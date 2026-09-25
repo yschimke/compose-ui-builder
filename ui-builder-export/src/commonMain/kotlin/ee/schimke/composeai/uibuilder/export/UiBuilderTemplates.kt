@@ -493,62 +493,6 @@ private fun NewDesignState.declaration(): JsonObject =
   )
 
 /**
- * An empty Wear screen: the scaffold, its clock and scroll indicator, and a list with nothing in
- * it.
- *
- * The list is part of the template rather than something to add afterwards, because a Wear screen
- * without one is not a starting point anybody wants — `ScreenScaffold` exists to hold a
- * `TransformingLazyColumn`, its `contentPadding` only means anything once something reads it, and
- * the generator refuses a scaffold whose content slot holds anything else at the top level. Opening
- * on the pair is opening on the shape of the thing.
- */
-fun blankWearScreenUiBuilderDocument(
-  designId: String,
-  catalogPin: JsonObject,
-  environment: JsonObject,
-): UiBuilderDocument {
-  require(designId.isNotBlank()) { "wear screen design id must not be blank" }
-  return UiBuilderDocument(
-    schema = "compose-ui-builder-document/v1-candidate",
-    id = designId,
-    title = "Untitled Wear screen",
-    revision = 0,
-    catalogPin = catalogPin,
-    environment = environment,
-    stateVariables = JsonObject(emptyMap()),
-    roots = listOf("wear-screen"),
-    nodes =
-      mapOf(
-        "wear-screen" to
-          UiBuilderNode(
-            id = "wear-screen",
-            componentId = "wear-m3/screen-scaffold",
-            properties =
-              JsonObject(
-                mapOf(
-                  "timeText" to literal("string", JsonPrimitive(WEAR_FROZEN_CLOCK)),
-                  "scrollIndicator" to literal("bool", JsonPrimitive(true)),
-                )
-              ),
-            modifiers = JsonArray(emptyList()),
-            slots = mapOf("content" to listOf("wear-list"), "edgeButton" to emptyList()),
-          ),
-        "wear-list" to
-          UiBuilderNode(
-            id = "wear-list",
-            componentId = "wear-m3/transforming-lazy-column",
-            properties =
-              JsonObject(
-                mapOf("verticalSpacingDp" to literal("float", JsonPrimitive(WEAR_LIST_SPACING_DP)))
-              ),
-            modifiers = JsonArray(emptyList()),
-            slots = mapOf("items" to emptyList()),
-          ),
-      ),
-  )
-}
-
-/**
  * The frame a Wear design is created on: the small round watch, at its own density, dark.
  *
  * Not the fixture's phone frame. The scaffold reads its diameter from the document, so a Wear
@@ -666,7 +610,7 @@ private const val WEAR_FROZEN_CLOCK = "10:10"
  * the builder's canvas and that repository's stitched `ScrollMode.LONG` render are the same design
  * drawn by two renderers — which is the only way a difference between them means anything.
  */
-private val WEAR_SCREEN_ROWS = (1..6).map { "Session $it" to "${it * 4} min" }
+internal val WEAR_SCREEN_ROWS = (1..6).map { "Session $it" to "${it * 4} min" }
 
 /**
  * The Wear list screen a `wear-m3` design opens on: a `ScreenScaffold` over a

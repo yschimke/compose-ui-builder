@@ -1,0 +1,4103 @@
+{
+  "schema": "compose-catalog-capabilities/v1",
+  "benchmark": {
+    "id": "remote-m3",
+    "sourceRevision": "components.json",
+    "catalogSystemId": "remote-m3",
+    "catalogRevision": "sha256:b2ff0dd000348e59aac83765914f8b92",
+    "nativeRuntimeId": "remote-m3-p3-0229ec65f611"
+  },
+  "statusSemantics": {
+    "platform": "remote-compose",
+    "platformLabel": "RemoteCompose",
+    "componentIdPrefix": "remote-m3/",
+    "previewSurfaces": {
+      "wasm": {
+        "fidelity": "approximate",
+        "reason": "The selectable Visual Editor draws Wear Compose CMP stand-ins. The read-only Browser Preview is a separate DEVICE surface: CMP Remote M3 records a real .rc document in Wasm and the pinned CMP RcComposePlayer plays it in each selected host frame. Approximate describes authoring only, never the Browser Preview."
+      },
+      "native": {
+        "fidelity": "authoritative",
+        "backend": "android",
+        "reason": "The generated creation-DSL Kotlin compiled against this module's own alpha Remote Compose trio and rasterised by the real player — the same lane that produces every sticker in this catalog."
+      }
+    },
+    "browserPreview": null,
+    "componentMenu": {
+      "groupOrder": [
+        "Layout",
+        "Widget Container",
+        "Scaffold templates",
+        "Containment",
+        "Buttons",
+        "Selection buttons",
+        "Edge-hugging buttons",
+        "Sliders",
+        "Steppers",
+        "Text",
+        "Iconography",
+        "Communication",
+        "Content",
+        "Styles",
+        "Embedded",
+        "Position indicators",
+        "Shapes",
+        "Shaders",
+        "Typeface",
+        "Theme",
+        "Wear M3",
+        "Confetti"
+      ],
+      "components": {
+        "remote-m3/remote-app-card": {
+          "group": "Containment"
+        },
+        "remote-m3/remote-button-group": {
+          "group": "Buttons"
+        },
+        "remote-m3/remote-button": {
+          "group": "Buttons"
+        },
+        "remote-m3/remote-compact-button": {
+          "group": "Buttons"
+        },
+        "remote-m3/remote-card": {
+          "group": "Containment"
+        },
+        "remote-m3/remote-outlined-card": {
+          "group": "Containment"
+        },
+        "remote-m3/remote-checkbox-button": {
+          "group": "Selection buttons"
+        },
+        "remote-m3/remote-circular-progress-indicator": {
+          "group": "Communication"
+        },
+        "remote-m3/remote-curved-progress-indicator": {
+          "group": "Communication"
+        },
+        "remote-m3/remote-edge-button": {
+          "group": "Edge-hugging buttons"
+        },
+        "remote-m3/remote-icon-button": {
+          "group": "Buttons"
+        },
+        "remote-m3/remote-icon": {
+          "group": "Iconography"
+        },
+        "remote-m3/remote-linear-progress-indicator": {
+          "group": "Communication"
+        },
+        "remote-m3/remote-horizontal-page-indicator": {
+          "group": "Position indicators"
+        },
+        "remote-m3/remote-vertical-page-indicator": {
+          "group": "Position indicators"
+        },
+        "remote-m3/remote-radio-button": {
+          "group": "Selection buttons"
+        },
+        "remote-m3/remote-slider": {
+          "group": "Sliders"
+        },
+        "remote-m3/remote-split-checkbox-button": {
+          "group": "Selection buttons"
+        },
+        "remote-m3/remote-split-radio-button": {
+          "group": "Selection buttons"
+        },
+        "remote-m3/remote-split-switch-button": {
+          "group": "Selection buttons"
+        },
+        "remote-m3/remote-stepper": {
+          "group": "Steppers"
+        },
+        "remote-m3/remote-switch-button": {
+          "group": "Selection buttons"
+        },
+        "remote-m3/remote-text-button": {
+          "group": "Buttons"
+        },
+        "remote-m3/remote-text": {
+          "group": "Text"
+        },
+        "remote-m3/remote-title-card": {
+          "group": "Containment"
+        },
+        "remote-m3/theme-specimen": {
+          "group": "Theme"
+        },
+        "layout/box": {
+          "group": "Layout"
+        },
+        "layout/column": {
+          "group": "Layout"
+        },
+        "layout/row": {
+          "group": "Layout"
+        },
+        "layout/for-each": {
+          "group": "Layout"
+        },
+        "remote-compose/document": {
+          "group": "Embedded"
+        },
+        "remote-compose/custom": {
+          "group": "Embedded"
+        },
+        "shape/linear-gradient": {
+          "group": "Styles"
+        },
+        "asset/image": {
+          "group": "Content"
+        }
+      }
+    },
+    "frame": {
+      "$comment_adapter": "Not a screen. A Remote Compose widget is drawn into a host container of a fixed size, so the frame is the host, not a watch face: `frame/widget-host` rather than the sibling catalog's `frame/round-screen`. This is the second reason `remote-m3` is a catalog of its own rather than a mode of the Wear one.",
+      "adapter": "frame/widget-host",
+      "geometry": {
+        "$comment": "The two host sizes are DECLARED BY THE PREVIEW CONTRACT, not measured after the fact: remote-catalog/src/main/kotlin/ee/schimke/wearm3catalog/remote/WidgetContainerPreviews.kt pins @Preview(widthDp = 216, heightDp = 76) and (216, 124), being 200x60dp and 200x108dp of content plus 8dp of padding on every edge. Every widget sticker in this catalog renders at one of them, so they are the sizes a builder must offer. Recorded here rather than transcribed into the server, which carried both numbers as constants.",
+        "sizesDp": [
+          {
+            "widthDp": 216,
+            "heightDp": 76,
+            "label": "Small container"
+          },
+          {
+            "widthDp": 216,
+            "heightDp": 124,
+            "label": "Large container"
+          }
+        ]
+      }
+    },
+    "code": null,
+    "composeSourceExport": null,
+    "templates": [
+      "ui-builder/designs/wear-widget-small.json",
+      "ui-builder/designs/wear-widget-large.json",
+      "ui-builder/designs/hello-widget.json",
+      "ui-builder/designs/weather-widget.json"
+    ],
+    "colorTokens": {
+      "$comment": "The theme roles a colour property may name. Same Material 3 vocabulary as the sibling :catalog, and stated here for the same reason: a Remote design names roles, and a role the canvas cannot resolve is a literal. Every sticker in this catalog is a RemoteDocument carrying explicit dark-first Material colours, so the values behind these names are the document's rather than a theme's — but the names are what a design writes.",
+      "roles": [
+        "background",
+        "surface",
+        "surfaceContainer",
+        "surfaceContainerLow",
+        "surfaceContainerHigh",
+        "surfaceContainerHighest",
+        "primary",
+        "onPrimary",
+        "tertiary",
+        "onTertiary",
+        "onSurface",
+        "onSurfaceVariant",
+        "outlineVariant",
+        "transparent"
+      ]
+    },
+    "assetRegistry": {
+      "keys": [
+        "jetcaster.cover.android-developers-backstage",
+        "jetcaster.cover.google-developers-podcast",
+        "ui-builder.gate0.cover",
+        "editor.placeholder"
+      ]
+    },
+    "supersedes": null,
+    "builtins": {
+      "remote-m3/widget-container-small": {
+        "role": "screen-root",
+        "displayName": "Wear widget · Small (216×76dp)",
+        "group": "Widget Container",
+        "canvas": "widget-container",
+        "unrolled": null,
+        "traits": [
+          "ScreenContent",
+          "WearWidgetHost",
+          "RemoteContentHost"
+        ],
+        "slots": {
+          "background": {
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "DrawLayer",
+              "ImageContent"
+            ]
+          },
+          "content": {
+            "acceptedRoles": [
+              "Scaffold",
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "AnyContent"
+            ],
+            "max": 1
+          }
+        },
+        "properties": [
+          {
+            "name": "background",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The widget's own background, painted by the host as the rounded rect. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none."
+          },
+          {
+            "name": "horizontalPaddingDp",
+            "jsonType": "number",
+            "required": false,
+            "notes": "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec."
+          },
+          {
+            "name": "verticalPaddingDp",
+            "jsonType": "number",
+            "required": false,
+            "notes": "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec."
+          },
+          {
+            "name": "cornerRadiusDp",
+            "jsonType": "number",
+            "required": false,
+            "notes": "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws this radius behind the content rather than clipping to it."
+          }
+        ],
+        "modifierCapabilities": [],
+        "implementation": null,
+        "shelfRole": null,
+        "wasm": null,
+        "code": null,
+        "svg": null
+      },
+      "remote-m3/widget-container-large": {
+        "role": "screen-root",
+        "displayName": "Wear widget · Large (216×124dp)",
+        "group": "Widget Container",
+        "canvas": "widget-container",
+        "unrolled": null,
+        "traits": [
+          "ScreenContent",
+          "WearWidgetHost",
+          "RemoteContentHost"
+        ],
+        "slots": {
+          "background": {
+            "acceptedRoles": [
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "DrawLayer",
+              "ImageContent"
+            ]
+          },
+          "content": {
+            "acceptedRoles": [
+              "Scaffold",
+              "Container",
+              "Leaf"
+            ],
+            "acceptedTraits": [
+              "AnyContent"
+            ],
+            "max": 1
+          }
+        },
+        "properties": [
+          {
+            "name": "background",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The widget's own background, painted by the host as the rounded rect. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none."
+          },
+          {
+            "name": "horizontalPaddingDp",
+            "jsonType": "number",
+            "required": false,
+            "notes": "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec."
+          },
+          {
+            "name": "verticalPaddingDp",
+            "jsonType": "number",
+            "required": false,
+            "notes": "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec."
+          },
+          {
+            "name": "cornerRadiusDp",
+            "jsonType": "number",
+            "required": false,
+            "notes": "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws this radius behind the content rather than clipping to it."
+          }
+        ],
+        "modifierCapabilities": [],
+        "implementation": null,
+        "shelfRole": null,
+        "wasm": null,
+        "code": null,
+        "svg": null
+      }
+    },
+    "components": {
+      "remote-m3/remote-app-card": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteAppCardKt.RemoteAppCard",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/card",
+        "canvasMapping": {
+          "slots": {
+            "content": "title"
+          },
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "app"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-button-group": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteButtonGroupKt.RemoteButtonGroup",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/button-group",
+        "canvasMapping": {
+          "slots": {
+            "children": "content"
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-button": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteButtonKt.RemoteButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/button",
+        "canvasMapping": {
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "filled"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-compact-button": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteButtonKt.RemoteCompactButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/button",
+        "canvasMapping": {
+          "slots": {
+            "content": "label"
+          },
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "filled"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-card": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteCardKt.RemoteCard",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/card",
+        "canvasMapping": {
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "filled"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-outlined-card": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteCardKt.RemoteOutlinedCard",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/card",
+        "canvasMapping": {
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "outlined"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-checkbox-button": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteCheckboxButtonKt.RemoteCheckboxButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/checkbox-button",
+        "canvasMapping": null,
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-circular-progress-indicator": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteCircularProgressIndicatorKt.RemoteCircularProgressIndicator",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/progress-indicator",
+        "canvasMapping": {
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "circular"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-curved-progress-indicator": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicatorKt.RemoteCurvedProgressIndicator",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/progress-indicator",
+        "canvasMapping": {
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "arc"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-edge-button": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteEdgeButtonKt.RemoteEdgeButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/edge-button",
+        "canvasMapping": {
+          "properties": {
+            "size": "buttonSize"
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-icon-button": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteIconButtonKt.RemoteIconButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/icon-button",
+        "canvasMapping": {
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "filled"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-icon": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteIconKt.RemoteIcon",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/icon",
+        "canvasMapping": {
+          "properties": {
+            "iconKey": "imageVector"
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-linear-progress-indicator": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteLinearProgressIndicatorKt.RemoteLinearProgressIndicator",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/progress-indicator",
+        "canvasMapping": {
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "linear"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-horizontal-page-indicator": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemotePageIndicatorKt.RemoteHorizontalPageIndicator",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/page-indicator",
+        "canvasMapping": {
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "horizontal"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-vertical-page-indicator": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemotePageIndicatorKt.RemoteVerticalPageIndicator",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/page-indicator",
+        "canvasMapping": {
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "vertical"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-radio-button": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteRadioButtonKt.RemoteRadioButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/radio-button",
+        "canvasMapping": null,
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-slider": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteSliderKt.RemoteSlider",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/slider",
+        "canvasMapping": {
+          "defaults": {
+            "valueFrom": {
+              "type": "float",
+              "value": 0.0
+            },
+            "valueTo": {
+              "type": "float",
+              "value": 1.0
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-split-checkbox-button": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteSplitCheckboxButtonKt.RemoteSplitCheckboxButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/checkbox-button",
+        "canvasMapping": null,
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-split-radio-button": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteSplitRadioButtonKt.RemoteSplitRadioButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/radio-button",
+        "canvasMapping": null,
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-split-switch-button": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteSplitSwitchButtonKt.RemoteSplitSwitchButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/switch-button",
+        "canvasMapping": null,
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-stepper": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteStepperKt.RemoteStepper",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/stepper",
+        "canvasMapping": {
+          "defaults": {
+            "valueFrom": {
+              "type": "float",
+              "value": 0.0
+            },
+            "valueTo": {
+              "type": "float",
+              "value": 1.0
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-switch-button": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteSwitchButtonKt.RemoteSwitchButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/switch-button",
+        "canvasMapping": null,
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-text-button": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteTextButtonKt.RemoteTextButton",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/text-button",
+        "canvasMapping": {
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "standard"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-text": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteTextKt.RemoteText",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/text",
+        "canvasMapping": {
+          "properties": {
+            "fontSizeSp": "fontSize"
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": [
+          {
+            "name": "text",
+            "jsonType": "string",
+            "required": true,
+            "notes": "The string the component draws. `RemoteText` takes a `RemoteString`, so a design's plain string is written as `\"…\".rs` and a binding or a state value as the remote expression it names — what the design carries is the same JSON either way."
+          },
+          {
+            "name": "style",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "displayLarge",
+              "displayMedium",
+              "displaySmall",
+              "titleLarge",
+              "titleMedium",
+              "titleSmall",
+              "labelLarge",
+              "labelMedium",
+              "labelSmall",
+              "bodyLarge",
+              "bodyMedium",
+              "bodySmall",
+              "bodyExtraSmall",
+              "numeralExtraLarge",
+              "numeralLarge",
+              "numeralMedium",
+              "numeralSmall",
+              "numeralExtraSmall"
+            ],
+            "notes": "A role on this catalog's type scale, written as `style = RemoteMaterialTheme.typography.<role>`. This is the way to set type here: a role carries size, weight, line height and letter spacing together through `RemoteTextStyle`, which is why the catalog's own stickers pass a role OR an explicit size and never both. The eighteen are `RemoteTypography`'s own and are NOT the Material 3 fifteen — there is no `headline` on a watch, and there are five `numeral` roles a time or a metric is set in. A role this class does not have would export as a call that does not compile, so the list is exactly what it publishes."
+          },
+          {
+            "name": "fontSize",
+            "jsonType": "number",
+            "required": false,
+            "notes": "Size in sp, as an override on top of `style` rather than a substitute for it — set it alone and everything else about the type comes from the ambient style. Spelled the parameter's own way; a design authored against the borrowed `m3/text` says `fontSizeSp` and the writer reads both. A whole number writes `22.rsp`; a fractional one writes `14.5f.sp.asRemoteTextUnit()`, because `RemoteTextUnitKt` publishes no `Float.rsp`."
+          },
+          {
+            "name": "color",
+            "jsonType": "string",
+            "required": false,
+            "notes": "A colour: a `#RRGGBB` literal, which exports as `Color(0x…).rc`, or one of `colorTokens.roles`, which exports as `RemoteMaterialTheme.colorScheme.<role>`."
+          },
+          {
+            "name": "textAlign",
+            "jsonType": "string",
+            "required": false,
+            "allowedValues": [
+              "start",
+              "center",
+              "end",
+              "justify"
+            ]
+          },
+          {
+            "name": "maxLines",
+            "jsonType": "integer",
+            "required": false
+          }
+        ],
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-title-card": {
+        "record": "remote-catalog/androidx.wear.compose.remote.material3.RemoteTitleCardKt.RemoteTitleCard",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": "wear-m3/card",
+        "canvasMapping": {
+          "slots": {
+            "content": "title"
+          },
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "title"
+            }
+          }
+        },
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/remote-sticker": {
+        "record": "remote-catalog/ee.schimke.wearm3catalog.remote.CatalogThemeKt.RemoteSticker",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "canvasMapping": null,
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": "the catalog's own preview frame, not a Remote Compose component: every sticker is drawn inside one and nobody places one in a design.",
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      },
+      "remote-m3/theme-specimen": {
+        "record": "remote-catalog/ee.schimke.wearm3catalog.remote.RemoteThemeSpecimensKt.ThemeSpecimen",
+        "catalogId": null,
+        "displayName": null,
+        "canvas": null,
+        "canvasMapping": null,
+        "unrolled": null,
+        "nativeOnly": false,
+        "traits": [],
+        "slots": {},
+        "stateCallbacks": {},
+        "starter": {},
+        "variantProperty": null,
+        "variants": {},
+        "excluded": null,
+        "propertyCapabilities": null,
+        "slotCapabilities": null,
+        "modifierCapabilities": null
+      }
+    }
+  },
+  "components": [
+    {
+      "componentId": "remote-m3/remote-app-card",
+      "displayName": "RemoteAppCard",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "appName",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "title",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "appImage",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "time",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteAppCard`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/card` adapter.",
+        "canvas": "wear-m3/card",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {
+            "content": "title"
+          },
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "app"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteAppCard",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteAppCard"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-button-group",
+      "displayName": "RemoteButtonGroup",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/button-group` adapter.",
+        "canvas": "wear-m3/button-group",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {
+            "children": "content"
+          },
+          "defaults": {}
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteButtonGroup",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteButtonGroup"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-button",
+      "displayName": "RemoteButton",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteButton`."
+        },
+        {
+          "name": "borderColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`borderColor: RemoteColor?` on `androidx.wear.compose.remote.material3.RemoteButton`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/button` adapter.",
+        "canvas": "wear-m3/button",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "filled"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteButton",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteButton"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-compact-button",
+      "displayName": "RemoteCompactButton",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "icon",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "label",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteCompactButton`."
+        },
+        {
+          "name": "borderColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`borderColor: RemoteColor?` on `androidx.wear.compose.remote.material3.RemoteCompactButton`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/button` adapter.",
+        "canvas": "wear-m3/button",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {
+            "content": "label"
+          },
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "filled"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteCompactButton",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteCompactButton"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-card",
+      "displayName": "RemoteCard",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteCard`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/card` adapter.",
+        "canvas": "wear-m3/card",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "filled"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteCard",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteCard"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-outlined-card",
+      "displayName": "RemoteOutlinedCard",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteOutlinedCard`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/card` adapter.",
+        "canvas": "wear-m3/card",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "outlined"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteOutlinedCard",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteOutlinedCard"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-checkbox-button",
+      "displayName": "RemoteCheckboxButton",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "icon",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "secondaryLabel",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "label",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "checked",
+          "jsonType": "boolean",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`checked: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteCheckboxButton`."
+        },
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteCheckboxButton`."
+        },
+        {
+          "name": "borderColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`borderColor: RemoteColor?` on `androidx.wear.compose.remote.material3.RemoteCheckboxButton`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/checkbox-button` adapter.",
+        "canvas": "wear-m3/checkbox-button"
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteCheckboxButton",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteCheckboxButton"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-circular-progress-indicator",
+      "displayName": "RemoteCircularProgressIndicator",
+      "role": "Leaf",
+      "traits": [],
+      "slots": [],
+      "properties": [
+        {
+          "name": "progress",
+          "jsonType": "number",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`progress: RemoteFloat` on `androidx.wear.compose.remote.material3.RemoteCircularProgressIndicator`."
+        },
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteCircularProgressIndicator`."
+        },
+        {
+          "name": "startAngle",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`startAngle: RemoteFloat` on `androidx.wear.compose.remote.material3.RemoteCircularProgressIndicator`."
+        },
+        {
+          "name": "endAngle",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`endAngle: RemoteFloat` on `androidx.wear.compose.remote.material3.RemoteCircularProgressIndicator`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/progress-indicator` adapter.",
+        "canvas": "wear-m3/progress-indicator",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "circular"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteCircularProgressIndicator",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteCircularProgressIndicator"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-curved-progress-indicator",
+      "displayName": "RemoteCurvedProgressIndicator",
+      "role": "Leaf",
+      "traits": [],
+      "slots": [],
+      "properties": [
+        {
+          "name": "progress",
+          "jsonType": "number",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`progress: RemoteFloat` on `androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicator`."
+        },
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicator`."
+        },
+        {
+          "name": "startAngle",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`startAngle: RemoteFloat` on `androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicator`."
+        },
+        {
+          "name": "sweepAngle",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`sweepAngle: RemoteFloat` on `androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicator`."
+        },
+        {
+          "name": "gapAngleDegrees",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`gapAngleDegrees: RemoteFloat` on `androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicator`."
+        },
+        {
+          "name": "dotFadeOutFraction",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`dotFadeOutFraction: RemoteFloat` on `androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicator`."
+        },
+        {
+          "name": "dotCollapsible",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`dotCollapsible: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicator`."
+        },
+        {
+          "name": "reverseDirection",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`reverseDirection: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicator`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/progress-indicator` adapter.",
+        "canvas": "wear-m3/progress-indicator",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "arc"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicator",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicator"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-edge-button",
+      "displayName": "RemoteEdgeButton",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteEdgeButton`."
+        },
+        {
+          "name": "borderColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`borderColor: RemoteColor?` on `androidx.wear.compose.remote.material3.RemoteEdgeButton`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/edge-button` adapter.",
+        "canvas": "wear-m3/edge-button",
+        "canvasMapping": {
+          "properties": {
+            "size": "buttonSize"
+          },
+          "slots": {},
+          "defaults": {}
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteEdgeButton",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteEdgeButton"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-icon-button",
+      "displayName": "RemoteIconButton",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteIconButton`."
+        },
+        {
+          "name": "borderColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`borderColor: RemoteColor?` on `androidx.wear.compose.remote.material3.RemoteIconButton`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/icon-button` adapter.",
+        "canvas": "wear-m3/icon-button",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "filled"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteIconButton",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteIconButton"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-icon",
+      "displayName": "RemoteIcon",
+      "role": "Leaf",
+      "traits": [],
+      "slots": [],
+      "properties": [
+        {
+          "name": "contentDescription",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`contentDescription: RemoteString?` on `androidx.wear.compose.remote.material3.RemoteIcon`."
+        },
+        {
+          "name": "tint",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`tint: RemoteColor` on `androidx.wear.compose.remote.material3.RemoteIcon`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/icon` adapter.",
+        "canvas": "wear-m3/icon",
+        "canvasMapping": {
+          "properties": {
+            "iconKey": "imageVector"
+          },
+          "slots": {},
+          "defaults": {}
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteIcon",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteIcon"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-linear-progress-indicator",
+      "displayName": "RemoteLinearProgressIndicator",
+      "role": "Leaf",
+      "traits": [],
+      "slots": [],
+      "properties": [
+        {
+          "name": "progress",
+          "jsonType": "number",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`progress: RemoteFloat` on `androidx.wear.compose.remote.material3.RemoteLinearProgressIndicator`."
+        },
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteLinearProgressIndicator`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/progress-indicator` adapter.",
+        "canvas": "wear-m3/progress-indicator",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "linear"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteLinearProgressIndicator",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteLinearProgressIndicator"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-horizontal-page-indicator",
+      "displayName": "RemoteHorizontalPageIndicator",
+      "role": "Leaf",
+      "traits": [],
+      "slots": [],
+      "properties": [
+        {
+          "name": "selectedColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`selectedColor: RemoteColor` on `androidx.wear.compose.remote.material3.RemoteHorizontalPageIndicator`."
+        },
+        {
+          "name": "unselectedColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`unselectedColor: RemoteColor` on `androidx.wear.compose.remote.material3.RemoteHorizontalPageIndicator`."
+        },
+        {
+          "name": "backgroundColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`backgroundColor: RemoteColor` on `androidx.wear.compose.remote.material3.RemoteHorizontalPageIndicator`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/page-indicator` adapter.",
+        "canvas": "wear-m3/page-indicator",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "horizontal"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteHorizontalPageIndicator",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteHorizontalPageIndicator"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-vertical-page-indicator",
+      "displayName": "RemoteVerticalPageIndicator",
+      "role": "Leaf",
+      "traits": [],
+      "slots": [],
+      "properties": [
+        {
+          "name": "selectedColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`selectedColor: RemoteColor` on `androidx.wear.compose.remote.material3.RemoteVerticalPageIndicator`."
+        },
+        {
+          "name": "unselectedColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`unselectedColor: RemoteColor` on `androidx.wear.compose.remote.material3.RemoteVerticalPageIndicator`."
+        },
+        {
+          "name": "backgroundColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`backgroundColor: RemoteColor` on `androidx.wear.compose.remote.material3.RemoteVerticalPageIndicator`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/page-indicator` adapter.",
+        "canvas": "wear-m3/page-indicator",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "vertical"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteVerticalPageIndicator",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteVerticalPageIndicator"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-radio-button",
+      "displayName": "RemoteRadioButton",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "icon",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "secondaryLabel",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "label",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "selected",
+          "jsonType": "boolean",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`selected: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteRadioButton`."
+        },
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteRadioButton`."
+        },
+        {
+          "name": "borderColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`borderColor: RemoteColor?` on `androidx.wear.compose.remote.material3.RemoteRadioButton`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/radio-button` adapter.",
+        "canvas": "wear-m3/radio-button"
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteRadioButton",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteRadioButton"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-slider",
+      "displayName": "RemoteSlider",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "decreaseIcon",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "increaseIcon",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "value",
+          "jsonType": "number",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`value: RemoteFloat` on `androidx.wear.compose.remote.material3.RemoteSlider`."
+        },
+        {
+          "name": "steps",
+          "jsonType": "integer",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`steps: Int` on `androidx.wear.compose.remote.material3.RemoteSlider`."
+        },
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteSlider`."
+        },
+        {
+          "name": "segmented",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`segmented: Boolean` on `androidx.wear.compose.remote.material3.RemoteSlider`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/slider` adapter.",
+        "canvas": "wear-m3/slider",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "valueFrom": {
+              "type": "float",
+              "value": 0.0
+            },
+            "valueTo": {
+              "type": "float",
+              "value": 1.0
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteSlider",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteSlider"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-split-checkbox-button",
+      "displayName": "RemoteSplitCheckboxButton",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "secondaryLabel",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "label",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "checked",
+          "jsonType": "boolean",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`checked: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteSplitCheckboxButton`."
+        },
+        {
+          "name": "toggleContentDescription",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`toggleContentDescription: RemoteString?` on `androidx.wear.compose.remote.material3.RemoteSplitCheckboxButton`."
+        },
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteSplitCheckboxButton`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/checkbox-button` adapter.",
+        "canvas": "wear-m3/checkbox-button"
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteSplitCheckboxButton",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteSplitCheckboxButton"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-split-radio-button",
+      "displayName": "RemoteSplitRadioButton",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "secondaryLabel",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "label",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "selected",
+          "jsonType": "boolean",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`selected: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteSplitRadioButton`."
+        },
+        {
+          "name": "selectionContentDescription",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`selectionContentDescription: RemoteString?` on `androidx.wear.compose.remote.material3.RemoteSplitRadioButton`."
+        },
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteSplitRadioButton`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/radio-button` adapter.",
+        "canvas": "wear-m3/radio-button"
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteSplitRadioButton",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteSplitRadioButton"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-split-switch-button",
+      "displayName": "RemoteSplitSwitchButton",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "secondaryLabel",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "label",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "checked",
+          "jsonType": "boolean",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`checked: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteSplitSwitchButton`."
+        },
+        {
+          "name": "toggleContentDescription",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`toggleContentDescription: RemoteString?` on `androidx.wear.compose.remote.material3.RemoteSplitSwitchButton`."
+        },
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteSplitSwitchButton`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/switch-button` adapter.",
+        "canvas": "wear-m3/switch-button"
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteSplitSwitchButton",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteSplitSwitchButton"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-stepper",
+      "displayName": "RemoteStepper",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "decreaseIcon",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "increaseIcon",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "value",
+          "jsonType": "number",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`value: RemoteFloat` on `androidx.wear.compose.remote.material3.RemoteStepper`."
+        },
+        {
+          "name": "steps",
+          "jsonType": "integer",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`steps: Int` on `androidx.wear.compose.remote.material3.RemoteStepper`."
+        },
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteStepper`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/stepper` adapter.",
+        "canvas": "wear-m3/stepper",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "valueFrom": {
+              "type": "float",
+              "value": 0.0
+            },
+            "valueTo": {
+              "type": "float",
+              "value": 1.0
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteStepper",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteStepper"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-switch-button",
+      "displayName": "RemoteSwitchButton",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "icon",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "secondaryLabel",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "label",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "checked",
+          "jsonType": "boolean",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`checked: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteSwitchButton`."
+        },
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteSwitchButton`."
+        },
+        {
+          "name": "borderColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`borderColor: RemoteColor?` on `androidx.wear.compose.remote.material3.RemoteSwitchButton`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/switch-button` adapter.",
+        "canvas": "wear-m3/switch-button"
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteSwitchButton",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteSwitchButton"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-text-button",
+      "displayName": "RemoteTextButton",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteTextButton`."
+        },
+        {
+          "name": "borderColor",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`borderColor: RemoteColor?` on `androidx.wear.compose.remote.material3.RemoteTextButton`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/text-button` adapter.",
+        "canvas": "wear-m3/text-button",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {},
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "standard"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteTextButton",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteTextButton"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-text",
+      "displayName": "RemoteText",
+      "role": "Leaf",
+      "traits": [],
+      "slots": [],
+      "properties": [
+        {
+          "name": "text",
+          "jsonType": "string",
+          "required": true,
+          "allowedValues": [],
+          "notes": "The string the component draws. `RemoteText` takes a `RemoteString`, so a design's plain string is written as `\"…\".rs` and a binding or a state value as the remote expression it names — what the design carries is the same JSON either way."
+        },
+        {
+          "name": "style",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "displayLarge",
+            "displayMedium",
+            "displaySmall",
+            "titleLarge",
+            "titleMedium",
+            "titleSmall",
+            "labelLarge",
+            "labelMedium",
+            "labelSmall",
+            "bodyLarge",
+            "bodyMedium",
+            "bodySmall",
+            "bodyExtraSmall",
+            "numeralExtraLarge",
+            "numeralLarge",
+            "numeralMedium",
+            "numeralSmall",
+            "numeralExtraSmall"
+          ],
+          "notes": "A role on this catalog's type scale, written as `style = RemoteMaterialTheme.typography.<role>`. This is the way to set type here: a role carries size, weight, line height and letter spacing together through `RemoteTextStyle`, which is why the catalog's own stickers pass a role OR an explicit size and never both. The eighteen are `RemoteTypography`'s own and are NOT the Material 3 fifteen — there is no `headline` on a watch, and there are five `numeral` roles a time or a metric is set in. A role this class does not have would export as a call that does not compile, so the list is exactly what it publishes."
+        },
+        {
+          "name": "fontSize",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "Size in sp, as an override on top of `style` rather than a substitute for it — set it alone and everything else about the type comes from the ambient style. Spelled the parameter's own way; a design authored against the borrowed `m3/text` says `fontSizeSp` and the writer reads both. A whole number writes `22.rsp`; a fractional one writes `14.5f.sp.asRemoteTextUnit()`, because `RemoteTextUnitKt` publishes no `Float.rsp`."
+        },
+        {
+          "name": "color",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "A colour: a `#RRGGBB` literal, which exports as `Color(0x…).rc`, or one of `colorTokens.roles`, which exports as `RemoteMaterialTheme.colorScheme.<role>`."
+        },
+        {
+          "name": "textAlign",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "start",
+            "center",
+            "end",
+            "justify"
+          ],
+          "notes": ""
+        },
+        {
+          "name": "maxLines",
+          "jsonType": "integer",
+          "required": false,
+          "allowedValues": [],
+          "notes": ""
+        },
+        {
+          "name": "fontStyle",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`fontStyle: FontStyle?` on `androidx.wear.compose.remote.material3.RemoteText`."
+        },
+        {
+          "name": "fontWeight",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`fontWeight: FontWeight?` on `androidx.wear.compose.remote.material3.RemoteText`."
+        },
+        {
+          "name": "overflow",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`overflow: TextOverflow` on `androidx.wear.compose.remote.material3.RemoteText`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/text` adapter.",
+        "canvas": "wear-m3/text",
+        "canvasMapping": {
+          "properties": {
+            "fontSizeSp": "fontSize"
+          },
+          "slots": {},
+          "defaults": {}
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteText",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteText"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/remote-title-card",
+      "displayName": "RemoteTitleCard",
+      "role": "Container",
+      "traits": [],
+      "slots": [
+        {
+          "name": "title",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "time",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "subtitle",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        },
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [],
+          "acceptedTraits": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "enabled",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": [],
+          "notes": "`enabled: RemoteBoolean` on `androidx.wear.compose.remote.material3.RemoteTitleCard`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight",
+        "fillMaxSize",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `wear-m3/card` adapter.",
+        "canvas": "wear-m3/card",
+        "canvasMapping": {
+          "properties": {},
+          "slots": {
+            "content": "title"
+          },
+          "defaults": {
+            "variant": {
+              "type": "enum",
+              "value": "title"
+            }
+          }
+        }
+      },
+      "code": {
+        "symbol": "androidx.wear.compose.remote.material3.RemoteTitleCard",
+        "imports": [
+          "androidx.wear.compose.remote.material3.RemoteTitleCard"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/theme-specimen",
+      "displayName": "ThemeSpecimen",
+      "role": "Leaf",
+      "traits": [],
+      "slots": [],
+      "properties": [
+        {
+          "name": "name",
+          "jsonType": "string",
+          "required": true,
+          "allowedValues": [],
+          "notes": "`name: String` on `ee.schimke.wearm3catalog.remote.ThemeSpecimen`."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": false,
+        "adapterStatus": "unsupported",
+        "notes": "Drawn on the canvas as a named placeholder: this catalog claims no adapter."
+      },
+      "code": {
+        "symbol": "ee.schimke.wearm3catalog.remote.ThemeSpecimen",
+        "imports": [
+          "ee.schimke.wearm3catalog.remote.ThemeSpecimen"
+        ]
+      }
+    },
+    {
+      "componentId": "remote-m3/widget-container-small",
+      "displayName": "Wear widget · Small (216×76dp)",
+      "role": "Scaffold",
+      "traits": [
+        "ScreenContent",
+        "WearWidgetHost",
+        "RemoteContentHost"
+      ],
+      "slots": [
+        {
+          "name": "background",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [
+            "Leaf"
+          ],
+          "acceptedTraits": [
+            "DrawLayer",
+            "ImageContent"
+          ]
+        },
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "ordered": true,
+          "acceptedRoles": [
+            "Scaffold",
+            "Container",
+            "Leaf"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "background",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "The widget's own background, painted by the host as the rounded rect. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none."
+        },
+        {
+          "name": "horizontalPaddingDp",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec."
+        },
+        {
+          "name": "verticalPaddingDp",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec."
+        },
+        {
+          "name": "cornerRadiusDp",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws this radius behind the content rather than clipping to it."
+        }
+      ],
+      "modifierCapabilities": [],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `widget-container` adapter.",
+        "canvas": "widget-container"
+      }
+    },
+    {
+      "componentId": "remote-m3/widget-container-large",
+      "displayName": "Wear widget · Large (216×124dp)",
+      "role": "Scaffold",
+      "traits": [
+        "ScreenContent",
+        "WearWidgetHost",
+        "RemoteContentHost"
+      ],
+      "slots": [
+        {
+          "name": "background",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [
+            "Leaf"
+          ],
+          "acceptedTraits": [
+            "DrawLayer",
+            "ImageContent"
+          ]
+        },
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "ordered": true,
+          "acceptedRoles": [
+            "Scaffold",
+            "Container",
+            "Leaf"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "background",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "The widget's own background, painted by the host as the rounded rect. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none."
+        },
+        {
+          "name": "horizontalPaddingDp",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec."
+        },
+        {
+          "name": "verticalPaddingDp",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec."
+        },
+        {
+          "name": "cornerRadiusDp",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws this radius behind the content rather than clipping to it."
+        }
+      ],
+      "modifierCapabilities": [],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Drawn on the canvas by the `widget-container` adapter.",
+        "canvas": "widget-container"
+      }
+    },
+    {
+      "componentId": "layout/box",
+      "displayName": "Box",
+      "role": "Container",
+      "traits": [
+        "OrderedContent",
+        "OverlayContent",
+        "LayoutPrimitive",
+        "RemoteAuthorable"
+      ],
+      "slots": [
+        {
+          "name": "children",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [
+            "Scaffold",
+            "Container",
+            "Leaf"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "contentAlignment",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": []
+        },
+        {
+          "name": "propagateMinConstraints",
+          "jsonType": "boolean",
+          "required": false,
+          "allowedValues": []
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxSize",
+        "fillMaxWidth",
+        "padding",
+        "clip",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll",
+        "horizontalScroll",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "planned"
+      },
+      "code": {
+        "symbol": "Box",
+        "imports": [
+          "androidx.compose.foundation.layout.Box"
+        ]
+      },
+      "svg": {
+        "status": "verified",
+        "fallback": "none",
+        "blocksExport": false
+      }
+    },
+    {
+      "componentId": "layout/column",
+      "displayName": "Column",
+      "role": "Container",
+      "traits": [
+        "OrderedContent",
+        "VerticalContent",
+        "LayoutPrimitive",
+        "RemoteAuthorable"
+      ],
+      "slots": [
+        {
+          "name": "children",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [
+            "Scaffold",
+            "Container",
+            "Leaf"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "verticalArrangement",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "top",
+            "center",
+            "bottom",
+            "spaceBetween",
+            "spaceAround",
+            "spaceEvenly"
+          ],
+          "notes": "Distribution down the axis. The three aligned values compose with verticalSpacingDp through Arrangement.spacedBy(space, alignment); the three space* values distribute the free space themselves, and Compose has no form that also inserts a fixed gap."
+        },
+        {
+          "name": "verticalSpacingDp",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": []
+        },
+        {
+          "name": "horizontalAlignment",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "start",
+            "center",
+            "end"
+          ]
+        },
+        {
+          "name": "alignment",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "topStart",
+            "topCenter",
+            "topEnd",
+            "centerStart",
+            "center",
+            "centerEnd",
+            "bottomStart",
+            "bottomCenter",
+            "bottomEnd"
+          ],
+          "notes": "How a parent Box aligns this column. The renderer has always read `alignment` off any Box child and the exporter has always emitted `.align(...)` for it; only the declaration was missing, so a centred column was inexpressible."
+        },
+        {
+          "name": "weight",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": []
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxSize",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "verticalScroll",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported"
+      },
+      "code": {
+        "symbol": "Column",
+        "imports": [
+          "androidx.compose.foundation.layout.Column"
+        ]
+      },
+      "svg": {
+        "status": "verified",
+        "fallback": "none",
+        "blocksExport": false
+      }
+    },
+    {
+      "componentId": "layout/row",
+      "displayName": "Row",
+      "role": "Container",
+      "traits": [
+        "OrderedContent",
+        "HorizontalContent",
+        "LayoutPrimitive",
+        "RemoteAuthorable"
+      ],
+      "slots": [
+        {
+          "name": "children",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [
+            "Scaffold",
+            "Container",
+            "Leaf"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "horizontalArrangement",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "start",
+            "center",
+            "end",
+            "spaceBetween",
+            "spaceAround",
+            "spaceEvenly"
+          ],
+          "notes": "The Row counterpart of a Column’s verticalArrangement, with the same relationship to horizontalSpacingDp."
+        },
+        {
+          "name": "horizontalSpacingDp",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": []
+        },
+        {
+          "name": "verticalAlignment",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "top",
+            "center",
+            "bottom"
+          ]
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxSize",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "wrapContentSize",
+        "horizontalScroll",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported"
+      },
+      "code": {
+        "symbol": "Row",
+        "imports": [
+          "androidx.compose.foundation.layout.Row"
+        ]
+      },
+      "svg": {
+        "status": "verified",
+        "fallback": "none",
+        "blocksExport": false
+      }
+    },
+    {
+      "componentId": "layout/for-each",
+      "displayName": "For each",
+      "role": "Container",
+      "traits": [
+        "OrderedContent",
+        "RepeatedContent",
+        "RemoteAuthorable"
+      ],
+      "slots": [
+        {
+          "name": "template",
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "ordered": false,
+          "acceptedRoles": [
+            "Container",
+            "Leaf"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "data",
+          "jsonType": "object",
+          "required": true,
+          "allowedValues": [],
+          "notes": "The rows: a `list` value whose entries are `object` values — one dictionary per row, read by the template through `{\"type\":\"binding\",\"value\":\"<key>\"}`, the same reader a component body uses for its arguments."
+        },
+        {
+          "name": "verticalSpacingDp",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": []
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxWidth",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported"
+      },
+      "code": {
+        "symbol": "",
+        "imports": []
+      },
+      "svg": {
+        "status": "unverified",
+        "fallback": "none",
+        "blocksExport": false,
+        "notes": "Repeated rows draw the template more than once, and the structured recorder correlates a text element by authored node id — so only the last row's measurements survive and the typography annotation cannot be matched. Unverified until the recorder reads instance paths, which makes an SVG export of a design holding a loop refuse by name rather than emit an unannotated one."
+      }
+    },
+    {
+      "componentId": "remote-compose/document",
+      "displayName": "Remote Compose document",
+      "role": "Container",
+      "traits": [
+        "RemoteContent",
+        "OrderedContent",
+        "DynamicSlots"
+      ],
+      "slots": [],
+      "properties": [
+        {
+          "name": "documentBase64",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "Base64-encoded Remote Compose wire document; limited to 8 MiB encoded. Not required on its own: a node carries either the bytes or a documentUrl, and the editor's own rule reports a node that carries neither."
+        },
+        {
+          "name": "documentUrl",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [],
+          "notes": "Absolute http(s) URL the host resolves to the same wire document. Read only when documentBase64 is empty, so a design that carries its own bytes never depends on the network."
+        },
+        {
+          "name": "theme",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "inherit",
+            "light",
+            "dark",
+            "system"
+          ]
+        },
+        {
+          "name": "namedValues",
+          "jsonType": "object",
+          "required": false,
+          "allowedValues": [],
+          "notes": "Typed host values keyed by the Remote Compose named-variable name."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxSize",
+        "fillMaxWidth",
+        "padding",
+        "clip",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "fillMaxHeight",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Uses the common CMP player. Each named UI Builder slot registers the matching Remote Compose custom-component config."
+      },
+      "code": {
+        "symbol": "RcComposePlayer",
+        "imports": [
+          "ee.schimke.composeai.rcplayer.compose.RcComposePlayer"
+        ]
+      },
+      "svg": {
+        "status": "unsupported",
+        "fallback": "none",
+        "blocksExport": true,
+        "notes": "Nested Remote Compose SVG export requires an explicit renderer implementation."
+      }
+    },
+    {
+      "componentId": "remote-compose/custom",
+      "displayName": "Custom component",
+      "role": "Container",
+      "traits": [
+        "RemoteContent",
+        "OrderedContent",
+        "RemoteAuthorable"
+      ],
+      "slots": [
+        {
+          "name": "content",
+          "cardinality": {
+            "min": 0
+          },
+          "ordered": true,
+          "acceptedRoles": [
+            "Scaffold",
+            "Container",
+            "Leaf"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "name",
+          "jsonType": "string",
+          "required": true,
+          "allowedValues": [],
+          "notes": "The custom-component config name the document writes and the host registers a renderer under. Namespaced by convention (slot:, rc:, or an application domain) so two documents composed together cannot collide."
+        },
+        {
+          "name": "widthDp",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "The bounds the document reserves for host content it cannot measure. A player lays out a custom component from the document, not from the Compose content filling it."
+        },
+        {
+          "name": "heightDp",
+          "jsonType": "number",
+          "required": false,
+          "allowedValues": [],
+          "notes": "See widthDp."
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxSize",
+        "fillMaxWidth",
+        "padding",
+        "clip",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "fillMaxHeight",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Draws the ordinary Compose content in its own slot, which is what a registered renderer draws on a real player too. A preview only draws it if a custom component of this name is registered; an unregistered one is a player support issue rather than silently borrowed content. The code mapping names the registry rather than a composable, because the composable is whatever the host registers under this name."
+      },
+      "code": {
+        "symbol": "RcCustomComponentRegistry",
+        "imports": [
+          "ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry"
+        ]
+      },
+      "svg": {
+        "status": "unsupported",
+        "fallback": "none",
+        "blocksExport": true,
+        "notes": "Host content inside a Remote Compose document has no structured SVG answer."
+      }
+    },
+    {
+      "componentId": "shape/linear-gradient",
+      "displayName": "Linear gradient layer",
+      "role": "Leaf",
+      "traits": [
+        "DrawLayer",
+        "OverlayContent"
+      ],
+      "slots": [],
+      "properties": [
+        {
+          "name": "startColor",
+          "jsonType": "string",
+          "required": true,
+          "allowedValues": [],
+          "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+        },
+        {
+          "name": "endColor",
+          "jsonType": "string",
+          "required": true,
+          "allowedValues": [],
+          "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit."
+        },
+        {
+          "name": "direction",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": []
+        }
+      ],
+      "modifierCapabilities": [],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "planned",
+        "notes": "Must remain a semantic brush layer, not persisted pixel geometry."
+      },
+      "code": {
+        "symbol": "Modifier.background(Brush.linearGradient)",
+        "imports": [
+          "androidx.compose.foundation.background",
+          "androidx.compose.ui.Modifier",
+          "androidx.compose.ui.graphics.Brush"
+        ]
+      },
+      "svg": {
+        "status": "verified",
+        "fallback": "none",
+        "blocksExport": false,
+        "notes": "The frozen benchmark usage records as vector gradient output."
+      }
+    },
+    {
+      "componentId": "asset/image",
+      "displayName": "Image asset",
+      "role": "Leaf",
+      "traits": [
+        "ImageContent",
+        "RemoteAuthorable"
+      ],
+      "slots": [],
+      "properties": [
+        {
+          "name": "assetKey",
+          "jsonType": "string",
+          "required": true,
+          "allowedValues": [],
+          "notes": "The key of an asset the canvas can draw, written as {\"type\":\"assetKey\",\"value\":\"…\"}: one of statusSemantics.assetRegistry.keys, or a key pinned in the design's own assets map by PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey} (raw PNG, JPEG, GIF or WebP body) or the ui_builder_put_asset MCP tool. Any other key is refused at commit, so put the picture before inserting the node. A pinned key whose bytes this lane cannot show renders as a placeholder naming it, and exports as Image(painter = ColorPainter(...)) with an ASSET_PLACEHOLDER warning."
+        },
+        {
+          "name": "contentDescription",
+          "jsonType": [
+            "string",
+            "null"
+          ],
+          "required": false,
+          "allowedValues": []
+        },
+        {
+          "name": "contentScale",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "crop",
+            "fit",
+            "fillBounds",
+            "inside"
+          ]
+        },
+        {
+          "name": "alignment",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": []
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxSize",
+        "fillMaxWidth",
+        "clip",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "fillMaxHeight",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Draws the bytes the design's assets map pins under assetKey (content-addressed, hash-checked, stored by the host), the project-owned Jetcaster covers, or a visible placeholder carrying the key. External URLs are not accepted."
+      },
+      "code": {
+        "symbol": "Image",
+        "imports": [
+          "androidx.compose.foundation.Image",
+          "androidx.compose.ui.layout.ContentScale"
+        ]
+      },
+      "svg": {
+        "status": "raster-fallback-required",
+        "fallback": "embedded-raster",
+        "blocksExport": false,
+        "notes": "The recorder embeds the pinned asset bytes, or the project-owned artwork, with source and payload provenance; a key with no bytes behind it is drawn as a vector placeholder rather than declared as a raster fallback."
+      }
+    }
+  ],
+  "exportCapabilities": {
+    "composeCode": true,
+    "svg": false,
+    "png": false,
+    "bundle": false
+  }
+}

@@ -1,7 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
-import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -46,20 +45,30 @@ class WearScreenNewDesignTest {
    * `ScreenScaffold` exists to hold a `TransformingLazyColumn`; its `contentPadding` means nothing
    * until something reads it, and the generator refuses a scaffold whose content slot holds
    * anything else. Opening on the pair is opening on the shape of the thing.
+   *
+   * In the vocabulary `wear-m3` publishes: the clock and the scroll indicator are components in the
+   * scaffold's slots, and the list opens on its header, because the published list requires an
+   * item.
    */
   @Test
-  fun `the empty screen opens on a scaffold over an empty list`() {
+  fun `the empty screen opens on a scaffold over a list with only its header`() {
     val document = seed("wear-screen")
 
     assertEquals(listOf("wear-screen"), document.roots)
     val scaffold = document.nodes.getValue("wear-screen")
     assertEquals("wear-m3/screen-scaffold", scaffold.componentId)
     assertEquals(listOf("wear-list"), scaffold.slots.getValue("content"))
-    assertEquals("10:10", scaffold.property("timeText"))
-    assertEquals("true", scaffold.property("scrollIndicator"))
+    assertEquals(
+      "wear-m3/time-text",
+      document.nodes.getValue(scaffold.slots.getValue("timeText").single()).componentId,
+    )
+    assertEquals(
+      "wear-m3/scroll-indicator",
+      document.nodes.getValue(scaffold.slots.getValue("scrollIndicator").single()).componentId,
+    )
     val list = document.nodes.getValue("wear-list")
     assertEquals("wear-m3/transforming-lazy-column", list.componentId)
-    assertTrue(list.slots.getValue("items").isEmpty())
+    assertEquals(listOf("list-header"), list.slots.getValue("items"))
   }
 
   /**
@@ -128,9 +137,6 @@ class WearScreenNewDesignTest {
       is WearScreenCodeExporter.Result.Emitted -> result.source
       is WearScreenCodeExporter.Result.Refused -> error(result.reasons.joinToString("\n"))
     }
-
-  private fun UiBuilderNode.property(name: String): String =
-    properties[name]?.jsonObject?.get("value")?.jsonPrimitive?.content.orEmpty()
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 }

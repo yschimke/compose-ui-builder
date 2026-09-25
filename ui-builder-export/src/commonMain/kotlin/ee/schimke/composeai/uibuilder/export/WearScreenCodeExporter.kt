@@ -136,7 +136,15 @@ object WearScreenCodeExporter {
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
     val name = document.screenIdentifier()
-    val timeText = root.text("timeText")
+    // The clock: a `timeText` string on the scaffold in the retired vocabulary, a
+    // `wear-m3/time-text` component in its `timeText` slot in the one catalogs publish.
+    val timeText =
+      root.text("timeText")?.let { "TimeText { timeTextCurvedText(${it.quoted()}) }" }
+        ?: root.slots["timeText"]
+          ?.firstOrNull()
+          ?.let(document.nodes::get)
+          ?.takeIf { it.componentId == TIME_TEXT }
+          ?.let { "TimeText()" }
     return Result.Emitted(
       screenName = name,
       source =
@@ -161,9 +169,7 @@ object WearScreenCodeExporter {
             // `AppScaffold` is what owns `TimeText` upstream — `ScreenScaffold` has no `timeText`
             // argument of its own — so a design that declares one generates the pair rather than
             // an argument that does not exist.
-            appendLine(
-              "${INDENT}AppScaffold(timeText = { TimeText { timeTextCurvedText(${timeText.quoted()}) } }) {"
-            )
+            appendLine("${INDENT}AppScaffold(timeText = { $timeText }) {")
           } else {
             appendLine("${INDENT}AppScaffold {")
           }
@@ -188,7 +194,8 @@ object WearScreenCodeExporter {
           // a long screenshot must not carry dashes at a different offset in every slice, which is
           // the platform's own reason for `LocalScrollCaptureInProgress` rather than a preview
           // concession.
-          if (root.flag("scrollIndicator") ?: true) {
+          // A slot in the published vocabulary, a flag in the retired one.
+          if (root.slots["scrollIndicator"]?.isNotEmpty() ?: root.flag("scrollIndicator") ?: true) {
             appendLine(
               "${INDENT}${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
             )
@@ -269,6 +276,12 @@ object WearScreenCodeExporter {
   const val TEXT = "wear-m3/text"
 
   const val CARD = "wear-m3/card"
+
+  /** Published `TitleCard`, with its title, subtitle and time as slots rather than a column. */
+  const val TITLE_CARD = "wear-m3/title-card"
+
+  /** Published `TimeText`, placed in the scaffold's `timeText` slot. */
+  const val TIME_TEXT = "wear-m3/time-text"
 
   const val BUTTON = "wear-m3/button"
 
@@ -587,10 +600,14 @@ internal class WearContentEmitter(
         // on the header. Both were declared and read by nobody — a design that truncated its header
         // to one line got as many as the string wrapped to.
         val label = node.labelArguments()
+        // The published header holds its label as a child rather than as `text`.
+        val content = node.slots["content"].orEmpty()
         listOf("${pad}ListHeader(") +
           surfaceArguments(pad + INDENT, nodeId, transformed, "ListHeader") +
           listOf("${pad}) {") +
-          (if (label.isEmpty()) {
+          (if (content.isNotEmpty()) {
+            content.flatMap { emit(it, depth + 1) }
+          } else if (label.isEmpty()) {
             listOf("${pad}${INDENT}Text(text = ${node.string("text").quoted()})")
           } else {
             listOf("${pad}${INDENT}Text(") +
@@ -599,6 +616,27 @@ internal class WearContentEmitter(
               listOf("${pad}${INDENT})")
           }) +
           listOf("${pad}}")
+      }
+      WearScreenCodeExporter.TITLE_CARD -> {
+        usesCard = true
+        fun lambda(slot: String): List<String> =
+          node.slots[slot]
+            .orEmpty()
+            .takeIf { it.isNotEmpty() }
+            ?.let { children ->
+              listOf("${pad}${INDENT}$slot = {") +
+                children.flatMap { emit(it, depth + 2) } +
+                listOf("${pad}${INDENT}},")
+            }
+            .orEmpty()
+        val content = node.slots["content"].orEmpty()
+        listOf("${pad}TitleCard(", "${pad}${INDENT}onClick = {},") +
+          lambda("title") +
+          lambda("subtitle") +
+          lambda("time") +
+          surfaceArguments(pad + INDENT, nodeId, transformed, "TitleCard") +
+          if (content.isEmpty()) listOf("${pad})")
+          else listOf("${pad}) {") + content.flatMap { emit(it, depth + 1) } + listOf("${pad}}")
       }
       WearScreenCodeExporter.CARD -> {
         val content = node.slots["content"].orEmpty()

@@ -38,13 +38,69 @@ class SeedTemplateCatalogReadinessTest {
   private val fixture =
     Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
 
-  /** The three catalogs the builder serves, each with its frozen capability document. */
+  /**
+   * The built-in catalog, as this build defines it: `m3-catalog` is the one catalog an instance
+   * serves without publishing anything.
+   *
+   * `wear-m3` and `remote-m3` are not here. Their frozen documents describe the Kotlin catalogs
+   * this repository used to carry; they are served only as published now, so [publishedCatalogs] is
+   * the whole question for them.
+   */
   private val catalogs: Map<String, CapabilityCatalog> =
+    mapOf("m3-catalog" to catalog("/m3-catalog-capabilities-v1.json"))
+
+  /**
+   * The same three catalogs as a deployment actually serves them: composed from the
+   * `ui-builder.json` each catalog repository publishes (`m3-catalog-out`, and
+   * `wear-m3-catalog-out`'s `wear-m3-catalog` and `remote-m3`), with the builder's own vocabulary
+   * added — captured from a running server's `listCatalogs`.
+   *
+   * The frozen documents above are what the retired Kotlin catalogs described. Every template
+   * validated against those while the published catalogs refused five of them, so a new Wear design
+   * on preview.coo.ee answered with a redirect to a design that was never created. These are what a
+   * template has to satisfy now; refresh them from a server when a catalog republishes.
+   */
+  private val publishedCatalogs: Map<String, CapabilityCatalog> =
     mapOf(
-      "m3-catalog" to catalog("/m3-catalog-capabilities-v1.json"),
-      "wear-m3" to catalog("/wear-m3-capabilities-v1.json"),
-      "remote-m3" to catalog("/remote-m3-capabilities-v1.json"),
+      "m3-catalog" to catalog("/published/m3-catalog-capabilities-v1.json"),
+      "wear-m3" to catalog("/published/wear-m3-capabilities-v1.json"),
+      "remote-m3" to catalog("/published/remote-m3-capabilities-v1.json"),
     )
+
+  @Test
+  fun `every template of every catalog validates against the catalog as published`() {
+    val failures = publishedCatalogs.flatMap { (systemId, catalog) ->
+      UiBuilderNewDesignSeed.templateIds(systemId).sorted().mapNotNull { templateId ->
+        val validation = CapabilityValidator(catalog).validate(seed(systemId, templateId))
+        if (validation.structurallyValid) null
+        else "$systemId/$templateId: ${validation.issues.joinToString { it.message }}"
+      }
+    }
+
+    assertEquals(emptyList(), failures, failures.joinToString("\n"))
+  }
+
+  @Test
+  fun `every template but jetcaster generates source against the catalog as published`() {
+    val failures = publishedCatalogs.flatMap { (systemId, catalog) ->
+      UiBuilderNewDesignSeed.templateIds(systemId)
+        .sorted()
+        .filter { "$systemId/$it" !in NOT_EXPORTABLE }
+        .mapNotNull { templateId ->
+          when (val outcome = generate(catalog, seed(systemId, templateId))) {
+            is Generated.Source -> {
+              val file = sourceDirectory.resolve("published/$systemId-$templateId.kt")
+              file.parentFile.mkdirs()
+              file.writeText(outcome.kotlin)
+              null
+            }
+            is Generated.Refused -> "$systemId/$templateId: ${outcome.reasons.joinToString("; ")}"
+          }
+        }
+    }
+
+    assertEquals(emptyList(), failures, failures.joinToString("\n"))
+  }
 
   @Test
   fun `every template of every catalog validates against that catalog`() {

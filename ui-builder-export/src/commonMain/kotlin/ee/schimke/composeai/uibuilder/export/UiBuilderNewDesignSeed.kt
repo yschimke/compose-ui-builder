@@ -35,8 +35,10 @@ object UiBuilderNewDesignSeed {
    */
   fun templateIds(catalogSystemId: String): Set<String> =
     when (catalogSystemId) {
+      // Not `AdaptiveWearWidget.TEMPLATE_ID`: its `remote-m3/widget-container-adaptive` is a
+      // component the published `remote-m3` does not declare, so every create of it was refused.
       "remote-m3" ->
-        setOf("wear-widget-small", "wear-widget-large", AdaptiveWearWidget.TEMPLATE_ID) +
+        setOf("wear-widget-small", "wear-widget-large") +
           WearWidgetSample.entries.map(WearWidgetSample::templateId)
       "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
       else -> setOf("blank", DEFAULT_TEMPLATE)
@@ -73,26 +75,26 @@ object UiBuilderNewDesignSeed {
     val environment = fixtureDocument.environment
     val widgetSample = WearWidgetSample.forTemplate(templateId)
     return when {
+      // The add-on catalogs' templates are written in the vocabulary those catalogs publish —
+      // see [PublishedCatalogSeeds] for why that differs from the sample documents' own.
       catalogSystemId == "remote-m3" && widgetSample != null ->
-        widgetSample.document(
-          designId = designId,
-          catalogPin = catalogPin,
-          environment = environment,
+        PublishedCatalogSeeds.remoteWidget(
+          widgetSample.document(
+            designId = designId,
+            catalogPin = catalogPin,
+            environment = environment,
+          )
         )
       // The Wear frame, not the fixture's handset: the scaffold reads its diameter from the
       // document, so seeding a watch design on a phone would draw the smallest watch while the
       // Screen inspector said "Pixel".
-      catalogSystemId == "wear-m3" && templateId == WEAR_LIST_TEMPLATE ->
-        wearScreenUiBuilderDocument(
-          designId = designId,
-          catalogPin = catalogPin,
-          environment = wearScreenEnvironment(environment),
-        )
       catalogSystemId == "wear-m3" ->
-        blankWearScreenUiBuilderDocument(
+        PublishedCatalogSeeds.wearScreen(
           designId = designId,
           catalogPin = catalogPin,
           environment = wearScreenEnvironment(environment),
+          title = if (templateId == WEAR_LIST_TEMPLATE) "Activity" else "Title",
+          rows = if (templateId == WEAR_LIST_TEMPLATE) WEAR_SCREEN_ROWS else emptyList(),
         )
       catalogSystemId == "remote-m3" && templateId == AdaptiveWearWidget.TEMPLATE_ID ->
         AdaptiveWearWidget.newDocument(
@@ -119,7 +121,11 @@ object UiBuilderNewDesignSeed {
           environment = mobileScreenEnvironment(environment),
           state = state,
         )
-      else -> fixtureDocument.copy(id = designId, revision = 0, catalogPin = catalogPin)
+      else ->
+        PublishedCatalogSeeds.withoutNodes(
+          fixtureDocument.copy(id = designId, revision = 0, catalogPin = catalogPin),
+          setOf("m3/snackbar-host"),
+        )
     }
   }
 }
