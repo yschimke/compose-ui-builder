@@ -914,8 +914,11 @@ private fun RenderNode(
         }
       "wear-m3/button-group" -> {
         val children = slot("children")
-        WearCanvasButtonGroup(childCount = children.size, modifier = measured) { index ->
-          child(children[index], Modifier)
+        WearCanvasButtonGroup(
+          weights = children.map { document.nodes[it]?.layoutWeight()?.weight },
+          modifier = measured,
+        ) { index, weighted ->
+          child(children[index], weighted)
         }
       }
       "wear-m3/icon-button" ->
