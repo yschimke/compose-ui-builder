@@ -245,6 +245,8 @@ internal fun openHostDesign(messageJson: String, generation: Int): HostOpenedDes
         fixture = Json.parseToJsonElement(seed.fixture).jsonObject,
       )
     }
+  // Never a design against another catalog's components — see [catalogPinMismatch].
+  catalogPinMismatch(document, catalog)?.let { throw IllegalArgumentException(it) }
   return HostOpenedDesign(
     document = document,
     catalog = catalog,

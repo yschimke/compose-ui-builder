@@ -664,6 +664,10 @@ class UiBuilderEditorReducer(
    */
   private fun pasteDestination(state: UiBuilderEditorState): ParentSlot? {
     val clipboard = state.clipboard?.takeIf { it.rootNodeIds.isNotEmpty() } ?: return null
+    // Every copied node, not only the roots: the clipboard outlives the design it was copied from,
+    // and a Column copied out of an m3 screen is a Column remote-m3 has, holding a Button it does
+    // not. The validator refuses that batch — but only after Paste was offered and pressed.
+    if (clipboard.nodes.values.any { it.componentId !in catalog.componentsById }) return null
     val capabilities = clipboard.rootComponentIds.map { catalog.componentsById[it] ?: return null }
     val destination =
       capabilities.map { findDestination(state.document, state.selectedNodeId, it) }.distinct()
