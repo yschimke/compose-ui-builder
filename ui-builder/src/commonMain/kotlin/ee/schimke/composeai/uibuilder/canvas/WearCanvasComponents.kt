@@ -466,11 +466,19 @@ internal fun WearCanvasEdgeButton(
  */
 @Composable
 internal fun WearCanvasButtonGroup(
-  childCount: Int,
+  weights: List<Float?>,
   modifier: Modifier = Modifier,
-  child: @Composable (Int) -> Unit,
+  child: @Composable (index: Int, modifier: Modifier) -> Unit,
 ) {
-  ButtonGroup(modifier = modifier.fillMaxWidth()) { repeat(childCount) { index -> child(index) } }
+  ButtonGroup(modifier = modifier.fillMaxWidth()) {
+    // Each child's `weight` is `ButtonGroupScope.weight`, which only this scope can write, so the
+    // group applies it rather than the child's own chain — the way `Row` and `Column` read
+    // `layoutWeight` for theirs. Without it Jetcaster's 0.7 / 0.3 play and queue buttons drew
+    // as equals on the canvas while the generated screen weighted them.
+    weights.forEachIndexed { index, weight ->
+      child(index, if (weight != null) Modifier.weight(weight) else Modifier)
+    }
+  }
 }
 
 /** `IconButton` and `TextButton` share a variant vocabulary, so they share this mapping. */

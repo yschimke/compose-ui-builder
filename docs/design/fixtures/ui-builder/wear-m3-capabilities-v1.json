@@ -12081,6 +12081,13 @@
                     "name": "sizeDp",
                     "notes": "The icon's box. Wear's own default is 24dp inside a button.",
                     "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentDescription",
+                    "notes": "What a screen reader says for the icon. Leave it empty beside a label, which already names the action; set it when the icon is the whole button — an icon button's only accessible name is this.",
+                    "required": false
                 }
             ],
             "role": "Leaf",
@@ -12106,7 +12113,13 @@
             "code": null,
             "componentId": "wear-m3/icon-button",
             "displayName": "Icon button",
-            "modifierCapabilities": [],
+            "modifierCapabilities": [
+                "weight",
+                "size",
+                "width",
+                "padding",
+                "testTag"
+            ],
             "properties": [
                 {
                     "allowedValues": [
@@ -12159,7 +12172,13 @@
             "code": null,
             "componentId": "wear-m3/text-button",
             "displayName": "Text button",
-            "modifierCapabilities": [],
+            "modifierCapabilities": [
+                "weight",
+                "size",
+                "width",
+                "padding",
+                "testTag"
+            ],
             "properties": [
                 {
                     "allowedValues": [

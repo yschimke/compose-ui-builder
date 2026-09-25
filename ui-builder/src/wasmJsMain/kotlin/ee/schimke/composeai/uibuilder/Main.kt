@@ -147,7 +147,11 @@ fun main() {
     return
   }
   ComposeViewport(viewportContainerId = "composeApp") {
-    if (liveSessionEnabled()) LiveSessionApp() else VisualFixtureApp(captureMode())
+    when {
+      hostBridgeEnabled() -> HostBridgeApp()
+      liveSessionEnabled() -> LiveSessionApp()
+      else -> VisualFixtureApp(captureMode())
+    }
   }
 }
 
@@ -220,10 +224,20 @@ internal fun CatalogRuntimeCanvas(
 ) {
   val runtimeId = document.catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull.orEmpty()
   val surfaceId = remember { nextCatalogRuntimeSurfaceId() }
+  // The runtime is sent the document and nothing else, and cannot fetch the design's uploaded
+  // pictures from its sandbox, so the ones the editor has fetched travel inside it.
+  val runtimeDocument = document.withInlinedUploadedAssets(LocalUiBuilderAssetBytes.current)
   val documentJson =
-    remember(document) { inspectionJson.encodeToString(UiBuilderDocument.serializer(), document) }
+    remember(runtimeDocument) {
+      inspectionJson.encodeToString(UiBuilderDocument.serializer(), runtimeDocument)
+    }
   var lastInspection by remember(surfaceId) { mutableStateOf("") }
+  var runtimeSnapshot by remember(surfaceId) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
   var coordinates by remember(surfaceId) { mutableStateOf<LayoutCoordinates?>(null) }
+  // Where the surface sits and how large it is drawn, in window pixels. A canvas zoom scales the
+  // runtime's frame without re-rendering it, so its snapshot stays valid but has to be mapped
+  // again.
+  var placement by remember(surfaceId) { mutableStateOf<Rect?>(null) }
   // Compose's window coordinates are canvas pixels and the host `div` is placed in CSS pixels. On
   // a display whose `devicePixelRatio` is not 1 the two differ by exactly this density.
   val pixelsPerCssPixel = LocalDensity.current.density
@@ -238,14 +252,18 @@ internal fun CatalogRuntimeCanvas(
         }
           .getOrNull()
           ?.takeIf { it.documentId == document.id && it.documentRevision == document.revision }
-          ?.let { snapshot ->
-            coordinates
-              ?.let { UiBuilderCanvasInspection(snapshot, snapshot.inEditorCoordinates(it)) }
-              ?.let(onInspectionSnapshot)
-          }
+          ?.let { runtimeSnapshot = it }
       }
       delay(100)
     }
+  }
+  // Mapped into the editor whenever either side moves: a new snapshot, or the same snapshot under a
+  // zoom or scroll. Mapped only once, the selection and drop overlays stayed where the canvas had
+  // been when the runtime first answered, and drifted off the design as soon as it was zoomed.
+  LaunchedEffect(runtimeSnapshot, placement) {
+    val snapshot = runtimeSnapshot ?: return@LaunchedEffect
+    val current = coordinates?.takeIf { it.isAttached } ?: return@LaunchedEffect
+    onInspectionSnapshot(UiBuilderCanvasInspection(snapshot, snapshot.inEditorCoordinates(current)))
   }
   DisposableEffect(surfaceId) {
     mountCatalogRuntimeSurface(surfaceId)
@@ -283,6 +301,13 @@ internal fun CatalogRuntimeCanvas(
       }
       .onGloballyPositioned { nextCoordinates ->
         coordinates = nextCoordinates
+        placement =
+          Rect(
+            nextCoordinates.localToWindow(Offset.Zero),
+            nextCoordinates.localToWindow(
+              Offset(nextCoordinates.size.width.toFloat(), nextCoordinates.size.height.toFloat())
+            ),
+          )
         positionCatalogRuntimeSurface(
           surfaceId,
           nextCoordinates,

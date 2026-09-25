@@ -1,0 +1,545 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "jetcaster-wear-queue",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Jetcaster queue · compose-samples Jetcaster Wear",
+      "catalogPin": {
+        "systemId": "wear-m3",
+        "catalogRevision": "wear-screen-scaffold-v1",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 192,
+        "heightDp": 192,
+        "density": 2,
+        "theme": "dark",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false,
+        "exportDevices": [
+          "id:wearos_small_round",
+          "id:wearos_xl_round"
+        ]
+      },
+      "stateVariables": {}
+    },
+    {
+      "operationId": "insert-screen",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "screen",
+        "componentId": "wear-m3/screen-scaffold",
+        "properties": {
+          "timeText": {
+            "type": "string",
+            "value": "10:10"
+          },
+          "scrollIndicator": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-list",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "screen",
+        "slot": "content"
+      },
+      "node": {
+        "id": "list",
+        "componentId": "wear-m3/transforming-lazy-column",
+        "properties": {
+          "transformation": {
+            "type": "enum",
+            "value": "spec"
+          },
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 4
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-queue-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "queue-title",
+        "componentId": "wear-m3/list-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Queue"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-queue-actions",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "queue-actions",
+        "componentId": "wear-m3/button-group"
+      },
+      "afterNodeId": "queue-title"
+    },
+    {
+      "operationId": "insert-play-all",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-actions",
+        "slot": "children"
+      },
+      "node": {
+        "id": "play-all",
+        "componentId": "wear-m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 0.7
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-play-all-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "play-all",
+        "slot": "content"
+      },
+      "node": {
+        "id": "play-all-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/playArrow"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Play episodes"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-clear-queue",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-actions",
+        "slot": "children"
+      },
+      "node": {
+        "id": "clear-queue",
+        "componentId": "wear-m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 0.3
+          }
+        ]
+      },
+      "afterNodeId": "play-all"
+    },
+    {
+      "operationId": "insert-clear-queue-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "clear-queue",
+        "slot": "content"
+      },
+      "node": {
+        "id": "clear-queue-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/delete"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Delete queue"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-queue-0",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "queue-0",
+        "componentId": "wear-m3/button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled-tonal"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "queue-actions"
+    },
+    {
+      "operationId": "insert-queue-0-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-0",
+        "slot": "content"
+      },
+      "node": {
+        "id": "queue-0-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/podcasts"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-queue-0-lines",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-0",
+        "slot": "content"
+      },
+      "node": {
+        "id": "queue-0-lines",
+        "componentId": "layout/column"
+      },
+      "afterNodeId": "queue-0-icon"
+    },
+    {
+      "operationId": "insert-queue-0-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-0-lines",
+        "slot": "children"
+      },
+      "node": {
+        "id": "queue-0-title",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Episode 140: Lorem ipsum dolor"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-queue-0-detail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-0-lines",
+        "slot": "children"
+      },
+      "node": {
+        "id": "queue-0-detail",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Jun 2, 2020 • 45 mins"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      },
+      "afterNodeId": "queue-0-title"
+    },
+    {
+      "operationId": "insert-queue-1",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "queue-1",
+        "componentId": "wear-m3/button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled-tonal"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "queue-0"
+    },
+    {
+      "operationId": "insert-queue-1-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-1",
+        "slot": "content"
+      },
+      "node": {
+        "id": "queue-1-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/podcasts"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-queue-1-lines",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-1",
+        "slot": "content"
+      },
+      "node": {
+        "id": "queue-1-lines",
+        "componentId": "layout/column"
+      },
+      "afterNodeId": "queue-1-icon"
+    },
+    {
+      "operationId": "insert-queue-1-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-1-lines",
+        "slot": "children"
+      },
+      "node": {
+        "id": "queue-1-title",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Episode 141: Material 3 for Wear"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-queue-1-detail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-1-lines",
+        "slot": "children"
+      },
+      "node": {
+        "id": "queue-1-detail",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Jun 16, 2020 • 38 mins"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      },
+      "afterNodeId": "queue-1-title"
+    },
+    {
+      "operationId": "insert-queue-2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "queue-2",
+        "componentId": "wear-m3/button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled-tonal"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "queue-1"
+    },
+    {
+      "operationId": "insert-queue-2-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-2",
+        "slot": "content"
+      },
+      "node": {
+        "id": "queue-2-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/podcasts"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-queue-2-lines",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-2",
+        "slot": "content"
+      },
+      "node": {
+        "id": "queue-2-lines",
+        "componentId": "layout/column"
+      },
+      "afterNodeId": "queue-2-icon"
+    },
+    {
+      "operationId": "insert-queue-2-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-2-lines",
+        "slot": "children"
+      },
+      "node": {
+        "id": "queue-2-title",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Episode 142: Compose on the wrist"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-queue-2-detail",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "queue-2-lines",
+        "slot": "children"
+      },
+      "node": {
+        "id": "queue-2-detail",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Jun 30, 2020 • 52 mins"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelSmall"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      },
+      "afterNodeId": "queue-2-title"
+    }
+  ],
+  "expectedDocumentHash": "09b1e5219eca7b248f64f970659ff277a11e94bd32a3f4e7dfddf55f086b8731"
+}

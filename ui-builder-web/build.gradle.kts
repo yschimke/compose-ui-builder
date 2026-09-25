@@ -38,10 +38,19 @@ version =
 // land the server's support for the new number first.
 val serverApiVersion = 1
 
+// The host-bridge postMessage contract (`HostBridgeApp.kt`) an IDE host speaks to embed this
+// editor over a document it owns — the VS Code extension's custom editor for `.uid` files. The
+// same idea as `serverApi`, for the host that has no server: a host refuses an archive whose number
+// it does not support rather than opening an editor that never answers. Absent means no bridge.
+// Bump it only for a change to the messages an existing host cannot handle.
+val hostBridgeVersion = 1
+
 abstract class WriteUiBuilderWebManifest : DefaultTask() {
   @get:Input abstract val editorVersion: Property<String>
 
   @get:Input abstract val serverApi: Property<Int>
+
+  @get:Input abstract val hostBridge: Property<Int>
 
   @get:OutputFile abstract val manifestFile: RegularFileProperty
 
@@ -52,7 +61,7 @@ abstract class WriteUiBuilderWebManifest : DefaultTask() {
       .asFile
       .writeText(
         """{"schema":"compose-ui-builder-web/v1","version":"${editorVersion.get()}",""" +
-          """"serverApi":${serverApi.get()}}""" +
+          """"serverApi":${serverApi.get()},"hostBridge":${hostBridge.get()}}""" +
           "\n"
       )
   }
@@ -63,6 +72,7 @@ val webManifest =
     description = "Write the editor's version and server-API contract into the archive root."
     editorVersion.set(project.version.toString())
     serverApi.set(serverApiVersion)
+    hostBridge.set(hostBridgeVersion)
     manifestFile.set(layout.buildDirectory.file("web-manifest/ui-builder-web.json"))
   }
 
@@ -122,6 +132,8 @@ abstract class VerifyUiBuilderWebArchive : DefaultTask() {
           "skiko.wasm",
           "m3-catalog-capabilities-v1.json",
           "jetcaster-discover-operations-v1.json",
+          "wear-m3-capabilities-v1.json",
+          "remote-m3-capabilities-v1.json",
           "fonts/fonts.json",
           "ui-builder-web.json",
         )

@@ -1,0 +1,302 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "jetcaster-wear-episode",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Jetcaster episode · compose-samples Jetcaster Wear",
+      "catalogPin": {
+        "systemId": "wear-m3",
+        "catalogRevision": "wear-screen-scaffold-v1",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 192,
+        "heightDp": 192,
+        "density": 2,
+        "theme": "dark",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false,
+        "exportDevices": [
+          "id:wearos_small_round",
+          "id:wearos_xl_round"
+        ]
+      },
+      "stateVariables": {}
+    },
+    {
+      "operationId": "insert-screen",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "screen",
+        "componentId": "wear-m3/screen-scaffold",
+        "properties": {
+          "timeText": {
+            "type": "string",
+            "value": "10:10"
+          },
+          "scrollIndicator": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-list",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "screen",
+        "slot": "content"
+      },
+      "node": {
+        "id": "list",
+        "componentId": "wear-m3/transforming-lazy-column",
+        "properties": {
+          "transformation": {
+            "type": "enum",
+            "value": "spec"
+          },
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 4
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-episode-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "episode-title",
+        "componentId": "wear-m3/list-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Episode 140: Lorem ipsum dolor"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-episode-actions",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "episode-actions",
+        "componentId": "wear-m3/button-group"
+      },
+      "afterNodeId": "episode-title"
+    },
+    {
+      "operationId": "insert-play",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "episode-actions",
+        "slot": "children"
+      },
+      "node": {
+        "id": "play",
+        "componentId": "wear-m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 0.7
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-play-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "play",
+        "slot": "content"
+      },
+      "node": {
+        "id": "play-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/playArrow"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Play episodes"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-add-to-queue",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "episode-actions",
+        "slot": "children"
+      },
+      "node": {
+        "id": "add-to-queue",
+        "componentId": "wear-m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 0.3
+          }
+        ]
+      },
+      "afterNodeId": "play"
+    },
+    {
+      "operationId": "insert-add-to-queue-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "add-to-queue",
+        "slot": "content"
+      },
+      "node": {
+        "id": "add-to-queue-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/playlistAdd"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Add to queue"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-episode-author",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "episode-author",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Android Developers"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyMedium"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      },
+      "afterNodeId": "episode-actions"
+    },
+    {
+      "operationId": "insert-episode-published",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "episode-published",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Jun 2, 2020 • 45 mins"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          },
+          "maxLines": {
+            "type": "int",
+            "value": 1
+          },
+          "overflow": {
+            "type": "enum",
+            "value": "ellipsis"
+          }
+        }
+      },
+      "afterNodeId": "episode-author"
+    },
+    {
+      "operationId": "insert-episode-summary",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "episode-summary",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "In this episode, Romain, Chet and Tor talked with Mady Melor and Artur Tsurkan from the System UI team about... Bubbles!"
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodySmall"
+          }
+        }
+      },
+      "afterNodeId": "episode-published"
+    }
+  ],
+  "expectedDocumentHash": "ed43493cb5e2ea777ffe5c41a1c5d08097e8d542ad9dcaffac1245f4b1d10985"
+}

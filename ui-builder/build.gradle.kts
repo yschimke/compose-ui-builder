@@ -227,6 +227,25 @@ tasks.named<Test>("jvmTest") {
   systemProperty("uiBuilderProjectDir", projectDir.absolutePath)
 }
 
+// Canvas frame times over the Jetcaster fixture on the JVM desktop backend, not the Wasm canvas
+// (#193). Reports, does not gate: `jvmTest` skips the benchmark, and this runs it alone and writes
+// the numbers CI keeps as an artifact.
+tasks.register<Test>("canvasFrameBenchmark") {
+  description = "Measures editor edit-to-canvas time over the Jetcaster fixture."
+  group = "verification"
+  val jvmTest = tasks.named<Test>("jvmTest").get()
+  testClassesDirs = jvmTest.testClassesDirs
+  classpath = jvmTest.classpath
+  javaLauncher.set(jvmTest.javaLauncher)
+  filter.includeTestsMatching("*.CanvasFrameTimeBenchmark")
+  val report = layout.buildDirectory.file("reports/ui-builder/canvas-frame-times.json")
+  outputs.file(report)
+  outputs.upToDateWhen { false }
+  systemProperty("uiBuilder.canvasBenchmark", "true")
+  systemProperty("uiBuilder.canvasBenchmark.report", report.get().asFile.absolutePath)
+  testLogging.showStandardStreams = true
+}
+
 tasks.register<JavaExec>("generateJetcasterComposeFixture") {
   description = "Generate the standalone Jetcaster Compose source from the frozen public document."
   group = "code generation"
@@ -371,6 +390,11 @@ tasks.register<Sync>("wasmFrontendDist") {
       "confetti-schedule-operations-v1.json",
       "m3-catalog-capabilities-v1.json",
       "jetcaster-discover-operations-v1.json",
+      // Not fetched by the page: host-bridge hosts read these from the unpacked archive and
+      // hand the one a design pins to the editor with the document (see HostBridgeApp.kt), so a
+      // host can open a design in any of the three offline catalogs, not only Material 3.
+      "wear-m3-capabilities-v1.json",
+      "remote-m3-capabilities-v1.json",
     )
   }
   from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {

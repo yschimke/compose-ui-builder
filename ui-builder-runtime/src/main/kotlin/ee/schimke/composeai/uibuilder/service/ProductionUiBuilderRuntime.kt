@@ -2141,6 +2141,14 @@ private val WEAR_MODIFIERS =
   )
 
 /**
+ * What a button that can sit in a `ButtonGroup` takes: its share of the group, and the few
+ * modifiers that size or tag it. `weight` is `ButtonGroupScope.weight` there, and refused anywhere
+ * without a row, a column or a group to share.
+ */
+private val WEAR_BUTTON_GROUP_CHILD_MODIFIERS =
+  listOf("weight", "size", "width", "padding", "testTag")
+
+/**
  * What a node that paints its own surface can take as well: the clip and the four painting
  * modifiers, which a `Text` or a list has nothing to apply them to.
  */
@@ -2301,6 +2309,7 @@ private fun wearOnlyComponents(
     slots: List<SlotCapabilityV1> = emptyList(),
     extra: String = "",
     drawnBy: String? = null,
+    modifierCapabilities: List<String> = emptyList(),
   ) =
     ComponentCapabilityV1.Builder(
         componentId,
@@ -2318,12 +2327,12 @@ private fun wearOnlyComponents(
         it.traits = traits
         it.slots = slots
         it.properties = properties
-        // No modifier vocabulary, and that is a statement rather than an omission. A Wear control
-        // is
-        // laid out by the list and the scaffold around it — a `CheckboxButton` is a full-width row
-        // whose height upstream fixes — and `WearScreenCodeExporter` writes the whole screen, so
-        // there is no per-node modifier chain for it to carry one into.
-        it.modifierCapabilities = emptyList()
+        // No modifier vocabulary by default, and that is a statement rather than an omission: a
+        // Wear control is laid out by the list and the scaffold around it — a `CheckboxButton` is
+        // a full-width row whose height upstream fixes. The exceptions pass one: an icon button in
+        // a `ButtonGroup` is sized by its `weight`, which is how Jetcaster makes play the wider of
+        // two, and `WearScreenCodeExporter` writes a node's authored chain.
+        it.modifierCapabilities = modifierCapabilities
         it.code = null
         it.svg =
           noStructuredSvg
@@ -2420,6 +2429,12 @@ private fun wearOnlyComponents(
             }
             .build(),
           number("sizeDp", "The icon's box. Wear's own default is 24dp inside a button."),
+          text(
+            "contentDescription",
+            "What a screen reader says for the icon. Leave it empty beside a label, which already " +
+              "names the action; set it when the icon is the whole button — an icon button's only " +
+              "accessible name is this.",
+          ),
         ),
       // The one component in this group the canvas does NOT draw with Wear Compose, and the
       // difference is stated rather than left to be discovered. `BuilderIcon` is the canvas's own
@@ -2450,6 +2465,7 @@ private fun wearOnlyComponents(
               "`m3/button`'s style does.",
           )
         ),
+      modifierCapabilities = WEAR_BUTTON_GROUP_CHILD_MODIFIERS,
     ),
     component(
       componentId = "wear-m3/text-button",
@@ -2467,6 +2483,7 @@ private fun wearOnlyComponents(
               "and the rest — rather than recolouring one.",
           )
         ),
+      modifierCapabilities = WEAR_BUTTON_GROUP_CHILD_MODIFIERS,
     ),
     component(
       componentId = "wear-m3/list-sub-header",
