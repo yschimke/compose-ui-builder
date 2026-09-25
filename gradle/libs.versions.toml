@@ -107,8 +107,10 @@ maven-publish = "0.37.0"
 # `maxHorizontalPartitions` and the Gmail and Calendar samples export. It moves with the daemon and
 # contracts pins below, to the set 2.24.0 itself was built against. 2.25.0 (compose-ai-tools#5575)
 # imports same-named extensions that differ by receiver — Gmail's filled and outlined stars — and
-# writes the generated screen the way Compose is written by hand.
-composeai-tools = "2.25.0"
+# writes the generated screen the way Compose is written by hand. 2.26.0
+# (compose-ai-tools#5581) names a slot lambda's parameter and reads it, which is how a Scaffold's
+# content is padded by the `contentPadding` it is handed; it is built against contracts 3.11.0.
+composeai-tools = "2.26.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
