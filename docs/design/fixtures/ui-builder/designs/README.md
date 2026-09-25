@@ -10,13 +10,14 @@ The chrome moves, so these move with it: when a change lands in `UiBuilderEditor
 screen one of these depicts, the design is updated in the same way it was authored, and the test
 below is what stops the two drifting apart quietly.
 
-They are three things at once:
+They are four things at once:
 
 | Consumer | What it does with a file here |
 | --- | --- |
 | `:ui-builder` `DesignFixturesTest` | replays it, checks the hash, validates every node against the pinned catalog, and requires the Compose export to accept it |
 | `:ui-builder` `DesignFixturePreviews.kt` | renders it as a `@Preview` through `UiBuilderSurface`, so `composePreviewRender` and the visual-diff bot see it |
 | `scripts/ui-builder/design-sync.mjs` | opens it as a live design on a server, and writes a live design back into this shape |
+| `.github/workflows/ui-builder-designs.yml` | renders it with `compose-preview-server design render --local` on a pull request that touches it, and posts the picture. A design compiles only against its own catalog's bundle, so there is one job per catalog over this directory, each picking its designs by the `catalogPin.systemId` in their `createDesign`: `m3-catalog` against m3-catalog's bundle, `wear-m3` against wear-m3-catalog's, each with its own sticky comment and render branches. A design pinned to any other catalog is rendered by neither, so give a new catalog its own job. |
 
 ## Round-tripping with a live server
 
