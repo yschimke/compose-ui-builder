@@ -42,7 +42,6 @@
       "node": {
         "id": "root",
         "componentId": "m3/navigation-suite-scaffold",
-        "properties": {},
         "modifiers": [
           {
             "type": "fillMaxSize"
