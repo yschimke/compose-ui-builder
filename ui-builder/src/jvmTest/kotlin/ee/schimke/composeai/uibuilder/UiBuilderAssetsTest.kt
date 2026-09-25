@@ -38,6 +38,25 @@ import kotlinx.serialization.json.putJsonObject
 class UiBuilderAssetsTest {
 
   @Test
+  fun `a catalog runtime is sent the uploaded pictures the editor fetched, inlined`() {
+    val document =
+      document(
+        node("photo", "remote"),
+        assets = mapOf("remote" to uploaded("sha256:bb"), "later" to uploaded("sha256:cc")),
+      )
+    val inlined = document.withInlinedUploadedAssets { if (it == "sha256:bb") PNG_1X1 else null }
+
+    val remote = assertIs<ResolvedUiBuilderAsset.Embedded>(inlined.resolveAsset("remote"))
+    // Same asset, re-sourced: the digest the design stored survives, only the bytes moved in.
+    assertEquals("sha256:bb", remote.contentDigest)
+    assertTrue(remote.bytes.contentEquals(PNG_1X1))
+    // Not fetched yet: left for the host to fill in on a later post.
+    assertIs<ResolvedUiBuilderAsset.Uploaded>(inlined.resolveAsset("later"))
+    // Nothing to inline is the same document, not a copy that re-posts identical JSON.
+    assertTrue(document.withInlinedUploadedAssets { null } === document)
+  }
+
+  @Test
   fun `a key resolves to the document's registry before anything the build ships`() {
     val document =
       document(

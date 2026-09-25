@@ -173,6 +173,7 @@ import ee.schimke.composeai.uibuilder.DesignRevisionPin
 import ee.schimke.composeai.uibuilder.DesignUrlSelectors
 import ee.schimke.composeai.uibuilder.LOTTIE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.LocalUiBuilderAssetBitmaps
+import ee.schimke.composeai.uibuilder.LocalUiBuilderAssetBytes
 import ee.schimke.composeai.uibuilder.ParentSlot
 import ee.schimke.composeai.uibuilder.REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.RemoteComposeSource
@@ -1967,20 +1968,31 @@ fun UiBuilderEditor(
   // anywhere else in the design finds its pictures already here. A failed fetch or decode is stored
   // as null so the placeholder is drawn once rather than the request retried every recomposition.
   val assetBitmapsByDigest = remember { mutableStateMapOf<String, ImageBitmap?>() }
+  // The encoded bytes too, for catalog runtimes: they draw in a sandboxed frame that is sent the
+  // document and nothing else, so the picture has to travel inside it (`LocalUiBuilderAssetBytes`).
+  val assetBytesByDigest = remember { mutableStateMapOf<String, ByteArray>() }
   val uploadedAssets = state.document.uploadedAssets()
   LaunchedEffect(uploadedAssets, resolveDesignAsset) {
     val resolve = resolveDesignAsset ?: return@LaunchedEffect
     uploadedAssets
       .filterNot { (_, asset) -> assetBitmapsByDigest.containsKey(asset.contentDigest) }
       .forEach { (assetKey, asset) ->
-        assetBitmapsByDigest[asset.contentDigest] =
+        val bytes =
           try {
-            decodeUiBuilderAssetBitmap(resolve(assetKey))
+            resolve(assetKey)
           } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
             throw cancelled
           } catch (_: Throwable) {
             null
           }
+        if (bytes != null) assetBytesByDigest[asset.contentDigest] = bytes
+        assetBitmapsByDigest[asset.contentDigest] = bytes?.let {
+          try {
+            decodeUiBuilderAssetBitmap(it)
+          } catch (_: Throwable) {
+            null
+          }
+        }
       }
   }
   // The URL half of a Lottie element, resolved into the JSON half exactly once.
@@ -2128,6 +2140,7 @@ fun UiBuilderEditor(
     LocalUiBuilderNavigator provides onNavigatePage,
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
     LocalUiBuilderAssetBitmaps provides { digest -> assetBitmapsByDigest[digest] },
+    LocalUiBuilderAssetBytes provides { digest -> assetBytesByDigest[digest] },
     LocalUiBuilderCanvasRenderer provides canvasRenderer,
     // Here for the same reason as the line above it: the canvas, the extent beside it and every
     // variant pane draw the same widget, and all of them should draw the frame being viewed.
@@ -6833,6 +6846,7 @@ private fun ConstrainedFramePane(
   val ambientWidgetHostShape = LocalWearWidgetHostShape.current
   val remoteDocuments = LocalRemoteComposeDocuments.current
   val assetBitmaps = LocalUiBuilderAssetBitmaps.current
+  val assetBytes = LocalUiBuilderAssetBytes.current
   Box(Modifier.size((widthDp * scale).dp, (heightDp * scale).dp)) {
     Surface(
       Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
@@ -6902,6 +6916,7 @@ private fun ConstrainedFramePane(
               LocalWearWidgetHostShape provides (wearWidgetHostShape ?: ambientWidgetHostShape),
               LocalRemoteComposeDocuments provides remoteDocuments,
               LocalUiBuilderAssetBitmaps provides assetBitmaps,
+              LocalUiBuilderAssetBytes provides assetBytes,
             ) {
               UiBuilderSurface(
                 document = document,

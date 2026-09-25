@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.reference.decodeReferenceBitmap
 import kotlin.io.encoding.Base64
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -109,6 +110,51 @@ public val LocalUiBuilderAssetBitmaps: ProvidableCompositionLocal<(String) -> Im
   staticCompositionLocalOf {
     { _ -> null }
   }
+
+/**
+ * The encoded bytes of an uploaded asset, by **content digest**, for hosts that hand a design to a
+ * renderer they cannot share pixels with.
+ *
+ * A catalog runtime draws in a sandboxed, opaque-origin frame: it cannot fetch the design's assets
+ * and must not be given a credential to try. What it can be given is the document, so the host
+ * inlines these bytes into the copy it posts ([withInlinedUploadedAssets]) and the runtime resolves
+ * them as `embedded`. `null` is not available (yet) here, exactly as for
+ * [LocalUiBuilderAssetBitmaps].
+ */
+public val LocalUiBuilderAssetBytes: ProvidableCompositionLocal<(String) -> ByteArray?> =
+  staticCompositionLocalOf {
+    { _ -> null }
+  }
+
+/**
+ * This document with every uploaded asset whose bytes [bytesByDigest] has re-sourced as `embedded`.
+ *
+ * Only the `source` changes: the key, digest and media type stay what the design stored, so a
+ * runtime resolves the same asset it would have asked the host for. Assets whose bytes are not
+ * available yet are left as they are, and a document with none is returned unchanged.
+ */
+internal fun UiBuilderDocument.withInlinedUploadedAssets(
+  bytesByDigest: (String) -> ByteArray?
+): UiBuilderDocument {
+  val inlined =
+    uploadedAssets().mapNotNull { (key, asset) ->
+      val bytes =
+        bytesByDigest(asset.contentDigest)?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+      val binding = assets[key] as? JsonObject ?: return@mapNotNull null
+      key to
+        JsonObject(
+          binding +
+            ("source" to
+              JsonObject(
+                mapOf(
+                  "type" to JsonPrimitive("embedded"),
+                  "base64" to JsonPrimitive(Base64.Default.encode(bytes)),
+                )
+              ))
+        )
+    }
+  return if (inlined.isEmpty()) this else copy(assets = JsonObject(assets + inlined))
+}
 
 /**
  * Bytes to pixels for a design asset. Null rather than throwing, because a picture that does not
