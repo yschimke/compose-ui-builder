@@ -1452,6 +1452,7 @@ internal val REMOTE_M3_MODIFIERS =
     "background",
     "border",
     "clip",
+    "collapsiblePriority",
     "fillMaxHeight",
     "fillMaxSize",
     "fillMaxWidth",
@@ -1462,6 +1463,7 @@ internal val REMOTE_M3_MODIFIERS =
     "padding",
     "rotate",
     "scale",
+    "sharedElement",
     "size",
     "verticalScroll",
     "weight",
@@ -1470,6 +1472,149 @@ internal val REMOTE_M3_MODIFIERS =
     "wrapContentSize",
     "zIndex",
   )
+
+/**
+ * The modifiers only Remote Compose has, offered on every node a widget body lays out.
+ *
+ * Neither is in the borrowed Compose vocabulary, so filtering a borrowed list by
+ * [REMOTE_M3_MODIFIERS] can never produce them: they are appended instead. `sharedElement` matches
+ * an element across the branches of a "Show by state" box and animates its bounds between them.
+ * `collapsiblePriority` is a member of the collapsible scopes; the emitter refuses it anywhere
+ * else.
+ */
+internal val REMOTE_ONLY_MODIFIERS: List<String> = listOf("collapsiblePriority", "sharedElement")
+
+/**
+ * A borrowed modifier list narrowed to what the Remote emitter writes, plus
+ * [REMOTE_ONLY_MODIFIERS].
+ */
+internal fun List<String>.remoteAuthorableModifiers(): List<String> =
+  filter { it in REMOTE_M3_MODIFIERS && it !in REMOTE_ONLY_MODIFIERS } + REMOTE_ONLY_MODIFIERS
+
+/**
+ * The note a component outside the Glance Wear widget profile carries on the palette.
+ *
+ * `remote-creation-compose` publishes it and the builder writes it, but `GlanceWearProfiles` admits
+ * none of its operations, so a widget using it fails to capture on Android. Offered anyway — the
+ * native lane is where that failure shows, and this note is where an author learns of it first.
+ */
+private fun outsideWidgetProfile(operation: String): String =
+  "Not in the Glance Wear widget profile ($operation): the Native / Live render of a widget " +
+    "using it fails while the document is captured."
+
+/**
+ * The layouts `remote-creation-compose` publishes that the packaged foundation does not declare.
+ *
+ * Each has a foundation sibling it is derived from — same slot, same arrangement vocabulary — and
+ * differs in id, name and the call it writes. `layout/flow-row` is not here: the packaged catalog
+ * declares it, and `RemoteFlowRow` takes the same arguments.
+ *
+ * - `layout/fit-box`: `RemoteFitBox`. Its children are alternatives, largest first; it shows the
+ *   first one that fits. In the Glance Wear widget profile (`LAYOUT_FIT_BOX`).
+ * - `layout/collapsible-column` / `layout/collapsible-row`: `RemoteCollapsibleColumn` and
+ *   `RemoteCollapsibleRow`, which HIDE whole children, lowest `collapsiblePriority` first, rather
+ *   than squeezing them. Outside the widget profile — see [outsideWidgetProfile].
+ */
+internal fun remoteOnlyLayout(
+  componentId: String,
+  declared: Map<String, ComponentCapabilityV1>,
+): ComponentCapabilityV1? {
+  fun derived(
+    from: String,
+    displayName: String,
+    notes: String,
+    properties: List<PropertyCapabilityV1>? = null,
+  ): ComponentCapabilityV1 {
+    val donor = declared.getValue(from)
+    return donor
+      .newBuilder()
+      .also {
+        it.componentId = componentId
+        it.displayName = displayName
+        it.slots = donor.slots.map { slot -> slot.acceptingRemoteAuthorable() }
+        properties?.let { declaredProperties -> it.properties = declaredProperties }
+        it.wasm = donor.wasm.newBuilder().also { wasm -> wasm.notes = notes }.build()
+        // Not a Compose call: the regular Compose exporter has no counterpart to write, and the
+        // Remote emitter writes these by id.
+        it.code = null
+      }
+      .build()
+  }
+  return when (componentId) {
+    "layout/fit-box" ->
+      derived(
+        "layout/box",
+        "Fit box",
+        "RemoteFitBox: its children are alternatives, largest first, and it shows the first one that fits.",
+        listOf(
+          PropertyCapabilityV1.Builder("horizontalAlignment", JsonPrimitive("string"))
+            .also {
+              it.allowedValues =
+                listOf(JsonPrimitive("start"), JsonPrimitive("center"), JsonPrimitive("end"))
+              it.notes = "Where the chosen child sits across the box. Centred when absent."
+            }
+            .build(),
+          PropertyCapabilityV1.Builder("verticalArrangement", JsonPrimitive("string"))
+            .also {
+              it.allowedValues =
+                listOf(JsonPrimitive("top"), JsonPrimitive("center"), JsonPrimitive("bottom"))
+              it.notes = "Where the chosen child sits down the box. Centred when absent."
+            }
+            .build(),
+        ),
+      )
+    "layout/collapsible-column" ->
+      derived(
+        "layout/column",
+        "Collapsible column",
+        "RemoteCollapsibleColumn: hides whole children, lowest collapsiblePriority first, when it " +
+          "runs out of height. " +
+          outsideWidgetProfile("LAYOUT_COLLAPSIBLE_COLUMN"),
+      )
+    "layout/collapsible-row" ->
+      derived(
+        "layout/row",
+        "Collapsible row",
+        "RemoteCollapsibleRow: hides whole children, lowest collapsiblePriority first, when it " +
+          "runs out of width. " +
+          outsideWidgetProfile("LAYOUT_COLLAPSIBLE_ROW"),
+      )
+    else -> null
+  }
+}
+
+/**
+ * A container slot narrowed to what `RemoteContentEmitter` can write inside it.
+ *
+ * The donor slots accept `AnyContent`, which would let a document, a gradient or a nested widget
+ * host into a Remote layout — each refused at export. The widget content slots already accept only
+ * `RemoteAuthorable`; the Remote-only layouts take the same rule.
+ */
+private fun SlotCapabilityV1.acceptingRemoteAuthorable(): SlotCapabilityV1 =
+  newBuilder().also { it.acceptedTraits = listOf("RemoteAuthorable") }.build()
+
+/** The ids [remoteOnlyLayout] answers, in palette order. */
+internal val REMOTE_ONLY_LAYOUT_IDS: List<String> =
+  listOf("layout/fit-box", "layout/collapsible-column", "layout/collapsible-row")
+
+/**
+ * `layout/flow-row` narrowed for a widget body: the packaged declaration, with the note that
+ * `LAYOUT_FLOW` is outside the Glance Wear widget profile (it is an experimental-profile
+ * operation).
+ */
+internal fun ComponentCapabilityV1.withWidgetProfileNote(): ComponentCapabilityV1 =
+  if (componentId != "layout/flow-row") this
+  else
+    newBuilder()
+      .also {
+        it.slots = slots.map { slot -> slot.acceptingRemoteAuthorable() }
+        it.wasm =
+          wasm
+            .newBuilder()
+            .also { wasm -> wasm.notes = "RemoteFlowRow. " + outsideWidgetProfile("LAYOUT_FLOW") }
+            .build()
+      }
+      .build()
 
 /**
  * A borrowed component, narrowed to what `RemoteContentEmitter` can write into a widget body.
@@ -1490,7 +1635,7 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
         // geometry to hang a modifier on — the generator refuses every one it finds there. So the
         // gradient offers none, rather than eighteen that each end in a refusal.
         if (componentId == "shape/linear-gradient") emptyList()
-        else modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
+        else modifierCapabilities.remoteAuthorableModifiers()
       // `RemoteAuthorable` is a capability of the Remote Compose emitter, not a property inherited
       // from a mobile component. The reviewed vocabulary does have an emitter branch (or
       // component-record fallback) and may enter a widget body.
@@ -1519,7 +1664,11 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
 internal fun remoteM3ComponentMenu(base: JsonObject): JsonObject =
   RemoteMaterial3.components
     .fold(
-      JsonObject(base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content")))
+      REMOTE_ONLY_LAYOUT_IDS.fold(
+        JsonObject(base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content")))
+      ) { semantics, id ->
+        JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, "Layout")))
+      }
     ) { semantics, component ->
       JsonObject(
         semantics +
@@ -1601,8 +1750,7 @@ private fun remoteMaterial3Components(
           record.parameters.mapNotNull { parameter ->
             remoteMaterial3Property(record.symbol.name, parameter)
           }
-        it.modifierCapabilities =
-          template.modifierCapabilities.filter { name -> name in REMOTE_M3_MODIFIERS }
+        it.modifierCapabilities = template.modifierCapabilities.remoteAuthorableModifiers()
         it.wasm =
           supportedWasm
             .newBuilder()
@@ -1782,6 +1930,8 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "layout/column",
       "layout/row",
       "layout/for-each",
+      "layout/flow-row",
+      *REMOTE_ONLY_LAYOUT_IDS.toTypedArray(),
       "m3/text",
       "remote-compose/document",
       // The way host content gets inside a widget body. A `@RemoteComposable` body cannot call an
@@ -1831,7 +1981,9 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             // Narrowed to what the generator can write; the published-catalog foundation applies
             // the
             // same function.
-            components.getValue(it).narrowedForRemoteAuthoring()
+            (components[it] ?: remoteOnlyLayout(it, components) ?: components.getValue(it))
+              .narrowedForRemoteAuthoring()
+              .withWidgetProfileNote()
           } +
           remoteMaterial3Components(box, contentSlot, supportedWasm, blockedSvg)
     }
@@ -1878,7 +2030,7 @@ private fun lottie(
       it.traits = listOf("RemoteContent", "RemoteAuthorable")
       it.slots = emptyList()
       it.properties = lottieProperties()
-      it.modifierCapabilities = borrowed.modifierCapabilities.filter { it in REMOTE_M3_MODIFIERS }
+      it.modifierCapabilities = borrowed.modifierCapabilities.remoteAuthorableModifiers()
       it.wasm =
         supportedWasm
           .newBuilder()

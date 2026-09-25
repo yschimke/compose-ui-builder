@@ -113,6 +113,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -1260,6 +1261,57 @@ private fun RenderNode(
           // Absent and zero both mean "as many as fit", which is the whole point of the component;
           // a design that wants three per line says three.
           maxItemsInEachRow = node.integer("maxItemsInEachRow").takeIf { it > 0 } ?: Int.MAX_VALUE,
+        ) {
+          slot("children").forEach { child(it, Modifier) }
+        }
+      // Remote Compose's two layouts that HIDE a child rather than squeeze it, lowest
+      // `collapsiblePriority` first. Same arrangement and alignment vocabulary as the eager
+      // column and row, so a design moves between them by changing the id.
+      "layout/collapsible-column",
+      "layout/collapsible-row" -> {
+        val vertical = node.componentId == "layout/collapsible-column"
+        val children = slot("children")
+        val items = children.map { document.nodes.getValue(it) }
+        val shared = items.mapNotNull { it.crossAxisAlignment() }.distinct().singleOrNull()
+        CollapsibleLinearLayout(
+          vertical = vertical,
+          priorities = items.map { it.collapsiblePriority() },
+          // At the extent there is no leftover to share, exactly as in a column.
+          weights =
+            if (LocalUiBuilderUnrolled.current) items.map { null }
+            else items.map { it.layoutWeight()?.weight },
+          horizontalArrangement = node.horizontalArrangement(),
+          verticalArrangement = node.verticalArrangement(),
+          horizontalAlignment = shared?.let(::horizontalAlignmentFor) ?: node.horizontalAlignment(),
+          verticalAlignment =
+            shared?.let(::verticalAlignmentFor)
+              ?: if (vertical) Alignment.Top else node.verticalAlignment(),
+          modifier = measured,
+        ) {
+          children.forEach { child(it, Modifier) }
+        }
+      }
+      // `RemoteFitBox`: the children are alternatives, largest first, and the first that fits is
+      // the one drawn. At the extent everything fits, so the first child is what an author sees
+      // while editing, and the device preview is where the choice is made against the real host.
+      "layout/fit-box" ->
+        FitBoxLayout(
+          alignment =
+            BiasAlignment(
+              horizontalBias =
+                when (node.string("horizontalAlignment")) {
+                  "start" -> -1f
+                  "end" -> 1f
+                  else -> 0f
+                },
+              verticalBias =
+                when (node.string("verticalArrangement")) {
+                  "top" -> -1f
+                  "bottom" -> 1f
+                  else -> 0f
+                },
+            ),
+          modifier = measured,
         ) {
           slot("children").forEach { child(it, Modifier) }
         }
@@ -3306,6 +3358,13 @@ private fun UiBuilderNode.crossAxisAlignment(): String? =
 private fun UiBuilderNode.layoutWeight(): UiBuilderModifierPlan.Weight? =
   modifierPlans().filterIsInstance<UiBuilderModifierPlan.Weight>().firstOrNull()
     ?: float("weight").takeIf { it > 0f }?.let { UiBuilderModifierPlan.Weight(it, null) }
+
+/** The `collapsiblePriority` a collapsible column or row reads off this child, or null for none. */
+private fun UiBuilderNode.collapsiblePriority(): Float? =
+  modifiers
+    .mapNotNull { it as? JsonObject }
+    .firstOrNull { (it["type"] as? JsonPrimitive)?.contentOrNull == "collapsiblePriority" }
+    ?.let { (it["priority"] as? JsonPrimitive)?.floatOrNull ?: 0f }
 
 private fun UiBuilderNode.modifierPlans(): List<UiBuilderModifierPlan> = modifiers.mapNotNull {
   (it as? JsonObject)?.let(::uiBuilderModifier)
