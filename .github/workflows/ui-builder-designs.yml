@@ -5,9 +5,13 @@ name: Design Renders
 #
 # This repository's review surface for a design is pixels, exactly as the catalogs' is: a design is
 # a JSON document of nodes, properties and modifiers, and a text diff of one says nothing about
-# whether the screen still looks right. `docs/design/fixtures/ui-builder/designs/` holds nineteen of
-# them — the editor's own chrome mocks, the Google app designs, the Jetcaster reference — and until
-# now the only way to see what a change to one did was to run a server and open the editor.
+# whether the screen still looks right. `docs/design/fixtures/ui-builder/designs/` holds them — the
+# editor's own chrome mocks, the Google app designs, the Jetcaster reference, and the Wear samples —
+# and until now the only way to see what a change to one did was to run a server and open the editor.
+#
+# Two lanes over that one directory, because a design compiles only against its own catalog's
+# bundle: each call picks its designs by `catalogPin.systemId` (`catalog-id`), and its `lane` keeps
+# its artifacts, sticky comment and render branches apart from the other's.
 #
 # The pipeline is `compose-preview-server design render --local`: the design's generated Kotlin,
 # compiled and rasterised in-process. Both the reusable workflow and that binary are
@@ -40,12 +44,27 @@ jobs:
       pull-requests: write
     uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@main
     with:
-      # m3-catalog's own bundle, off its delivery branch in the m3-catalog-out output repository.
-      # Every design in this directory is a Material 3 design; a Wear one would need `wear-m3`'s
-      # bundle and its own call of this workflow, because a design only compiles against its own
-      # catalog's bundle.
+      # The Material 3 designs, against m3-catalog's own bundle off its delivery branch in the
+      # m3-catalog-out output repository. No `lane`: this call keeps the comment and branches it
+      # has always had.
+      catalog-id: m3-catalog
       catalog-bundle: https://raw.githubusercontent.com/yschimke/m3-catalog-out/design-artifacts/m3-catalog/bundle/bundle.png
       # The record the generator proves each call site against. `m3-catalog` is record-driven, so
       # without this every `m3/*` node is refused as an unproven component.
       components: |
         m3-catalog=docs/design/fixtures/ui-builder/m3-catalog-components-v1.json
+
+  wear-designs:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@main
+    with:
+      # The Wear designs, against wear-m3-catalog's bundle. Compiled against the m3 bundle they fail
+      # at `Unresolved reference 'wear'`. `wear-m3` is record-free, so there is no `components`.
+      catalog-id: wear-m3
+      lane: wear-m3
+      catalog-bundle: https://raw.githubusercontent.com/yschimke/wear-m3-catalog-out/design-artifacts/wear-m3-catalog/bundle/bundle.png
+      baseline-branch: ui-builder-designs/wear-m3
+      render-branch-prefix: ui-builder-designs/wear-m3-pr
