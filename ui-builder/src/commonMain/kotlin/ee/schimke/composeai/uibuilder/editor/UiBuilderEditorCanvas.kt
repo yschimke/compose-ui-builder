@@ -334,19 +334,22 @@ internal fun PinnedDesignCanvas(
         if (dy != 0f) verticalScrollState.dispatchRawDelta(dy)
       }
     }
-    // Where the scroll has to be once the zoom a pinch or Ctrl+wheel just asked for is laid out,
-    // so the point under the hand stays under it. Applied a frame later, because until the new
-    // scale has been measured the scroll range is the old one's and the offset would be clamped
-    // away; kept until then, so a burst of wheel events chains from the last target rather than
-    // from a scroll that has not moved yet.
-    var zoomTarget by remember(document.id) { mutableStateOf<Triple<Float, Float, Float>?>(null) }
+    // The zoom a pinch or Ctrl+wheel asked for, and the design point that has to stay under the
+    // hand. Anchored on the design itself — the frame's real origin on screen — rather than on
+    // `scroll + pointer`, because a design smaller than the workspace is centred in it and that
+    // margin is not scroll. Applied once the new scale has been laid out: until then the frame is
+    // where the old scale put it, and the scroll range is the old one's.
+    var zoomAnchor by remember(document.id) { mutableStateOf<ZoomAnchor?>(null) }
     LaunchedEffect(scale) {
-      val (targetScale, x, y) = zoomTarget ?: return@LaunchedEffect
-      if (targetScale != scale) return@LaunchedEffect
+      val anchor = zoomAnchor ?: return@LaunchedEffect
+      if (anchor.scale != scale) return@LaunchedEffect
+      // One frame to compose and lay out the new scale, one more for its position to land.
       withFrameNanos {}
-      horizontalScrollState.scrollTo(x.roundToInt())
-      verticalScrollState.scrollTo(y.roundToInt())
-      zoomTarget = null
+      withFrameNanos {}
+      val drift = anchorDrift(frameOrigin, anchor.designPoint, scale, anchor.focus)
+      horizontalScrollState.dispatchRawDelta(drift.x)
+      verticalScrollState.dispatchRawDelta(drift.y)
+      zoomAnchor = null
     }
     Box(
       Modifier.fillMaxSize()
@@ -357,26 +360,29 @@ internal fun PinnedDesignCanvas(
         // Outside the scrolls, so the positions it reads are the workspace's own and it sees a
         // pinch before the scroll can take one finger of it.
         .canvasZoomGestures(
-          scale = zoomTarget?.first ?: scale,
+          scale = zoomAnchor?.scale ?: scale,
           onZoom = { request ->
-            val (fromScale, fromX, fromY) =
-              zoomTarget
-                ?: Triple(
-                  scale,
-                  horizontalScrollState.value.toFloat(),
-                  verticalScrollState.value.toFloat(),
-                )
-            zoomTarget =
-              Triple(
-                request.scale,
-                anchoredScroll(fromX, request.focus.x, fromScale, request.scale),
-                anchoredScroll(fromY, request.focus.y, fromScale, request.scale),
+            val focus = workspaceBounds.topLeft + request.focus
+            zoomAnchor =
+              ZoomAnchor(
+                scale = request.scale,
+                focus = focus,
+                // A burst keeps the point it started on: the frame has not moved yet, so reading
+                // it again would anchor on where the design was, not where it is going.
+                designPoint = zoomAnchor?.designPoint ?: ((focus - frameOrigin) / scale),
               )
             onZoomChanged(request.scale)
           },
           onPan = { pan ->
-            horizontalScrollState.dispatchRawDelta(-pan.x)
-            verticalScrollState.dispatchRawDelta(-pan.y)
+            // Mid-zoom the anchor owns the scroll, so the pan moves the point it has to land under;
+            // otherwise the pan is the scroll.
+            val pending = zoomAnchor
+            if (pending != null) {
+              zoomAnchor = pending.copy(focus = pending.focus + pan)
+            } else {
+              horizontalScrollState.dispatchRawDelta(-pan.x)
+              verticalScrollState.dispatchRawDelta(-pan.y)
+            }
           },
         )
         .horizontalScroll(horizontalScrollState)

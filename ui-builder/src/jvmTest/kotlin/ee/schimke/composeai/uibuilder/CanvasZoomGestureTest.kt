@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -15,7 +16,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.editor.PinnedDesignCanvas
-import ee.schimke.composeai.uibuilder.editor.anchoredScroll
+import ee.schimke.composeai.uibuilder.editor.anchorDrift
 import ee.schimke.composeai.uibuilder.editor.wheelZoom
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
@@ -45,11 +46,13 @@ class CanvasZoomGestureTest {
   }
 
   @Test
-  fun `the point under the hand stays under it`() {
-    // At 1x, content x 300 is under a pointer at 100 with the scroll at 200. At 2x it is at 600, so
-    // the scroll has to be 500 for the pointer to still be over it.
-    assertEquals(500f, anchoredScroll(200f, 100f, 1f, 2f))
-    assertEquals(0f, anchoredScroll(0f, 100f, 1f, 0.5f))
+  fun `the drift is where the design point landed relative to the hand`() {
+    // The frame is at (100, 50) and the design point (100, 50) is drawn at 3x, so it lands at
+    // (400, 200). The hand is at (300, 200): 100px right of it, level vertically.
+    assertEquals(
+      Offset(100f, 0f),
+      anchorDrift(Offset(100f, 50f), Offset(100f, 50f), 3f, Offset(300f, 200f)),
+    )
   }
 
   @Test
@@ -108,6 +111,74 @@ class CanvasZoomGestureTest {
     }
 
   @Test
+  fun `a design centred on one axis keeps the point under the pointer as it starts to overflow`() =
+    runDesktopComposeUiTest(width = 900, height = 700) {
+      var snapshot: UiBuilderInspectionSnapshot? = null
+      // 640px tall in a 700px workspace: centred with a 30px margin, which one notch (2.25x, 720px)
+      // takes away while opening 20px of scroll. The point under y can be kept there only while the
+      // scroll it needs, 0.125y - 33.75, fits in that 20px — y from 270 to 430. At 350 it needs
+      // 10px;
+      // reading the point as `scroll + y` forgets the margin and asks for 43.75, clamped to 20.
+      setContent {
+        MaterialTheme {
+          // Centred, as both editor layouts draw it.
+          Host(initial = 2f, centred = true, onInspection = { snapshot = it }) {}
+        }
+      }
+      waitForIdle()
+      val pointer = Offset(450f, 350f)
+      fun fractionY(): Float {
+        val frame =
+          assertNotNull(snapshot?.nodes?.firstOrNull { it.nodeId == "plan-scaffold" }?.bounds)
+        return (pointer.y - frame.y) / frame.height
+      }
+      val before = fractionY()
+      onRoot().performMultiModalInput {
+        key { keyDown(Key.CtrlLeft) }
+        mouse {
+          moveTo(pointer)
+          scroll(-1f)
+        }
+        key { keyUp(Key.CtrlLeft) }
+      }
+      waitForIdle()
+      // In pixels, not as a fraction: forgetting the centring margin is a few pixels off here,
+      // which a fraction of the whole design would round away.
+      val frame =
+        assertNotNull(snapshot?.nodes?.firstOrNull { it.nodeId == "plan-scaffold" }?.bounds)
+      assertEquals(pointer.y, frame.y + before * frame.height, 1.5f)
+    }
+
+  @Test
+  fun `a pinch that also moves carries the design point with the fingers`() =
+    runDesktopComposeUiTest(width = 900, height = 700) {
+      var snapshot: UiBuilderInspectionSnapshot? = null
+      setContent { MaterialTheme { Host(initial = 2f, onInspection = { snapshot = it }) {} } }
+      waitForIdle()
+      fun frame() =
+        assertNotNull(snapshot?.nodes?.firstOrNull { it.nodeId == "plan-scaffold" }?.bounds)
+      // Fingers 200px apart around (400, 300), spreading to 300px apart around (400, 200): a 1.5x
+      // zoom to 3x while the pinch rises 100px. The design point under the start must end under
+      // the end — the pan is part of the gesture, not something the zoom's scroll overwrites.
+      val start = frame()
+      val fraction = (300f - start.y) / start.height
+      onRoot().performTouchInput {
+        down(0, Offset(300f, 300f))
+        down(1, Offset(500f, 300f))
+        for (step in 1..10) {
+          val t = step / 10f
+          moveTo(0, Offset(300f - 50f * t, 300f - 100f * t), delayMillis = 16)
+          moveTo(1, Offset(500f + 50f * t, 300f - 100f * t), delayMillis = 16)
+        }
+        up(0)
+        up(1)
+      }
+      waitForIdle()
+      val end = frame()
+      assertEquals(200f, end.y + fraction * end.height, 3f)
+    }
+
+  @Test
   fun `two fingers pinching together zoom out`() =
     runDesktopComposeUiTest(width = 900, height = 700) {
       var zoom: Float? = 2f
@@ -129,6 +200,7 @@ class CanvasZoomGestureTest {
   @androidx.compose.runtime.Composable
   private fun Host(
     initial: Float = 1f,
+    centred: Boolean = false,
     onInspection: ((UiBuilderInspectionSnapshot) -> Unit)? = null,
     onZoom: (Float?) -> Unit,
   ) {
@@ -154,6 +226,7 @@ class CanvasZoomGestureTest {
       selectionMenu = { emptyList() },
       hoverEditor = null,
       zoom = zoom,
+      contentAlignment = if (centred) Alignment.Center else Alignment.TopStart,
       onZoomChanged = {
         zoom = it
         onZoom(it)

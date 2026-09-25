@@ -40,12 +40,24 @@ internal fun wheelZoom(from: Float, deltaY: Float): Float =
   )
 
 /**
- * Where a scroll offset has to go so the content point that was under [focus] at [oldScale] is
- * under it again at [newScale]: the content scales about the origin, the point under the hand is
- * `scroll + focus`, and it moves by the same ratio.
+ * A zoom in flight: the [scale] asked for, the root-space [focus] the hand is at, and the
+ * [designPoint] that was under it — in design units, the frame-relative offset divided by the scale
+ * it was measured at.
  */
-internal fun anchoredScroll(scroll: Float, focus: Float, oldScale: Float, newScale: Float): Float =
-  ((scroll + focus) * (newScale / oldScale) - focus).coerceAtLeast(0f)
+internal data class ZoomAnchor(val scale: Float, val focus: Offset, val designPoint: Offset)
+
+/**
+ * How far to scroll so [designPoint] is under [focus] again, once the frame is at [frameOrigin] and
+ * drawn at [scale]: positive when the point has landed right of or below the hand, which a larger
+ * scroll offset brings back. The scroll clamps what it cannot give — a design still smaller than
+ * the workspace stays centred.
+ */
+internal fun anchorDrift(
+  frameOrigin: Offset,
+  designPoint: Offset,
+  scale: Float,
+  focus: Offset,
+): Offset = frameOrigin + designPoint * scale - focus
 
 /**
  * Pinch and Ctrl/Cmd + wheel, on the workspace.
