@@ -41,17 +41,7 @@
       "parent": null,
       "node": {
         "id": "root",
-        "componentId": "layout/row",
-        "properties": {
-          "horizontalSpacingDp": {
-            "type": "float",
-            "value": 0.0
-          },
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "top"
-          }
-        },
+        "componentId": "m3/navigation-suite-scaffold",
         "modifiers": [
           {
             "type": "fillMaxSize"
@@ -60,117 +50,19 @@
       }
     },
     {
-      "operationId": "insert-cal-rail",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "root",
-        "slot": "children"
-      },
-      "node": {
-        "id": "cal-rail",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 6.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "width",
-            "widthDp": 88
-          },
-          {
-            "type": "fillMaxHeight"
-          },
-          {
-            "type": "background",
-            "color": {
-              "type": "colorToken",
-              "value": "surfaceContainerLow"
-            }
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 12,
-            "endDp": 0,
-            "bottomDp": 0
-          }
-        ]
-      }
-    },
-    {
       "operationId": "insert-cal-rail-day",
       "type": "insertNode",
       "parent": {
-        "nodeId": "cal-rail",
-        "slot": "children"
+        "nodeId": "root",
+        "slot": "navigationItems"
       },
       "node": {
         "id": "cal-rail-day",
-        "componentId": "layout/column",
+        "componentId": "m3/navigation-suite-item",
         "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      }
-    },
-    {
-      "operationId": "insert-cal-rail-day-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "cal-rail-day",
-        "slot": "children"
-      },
-      "node": {
-        "id": "cal-rail-day-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          },
-          {
-            "type": "background",
-            "color": {
-              "type": "colorToken",
-              "value": "surfaceContainerHighest"
-            },
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
+          "selected": {
+            "type": "bool",
+            "value": true
           }
         }
       }
@@ -179,8 +71,8 @@
       "operationId": "insert-cal-rail-day-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "cal-rail-day-pill",
-        "slot": "children"
+        "nodeId": "cal-rail-day",
+        "slot": "icon"
       },
       "node": {
         "id": "cal-rail-day-icon",
@@ -193,14 +85,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Day"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurface"
           }
         }
       }
@@ -210,7 +94,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "cal-rail-day",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "cal-rail-day-label",
@@ -223,85 +107,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurface"
-          }
-        }
-      },
-      "afterNodeId": "cal-rail-day-pill"
-    },
-    {
-      "operationId": "insert-cal-rail-week",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "cal-rail",
-        "slot": "children"
-      },
-      "node": {
-        "id": "cal-rail-week",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      },
-      "afterNodeId": "cal-rail-day"
-    },
-    {
-      "operationId": "insert-cal-rail-week-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "cal-rail-week",
-        "slot": "children"
-      },
-      "node": {
-        "id": "cal-rail-week-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
           }
         }
       }
     },
     {
+      "operationId": "insert-cal-rail-week",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "cal-rail-week",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "cal-rail-day"
+    },
+    {
       "operationId": "insert-cal-rail-week-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "cal-rail-week-pill",
-        "slot": "children"
+        "nodeId": "cal-rail-week",
+        "slot": "icon"
       },
       "node": {
         "id": "cal-rail-week-icon",
@@ -314,14 +148,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Week"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -331,7 +157,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "cal-rail-week",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "cal-rail-week-label",
@@ -344,85 +170,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
-          }
-        }
-      },
-      "afterNodeId": "cal-rail-week-pill"
-    },
-    {
-      "operationId": "insert-cal-rail-month",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "cal-rail",
-        "slot": "children"
-      },
-      "node": {
-        "id": "cal-rail-month",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      },
-      "afterNodeId": "cal-rail-week"
-    },
-    {
-      "operationId": "insert-cal-rail-month-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "cal-rail-month",
-        "slot": "children"
-      },
-      "node": {
-        "id": "cal-rail-month-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
           }
         }
       }
     },
     {
+      "operationId": "insert-cal-rail-month",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "cal-rail-month",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "cal-rail-week"
+    },
+    {
       "operationId": "insert-cal-rail-month-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "cal-rail-month-pill",
-        "slot": "children"
+        "nodeId": "cal-rail-month",
+        "slot": "icon"
       },
       "node": {
         "id": "cal-rail-month-icon",
@@ -435,14 +211,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Month"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -452,7 +220,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "cal-rail-month",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "cal-rail-month-label",
@@ -465,85 +233,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
-          }
-        }
-      },
-      "afterNodeId": "cal-rail-month-pill"
-    },
-    {
-      "operationId": "insert-cal-rail-tasks",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "cal-rail",
-        "slot": "children"
-      },
-      "node": {
-        "id": "cal-rail-tasks",
-        "componentId": "layout/column",
-        "properties": {
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
-          },
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      },
-      "afterNodeId": "cal-rail-month"
-    },
-    {
-      "operationId": "insert-cal-rail-tasks-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "cal-rail-tasks",
-        "slot": "children"
-      },
-      "node": {
-        "id": "cal-rail-tasks-pill",
-        "componentId": "layout/box",
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ],
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
           }
         }
       }
     },
     {
+      "operationId": "insert-cal-rail-tasks",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "cal-rail-tasks",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "cal-rail-month"
+    },
+    {
       "operationId": "insert-cal-rail-tasks-icon",
       "type": "insertNode",
       "parent": {
-        "nodeId": "cal-rail-tasks-pill",
-        "slot": "children"
+        "nodeId": "cal-rail-tasks",
+        "slot": "icon"
       },
       "node": {
         "id": "cal-rail-tasks-icon",
@@ -556,14 +274,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Tasks"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -573,7 +283,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "cal-rail-tasks",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "cal-rail-tasks-label",
@@ -586,21 +296,16 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
-      },
-      "afterNodeId": "cal-rail-tasks-pill"
+      }
     },
     {
       "operationId": "insert-cal-panes",
       "type": "insertNode",
       "parent": {
         "nodeId": "root",
-        "slot": "children"
+        "slot": "content"
       },
       "node": {
         "id": "cal-panes",
@@ -630,14 +335,9 @@
         "modifiers": [
           {
             "type": "fillMaxSize"
-          },
-          {
-            "type": "weight",
-            "weight": 1
           }
         ]
-      },
-      "afterNodeId": "cal-rail"
+      }
     },
     {
       "operationId": "insert-cal-day",
@@ -5814,5 +5514,5 @@
       "afterNodeId": "cal-next-spike-headline"
     }
   ],
-  "expectedDocumentHash": "257544e8ebe7e46316e5f7bbb93a86d715628b29461cfe22e1a19663ce6342e7"
+  "expectedDocumentHash": "363a5efaced57338f388096a094715088757f1682868d88db3877a75b3e3ab5f"
 }

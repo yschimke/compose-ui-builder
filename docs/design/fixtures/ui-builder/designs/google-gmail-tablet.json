@@ -41,13 +41,7 @@
       "parent": null,
       "node": {
         "id": "root",
-        "componentId": "layout/row",
-        "properties": {
-          "verticalAlignment": {
-            "type": "enum",
-            "value": "top"
-          }
-        },
+        "componentId": "m3/navigation-suite-scaffold",
         "modifiers": [
           {
             "type": "fillMaxSize"
@@ -56,56 +50,11 @@
       }
     },
     {
-      "operationId": "insert-rail",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "root",
-        "slot": "children"
-      },
-      "node": {
-        "id": "rail",
-        "componentId": "layout/column",
-        "properties": {
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          },
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 6.0
-          }
-        },
-        "modifiers": [
-          {
-            "type": "width",
-            "widthDp": 88
-          },
-          {
-            "type": "fillMaxHeight"
-          },
-          {
-            "type": "background",
-            "color": {
-              "type": "colorToken",
-              "value": "surfaceContainerLow"
-            }
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 12,
-            "endDp": 0,
-            "bottomDp": 0
-          }
-        ]
-      }
-    },
-    {
       "operationId": "insert-rail-compose",
       "type": "insertNode",
       "parent": {
-        "nodeId": "rail",
-        "slot": "children"
+        "nodeId": "root",
+        "slot": "primaryAction"
       },
       "node": {
         "id": "rail-compose",
@@ -115,16 +64,7 @@
             "type": "enum",
             "value": "fab"
           }
-        },
-        "modifiers": [
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 0,
-            "endDp": 0,
-            "bottomDp": 8
-          }
-        ]
+        }
       }
     },
     {
@@ -153,80 +93,26 @@
       "operationId": "insert-rail-inbox",
       "type": "insertNode",
       "parent": {
-        "nodeId": "rail",
-        "slot": "children"
+        "nodeId": "root",
+        "slot": "navigationItems"
       },
       "node": {
         "id": "rail-inbox",
-        "componentId": "layout/column",
+        "componentId": "m3/navigation-suite-item",
         "properties": {
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          },
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
+          "selected": {
+            "type": "bool",
+            "value": true
           }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
-      },
-      "afterNodeId": "rail-compose"
-    },
-    {
-      "operationId": "insert-rail-inbox-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "rail-inbox",
-        "slot": "children"
-      },
-      "node": {
-        "id": "rail-inbox-pill",
-        "componentId": "layout/box",
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          },
-          {
-            "type": "background",
-            "color": {
-              "type": "colorToken",
-              "value": "surfaceContainerHighest"
-            },
-            "shape": "16"
-          }
-        ]
+        }
       }
     },
     {
       "operationId": "insert-icon-2",
       "type": "insertNode",
       "parent": {
-        "nodeId": "rail-inbox-pill",
-        "slot": "children"
+        "nodeId": "rail-inbox",
+        "slot": "icon"
       },
       "node": {
         "id": "icon-2",
@@ -239,14 +125,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Inbox"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurface"
           }
         }
       }
@@ -256,7 +134,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "rail-inbox",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "text-3",
@@ -269,85 +147,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurface"
           }
         }
-      },
-      "afterNodeId": "rail-inbox-pill"
+      }
     },
     {
       "operationId": "insert-rail-starred",
       "type": "insertNode",
       "parent": {
-        "nodeId": "rail",
-        "slot": "children"
+        "nodeId": "root",
+        "slot": "navigationItems"
       },
       "node": {
         "id": "rail-starred",
-        "componentId": "layout/column",
+        "componentId": "m3/navigation-suite-item",
         "properties": {
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          },
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
+          "selected": {
+            "type": "bool",
+            "value": false
           }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
+        }
       },
       "afterNodeId": "rail-inbox"
-    },
-    {
-      "operationId": "insert-rail-starred-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "rail-starred",
-        "slot": "children"
-      },
-      "node": {
-        "id": "rail-starred-pill",
-        "componentId": "layout/box",
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ]
-      }
     },
     {
       "operationId": "insert-icon-4",
       "type": "insertNode",
       "parent": {
-        "nodeId": "rail-starred-pill",
-        "slot": "children"
+        "nodeId": "rail-starred",
+        "slot": "icon"
       },
       "node": {
         "id": "icon-4",
@@ -360,14 +188,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Starred"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -377,7 +197,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "rail-starred",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "text-5",
@@ -390,85 +210,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
-      },
-      "afterNodeId": "rail-starred-pill"
+      }
     },
     {
       "operationId": "insert-rail-snoozed",
       "type": "insertNode",
       "parent": {
-        "nodeId": "rail",
-        "slot": "children"
+        "nodeId": "root",
+        "slot": "navigationItems"
       },
       "node": {
         "id": "rail-snoozed",
-        "componentId": "layout/column",
+        "componentId": "m3/navigation-suite-item",
         "properties": {
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          },
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
+          "selected": {
+            "type": "bool",
+            "value": false
           }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
+        }
       },
       "afterNodeId": "rail-starred"
-    },
-    {
-      "operationId": "insert-rail-snoozed-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "rail-snoozed",
-        "slot": "children"
-      },
-      "node": {
-        "id": "rail-snoozed-pill",
-        "componentId": "layout/box",
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ]
-      }
     },
     {
       "operationId": "insert-icon-6",
       "type": "insertNode",
       "parent": {
-        "nodeId": "rail-snoozed-pill",
-        "slot": "children"
+        "nodeId": "rail-snoozed",
+        "slot": "icon"
       },
       "node": {
         "id": "icon-6",
@@ -481,14 +251,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Snoozed"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -498,7 +260,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "rail-snoozed",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "text-7",
@@ -511,85 +273,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
-      },
-      "afterNodeId": "rail-snoozed-pill"
+      }
     },
     {
       "operationId": "insert-rail-sent",
       "type": "insertNode",
       "parent": {
-        "nodeId": "rail",
-        "slot": "children"
+        "nodeId": "root",
+        "slot": "navigationItems"
       },
       "node": {
         "id": "rail-sent",
-        "componentId": "layout/column",
+        "componentId": "m3/navigation-suite-item",
         "properties": {
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          },
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
+          "selected": {
+            "type": "bool",
+            "value": false
           }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
+        }
       },
       "afterNodeId": "rail-snoozed"
-    },
-    {
-      "operationId": "insert-rail-sent-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "rail-sent",
-        "slot": "children"
-      },
-      "node": {
-        "id": "rail-sent-pill",
-        "componentId": "layout/box",
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ]
-      }
     },
     {
       "operationId": "insert-icon-8",
       "type": "insertNode",
       "parent": {
-        "nodeId": "rail-sent-pill",
-        "slot": "children"
+        "nodeId": "rail-sent",
+        "slot": "icon"
       },
       "node": {
         "id": "icon-8",
@@ -602,14 +314,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Sent"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -619,7 +323,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "rail-sent",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "text-9",
@@ -632,85 +336,35 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
-      },
-      "afterNodeId": "rail-sent-pill"
+      }
     },
     {
       "operationId": "insert-rail-drafts",
       "type": "insertNode",
       "parent": {
-        "nodeId": "rail",
-        "slot": "children"
+        "nodeId": "root",
+        "slot": "navigationItems"
       },
       "node": {
         "id": "rail-drafts",
-        "componentId": "layout/column",
+        "componentId": "m3/navigation-suite-item",
         "properties": {
-          "horizontalAlignment": {
-            "type": "enum",
-            "value": "center"
-          },
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 2.0
+          "selected": {
+            "type": "bool",
+            "value": false
           }
-        },
-        "modifiers": [
-          {
-            "type": "fillMaxWidth"
-          },
-          {
-            "type": "padding",
-            "startDp": 0,
-            "topDp": 4,
-            "endDp": 0,
-            "bottomDp": 4
-          }
-        ]
+        }
       },
       "afterNodeId": "rail-sent"
-    },
-    {
-      "operationId": "insert-rail-drafts-pill",
-      "type": "insertNode",
-      "parent": {
-        "nodeId": "rail-drafts",
-        "slot": "children"
-      },
-      "node": {
-        "id": "rail-drafts-pill",
-        "componentId": "layout/box",
-        "properties": {
-          "contentAlignment": {
-            "type": "string",
-            "value": "center"
-          }
-        },
-        "modifiers": [
-          {
-            "type": "size",
-            "widthDp": 56,
-            "heightDp": 32
-          },
-          {
-            "type": "clip",
-            "shape": "16"
-          }
-        ]
-      }
     },
     {
       "operationId": "insert-icon-10",
       "type": "insertNode",
       "parent": {
-        "nodeId": "rail-drafts-pill",
-        "slot": "children"
+        "nodeId": "rail-drafts",
+        "slot": "icon"
       },
       "node": {
         "id": "icon-10",
@@ -723,14 +377,6 @@
           "contentDescription": {
             "type": "string",
             "value": "Drafts"
-          },
-          "sizeDp": {
-            "type": "float",
-            "value": 22.0
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
       }
@@ -740,7 +386,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "rail-drafts",
-        "slot": "children"
+        "slot": "label"
       },
       "node": {
         "id": "text-11",
@@ -753,21 +399,16 @@
           "style": {
             "type": "enum",
             "value": "labelMedium"
-          },
-          "color": {
-            "type": "colorToken",
-            "value": "onSurfaceVariant"
           }
         }
-      },
-      "afterNodeId": "rail-drafts-pill"
+      }
     },
     {
       "operationId": "insert-panes",
       "type": "insertNode",
       "parent": {
         "nodeId": "root",
-        "slot": "children"
+        "slot": "content"
       },
       "node": {
         "id": "panes",
@@ -797,14 +438,9 @@
         "modifiers": [
           {
             "type": "fillMaxSize"
-          },
-          {
-            "type": "weight",
-            "weight": 1
           }
         ]
-      },
-      "afterNodeId": "rail"
+      }
     },
     {
       "operationId": "insert-list-pane",
@@ -4779,5 +4415,5 @@
       "afterNodeId": "icon-83"
     }
   ],
-  "expectedDocumentHash": "aa95c3665d1f8e39546e1c57e99178690b8b489ed0f0625b07e13e0f2f39b7b7"
+  "expectedDocumentHash": "897ff6bf96c4884835ac9fddacef8ad9181b4e8ad55bb92e6a04fb419b6b9226"
 }

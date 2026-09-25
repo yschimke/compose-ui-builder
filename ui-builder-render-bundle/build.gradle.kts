@@ -154,7 +154,14 @@ val verifyRenderBundlePackaged =
     // coordinate that redirects (`available-at`) to a per-platform artifact, so the resolved JVM
     // dependency is recorded as `window-core-desktop`, never `window-core`. An exact match here
     // failed on a bundle that carried the class perfectly well.
-    val required = listOf("org.jetbrains.androidx.window:window-core")
+    //
+    // `NavigationSuiteScaffold` is the same case: the node renderer enters it only for an
+    // `m3/navigation-suite-scaffold` node, which no packed preview draws.
+    val required =
+      listOf(
+        "org.jetbrains.androidx.window:window-core",
+        "org.jetbrains.compose.material3:material3-adaptive-navigation-suite",
+      )
     val variantSuffixes = listOf("", "-desktop", "-jvm")
     inputs.file(jarFile)
     doLast {

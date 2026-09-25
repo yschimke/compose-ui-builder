@@ -584,6 +584,7 @@ object CapabilityCatalogParser {
       // A tab index is a count, not a dimension, so the `…Dp` rule below cannot reach it and the
       // control would be `Unsupported` — on the one property a tab row has.
       ("m3/primary-tab-row" to "selectedIndex") to numberEditor(0.0, 32.0, 1.0),
+      ("m3/primary-scrollable-tab-row" to "selectedIndex") to numberEditor(0.0, 32.0, 1.0),
       ("m3/time-picker" to "hour") to numberEditor(0.0, 23.0, 1.0),
       ("m3/time-picker" to "minute") to numberEditor(0.0, 59.0, 1.0),
     ) +

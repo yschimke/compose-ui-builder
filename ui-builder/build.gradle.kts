@@ -76,6 +76,9 @@ kotlin {
       // `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md` for why the preview pane owes real components.
       implementation(libs.compose.material3.adaptive)
       implementation(libs.compose.material3.adaptive.layout)
+      // `NavigationSuiteScaffold`, drawn for real for the same reason: whether a design's
+      // navigation is a rail or a bar is the library's answer, per frame.
+      implementation(libs.compose.material3.navigation.suite)
       // Wear Compose, for real, on the canvas. See `docs/design/UI_BUILDER_WEAR_SCREEN.md`: this
       // is the CMP port rather than `androidx.wear.compose`, because that one is an Android AAR
       // with no `wasmJs` variant to resolve. The port keeps the upstream package names, so a

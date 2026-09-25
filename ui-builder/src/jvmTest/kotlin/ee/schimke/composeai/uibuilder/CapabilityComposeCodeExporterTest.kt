@@ -165,6 +165,45 @@ class CapabilityComposeCodeExporterTest {
   }
 
   @Test
+  fun `a navigation suite item without a label still names the parameter`() {
+    // `NavigationSuiteItem`'s `label` is nullable with no default, so leaving it out does not
+    // compile.
+    fun node(
+      id: String,
+      componentId: String,
+      vararg properties: Pair<String, JsonObject>,
+      slots: Map<String, List<String>> = emptyMap(),
+    ) = UiBuilderNode(id, componentId, JsonObject(mapOf(*properties)), slots = slots)
+    val suite =
+      document.copy(
+        roots = listOf("suite"),
+        nodes =
+          mapOf(
+            "suite" to
+              node(
+                "suite",
+                "m3/navigation-suite-scaffold",
+                slots = mapOf("navigationItems" to listOf("item"), "content" to listOf("body")),
+              ),
+            "item" to
+              node(
+                "item",
+                "m3/navigation-suite-item",
+                "selected" to property("bool", JsonPrimitive(true)),
+                slots = mapOf("icon" to listOf("glyph")),
+              ),
+            "glyph" to
+              node("glyph", "m3/icon", "iconKey" to property("enum", JsonPrimitive("filled/home"))),
+            "body" to node("body", "m3/text", "text" to property("string", JsonPrimitive("Home"))),
+          ),
+      )
+    val result = CapabilityComposeCodeExporter.export(suite, catalog)
+    val source = assertNotNull(result.source, result.diagnostics.toString())
+    assertTrue(source.contains("NavigationSuiteItem("), source)
+    assertTrue(source.contains("label = null,"), source)
+  }
+
+  @Test
   fun `the adaptive imports appear exactly when the source calls the adaptive helper`() {
     // The invariant rather than one escape route. A document-wide "does any node use it?" is a
     // *prediction* about emission, and emission drops nodes for reasons a predicate has to keep up

@@ -68,6 +68,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -96,6 +97,11 @@ import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationIt
 import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuite
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.darkColorScheme
@@ -106,6 +112,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ProvidedValue
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
@@ -1519,6 +1526,12 @@ private fun RenderNode(
         PrimaryTabRow(node.resolvedInteger("selectedIndex", state), measured) {
           slot("tabs").forEach { child(it, Modifier) }
         }
+      // The same row, scrolling instead of dividing the width: on a phone five tabs keep their
+      // labels rather than each getting a fifth of the screen and an ellipsis.
+      "m3/primary-scrollable-tab-row" ->
+        PrimaryScrollableTabRow(node.resolvedInteger("selectedIndex", state), measured) {
+          slot("tabs").forEach { child(it, Modifier) }
+        }
       "m3/tab" ->
         Tab(
           node.resolvedBool("selected", state),
@@ -1527,6 +1540,27 @@ private fun RenderNode(
           enabled = enabled,
           text = { slot("text").forEach { child(it, Modifier) } },
         )
+      "m3/navigation-suite-scaffold" -> {
+        val primaryAction = slot("primaryAction")
+        AdaptiveNavigationSuiteScaffold(
+          measured,
+          items = { slot("navigationItems").forEach { child(it, Modifier) } },
+          primaryAction = { primaryAction.forEach { child(it, Modifier) } },
+          content = { slot("content").forEach { child(it, Modifier) } },
+        )
+      }
+      "m3/navigation-suite-item" -> {
+        val label = slot("label")
+        NavigationSuiteItem(
+          selected = node.resolvedBool("selected", state),
+          onClick = activate,
+          icon = { slot("icon").forEach { child(it, Modifier) } },
+          label = if (label.isEmpty()) null else ({ label.forEach { child(it, Modifier) } }),
+          modifier = measured,
+          navigationSuiteType = LocalFrameNavigationSuiteType.current,
+          enabled = enabled,
+        )
+      }
       "m3/list-item" ->
         LegacyListItem(
           node,
@@ -2707,6 +2741,68 @@ private fun RemoteComposeDiagnostic(
  * documented meaning of that row
  * ([`UI_BUILDER_PREVIEW_FIDELITY.md`](../../../../../../docs/design/UI_BUILDER_PREVIEW_FIDELITY.md)).
  */
+/**
+ * The navigation suite type the enclosing [AdaptiveNavigationSuiteScaffold] chose for its frame.
+ *
+ * `NavigationSuiteItem` asks for its type from `currentWindowAdaptiveInfo()` by default, and on the
+ * canvas that is the browser window holding every device frame — so a phone frame's items would
+ * draw as rail items inside a bar. The scaffold decides once, from its own frame, and its items
+ * read that answer here. Outside a scaffold an item draws as a rail item, the widest form.
+ */
+private val LocalFrameNavigationSuiteType = compositionLocalOf {
+  NavigationSuiteType.WideNavigationRailCollapsed
+}
+
+/**
+ * `m3/navigation-suite-scaffold`: `NavigationSuiteScaffold` itself, deciding rail or bar from the
+ * frame it is drawn in — the same rule, and for the same reason, as
+ * [AdaptiveSupportingPaneScaffold]: each device frame is its own window, so a phone frame gets a
+ * bar and a tablet frame beside it a rail.
+ *
+ * The unrolled editor gets the rail at every width, with the design's content beside it, which is
+ * the full tablet experience the editing surface always draws. The scaffold proper cannot be
+ * measured against the unbounded height that surface lays out with, so it is `NavigationSuite` —
+ * the library's own navigation component, without the scaffold — in a `Row`.
+ */
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@Composable
+private fun AdaptiveNavigationSuiteScaffold(
+  modifier: Modifier,
+  items: @Composable () -> Unit,
+  primaryAction: @Composable () -> Unit,
+  content: @Composable () -> Unit,
+) {
+  if (LocalUiBuilderUnrolled.current) {
+    val type = NavigationSuiteType.WideNavigationRailCollapsed
+    CompositionLocalProvider(LocalFrameNavigationSuiteType provides type) {
+      Row(modifier) {
+        NavigationSuite(
+          navigationSuiteType = type,
+          primaryActionContent = primaryAction,
+          content = items,
+        )
+        Box(Modifier.weight(1f)) { content() }
+      }
+    }
+    return
+  }
+  val posture = currentWindowAdaptiveInfo().windowPosture
+  BoxWithConstraints(modifier) {
+    val type =
+      NavigationSuiteScaffoldDefaults.navigationSuiteType(
+        WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)
+      )
+    CompositionLocalProvider(LocalFrameNavigationSuiteType provides type) {
+      NavigationSuiteScaffold(
+        navigationItems = items,
+        navigationSuiteType = type,
+        primaryActionContent = primaryAction,
+        content = content,
+      )
+    }
+  }
+}
+
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 private fun AdaptiveSupportingPaneScaffold(
