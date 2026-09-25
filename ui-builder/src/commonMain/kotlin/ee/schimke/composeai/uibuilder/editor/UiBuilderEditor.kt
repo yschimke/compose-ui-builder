@@ -1464,7 +1464,15 @@ fun UiBuilderEditor(
   // every node and every property against the catalog, traverses the graph and looks for cycles.
   // Called inline it would run all of that on every recomposition of the inspector — which is
   // every keystroke in a property field and every frame of a drag.
-  val documentProblems = remember(reducer, state.document) { reducer.problems(state.document) }
+  val assetBitmapsByDigest = remember { mutableStateMapOf<String, ImageBitmap?>() }
+  // The encoded bytes too, for catalog runtimes and for the widget export the code pane and the
+  // problems panel run: they draw in a sandboxed frame that is sent the
+  // document and nothing else, so the picture has to travel inside it (`LocalUiBuilderAssetBytes`).
+  val assetBytesByDigest = remember { mutableStateMapOf<String, ByteArray>() }
+  val documentProblems =
+    remember(reducer, state.document, assetBytesByDigest.size) {
+      reducer.problems(state.document) { assetBytesByDigest[it] }
+    }
   // Appended rather than folded into `problems`, which is a pure function of the document and stays
   // one: drift is a fact about another host's library, fetched by whoever is hosting this editor
   // and handed over as state. Keyed on the findings alone, so the cache above survives a fetch.
@@ -1679,10 +1687,6 @@ fun UiBuilderEditor(
   // by too: re-pointing a key at a new picture changes the digest and fetches again, while an edit
   // anywhere else in the design finds its pictures already here. A failed fetch or decode is stored
   // as null so the placeholder is drawn once rather than the request retried every recomposition.
-  val assetBitmapsByDigest = remember { mutableStateMapOf<String, ImageBitmap?>() }
-  // The encoded bytes too, for catalog runtimes: they draw in a sandboxed frame that is sent the
-  // document and nothing else, so the picture has to travel inside it (`LocalUiBuilderAssetBytes`).
-  val assetBytesByDigest = remember { mutableStateMapOf<String, ByteArray>() }
   val uploadedAssets = state.document.uploadedAssets()
   LaunchedEffect(uploadedAssets, resolveDesignAsset) {
     val resolve = resolveDesignAsset ?: return@LaunchedEffect
@@ -1740,7 +1744,9 @@ fun UiBuilderEditor(
   }
   val generatedCode =
     if (state.codePaneVisible || mobilePanel == MobileEditorPanel.Code) {
-      remember(reducer, state.document) { reducer.generatedCode(state.document) }
+      remember(reducer, state.document, assetBytesByDigest.size) {
+        reducer.generatedCode(state.document) { assetBytesByDigest[it] }
+      }
     } else null
   // Named where the document is, not inside the pane: the pane is handed source and has no way to
   // tell which generator wrote it.
