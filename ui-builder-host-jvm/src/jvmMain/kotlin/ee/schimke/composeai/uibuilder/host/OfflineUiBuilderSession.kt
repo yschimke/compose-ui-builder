@@ -434,9 +434,13 @@ public enum class OfflineCatalog(
   WEAR_M3("wear-m3", "wear-m3-capabilities-v1.json", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE),
   REMOTE_M3("remote-m3", "remote-m3-capabilities-v1.json", "wear-widget-small");
 
-  /** Every template [seed] accepts, from the same seed the web host's New design form offers. */
+  /**
+   * Every template [seed] accepts, from the same seed the web host's New design form offers — in
+   * the packaged vocabulary, because this host validates against [capabilitiesResource] and draws
+   * with the in-process canvas rather than a catalog's published runtime.
+   */
   val templateIds: Set<String>
-    get() = UiBuilderNewDesignSeed.templateIds(systemId)
+    get() = UiBuilderNewDesignSeed.templateIds(systemId, UiBuilderNewDesignSeed.Vocabulary.PACKAGED)
 
   fun seed(
     designId: String,
@@ -458,6 +462,7 @@ public enum class OfflineCatalog(
         nativeRuntimeId = nativeRuntimeId,
         fixture =
           Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject,
+        vocabulary = UiBuilderNewDesignSeed.Vocabulary.PACKAGED,
       )
     }
 

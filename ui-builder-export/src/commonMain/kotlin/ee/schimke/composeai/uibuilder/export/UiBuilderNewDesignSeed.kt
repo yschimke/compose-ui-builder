@@ -21,6 +21,24 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 object UiBuilderNewDesignSeed {
 
+  /**
+   * Which catalog vocabulary a new design is written in.
+   *
+   * A served add-on (`wear-m3`, `remote-m3`) is described by the `ui-builder.json` its repository
+   * publishes and drawn by the renderer runtime it publishes, and its vocabulary is not the one the
+   * retired Kotlin catalogs described. The offline hosts still author against those: the desktop
+   * app and the IntelliJ plugin validate with the packaged capability documents and draw with the
+   * in-process canvas, `:ui-builder-canvas-wear`, which speaks the same vocabulary. A design seeded
+   * for one is refused by the other, so each host says which it is.
+   */
+  enum class Vocabulary {
+    /** The catalog as its repository publishes it: what a server, and a browser session, serve. */
+    PUBLISHED,
+
+    /** The packaged capability documents the offline hosts and the in-process canvas speak. */
+    PACKAGED,
+  }
+
   /** The template a URL that names none is asking for. */
   const val DEFAULT_TEMPLATE: String = "jetcaster"
 
@@ -33,13 +51,19 @@ object UiBuilderNewDesignSeed {
   /**
    * The templates [document] can seed for a catalog, which is what a caller is validated against.
    */
-  fun templateIds(catalogSystemId: String): Set<String> =
+  fun templateIds(
+    catalogSystemId: String,
+    vocabulary: Vocabulary = Vocabulary.PUBLISHED,
+  ): Set<String> =
     when (catalogSystemId) {
-      // Not `AdaptiveWearWidget.TEMPLATE_ID`: its `remote-m3/widget-container-adaptive` is a
-      // component the published `remote-m3` does not declare, so every create of it was refused.
+      // `AdaptiveWearWidget.TEMPLATE_ID` only where the catalog has its container: the packaged
+      // `remote-m3` declares `remote-m3/widget-container-adaptive` and the published one does not,
+      // so every published create of it was refused.
       "remote-m3" ->
         setOf("wear-widget-small", "wear-widget-large") +
-          WearWidgetSample.entries.map(WearWidgetSample::templateId)
+          WearWidgetSample.entries.map(WearWidgetSample::templateId) +
+          if (vocabulary == Vocabulary.PACKAGED) setOf(AdaptiveWearWidget.TEMPLATE_ID)
+          else emptySet()
       "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
       else -> setOf("blank", DEFAULT_TEMPLATE)
     }
@@ -61,6 +85,7 @@ object UiBuilderNewDesignSeed {
     nativeRuntimeId: String,
     fixture: JsonObject,
     state: List<NewDesignState> = emptyList(),
+    vocabulary: Vocabulary = Vocabulary.PUBLISHED,
   ): UiBuilderDocument {
     require(designId.isNotBlank()) { "a new design needs an id" }
     val fixtureDocument = UiBuilderReducer.replay(fixture).document
@@ -74,6 +99,17 @@ object UiBuilderNewDesignSeed {
       )
     val environment = fixtureDocument.environment
     val widgetSample = WearWidgetSample.forTemplate(templateId)
+    if (vocabulary == Vocabulary.PACKAGED) {
+      return packagedDocument(
+        designId = designId,
+        catalogSystemId = catalogSystemId,
+        templateId = templateId,
+        catalogPin = catalogPin,
+        environment = environment,
+        fixtureDocument = fixtureDocument,
+        state = state,
+      )
+    }
     return when {
       // The add-on catalogs' templates are written in the vocabulary those catalogs publish —
       // see [PublishedCatalogSeeds] for why that differs from the sample documents' own.
@@ -126,6 +162,62 @@ object UiBuilderNewDesignSeed {
           fixtureDocument.copy(id = designId, revision = 0, catalogPin = catalogPin),
           setOf("m3/snackbar-host"),
         )
+    }
+  }
+
+  /** [document] in [Vocabulary.PACKAGED]: the templates the in-process canvas was built against. */
+  private fun packagedDocument(
+    designId: String,
+    catalogSystemId: String,
+    templateId: String,
+    catalogPin: JsonObject,
+    environment: JsonObject,
+    fixtureDocument: UiBuilderDocument,
+    state: List<NewDesignState>,
+  ): UiBuilderDocument {
+    val widgetSample = WearWidgetSample.forTemplate(templateId)
+    return when {
+      catalogSystemId == "remote-m3" && widgetSample != null ->
+        widgetSample.document(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = environment,
+        )
+      catalogSystemId == "wear-m3" && templateId == WEAR_LIST_TEMPLATE ->
+        wearScreenUiBuilderDocument(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = wearScreenEnvironment(environment),
+        )
+      catalogSystemId == "wear-m3" ->
+        blankWearScreenUiBuilderDocument(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = wearScreenEnvironment(environment),
+        )
+      catalogSystemId == "remote-m3" && templateId == AdaptiveWearWidget.TEMPLATE_ID ->
+        AdaptiveWearWidget.newDocument(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = environment,
+        )
+      catalogSystemId == "remote-m3" ->
+        wearWidgetUiBuilderDocument(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = environment,
+          size =
+            if (templateId == "wear-widget-large") WearWidgetScaffoldSize.Large
+            else WearWidgetScaffoldSize.Small,
+        )
+      templateId == "blank" ->
+        blankUiBuilderDocument(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = mobileScreenEnvironment(environment),
+          state = state,
+        )
+      else -> fixtureDocument.copy(id = designId, revision = 0, catalogPin = catalogPin)
     }
   }
 }
