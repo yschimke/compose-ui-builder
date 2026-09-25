@@ -78,6 +78,9 @@ internal fun resizePreview(
   dy: Float,
   pxPerDp: Float,
   snapPx: Float,
+  /** The node's own `scale` per axis, which its measured box already includes. */
+  nodeScaleX: Float = 1f,
+  nodeScaleY: Float = 1f,
 ): ResizePreview {
   fun axis(
     active: Boolean,
@@ -86,6 +89,7 @@ internal fun resizePreview(
     size: Float,
     delta: Float,
     parentEnd: Float?,
+    nodeScale: Float,
   ): Pair<Float, EditorSizing?> {
     if (!active) return size to null
     val raw = (size + delta).coerceAtLeast(pxPerDp)
@@ -93,12 +97,20 @@ internal fun resizePreview(
       return (parentEnd - start).coerceAtLeast(pxPerDp) to EditorSizing.Fill
     }
     if (!axis.canFix) return size to null
-    return raw to EditorSizing.Fixed((raw / pxPerDp).roundToInt().toFloat())
+    return raw to EditorSizing.Fixed((raw / (pxPerDp * nodeScale)).roundToInt().toFloat())
   }
   val (widthPx, width) =
-    axis(handle.width, sizing.width, bounds.x, bounds.width, dx, parentBounds?.right)
+    axis(handle.width, sizing.width, bounds.x, bounds.width, dx, parentBounds?.right, nodeScaleX)
   val (heightPx, height) =
-    axis(handle.height, sizing.height, bounds.y, bounds.height, dy, parentBounds?.bottom)
+    axis(
+      handle.height,
+      sizing.height,
+      bounds.y,
+      bounds.height,
+      dy,
+      parentBounds?.bottom,
+      nodeScaleY,
+    )
   return ResizePreview(widthPx, heightPx, width, height)
 }
 
@@ -148,6 +160,8 @@ internal fun ResizeHandles(
   origin: Offset,
   /** Root pixels per design dp, at the zoom the canvas is drawn at. */
   pxPerDp: Float,
+  /** The node's own `scale` per axis — see [drawnScale]. */
+  nodeScale: Pair<Float, Float> = 1f to 1f,
   onResizing: (Boolean) -> Unit,
   onResize: (EditorSizing?, EditorSizing?) -> Unit,
   modifier: Modifier = Modifier,
@@ -158,6 +172,7 @@ internal fun ResizeHandles(
   var preview by remember(sizing.nodeId) { mutableStateOf<ResizePreview?>(null) }
   val current = rememberUpdatedState(Triple(sizing, bounds, parentBounds))
   val currentPxPerDp = rememberUpdatedState(pxPerDp)
+  val currentNodeScale = rememberUpdatedState(nodeScale)
   val currentOnResize = rememberUpdatedState(onResize)
   val currentOnResizing = rememberUpdatedState(onResizing)
   val color = MaterialTheme.colorScheme.primary
@@ -251,7 +266,20 @@ internal fun ResizeHandles(
             var dy = 0f
             fun measure() {
               val (s, b, p) = current.value
-              preview = resizePreview(handle, s, b, p, dx, dy, currentPxPerDp.value, snapPx)
+              val (scaleX, scaleY) = currentNodeScale.value
+              preview =
+                resizePreview(
+                  handle,
+                  s,
+                  b,
+                  p,
+                  dx,
+                  dy,
+                  currentPxPerDp.value,
+                  snapPx,
+                  scaleX,
+                  scaleY,
+                )
             }
             detectDragGestures(
               onDragStart = {
