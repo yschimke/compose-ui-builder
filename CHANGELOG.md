@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.58.0](https://github.com/yschimke/compose-ui-builder/compare/v3.57.0...v3.58.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ui-builder:** the pinned runtime frame fills its surface on a high-density screen ([#288](https://github.com/yschimke/compose-ui-builder/issues/288)) ([9be6efc](https://github.com/yschimke/compose-ui-builder/commit/9be6efc9ce3b21b823badd4a219b1a6db52abc07))
+
 ## [3.57.0](https://github.com/yschimke/compose-ui-builder/compare/v3.56.0...v3.57.0) (2026-09-25)
 
 
