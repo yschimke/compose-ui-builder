@@ -224,8 +224,9 @@ tasks.named<Test>("jvmTest") {
   systemProperty("uiBuilderProjectDir", projectDir.absolutePath)
 }
 
-// Canvas frame times over the Jetcaster fixture (#193). Reports, does not gate: `jvmTest` skips the
-// benchmark, and this runs it alone and writes the numbers CI keeps as an artifact.
+// Canvas frame times over the Jetcaster fixture on the JVM desktop backend, not the Wasm canvas
+// (#193). Reports, does not gate: `jvmTest` skips the benchmark, and this runs it alone and writes
+// the numbers CI keeps as an artifact.
 tasks.register<Test>("canvasFrameBenchmark") {
   description = "Measures editor edit-to-canvas time over the Jetcaster fixture."
   group = "verification"
