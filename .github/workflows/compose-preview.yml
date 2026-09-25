@@ -1,0 +1,75 @@
+name: Compose Preview
+
+# Renders every `@Preview` in `:ui-builder` on each pull request, diffs it against the baseline, and
+# posts a sticky before/after comment. The baseline refreshes on every push to main.
+#
+# This is compose-ai-tools' `apply` over the module's own previews, on the Compose Desktop lane
+# (`ImageComposeScene` + Skia; the module has no Android target). It is the pixel review surface for
+# the EDITOR — its chrome, panels, compact layout, host themes and the catalog components the
+# canvas draws — where `ui-builder-designs.yml` is the one for the committed DESIGNS, which go
+# through `compose-preview-server design render` instead. The previews that set up each editor
+# scenario live in `ui-builder/src/jvmMain/.../preview/`; a new surface or setup that is not in one
+# of them is not diffed, so add a preview with the change that introduces it.
+#
+# The CLI is installed at the plugin version `gradle/libs.versions.toml` pins (`composeai-tools`,
+# the `compose-preview` plugin's `version.ref`): `cli-version` is left on `auto` so a compose-ai-tools
+# release cannot float the CLI ahead of the applied plugin. Keep the action ref below on the same
+# release when that line moves.
+#
+# Only `compose`: the resources pipeline renders Android XML drawables and there are none, and the
+# a11y / notifications pipelines are Android-only.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions: {}
+
+# A pull request cancels its own superseded runs. A baseline run on main is never cancelled: a
+# cancelled one strands the baseline at an older commit, and every later pull request then reports
+# the skipped commits' changes as its own.
+concurrency:
+  group: compose-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  apply:
+    name: Apply compose-preview
+    # A fork's pull request gets a read-only token whatever this job asks for, so it could neither
+    # push the render branch nor comment. Skipped rather than failed, as `ui-builder-designs.yml`
+    # does; the release-please PR changes no source a preview reads.
+    if: >-
+      ${{ (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name == github.repository) &&
+          !startsWith(github.head_ref, 'release-please--') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # the compose-preview/main baseline and compose-preview/pr render branches
+      pull-requests: write # the sticky comment
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          # The same two JDKs as `ci.yml`: 17 is JAVA_HOME and runs Gradle, 21 is the
+          # `java-ui-builder` toolchain `:ui-builder` compiles and renders on, reached through
+          # `org.gradle.java.installations.fromEnv`.
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+      - uses: yschimke/compose-ai-tools/.github/actions/apply@57d56e06948f9f9c115ebbe73966097869f6bf97 # v2.26.0
+        with:
+          only: compose
+          # A ceiling for a hung build, not a budget: a cold runner compiles the whole editor
+          # before the first frame.
+          timeout: '1800'
