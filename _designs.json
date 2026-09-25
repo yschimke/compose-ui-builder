@@ -1,0 +1,17 @@
+{
+  "schema": "compose-ui-builder-design-renders/v1",
+  "designs": [
+    {
+      "id": "jetcaster-wear-library",
+      "file": "jetcaster-wear-library.png",
+      "sha256": "e5e352f1fc44a5f2027624d45590a3c0c2bfb66d97fdf176919a397b8b85bf71",
+      "bytes": 21455
+    },
+    {
+      "id": "wear-starter-list",
+      "file": "wear-starter-list.png",
+      "sha256": "8981cd5299c6436708789034e1771d7de1f54af6b90cac19896831a9efbcb23f",
+      "bytes": 19794
+    }
+  ]
+}
