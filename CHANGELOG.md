@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.49.0](https://github.com/yschimke/compose-ui-builder/compare/v3.48.0...v3.49.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* **intellij:** reconnect a remote design's update stream after a disconnect ([#233](https://github.com/yschimke/compose-ui-builder/issues/233)) ([4ad58e9](https://github.com/yschimke/compose-ui-builder/commit/4ad58e9568b45ebc9d39dce4ac3a71a97170825b))
+* **ui-builder:** catalog runtimes get the design's pictures and follow canvas zoom ([#240](https://github.com/yschimke/compose-ui-builder/issues/240)) ([df78358](https://github.com/yschimke/compose-ui-builder/commit/df783585dbc8ee558439fc07360e5be8f43922c7))
+
 ## [3.48.0](https://github.com/yschimke/compose-ui-builder/compare/v3.47.0...v3.48.0) (2026-09-24)
 
 
