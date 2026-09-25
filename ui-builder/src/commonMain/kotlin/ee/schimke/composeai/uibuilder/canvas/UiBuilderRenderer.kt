@@ -68,6 +68,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -1468,6 +1469,12 @@ private fun RenderNode(
       // and nothing on the canvas moved with it.
       "m3/primary-tab-row" ->
         PrimaryTabRow(node.resolvedInteger("selectedIndex", state), measured) {
+          slot("tabs").forEach { child(it, Modifier) }
+        }
+      // The same row, scrolling instead of dividing the width: on a phone five tabs keep their
+      // labels rather than each getting a fifth of the screen and an ellipsis.
+      "m3/primary-scrollable-tab-row" ->
+        PrimaryScrollableTabRow(node.resolvedInteger("selectedIndex", state), measured) {
           slot("tabs").forEach { child(it, Modifier) }
         }
       "m3/tab" ->

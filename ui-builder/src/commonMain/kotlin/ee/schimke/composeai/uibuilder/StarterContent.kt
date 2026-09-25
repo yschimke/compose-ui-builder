@@ -130,6 +130,7 @@ internal object StarterContent {
       // Zero is already what the catalog's neutral default writes; it is spelled out because a tab
       // row is required to carry the index and a row with none draws no indicator at all.
       "m3/primary-tab-row" to mapOf("selectedIndex" to starterNumber(0)),
+      "m3/primary-scrollable-tab-row" to mapOf("selectedIndex" to starterNumber(0)),
       // An item has to say whether it is the current destination, and one the author has to set
       // first is one that inserts looking wrong in a rail or bar where another is selected.
       "m3/navigation-suite-item" to mapOf("selected" to starterBool(false)),
@@ -254,6 +255,19 @@ internal object StarterContent {
       // selected draws no indicator at all.
       "m3/primary-tab-row" to
         mapOf("tabs" to listOf(tab("Tab 1", selected = true), tab("Tab 2"), tab("Tab 3"))),
+      // Five, one more than a phone's width divides legibly, so the insert shows what scrolling
+      // is for.
+      "m3/primary-scrollable-tab-row" to
+        mapOf(
+          "tabs" to
+            listOf(
+              tab("Tab 1", selected = true),
+              tab("Tab 2"),
+              tab("Tab 3"),
+              tab("Tab 4"),
+              tab("Tab 5"),
+            )
+        ),
       "m3/tab" to mapOf("text" to listOf(text("Tab", "titleSmall"))),
       // The example the goal named: a dialog that arrives saying something and offering the two
       // answers every dialog offers. `confirmButton` has a minimum of one, so without this entry

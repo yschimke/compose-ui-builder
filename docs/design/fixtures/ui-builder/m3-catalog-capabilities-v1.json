@@ -69,6 +69,7 @@
         "m3/list-item": { "group": "Containment" },
         "m3/navigation-suite-item": { "group": "Navigation" },
         "m3/navigation-suite-scaffold": { "group": "Scaffolds" },
+        "m3/primary-scrollable-tab-row": { "group": "Navigation" },
         "m3/primary-tab-row": { "group": "Navigation" },
         "m3/progress-indicator": { "group": "Communication", "variantProperty": "variant" },
         "m3/radio-button": { "group": "Selection" },
@@ -600,6 +601,22 @@
       "modifierCapabilities": ["size", "fillMaxSize", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "align", "alignHorizontal", "alignVertical", "weight"],
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "The real `NavigationSuiteScaffold` from Compose Multiplatform's Material 3 navigation-suite artifact, typed per frame: a phone frame draws a bar and a tablet frame beside it a rail." },
       "code": { "symbol": "NavigationSuiteScaffold", "imports": ["androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
+      "componentId": "m3/primary-scrollable-tab-row",
+      "displayName": "Scrollable tab row",
+      "role": "Container",
+      "traits": ["TabBar", "OrderedContent"],
+      "slots": [
+        { "name": "tabs", "cardinality": { "min": 1, "max": null }, "ordered": true, "acceptedRoles": ["Container"], "acceptedTraits": ["TabItem"] }
+      ],
+      "properties": [
+        { "name": "selectedIndex", "jsonType": ["integer", "object"], "required": true, "notes": "An index, or a `state` read of a declared `int` variable \u2014 which is an object, and why `object` is one of the accepted types. It is the variable the tabs write." }
+      ],
+      "modifierCapabilities": ["fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported" },
+      "code": { "symbol": "PrimaryScrollableTabRow", "imports": ["androidx.compose.material3.PrimaryScrollableTabRow"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {

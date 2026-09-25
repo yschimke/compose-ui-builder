@@ -3098,6 +3098,8 @@ object ScreenDocumentProjection {
       // `selectedIndex`" — the property is right and the two exporters disagreed about it.
       "m3/primary-tab-row" to
         mapOf("selectedIndex" to ParameterTarget("selectedTabIndex", TargetKind.INT)),
+      "m3/primary-scrollable-tab-row" to
+        mapOf("selectedIndex" to ParameterTarget("selectedTabIndex", TargetKind.INT)),
       "asset/image" to mapOf("assetKey" to ParameterTarget("painter", TargetKind.ASSET_PAINTER)),
       // Three of the four styles; `fab` overrides this in `COMPONENT_VARIANTS` because it takes a
       // bare `Color` on a different parameter.

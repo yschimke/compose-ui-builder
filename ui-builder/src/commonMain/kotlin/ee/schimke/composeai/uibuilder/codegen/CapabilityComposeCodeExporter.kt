@@ -758,6 +758,14 @@ private class ComposeEmitter(
           "tabs",
           "selectedTabIndex = ${node.integerExpression("selectedIndex", stateKotlinTypes)}",
         )
+      "m3/primary-scrollable-tab-row" ->
+        emitSimpleContainer(
+          node,
+          bodyLevel,
+          "PrimaryScrollableTabRow",
+          "tabs",
+          "selectedTabIndex = ${node.integerExpression("selectedIndex", stateKotlinTypes)}",
+        )
       // A tab that cannot be clicked is a picture of a tab. The wire has carried the binding all
       // along — the renderer dispatches it — and the export dropped it, so a generated screen
       // showed a tab row whose selection could never move.
@@ -3343,6 +3351,7 @@ private val EMITTER_IDS =
     "m3/list-item",
     "m3/navigation-suite-item",
     "m3/navigation-suite-scaffold",
+    "m3/primary-scrollable-tab-row",
     "m3/primary-tab-row",
     "m3/progress-indicator",
     "m3/radio-button",
@@ -3554,6 +3563,7 @@ private val HANDLED_FIELDS =
       HandledFields(setOf("selected"), setOf("icon", "label"), setOf("click")),
     "m3/navigation-suite-scaffold" to
       HandledFields(emptySet(), setOf("navigationItems", "primaryAction", "content")),
+    "m3/primary-scrollable-tab-row" to HandledFields(setOf("selectedIndex"), setOf("tabs")),
     "m3/primary-tab-row" to HandledFields(setOf("selectedIndex"), setOf("tabs")),
     "m3/progress-indicator" to HandledFields(setOf("variant", "progress", "indeterminate")),
     "m3/radio-button" to HandledFields(setOf("selected", "enabled"), events = setOf("click")),

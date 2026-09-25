@@ -2175,6 +2175,100 @@
         ]
       },
       "signatureKnown": true
+    },
+    {
+      "canonicalId": "m3-catalog/androidx.compose.material3.TabRowKt.PrimaryScrollableTabRow",
+      "componentIds": [
+        "m3/primary-scrollable-tab-row"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.TabRowKt",
+        "callable": "androidx.compose.material3.PrimaryScrollableTabRow",
+        "name": "PrimaryScrollableTabRow",
+        "origin": "LIBRARY"
+      },
+      "parameters": [
+        {
+          "name": "selectedTabIndex",
+          "type": "Int",
+          "hasDefault": false,
+          "typeFqn": "kotlin.Int"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.Modifier"
+        },
+        {
+          "name": "scrollState",
+          "type": "ScrollState",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.foundation.ScrollState"
+        },
+        {
+          "name": "containerColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "contentColor",
+          "type": "Color",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.graphics.Color"
+        },
+        {
+          "name": "edgePadding",
+          "type": "Dp",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.unit.Dp"
+        },
+        {
+          "name": "indicator",
+          "type": "@Composable TabIndicatorScope.() -> Unit",
+          "hasDefault": true,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.material3.TabIndicatorScope"
+        },
+        {
+          "name": "divider",
+          "type": "@Composable () -> Unit",
+          "hasDefault": true,
+          "composableSlot": true
+        },
+        {
+          "name": "minTabWidth",
+          "type": "Dp",
+          "hasDefault": true,
+          "typeFqn": "androidx.compose.ui.unit.Dp"
+        },
+        {
+          "name": "tabs",
+          "type": "@Composable () -> Unit",
+          "hasDefault": false,
+          "composableSlot": true
+        }
+      ],
+      "slots": [
+        {
+          "name": "tabs",
+          "required": true
+        }
+      ],
+      "code": {
+        "call": "PrimaryScrollableTabRow(selectedTabIndex = 0) {}",
+        "imports": [
+          "androidx.compose.material3.PrimaryScrollableTabRow"
+        ],
+        "requiredOptIns": [
+          "androidx.compose.material3.ExperimentalMaterial3Api"
+        ]
+      },
+      "signatureKnown": true,
+      "requiredOptIns": [
+        "androidx.compose.material3.ExperimentalMaterial3Api"
+      ]
     }
   ]
 }

@@ -3848,6 +3848,9 @@
                 "m3/navigation-suite-scaffold": {
                     "group": "Scaffolds"
                 },
+                "m3/primary-scrollable-tab-row": {
+                    "group": "Navigation"
+                },
                 "m3/primary-tab-row": {
                     "group": "Navigation"
                 },
