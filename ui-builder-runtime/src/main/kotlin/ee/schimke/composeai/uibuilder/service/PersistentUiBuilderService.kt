@@ -1096,7 +1096,14 @@ public class PersistentUiBuilderService(
     if (!design.allows(actor, DesignAccessActionV1.READ)) {
       return serviceError(forbidden("read", designId))
     }
-    val authors = design.history.associate { it.outcome.sequence to it.submission.actorId() }
+    // The commit audit first, the operation log over it: an asset upload clears the log but keeps
+    // the revisions, and records its author only in the audit, so reading the log alone would
+    // name nobody for every revision at or before the upload.
+    val authors =
+      design.audit
+        .filter { it.kind == AuditKindV1.COMMIT }
+        .associate { it.sequence to it.actorId } +
+        design.history.associate { it.outcome.sequence to it.submission.actorId() }
     return LockedExecution(
       UiBuilderServiceResponse.Revisions(
         designId,
@@ -1129,6 +1136,18 @@ public class PersistentUiBuilderService(
       persisted.designs[request.designId] ?: return serviceError(notFound(request.designId))
     if (!design.allows(actor, DesignAccessActionV1.READ)) {
       return serviceError(notFound(request.designId))
+    }
+    // A retry of a restore that already committed: the mutation below is derived from the current
+    // document, which that restore changed, so rebuilding it would fingerprint differently and be
+    // refused as a reused operation id. Answer with the recorded outcome instead, as [apply] does
+    // for any replayed submission.
+    design.operationOutcomes[request.operationId]?.let { prior ->
+      val outcome =
+        when (val original = prior.outcome) {
+          is AcceptedOutcomeV1 -> original.copy(idempotentReplay = true)
+          is RejectedOutcomeV1 -> original
+        }
+      return LockedExecution(UiBuilderServiceResponse.OperationOutcome(outcome))
     }
     val target =
       design.revisionSnapshots.firstOrNull { it.document.revision == request.revision }?.document

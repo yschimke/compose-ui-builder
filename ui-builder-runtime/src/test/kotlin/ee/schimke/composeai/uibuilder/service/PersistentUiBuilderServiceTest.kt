@@ -323,6 +323,17 @@ class PersistentUiBuilderServiceTest {
         )
       )
     assertEquals(3, restored.committedRevision)
+    // A retry whose first answer was lost replays that answer rather than being refused.
+    val replayed =
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 2, "restore-1"),
+        )
+      )
+    assertTrue(replayed.idempotentReplay)
+    assertEquals(3, replayed.committedRevision)
     val document = currentDocument(service)
     assertEquals(3, document.revision)
     assertTrue("first" in document.nodes)

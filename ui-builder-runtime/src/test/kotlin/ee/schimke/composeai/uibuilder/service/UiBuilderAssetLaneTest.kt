@@ -77,6 +77,23 @@ class UiBuilderAssetLaneTest {
     assertEquals(binding, found.binding)
   }
 
+  /**
+   * An upload clears the operation log but keeps the revisions, so the history view must still be
+   * able to say who made each one — from the commit audit, which the upload does write.
+   */
+  @Test
+  fun `the revision an upload made is still attributed to its uploader`() {
+    val service = service(MemoryAssetStore())
+    create(service)
+    put(service, owner, "avatar-lain", PNG_HEADER)
+
+    val revisions =
+      assertIs<UiBuilderServiceResponse.Revisions>(
+        execute(service, owner, UiBuilderServiceRequest.ListRevisions("design"))
+      )
+    assertEquals(owner.actorId, revisions.revisions.first { it.revision == 1L }.actorId)
+  }
+
   @Test
   fun `the same bytes under the same key replay idempotently and different bytes re-point it`() {
     val service = service(MemoryAssetStore())
