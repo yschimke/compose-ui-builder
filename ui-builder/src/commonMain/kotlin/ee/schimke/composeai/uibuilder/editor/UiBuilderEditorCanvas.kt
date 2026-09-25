@@ -686,9 +686,26 @@ internal fun PinnedDesignCanvas(
         selectedBounds != null &&
         dragPosition == null
     ) {
+      val pxPerDp = density.density * scale
+      // Where Fill actually reaches: the parent's box less its own padding, which is the room it
+      // offers its children. Snapping to the outer box made a padded parent's Fill land short of
+      // where the handle was let go.
       val parentBounds =
         document.location(sizing.nodeId)?.nodeId?.let { parentId ->
-          inspection?.nodes?.firstOrNull { it.nodeId == parentId }?.bounds
+          inspection
+            ?.nodes
+            ?.firstOrNull { it.nodeId == parentId }
+            ?.bounds
+            ?.let { outer ->
+              val (start, top, end, bottom) =
+                paddingInsets(document.nodes[parentId]?.modifiers.orEmpty()).map { it * pxPerDp }
+              UiBuilderPixelBounds(
+                x = outer.x + start,
+                y = outer.y + top,
+                width = (outer.width - start - end).coerceAtLeast(0f),
+                height = (outer.height - top - bottom).coerceAtLeast(0f),
+              )
+            }
         }
       ResizeHandles(
         sizing = sizing,
@@ -697,7 +714,11 @@ internal fun PinnedDesignCanvas(
         origin = workspaceBounds.topLeft,
         // A design dp is `scale` workspace dp — see [drawScale] — and the root counts in the
         // workspace's pixels.
-        pxPerDp = density.density * scale,
+        pxPerDp = pxPerDp,
+        nodeScale =
+          document.nodes[sizing.nodeId]?.modifiers.orEmpty().let { chain ->
+            drawnScale(chain, EditorAxis.Width) to drawnScale(chain, EditorAxis.Height)
+          },
         onResizing = { resizing = it },
         onResize = { width, height -> onResize(sizing.nodeId, width, height) },
         modifier = Modifier.matchParentSize().clipToBounds(),

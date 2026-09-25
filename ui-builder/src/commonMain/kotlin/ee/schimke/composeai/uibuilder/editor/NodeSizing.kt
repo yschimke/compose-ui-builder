@@ -104,27 +104,65 @@ private fun JsonObject.dp(field: String): Float? =
   this[field]?.primitiveOrNull()?.doubleOrNull?.toFloat()
 
 /**
- * How [axis] is sized by [chain], read the way the renderer applies it: the last size-deciding
- * modifier on the axis wins, which is also what Compose does with a chain that says two things.
+ * How [axis] is sized by [chain], read the way Compose applies it: the **first** size-deciding
+ * modifier on the axis wins, because an outer modifier fixes the constraints every inner one is
+ * measured against — `fillMaxWidth().width(64.dp)` still fills. A `weight` wins over all of them,
+ * since the parent measures a weighted child at its share before the chain is consulted.
  */
 internal fun sizingOf(
   chain: List<JsonElement>,
   axis: EditorAxis,
   scope: EditorLayoutScope?,
 ): EditorSizing {
-  var sizing: EditorSizing = EditorSizing.Hug
+  if (axis.fillsByWeight(scope) && chain.any { it.modifierType() == "weight" }) {
+    return EditorSizing.Fill
+  }
   chain.forEach { element ->
     val modifier = element as? JsonObject ?: return@forEach
     when (modifier.optionalStringValue("type")) {
       axis.fillType(),
       "fillMaxSize",
-      "matchParentSize" -> sizing = EditorSizing.Fill
-      "weight" -> if (axis.fillsByWeight(scope)) sizing = EditorSizing.Fill
-      axis.fixedType() -> modifier.dp(axis.fixedField())?.let { sizing = EditorSizing.Fixed(it) }
-      "size" -> modifier.dp(axis.fixedField())?.let { sizing = EditorSizing.Fixed(it) }
+      "matchParentSize" -> return EditorSizing.Fill
+      axis.fixedType(),
+      "size" ->
+        modifier.dp(axis.fixedField())?.let {
+          return EditorSizing.Fixed(it)
+        }
     }
   }
-  return sizing
+  return EditorSizing.Hug
+}
+
+/**
+ * How much [chain]'s `scale` modifiers magnify the node as drawn, per axis. The canvas measures a
+ * node after its transforms, so a handle's pixels are divided by this before they become dp —
+ * otherwise a 2x node resized to 120px would be written as 120dp and drawn at 240.
+ */
+internal fun drawnScale(chain: List<JsonElement>, axis: EditorAxis): Float =
+  chain.fold(1f) { product, element ->
+    val modifier = element as? JsonObject
+    if (modifier?.optionalStringValue("type") != "scale") product
+    else {
+      val factor =
+        modifier.dp(if (axis == EditorAxis.Width) "scaleX" else "scaleY")?.takeIf { it > 0f } ?: 1f
+      product * factor
+    }
+  }
+
+/**
+ * The padding [chain] puts between a node's box and its content, in dp, as (start, top, end,
+ * bottom) — every `padding` in the chain, because each one shrinks what the children are offered.
+ */
+internal fun paddingInsets(chain: List<JsonElement>): List<Float> {
+  val sums = FloatArray(4)
+  chain.forEach { element ->
+    val modifier = element as? JsonObject ?: return@forEach
+    if (modifier.optionalStringValue("type") != "padding") return@forEach
+    listOf("startDp", "topDp", "endDp", "bottomDp").forEachIndexed { index, field ->
+      sums[index] += modifier.dp(field) ?: 0f
+    }
+  }
+  return sums.toList()
 }
 
 /** The horizontal (or vertical) padding written *before* [index] in [chain], in dp. */

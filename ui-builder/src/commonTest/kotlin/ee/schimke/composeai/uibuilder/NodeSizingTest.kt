@@ -4,7 +4,9 @@ import ee.schimke.composeai.uibuilder.editor.EditorAxis
 import ee.schimke.composeai.uibuilder.editor.EditorLayoutScope
 import ee.schimke.composeai.uibuilder.editor.EditorSizing
 import ee.schimke.composeai.uibuilder.editor.ResizeHandle
+import ee.schimke.composeai.uibuilder.editor.drawnScale
 import ee.schimke.composeai.uibuilder.editor.nodeSizing
+import ee.schimke.composeai.uibuilder.editor.paddingInsets
 import ee.schimke.composeai.uibuilder.editor.resizePreview
 import ee.schimke.composeai.uibuilder.editor.resizeToggle
 import ee.schimke.composeai.uibuilder.editor.resizedModifierChain
@@ -132,10 +134,33 @@ class NodeSizingTest {
   }
 
   @Test
-  fun `the last modifier on an axis is how it is read`() {
+  fun `the first modifier on an axis is how it is read, as Compose measures it`() {
+    // The outer fill fixes the constraints the inner width is measured against: it still fills.
     val read = chain("""[{"type":"fillMaxWidth"},{"type":"width","widthDp":64}]""")
-    assertEquals(EditorSizing.Fixed(64f), sizingOf(read, EditorAxis.Width, null))
+    assertEquals(EditorSizing.Fill, sizingOf(read, EditorAxis.Width, null))
     assertEquals(EditorSizing.Hug, sizingOf(read, EditorAxis.Height, null))
+    val fixedFirst = chain("""[{"type":"width","widthDp":64},{"type":"fillMaxWidth"}]""")
+    assertEquals(EditorSizing.Fixed(64f), sizingOf(fixedFirst, EditorAxis.Width, null))
+    // A weight on the main axis is applied by the parent, outside the whole chain.
+    val weighted = chain("""[{"type":"width","widthDp":64},{"type":"weight","weight":1}]""")
+    assertEquals(
+      EditorSizing.Fill,
+      sizingOf(weighted, EditorAxis.Width, EditorLayoutScope.Row),
+    )
+  }
+
+  @Test
+  fun `every padding in a chain adds to the insets its children are offered`() {
+    assertEquals(
+      listOf(10f, 2f, 12f, 4f),
+      paddingInsets(
+        chain(
+          """[{"type":"padding","startDp":8,"topDp":0,"endDp":8,"bottomDp":4},
+             {"type":"width","widthDp":10},
+             {"type":"padding","startDp":2,"topDp":2,"endDp":4,"bottomDp":0}]"""
+        )
+      ),
+    )
   }
 
   private val bounds = UiBuilderPixelBounds(100f, 100f, 50f, 20f)
@@ -151,6 +176,19 @@ class NodeSizingTest {
     val snapped = resizePreview(ResizeHandle.End, sizing, bounds, parent, 120f, 0f, 2f, 12f)
     assertEquals(EditorSizing.Fill, snapped.width)
     assertEquals(180f, snapped.widthPx)
+  }
+
+  @Test
+  fun `a scaled node's pixels are unscaled before they become dp`() {
+    val sizing = nodeSizing("n", emptyList(), everything, null)
+    // Drawn at 2x: 50px on screen is 25dp of layout, and dragging to 70px is 35dp.
+    val scaled =
+      resizePreview(ResizeHandle.End, sizing, bounds, null, 20f, 0f, 1f, 12f, nodeScaleX = 2f)
+    assertEquals(EditorSizing.Fixed(35f), scaled.width)
+    assertEquals(
+      2f,
+      drawnScale(chain("""[{"type":"scale","scaleX":2,"scaleY":1}]"""), EditorAxis.Width),
+    )
   }
 
   @Test
