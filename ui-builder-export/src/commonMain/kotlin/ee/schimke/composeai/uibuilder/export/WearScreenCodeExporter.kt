@@ -480,7 +480,12 @@ internal class WearContentEmitter(
 
   private var usesZIndex = false
 
-  /** Wear `…Defaults` objects a row's minimum list padding named, by simple name. */
+  private var usesAlertDialogDefaults = false
+
+  /**
+   * Wear `…Defaults` objects a row's minimum list padding or a button's colours named, by simple
+   * name.
+   */
   private val listPaddingDefaults = mutableSetOf<String>()
 
   /** Text arguments' own types, by simple name, with their packages in [imports]. */
@@ -694,11 +699,13 @@ internal class WearContentEmitter(
         val enabled =
           if (node.boolean("enabled") != false) emptyList()
           else listOf("${pad}${INDENT}enabled = false,")
+        val colors = colorsArgument(node, nodeId, pad + INDENT, symbol)
         val slots = buttonSlots(content)
         if (slots == null) {
           // Nothing the slots can say: the content overload, which is still Wear's `Button`.
           return listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
             enabled +
+            colors +
             surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
             listOf("${pad}) {") +
             content.flatMap { emit(it, depth + 1) } +
@@ -710,6 +717,7 @@ internal class WearContentEmitter(
         // title-over-date row as two identical centred lines.
         listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
           enabled +
+          colors +
           (slots.icon?.let {
             listOf("${pad}${INDENT}icon = {") + emit(it, depth + 2) + listOf("${pad}${INDENT}},")
           } ?: emptyList()) +
@@ -848,6 +856,7 @@ internal class WearContentEmitter(
         val symbol = iconButtonSymbol(node.string("variant"))
         usesIconButton += symbol
         listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
+          colorsArgument(node, nodeId, pad + INDENT, symbol) +
           surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
           listOf("${pad}) {") +
           node.slots["content"].orEmpty().flatMap { emit(it, depth + 1) } +
@@ -1545,6 +1554,52 @@ internal class WearContentEmitter(
         listOf("${pad}transformation = SurfaceTransformation(spec),")
       else emptyList()
 
+  /**
+   * `colors = <Defaults>.<variant>Colors(containerColor = …, contentColor = …)` for a button that
+   * recolours its variant, which is how both upstream samples mark hierarchy — ComposeStarter's
+   * settings button on `secondary`, Jetcaster's first library row on `surfaceContainer`.
+   *
+   * The variant's own colours function, not a generic one, so the variant still decides every
+   * colour the design did not name (the disabled pair, the secondary label, the icon). An outlined
+   * or child button draws no container, and Wear's colours functions for them take no
+   * `containerColor`; a design that names one there is refused rather than silently dropped.
+   */
+  private fun colorsArgument(
+    node: UiBuilderNode,
+    nodeId: String,
+    pad: String,
+    symbol: String,
+  ): List<String> {
+    val container = colorExpression(node, "containerColor")
+    val content = colorExpression(node, "contentColor")
+    if (container == null && content == null) return emptyList()
+    val (defaults, function) =
+      when (symbol) {
+        "Button" -> "ButtonDefaults" to "buttonColors"
+        "FilledTonalButton" -> "ButtonDefaults" to "filledTonalButtonColors"
+        "OutlinedButton" -> "ButtonDefaults" to "outlinedButtonColors"
+        "ChildButton" -> "ButtonDefaults" to "childButtonColors"
+        "FilledIconButton" -> "IconButtonDefaults" to "filledIconButtonColors"
+        "FilledTonalIconButton" -> "IconButtonDefaults" to "filledTonalIconButtonColors"
+        "FilledVariantIconButton" -> "IconButtonDefaults" to "filledVariantIconButtonColors"
+        "OutlinedIconButton" -> "IconButtonDefaults" to "outlinedIconButtonColors"
+        else -> "IconButtonDefaults" to "iconButtonColors"
+      }
+    if (container != null && symbol in NO_CONTAINER_BUTTON_SYMBOLS) {
+      return refused(
+        "`${node.componentId}` (node `$nodeId`) sets `containerColor` on `$symbol`, which draws " +
+          "no container — Wear's `$defaults.$function` takes only content colours"
+      )
+    }
+    listPaddingDefaults += defaults
+    val arguments =
+      listOfNotNull(
+        container?.let { "containerColor = $it" },
+        content?.let { "contentColor = $it" },
+      )
+    return listOf("${pad}colors = $defaults.$function(${arguments.joinToString(", ")}),")
+  }
+
   private fun refused(reason: String): List<String> {
     refusals += reason
     return emptyList()
@@ -1615,6 +1670,13 @@ internal class WearContentEmitter(
         val confirm = node.slots["confirmButton"].orEmpty().singleOrNull()
         val dismissButton = node.slots["dismissButton"].orEmpty().singleOrNull()
         val extra = node.slots["content"].orEmpty()
+        if (dismissButton != null && confirm == null) {
+          return refused(
+            "`${node.componentId}` (node `$nodeId`) has a dismiss button and no confirm button, " +
+              "and Wear's `AlertDialog` has no such shape: `dismissButton` is a parameter of the " +
+              "two-button overload only, which also takes the confirm"
+          )
+        }
         listOf("${pad}AlertDialog(") +
           listOf(
             "${pad}${INDENT}visible = $visible,",
@@ -1623,15 +1685,23 @@ internal class WearContentEmitter(
           ) +
           (if (text.isEmpty()) emptyList()
           else listOf("${pad}${INDENT}text = { Text(text = ${text.quoted()}) },")) +
+          // Wear's own confirm and dismiss buttons, which carry the icons, sizes, shapes and
+          // content
+          // descriptions the dialog guidance specifies. A filled slot is written as the default
+          // button because that is what the canvas draws for one — it reads the slot's presence,
+          // not its content — so the design and the code show the same dialog. Both dismiss the
+          // dialog; the app wires its own action beside that.
           (confirm?.let {
-            listOf("${pad}${INDENT}confirmButton = {") +
-              emit(it, depth + 2) +
-              listOf("${pad}${INDENT}},")
+            usesAlertDialogDefaults = true
+            listOf(
+              "${pad}${INDENT}confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { $visible = false }) },"
+            )
           } ?: emptyList()) +
           (dismissButton?.let {
-            listOf("${pad}${INDENT}dismissButton = {") +
-              emit(it, depth + 2) +
-              listOf("${pad}${INDENT}},")
+            usesAlertDialogDefaults = true
+            listOf(
+              "${pad}${INDENT}dismissButton = { AlertDialogDefaults.DismissButton(onClick = { $visible = false }) },"
+            )
           } ?: emptyList()) +
           (modifierChain(nodeId)?.let { listOf("${pad}${INDENT}modifier = $it,") } ?: emptyList()) +
           // The content lambda only when the design put something in it: `content` is nullable
@@ -1778,6 +1848,7 @@ internal class WearContentEmitter(
     usesSelection.forEach { add("androidx.wear.compose.material3.$it") }
     usesProgress.forEach { add("androidx.wear.compose.material3.$it") }
     usesDialog.forEach { add("androidx.wear.compose.material3.$it") }
+    if (usesAlertDialogDefaults) add("androidx.wear.compose.material3.AlertDialogDefaults")
     if (usesDialog.any { it.endsWith("ConfirmationDialog") })
       add("androidx.wear.compose.material3.confirmationDialogCurvedText")
     if ("OpenOnPhoneDialog" in usesDialog)
@@ -1963,9 +2034,22 @@ internal class WearContentEmitter(
       val argb = if (hex.length == 6) "FF$hex" else hex
       textImports += "Color"
       "Color(0x$argb)"
+    } else if (value == "transparent") {
+      textImports += "Color"
+      "Color.Transparent"
     } else {
       usesMaterialTheme = true
-      "MaterialTheme.colorScheme.$value"
+      // The token vocabulary is shared with the mobile catalog, and Wear's `ColorScheme` has no
+      // `surface` and no `surfaceContainerHighest`: a watch draws on black and publishes three
+      // container tones. Each maps to the Wear role the canvas draws it as, so the code compiles
+      // and shows the colour the design did.
+      val role =
+        when (value) {
+          "surface" -> "surfaceContainer"
+          "surfaceContainerHighest" -> "surfaceContainerHigh"
+          else -> value
+        }
+      "MaterialTheme.colorScheme.$role"
     }
   }
 
@@ -2056,6 +2140,9 @@ internal class WearContentEmitter(
         "OutlinedIconButton",
         "IconButton",
       )
+
+    /** The buttons whose colours function has no `containerColor`, because they draw none. */
+    val NO_CONTAINER_BUTTON_SYMBOLS = setOf("OutlinedButton", "ChildButton", "OutlinedIconButton")
 
     val TEXT_BUTTON_SYMBOLS =
       setOf(

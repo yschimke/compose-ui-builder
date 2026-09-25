@@ -944,6 +944,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
         "surfaceContainerHighest",
         "primary",
         "onPrimary",
+        "secondary",
+        "onSecondary",
         "tertiary",
         "onTertiary",
         "onSurface",
@@ -2615,7 +2617,12 @@ private fun wearOnlyComponents(
               "`FilledTonalIconButton`, `FilledVariantIconButton`, `OutlinedIconButton` or plain " +
               "`IconButton`. A variant selects the composable rather than tinting one, the way " +
               "`m3/button`'s style does.",
-          )
+          ),
+          // Recolours the variant's own palette rather than replacing the variant: upstream
+          // passes `IconButtonDefaults.filledIconButtonColors(containerColor = …)` to a
+          // `FilledIconButton`, so the variant still decides the shape and the disabled colours.
+          wearColor("containerColor"),
+          wearColor("contentColor"),
         ),
       modifierCapabilities = WEAR_BUTTON_GROUP_CHILD_MODIFIERS,
     ),
@@ -3307,6 +3314,8 @@ private fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
                 "`ChildButton`. There is no `fab` and no `elevated` — a watch publishes neither.",
           ),
           wearBoolean("enabled", "Whether the button responds to a press."),
+          wearColor("containerColor"),
+          wearColor("contentColor"),
           wearClickAction(),
         ),
     )

@@ -112,6 +112,10 @@
           "variant": {
             "type": "enum",
             "value": "filled-tonal"
+          },
+          "containerColor": {
+            "type": "colorToken",
+            "value": "surfaceContainer"
           }
         },
         "modifiers": [
@@ -301,5 +305,5 @@
       "afterNodeId": "up-next-icon"
     }
   ],
-  "expectedDocumentHash": "3aa4c03d07d529927f1909f523dcde91e974d35a0d06d9e1fcf61f3041f4d6cb"
+  "expectedDocumentHash": "cb20618f9058b8fc391998cf092423b2c7aecdd5fd244ce959440ecf2ce0ab34"
 }

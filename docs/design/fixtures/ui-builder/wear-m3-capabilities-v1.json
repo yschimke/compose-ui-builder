@@ -582,6 +582,20 @@
                 },
                 {
                     "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is rejected rather than guessed at.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is rejected rather than guessed at.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
                     "jsonType": [
                         "object",
                         "null"
@@ -12133,6 +12147,20 @@
                     "name": "variant",
                     "notes": "Which of the five `IconButton` overloads is written: `FilledIconButton`, `FilledTonalIconButton`, `FilledVariantIconButton`, `OutlinedIconButton` or plain `IconButton`. A variant selects the composable rather than tinting one, the way `m3/button`'s style does.",
                     "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is rejected rather than guessed at.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is rejected rather than guessed at.",
+                    "required": false
                 }
             ],
             "role": "Container",
@@ -13480,6 +13508,8 @@
                 "surfaceContainerHighest",
                 "primary",
                 "onPrimary",
+                "secondary",
+                "onSecondary",
                 "tertiary",
                 "onTertiary",
                 "onSurface",

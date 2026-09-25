@@ -9,6 +9,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 /**
@@ -29,6 +30,32 @@ class WearSampleDesignExportTest {
       "jetcaster-wear-episode" to "JetcasterEpisodeScreen",
       "jetcaster-wear-queue" to "JetcasterQueueScreen",
     )
+
+  /** An outlined button draws no container, so it has none to recolour. */
+  @Test
+  fun `a container colour on an outlined button is refused`() {
+    val file = File(designsDirectory(), "wear-starter-list.json")
+    val document =
+      UiBuilderReducer.replay(Json.parseToJsonElement(file.readText()).jsonObject).document
+    val settings = document.nodes.getValue("settings")
+    val outlined =
+      document.copy(
+        nodes =
+          document.nodes +
+            ("settings" to
+              settings.copy(
+                properties =
+                  JsonObject(
+                    settings.properties +
+                      ("variant" to
+                        Json.parseToJsonElement("{\"type\":\"enum\",\"value\":\"outlined\"}"))
+                  )
+              ))
+      )
+    val result = RecordFreeExport.generate(outlined, UiBuilderCatalogPlatform.WEAR)
+    assertTrue(result is RecordFreeExport.Generated.Refused, "$result")
+    assertTrue(result.reasons.any { "draws no container" in it }, "${result.reasons}")
+  }
 
   @Test
   fun `every upstream Wear sample exports as a Wear screen`() {
@@ -87,6 +114,31 @@ class WearSampleDesignExportTest {
     assertTrue("contentDescription = \"Settings Button\"," in list, list)
     // Hoisted state reads as Kotlin.
     assertTrue("var errorDialogVisible by remember { mutableStateOf(false) }" in list, list)
+    // The dialog's buttons are Wear's own, with their icons and content descriptions.
+    assertTrue(
+      "confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { errorDialogVisible = false }) }," in
+        list,
+      list,
+    )
+    assertTrue(
+      "dismissButton = { AlertDialogDefaults.DismissButton(onClick = { errorDialogVisible = false }) }," in
+        list,
+      list,
+    )
+    assertTrue("import androidx.wear.compose.material3.AlertDialogDefaults" in list, list)
+    // Hierarchy by colour, through the variant's own colours function.
+    assertTrue(
+      "colors = IconButtonDefaults.filledIconButtonColors(" +
+        "containerColor = MaterialTheme.colorScheme.secondary, " +
+        "contentColor = MaterialTheme.colorScheme.onSecondary)," in list,
+      list,
+    )
+    val library = export("jetcaster-wear-library")
+    assertTrue(
+      "colors = ButtonDefaults.filledTonalButtonColors(" +
+        "containerColor = MaterialTheme.colorScheme.surfaceContainer)," in library,
+      library,
+    )
 
     val episode = export("jetcaster-wear-episode")
     assertTrue("modifier = Modifier.weight(0.7f)," in episode, episode)

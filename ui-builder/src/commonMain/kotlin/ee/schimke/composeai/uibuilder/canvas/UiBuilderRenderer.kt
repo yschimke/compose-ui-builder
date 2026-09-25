@@ -934,6 +934,8 @@ private fun RenderNode(
           variant = node.string("variant"),
           enabled = node.bool("enabled", true),
           modifier = measured,
+          containerColor = node.wearColor("containerColor"),
+          contentColor = node.wearColor("contentColor"),
         ) {
           slot("content").forEach { wearChild(it, Modifier) }
         }
@@ -993,7 +995,13 @@ private fun RenderNode(
           slot("content").forEach { wearChild(it, Modifier) }
         }
       "wear-m3/button" ->
-        WearCanvasButton(node.string("variant"), node.bool("enabled", true), measured) {
+        WearCanvasButton(
+          node.string("variant"),
+          node.bool("enabled", true),
+          measured,
+          containerColor = node.wearColor("containerColor"),
+          contentColor = node.wearColor("contentColor"),
+        ) {
           slot("content").forEach { wearChild(it, Modifier) }
         }
       // The dialogs. Drawn only when the document says they are showing: `visible` is the flag the
@@ -1007,7 +1015,6 @@ private fun RenderNode(
             text = node.string("text"),
             modifier = measured,
             hasConfirm = slot("confirmButton").isNotEmpty(),
-            hasDismiss = slot("dismissButton").isNotEmpty(),
           ) {
             slot("content").forEach { child(it, Modifier) }
           }
@@ -3678,6 +3685,8 @@ private fun colorTokenOrNull(value: String): Color? =
     "surfaceContainerHighest" -> MaterialTheme.colorScheme.surfaceContainerHighest
     "primary" -> MaterialTheme.colorScheme.primary
     "onPrimary" -> MaterialTheme.colorScheme.onPrimary
+    "secondary" -> MaterialTheme.colorScheme.secondary
+    "onSecondary" -> MaterialTheme.colorScheme.onSecondary
     "tertiary" -> MaterialTheme.colorScheme.tertiary
     "onTertiary" -> MaterialTheme.colorScheme.onTertiary
     "onSurface" -> MaterialTheme.colorScheme.onSurface
@@ -3701,6 +3710,8 @@ private val RESOLVABLE_COLOR_TOKENS =
     "surfaceContainerHighest",
     "primary",
     "onPrimary",
+    "secondary",
+    "onSecondary",
     "tertiary",
     "onTertiary",
     "onSurface",
@@ -3730,6 +3741,14 @@ private fun UiBuilderNode.color(name: String, fallback: Color): Color {
   if (value.startsWith("#")) return Color(parseArgb(value))
   if (value.isEmpty()) return fallback
   return colorTokenOrNull(value) ?: fallback
+}
+
+/** A Wear property's colour: a literal as itself, a role through Wear's own scheme. */
+@Composable
+private fun UiBuilderNode.wearColor(name: String): Color {
+  val value = string(name)
+  if (value.startsWith("#")) return Color(parseArgb(value))
+  return wearThemeColor(value)
 }
 
 private fun UiBuilderNode.shape(themeCornerRadius: Float) =

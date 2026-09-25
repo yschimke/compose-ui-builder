@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -21,6 +22,7 @@ import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AppCard
 import androidx.wear.compose.material3.ArcProgressIndicator
 import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.ButtonGroup
 import androidx.wear.compose.material3.Card
 import androidx.wear.compose.material3.CardDefaults
@@ -37,6 +39,7 @@ import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.FilledTonalIconButton
 import androidx.wear.compose.material3.HorizontalPageIndicator
 import androidx.wear.compose.material3.IconButton
+import androidx.wear.compose.material3.IconButtonDefaults
 import androidx.wear.compose.material3.LinearProgressIndicator
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.ListSubHeader
@@ -487,17 +490,82 @@ internal fun WearCanvasIconButton(
   variant: String,
   enabled: Boolean,
   modifier: Modifier = Modifier,
+  containerColor: Color = Color.Unspecified,
+  contentColor: Color = Color.Unspecified,
   content: @Composable () -> Unit,
 ) {
   when (variant) {
-    "filled" -> FilledIconButton(onClick = {}, modifier = modifier, enabled = enabled) { content() }
+    "filled" ->
+      FilledIconButton(
+        onClick = {},
+        modifier = modifier,
+        enabled = enabled,
+        colors = IconButtonDefaults.filledIconButtonColors(containerColor, contentColor),
+      ) {
+        content()
+      }
     "filled-tonal" ->
-      FilledTonalIconButton(onClick = {}, modifier = modifier, enabled = enabled) { content() }
+      FilledTonalIconButton(
+        onClick = {},
+        modifier = modifier,
+        enabled = enabled,
+        colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor, contentColor),
+      ) {
+        content()
+      }
     "outlined" ->
-      OutlinedIconButton(onClick = {}, modifier = modifier, enabled = enabled) { content() }
-    else -> IconButton(onClick = {}, modifier = modifier, enabled = enabled) { content() }
+      OutlinedIconButton(
+        onClick = {},
+        modifier = modifier,
+        enabled = enabled,
+        colors = IconButtonDefaults.outlinedIconButtonColors(contentColor = contentColor),
+      ) {
+        content()
+      }
+    else ->
+      IconButton(
+        onClick = {},
+        modifier = modifier,
+        enabled = enabled,
+        colors = IconButtonDefaults.iconButtonColors(containerColor, contentColor),
+      ) {
+        content()
+      }
   }
 }
+
+/**
+ * A theme role, resolved against **Wear's** colour scheme — the one the Wear components draw with,
+ * and the one `MaterialTheme.colorScheme.<role>` names in the generated screen. Not the canvas's
+ * mobile scheme, whose `secondary` is Material 3's rather than the watch's.
+ *
+ * `surface` and `surfaceContainerHighest` are the shared vocabulary's and Wear has neither; they
+ * map to the role the Wear export writes for them. Anything else unknown is `Unspecified`, which a
+ * Wear colours function reads as the component's own default.
+ */
+@Composable
+internal fun wearThemeColor(role: String): Color =
+  with(MaterialTheme.colorScheme) {
+    when (role) {
+      "background" -> background
+      "surface",
+      "surfaceContainer" -> surfaceContainer
+      "surfaceContainerLow" -> surfaceContainerLow
+      "surfaceContainerHigh",
+      "surfaceContainerHighest" -> surfaceContainerHigh
+      "primary" -> primary
+      "onPrimary" -> onPrimary
+      "secondary" -> secondary
+      "onSecondary" -> onSecondary
+      "tertiary" -> tertiary
+      "onTertiary" -> onTertiary
+      "onSurface" -> onSurface
+      "onSurfaceVariant" -> onSurfaceVariant
+      "outlineVariant" -> outlineVariant
+      "transparent" -> Color.Transparent
+      else -> Color.Unspecified
+    }
+  }
 
 @Composable
 internal fun WearCanvasTextButton(
@@ -548,16 +616,17 @@ internal fun WearCanvasAlertDialog(
   text: String,
   modifier: Modifier = Modifier,
   hasConfirm: Boolean,
-  hasDismiss: Boolean,
   content: @Composable () -> Unit,
 ) {
   val titleSlot: @Composable () -> Unit = { Text(title) }
   val textSlot: (@Composable () -> Unit)? = text.takeIf { it.isNotEmpty() }?.let { { Text(it) } }
   // Two overloads, not one call with nullable buttons: Wear's two-button alert is a distinct shape
   // from its button-less one and its parameters are non-null, so which dialog is drawn is decided
-  // here rather than by passing null. Both slots or neither — a single confirm would silently draw
-  // the wrong one.
-  if (hasConfirm && hasDismiss) {
+  // here rather than by passing null. A confirm is what selects the two-button shape: that overload
+  // defaults `dismissButton` to `AlertDialogDefaults.DismissButton`, so a design with a confirm and
+  // no dismiss still shows both on a watch, and the canvas draws what the watch does. A dismiss
+  // alone has no overload to be; the export refuses it.
+  if (hasConfirm) {
     AlertDialogContent(
       confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = {}) },
       dismissButton = { AlertDialogDefaults.DismissButton(onClick = {}) },
@@ -738,55 +807,88 @@ internal fun WearCanvasButton(
   variant: String,
   enabled: Boolean,
   modifier: Modifier = Modifier,
+  containerColor: Color = Color.Unspecified,
+  contentColor: Color = Color.Unspecified,
   label: @Composable () -> Unit,
 ) {
+  // The variant's own colours function with the design's overrides in it, as the export writes:
+  // an unset colour is `Unspecified`, which each function reads as "the variant's default".
+  val colors =
+    when (variant) {
+      "filled-tonal" -> ButtonDefaults.filledTonalButtonColors(containerColor, contentColor)
+      "outlined" -> ButtonDefaults.outlinedButtonColors(contentColor = contentColor)
+      "child" -> ButtonDefaults.childButtonColors(contentColor = contentColor)
+      else -> ButtonDefaults.buttonColors(containerColor, contentColor)
+    }
   val slot: @Composable RowScope.() -> Unit = { label() }
   val transformation = LocalWearSurfaceTransformation.current
   when (variant) {
     "filled-tonal" ->
       if (transformation == null) {
-        FilledTonalButton(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
+        FilledTonalButton(
+          onClick = {},
+          modifier = modifier,
+          enabled = enabled,
+          colors = colors,
+          label = slot,
+        )
       } else {
         FilledTonalButton(
           onClick = {},
           modifier = modifier,
           enabled = enabled,
+          colors = colors,
           label = slot,
           transformation = transformation,
         )
       }
     "outlined" ->
       if (transformation == null) {
-        OutlinedButton(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
+        OutlinedButton(
+          onClick = {},
+          modifier = modifier,
+          enabled = enabled,
+          colors = colors,
+          label = slot,
+        )
       } else {
         OutlinedButton(
           onClick = {},
           modifier = modifier,
           enabled = enabled,
+          colors = colors,
           label = slot,
           transformation = transformation,
         )
       }
     "child" ->
       if (transformation == null) {
-        ChildButton(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
+        ChildButton(
+          onClick = {},
+          modifier = modifier,
+          enabled = enabled,
+          colors = colors,
+          label = slot,
+        )
       } else {
         ChildButton(
           onClick = {},
           modifier = modifier,
           enabled = enabled,
+          colors = colors,
           label = slot,
           transformation = transformation,
         )
       }
     else ->
       if (transformation == null) {
-        Button(onClick = {}, modifier = modifier, enabled = enabled, label = slot)
+        Button(onClick = {}, modifier = modifier, enabled = enabled, colors = colors, label = slot)
       } else {
         Button(
           onClick = {},
           modifier = modifier,
           enabled = enabled,
+          colors = colors,
           label = slot,
           transformation = transformation,
         )
