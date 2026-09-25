@@ -254,6 +254,7 @@ private fun LiveSessionApp(
               it.updatedAtEpochMillis
                 ?.let { at -> "updated ${formatLocalDateTime(at.toDouble())}" }
                 .orEmpty(),
+            revision = it.revision,
           )
         }
   }
@@ -1006,6 +1007,17 @@ private fun LiveSessionApp(
             }
           }
         } else null,
+      loadThumbnail =
+        if (localSession == null) {
+          { designId, revision ->
+            val encoded =
+              fetchBase64(
+                "/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/thumbnail.png" +
+                  "?revision=$revision"
+              )
+            Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
+          }
+        } else null,
       onCreate = createDesign,
     )
     LaunchedEffect(newDesignCatalogs) { markReady() }
@@ -1137,6 +1149,12 @@ private fun LiveSessionApp(
       newDesignCatalogs = newDesignCatalogs,
       onCreateDesign = createDesign,
       onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
+      // A fork of the design as it is now, owned by whoever presses it: the copy route reads the
+      // source as the caller, so this lends nothing a reader could not already open.
+      onForkDesign =
+        if (localSession == null) {
+          { navigateToCopyDesign(config.designId, NewDesignNames.random()) }
+        } else null,
       onHelp = ::openUiBuilderGuide,
       onCopyAiPrompt =
         if (localSession != null || !isDesignUrlPathSafe(config.designId)) null

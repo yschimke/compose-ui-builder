@@ -107,6 +107,7 @@ internal fun MobileEditorToolbar(
   canRedo: Boolean,
   onNewDesign: (() -> Unit)?,
   onBrowseDesigns: (() -> Unit)? = null,
+  onForkDesign: (() -> Unit)? = null,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
   onCopyAiPrompt: (suspend () -> String)?,
@@ -172,6 +173,14 @@ internal fun MobileEditorToolbar(
               UiBuilderMenuEntry.Action("My designs") {
                 expanded = false
                 onBrowseDesigns()
+              }
+            )
+          }
+          if (onForkDesign != null) {
+            add(
+              UiBuilderMenuEntry.Action("Fork this design") {
+                expanded = false
+                onForkDesign()
               }
             )
           }
@@ -328,6 +337,7 @@ internal fun EditorToolbar(
    * Leaves for the host's index of every design this account may open; null where there is none.
    */
   onBrowseDesigns: (() -> Unit)? = null,
+  onForkDesign: (() -> Unit)? = null,
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
   onCopyAiPrompt: (suspend () -> String)?,
@@ -410,6 +420,9 @@ internal fun EditorToolbar(
       }
       if (onNewDesign != null) {
         ToolbarIconAction("New design", "", UiBuilderChromeIcon.New, true, onNewDesign)
+      }
+      if (onForkDesign != null) {
+        ToolbarIconAction("Fork this design", "", UiBuilderChromeIcon.Copy, true, onForkDesign)
       }
       if (onCopyAiPrompt != null) {
         ToolbarIconAction("Copy OpenCode AI prompt", "", UiBuilderChromeIcon.Copy, true) {
@@ -1454,6 +1467,7 @@ internal fun ComponentPacksDialog(
   onToggle: (String) -> Unit,
   onDismiss: () -> Unit,
 ) {
+  TrackEditorOverlay(true)
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text("Component packs") },
@@ -1515,6 +1529,7 @@ internal fun ComponentPacksPanel(
 
 @Composable
 private fun EditorShortcutsDialog(onDismiss: () -> Unit) {
+  TrackEditorOverlay(true)
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text("Keyboard and pointer") },

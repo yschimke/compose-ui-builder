@@ -140,7 +140,9 @@ public object UiBuilderProtocolMapper {
       is UiBuilderServiceRequest.ExportDocument,
       is UiBuilderServiceRequest.GetDesignActions,
       is UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade,
-      is UiBuilderServiceRequest.DeleteDesign ->
+      is UiBuilderServiceRequest.DeleteDesign,
+      is UiBuilderServiceRequest.ListRevisions,
+      is UiBuilderServiceRequest.RestoreRevision ->
         throw IllegalArgumentException(
           "${request::class.simpleName} has no ui-builder-protocol v1 request shape"
         )
@@ -166,6 +168,7 @@ public object UiBuilderProtocolMapper {
       // happened beats a connection that drops.
       is UiBuilderServiceResponse.DesignRenamed,
       is UiBuilderServiceResponse.DesignActions,
+      is UiBuilderServiceResponse.Revisions,
       is UiBuilderServiceResponse.DesignDeleted ->
         ErrorResponseV1(
           ServiceErrorV1(

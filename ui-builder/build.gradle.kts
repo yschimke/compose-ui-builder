@@ -22,6 +22,16 @@ val embedComponentRecord =
     )
   }
 
+val embedReleaseNotes =
+  tasks.register<EmbedReleaseNotes>("embedReleaseNotes") {
+    changelog.set(rootProject.file("CHANGELOG.md"))
+    output.set(
+      layout.buildDirectory.file(
+        "generated/releaseNotes/ee/schimke/composeai/uibuilder/editor/EmbeddedReleaseNotes.kt"
+      )
+    )
+  }
+
 val ktfmtCli = configurations.create("ktfmtCli")
 
 dependencies { ktfmtCli(variantOf(libs.ktfmt.cli) { classifier("with-dependencies") }) }
@@ -66,6 +76,7 @@ kotlin {
       kotlin.srcDir(
         embedComponentRecord.map { layout.buildDirectory.dir("generated/componentRecord") }
       )
+      kotlin.srcDir(embedReleaseNotes.map { layout.buildDirectory.dir("generated/releaseNotes") })
     }
     commonMain.dependencies {
       @Suppress("DEPRECATION") implementation(compose.runtime)

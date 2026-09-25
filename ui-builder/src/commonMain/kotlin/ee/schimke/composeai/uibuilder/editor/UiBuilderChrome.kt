@@ -1205,6 +1205,7 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
     entries: List<UiBuilderMenuEntry>,
     offset: DpOffset,
   ) {
+    TrackEditorOverlay(expanded)
     DropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest, offset = offset) {
       entries.forEach { entry ->
         when (entry) {
@@ -1394,6 +1395,7 @@ private fun MaterialMenuAction(entry: UiBuilderMenuEntry.Action) {
       modifier = Modifier.semantics { contentDescription = entry.contentDescription },
       onClick = { if (entry.children.isEmpty()) entry.onClick() else submenuOpen = true },
     )
+    TrackEditorOverlay(submenuOpen)
     DropdownMenu(expanded = submenuOpen, onDismissRequest = { submenuOpen = false }) {
       entry.children.forEach { child -> MaterialMenuAction(child) }
     }

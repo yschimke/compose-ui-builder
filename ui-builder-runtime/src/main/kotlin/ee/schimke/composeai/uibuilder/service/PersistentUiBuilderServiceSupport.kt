@@ -80,8 +80,28 @@ internal fun DesignAccessControlV1.collapsed(): DesignAccessControlV1 =
   effectiveGrants().let { if (it.size == actorGrants.size) this else copy(actorGrants = it) }
 
 internal fun DesignAccessControlV1.allows(actorId: String, action: DesignAccessActionV1): Boolean =
+  allowsPersonally(actorId, action) ||
+    effectiveGrants().any {
+      it.actorId == UiBuilderPublicAccess.ANYONE_ACTOR_ID && action in it.allowedActions
+    }
+
+/**
+ * [allows] without the [UiBuilderPublicAccess.ANYONE_ACTOR_ID] grant: the owner, or a grant naming
+ * this actor. It is the question "is this design one of *mine*", which is what a listing asks — a
+ * public design is readable by everyone, and listing every public design to everyone would turn
+ * each person's file manager into the whole server's.
+ */
+internal fun DesignAccessControlV1.allowsPersonally(
+  actorId: String,
+  action: DesignAccessActionV1,
+): Boolean =
   sameActor(actorId, ownerActorId) ||
     effectiveGrants().any { sameActor(it.actorId, actorId) && action in it.allowedActions }
+
+internal fun DesignAccessControlV1.allowsPersonally(
+  actor: AuthenticatedUiBuilderActor,
+  action: DesignAccessActionV1,
+): Boolean = actor.accessIdentities.any { allowsPersonally(it, action) }
 
 internal fun DesignAccessControlV1.allows(
   actor: AuthenticatedUiBuilderActor,
@@ -159,10 +179,11 @@ private fun DesignAccessControlV1.requesterAccess(
   if (ownedBy(actor))
     DesignActorAccessV1(actor.actorId, DesignAccessRoleV1.OWNER, DesignAccessActionV1.entries)
   else {
+    // A reader who reached the design only because it is public is described by the public grant.
     val grant =
-      actor.accessIdentities.firstNotNullOf { identity ->
+      actor.accessIdentities.firstNotNullOfOrNull { identity ->
         effectiveGrants().firstOrNull { sameActor(it.actorId, identity) }
-      }
+      } ?: effectiveGrants().first { it.actorId == UiBuilderPublicAccess.ANYONE_ACTOR_ID }
     DesignActorAccessV1(actor.actorId, grant.role, grant.allowedActions)
   }
 
@@ -234,6 +255,13 @@ internal fun DesignSubmissionV1.operationId(): String =
     is DesignCommandV1 -> operationId
     is UndoCommandV1 -> operationId
     is RedoCommandV1 -> operationId
+  }
+
+internal fun DesignSubmissionV1.actorId(): String =
+  when (this) {
+    is DesignCommandV1 -> actorId
+    is UndoCommandV1 -> actorId
+    is RedoCommandV1 -> actorId
   }
 
 internal fun DesignSubmissionV1.clientId(): String =

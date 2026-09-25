@@ -360,6 +360,7 @@ private fun HoverEnumControl(
         overflow = TextOverflow.Ellipsis,
       )
     }
+    TrackEditorOverlay(open)
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
       choices.forEach { choice ->
         DropdownMenuItem(
