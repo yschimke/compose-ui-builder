@@ -23,8 +23,8 @@ person adding a fourth (a TV catalog, an XR one, an application's own design sys
 write, in this repository:
 
 - a value in the `UiBuilderCatalogPlatform` enum, and a `when` branch on it in the New design chooser;
-- a `fun fourthCatalog(base): CatalogCapabilityV1` in `ProductionUiBuilderRuntime.kt`, the way
-  `wearM3Catalog` and `remoteM3Catalog` are written — ~340 and ~110 lines of authored capabilities,
+- a `fun fourthCatalog(base): CatalogCapabilityV1` in a file of its own, the way `wearM3Catalog`
+  (`WearM3Catalog.kt`) and `remoteM3Catalog` (`RemoteM3Catalog.kt`) are written — ~340 and ~110 lines of authored capabilities,
   shelves, variant properties and slot policy, derived by mutating the packaged Material 3 JSON;
 - a screen emitter, if the catalog's screens cannot be written from a component record, the way
   `WearScreenCodeExporter` (1,406 lines) writes a Wear screen and `WearWidgetCodeExporter` a widget;
@@ -53,8 +53,8 @@ The inventory, so the rest of the document can point at it. Line references are 
 | Which catalogs exist | `ProductionUiBuilderRuntime.kt:95-100, 303-308` | a `mapOf` of three ids and three constants |
 | `m3-catalog`'s capability catalog | `docs/design/fixtures/ui-builder/m3-catalog-capabilities-v1.json`, packaged into `:ui-builder-runtime` | a hand-transcribed Jetcaster catalog, unrelated to `yschimke/m3-catalog` |
 | `m3-catalog`'s component record | `docs/design/fixtures/ui-builder/m3-catalog-components-v1.json`, staged into the image | a checked-in copy of a build output |
-| `wear-m3`'s capability catalog | `ProductionUiBuilderRuntime.kt:589-659, 881-937, 974-1776` | Kotlin, synthesised from the M3 JSON at startup |
-| `remote-m3`'s capability catalog | `ProductionUiBuilderRuntime.kt:546-572, 661-866` | Kotlin, the same way |
+| `wear-m3`'s capability catalog | `ui-builder-runtime/…/WearM3Catalog.kt` | Kotlin, synthesised from the M3 JSON at startup |
+| `remote-m3`'s capability catalog | `ui-builder-runtime/…/RemoteM3Catalog.kt` | Kotlin, the same way |
 | Which emitter writes a screen | `ui-builder-export/…/RecordFreeExport.kt:56-70` | `when` on root component id |
 | The Wear screen emitter | `ui-builder-export/…/WearScreenCodeExporter.kt` | 24 id constants, ~45 conditional imports, scaffold/list/overlay structure, state hoisting |
 | The Wear widget emitter | `ui-builder-export/…/WearWidgetCodeExporter.kt`, `RemoteContentEmitter.kt:410-473` | the Remote Compose import list and host-frame erasure |
