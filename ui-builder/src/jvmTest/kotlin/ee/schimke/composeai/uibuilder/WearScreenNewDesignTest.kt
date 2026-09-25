@@ -102,14 +102,14 @@ class WearScreenNewDesignTest {
     val source = assertEmitted(WearScreenCodeExporter.export(seed("wear-list")))
 
     assertTrue("@WearPreviewDevices" in source, source)
-    assertTrue("fun ActivityScreenPreview() = ActivityScreen()" in source, source)
+    assertTrue("fun ActivityScreenPreview() {\n    AppScaffold(" in source, source)
     assertTrue(
       "@Preview(device = \"id:wearos_small_round\", showBackground = true, backgroundColor = 0xFF000000)" in
         source,
       source,
     )
     assertTrue("@ScrollingPreview(modes = [ScrollMode.LONG])" in source, source)
-    assertTrue("fun ActivityScreenLongPreview() = ActivityScreen()" in source, source)
+    assertTrue("fun ActivityScreenLongPreview() {\n    AppScaffold(" in source, source)
     assertTrue("import ee.schimke.composeai.preview.ScrollMode" in source, source)
     assertTrue("import ee.schimke.composeai.preview.ScrollingPreview" in source, source)
   }

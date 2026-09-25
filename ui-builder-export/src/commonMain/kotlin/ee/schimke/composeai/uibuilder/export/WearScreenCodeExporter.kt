@@ -49,6 +49,11 @@ object WearScreenCodeExporter {
      *   recompute. The native preview lane imports it by name into the `@Preview` it wraps the
      *   design in, and the name comes from the design's *title* through [screenIdentifier] — a
      *   transformation nothing outside this file should be reimplementing.
+     *
+     *   Without previews (the native lane) this names `<Screen>InAppScaffold`, the wrapper that
+     *   puts the screen in the `AppScaffold` and frozen `TimeText` an app's root would provide: the
+     *   screen itself no longer carries them (see [export]), and a native render without the status
+     *   strip would be a picture of a screen no watch shows.
      */
     data class Emitted(val source: String, val screenName: String) : Result
 
@@ -128,17 +133,21 @@ object WearScreenCodeExporter {
       refusals +=
         "`ScreenScaffold(edgeButton = …)` takes one composable; this design has ${edgeButtonIds.size}"
     }
-    val edgeButton = edgeButtonIds.firstOrNull()?.let { emitter.emitEdgeButton(it, depth = 4) }
+    val edgeButton = edgeButtonIds.firstOrNull()?.let { emitter.emitEdgeButton(it, depth = 3) }
     // Emitted after the body and before the source is assembled, because a dialog is a sibling of
     // the `ScreenScaffold` rather than a node inside it — and because its `visible` flag hoists a
     // `remember` that has to be declared above both.
-    val overlays = root.slots["overlays"].orEmpty().flatMap { emitter.emitOverlay(it, depth = 2) }
+    val overlays = root.slots["overlays"].orEmpty().flatMap { emitter.emitOverlay(it, depth = 1) }
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
     val name = document.screenIdentifier()
     val timeText = root.text("timeText")
+    // The wrapper the native lane renders, since the screen no longer carries its own
+    // `AppScaffold`. Only written without previews: an export's previews wrap the screen
+    // themselves, and a public second composable in source somebody keeps is noise.
+    val appScaffoldHost = "${name}InAppScaffold"
     return Result.Emitted(
-      screenName = name,
+      screenName = if (previews) name else appScaffoldHost,
       source =
         buildString {
           appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
@@ -157,82 +166,77 @@ object WearScreenCodeExporter {
           // value and hand back a new one. Hoisting that here is what an author would write, and it
           // is the difference between a generated screen you can run and one you have to finish.
           emitter.stateDeclarations().forEach { appendLine("${INDENT}$it") }
-          if (timeText != null) {
-            // `AppScaffold` is what owns `TimeText` upstream — `ScreenScaffold` has no `timeText`
-            // argument of its own — so a design that declares one generates the pair rather than
-            // an argument that does not exist.
-            appendLine(
-              "${INDENT}AppScaffold(timeText = { TimeText { timeTextCurvedText(${timeText.quoted()}) } }) {"
-            )
-          } else {
-            appendLine("${INDENT}AppScaffold {")
-          }
-          append("${INDENT}${INDENT}ScreenScaffold(scrollState = listState")
+          // No `AppScaffold` here. It belongs once at the app's root, around the navigation host,
+          // with `ScreenScaffold` per destination — which is how ComposeStarter's `WearApp` is
+          // built. A screen that brought its own nested one inside every destination it was
+          // dropped into, and its `TimeText` froze the clock at the design's `10:10` in shipping
+          // code. The previews below supply both, which is where a frozen time belongs.
+          append("${INDENT}ScreenScaffold(scrollState = listState")
           emitter.rootModifier(rootId)?.let { append(", modifier = $it") }
-          // The scroll indicator is transient chrome, and a long screenshot is exactly when it must
-          // not be drawn: the platform composites many frames into one tall image, and an indicator
-          // painted at a different offset and opacity in every slice lands as a column of dashes
-          // down
-          // the edge. `LocalScrollCaptureInProgress` is the platform's own signal for that —
-          // Android's
-          // system long-screenshot sets it, and so does the renderer for a `ScrollMode.LONG`
-          // capture
-          // —
-          // so reading it here is app behaviour that happens to make the parity capture clean,
-          // rather
-          // than a preview concession baked into a screen.
           appendLine(",")
-          // The indicator is the design's choice, and the capture guard is not. `scrollIndicator`
-          // was declared on the scaffold and read by nobody: the generated screen always drew one,
-          // so a design that turned it off still came out with it. The guard stays on both arms —
-          // a long screenshot must not carry dashes at a different offset in every slice, which is
-          // the platform's own reason for `LocalScrollCaptureInProgress` rather than a preview
+          // The indicator is the design's choice, and the capture guard is not. The guard stays on
+          // both arms: a long screenshot composites many frames into one image, and an indicator
+          // painted at a different offset in every slice lands as a column of dashes down the
+          // edge. `LocalScrollCaptureInProgress` is the platform's own signal for that — Android's
+          // system long-screenshot sets it — so reading it is app behaviour rather than a preview
           // concession.
           if (root.flag("scrollIndicator") ?: true) {
             appendLine(
-              "${INDENT}${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
+              "${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
             )
           } else {
-            appendLine("${INDENT}${INDENT}${INDENT}scrollIndicator = null,")
+            appendLine("${INDENT}${INDENT}scrollIndicator = null,")
           }
           if (edgeButton != null) {
-            appendLine("${INDENT}${INDENT}${INDENT}edgeButton = {")
+            appendLine("${INDENT}${INDENT}edgeButton = {")
             edgeButton.forEach { appendLine(it) }
-            appendLine("${INDENT}${INDENT}${INDENT}},")
+            appendLine("${INDENT}${INDENT}},")
           }
-          appendLine("${INDENT}${INDENT}) { contentPadding ->")
+          appendLine("${INDENT}) { contentPadding ->")
           body.forEach { appendLine(it) }
-          appendLine("${INDENT}${INDENT}}")
-          overlays.forEach { appendLine(it) }
           appendLine("${INDENT}}")
+          overlays.forEach { appendLine(it) }
           appendLine("}")
+          // `AppScaffold` owns the status strip — `ScreenScaffold` has no `timeText` argument — so
+          // a design that declares one gets the pair, frozen, around the screen.
+          val appScaffold =
+            if (timeText != null)
+              "AppScaffold(timeText = { TimeText { timeTextCurvedText(${timeText.quoted()}) } }) { $name() }"
+            else "AppScaffold { $name() }"
           if (previews) {
             appendLine()
             // Every round size, because a Wear screen that only ever rendered at one is a screen
-            // whose
-            // list has not been seen wrap. `WearPreviewDevices` is the shipped provider for exactly
-            // this and is what `samples/design-catalog-wear-m3` fans its full-screen stickers out
-            // with.
+            // whose list has not been seen wrap. `WearPreviewDevices` is the shipped provider for
+            // exactly this.
             appendLine("@WearPreviewDevices")
             appendLine("@Composable")
-            appendLine("fun ${name}Preview() = $name()")
+            appendLine("fun ${name}Preview() {")
+            appendLine("${INDENT}$appScaffold")
+            appendLine("}")
             appendLine()
             // The second preview is the one that answers "is the canvas telling the truth?".
             //
             // `ScrollMode.LONG` stitches the whole scroll into one tall PNG **with the row
             // transformation off**, which is exactly what the builder's stadium draws — so this
-            // render
-            // and the design as it appeared on the canvas are the same picture, and a difference
-            // between them is a bug in one of the two. The multipreview above cannot carry it:
-            // `LONG`
-            // on five devices is five stitched captures to answer a question one answers, and the
-            // parity claim is about the small round screen a design is authored on.
+            // render and the design as it appeared on the canvas are the same picture, and a
+            // difference between them is a bug in one of the two. The multipreview above cannot
+            // carry it: `LONG` on five devices is five stitched captures to answer a question one
+            // answers, and the parity claim is about the small round screen a design is authored
+            // on.
             appendLine(
               "@Preview(device = ${WEAR_PARITY_DEVICE.quoted()}, showBackground = true, backgroundColor = 0xFF000000)"
             )
             appendLine("@ScrollingPreview(modes = [ScrollMode.LONG])")
             appendLine("@Composable")
-            appendLine("fun ${name}LongPreview() = $name()")
+            appendLine("fun ${name}LongPreview() {")
+            appendLine("${INDENT}$appScaffold")
+            appendLine("}")
+          } else {
+            appendLine()
+            appendLine("@Composable")
+            appendLine("fun $appScaffoldHost() {")
+            appendLine("${INDENT}$appScaffold")
+            appendLine("}")
           }
         },
     )
@@ -439,7 +443,6 @@ internal class WearContentEmitter(
   private var usesBox = false
   private val usesButtonSymbol = mutableSetOf<String>()
   private var usesCard = false
-  private var usesCardListPadding = false
   private var usesListHeader = false
   private var usesEdgeButton = false
   private var usesArrangement = false
@@ -465,6 +468,22 @@ internal class WearContentEmitter(
   private val usesSelection = mutableSetOf<String>()
   private val usesDialog = mutableSetOf<String>()
   private val iconImports = mutableSetOf<String>()
+
+  /** `androidx.compose.foundation.layout` modifiers an authored chain used, by name. */
+  private val layoutImports = mutableSetOf<String>()
+
+  /** `androidx.compose.ui.draw` modifiers an authored chain used, by name. */
+  private val drawImports = mutableSetOf<String>()
+
+  private var usesZIndex = false
+
+  /** Wear `…Defaults` objects a row's minimum list padding named, by simple name. */
+  private val listPaddingDefaults = mutableSetOf<String>()
+
+  /** Text arguments' own types, by simple name, with their packages in [imports]. */
+  private val textImports = mutableSetOf<String>()
+
+  private var usesMaterialTheme = false
 
   /** The imports the pack components this screen holds resolve through; see [emitPack]. */
   private val packImports = mutableSetOf<String>()
@@ -500,7 +519,7 @@ internal class WearContentEmitter(
    * without this the one rectangle covering the whole design is the one with no id. Null when
    * nothing is being tagged, so an ordinary export's `ScreenScaffold` call is unchanged.
    */
-  fun rootModifier(nodeId: String): String? = modifierChain(nodeId)
+  fun rootModifier(nodeId: String): String? = modifierChain(nodeId, authored = false)
 
   fun emitScaffoldBody(nodeId: String): List<String> {
     val node = document.nodes[nodeId] ?: return refused("the content node `$nodeId` is missing")
@@ -509,20 +528,22 @@ internal class WearContentEmitter(
       // A `Stepper` or a picker owns the whole round display and a single centred control is a
       // real screen; neither is a row, and neither has a `TransformingLazyColumnScope` to be an
       // `item` of. This is also the shape a full-screen component needs to compile at all.
-      return emit(nodeId, depth = 3)
+      return emit(nodeId, depth = 2)
     }
     val spacing = node.number("verticalSpacingDp")
     val lines = mutableListOf<String>()
-    lines += "${indent(3)}TransformingLazyColumn("
-    lines += "${indent(4)}state = listState,"
-    lines += "${indent(4)}contentPadding = contentPadding,"
+    lines += "${indent(2)}TransformingLazyColumn("
+    lines += "${indent(3)}state = listState,"
+    lines += "${indent(3)}contentPadding = contentPadding,"
     if (spacing != null) {
       usesArrangement = true
       usesDp = true
-      lines += "${indent(4)}verticalArrangement = Arrangement.spacedBy(${spacing.dp()}.dp),"
+      lines += "${indent(3)}verticalArrangement = Arrangement.spacedBy(${spacing.dp()}.dp),"
     }
-    lines += "${indent(4)}modifier = ${modifierChain(nodeId, "fillMaxSize()")},"
-    lines += "${indent(3)}) {"
+    // The list fills the scaffold by construction, so an authored `fillMaxSize` on it is already
+    // said, and the list takes no other modifier a design could want.
+    lines += "${indent(3)}modifier = ${modifierChain(nodeId, "fillMaxSize()", authored = false)},"
+    lines += "${indent(2)}) {"
     node.slots["items"].orEmpty().forEach { itemId ->
       // `stableKey` is the item's identity, and this is where identity is spelled: a lazy list's
       // `key`. It is read here rather than by the canvas, which draws the extent as a Column and
@@ -537,11 +558,11 @@ internal class WearContentEmitter(
           // is concerned — the generated screen fails when it runs, not when it compiles.
           ?.takeIf { it.isNotBlank() }
       lines +=
-        if (key == null) "${indent(4)}item {" else "${indent(4)}item(key = ${key.quoted()}) {"
-      lines += emit(itemId, depth = 5, transformed = node.transformation())
-      lines += "${indent(4)}}"
+        if (key == null) "${indent(3)}item {" else "${indent(3)}item(key = ${key.quoted()}) {"
+      lines += emit(itemId, depth = 4, transformed = node.transformation())
+      lines += "${indent(3)}}"
     }
-    lines += "${indent(3)}}"
+    lines += "${indent(2)}}"
     return lines
   }
 
@@ -559,22 +580,23 @@ internal class WearContentEmitter(
     return when (node.componentId) {
       WearScreenCodeExporter.TEXT -> {
         usesText = true
-        val text = node.string("text")
         // `SurfaceTransformation` is a *surface* treatment — upstream applies it to `ListHeader`,
         // `TitleCard`, `Button`, the things that draw a background. A bare `Text` has no surface
-        // to transform, so it takes the height treatment alone rather than an argument
-        // `androidx.wear.compose.material3.Text` does not have.
-        val modifier = modifierChain(nodeId, transformedHeight(transformed))
-        if (modifier == null) {
-          listOf("${pad}Text(text = ${text.quoted()})")
-        } else {
-          listOf(
-            "${pad}Text(",
-            "${pad}${INDENT}text = ${text.quoted()},",
-            "${pad}${INDENT}modifier = $modifier,",
-            "${pad})",
+        // to transform, so it takes the height treatment and `TextDefaults`' list padding rather
+        // than an argument `androidx.wear.compose.material3.Text` does not have.
+        val modifier =
+          modifierChain(
+            nodeId,
+            textPropertyModifier(node),
+            minimumVerticalListContentPadding(transformed, "Text"),
+            transformedHeight(transformed),
           )
-        }
+        val arguments =
+          listOf("text = ${node.string("text").quoted()}") +
+            listOfNotNull(modifier?.let { "modifier = $it" }) +
+            textArguments(node)
+        if (arguments.size == 1) listOf("${pad}Text(${arguments.single()})")
+        else listOf("${pad}Text(") + arguments.map { "${pad}${INDENT}$it," } + listOf("${pad})")
       }
       // `ListHeader`, not a Text with padding. The canvas draws a 48dp item and so does this, which
       // is the whole reason the component exists: the template used to fake the height with a
@@ -605,8 +627,8 @@ internal class WearContentEmitter(
         val variant = node.string("variant")
         // Which card upstream publishes, chosen by the variant rather than by recolouring one —
         // the same rule `m3/card`'s variant follows on the mobile side. `OutlinedCard` and `Card`
-        // take a single content lambda instead of `TitleCard`'s title/subtitle pair, so they are
-        // written as one block and never reach the pair-recognition below.
+        // take a single content lambda instead of `TitleCard`'s title and content, so they are
+        // written as one block and never reach the line recognition below.
         if (variant == "outlined" || variant == "plain") {
           val symbol = if (variant == "outlined") "OutlinedCard" else "Card"
           usesPlainCard += symbol
@@ -616,29 +638,40 @@ internal class WearContentEmitter(
             content.flatMap { emit(it, depth + 1) } +
             listOf("${pad}}")
         }
-        usesCard = true
-        // `TitleCard` takes `title` and `subtitle` as separate slots, and a two-line row is what a
-        // Wear list is mostly made of. The canvas can only draw those two lines as a Column inside
-        // the card's single content slot — `m3/card` has one — so the pair is recognised here and
-        // written as the API upstream actually publishes, rather than as a Column nested in a
-        // `title` lambda that would compile and read as a mistake.
-        val lines = content.singleOrNull()?.let(::twoTextLines)
-        val slots =
-          if (lines != null) {
-            listOf("${pad}${INDENT}title = {") +
-              emit(lines.first, depth + 2) +
-              listOf("${pad}${INDENT}},", "${pad}${INDENT}subtitle = {") +
-              emit(lines.second, depth + 2) +
-              listOf("${pad}${INDENT}},")
-          } else {
-            listOf("${pad}${INDENT}title = {") +
-              content.flatMap { emit(it, depth + 2) } +
-              listOf("${pad}${INDENT}},")
+        // The canvas can only draw a card's lines as a Column in its single content slot, so the
+        // lines are recognised here and written as the slots upstream publishes. `AppCard` reads
+        // them as app name, title and body; `TitleCard` as title and body. The body is the card's
+        // **content** — ComposeStarter's `TitleCard(title = { … }) { Text(body) }` — rather than
+        // its `subtitle`, which this used to guess and which draws in the subtitle's tertiary
+        // colour: a column of texts cannot say which one the author meant, so the common case
+        // wins.
+        val lines = content.singleOrNull()?.let(::textLines)
+        if (variant == "app") {
+          if (lines == null || lines.size < 2) {
+            return refused(
+              "`${node.componentId}` (node `$nodeId`) is an `app` card, and `AppCard` needs an " +
+                "app name and a title: give it a column of at least two texts, the app name first"
+            )
           }
+          usesPlainCard += "AppCard"
+          return listOf("${pad}AppCard(", "${pad}${INDENT}onClick = {},") +
+            listOf("${pad}${INDENT}appName = {") +
+            emit(lines[0], depth + 2) +
+            listOf("${pad}${INDENT}},", "${pad}${INDENT}title = {") +
+            emit(lines[1], depth + 2) +
+            listOf("${pad}${INDENT}},") +
+            surfaceArguments(pad + INDENT, nodeId, transformed, "AppCard") +
+            trailingContent(pad, depth, lines.drop(2))
+        }
+        usesCard = true
+        val (title, body) =
+          if (lines != null) listOf(lines.first()) to lines.drop(1) else content to emptyList()
         listOf("${pad}TitleCard(", "${pad}${INDENT}onClick = {},") +
-          slots +
+          listOf("${pad}${INDENT}title = {") +
+          title.flatMap { emit(it, depth + 2) } +
+          listOf("${pad}${INDENT}},") +
           surfaceArguments(pad + INDENT, nodeId, transformed, "TitleCard") +
-          listOf("${pad})")
+          trailingContent(pad, depth, body)
       }
       WearScreenCodeExporter.BUTTON -> {
         // Wear's four, and none of them is a FAB — a watch publishes no floating action button.
@@ -658,11 +691,33 @@ internal class WearContentEmitter(
         val enabled =
           if (node.boolean("enabled") != false) emptyList()
           else listOf("${pad}${INDENT}enabled = false,")
+        val slots = buttonSlots(content)
+        if (slots == null) {
+          // Nothing the slots can say: the content overload, which is still Wear's `Button`.
+          return listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
+            enabled +
+            surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
+            listOf("${pad}) {") +
+            content.flatMap { emit(it, depth + 1) } +
+            listOf("${pad}}")
+        }
+        // Wear Material 3's button is built around its slots — `icon`, `label`, `secondaryLabel` —
+        // each with its own typography, colour role and spacing, and it is what both upstream
+        // samples call. The content overload put the icon flush against the text and drew a
+        // title-over-date row as two identical centred lines.
         listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
           enabled +
+          (slots.icon?.let {
+            listOf("${pad}${INDENT}icon = {") + emit(it, depth + 2) + listOf("${pad}${INDENT}},")
+          } ?: emptyList()) +
+          (slots.secondaryLabel?.let {
+            listOf("${pad}${INDENT}secondaryLabel = {") +
+              emit(it, depth + 2) +
+              listOf("${pad}${INDENT}},")
+          } ?: emptyList()) +
           surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
           listOf("${pad}) {") +
-          content.flatMap { emit(it, depth + 1) } +
+          emit(slots.label, depth + 1) +
           listOf("${pad}}")
       }
       // No transformation on a layout container, even directly inside an item.
@@ -775,9 +830,13 @@ internal class WearContentEmitter(
         listOf("${pad}Icon(") +
           listOf(
             "${pad}${INDENT}imageVector = Icons.$member,",
-            // Null, and stated rather than defaulted: the builder has no place to author an icon's
-            // description yet, and a made-up one is worse for a screen reader than none.
-            "${pad}${INDENT}contentDescription = null,",
+            // The design's, and null only when it gave none. Null is right beside a label, which
+            // already names the action, and wrong for an icon that *is* the button: the play and
+            // delete buttons in the upstream samples each pass a string resource here.
+            "${pad}${INDENT}contentDescription = " +
+              (node.stringOrNull("contentDescription")?.takeIf(String::isNotEmpty)?.quoted()
+                ?: "null") +
+              ",",
           ) +
           (modifier?.let { listOf("${pad}${INDENT}modifier = $it,") } ?: emptyList()) +
           listOf("${pad})")
@@ -823,7 +882,7 @@ internal class WearContentEmitter(
         // A slider is state, and this generator writes a screen rather than a view model. The
         // authored value becomes the `remember` the screen reads and writes, which is what makes
         // the emitted code something you can run rather than something you have to finish.
-        val state = rememberedFloat(nodeId, node.number("value") ?: 0f)
+        val state = rememberedFloat(nodeId, "Value", node.number("value") ?: 0f)
         listOf("${pad}Slider(") +
           listOf(
             "${pad}${INDENT}value = $state,",
@@ -837,7 +896,7 @@ internal class WearContentEmitter(
       }
       WearScreenCodeExporter.STEPPER -> {
         usesStepper = true
-        val state = rememberedFloat(nodeId, node.number("value") ?: 0f)
+        val state = rememberedFloat(nodeId, "Value", node.number("value") ?: 0f)
         listOf("${pad}Stepper(") +
           listOf(
             "${pad}${INDENT}value = $state,",
@@ -871,10 +930,11 @@ internal class WearContentEmitter(
       }
       WearScreenCodeExporter.BUTTON_GROUP -> {
         usesButtonGroup = true
+        // `ButtonGroup` takes a `SurfaceTransformation` of its own (wear-compose-material3
+        // 1.7.0-rc01), and `ButtonGroupDefaults` its list padding. Without the first the group
+        // neither scaled nor faded at the screen's edge while every row around it did.
         listOf("${pad}ButtonGroup(") +
-          (modifierChain(nodeId, transformedHeight(transformed))?.let {
-            listOf("${pad}${INDENT}modifier = $it,")
-          } ?: emptyList()) +
+          surfaceArguments(pad + INDENT, nodeId, transformed, "ButtonGroup") +
           listOf("${pad}) {") +
           node.slots["children"].orEmpty().flatMap { emit(it, depth + 1) } +
           listOf("${pad}}")
@@ -1150,14 +1210,41 @@ internal class WearContentEmitter(
       else -> null
     }
 
-  /** A container holding exactly two texts, which is a `TitleCard`'s title and subtitle. */
-  private fun twoTextLines(nodeId: String): Pair<String, String>? {
+  /** A `layout/column` holding only texts: a card's or a button's lines, in order. */
+  private fun textLines(nodeId: String): List<String>? {
     val node = document.nodes[nodeId] ?: return null
     if (node.componentId != "layout/column") return null
     val children = node.slots["children"].orEmpty()
-    if (children.size != 2) return null
+    if (children.isEmpty()) return null
     if (children.any { document.nodes[it]?.componentId != WearScreenCodeExporter.TEXT }) return null
-    return children[0] to children[1]
+    return children
+  }
+
+  /** A card's trailing content lambda, or its closing parenthesis when there is no body. */
+  private fun trailingContent(pad: String, depth: Int, body: List<String>): List<String> =
+    if (body.isEmpty()) listOf("${pad})")
+    else listOf("${pad}) {") + body.flatMap { emit(it, depth + 1) } + listOf("${pad}}")
+
+  /** A button's content, as the slots Wear's `Button` publishes. */
+  private class ButtonSlots(val icon: String?, val label: String, val secondaryLabel: String?)
+
+  /**
+   * The slot shape of a button's content, or null when the content is something the slots cannot
+   * hold: a text, an icon and a text, or either with a column of two texts as label and secondary
+   * label.
+   */
+  private fun buttonSlots(content: List<String>): ButtonSlots? {
+    fun componentOf(id: String) = document.nodes[id]?.componentId
+    val icon = content.firstOrNull()?.takeIf { componentOf(it) == WearScreenCodeExporter.ICON }
+    val rest = if (icon == null) content else content.drop(1)
+    val labelId = rest.singleOrNull() ?: return null
+    if (componentOf(labelId) == WearScreenCodeExporter.TEXT) return ButtonSlots(icon, labelId, null)
+    val lines = textLines(labelId) ?: return null
+    return when (lines.size) {
+      1 -> ButtonSlots(icon, lines[0], null)
+      2 -> ButtonSlots(icon, lines[0], lines[1])
+      else -> null
+    }
   }
 
   private fun container(
@@ -1183,27 +1270,223 @@ internal class WearContentEmitter(
    * it changes how the node draws, and reading the id first is how a tagged render is checked
    * against the design.
    */
-  private fun modifierChain(nodeId: String, vararg calls: String?): String? {
+  private fun modifierChain(
+    nodeId: String,
+    vararg calls: String?,
+    authored: Boolean = true,
+  ): String? {
     val chain = buildList {
       if (tagNodes) {
         usesTestTag = true
         add("testTag(${nodeId.quoted()})")
       }
+      // What the design asked for, before what the list adds. These were never read: every row
+      // in the upstream samples is `fillMaxWidth`, the canvas drew it that way, and the generated
+      // screen drew content-width pills instead.
+      if (authored) document.nodes[nodeId]?.let { addAll(authoredModifiers(it)) }
       calls.filterNotNullTo(this)
     }
     return if (chain.isEmpty()) null else chain.joinToString(".", prefix = "Modifier.")
+  }
+
+  /** Each node's parent, for the scope a `weight` or an `align` means something in. */
+  private val parents: Map<String, UiBuilderNode> = buildMap {
+    document.nodes.values.forEach { parent ->
+      parent.slots.values.forEach { children -> children.forEach { put(it, parent) } }
+    }
+  }
+
+  /**
+   * The modifiers a design authored on [node], as the `Modifier` calls they become.
+   *
+   * The same vocabulary the canvas draws (`uiBuilderModifier`), written as plain Compose. What this
+   * generator cannot write is refused by name rather than dropped — a node that silently loses its
+   * `size` generates a screen the canvas never showed, which is the drift this fixes.
+   */
+  private fun authoredModifiers(node: UiBuilderNode): List<String> =
+    node.modifiers.mapNotNull { element ->
+      val modifier = element as? JsonObject ?: return@mapNotNull null
+      fun number(name: String): Float? = modifier[name]?.jsonPrimitive?.floatOrNull
+      fun text(name: String): String? = modifier[name]?.jsonPrimitive?.contentOrNull
+      fun dp(value: Float?): String {
+        usesDp = true
+        return "${(value ?: 0f).dp()}.dp"
+      }
+      fun layout(call: String): String {
+        layoutImports += call.substringBefore('(')
+        return call
+      }
+      when (val type = text("type")) {
+        "fillMaxWidth",
+        "fillMaxSize",
+        "fillMaxHeight" -> layout("$type()")
+        "padding" -> {
+          val start = number("startDp") ?: 0f
+          val top = number("topDp") ?: 0f
+          val end = number("endDp") ?: 0f
+          val bottom = number("bottomDp") ?: 0f
+          layout(
+            when {
+              start == top && top == end && end == bottom -> "padding(${dp(start)})"
+              start == end && top == bottom ->
+                "padding(horizontal = ${dp(start)}, vertical = ${dp(top)})"
+              else ->
+                "padding(start = ${dp(start)}, top = ${dp(top)}, end = ${dp(end)}, " +
+                  "bottom = ${dp(bottom)})"
+            }
+          )
+        }
+        "size" -> {
+          val width = number("widthDp")
+          val height = number("heightDp")
+          when {
+            width != null && width == height -> layout("size(${dp(width)})")
+            width != null && height != null -> layout("size(${dp(width)}, ${dp(height)})")
+            width != null -> layout("width(${dp(width)})")
+            height != null -> layout("height(${dp(height)})")
+            else -> null
+          }
+        }
+        "width" -> layout("width(${dp(number("widthDp"))})")
+        "height" -> layout("height(${dp(number("heightDp"))})")
+        "widthIn",
+        "heightIn" ->
+          layout(
+            "$type(" +
+              listOfNotNull(
+                  number("minDp")?.let { "min = ${dp(it)}" },
+                  number("maxDp")?.let { "max = ${dp(it)}" },
+                )
+                .joinToString() +
+              ")"
+          )
+        "aspectRatio" -> layout("aspectRatio(${(number("ratio") ?: 1f).dp()}f)")
+        "offset" -> layout("offset(${dp(number("xDp"))}, ${dp(number("yDp"))})")
+        "alpha" -> {
+          drawImports += "alpha"
+          "alpha(${(number("alpha") ?: 1f).dp()}f)"
+        }
+        "rotate" -> {
+          drawImports += "rotate"
+          "rotate(${(number("degrees") ?: 0f).dp()}f)"
+        }
+        "scale" -> {
+          drawImports += "scale"
+          "scale(${(number("scaleX") ?: 1f).dp()}f, ${(number("scaleY") ?: 1f).dp()}f)"
+        }
+        "zIndex" -> {
+          usesZIndex = true
+          "zIndex(${(number("zIndex") ?: 0f).dp()}f)"
+        }
+        // Identity rather than layout. The native lane's own tag is written first and wins; an
+        // authored one is kept in an export, where it is the only tag.
+        "testTag" ->
+          if (tagNodes) null
+          else
+            text("tag")?.takeIf(String::isNotBlank)?.let {
+              usesTestTag = true
+              "testTag(${it.quoted()})"
+            }
+        "weight" ->
+          weightCall(node, number("weight"), modifier["fill"]?.jsonPrimitive?.booleanOrNull)
+        "align",
+        "alignHorizontal",
+        "alignVertical" -> alignCall(node, type, text("alignment"))
+        null -> null
+        else -> {
+          refusals +=
+            "the `$type` modifier on `${node.id}` is not one the Wear screen generator writes; " +
+              "the canvas draws it, so exporting without it would generate a different screen"
+          null
+        }
+      }
+    }
+
+  /**
+   * `weight`, in the three scopes that define one: `Row`, `Column` and `ButtonGroup`, whose own
+   * `ButtonGroupScope.weight` is how Jetcaster's episode screen makes play the wider button.
+   */
+  private fun weightCall(node: UiBuilderNode, weight: Float?, fill: Boolean?): String? {
+    if (weight == null || weight <= 0f) return null
+    val parent = parents[node.id]?.componentId
+    return when (parent) {
+      "layout/row",
+      "layout/column" ->
+        "weight(${weight.dp()}f" + (if (fill == false) ", fill = false" else "") + ")"
+      WearScreenCodeExporter.BUTTON_GROUP -> "weight(${weight.dp()}f)"
+      else -> {
+        refusals +=
+          "the `weight` modifier on `${node.id}` shares out a row's, a column's or a button " +
+            "group's space, and this node's parent is ${parent?.let { "`$it`" } ?: "the screen"}"
+        null
+      }
+    }
+  }
+
+  /** `align`, where the parent's scope defines it, on the axis that scope aligns on. */
+  private fun alignCall(node: UiBuilderNode, type: String, alignment: String?): String? {
+    if (alignment.isNullOrEmpty()) return null
+    val parent = parents[node.id]?.componentId
+    val expected =
+      when (type) {
+        "align" -> "layout/box"
+        "alignHorizontal" -> "layout/column"
+        else -> "layout/row"
+      }
+    if (parent != expected) {
+      refusals +=
+        "the `$type` modifier on `${node.id}` aligns within a `$expected`, and this node's " +
+          "parent is ${parent?.let { "`$it`" } ?: "the screen"}"
+      return null
+    }
+    usesAlignment = true
+    return "align(Alignment.${alignment.replaceFirstChar(Char::uppercaseChar)})"
   }
 
   /** `transformedHeight`, or nothing, so [modifierChain] can take it positionally. */
   private fun transformedHeight(transformed: Boolean): String? =
     if (transformed) "transformedHeight(this, spec)" else null
 
-  /** The card-row safe inset Wear Material 3 asks a transforming list to honour at its edges. */
-  private fun minimumVerticalListContentPadding(transformed: Boolean, symbol: String): String? =
-    if (transformed && symbol in setOf("Card", "OutlinedCard", "TitleCard")) {
-      usesCardListPadding = true
-      "minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)"
-    } else null
+  /**
+   * The minimum vertical padding Wear Material 3 asks a transforming list's row to keep, from the
+   * component's own `…Defaults`.
+   *
+   * Every row type has one — `ListHeaderDefaults` and `TextDefaults` as a top/bottom pair, the rest
+   * as one value — and both upstream samples set it on every item. This used to be written for
+   * cards only, so a header or a button sat on the list's flat spacing where the round screen's top
+   * and bottom clip it. A component with no published minimum gets none rather than a borrowed one.
+   */
+  private fun minimumVerticalListContentPadding(transformed: Boolean, symbol: String): String? {
+    if (!transformed) return null
+    val pair =
+      when (symbol) {
+        "ListHeader" -> "ListHeaderDefaults"
+        "Text" -> "TextDefaults"
+        else -> null
+      }
+    if (pair != null) {
+      listPaddingDefaults += pair
+      return "minimumVerticalContentPadding($pair.minimumTopListContentPadding, " +
+        "$pair.minimumBottomListContentPadding)"
+    }
+    val defaults =
+      when (symbol) {
+        "Card",
+        "OutlinedCard",
+        "TitleCard",
+        "AppCard" -> "CardDefaults"
+        "Button",
+        "FilledTonalButton",
+        "OutlinedButton",
+        "ChildButton" -> "ButtonDefaults"
+        "ButtonGroup" -> "ButtonGroupDefaults"
+        in ICON_BUTTON_SYMBOLS -> "IconButtonDefaults"
+        in TEXT_BUTTON_SYMBOLS -> "TextButtonDefaults"
+        else -> return null
+      }
+    listPaddingDefaults += defaults
+    return "minimumVerticalContentPadding($defaults.minimumVerticalListContentPadding)"
+  }
 
   /**
    * What a **surface** node adds to its call: the row treatment, and the tag if one is being
@@ -1273,7 +1556,12 @@ internal class WearContentEmitter(
     usesSelection += symbol
     usesText = true
     val callback = if (flag == "selected") "onSelect" else "onCheckedChange"
-    val state = rememberedBoolean(nodeId, node.boolean(flag) ?: false)
+    val state =
+      rememberedBoolean(
+        nodeId,
+        flag.replaceFirstChar(Char::uppercaseChar),
+        node.boolean(flag) ?: false,
+      )
     val secondary = node.string("secondaryLabel")
     return listOf("${pad}$symbol(") +
       listOf(
@@ -1302,7 +1590,7 @@ internal class WearContentEmitter(
   fun emitOverlay(nodeId: String, depth: Int): List<String> {
     val node = document.nodes[nodeId] ?: return refused("the overlay node `$nodeId` is missing")
     val pad = indent(depth)
-    val visible = rememberedBoolean(nodeId, node.boolean("visible") ?: false)
+    val visible = rememberedBoolean(nodeId, "Visible", node.boolean("visible") ?: false)
     val dismiss = "${pad}${INDENT}onDismissRequest = { $visible = false },"
     return when (node.componentId) {
       WearScreenCodeExporter.ALERT_DIALOG -> {
@@ -1331,9 +1619,10 @@ internal class WearContentEmitter(
               listOf("${pad}${INDENT}},")
           } ?: emptyList()) +
           (modifierChain(nodeId)?.let { listOf("${pad}${INDENT}modifier = $it,") } ?: emptyList()) +
-          listOf("${pad}) {") +
-          extra.flatMap { emit(it, depth + 1) } +
-          listOf("${pad}}")
+          // The content lambda only when the design put something in it: `content` is nullable
+          // upstream, and an empty `{ }` after every dialog was a line of nothing to read past.
+          (if (extra.isEmpty()) listOf("${pad})")
+          else listOf("${pad}) {") + extra.flatMap { emit(it, depth + 1) } + listOf("${pad}}"))
       }
       WearScreenCodeExporter.CONFIRMATION_DIALOG -> {
         val symbol =
@@ -1410,15 +1699,15 @@ internal class WearContentEmitter(
    * from. Non-identifier characters are folded to `_`, which is what makes a node id like
    * `slider-1` legal Kotlin.
    */
-  private fun rememberedFloat(nodeId: String, initial: Float): String {
-    val name = nodeId.stateIdentifier()
+  private fun rememberedFloat(nodeId: String, role: String, initial: Float): String {
+    val name = nodeId.stateIdentifier(role)
     usesRememberState = true
     rememberedState += "var $name by remember { mutableFloatStateOf(${initial.dp()}f) }"
     return name
   }
 
-  private fun rememberedBoolean(nodeId: String, initial: Boolean): String {
-    val name = nodeId.stateIdentifier()
+  private fun rememberedBoolean(nodeId: String, role: String, initial: Boolean): String {
+    val name = nodeId.stateIdentifier(role)
     usesRememberState = true
     rememberedState += "var $name by remember { mutableStateOf($initial) }"
     return name
@@ -1451,7 +1740,7 @@ internal class WearContentEmitter(
     }
     if (usesTime) add("java.time.LocalDate")
     if (usesTime) add("java.time.LocalTime")
-    if (usesImage) add("androidx.wear.compose.material3.MaterialTheme")
+    if (usesImage || usesMaterialTheme) add("androidx.wear.compose.material3.MaterialTheme")
     if (usesIcon) add("androidx.wear.compose.material3.Icon")
     usesIconButton.forEach { add("androidx.wear.compose.material3.$it") }
     usesTextButton.forEach { add("androidx.wear.compose.material3.$it") }
@@ -1487,12 +1776,27 @@ internal class WearContentEmitter(
     add("androidx.wear.compose.material3.SurfaceTransformation")
     if (usesText) add("androidx.wear.compose.material3.Text")
     if (usesTextOverflow) add("androidx.compose.ui.text.style.TextOverflow")
+    textImports.forEach {
+      add(
+        when (it) {
+          "FontWeight" -> "androidx.compose.ui.text.font.FontWeight"
+          "FontStyle" -> "androidx.compose.ui.text.font.FontStyle"
+          "TextDecoration" -> "androidx.compose.ui.text.style.TextDecoration"
+          "TextAlign" -> "androidx.compose.ui.text.style.TextAlign"
+          "Color" -> "androidx.compose.ui.graphics.Color"
+          else -> "androidx.compose.ui.unit.sp"
+        }
+      )
+    }
+    layoutImports.forEach { add("androidx.compose.foundation.layout.$it") }
+    drawImports.forEach { add("androidx.compose.ui.draw.$it") }
+    if (usesZIndex) add("androidx.compose.ui.zIndex")
     if (timeText) add("androidx.wear.compose.material3.TimeText")
     if (timeText) add("androidx.wear.compose.material3.timeTextCurvedText")
     if (usesListHeader) add("androidx.wear.compose.material3.ListHeader")
     if (usesCard) add("androidx.wear.compose.material3.TitleCard")
     usesPlainCard.forEach { add("androidx.wear.compose.material3.$it") }
-    if (usesCardListPadding) add("androidx.wear.compose.material3.CardDefaults")
+    listPaddingDefaults.forEach { add("androidx.wear.compose.material3.$it") }
     add("androidx.wear.compose.material3.lazy.rememberTransformationSpec")
     add("androidx.wear.compose.material3.lazy.transformedHeight")
     // `androidx.wear.compose:compose-ui-tooling`, not `androidx.wear:wear-tooling-preview`. The
@@ -1525,6 +1829,114 @@ internal class WearContentEmitter(
 
   private fun UiBuilderNode.stringOrNull(name: String): String? =
     (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.contentOrNull
+
+  /**
+   * Everything `wear-m3/text` declares beyond its string, as `Text` arguments.
+   *
+   * The catalog declares sixteen properties and the canvas has drawn all of them; this wrote the
+   * string alone, so Jetcaster's `bodySmall` date came out in the default body style and wrapped
+   * where the design truncated it. Unset properties write nothing, so an undecorated text keeps the
+   * short form.
+   */
+  private fun textArguments(node: UiBuilderNode): List<String> = buildList {
+    node.stringOrNull("style")?.takeIf(String::isNotEmpty)?.let {
+      usesMaterialTheme = true
+      add("style = MaterialTheme.typography.$it")
+    }
+    colorExpression(node, "color")?.let { add("color = $it") }
+    node.stringOrNull("fontWeight")?.let {
+      textImports += "FontWeight"
+      add(
+        "fontWeight = FontWeight." +
+          when (it) {
+            "medium" -> "Medium"
+            "semiBold" -> "SemiBold"
+            "bold" -> "Bold"
+            else -> "Normal"
+          }
+      )
+    }
+    node.stringOrNull("fontStyle")?.let {
+      textImports += "FontStyle"
+      add("fontStyle = FontStyle." + if (it == "italic") "Italic" else "Normal")
+    }
+    node
+      .number("fontSizeSp")
+      ?.takeIf { it > 0f }
+      ?.let {
+        textImports += "sp"
+        add("fontSize = ${it.dp()}.sp")
+      }
+    node
+      .number("lineHeightSp")
+      ?.takeIf { it > 0f }
+      ?.let {
+        textImports += "sp"
+        add("lineHeight = ${it.dp()}.sp")
+      }
+    node.number("letterSpacingSp")?.let {
+      textImports += "sp"
+      add("letterSpacing = ${it.dp()}.sp")
+    }
+    node
+      .stringOrNull("textDecoration")
+      ?.takeIf { it != "none" }
+      ?.let {
+        textImports += "TextDecoration"
+        add(
+          "textDecoration = TextDecoration." + if (it == "underline") "Underline" else "LineThrough"
+        )
+      }
+    node.stringOrNull("textAlign")?.let {
+      textImports += "TextAlign"
+      add("textAlign = TextAlign." + it.replaceFirstChar(Char::uppercaseChar))
+    }
+    node.number("minLines")?.let { add("minLines = ${it.toInt().coerceAtLeast(1)}") }
+    if (node.boolean("softWrap") == false) add("softWrap = false")
+    addAll(node.labelArguments())
+  }
+
+  /**
+   * The two `wear-m3/text` properties that are really its parent's business: `alignment` in a `Box`
+   * and `weight` in a `Row` or `Column`. Written as the modifier they mean in that scope, and
+   * nothing anywhere else, because the canvas ignores them there too.
+   */
+  private fun textPropertyModifier(node: UiBuilderNode): String? {
+    val parent = parents[node.id]?.componentId
+    node
+      .number("weight")
+      ?.takeIf { it > 0f }
+      ?.let { weight ->
+        if (parent == "layout/row" || parent == "layout/column") return "weight(${weight.dp()}f)"
+      }
+    node.stringOrNull("alignment")?.let { alignment ->
+      if (parent == "layout/box") {
+        usesAlignment = true
+        return "align(Alignment.${alignment.replaceFirstChar(Char::uppercaseChar)})"
+      }
+    }
+    return null
+  }
+
+  /**
+   * A colour property as Wear Compose source: a theme role is `MaterialTheme.colorScheme.<role>`,
+   * which follows the app's theme the way the canvas's does, and a `#RRGGBB` / `#AARRGGBB` literal
+   * is a `Color(0x…)`.
+   */
+  private fun colorExpression(node: UiBuilderNode, name: String): String? {
+    val property = node.properties[name] as? JsonObject ?: return null
+    val value =
+      property["value"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotEmpty) ?: return null
+    return if (value.startsWith("#")) {
+      val hex = value.removePrefix("#").uppercase()
+      val argb = if (hex.length == 6) "FF$hex" else hex
+      textImports += "Color"
+      "Color(0x$argb)"
+    } else {
+      usesMaterialTheme = true
+      "MaterialTheme.colorScheme.$value"
+    }
+  }
 
   /**
    * A label's own arguments — `maxLines` and `overflow`, which upstream's `ListHeader` and
@@ -1604,19 +2016,48 @@ internal class WearContentEmitter(
 
   private companion object {
     const val INDENT = WearScreenCodeExporter.INDENT
+
+    val ICON_BUTTON_SYMBOLS =
+      setOf(
+        "FilledIconButton",
+        "FilledTonalIconButton",
+        "FilledVariantIconButton",
+        "OutlinedIconButton",
+        "IconButton",
+      )
+
+    val TEXT_BUTTON_SYMBOLS =
+      setOf(
+        "FilledTextButton",
+        "FilledTonalTextButton",
+        "FilledVariantTextButton",
+        "OutlinedTextButton",
+        "TextButton",
+      )
   }
 }
 
 /**
- * A node id as a Kotlin identifier, for the `var` a control's hoisted state is held in.
+ * A node id as the Kotlin name of the state it holds: `error-dialog` and `Visible` become
+ * `errorDialogVisible`.
  *
- * `slider-1` becomes `slider_1`; a leading digit gains a prefix. The id is used rather than a
- * counter because it is already unique across the document and because it is how a reader gets from
- * a line of generated Kotlin back to the node in the design that produced it.
+ * The id is used rather than a counter because it is already unique across the document and because
+ * it is how a reader gets from a line of generated Kotlin back to the node that produced it. It
+ * used to be folded to `error_dialog`, which is not how Kotlin names a local, and said nothing
+ * about what the state was; the role suffix says that, and also keeps an id like `in` or `list`
+ * from colliding with a keyword or with `listState`.
  */
-private fun String.stateIdentifier(): String {
-  val folded = map { if (it.isLetterOrDigit() || it == '_') it else '_' }.joinToString("")
-  return if (folded.isEmpty() || folded.first().isDigit()) "state_$folded" else folded
+private fun String.stateIdentifier(role: String): String {
+  val words = split(Regex("[^A-Za-z0-9]+")).filter(String::isNotEmpty)
+  val camel =
+    words
+      .mapIndexed { index, word ->
+        if (index == 0) word.replaceFirstChar(Char::lowercaseChar)
+        else word.replaceFirstChar(Char::uppercaseChar)
+      }
+      .joinToString("")
+  val base = if (camel.isEmpty() || camel.first().isDigit()) "state$camel" else camel
+  return base + role
 }
 
 /** `8.0` reads as `8` in a `.dp` literal. */

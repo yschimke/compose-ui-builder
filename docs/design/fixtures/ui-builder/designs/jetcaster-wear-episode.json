@@ -134,7 +134,13 @@
             "type": "enum",
             "value": "filled"
           }
-        }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 0.7
+          }
+        ]
       }
     },
     {
@@ -151,6 +157,10 @@
           "iconKey": {
             "type": "enum",
             "value": "filled/playArrow"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Play episodes"
           }
         }
       }
@@ -170,7 +180,13 @@
             "type": "enum",
             "value": "filled"
           }
-        }
+        },
+        "modifiers": [
+          {
+            "type": "weight",
+            "weight": 0.3
+          }
+        ]
       },
       "afterNodeId": "play"
     },
@@ -188,6 +204,10 @@
           "iconKey": {
             "type": "enum",
             "value": "filled/playlistAdd"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Add to queue"
           }
         }
       }
@@ -278,5 +298,5 @@
       "afterNodeId": "episode-published"
     }
   ],
-  "expectedDocumentHash": "0097764ed4d66487cbf0c3b032b3e3c476f7c7e108c09a3d33195ffbbd4dfec1"
+  "expectedDocumentHash": "ed43493cb5e2ea777ffe5c41a1c5d08097e8d542ad9dcaffac1245f4b1d10985"
 }

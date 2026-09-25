@@ -51,7 +51,7 @@ class WearScreenCodeExporterTest {
       "minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)" in source,
       source,
     )
-    assertTrue("Modifier.transformedHeight(this, spec)" in source, source)
+    assertTrue(".transformedHeight(this, spec)" in source, source)
     assertTrue("transformation = SurfaceTransformation(spec)" in source, source)
     assertTrue("val spec = rememberTransformationSpec()" in source, source)
     // The stand-in is emitted, not erased — the opposite of the widget container.
@@ -59,18 +59,50 @@ class WearScreenCodeExporterTest {
     assertTrue("transforming-lazy-column" !in source, source)
   }
 
-  /** The status strip is `AppScaffold`'s, not `ScreenScaffold`'s, and it is frozen. */
+  /**
+   * The status strip is `AppScaffold`'s, and `AppScaffold` is the app root's rather than the
+   * screen's: the previews wrap the screen in it, frozen at the design's time, and the screen
+   * itself is a `ScreenScaffold` an app can drop into its own navigation.
+   */
   @Test
-  fun `a declared timeText generates the AppScaffold that owns it`() {
-    val source =
+  fun `a declared timeText is the previews' AppScaffold, not the screen's`() {
+    val emitted =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
-          WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment))
-        )
-        .source
+        WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment))
+      )
+    val source = emitted.source
+    val appScaffold =
+      "AppScaffold(timeText = { TimeText { timeTextCurvedText(\"10:10\") } }) { ActivityScreen() }"
 
+    assertEquals("ActivityScreen", emitted.screenName)
+    val screen = source.substringAfter("fun ActivityScreen() {").substringBefore("\n}\n")
+    assertFalse("AppScaffold" in screen, screen)
+    assertFalse("TimeText" in screen, screen)
+    assertTrue("fun ActivityScreenPreview() {\n    $appScaffold\n}" in source, source)
+    assertTrue("fun ActivityScreenLongPreview() {\n    $appScaffold\n}" in source, source)
+  }
+
+  /**
+   * The native lane renders without the export's previews, so it is handed a wrapper that puts the
+   * screen in its `AppScaffold`: a native render without the status strip would be a picture of a
+   * screen no watch shows.
+   */
+  @Test
+  fun `the native lane is given the screen inside its AppScaffold`() {
+    val emitted =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(
+        WearScreenCodeExporter.export(
+          wearScreenUiBuilderDocument("activity", pin, environment),
+          tagNodes = true,
+        )
+      )
+
+    assertEquals("ActivityScreenInAppScaffold", emitted.screenName)
     assertTrue(
-      "AppScaffold(timeText = { TimeText { timeTextCurvedText(\"10:10\") } })" in source,
-      source,
+      "fun ActivityScreenInAppScaffold() {\n" +
+        "    AppScaffold(timeText = { TimeText { timeTextCurvedText(\"10:10\") } }) { ActivityScreen() }\n" +
+        "}" in emitted.source,
+      emitted.source,
     )
   }
 
@@ -84,7 +116,7 @@ class WearScreenCodeExporterTest {
         .source
 
     assertTrue("@WearPreviewDevices" in source, source)
-    assertTrue("fun ActivityScreenPreview() = ActivityScreen()" in source, source)
+    assertTrue("fun ActivityScreenPreview() {" in source, source)
   }
 
   /**
@@ -240,10 +272,10 @@ class WearScreenCodeExporterTest {
     assertTrue("import dev.johnoreilly.confetti.wear.components.SectionHeader" in source, source)
     assertTrue(
       "SectionHeader(\n" +
-        "                        text = \"Thursday\",\n" +
-        "                        modifier = Modifier.transformedHeight(this, spec),\n" +
-        "                        transformation = SurfaceTransformation(spec),\n" +
-        "                    )" in source,
+        "                    text = \"Thursday\",\n" +
+        "                    modifier = Modifier.transformedHeight(this, spec),\n" +
+        "                    transformation = SurfaceTransformation(spec),\n" +
+        "                )" in source,
       source,
     )
     // The pack id is a design-side name; nothing of it reaches the Kotlin.
@@ -281,13 +313,13 @@ class WearScreenCodeExporterTest {
 
     assertTrue(
       "SessionGroup(\n" +
-        "                        onClick = {},\n" +
-        "                        expanded = true,\n" +
-        "                        count = 3,\n" +
-        "                        content = {\n" +
-        "                            Text(text = \"Talks\")\n" +
-        "                        },\n" +
-        "                    )" in source,
+        "                    onClick = {},\n" +
+        "                    expanded = true,\n" +
+        "                    count = 3,\n" +
+        "                    content = {\n" +
+        "                        Text(text = \"Talks\")\n" +
+        "                    },\n" +
+        "                )" in source,
       source,
     )
     // `SessionGroup` declares no `Modifier`, so the row treatment has nowhere to go and is not
