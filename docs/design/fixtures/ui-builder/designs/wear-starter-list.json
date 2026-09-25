@@ -240,6 +240,14 @@
           "variant": {
             "type": "enum",
             "value": "filled"
+          },
+          "containerColor": {
+            "type": "colorToken",
+            "value": "secondary"
+          },
+          "contentColor": {
+            "type": "colorToken",
+            "value": "onSecondary"
           }
         }
       }
@@ -414,5 +422,5 @@
       }
     }
   ],
-  "expectedDocumentHash": "754972f402bbaf245e4e68586b1c3972b18faaa2f66de107dbed692873912080"
+  "expectedDocumentHash": "c0cac3faab9c01142ef9c13d87eefd6f5aacbd41ca9e0988944fc9269200a184"
 }

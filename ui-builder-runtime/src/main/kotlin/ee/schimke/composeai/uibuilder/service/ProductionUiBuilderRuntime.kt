@@ -935,6 +935,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
         "surfaceContainerHighest",
         "primary",
         "onPrimary",
+        "secondary",
+        "onSecondary",
         "tertiary",
         "onTertiary",
         "onSurface",

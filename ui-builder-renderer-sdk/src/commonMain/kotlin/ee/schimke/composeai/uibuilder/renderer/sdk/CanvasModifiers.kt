@@ -319,6 +319,8 @@ private val ResolvableColorTokens =
     "surfaceContainerHighest",
     "primary",
     "onPrimary",
+    "secondary",
+    "onSecondary",
     "tertiary",
     "onTertiary",
     "onSurface",

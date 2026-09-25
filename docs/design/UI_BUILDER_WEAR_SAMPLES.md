@@ -206,7 +206,7 @@ and there is no `AppCard` branch: `app` falls through to `TitleCard`, silently.
 
 ## What was fixed, and what is left
 
-All but four of the findings are fixed, in `WearScreenCodeExporter`, the synthesised `wear-m3`
+All but two of the findings are fixed, in `WearScreenCodeExporter`, the synthesised `wear-m3`
 catalog and the canvas. The five samples' generated Kotlin, taken from this exporter, was compiled
 and rendered against AndroidX Wear Compose Material 3 1.7.0-rc01 in wear-m3-catalog's
 Robolectric lane. `WearSampleDesignExportTest` pins each fix against the sample that showed it.
@@ -222,12 +222,12 @@ Robolectric lane. `WearSampleDesignExportTest` pins each fix against the sample 
 | 7 | Card body as `subtitle`; no `AppCard` | **Fixed.** A title card's second and later lines are its content. `variant = "app"` writes `AppCard(appName, title) { … }` and refuses, by node, a card without the two lines it needs. |
 | 8 | `AppScaffold` and a frozen `TimeText` in every screen | **Fixed.** The screen is a `ScreenScaffold` an app drops into its own navigation. The previews wrap it in `AppScaffold` with the design's frozen time. The native lane writes no previews, so there the design's name is an `AppScaffold` wrapper around `<Screen>Content`: its render keeps the status strip, and the name the server imports is unchanged. The scroll-capture guard stays: a long screenshot is a platform feature, not a preview one. |
 | 9 | State named `error_dialog`; empty dialog lambda | **Fixed.** Hoisted state is camelCase with its role (`errorDialogVisible`, `notifyChecked`, `volumeValue`), and a dialog with no content ends at its `)`. |
-| 9 | `AlertDialogDefaults` confirm / dismiss | **Left.** The design still says which button goes in each slot. |
-| 9 | Colour overrides for hierarchy | **Left.** Needs a colour property on the Wear buttons in the catalog, and a canvas to draw it. |
+| 9 | `AlertDialogDefaults` confirm / dismiss | **Fixed.** A filled `confirmButton` / `dismissButton` slot is written as `AlertDialogDefaults.ConfirmButton` / `DismissButton`, each closing the dialog, which is what the canvas already drew for a filled slot. A confirm alone draws both on the canvas too, because Wear's two-button overload defaults the dismiss; a dismiss with no confirm has no overload and is refused. |
+| 9 | Colour overrides for hierarchy | **Fixed.** `wear-m3/button` and `wear-m3/icon-button` declare `containerColor` and `contentColor`. The export writes the variant's own colours function (`ButtonDefaults.filledTonalButtonColors(containerColor = …)`, `IconButtonDefaults.filledIconButtonColors(…)`) and the canvas passes the same colours, resolved against Wear's scheme rather than the editor's. A container colour on an outlined or child button, which draw none, is refused. `secondary` / `onSecondary` joined the shared token vocabulary for ComposeStarter's settings button; `surface` and `surfaceContainerHighest`, which Wear's scheme lacks, are written as `surfaceContainer` and `surfaceContainerHigh`. |
 | 9 | `EdgeButton` font on the JVM canvas | **Left.** The canvas's font rather than the code. |
 
-One lane is still missing for these designs: `ui-builder-designs.yml` compiles every fixture against
-m3-catalog's bundle, so each Wear design is refused there with `Unresolved reference 'wear'`. The
-fix is a second call with the `wear-m3-catalog` bundle, but the reusable workflow in
-compose-preview-server names its artifacts and its sticky comment's marker as constants, so two
-calls collide. It needs a suffix input there first.
+The Design Renders lane covers these designs too. `ui-builder-designs.yml` calls the reusable
+workflow once per catalog over the same directory: `catalog-id: m3-catalog` against m3-catalog's
+bundle, and `catalog-id: wear-m3` with `lane: wear-m3` against wear-m3-catalog's. Before
+yschimke/compose-preview-server#1055 gave the workflow those two inputs, every design compiled
+against the m3 bundle and each Wear design was refused with `Unresolved reference 'wear'`.

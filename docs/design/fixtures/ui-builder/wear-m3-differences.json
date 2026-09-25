@@ -690,5 +690,43 @@
     "why": "Additive and read (2026-09-12). The catalog states an empty list — it ships no starter templates — where the frozen catalog says nothing. Pinned as `[]` rather than waived so the first template the catalog adds fails this gate and gets reviewed, which is the moment it matters: templates are what a new design opens with.",
     "policy": [],
     "frozen": null
+  },
+  {
+    "field": "colorTokens.roles",
+    "why": "Deliberate, and ahead of the catalogs rather than behind them. `secondary` / `onSecondary` joined the token vocabulary the canvas draws and both reducers accept, so a design can recolour a Wear button the way ComposeStarter's settings button is recoloured upstream (`IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.secondary, …)`). The roles are one shared list mirrored in PropertyValueKinds, the runtime and the renderer, so every catalog's frozen side gains them at once. The published side is captured from the catalog repositories and still lists the fourteen roles it was captured with; nothing a design names from the old list stops resolving. The entry fails, as intended, when a re-capture carries the two roles, and is deleted then.",
+    "policy": [
+      "background",
+      "surface",
+      "surfaceContainer",
+      "surfaceContainerLow",
+      "surfaceContainerHigh",
+      "surfaceContainerHighest",
+      "primary",
+      "onPrimary",
+      "tertiary",
+      "onTertiary",
+      "onSurface",
+      "onSurfaceVariant",
+      "outlineVariant",
+      "transparent"
+    ],
+    "frozen": [
+      "background",
+      "surface",
+      "surfaceContainer",
+      "surfaceContainerLow",
+      "surfaceContainerHigh",
+      "surfaceContainerHighest",
+      "primary",
+      "onPrimary",
+      "secondary",
+      "onSecondary",
+      "tertiary",
+      "onTertiary",
+      "onSurface",
+      "onSurfaceVariant",
+      "outlineVariant",
+      "transparent"
+    ]
   }
 ]

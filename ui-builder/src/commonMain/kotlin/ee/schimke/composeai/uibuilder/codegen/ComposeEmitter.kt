@@ -1833,6 +1833,8 @@ private fun colorExpressionFor(value: String): String {
   return when (value) {
     "primary" -> "MaterialTheme.colorScheme.primary"
     "onPrimary" -> "MaterialTheme.colorScheme.onPrimary"
+    "secondary" -> "MaterialTheme.colorScheme.secondary"
+    "onSecondary" -> "MaterialTheme.colorScheme.onSecondary"
     "tertiary" -> "MaterialTheme.colorScheme.tertiary"
     "onTertiary" -> "MaterialTheme.colorScheme.onTertiary"
     "onSurface" -> "MaterialTheme.colorScheme.onSurface"
