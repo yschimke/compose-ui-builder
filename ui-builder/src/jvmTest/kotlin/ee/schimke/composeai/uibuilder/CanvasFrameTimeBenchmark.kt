@@ -29,10 +29,16 @@ import org.junit.Assume
  * draw of the Jetcaster fixture, for a scripted sequence — select, drag a property through twenty
  * values, insert, undo.
  *
- * The product spec records canvas p95 at 39.5ms against a 16.67ms frame, and nothing here measured
- * it, so it could get worse unnoticed (#193). This writes the numbers; it does not judge them. A
- * shared runner is too noisy for an absolute 16ms line to be a stable pass/fail, so a gate, when it
- * comes, compares against the base branch's number from the same runner class.
+ * **This is the JVM desktop backend, not the Wasm canvas.** The product spec's 39.5ms p95 against a
+ * 16.67ms frame (#193) was taken in the browser, where Wasm compilation, browser scheduling and
+ * browser rendering all add to it; none of those are here, so these numbers are their own series,
+ * not comparable to that baseline. What they do catch is the shared part — the reducer and the
+ * canvas composition both backends run — getting slower. The browser measurement belongs with the
+ * headless-Chromium smoke (#185).
+ *
+ * It writes the numbers; it does not judge them. A shared runner is too noisy for an absolute line
+ * to be a stable pass/fail, so a gate, when it comes, compares against the base branch's number
+ * from the same runner class.
  *
  * Off in the ordinary test run, where a timing loop would only slow `check` down. Run it with
  * `./gradlew :ui-builder:canvasFrameBenchmark`, which writes
@@ -73,7 +79,7 @@ class CanvasFrameTimeBenchmark {
 
       val samples = mutableMapOf<String, MutableList<Long>>()
       repeat(WARMUP_PASSES + MEASURED_PASSES) { pass ->
-        for ((step, event) in script(state)) {
+        for ((step, event) in script(state, pass)) {
           val start = System.nanoTime()
           state = reducer.reduce(state, event)
           waitForIdle()
@@ -94,14 +100,20 @@ class CanvasFrameTimeBenchmark {
    * One pass of the edit sequence, as named steps. The drag commits the same text property twenty
    * times, the way a slider or a typed value arrives a frame at a time; the insert lands in the
    * Discover grid and the undo takes it back out, so every pass starts from the same tree.
+   *
+   * The select alternates between two nodes by [pass]. Undo restores the selection from before the
+   * insert, so selecting the same node every pass would time a no-op instead of the overlay moving.
    */
-  private fun script(state: UiBuilderEditorState): List<Pair<String, UiBuilderEditorEvent>> {
+  private fun script(
+    state: UiBuilderEditorState,
+    pass: Int,
+  ): List<Pair<String, UiBuilderEditorEvent>> {
     val text =
       state.document.nodes.values.first { it.componentId == "m3/text" && "text" in it.properties }
     val target =
       requireNotNull(reducer.dropTarget(reducer.initial(state.document, GRID_ID), "m3/text"))
     return buildList {
-      add("select" to UiBuilderEditorEvent.SelectNode(text.id))
+      add("select" to UiBuilderEditorEvent.SelectNode(if (pass % 2 == 0) text.id else GRID_ID))
       repeat(DRAG_STEPS) { step ->
         add("drag" to UiBuilderEditorEvent.CommitProperty(text.id, "text", "Frame $step"))
       }
@@ -116,7 +128,8 @@ class CanvasFrameTimeBenchmark {
     val all = samples.values.flatten()
     val json = buildJsonObject {
       put("fixture", "jetcaster-discover")
-      put("frameBudgetMs", FRAME_BUDGET_MS)
+      // Not the Wasm canvas: see the class comment before comparing with a browser number.
+      put("backend", "jvm-desktop")
       put("warmupPasses", WARMUP_PASSES)
       put("measuredPasses", MEASURED_PASSES)
       put("all", summary(all))
@@ -148,6 +161,5 @@ class CanvasFrameTimeBenchmark {
     const val DRAG_STEPS = 20
     const val WARMUP_PASSES = 3
     const val MEASURED_PASSES = 10
-    const val FRAME_BUDGET_MS = 16.67
   }
 }
