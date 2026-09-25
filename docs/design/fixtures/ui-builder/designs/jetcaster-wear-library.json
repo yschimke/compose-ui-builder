@@ -1,0 +1,305 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "jetcaster-wear-library",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Jetcaster library · compose-samples Jetcaster Wear",
+      "catalogPin": {
+        "systemId": "wear-m3",
+        "catalogRevision": "wear-screen-scaffold-v1",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 192,
+        "heightDp": 192,
+        "density": 2,
+        "theme": "dark",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false,
+        "exportDevices": [
+          "id:wearos_small_round",
+          "id:wearos_xl_round"
+        ]
+      },
+      "stateVariables": {}
+    },
+    {
+      "operationId": "insert-screen",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "screen",
+        "componentId": "wear-m3/screen-scaffold",
+        "properties": {
+          "timeText": {
+            "type": "string",
+            "value": "10:10"
+          },
+          "scrollIndicator": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-list",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "screen",
+        "slot": "content"
+      },
+      "node": {
+        "id": "list",
+        "componentId": "wear-m3/transforming-lazy-column",
+        "properties": {
+          "transformation": {
+            "type": "enum",
+            "value": "spec"
+          },
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 4
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-library-header",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "library-header",
+        "componentId": "wear-m3/list-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Your library"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-latest-episodes",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "latest-episodes",
+        "componentId": "wear-m3/button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled-tonal"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "library-header"
+    },
+    {
+      "operationId": "insert-latest-episodes-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "latest-episodes",
+        "slot": "content"
+      },
+      "node": {
+        "id": "latest-episodes-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/newReleases"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-latest-episodes-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "latest-episodes",
+        "slot": "content"
+      },
+      "node": {
+        "id": "latest-episodes-label",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Latest episodes"
+          }
+        }
+      },
+      "afterNodeId": "latest-episodes-icon"
+    },
+    {
+      "operationId": "insert-podcasts",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "podcasts",
+        "componentId": "wear-m3/button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled-tonal"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "latest-episodes"
+    },
+    {
+      "operationId": "insert-podcasts-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "podcasts",
+        "slot": "content"
+      },
+      "node": {
+        "id": "podcasts-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/podcasts"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-podcasts-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "podcasts",
+        "slot": "content"
+      },
+      "node": {
+        "id": "podcasts-label",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Podcasts"
+          }
+        }
+      },
+      "afterNodeId": "podcasts-icon"
+    },
+    {
+      "operationId": "insert-queue-header",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "queue-header",
+        "componentId": "wear-m3/list-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Queue"
+          }
+        }
+      },
+      "afterNodeId": "podcasts"
+    },
+    {
+      "operationId": "insert-up-next",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "up-next",
+        "componentId": "wear-m3/button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled-tonal"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "queue-header"
+    },
+    {
+      "operationId": "insert-up-next-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "up-next",
+        "slot": "content"
+      },
+      "node": {
+        "id": "up-next-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/playlistPlay"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-up-next-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "up-next",
+        "slot": "content"
+      },
+      "node": {
+        "id": "up-next-label",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Up Next"
+          }
+        }
+      },
+      "afterNodeId": "up-next-icon"
+    }
+  ],
+  "expectedDocumentHash": "3aa4c03d07d529927f1909f523dcde91e974d35a0d06d9e1fcf61f3041f4d6cb"
+}

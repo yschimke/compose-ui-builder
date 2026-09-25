@@ -169,6 +169,33 @@ class WearScreenCodeExporterTest {
     assertTrue("chip" in refused.reasons.single(), refused.reasons.single())
   }
 
+  /**
+   * Authored text is escaped for the literal it lands in. The upstream ComposeStarter greeting is
+   * two lines — `"From the Round world,\nHello, Android!"` — and used to generate a `"…"` literal
+   * broken across two source lines, which does not compile.
+   */
+  @Test
+  fun `a label with a line break or a dollar sign is written as an escaped literal`() {
+    val document =
+      withListItems(
+        UiBuilderNode(
+          id = "greeting",
+          componentId = "wear-m3/list-header",
+          properties =
+            JsonObject(mapOf("text" to text("From the Round world,\nHello, \$5 \"Android\"!"))),
+        )
+      )
+
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(document))
+        .source
+
+    assertTrue(
+      "Text(text = \"From the Round world,\\nHello, \\\$5 \\\"Android\\\"!\")" in source,
+      source,
+    )
+  }
+
   /** The Code pane routes a Wear screen here rather than to the Compose gate's record refusal. */
   @Test
   fun `the editor's code pane generates the screen, not a compose refusal`() {

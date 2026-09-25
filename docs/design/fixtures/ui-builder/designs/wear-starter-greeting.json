@@ -1,0 +1,139 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "wear-starter-greeting",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Starter greeting · wear-os-samples ComposeStarter",
+      "catalogPin": {
+        "systemId": "wear-m3",
+        "catalogRevision": "wear-screen-scaffold-v1",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 192,
+        "heightDp": 192,
+        "density": 2,
+        "theme": "dark",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false,
+        "exportDevices": [
+          "id:wearos_small_round",
+          "id:wearos_xl_round"
+        ]
+      },
+      "stateVariables": {}
+    },
+    {
+      "operationId": "insert-screen",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "screen",
+        "componentId": "wear-m3/screen-scaffold",
+        "properties": {
+          "timeText": {
+            "type": "string",
+            "value": "10:10"
+          },
+          "scrollIndicator": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-list",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "screen",
+        "slot": "content"
+      },
+      "node": {
+        "id": "list",
+        "componentId": "wear-m3/transforming-lazy-column",
+        "properties": {
+          "transformation": {
+            "type": "enum",
+            "value": "spec"
+          },
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 4
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-greeting",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "greeting",
+        "componentId": "wear-m3/list-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "From the Round world,\nHello, Android!"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-show-list",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "screen",
+        "slot": "edgeButton"
+      },
+      "node": {
+        "id": "show-list",
+        "componentId": "wear-m3/edge-button",
+        "properties": {
+          "size": {
+            "type": "enum",
+            "value": "extra-small"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-show-list-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "show-list",
+        "slot": "content"
+      },
+      "node": {
+        "id": "show-list-label",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Show list"
+          }
+        }
+      }
+    }
+  ],
+  "expectedDocumentHash": "88a38222eb0744f63631fb27d5104b826bab70c882485ab5403cca26d0a14d34"
+}

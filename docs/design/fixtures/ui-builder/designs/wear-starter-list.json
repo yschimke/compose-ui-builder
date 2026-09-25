@@ -1,0 +1,402 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "wear-starter-list",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Starter list · wear-os-samples ComposeStarter",
+      "catalogPin": {
+        "systemId": "wear-m3",
+        "catalogRevision": "wear-screen-scaffold-v1",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 192,
+        "heightDp": 192,
+        "density": 2,
+        "theme": "dark",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false,
+        "exportDevices": [
+          "id:wearos_small_round",
+          "id:wearos_xl_round"
+        ]
+      },
+      "stateVariables": {}
+    },
+    {
+      "operationId": "insert-screen",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "screen",
+        "componentId": "wear-m3/screen-scaffold",
+        "properties": {
+          "timeText": {
+            "type": "string",
+            "value": "10:10"
+          },
+          "scrollIndicator": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-list",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "screen",
+        "slot": "content"
+      },
+      "node": {
+        "id": "list",
+        "componentId": "wear-m3/transforming-lazy-column",
+        "properties": {
+          "transformation": {
+            "type": "enum",
+            "value": "spec"
+          },
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 4
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-list-header",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "list-header",
+        "componentId": "wear-m3/list-header",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Header"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-example-card",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "example-card",
+        "componentId": "wear-m3/card",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "title"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "list-header"
+    },
+    {
+      "operationId": "insert-example-card-lines",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "example-card",
+        "slot": "content"
+      },
+      "node": {
+        "id": "example-card-lines",
+        "componentId": "layout/column"
+      }
+    },
+    {
+      "operationId": "insert-example-card-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "example-card-lines",
+        "slot": "children"
+      },
+      "node": {
+        "id": "example-card-title",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Example Title"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-example-card-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "example-card-lines",
+        "slot": "children"
+      },
+      "node": {
+        "id": "example-card-body",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Example Content\nMore Lines\nAnd More"
+          }
+        }
+      },
+      "afterNodeId": "example-card-title"
+    },
+    {
+      "operationId": "insert-example-button",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "example-button",
+        "componentId": "wear-m3/button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxWidth"
+          }
+        ]
+      },
+      "afterNodeId": "example-card"
+    },
+    {
+      "operationId": "insert-example-button-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "example-button",
+        "slot": "content"
+      },
+      "node": {
+        "id": "example-button-label",
+        "componentId": "wear-m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Example Button"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-actions",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "list",
+        "slot": "items"
+      },
+      "node": {
+        "id": "actions",
+        "componentId": "wear-m3/button-group"
+      },
+      "afterNodeId": "example-button"
+    },
+    {
+      "operationId": "insert-settings",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "actions",
+        "slot": "children"
+      },
+      "node": {
+        "id": "settings",
+        "componentId": "wear-m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-settings-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "settings",
+        "slot": "content"
+      },
+      "node": {
+        "id": "settings-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "settings"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-thumbs-up",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "actions",
+        "slot": "children"
+      },
+      "node": {
+        "id": "thumbs-up",
+        "componentId": "wear-m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          }
+        }
+      },
+      "afterNodeId": "settings"
+    },
+    {
+      "operationId": "insert-thumbs-up-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "thumbs-up",
+        "slot": "content"
+      },
+      "node": {
+        "id": "thumbs-up-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/thumbUp"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-error-dialog",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "screen",
+        "slot": "overlays"
+      },
+      "node": {
+        "id": "error-dialog",
+        "componentId": "wear-m3/alert-dialog",
+        "properties": {
+          "title": {
+            "type": "string",
+            "value": "Title"
+          },
+          "text": {
+            "type": "string",
+            "value": "An unknown error occurred during the request."
+          },
+          "visible": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-error-ok",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "error-dialog",
+        "slot": "confirmButton"
+      },
+      "node": {
+        "id": "error-ok",
+        "componentId": "wear-m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-error-ok-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "error-ok",
+        "slot": "content"
+      },
+      "node": {
+        "id": "error-ok-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/check"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-error-cancel",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "error-dialog",
+        "slot": "dismissButton"
+      },
+      "node": {
+        "id": "error-cancel",
+        "componentId": "wear-m3/icon-button",
+        "properties": {
+          "variant": {
+            "type": "enum",
+            "value": "filled-tonal"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-error-cancel-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "error-cancel",
+        "slot": "content"
+      },
+      "node": {
+        "id": "error-cancel-icon",
+        "componentId": "wear-m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "filled/close"
+          }
+        }
+      }
+    }
+  ],
+  "expectedDocumentHash": "c2b13b17ba65d9122222ede7da06e382ac6f7016616c9f38d5ac9ecd5a0db2f3"
+}
