@@ -902,6 +902,10 @@ fun UiBuilderEditor(
     inspectorOpen = true
     mobilePanel = MobileEditorPanel.Properties
   }
+  // The node whose floating card the author closed. The selection stays (something is always
+  // selected), so the card is hidden for that node until another is chosen or it is chosen again.
+  var hoverDismissedFor by remember { mutableStateOf<String?>(null) }
+
   /**
    * Selection is the beginning of editing, not a separate mode an author has to discover.
    *
@@ -911,6 +915,8 @@ fun UiBuilderEditor(
    * agreement.
    */
   fun selectNodeForEditing(nodeId: String) {
+    // Choosing a node, even the one already chosen, brings its card back after a dismiss.
+    hoverDismissedFor = null
     focusEditor()
     dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
     openProperties()
@@ -1331,6 +1337,7 @@ fun UiBuilderEditor(
         document = state.document,
         variants = previewPanes,
         modifier = modifier,
+        deviceRenderer = canvasRenderer,
       )
     }
   }
@@ -1400,11 +1407,12 @@ fun UiBuilderEditor(
       canvasRenderer = canvasRenderer,
       selectionMenu = selectionMenu,
       hoverEditor =
-        if (state.selection.size != 1) null
+        if (state.selection.size != 1 || state.selectedNodeId == hoverDismissedFor) null
         else {
           {
             SelectionHoverEditor(
               label = selectionLabel,
+              onDismiss = { hoverDismissedFor = state.selectedNodeId },
               // The same rule the panel opens on: what the node carries, which is what the export
               // would write. A hovering card is the last place to list what a component *could*
               // have.

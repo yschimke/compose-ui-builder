@@ -474,6 +474,8 @@ internal fun DesignPreviewPane(
    */
   variants: List<UiBuilderVariantPane>,
   modifier: Modifier = Modifier,
+  /** The catalog's pinned runtime, which draws each device pane when the catalog has one. */
+  deviceRenderer: UiBuilderCanvasRenderer? = null,
 ) {
   val hostDensity = LocalDensity.current
   val panes = document.wearWidgetScaffoldSize()?.let(document::wearWidgetPreviewPanes) ?: variants
@@ -534,7 +536,14 @@ internal fun DesignPreviewPane(
             maxItemsInEachRow = perRow,
           ) {
             panes.forEach { pane ->
-              key(pane.id) { VariantPane(pane = pane, scale = scale, hostDensity = hostDensity) }
+              key(pane.id) {
+                VariantPane(
+                  pane = pane,
+                  scale = scale,
+                  hostDensity = hostDensity,
+                  deviceRenderer = deviceRenderer,
+                )
+              }
             }
           }
         }
