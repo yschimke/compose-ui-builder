@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
+import ee.schimke.composeai.uibuilder.editor.UiBuilderReleaseNote
 import ee.schimke.composeai.uibuilder.editor.homeDesignFolders
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import kotlin.test.Test
@@ -58,7 +59,7 @@ class UiBuilderHomeScreenTest {
     onAllNodesWithText("Mobile").assertCountEquals(2)
     onNodeWithText("Adaptive app").assertIsDisplayed()
     onNodeWithText("List-detail screen").assertIsDisplayed()
-    onNodeWithText("Open a file").assertIsDisplayed()
+    onNodeWithText("Recent designs").assertIsDisplayed()
     onNodeWithText("Morning player").assertIsDisplayed()
     onNodeWithText("morning-player · m3-catalog · updated yesterday").assertIsDisplayed()
     onNodeWithContentDescription("All designs").assertIsDisplayed()
@@ -173,7 +174,7 @@ class UiBuilderHomeScreenTest {
       )
     }
 
-    onNodeWithContentDescription("Create design").performClick()
+    onNodeWithContentDescription("Create design").performScrollTo().performClick()
     val submitted = checkNotNull(created)
     assertEquals("m3-catalog", submitted[0])
     assertEquals("blank", submitted[2])
@@ -182,6 +183,35 @@ class UiBuilderHomeScreenTest {
   }
 
   /** A host with no index and nothing to copy shows the create panel alone, as it always did. */
+  @Test
+  fun `the quick start creates a blank screen or the hello sample in one press`() =
+    runComposeUiTest {
+      val submitted = mutableListOf<String>()
+      setContent {
+        UiBuilderNewDesignScreen(
+          catalogs =
+            listOf(
+              UiBuilderNewDesignCatalog(
+                "m3-catalog",
+                "Android app",
+                listOf(
+                  UiBuilderNewDesignTemplate("blank", "Blank screen", ""),
+                  UiBuilderNewDesignTemplate("hello", "Hello sample", ""),
+                ),
+              )
+            ),
+          initialCatalogSystemId = "m3-catalog",
+          releaseNotes = listOf(UiBuilderReleaseNote("9.9.0", "2026-09-25", listOf("a new thing"))),
+          onCreate = { catalog, _, template, _ -> submitted += "$catalog/$template" },
+        )
+      }
+      onNodeWithText("What's new").performScrollTo().assertIsDisplayed()
+      onNodeWithText("• A new thing").performScrollTo().assertIsDisplayed()
+      onNodeWithContentDescription("New from hello").performScrollTo().performClick()
+      onNodeWithContentDescription("New from blank").performScrollTo().performClick()
+      assertEquals(listOf("m3-catalog/hello", "m3-catalog/blank"), submitted)
+    }
+
   @Test
   fun `the designs panel is absent where the host offers neither`() = runComposeUiTest {
     setContent {
@@ -193,7 +223,7 @@ class UiBuilderHomeScreenTest {
     }
 
     onNodeWithText("Create from a template").assertIsDisplayed()
-    onNodeWithText("Open a file").assertDoesNotExist()
+    onNodeWithText("Recent designs").assertDoesNotExist()
   }
 }
 

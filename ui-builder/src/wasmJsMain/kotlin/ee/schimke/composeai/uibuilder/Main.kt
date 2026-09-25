@@ -1448,7 +1448,12 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
               id = "blank",
               label = "Blank screen",
               supportingText = "A Material scaffold with an empty content container.",
-            )
+            ),
+            UiBuilderNewDesignTemplate(
+              id = UiBuilderNewDesignSeed.HELLO_TEMPLATE,
+              label = "Hello sample",
+              supportingText = "The same scaffold with a headline and a line of text to edit.",
+            ),
           ),
       )
     "remote-m3" ->
