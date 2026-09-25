@@ -334,12 +334,51 @@ internal fun PinnedDesignCanvas(
         if (dy != 0f) verticalScrollState.dispatchRawDelta(dy)
       }
     }
+    // Where the scroll has to be once the zoom a pinch or Ctrl+wheel just asked for is laid out,
+    // so the point under the hand stays under it. Applied a frame later, because until the new
+    // scale has been measured the scroll range is the old one's and the offset would be clamped
+    // away; kept until then, so a burst of wheel events chains from the last target rather than
+    // from a scroll that has not moved yet.
+    var zoomTarget by remember(document.id) { mutableStateOf<Triple<Float, Float, Float>?>(null) }
+    LaunchedEffect(scale) {
+      val (targetScale, x, y) = zoomTarget ?: return@LaunchedEffect
+      if (targetScale != scale) return@LaunchedEffect
+      withFrameNanos {}
+      horizontalScrollState.scrollTo(x.roundToInt())
+      verticalScrollState.scrollTo(y.roundToInt())
+      zoomTarget = null
+    }
     Box(
       Modifier.fillMaxSize()
         .onGloballyPositioned {
           workspaceBounds = it.boundsInRoot()
           onWorkspaceBounds(workspaceBounds)
         }
+        // Outside the scrolls, so the positions it reads are the workspace's own and it sees a
+        // pinch before the scroll can take one finger of it.
+        .canvasZoomGestures(
+          scale = zoomTarget?.first ?: scale,
+          onZoom = { request ->
+            val (fromScale, fromX, fromY) =
+              zoomTarget
+                ?: Triple(
+                  scale,
+                  horizontalScrollState.value.toFloat(),
+                  verticalScrollState.value.toFloat(),
+                )
+            zoomTarget =
+              Triple(
+                request.scale,
+                anchoredScroll(fromX, request.focus.x, fromScale, request.scale),
+                anchoredScroll(fromY, request.focus.y, fromScale, request.scale),
+              )
+            onZoomChanged(request.scale)
+          },
+          onPan = { pan ->
+            horizontalScrollState.dispatchRawDelta(-pan.x)
+            verticalScrollState.dispatchRawDelta(-pan.y)
+          },
+        )
         .horizontalScroll(horizontalScrollState)
         .verticalScroll(verticalScrollState)
     ) {
