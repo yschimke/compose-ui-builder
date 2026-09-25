@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -171,6 +172,30 @@ class CatalogRuntimeProtocolTest {
     assertEquals(
       "INVALID_ACTION",
       error("horizontal", action("design", 1, "root", "scrollBy", 4.0, 20.0)),
+    )
+  }
+
+  @Test
+  fun `a long editing session keeps a bounded replay record`() {
+    // One frame now lives for a whole session and takes a request per edit; the record of accepted
+    // ids that refuses a replay must not grow with every one of them.
+    val endpoint = initializedEndpoint()
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    val ids = (1..ACCEPTED_REQUEST_ID_HISTORY + 10).map { "edit-$it" }
+    ids.forEach { endpoint.receive(ORIGIN, true, host.request(it, "initialize")) }
+    // The same ids sent again, as a replay would.
+    val replay = CatalogRuntimeHostSession(RUNTIME)
+
+    val recent =
+      assertIs<CatalogRuntimeCommand.Reply>(
+        endpoint.receive(ORIGIN, true, replay.request(ids.last(), "initialize"))
+      )
+    assertEquals("DUPLICATE_REQUEST", recent.message.code(), "a recent replay is still refused")
+    val forgotten = endpoint.receive(ORIGIN, true, replay.request(ids.first(), "initialize"))
+    assertTrue(
+      forgotten !is CatalogRuntimeCommand.Reply ||
+        forgotten.message.payload["code"]?.toString()?.trim('"') != "DUPLICATE_REQUEST",
+      "the oldest ids have been let go",
     )
   }
 

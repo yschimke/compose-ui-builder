@@ -531,6 +531,11 @@ private fun updateCatalogRuntimeSurface(
           if (!manifest || !frame.contentWindow) return;
           const requestId = surfaceId + '-' + (++sequence);
           const body = type === 'renderDocument' ? payload.document : null;
+          // A newer render replaces one still waiting: the frame may conflate them and answer only
+          // the last, and a long-lived frame must not keep every superseded request.
+          if (type === 'renderDocument') {
+            for (const [id, entry] of pending) if (entry.type === 'renderDocument') pending.delete(id);
+          }
           pending.set(requestId, {
             type,
             documentId: body?.id,

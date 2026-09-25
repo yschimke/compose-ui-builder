@@ -69,7 +69,16 @@ class CatalogRuntimeProtocolEndpoint(
   private var activeDocument: DocumentRef? = null
   private var pendingRender: Pair<String, DocumentRef>? = null
   private val pendingActions = mutableMapOf<String, DocumentRef>()
-  private val acceptedRequestIds = mutableSetOf<String>()
+  // Replay detection, bounded: the editor keeps one frame for a whole editing session and sends a
+  // render per edit, so an unbounded record grew with every edit. Its request ids only increase, so
+  // a replay is always of a recent one.
+  private val acceptedRequestIds = LinkedHashSet<String>()
+
+  private fun trimAcceptedRequestIds() {
+    while (acceptedRequestIds.size > ACCEPTED_REQUEST_ID_HISTORY) {
+      acceptedRequestIds.remove(acceptedRequestIds.first())
+    }
+  }
 
   fun receive(origin: String, sourceIsParent: Boolean, encoded: String): CatalogRuntimeCommand? {
     if (!sourceIsParent) return null
@@ -99,7 +108,7 @@ class CatalogRuntimeProtocolEndpoint(
     }
     val lockedOrigin = parentOrigin
     if (lockedOrigin != null && origin != lockedOrigin) return null
-    if (!acceptedRequestIds.add(message.requestId)) {
+    if (!acceptedRequestIds.add(message.requestId).also { trimAcceptedRequestIds() }) {
       return CatalogRuntimeCommand.Reply(
         message.reply(
           "error",
@@ -512,3 +521,6 @@ internal val RUNTIME_PROTOCOL_JSON = Json {
   ignoreUnknownKeys = false
   explicitNulls = false
 }
+
+/** How many request ids a runtime remembers to refuse a replay. */
+internal const val ACCEPTED_REQUEST_ID_HISTORY = 1024
