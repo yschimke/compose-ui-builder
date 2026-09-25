@@ -789,6 +789,11 @@ fun UiBuilderEditor(
    */
   selectionRequest: EditorSelectionRequest? = null,
   /**
+   * Draws the editor's toolbar and rails in the host's own chrome instead of in the page. See
+   * [UiBuilderHostChrome]. Null — everywhere but an IDE webview — keeps the editor's own.
+   */
+  hostChrome: UiBuilderHostChrome? = null,
+  /**
    * Copies an OpenCode-ready prompt for working on this live design through MCP.
    *
    * Null where this editor has no live server or clipboard. The host owns the prompt because it
@@ -2171,7 +2176,9 @@ fun UiBuilderEditor(
 
     MaterialTheme(colorScheme = EditorColors) {
       BoxWithConstraints(Modifier.fillMaxSize()) {
-        val compact = maxWidth < 840.dp
+        // A host drawing the toolbar and rails has taken the width they cost, and its panes are
+        // resized by the person rather than by a phone, so it keeps the desktop layout.
+        val compact = maxWidth < 840.dp && hostChrome == null
         // A host may put rendered output in its own view (for example IntelliJ's Preview tool
         // window). That surface owns no editor chrome: toolbars, navigator, inspector and status
         // stay with the visual editor instead of being duplicated around a read-only render.
@@ -2190,7 +2197,27 @@ fun UiBuilderEditor(
               )
             }
         ) {
-          if (!dedicatedOutput) {
+          if (!dedicatedOutput && hostChrome != null) {
+            HostChromeToolbar(
+              chrome = hostChrome,
+              state = state,
+              canUndo = reducer.canUndo(state),
+              canRedo = reducer.canRedo(state),
+              onTidy = {
+                focusEditor()
+                val edits = reducer.tidyPlan(state).changedValues
+                if (edits == 0) {
+                  say("Every dp value is already on the 4dp grid")
+                } else {
+                  dispatch(UiBuilderEditorEvent.Tidy)
+                  say("Tidied $edits values to the 4dp grid")
+                }
+              },
+              onComponentPacks = onComponentPacks,
+              onHelp = onHelp,
+              dispatch = ::dispatch,
+            )
+          } else if (!dedicatedOutput) {
             if (compact) {
               MobileEditorToolbar(
                 state = state,
@@ -2287,9 +2314,12 @@ fun UiBuilderEditor(
                   else -> null
                 }
               Row(Modifier.fillMaxSize()) {
-                EditorRail(
+                HostOrOwnRail(
+                  hostChrome,
+                  "navigator",
                   NavigatorTab.entries.map { entry ->
                     EditorRailItem(
+                      id = "navigator.${entry.name.lowercase()}",
                       label = entry.label,
                       icon = entry.icon(),
                       selected = navigatorTab == entry,
@@ -2298,7 +2328,7 @@ fun UiBuilderEditor(
                         navigatorTab = if (navigatorTab == entry) null else entry
                       },
                     )
-                  }
+                  },
                 )
                 navigatorTab?.let { open ->
                   navigator(Modifier.width(NAVIGATOR_WIDTH).fillMaxHeight(), open, false) {
@@ -2434,9 +2464,12 @@ fun UiBuilderEditor(
                       EditorPane.Preview in state.panes,
                     )
                 }
-                EditorRail(
+                HostOrOwnRail(
+                  hostChrome,
+                  "dock",
                   EditorDock.entries.map { entry ->
                     EditorRailItem(
+                      id = "dock.${entry.name.lowercase()}",
                       label = entry.label,
                       icon = entry.icon(),
                       selected = dock == entry,
@@ -2472,7 +2505,7 @@ fun UiBuilderEditor(
                         }
                       },
                     )
-                  }
+                  },
                 )
               }
             } else {
@@ -4951,8 +4984,132 @@ private fun EditorRail(items: List<EditorRailItem>, modifier: Modifier = Modifie
   )
 }
 
+/** [EditorRail] in the editor, or the same switches published to a host's own chrome. */
+@Composable
+private fun HostOrOwnRail(
+  hostChrome: UiBuilderHostChrome?,
+  group: String,
+  items: List<EditorRailItem>,
+  modifier: Modifier = Modifier,
+) {
+  if (hostChrome == null) {
+    EditorRail(items, modifier)
+  } else {
+    PublishHostChrome(
+      hostChrome,
+      group,
+      items.map {
+        HostChromeEntry(
+          UiBuilderHostAction(
+            id = it.id,
+            label = it.label,
+            group = group,
+            icon = it.icon.name,
+            checked = it.selected,
+            badge = it.badge,
+          ),
+          it.onClick,
+        )
+      },
+    )
+  }
+}
+
+/**
+ * [EditorToolbar]'s controls, published to a host that draws them itself.
+ *
+ * The same verbs as the desktop toolbar, less the ones a host editor already owns: the document's
+ * name is the host's tab title, and new, browse, export, reconnect and the AI prompt belong to
+ * hosts with a server. The shortcuts dialog is still drawn here, because it describes this canvas.
+ */
+@Composable
+private fun HostChromeToolbar(
+  chrome: UiBuilderHostChrome,
+  state: UiBuilderEditorState,
+  canUndo: Boolean,
+  canRedo: Boolean,
+  onTidy: () -> Unit,
+  onComponentPacks: (() -> Unit)?,
+  onHelp: (() -> Unit)?,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  var showShortcuts by remember { mutableStateOf(false) }
+  if (showShortcuts) {
+    EditorShortcutsDialog(onDismiss = { showShortcuts = false })
+  }
+  fun entry(action: UiBuilderHostAction, onInvoke: () -> Unit) = HostChromeEntry(action, onInvoke)
+  val entries = buildList {
+    add(
+      entry(
+        UiBuilderHostAction("undo", "Undo", "toolbar", "Undo", canUndo, shortcut = "Ctrl/⌘+Z")
+      ) {
+        dispatch(UiBuilderEditorEvent.Undo)
+      }
+    )
+    add(
+      entry(
+        UiBuilderHostAction(
+          "redo",
+          "Redo",
+          "toolbar",
+          "Redo",
+          canRedo,
+          shortcut = "Ctrl/⌘+Shift+Z",
+        )
+      ) {
+        dispatch(UiBuilderEditorEvent.Redo)
+      }
+    )
+    if (state.reference.hasContent) {
+      val visible = state.reference.settings.visible
+      add(
+        entry(
+          UiBuilderHostAction(
+            "reference",
+            "Reference image",
+            "toolbar",
+            if (visible) "Show" else "Hide",
+            checked = visible,
+          )
+        ) {
+          dispatch(UiBuilderEditorEvent.ToggleReference)
+        }
+      )
+    }
+    add(
+      entry(
+        UiBuilderHostAction(
+          "overflow.tidy",
+          "Tidy to the 4dp grid",
+          "overflow",
+          "Fit",
+        ),
+        onTidy,
+      )
+    )
+    add(
+      entry(UiBuilderHostAction("overflow.shortcuts", "Keyboard shortcuts", "overflow", "More")) {
+        showShortcuts = true
+      }
+    )
+    if (onComponentPacks != null) {
+      add(
+        entry(
+          UiBuilderHostAction("overflow.packs", "Component packs…", "overflow", "Components"),
+          onComponentPacks,
+        )
+      )
+    }
+    if (onHelp != null) {
+      add(entry(UiBuilderHostAction("overflow.help", "Help", "overflow", "More"), onHelp))
+    }
+  }
+  PublishHostChrome(chrome, "toolbar", entries)
+}
+
 /** One switch on an [EditorRail]. */
 private data class EditorRailItem(
+  val id: String,
   val label: String,
   val icon: UiBuilderChromeIcon,
   val selected: Boolean,

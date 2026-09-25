@@ -17,6 +17,8 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.editor.EditorSelectionRequest
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.editor.UiBuilderHostAction
+import ee.schimke.composeai.uibuilder.editor.UiBuilderHostChrome
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
@@ -42,11 +44,14 @@ import kotlinx.serialization.json.jsonObject
  *   [HostOpenMessage]. Every `open` replaces the design: the host sends one when the file opens and
  *   again whenever the file changes under the editor (an external edit, a `git checkout`, the text
  *   editor beside this one). `{ type: "compose-ui-builder/select", nodeId }` selects a layer, for a
- *   host that draws its own layer tree.
+ *   host that draws its own layer tree, and `{ type: "compose-ui-builder/invoke", id }` runs one of
+ *   the editor's toolbar or rail controls.
  * - **out**, through `composeUiBuilderHost.postMessage`: `ready` once the listener is installed,
- *   `changed` with the whole document after each edit, `selection` with the selected layer's id
- *   (empty for none), `error` when an `open` cannot be read, and `open-link` for a URL the host
- *   should open, since a webview cannot navigate.
+ *   `changed` with the whole document after each edit, `chrome` with the toolbar and rail controls
+ *   the host draws in place of the editor's own (`UiBuilderHostChrome`; the editor role draws
+ *   neither), `selection` with the selected layer's id (empty for none), `error` when an `open`
+ *   cannot be read, and `open-link` for a URL the host should open, since a webview cannot
+ *   navigate.
  *
  * `composeUiBuilderHost.role` picks which half of the IntelliJ plugin's split a page is: `editor`
  * (the default) is the canvas and inspector, and `preview` is the devices-and-configurations view,
@@ -64,6 +69,13 @@ internal fun HostBridgeApp() {
   val role = remember { hostBridgeRole() }
   var opened by remember { mutableStateOf<HostOpenedDesign?>(null) }
   var selectionRequest by remember { mutableStateOf<EditorSelectionRequest?>(null) }
+  // The editor's toolbar and rails, drawn by the host (see UiBuilderHostChrome). One instance for
+  // the page, so an `invoke` that lands between two `open`s still finds the current handlers.
+  val hostChrome = remember {
+    UiBuilderHostChrome { actions ->
+      postHostChrome(hostChromeJson.encodeToString(HostChromeActionsSerializer, actions))
+    }
+  }
   LaunchedEffect(Unit) {
     var generation = 0
     var selections = 0
@@ -81,6 +93,9 @@ internal fun HostBridgeApp() {
           .onFailure { postHostError(it.message ?: it::class.simpleName ?: "unreadable design") }
       },
       onSelect = { nodeId -> selectionRequest = EditorSelectionRequest(nodeId, ++selections) },
+      onInvoke = { id ->
+        if (!hostChrome.invoke(id)) postHostError("no editor action '$id' right now")
+      },
     )
     postHostReady()
   }
@@ -101,6 +116,7 @@ internal fun HostBridgeApp() {
           },
           onHelp = { postHostOpenLink(UI_BUILDER_GUIDE_URL) },
           selectionRequest = selectionRequest,
+          hostChrome = hostChrome,
           // The split the IntelliJ plugin makes: the editor tab is the canvas, and the devices
           // and configurations are a view of their own beside it (the `preview` role). The layer
           // tree is the host's too, so it starts closed here; its rail still opens it.
@@ -274,22 +290,41 @@ internal external fun hostBridgeEnabled(): Boolean
 private external fun hostBridgeRoleName(): String
 
 /**
- * Hands each `open` to [onOpen] as JSON, so the envelope is decoded once, in Kotlin, and each `{
- * type: "compose-ui-builder/select", nodeId }` to [onSelect].
+ * Hands each `open` to [onOpen] as JSON, so the envelope is decoded once, in Kotlin; each `select`
+ * to [onSelect]; and each `invoke` to [onInvoke].
  */
 @JsFun(
-  """(onOpen, onSelect) => {
+  """(onOpen, onSelect, onInvoke) => {
   globalThis.addEventListener('message', (event) => {
     const data = event.data;
     if (!data) return;
     if (data.type === 'compose-ui-builder/open') onOpen(JSON.stringify(data));
     else if (data.type === 'compose-ui-builder/select' && typeof data.nodeId === 'string') {
       onSelect(data.nodeId);
+    } else if (data.type === 'compose-ui-builder/invoke' && typeof data.id === 'string') {
+      onInvoke(data.id);
     }
   });
 }"""
 )
-private external fun listenForHostMessages(onOpen: (String) -> Unit, onSelect: (String) -> Unit)
+private external fun listenForHostMessages(
+  onOpen: (String) -> Unit,
+  onSelect: (String) -> Unit,
+  onInvoke: (String) -> Unit,
+)
+
+/** `{ type: "compose-ui-builder/chrome", actions: [...] }`, the actions as parsed JSON. */
+@JsFun(
+  """(actionsJson) => {
+  const host = globalThis.composeUiBuilderHost;
+  if (host && typeof host.postMessage === 'function') {
+    host.postMessage({ type: 'compose-ui-builder/chrome', actions: JSON.parse(actionsJson) });
+  }
+}"""
+)
+private external fun postHostChrome(actionsJson: String)
+
+private val hostChromeJson = Json { encodeDefaults = true }
 
 @JsFun(
   """(message) => {
@@ -321,3 +356,50 @@ private fun postHostError(message: String) =
 
 private fun postHostOpenLink(url: String) =
   postToHost(hostMessage("compose-ui-builder/open-link", "url", url))
+
+/**
+ * [UiBuilderHostAction] as JSON. A wire class here rather than `@Serializable` on the common model:
+ * the shape is this bridge's contract, and it should not move because a field was added to the
+ * editor's model for another host.
+ */
+private object HostChromeActionsSerializer :
+  kotlinx.serialization.KSerializer<List<UiBuilderHostAction>> {
+  private val delegate =
+    kotlinx.serialization.builtins.ListSerializer(HostChromeActionWire.serializer())
+  override val descriptor = delegate.descriptor
+
+  override fun serialize(
+    encoder: kotlinx.serialization.encoding.Encoder,
+    value: List<UiBuilderHostAction>,
+  ) =
+    delegate.serialize(
+      encoder,
+      value.map {
+        HostChromeActionWire(
+          it.id,
+          it.label,
+          it.group,
+          it.icon,
+          it.enabled,
+          it.checked,
+          it.badge,
+          it.shortcut,
+        )
+      },
+    )
+
+  override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder) =
+    error("the bridge only sends chrome")
+}
+
+@Serializable
+private data class HostChromeActionWire(
+  val id: String,
+  val label: String,
+  val group: String,
+  val icon: String,
+  val enabled: Boolean,
+  val checked: Boolean?,
+  val badge: Int,
+  val shortcut: String,
+)
