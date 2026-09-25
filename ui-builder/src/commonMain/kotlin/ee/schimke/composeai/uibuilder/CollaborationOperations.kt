@@ -229,7 +229,7 @@ internal fun CollaborationState.applyOperation(
         EnvironmentChange(
           operation.field,
           before,
-          operation.value,
+          operation.value.takeUnless { it is JsonNull },
           environmentVersions[operation.field],
         )
       trace.environmentTouches += operation.field

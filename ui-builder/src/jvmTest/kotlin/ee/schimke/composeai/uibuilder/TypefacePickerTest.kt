@@ -127,6 +127,42 @@ class TypefacePickerTest {
     )
   }
 
+  /**
+   * The clear is recorded as absent, not as JSON null: undo checks the field still holds what the
+   * command wrote, and an absent field never equals a recorded null — so undoing Default was
+   * refused, and redoing it would have written an explicit null back.
+   */
+  @Test
+  fun `choosing Default can be undone and redone`() {
+    val initial = reducer.initial(document, selectedNodeId = null)
+    fun typeface(state: UiBuilderEditorState) = state.document.screenEnvironmentSettings().typeface
+    val picked =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.UpdateEnvironment(
+          initial.document.screenEnvironmentSettings().copy(typeface = "Inter")
+        ),
+      )
+    val cleared =
+      reducer.reduce(
+        picked,
+        UiBuilderEditorEvent.UpdateEnvironment(
+          picked.document.screenEnvironmentSettings().copy(typeface = null)
+        ),
+      )
+    assertNull(typeface(cleared))
+
+    val undone = reducer.reduce(cleared, UiBuilderEditorEvent.Undo)
+    assertEquals("Inter", typeface(undone), "undo of Default was refused")
+
+    val redone = reducer.reduce(undone, UiBuilderEditorEvent.Redo)
+    assertNull(typeface(redone))
+    assertFalse(
+      "typeface" in redone.document.environment,
+      "redo wrote ${redone.document.environment}",
+    )
+  }
+
   @Test
   fun `an unrelated frame edit does not touch the typeface`() {
     val initial = reducer.initial(document, selectedNodeId = null)
