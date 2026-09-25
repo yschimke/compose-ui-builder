@@ -277,7 +277,7 @@ class ScopedComposeProjectionTest {
         it.copy(properties = it.properties + ("horizontalArrangement" to EnumValueV1("center")))
       }
     val source = source(doc) ?: return
-    assertContains(source, "max(0.0f, argument0).dp")
+    assertContains(source, "max(0f, argument0).dp")
     assertContains(source, "Alignment.CenterHorizontally")
   }
 
