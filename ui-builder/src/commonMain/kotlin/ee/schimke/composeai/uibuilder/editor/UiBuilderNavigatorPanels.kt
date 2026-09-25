@@ -1394,7 +1394,9 @@ private fun SlotRow(
       .height(26.dp)
       .then(
         if (accent != null) Modifier.background(accent.copy(alpha = 0.22f))
-        else if (isCatalogTarget) Modifier.background(Color(0xff26304a)) else Modifier
+        else if (isCatalogTarget)
+          Modifier.background(LocalUiBuilderEditorPalette.current.dropTarget)
+        else Modifier
       )
       .padding(start = (8 + row.indent * 12).dp, end = 10.dp),
     verticalAlignment = Alignment.CenterVertically,
@@ -1454,8 +1456,8 @@ private fun LayerRow(
   val density = LocalDensity.current
   val background =
     when {
-      dragged -> Color(0xff3b4468)
-      selected -> Color(0xff30385a)
+      dragged -> LocalUiBuilderEditorPalette.current.layerDragged
+      selected -> LocalUiBuilderEditorPalette.current.layerSelected
       else -> Color.Transparent
     }
   val marker = landing?.markerColor()

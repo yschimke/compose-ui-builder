@@ -304,7 +304,7 @@ internal fun RevisionReviewPane(
   onBackToNow: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  Column(modifier.background(Color(0xff0d0e11))) {
+  Column(modifier.background(LocalUiBuilderEditorPalette.current.workspace)) {
     Surface(
       Modifier.fillMaxWidth(),
       color = MaterialTheme.colorScheme.secondaryContainer,

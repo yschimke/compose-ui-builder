@@ -17,6 +17,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.editor.EditorSelectionRequest
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorTheme
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHostAction
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHostChrome
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -53,6 +54,10 @@ import kotlinx.serialization.json.jsonObject
  *   cannot be read, and `open-link` for a URL the host should open, since a webview cannot
  *   navigate.
  *
+ * The page may also define `composeUiBuilderHost.readTheme()` and send `{ type:
+ * "compose-ui-builder/theme", theme }` when its theme changes, to draw the editor's own UI in the
+ * host's colours; see [HostThemeMessage].
+ *
  * `composeUiBuilderHost.role` picks which half of the IntelliJ plugin's split a page is: `editor`
  * (the default) is the canvas and inspector, and `preview` is the devices-and-configurations view,
  * which only follows `open`s and never publishes. See [HostBridgeRole].
@@ -71,6 +76,13 @@ internal fun HostBridgeApp() {
   var selectionRequest by remember { mutableStateOf<EditorSelectionRequest?>(null) }
   // The editor's toolbar and rails, drawn by the host (see UiBuilderHostChrome). One instance for
   // the page, so an `invoke` that lands between two `open`s still finds the current handlers.
+  // The host's colours for the editor's own UI, read once and then followed as the host's theme
+  // changes; the editor keeps its own where the host sends none (see HostBridgeTheme.kt).
+  var hostTheme by remember { mutableStateOf(decodeHostTheme(readHostTheme())) }
+  LaunchedEffect(Unit) {
+    listenForHostTheme { json -> decodeHostTheme(json)?.let { hostTheme = it } }
+  }
+  val theme = hostTheme ?: UiBuilderEditorTheme.Default
   val hostChrome = remember {
     UiBuilderHostChrome { actions ->
       postHostChrome(hostChromeJson.encodeToString(HostChromeActionsSerializer, actions))
@@ -117,6 +129,7 @@ internal fun HostBridgeApp() {
           onHelp = { postHostOpenLink(UI_BUILDER_GUIDE_URL) },
           selectionRequest = selectionRequest,
           hostChrome = hostChrome,
+          theme = theme,
           // The split the IntelliJ plugin makes: the editor tab is the canvas, and the devices
           // and configurations are a view of their own beside it (the `preview` role). The layer
           // tree is the host's too, so it starts closed here; its rail still opens it.
@@ -133,6 +146,7 @@ internal fun HostBridgeApp() {
           document = design.document,
           catalog = design.catalog,
           sessionLabel = design.label,
+          theme = theme,
           initialPanes = setOf(EditorPane.Preview),
           availablePanes = setOf(EditorPane.Preview),
           openDefaultPreview = false,

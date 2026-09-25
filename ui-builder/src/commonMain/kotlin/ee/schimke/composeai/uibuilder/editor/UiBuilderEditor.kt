@@ -701,6 +701,11 @@ fun UiBuilderEditor(
    */
   hostChrome: UiBuilderHostChrome? = null,
   /**
+   * The colours of the editor's own UI. [UiBuilderEditorTheme.Default] everywhere but a host that
+   * themes it to match its own panels.
+   */
+  theme: UiBuilderEditorTheme = UiBuilderEditorTheme.Default,
+  /**
    * Copies an OpenCode-ready prompt for working on this live design through MCP.
    *
    * Null where this editor has no live server or clipboard. The host owns the prompt because it
@@ -2081,7 +2086,7 @@ fun UiBuilderEditor(
       },
     )
 
-    MaterialTheme(colorScheme = EditorColors) {
+    EditorTheme(theme) {
       BoxWithConstraints(Modifier.fillMaxSize()) {
         // A host drawing the toolbar and rails has taken the width they cost, and its panes are
         // resized by the person rather than by a phone, so it keeps the desktop layout.
@@ -2300,7 +2305,7 @@ fun UiBuilderEditor(
                         canvas(
                           Modifier.weight(1f)
                             .fillMaxHeight()
-                            .background(Color(0xff0d0e11))
+                            .background(LocalUiBuilderEditorPalette.current.workspace)
                             .padding(24.dp),
                           Alignment.Center,
                         )
@@ -2418,7 +2423,7 @@ fun UiBuilderEditor(
             } else {
               canvas(
                 Modifier.fillMaxSize()
-                  .background(Color(0xff0d0e11))
+                  .background(LocalUiBuilderEditorPalette.current.workspace)
                   .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 64.dp),
                 Alignment.Center,
               )
@@ -3882,11 +3887,14 @@ private fun CanvasStatusBar(
         if (outcome is CommandOutcome.Rejected) {
           StatusText("${outcome.code}: ${outcome.message}", color = MaterialTheme.colorScheme.error)
         }
-        Surface(shape = RoundedCornerShape(10.dp), color = Color(0xff214c37)) {
+        Surface(
+          shape = RoundedCornerShape(10.dp),
+          color = LocalUiBuilderEditorPalette.current.sessionBadge,
+        ) {
           Text(
             sessionLabel,
             Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-            color = Color(0xffa8f2c6),
+            color = LocalUiBuilderEditorPalette.current.onSessionBadge,
             style = MaterialTheme.typography.labelSmall,
           )
         }
