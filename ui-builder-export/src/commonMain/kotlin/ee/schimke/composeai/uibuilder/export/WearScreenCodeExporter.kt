@@ -50,10 +50,11 @@ object WearScreenCodeExporter {
      *   design in, and the name comes from the design's *title* through [screenIdentifier] — a
      *   transformation nothing outside this file should be reimplementing.
      *
-     *   Without previews (the native lane) this names `<Screen>InAppScaffold`, the wrapper that
-     *   puts the screen in the `AppScaffold` and frozen `TimeText` an app's root would provide: the
-     *   screen itself no longer carries them (see [export]), and a native render without the status
-     *   strip would be a picture of a screen no watch shows.
+     *   The same name with or without previews. Without them (the native lane) it names the wrapper
+     *   that puts the screen in the `AppScaffold` and frozen `TimeText` an app's root would
+     *   provide, with the scaffold body as `<Screen>Content`: the exported screen no longer carries
+     *   them (see [export]), and a native render without the status strip would be a picture of a
+     *   screen no watch shows.
      */
     data class Emitted(val source: String, val screenName: String) : Result
 
@@ -142,12 +143,14 @@ object WearScreenCodeExporter {
 
     val name = document.screenIdentifier()
     val timeText = root.text("timeText")
-    // The wrapper the native lane renders, since the screen no longer carries its own
-    // `AppScaffold`. Only written without previews: an export's previews wrap the screen
-    // themselves, and a public second composable in source somebody keeps is noise.
-    val appScaffoldHost = "${name}InAppScaffold"
+    // The native lane renders the composable named [Result.Emitted.screenName] and writes no
+    // previews, so there the screen is the `AppScaffold` wrapper under the design's name and the
+    // scaffold body moves to `<Screen>Content`. The name the lane imports is the same in both
+    // modes, and the source it compiles is never one a person keeps. An export keeps the body
+    // under the design's name and its previews wrap it.
+    val screenFunction = if (previews) name else "${name}Content"
     return Result.Emitted(
-      screenName = if (previews) name else appScaffoldHost,
+      screenName = name,
       source =
         buildString {
           appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
@@ -159,7 +162,7 @@ object WearScreenCodeExporter {
           emitter.imports(timeText != null, previews).forEach { appendLine("import $it") }
           appendLine()
           appendLine("@Composable")
-          appendLine("fun $name() {")
+          appendLine("fun $screenFunction() {")
           appendLine("${INDENT}val listState = rememberTransformingLazyColumnState()")
           appendLine("${INDENT}val spec = rememberTransformationSpec()")
           // A slider, a stepper, a selection control and a dialog are all controlled: they take a
@@ -201,8 +204,8 @@ object WearScreenCodeExporter {
           // a design that declares one gets the pair, frozen, around the screen.
           val appScaffold =
             if (timeText != null)
-              "AppScaffold(timeText = { TimeText { timeTextCurvedText(${timeText.quoted()}) } }) { $name() }"
-            else "AppScaffold { $name() }"
+              "AppScaffold(timeText = { TimeText { timeTextCurvedText(${timeText.quoted()}) } }) { $screenFunction() }"
+            else "AppScaffold { $screenFunction() }"
           if (previews) {
             appendLine()
             // Every round size, because a Wear screen that only ever rendered at one is a screen
@@ -234,7 +237,7 @@ object WearScreenCodeExporter {
           } else {
             appendLine()
             appendLine("@Composable")
-            appendLine("fun $appScaffoldHost() {")
+            appendLine("fun $name() {")
             appendLine("${INDENT}$appScaffold")
             appendLine("}")
           }
@@ -588,8 +591,8 @@ internal class WearContentEmitter(
           modifierChain(
             nodeId,
             textPropertyModifier(node),
-            minimumVerticalListContentPadding(transformed, "Text"),
             transformedHeight(transformed),
+            minimumVerticalListContentPadding(transformed, "Text"),
           )
         val arguments =
           listOf("text = ${node.string("text").quoted()}") +
@@ -1529,10 +1532,13 @@ internal class WearContentEmitter(
     transformed: Boolean,
     symbol: String,
   ): List<String> =
+    // The lists guide's order: what the design authored, then `transformedHeight`, then the
+    // component's minimum list padding — `fillMaxWidth().transformedHeight(this, spec)
+    // .minimumVerticalContentPadding(ButtonDefaults.minimumVerticalListContentPadding)`.
     (modifierChain(
         nodeId,
-        minimumVerticalListContentPadding(transformed, symbol),
         transformedHeight(transformed),
+        minimumVerticalListContentPadding(transformed, symbol),
       )
       ?.let { listOf("${pad}modifier = $it,") } ?: emptyList()) +
       if (transformed && symbol in WearScreenCodeExporter.SURFACE_TRANSFORMATION_SYMBOLS)
