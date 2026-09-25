@@ -1,7 +1,30 @@
 # Hosting the UI builder in the VS Code extension
 
-**Status: handover note.** Nothing here is built. This is a feasibility assessment with the facts
-checked, written so the next person can start on the right thing rather than re-derive it.
+**Status: shape A is built, as early access, in compose-preview-vscode.** The rest of this note is
+the feasibility assessment it started from, kept because its reasoning still explains the choices.
+What was built, and how it differs from the plan below:
+
+- **It paints.** The spike's control never painted because of its full-Chromium
+  `--use-angle=swiftshader` launch, not because of software GL. Playwright's headless shell, as the
+  server's UI Builder harness launches it, paints in ~3 s. `spikes/ui-builder-wasm/bridge.mjs` over
+  there is the instrument: it serves the extension's real webview page and the archive from two
+  origins and plays the host's side of the bridge.
+- **The design is the IDE's file, not the page's storage.** Rather than `?storage=local` bridged to
+  host storage (§A.3), the editor has a host-bridge mode (`HostBridgeApp.kt`), selected when the
+  page defines `globalThis.composeUiBuilderHost`. The host sends `open` with a `DesignDocumentV1` and
+  its catalog's capability JSON, and the editor sends back `changed` with the whole document after
+  each edit. In VS Code that document is a custom *text* editor's TextDocument, so dirty state,
+  save, revert and diffs are the IDE's, which is the same place `OfflineUiBuilderSession.projectDocument`
+  puts them for the JVM hosts. Nothing in that mode fetches, which retires open question 2.
+- **Split like the IntelliJ plugin.** The editor tab is the `editor` role: Editor pane only, with the
+  inspector. The `preview` role (Preview pane only) runs in a side-bar view that follows the focused
+  design, as IntelliJ's Preview tool window does. The layer tree is a native VS Code tree, driven
+  through `select` / `selection` messages.
+- **Versioned.** `ui-builder-web.json` carries `hostBridge` (1). A host refuses an archive without
+  it. The archive also packages `wear-m3` and `remote-m3` capabilities now, so a host can open a
+  design in any of the three offline catalogs.
+- **Not in the VSIX.** The extension downloads a pinned release (sha256-checked) or uses a local
+  checkout's archive. Shape B, the server with native renders, is still the next step.
 
 The question was: could `yschimke/compose-preview-vscode` include the UI builder? Yes. The rest of
 this says which of two shapes to build, what each costs, and the one unknown that decides whether

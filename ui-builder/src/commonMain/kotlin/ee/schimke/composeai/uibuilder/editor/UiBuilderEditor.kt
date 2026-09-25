@@ -197,6 +197,9 @@ internal enum class MobileEditorPanel {
   Code,
 }
 
+/** See `UiBuilderEditor`'s `selectionRequest`. [serial] distinguishes two requests for one node. */
+data class EditorSelectionRequest(val nodeId: String, val serial: Int)
+
 data class UiBuilderNewDesignTemplate(
   val id: String,
   val label: String,
@@ -652,6 +655,22 @@ fun UiBuilderEditor(
     ) -> Unit)? =
     null,
   onHelp: (() -> Unit)? = null,
+  /**
+   * A selection made outside the editor — a host's own layer tree beside this canvas — to apply as
+   * though the layer had been picked here. A new [EditorSelectionRequest] is a new request, so
+   * choosing the same layer twice selects it twice. Null everywhere the editor owns every way in.
+   */
+  selectionRequest: EditorSelectionRequest? = null,
+  /**
+   * Draws the editor's toolbar and rails in the host's own chrome instead of in the page. See
+   * [UiBuilderHostChrome]. Null — everywhere but an IDE webview — keeps the editor's own.
+   */
+  hostChrome: UiBuilderHostChrome? = null,
+  /**
+   * The colours of the editor's own UI. [UiBuilderEditorTheme.Default] everywhere but a host that
+   * themes it to match its own panels.
+   */
+  theme: UiBuilderEditorTheme = UiBuilderEditorTheme.Default,
   /**
    * Copies an OpenCode-ready prompt for working on this live design through MCP.
    *
@@ -1133,6 +1152,11 @@ fun UiBuilderEditor(
     )
   }
   LaunchedEffect(state) { onStateChanged(state) }
+  LaunchedEffect(selectionRequest) {
+    val request = selectionRequest ?: return@LaunchedEffect
+    // A layer the document no longer has — the host's tree lagging an edit — selects nothing.
+    if (request.nodeId in state.document.nodes) selectNodeForEditing(request.nodeId)
+  }
   LaunchedEffect(Unit) { editorFocusRequester.requestFocus() }
   LaunchedEffect(canvasDropHovered, draggedPlan, draggingOverBesideGround, dropTargetLabel) {
     onDropTargetChanged(canvasDropHovered || draggingOverBesideGround, dropTargetLabel)
@@ -2028,9 +2052,11 @@ fun UiBuilderEditor(
       },
     )
 
-    MaterialTheme(colorScheme = EditorColors) {
+    EditorTheme(theme) {
       BoxWithConstraints(Modifier.fillMaxSize()) {
-        val compact = maxWidth < 840.dp
+        // A host drawing the toolbar and rails has taken the width they cost, and its panes are
+        // resized by the person rather than by a phone, so it keeps the desktop layout.
+        val compact = maxWidth < 840.dp && hostChrome == null
         // A host may put rendered output in its own view (for example IntelliJ's Preview tool
         // window). That surface owns no editor chrome: toolbars, navigator, inspector and status
         // stay with the visual editor instead of being duplicated around a read-only render.
@@ -2049,7 +2075,27 @@ fun UiBuilderEditor(
               )
             }
         ) {
-          if (!dedicatedOutput) {
+          if (!dedicatedOutput && hostChrome != null) {
+            HostChromeToolbar(
+              chrome = hostChrome,
+              state = state,
+              canUndo = reducer.canUndo(state),
+              canRedo = reducer.canRedo(state),
+              onTidy = {
+                focusEditor()
+                val edits = reducer.tidyPlan(state).changedValues
+                if (edits == 0) {
+                  say("Every dp value is already on the 4dp grid")
+                } else {
+                  dispatch(UiBuilderEditorEvent.Tidy)
+                  say("Tidied $edits values to the 4dp grid")
+                }
+              },
+              onComponentPacks = onComponentPacks,
+              onHelp = onHelp,
+              dispatch = ::dispatch,
+            )
+          } else if (!dedicatedOutput) {
             if (compact) {
               MobileEditorToolbar(
                 state = state,
@@ -2146,9 +2192,12 @@ fun UiBuilderEditor(
                   else -> null
                 }
               Row(Modifier.fillMaxSize()) {
-                EditorRail(
+                HostOrOwnRail(
+                  hostChrome,
+                  "navigator",
                   NavigatorTab.entries.map { entry ->
                     EditorRailItem(
+                      id = "navigator.${entry.name.lowercase()}",
                       label = entry.label,
                       icon = entry.icon(),
                       selected = navigatorTab == entry,
@@ -2157,7 +2206,7 @@ fun UiBuilderEditor(
                         navigatorTab = if (navigatorTab == entry) null else entry
                       },
                     )
-                  }
+                  },
                 )
                 navigatorTab?.let { open ->
                   navigator(Modifier.width(NAVIGATOR_WIDTH).fillMaxHeight(), open, false) {
@@ -2222,7 +2271,7 @@ fun UiBuilderEditor(
                         canvas(
                           Modifier.weight(1f)
                             .fillMaxHeight()
-                            .background(Color(0xff0d0e11))
+                            .background(LocalUiBuilderEditorPalette.current.workspace)
                             .padding(24.dp),
                           Alignment.Center,
                         )
@@ -2293,9 +2342,12 @@ fun UiBuilderEditor(
                       EditorPane.Preview in state.panes,
                     )
                 }
-                EditorRail(
+                HostOrOwnRail(
+                  hostChrome,
+                  "dock",
                   EditorDock.entries.map { entry ->
                     EditorRailItem(
+                      id = "dock.${entry.name.lowercase()}",
                       label = entry.label,
                       icon = entry.icon(),
                       selected = dock == entry,
@@ -2331,13 +2383,13 @@ fun UiBuilderEditor(
                         }
                       },
                     )
-                  }
+                  },
                 )
               }
             } else {
               canvas(
                 Modifier.fillMaxSize()
-                  .background(Color(0xff0d0e11))
+                  .background(LocalUiBuilderEditorPalette.current.workspace)
                   .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 64.dp),
                 Alignment.Center,
               )

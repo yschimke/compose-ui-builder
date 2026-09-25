@@ -387,6 +387,11 @@ tasks.register<Sync>("wasmFrontendDist") {
       "confetti-schedule-operations-v1.json",
       "m3-catalog-capabilities-v1.json",
       "jetcaster-discover-operations-v1.json",
+      // Not fetched by the page: host-bridge hosts read these from the unpacked archive and
+      // hand the one a design pins to the editor with the document (see HostBridgeApp.kt), so a
+      // host can open a design in any of the three offline catalogs, not only Material 3.
+      "wear-m3-capabilities-v1.json",
+      "remote-m3-capabilities-v1.json",
     )
   }
   from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {

@@ -663,8 +663,40 @@ internal fun EditorRail(items: List<EditorRailItem>, modifier: Modifier = Modifi
   )
 }
 
+/** [EditorRail] in the editor, or the same switches published to a host's own chrome. */
+@Composable
+internal fun HostOrOwnRail(
+  hostChrome: UiBuilderHostChrome?,
+  group: String,
+  items: List<EditorRailItem>,
+  modifier: Modifier = Modifier,
+) {
+  if (hostChrome == null) {
+    EditorRail(items, modifier)
+  } else {
+    PublishHostChrome(
+      hostChrome,
+      group,
+      items.map {
+        HostChromeEntry(
+          UiBuilderHostAction(
+            id = it.id,
+            label = it.label,
+            group = group,
+            icon = it.icon.name,
+            checked = it.selected,
+            badge = it.badge,
+          ),
+          it.onClick,
+        )
+      },
+    )
+  }
+}
+
 /** One switch on an [EditorRail]. */
 internal data class EditorRailItem(
+  val id: String,
   val label: String,
   val icon: UiBuilderChromeIcon,
   val selected: Boolean,
@@ -1362,7 +1394,9 @@ private fun SlotRow(
       .height(26.dp)
       .then(
         if (accent != null) Modifier.background(accent.copy(alpha = 0.22f))
-        else if (isCatalogTarget) Modifier.background(Color(0xff26304a)) else Modifier
+        else if (isCatalogTarget)
+          Modifier.background(LocalUiBuilderEditorPalette.current.dropTarget)
+        else Modifier
       )
       .padding(start = (8 + row.indent * 12).dp, end = 10.dp),
     verticalAlignment = Alignment.CenterVertically,
@@ -1422,8 +1456,8 @@ private fun LayerRow(
   val density = LocalDensity.current
   val background =
     when {
-      dragged -> Color(0xff3b4468)
-      selected -> Color(0xff30385a)
+      dragged -> LocalUiBuilderEditorPalette.current.layerDragged
+      selected -> LocalUiBuilderEditorPalette.current.layerSelected
       else -> Color.Transparent
     }
   val marker = landing?.markerColor()
