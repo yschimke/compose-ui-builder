@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.57.0](https://github.com/yschimke/compose-ui-builder/compare/v3.56.0...v3.57.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ui-builder:** export m3/dialog through the component record, as AlertDialog ([#286](https://github.com/yschimke/compose-ui-builder/issues/286)) ([cf78874](https://github.com/yschimke/compose-ui-builder/commit/cf78874e5459d2cad2c10dc0e3ac5fdad5f73cbf))
+
 ## [3.56.0](https://github.com/yschimke/compose-ui-builder/compare/v3.55.0...v3.56.0) (2026-09-25)
 
 
