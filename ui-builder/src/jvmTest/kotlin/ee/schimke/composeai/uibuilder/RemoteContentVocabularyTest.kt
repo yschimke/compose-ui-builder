@@ -321,26 +321,81 @@ class RemoteContentVocabularyTest {
   }
 
   /**
-   * `remote-creation-compose` publishes a flow row and the collapsibles, and a Wear widget cannot
-   * carry them: Glance Wear's widget profile admits none of their operations. A stored design with
-   * one is refused by name, with the reason, rather than exporting a widget that fails to build.
+   * A flow row and the collapsibles are written as the calls they are, with the scope members a
+   * child of each may ask for. None is in the Glance Wear widget profile, so the native render of
+   * such a widget fails while the document is captured: each call carries a comment saying so, so
+   * that failure reads as the profile's rather than the design's.
    */
   @Test
-  fun `the layouts outside the Glance Wear widget profile are refused with the reason`() {
-    listOf("layout/flow-row", "layout/collapsible-column", "layout/collapsible-row").forEach { id ->
-      val refused =
-        assertIs<WearWidgetCodeExporter.Result.Refused>(
-          WearWidgetCodeExporter.export(widgetWith(node("layout", id)))
+  fun `a flow row and the collapsibles are written, marked as outside the widget profile`() {
+    fun literal(kind: String, value: Any) =
+      JsonObject(
+        mapOf(
+          "type" to JsonPrimitive(kind),
+          "value" to if (value is Number) JsonPrimitive(value) else JsonPrimitive("$value"),
         )
-      val reason = refused.reasons.single()
-      assertTrue("`$id`" in reason, reason)
-      assertTrue("Glance Wear widget profile" in reason, reason)
-    }
-    val priority =
-      assertIs<WearWidgetCodeExporter.Result.Refused>(
-        WearWidgetCodeExporter.export(widgetWith(modifier("collapsiblePriority")))
       )
-    assertTrue("Glance Wear widget profile" in priority.reasons.single(), priority.reasons.single())
+    fun UiBuilderNode.with(vararg values: Pair<String, JsonObject>) =
+      copy(properties = JsonObject(properties + values))
+    val chips = (1..3).map { node("chip$it", "m3/text", text = "Chip $it") }
+    val flow =
+      node("flow", "layout/flow-row", children = chips.map { it.id })
+        .with(
+          "horizontalSpacingDp" to literal("number", 4),
+          "verticalSpacingDp" to literal("number", 2),
+          "maxItemsInEachRow" to literal("number", 2),
+        )
+    val headline = node("headline", "m3/text", text = "Headline")
+    val supporting =
+      node("supporting", "m3/text", text = "Supporting")
+        .withModifiers(modifier("collapsiblePriority"))
+    val column =
+      node("column", "layout/collapsible-column", children = listOf(headline.id, supporting.id))
+        .with("verticalArrangement" to literal("enum", "spaceBetween"))
+    val grow = node("grow", "m3/text", text = "Grow").withModifiers(modifier("weight"))
+    val row = node("row", "layout/collapsible-row", children = listOf(grow.id))
+    val frame = node("frame", "layout/column", children = listOf(flow.id, column.id, row.id))
+
+    val source =
+      emitted(
+        widget(
+          (chips + listOf(flow, headline, supporting, column, grow, row, frame)).associateBy {
+            it.id
+          },
+          root = "frame",
+        )
+      )
+
+    Files.createDirectories(GENERATED)
+    Files.writeString(GENERATED.resolve("OutsideWidgetProfileWidget.kt"), source)
+    assertTrue("RemoteFlowRow(" in source, source)
+    assertTrue("horizontalArrangement = RemoteArrangement.spacedBy(4.rdp)" in source, source)
+    assertTrue("verticalArrangement = RemoteArrangement.spacedBy(2.rdp)" in source, source)
+    assertTrue("maxItemsInEachRow = 2" in source, source)
+    assertTrue("RemoteCollapsibleColumn(" in source, source)
+    assertTrue("verticalArrangement = RemoteArrangement.SpaceBetween" in source, source)
+    assertTrue("RemoteModifier.collapsiblePriority(2f)" in source, source)
+    assertTrue("RemoteCollapsibleRow(" in source, source)
+    assertTrue("RemoteModifier.weight(1.rf)" in source, source)
+    listOf("LAYOUT_FLOW", "LAYOUT_COLLAPSIBLE_COLUMN", "LAYOUT_COLLAPSIBLE_ROW").forEach {
+      assertTrue("// $it is outside the Glance Wear widget profile." in source, source)
+    }
+    listOf("RemoteFlowRow", "RemoteCollapsibleColumn", "RemoteCollapsibleRow").forEach {
+      assertTrue("import androidx.compose.remote.creation.compose.layout.$it" in source, it)
+    }
+    // Scope members resolve through the lambda's receiver, so nothing imports them.
+    assertTrue("modifier.collapsiblePriority" !in source, source)
+    assertEquals(emptyList(), source.lines().filter { it.length > 100 })
+  }
+
+  /** A priority means nothing outside a collapsible, and does not compile there upstream. */
+  @Test
+  fun `a collapsible priority outside a collapsible column or row is refused`() {
+    val refused =
+      assertIs<WearWidgetCodeExporter.Result.Refused>(
+        WearWidgetCodeExporter.export(widgetWith(modifier("collapsiblePriority"), on = "frame"))
+      )
+    assertTrue("layout/collapsible-column" in refused.reasons.single(), refused.reasons.single())
   }
 
   private val GENERATED = Path.of("build", "generated-widget-source")
@@ -377,7 +432,8 @@ class RemoteContentVocabularyTest {
       "align" -> "stack"
       "alignHorizontal",
       "weight" -> "line"
-      "alignVertical" -> "label"
+      "alignVertical",
+      "collapsiblePriority" -> "label"
       else -> "frame"
     }
 
@@ -400,7 +456,14 @@ class RemoteContentVocabularyTest {
     modifierOn: Pair<String, JsonObject>? = null,
   ): UiBuilderDocument {
     val label = leaves.ifEmpty { listOf(node("label", "m3/text", text = "Track")) }
-    val line = node("line", "layout/row", children = label.map { it.id })
+    // A priority is a member of the collapsible scopes only, so the row it is tested in is one.
+    val collapsible = modifierOn?.second?.get("type") == JsonPrimitive("collapsiblePriority")
+    val line =
+      node(
+        "line",
+        if (collapsible) "layout/collapsible-row" else "layout/row",
+        children = label.map { it.id },
+      )
     val stack = node("stack", "layout/column", children = listOf(line.id))
     val frame = node("frame", "layout/box", children = listOf(stack.id))
     return widget(
@@ -492,6 +555,7 @@ class RemoteContentVocabularyTest {
           "testTag" -> put("tag", JsonPrimitive("play"))
           "shadow" -> put("elevationDp", JsonPrimitive(4))
           "weight" -> put("weight", JsonPrimitive(1))
+          "collapsiblePriority" -> put("priority", JsonPrimitive(2))
           "sharedElement" -> put("key", JsonPrimitive(3))
           "align" -> put("alignment", JsonPrimitive("bottomEnd"))
           "alignHorizontal" -> put("alignment", JsonPrimitive("centerHorizontally"))

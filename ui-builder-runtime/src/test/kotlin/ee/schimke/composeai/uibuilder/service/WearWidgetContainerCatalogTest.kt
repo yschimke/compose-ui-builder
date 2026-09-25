@@ -127,8 +127,11 @@ class WearWidgetContainerCatalogTest {
       setOf(
         "asset/image",
         "layout/box",
+        "layout/collapsible-column",
+        "layout/collapsible-row",
         "layout/column",
         "layout/fit-box",
+        "layout/flow-row",
         "layout/for-each",
         "layout/row",
         "m3/text",

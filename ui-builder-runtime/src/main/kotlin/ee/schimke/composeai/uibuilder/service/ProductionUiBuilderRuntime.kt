@@ -1452,6 +1452,7 @@ internal val REMOTE_M3_MODIFIERS =
     "background",
     "border",
     "clip",
+    "collapsiblePriority",
     "fillMaxHeight",
     "fillMaxSize",
     "fillMaxWidth",
@@ -1473,19 +1474,15 @@ internal val REMOTE_M3_MODIFIERS =
   )
 
 /**
- * The modifier only Remote Compose has, offered on every node a widget body lays out.
+ * The modifiers only Remote Compose has, offered on every node a widget body lays out.
  *
- * `sharedElement` is not in the borrowed Compose vocabulary, so filtering a borrowed list by
- * [REMOTE_M3_MODIFIERS] can never produce it: it is appended instead. It matches an element across
- * the branches of a "Show by state" box, which the export writes as a `RemoteStateLayout`, and
- * animates its bounds between them — `ANIMATION_SPEC` is in the Glance Wear widget profile.
- *
- * `collapsiblePriority` is deliberately not here, and neither are the collapsible layouts it
- * belongs to or `layout/flow-row`: `remote-creation-compose` publishes all of them, but Glance
- * Wear's widget profile admits none of their operations, so a design using one could never be
- * shipped as a widget. The emitter refuses them by name for a stored document that carries one.
+ * Neither is in the borrowed Compose vocabulary, so filtering a borrowed list by
+ * [REMOTE_M3_MODIFIERS] can never produce them: they are appended instead. `sharedElement` matches
+ * an element across the branches of a "Show by state" box and animates its bounds between them.
+ * `collapsiblePriority` is a member of the collapsible scopes; the emitter refuses it anywhere
+ * else.
  */
-internal val REMOTE_ONLY_MODIFIERS: List<String> = listOf("sharedElement")
+internal val REMOTE_ONLY_MODIFIERS: List<String> = listOf("collapsiblePriority", "sharedElement")
 
 /**
  * A borrowed modifier list narrowed to what the Remote emitter writes, plus
@@ -1495,25 +1492,59 @@ internal fun List<String>.remoteAuthorableModifiers(): List<String> =
   filter { it in REMOTE_M3_MODIFIERS && it !in REMOTE_ONLY_MODIFIERS } + REMOTE_ONLY_MODIFIERS
 
 /**
- * `layout/fit-box`: `RemoteFitBox`, the one layout `remote-creation-compose` publishes beyond the
- * foundation three that a Wear widget can carry (`LAYOUT_FIT_BOX` is in the Glance Wear profile).
+ * The note a component outside the Glance Wear widget profile carries on the palette.
  *
- * Its children are alternatives, largest first, and it shows the first one that fits — the way a
- * widget keeps one design across the small and large hosts. Derived from `layout/box`, the
- * foundation container it most resembles, and differs in id, name and its two alignment properties.
+ * `remote-creation-compose` publishes it and the builder writes it, but `GlanceWearProfiles` admits
+ * none of its operations, so a widget using it fails to capture on Android. Offered anyway — the
+ * native lane is where that failure shows, and this note is where an author learns of it first.
+ */
+private fun outsideWidgetProfile(operation: String): String =
+  "Not in the Glance Wear widget profile ($operation): the Native / Live render of a widget " +
+    "using it fails while the document is captured."
+
+/**
+ * The layouts `remote-creation-compose` publishes that the packaged foundation does not declare.
+ *
+ * Each has a foundation sibling it is derived from — same slot, same arrangement vocabulary — and
+ * differs in id, name and the call it writes. `layout/flow-row` is not here: the packaged catalog
+ * declares it, and `RemoteFlowRow` takes the same arguments.
+ *
+ * - `layout/fit-box`: `RemoteFitBox`. Its children are alternatives, largest first; it shows the
+ *   first one that fits. In the Glance Wear widget profile (`LAYOUT_FIT_BOX`).
+ * - `layout/collapsible-column` / `layout/collapsible-row`: `RemoteCollapsibleColumn` and
+ *   `RemoteCollapsibleRow`, which HIDE whole children, lowest `collapsiblePriority` first, rather
+ *   than squeezing them. Outside the widget profile — see [outsideWidgetProfile].
  */
 internal fun remoteOnlyLayout(
   componentId: String,
   declared: Map<String, ComponentCapabilityV1>,
 ): ComponentCapabilityV1? {
-  if (componentId != FIT_BOX_COMPONENT_ID) return null
-  val donor = declared.getValue("layout/box")
-  return donor
-    .newBuilder()
-    .also {
-      it.componentId = componentId
-      it.displayName = "Fit box"
-      it.properties =
+  fun derived(
+    from: String,
+    displayName: String,
+    notes: String,
+    properties: List<PropertyCapabilityV1>? = null,
+  ): ComponentCapabilityV1 {
+    val donor = declared.getValue(from)
+    return donor
+      .newBuilder()
+      .also {
+        it.componentId = componentId
+        it.displayName = displayName
+        properties?.let { declaredProperties -> it.properties = declaredProperties }
+        it.wasm = donor.wasm.newBuilder().also { wasm -> wasm.notes = notes }.build()
+        // Not a Compose call: the regular Compose exporter has no counterpart to write, and the
+        // Remote emitter writes these by id.
+        it.code = null
+      }
+      .build()
+  }
+  return when (componentId) {
+    "layout/fit-box" ->
+      derived(
+        "layout/box",
+        "Fit box",
+        "RemoteFitBox: its children are alternatives, largest first, and it shows the first one that fits.",
         listOf(
           PropertyCapabilityV1.Builder("horizontalAlignment", JsonPrimitive("string"))
             .also {
@@ -1529,26 +1560,49 @@ internal fun remoteOnlyLayout(
               it.notes = "Where the chosen child sits down the box. Centred when absent."
             }
             .build(),
-        )
-      it.wasm =
-        donor.wasm
-          .newBuilder()
-          .also { wasm ->
-            wasm.notes =
-              "RemoteFitBox: its children are alternatives, largest first, and it shows the first one that fits."
-          }
-          .build()
-      // Not a Compose call: the regular Compose exporter has no counterpart to write, and the
-      // Remote emitter writes it by id.
-      it.code = null
-    }
-    .build()
+        ),
+      )
+    "layout/collapsible-column" ->
+      derived(
+        "layout/column",
+        "Collapsible column",
+        "RemoteCollapsibleColumn: hides whole children, lowest collapsiblePriority first, when it " +
+          "runs out of height. " +
+          outsideWidgetProfile("LAYOUT_COLLAPSIBLE_COLUMN"),
+      )
+    "layout/collapsible-row" ->
+      derived(
+        "layout/row",
+        "Collapsible row",
+        "RemoteCollapsibleRow: hides whole children, lowest collapsiblePriority first, when it " +
+          "runs out of width. " +
+          outsideWidgetProfile("LAYOUT_COLLAPSIBLE_ROW"),
+      )
+    else -> null
+  }
 }
 
-private const val FIT_BOX_COMPONENT_ID = "layout/fit-box"
-
 /** The ids [remoteOnlyLayout] answers, in palette order. */
-internal val REMOTE_ONLY_LAYOUT_IDS: List<String> = listOf(FIT_BOX_COMPONENT_ID)
+internal val REMOTE_ONLY_LAYOUT_IDS: List<String> =
+  listOf("layout/fit-box", "layout/collapsible-column", "layout/collapsible-row")
+
+/**
+ * `layout/flow-row` narrowed for a widget body: the packaged declaration, with the note that
+ * `LAYOUT_FLOW` is outside the Glance Wear widget profile (it is an experimental-profile
+ * operation).
+ */
+internal fun ComponentCapabilityV1.withWidgetProfileNote(): ComponentCapabilityV1 =
+  if (componentId != "layout/flow-row") this
+  else
+    newBuilder()
+      .also {
+        it.wasm =
+          wasm
+            .newBuilder()
+            .also { wasm -> wasm.notes = "RemoteFlowRow. " + outsideWidgetProfile("LAYOUT_FLOW") }
+            .build()
+      }
+      .build()
 
 /**
  * A borrowed component, narrowed to what `RemoteContentEmitter` can write into a widget body.
@@ -1865,6 +1919,7 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "layout/column",
       "layout/row",
       "layout/for-each",
+      "layout/flow-row",
       *REMOTE_ONLY_LAYOUT_IDS.toTypedArray(),
       "m3/text",
       "remote-compose/document",
@@ -1917,6 +1972,7 @@ private fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             // same function.
             (components[it] ?: remoteOnlyLayout(it, components) ?: components.getValue(it))
               .narrowedForRemoteAuthoring()
+              .withWidgetProfileNote()
           } +
           remoteMaterial3Components(box, contentSlot, supportedWasm, blockedSvg)
     }

@@ -146,6 +146,7 @@ private val FOUNDATION_CURATIONS =
             "layout/column",
             "layout/row",
             "layout/for-each",
+            "layout/flow-row",
             *REMOTE_ONLY_LAYOUT_IDS.toTypedArray(),
             "remote-compose/document",
             REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
@@ -153,7 +154,7 @@ private val FOUNDATION_CURATIONS =
             "asset/image",
           ),
         // The same narrowing `remoteM3Catalog` applies, from the one place it is written.
-        curate = { component -> component.narrowedForRemoteAuthoring() },
+        curate = { component -> component.narrowedForRemoteAuthoring().withWidgetProfileNote() },
         menu = { base -> remoteM3ComponentMenu(base.statusSemantics) },
       ),
   )

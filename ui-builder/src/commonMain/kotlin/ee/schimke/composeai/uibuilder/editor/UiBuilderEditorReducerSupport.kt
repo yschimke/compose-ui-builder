@@ -1082,10 +1082,23 @@ internal val MENU_MODIFIERS: List<MenuModifier> =
       "Take the leftover space",
       EditorLayoutScope.Column,
       EditorLayoutScope.Row,
+      EditorLayoutScope.Collapsible,
     ) {
       buildJsonObject {
         put("type", "weight")
         put("weight", 1)
+      }
+    },
+    // Remote Compose's collapsible layouts hide the lowest priority first; a child given one is
+    // offered to go before its siblings, which carry none and are kept longest.
+    MenuModifier(
+      "collapsiblePriority",
+      "Hide first when short of room",
+      EditorLayoutScope.Collapsible,
+    ) {
+      buildJsonObject {
+        put("type", "collapsiblePriority")
+        put("priority", 1)
       }
     },
     MenuModifier("sharedElement", "Animate between states") {
@@ -1109,6 +1122,8 @@ internal enum class EditorLayoutScope {
   Box,
   Column,
   Row,
+  /** A Remote Compose collapsible column or row: its children take a weight and a priority. */
+  Collapsible,
 }
 
 /** The containers whose children the renderer composes inside a scope, and which one. */
@@ -1120,6 +1135,8 @@ private val EDITOR_LAYOUT_SCOPES: Map<String, EditorLayoutScope> =
     "m3/card" to EditorLayoutScope.Box,
     "layout/column" to EditorLayoutScope.Column,
     "layout/row" to EditorLayoutScope.Row,
+    "layout/collapsible-column" to EditorLayoutScope.Collapsible,
+    "layout/collapsible-row" to EditorLayoutScope.Collapsible,
   )
 
 internal fun UiBuilderDocument.scopeOf(nodeId: String): EditorLayoutScope? {
@@ -1179,6 +1196,7 @@ internal val MODIFIER_FIELDS: Map<String, List<ModifierField>> =
     "rotate" to listOf(ModifierField("degrees", "Degrees")),
     "scale" to listOf(ModifierField("scaleX", "Scale X"), ModifierField("scaleY", "Scale Y")),
     "weight" to listOf(ModifierField("weight", "Weight")),
+    "collapsiblePriority" to listOf(ModifierField("priority", "Priority")),
     "sharedElement" to listOf(ModifierField("key", "Shared key")),
     "align" to listOf(ModifierField("alignment", "Align", BOX_ALIGNMENTS)),
     "alignHorizontal" to listOf(ModifierField("alignment", "Align", COLUMN_ALIGNMENTS)),
