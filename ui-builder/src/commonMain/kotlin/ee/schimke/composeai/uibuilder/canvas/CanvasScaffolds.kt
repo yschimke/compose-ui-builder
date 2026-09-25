@@ -558,6 +558,7 @@ private fun MissingAssetPlaceholder(
   contentDescription: String?,
   modifier: Modifier,
 ) {
+  ReportContentMissing()
   val ground = MaterialTheme.colorScheme.surfaceVariant
   val ink = MaterialTheme.colorScheme.onSurfaceVariant
   val semantics =

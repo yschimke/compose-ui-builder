@@ -711,9 +711,9 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
             if (model.variant) MaterialTheme.typography.labelMedium
             else MaterialTheme.typography.labelLarge,
           color = MaterialTheme.colorScheme.onSurface,
-          // Two lines: a component's name is what the tile is for, and "Adaptive lazy vertical
-          // grid" is a real name.
-          maxLines = 2,
+          // Three lines: a component's name is what the tile is for, and "Circular progress
+          // indicator" or "Adaptive lazy vertical grid" beside the add button is three.
+          maxLines = 3,
           overflow = TextOverflow.Ellipsis,
         )
         if (model.unexportable) MaterialUnexportableBadge(model.title)

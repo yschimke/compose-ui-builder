@@ -1516,6 +1516,25 @@ object ScreenDocumentProjection {
                 typeFqn = "kotlin.Int",
               )
             ),
+          // Both named, although adaptive-layout 1.2 defaults them: 1.3 drops those defaults and
+          // offers two overloads, one taking a `currentDestination` and one a `destinationHistory`,
+          // so a call that leaves them out does not compile against a catalog built on 1.3 — which
+          // is what m3-catalog's native lane compiles the export against. An empty history is the
+          // same "no destination yet" the 1.2 default meant, and names the overload both versions
+          // have.
+          named =
+            mapOf(
+              "adaptStrategies" to
+                ScreenValue.Construct(
+                  callableFqn = "$ADAPTIVE_LAYOUT.SupportingPaneScaffoldDefaults.adaptStrategies",
+                  typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldAdaptStrategies",
+                ),
+              "destinationHistory" to
+                ScreenValue.Construct(
+                  callableFqn = "kotlin.collections.emptyList",
+                  typeFqn = "kotlin.collections.List",
+                ),
+            ),
           typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldValue",
         )
       return setOf(

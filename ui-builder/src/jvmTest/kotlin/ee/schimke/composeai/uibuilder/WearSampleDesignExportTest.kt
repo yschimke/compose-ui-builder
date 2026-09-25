@@ -31,6 +31,33 @@ class WearSampleDesignExportTest {
       "jetcaster-wear-queue" to "JetcasterQueueScreen",
     )
 
+  /**
+   * `AppCard`'s `content` has no default. google-home-wear's camera cards are an app name and a
+   * title with no body, and ending those calls at `)` matched no overload, so the design render
+   * refused the whole screen.
+   */
+  @Test
+  fun `a two-line app card still passes its content lambda`() {
+    val file = File(designsDirectory(), "google-home-wear.json")
+    val document =
+      UiBuilderReducer.replay(Json.parseToJsonElement(file.readText()).jsonObject).document
+    val result = RecordFreeExport.generate(document, UiBuilderCatalogPlatform.WEAR)
+    assertTrue(result is RecordFreeExport.Generated.Emitted, "$result")
+    val source = result.source
+    val cards = source.split("AppCard(").drop(1)
+    assertTrue(cards.isNotEmpty(), source)
+    cards.forEach { call ->
+      val close = call.substringBefore("\n                )")
+      assertTrue(
+        call
+          .substringAfter("transformation = SurfaceTransformation(spec),\n")
+          .trimStart()
+          .startsWith(") {"),
+        "an AppCard without its content lambda:\nAppCard($close",
+      )
+    }
+  }
+
   /** An outlined button draws no container, so it has none to recolour. */
   @Test
   fun `a container colour on an outlined button is refused`() {

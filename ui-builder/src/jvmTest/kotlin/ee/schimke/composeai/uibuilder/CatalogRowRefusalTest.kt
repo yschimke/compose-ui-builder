@@ -2,10 +2,8 @@ package ee.schimke.composeai.uibuilder
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderBoard
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -33,8 +31,19 @@ class CatalogRowRefusalTest {
   private val documentRefusal =
     "A Wear screen or widget is exported as itself, so it cannot become one item of a board"
 
+  /**
+   * A root-only component on a design that already has a root is not offered at all.
+   *
+   * It used to be listed with a disabled Add and the reason beside it. Better than a silent
+   * refusal, but it was still a row for a component that could not go anywhere in the design — a
+   * widget design's list opened on three more widget containers. Now there is no row, and so no
+   * refusal to explain.
+   */
   @Test
-  fun `a root-only component's row says why it cannot be an item of a board`() = runWideEditor {
+  fun `a root-only component is not offered where it cannot land`() = runWideEditor {
+    val scaffold =
+      wearCatalog.componentsById[WearScreenCodeExporter.SCAFFOLD]?.displayName
+        ?: WearScreenCodeExporter.SCAFFOLD
     setContent {
       UiBuilderEditor(
         document = wearBoard(),
@@ -44,13 +53,8 @@ class CatalogRowRefusalTest {
         initialComponentsOpen = true,
       )
     }
-    // The reason is on the row, where the disabled Add is — not only in the code that computed it.
-    onNodeWithText("cannot be one item of a board", substring = true).assertExists()
-    // And the row still refuses. Selected by the Add button's own description rather than by text:
-    // "Add" as a substring matches the destination line ("Adds beside 2 item(s) on the board")
-    // first, and a message sitting next to a working Add would be worse than no message at all.
-    onNode(hasContentDescription("cannot be one item of a board", substring = true))
-      .assertIsNotEnabled()
+    onAllNodes(hasContentDescription("Add $scaffold", substring = true)).assertCountEquals(0)
+    onAllNodes(hasText("cannot be one item of a board", substring = true)).assertCountEquals(0)
   }
 
   /**

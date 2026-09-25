@@ -51,6 +51,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -110,15 +111,14 @@ import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.ParentSlot
 import ee.schimke.composeai.uibuilder.REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.RemoteComposeSource
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderContentMissing
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderBoard
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvas.boardRootId
-import ee.schimke.composeai.uibuilder.canvas.renderDensity
 import ee.schimke.composeai.uibuilder.export.UiBuilderComponentPacks
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.filterRemoteComposeSources
 import ee.schimke.composeai.uibuilder.humanizeSourceSlug
-import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
@@ -885,6 +885,7 @@ private fun CatalogComponentTile(
         componentId = item.componentId,
         label = item.displayName,
         size = DpSize(104.dp, 72.dp),
+        container = item.kind == EditorComponentKind.Container,
       )
     }
   }
@@ -929,6 +930,9 @@ private fun CatalogVariantTile(
         componentId = variant.componentId,
         label = qualified,
         size = DpSize(96.dp, 64.dp),
+        // A variant is a property value of its component, and the list does not carry the
+        // component's kind down to it; an empty variant keeps the container sketch it always had.
+        container = true,
       )
     }
   }
@@ -1002,15 +1006,28 @@ private fun CatalogThumbnail(
   componentId: String,
   label: String,
   size: DpSize,
+  /**
+   * Whether the component holds children. Only then is a picture that measured nothing an empty
+   * container, drawn as the arrangement it would give them; anything else that draws nothing — a
+   * curved indicator with no canvas of its own here — is a component with no picture, not a layout.
+   */
+  container: Boolean,
 ) {
-  // A component the frame could not hold keeps the handle it always had. A picture that could not
-  // be drawn is better absent than faked.
+  // A component the frame could not hold, a root-only scaffold, has no picture. Better absent than
+  // faked, and the same absence every other pictureless tile shows.
   if (document == null) {
-    CatalogDragHandle(label)
+    NoPictureThumbnail(label, size)
+    return
+  }
+  // Set when the component draws its stand-in for content nobody has given it yet: an empty
+  // document's error box, an animation's "add a URL" line. Right on the canvas, where it says what
+  // to fill; wrong here, where a shelf of error boxes reads as a broken catalog.
+  var needsContent by remember(componentId) { mutableStateOf(false) }
+  if (needsContent) {
+    NoPictureThumbnail(label, size)
     return
   }
   val density = LocalDensity.current
-  val renderer = LocalUiBuilderCanvasRenderer.current
   // The panel's brightness, not the catalog's pinned dark: a component drawn in the opposite
   // theme to the list it sits on is a dark block on a light panel — a frame by another name.
   val panelDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
@@ -1091,31 +1108,25 @@ private fun CatalogThumbnail(
               snapshot.nodes.any { it.nodeId == PREVIEW_FRAME_CELL_ID && it.bounds != null }
           if (empty != drewNothing) drewNothing = empty
         }
-        if (renderer == null) {
+        // Always in-process, never the catalog's pinned runtime. On a catalog that publishes
+        // one, that runtime is a sandboxed iframe booting its own Wasm: one per tile was dozens of
+        // whole runtimes for one list, each polling for its inspection and each a DOM layer
+        // re-placed by hand as the list scrolled. The editing canvas is the one place it draws.
+        CompositionLocalProvider(LocalUiBuilderContentMissing provides { needsContent = true }) {
           UiBuilderSurface(
             document = themed,
             editorOverlay = false,
             onInspectionSnapshot = inspection,
           )
-        } else {
-          renderer(
-            themed,
-            UiBuilderCanvasSurface(
-              PREVIEW_FRAME_WIDTH_DP.toFloat(),
-              PREVIEW_FRAME_HEIGHT_DP.toFloat(),
-              themed.renderDensity(density).density,
-              UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED,
-            ),
-            null,
-            false,
-            {},
-            { snapshots -> inspection(snapshots.editor) },
-          )
         }
       }
     }
     if (drewNothing) {
-      EmptyContainerSchematic(emptyContainerSchematic(componentId), Modifier.matchParentSize())
+      if (container) {
+        EmptyContainerSchematic(emptyContainerSchematic(componentId), Modifier.matchParentSize())
+      } else {
+        NoPictureGlyph(Modifier.matchParentSize())
+      }
     }
     // ON TOP of the picture rather than under it. A Switch drawn in a thumbnail is a real Switch
     // and would take the press meant for the tile; a later sibling wins the hit test, so this
@@ -1303,17 +1314,31 @@ internal fun thumbnailContentBounds(
 }
 
 /**
- * What a palette tile shows where it has no picture: a grip, so the tile still says it can be
- * dragged. The gesture is the tile's, like every other tile's.
+ * A palette tile with no picture of its component: a quiet glyph where the picture would be, sized
+ * like one so the grid does not jump, and the name the tile already carries under it.
+ *
+ * One look for every reason there is no picture — a root-only scaffold, a component that measured
+ * nothing, one that would only have drawn a "fill me in" message — because the reader's question is
+ * the same in each case: what is this, and can I pick it up. The name answers the first and the
+ * tile's grip the second.
  */
 @Composable
-private fun CatalogDragHandle(label: String) {
-  Icon(
-    Icons.Filled.DragIndicator,
-    contentDescription = "Drag $label",
-    modifier = Modifier.size(18.dp),
-    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-  )
+private fun NoPictureThumbnail(label: String, size: DpSize) {
+  Box(Modifier.size(size).semantics { contentDescription = "Drag $label" }) {
+    NoPictureGlyph(Modifier.matchParentSize())
+  }
+}
+
+@Composable
+private fun NoPictureGlyph(modifier: Modifier) {
+  Box(modifier.clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
+    Icon(
+      Icons.Filled.Widgets,
+      contentDescription = null,
+      modifier = Modifier.size(28.dp),
+      tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+    )
+  }
 }
 
 /**

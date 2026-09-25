@@ -44,6 +44,7 @@ import androidx.wear.compose.material3.ScreenStage
 import androidx.wear.compose.material3.ScrollIndicator
 import androidx.wear.compose.material3.scrollAway
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderUnrolled
+import ee.schimke.composeai.uibuilder.canvas.ReportContentMissing
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.bool
 import ee.schimke.composeai.uibuilder.canvas.color
@@ -434,6 +435,7 @@ internal fun LottiePlaceholder(node: UiBuilderNode, modifier: Modifier) {
   val outline = MaterialTheme.colorScheme.outline
   val json = node.string("json")
   val url = node.string("url")
+  if (json.isEmpty() && url.isEmpty()) ReportContentMissing()
   Column(
     modifier
       .fillMaxWidth()

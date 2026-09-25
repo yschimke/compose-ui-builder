@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.53.0](https://github.com/yschimke/compose-ui-builder/compare/v3.52.0...v3.53.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ui-builder-export:** name the pane scaffold value's strategies and history ([#273](https://github.com/yschimke/compose-ui-builder/issues/273)) ([96608fb](https://github.com/yschimke/compose-ui-builder/commit/96608fb0f3dd42cb8700c07ad42e21ea97de653a))
+
+## [3.52.0](https://github.com/yschimke/compose-ui-builder/compare/v3.51.0...v3.52.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ui-builder-export:** pass AppCard its content lambda when it has no body ([#271](https://github.com/yschimke/compose-ui-builder/issues/271)) ([f22e75d](https://github.com/yschimke/compose-ui-builder/commit/f22e75d1b765b81b1b414df416cd6fd669c555ce))
+
 ## [3.51.0](https://github.com/yschimke/compose-ui-builder/compare/v3.50.0...v3.51.0) (2026-09-25)
 
 
