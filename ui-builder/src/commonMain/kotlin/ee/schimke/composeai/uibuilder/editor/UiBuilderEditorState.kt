@@ -1017,6 +1017,22 @@ class UiBuilderEditorReducer(
   fun pinnedComponents(state: UiBuilderEditorState): Set<String> =
     state.pinnedComponents ?: catalog.pinnedComponents
 
+  /**
+   * Whether [componentId] has nowhere to go in this design, so the list leaves it out.
+   *
+   * A root-only component — a Wear widget container, a Wear screen scaffold — is exported as the
+   * whole design, so it is refused by both kinds of Add once the design has a root:
+   * `findDestination` finds it no slot and `besideRefusal` no board. Listed anyway, a widget
+   * design's palette opened on three more widget containers it could never take. It stays on an
+   * empty design, where it is the one placement that is right.
+   */
+  fun placeableNowhere(state: UiBuilderEditorState, componentId: String): Boolean =
+    componentId in RecordFreeExport.ROOT_ONLY_COMPONENT_IDS && state.document.roots.isNotEmpty()
+
+  /** How many components the list offers this design, which is what its All row counts. */
+  fun listedComponentCount(state: UiBuilderEditorState): Int =
+    catalog.paletteComponents.count { !placeableNowhere(state, it.componentId) }
+
   fun catalogRows(state: UiBuilderEditorState): List<EditorCatalogRow> {
     val needle = state.catalogQuery.trim().lowercase()
     val filtering = needle.isNotEmpty()
@@ -1027,6 +1043,7 @@ class UiBuilderEditorReducer(
         // the whole point of the switch, and a search that surfaced what the switch hides would
         // make the switch a lie.
         .filter { it.pack == null || it.pack in state.enabledPacks }
+        .filter { !placeableNowhere(state, it.componentId) }
         .filter { it.matches(needle) }
         .sortedWith(compareBy({ it.searchRank(needle) }, EditorCatalogItem::displayName))
     // The declared shelves, then the kind labels an unshelved catalog falls back to — in *kind*

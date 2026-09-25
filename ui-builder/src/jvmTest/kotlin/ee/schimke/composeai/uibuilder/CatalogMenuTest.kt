@@ -40,6 +40,9 @@ class CatalogMenuTest {
       .document
   private val state = reducer.initial(document, selectedNodeId = "discover-grid")
 
+  /** [state] with nothing in its design yet — the one place a root-only component can go. */
+  private val emptyDesign = reducer.initial(document.copy(roots = emptyList(), nodes = emptyMap()))
+
   @Test
   fun `the menu declaration covers this catalog and nothing else`() {
     // The declaration rides in the catalog's own `statusSemantics` (see `ComponentMenu`), which
@@ -270,9 +273,11 @@ class CatalogMenuTest {
           componentId = "remote-m3/widget-container-small",
           displayName = "Wear widget · Small",
         )
+    // On an empty design: a root-only component is listed only where it can land, and an empty
+    // design is the one place a widget container can.
     val rows =
       UiBuilderEditorReducer(catalog.copy(components = catalog.components + widget))
-        .catalogRows(state)
+        .catalogRows(emptyDesign)
 
     assertEquals(
       listOf("Navigation suite", "Scaffold", "Supporting pane scaffold", "Wear widget · Small"),
@@ -328,9 +333,10 @@ class CatalogMenuTest {
 
     val groups =
       UiBuilderEditorReducer(wear)
-        // `catalogRows` reads the query and the open/closed sets off the state and nothing else,
-        // so the design in it is irrelevant to what the shelves are.
-        .catalogRows(state)
+        // Empty, so the root-only screen scaffold is listed: on a design with a root it has
+        // nowhere to land and the list leaves it out, which is `RootOnlyPaletteTest`'s question,
+        // not this one.
+        .catalogRows(emptyDesign)
         .filterIsInstance<EditorCatalogRow.Group>()
         .map { it.name }
 

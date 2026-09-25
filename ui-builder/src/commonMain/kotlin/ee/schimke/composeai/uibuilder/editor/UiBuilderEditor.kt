@@ -1095,7 +1095,7 @@ fun UiBuilderEditor(
         catalogRows = reducer.catalogRows(state),
         // The rows the palette lists. Subtracting the hidden set's size miscounted a catalog that
         // does not declare a hidden id, since hiding it removed nothing.
-        totalCatalogComponents = catalog.paletteComponents.size,
+        totalCatalogComponents = reducer.listedComponentCount(state),
         pinnedComponents = reducer.pinnedComponents(state),
         packs = catalog.componentPacks,
         onManagePacks = onComponentPacks,
