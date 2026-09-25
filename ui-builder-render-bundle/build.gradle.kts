@@ -145,7 +145,7 @@ val verifyRenderBundlePackaged =
     // anyway.
     //
     // Coordinates the RENDERER needs that no packed preview reaches.
-    // `androidx.window.core.layout.WindowSizeClass` is imported by `UiBuilderRenderer.kt` and
+    // `androidx.window.core.layout.WindowSizeClass` is imported by `CanvasScaffolds.kt` and
     // called from `AdaptiveSupportingPaneScaffold`, which the node renderer enters for a
     // `layout/supporting-pane-scaffold` node -- needed by the *document*, never by the one preview
     // the bundle packs (#788 introduced the call, #812 is the 500 it produced).
