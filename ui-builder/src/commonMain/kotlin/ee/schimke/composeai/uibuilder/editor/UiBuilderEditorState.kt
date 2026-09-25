@@ -15,6 +15,7 @@ import ee.schimke.composeai.uibuilder.REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.RedoCommand
 import ee.schimke.composeai.uibuilder.RejectionCode
 import ee.schimke.composeai.uibuilder.RemoteComposeSource
+import ee.schimke.composeai.uibuilder.ResolvedUiBuilderAsset
 import ee.schimke.composeai.uibuilder.UndoCommand
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderBoard
 import ee.schimke.composeai.uibuilder.canvas.boardRootId
@@ -39,6 +40,7 @@ import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.WidgetAssetBytes
 import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.export.isWearWidget
 import ee.schimke.composeai.uibuilder.exportRecord
@@ -58,6 +60,7 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderSlotInspection
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.right
+import ee.schimke.composeai.uibuilder.resolveAsset
 import ee.schimke.composeai.uibuilder.stillDescribing
 import kotlin.math.abs
 import kotlin.math.floor
@@ -1687,7 +1690,10 @@ class UiBuilderEditorReducer(
    * Takes the document rather than the state because it reads nothing else, which is what lets the
    * caller cache it against the document alone.
    */
-  fun problems(document: UiBuilderDocument): List<EditorProblem> =
+  fun problems(
+    document: UiBuilderDocument,
+    assetBytes: (contentDigest: String) -> ByteArray? = { null },
+  ): List<EditorProblem> =
     (CapabilityComposeCodeExporter.diagnose(document, catalog)
         // A Wear widget is a WearWidgetDocument of Remote Compose, not a Compose call tree. Its
         // root is the launcher-owned frame that WearWidgetCodeExporter deliberately removes, and
@@ -1716,7 +1722,7 @@ class UiBuilderEditorReducer(
         // Appended rather than replacing: the capability diagnostics still answer questions the
         // generator does not ask — catalog pin drift, a modifier the catalog disallows on a
         // component — and dropping them to unify the source would narrow the panel's promise.
-        exportRefusals(document) +
+        exportRefusals(document, assetBytes) +
         undeclaredPropertyProblems(document) +
         // Not a refusal — the export runs — but the one property a whole design is judged by that
         // commits and changes nothing visible (#485). The same notice the served export attaches.
@@ -1829,8 +1835,10 @@ class UiBuilderEditorReducer(
    * fail its decode, and a pane that propagated that would take the editor down over exactly the
    * document whose code someone is trying to read.
    */
-  fun generatedCode(document: UiBuilderDocument): EditorGeneratedCode =
-    screenCode(document).withRemoteContent(document)
+  fun generatedCode(
+    document: UiBuilderDocument,
+    assetBytes: (contentDigest: String) -> ByteArray? = { null },
+  ): EditorGeneratedCode = screenCode(document, assetBytes).withRemoteContent(document)
 
   /**
    * The `@RemoteComposable` bodies of the design's inline remote content, joined to [screenCode].
@@ -1876,7 +1884,10 @@ class UiBuilderEditorReducer(
     )
   }
 
-  private fun screenCode(document: UiBuilderDocument): EditorGeneratedCode = runCatching {
+  private fun screenCode(
+    document: UiBuilderDocument,
+    assetBytes: (contentDigest: String) -> ByteArray?,
+  ): EditorGeneratedCode = runCatching {
     // A Wear widget ships as a `WearWidgetDocument` of Remote Compose and a Wear screen's
     // `ScreenScaffold` takes a scroll state no record can recover, so neither has a component
     // record and the Compose gate below can only ever refuse them. Asked first rather than as a
@@ -1886,13 +1897,18 @@ class UiBuilderEditorReducer(
     //
     // No package: this pane is read and pasted into a file that already has one. The export passes
     // `ScreenExportGate.PACKAGE_NAME` for the same designs, because an artifact *is* the file.
-    RecordFreeExport.generate(document, catalog.platform, packComponents = packComponents)?.let {
-      recordFree ->
-      return@runCatching when (recordFree) {
-        is RecordFreeExport.Generated.Emitted -> EditorGeneratedCode.Source(recordFree.source)
-        is RecordFreeExport.Generated.Refused -> EditorGeneratedCode.Refused(recordFree.reasons)
+    RecordFreeExport.generate(
+        document,
+        catalog.platform,
+        packComponents = packComponents,
+        assets = document.widgetAssetBytes(assetBytes),
+      )
+      ?.let { recordFree ->
+        return@runCatching when (recordFree) {
+          is RecordFreeExport.Generated.Emitted -> EditorGeneratedCode.Source(recordFree.source)
+          is RecordFreeExport.Generated.Refused -> EditorGeneratedCode.Refused(recordFree.reasons)
+        }
       }
-    }
     when (val outcome = ScreenExportGate.export(document.toProtocolDocument(), exportRecord)) {
       is ScreenExportGate.Outcome.Emitted -> EditorGeneratedCode.Source(outcome.source)
       is ScreenExportGate.Outcome.Refused -> EditorGeneratedCode.Refused(outcome.reasons)
@@ -1923,7 +1939,10 @@ class UiBuilderEditorReducer(
    * blocker on a design that exports perfectly well, and told a designer to go and undo the widget
    * they had just drawn.
    */
-  private fun exportRefusals(document: UiBuilderDocument): List<EditorProblem> =
+  private fun exportRefusals(
+    document: UiBuilderDocument,
+    assetBytes: (contentDigest: String) -> ByteArray?,
+  ): List<EditorProblem> =
   // Total, because the panel's contract is to *report* rather than throw. A malformed property
   // makes `toProtocolDocument` fail its decode, and a panel that propagated that would take the
   // editor down over the one document whose problems a designer most needs listed. The capability
@@ -1931,7 +1950,12 @@ class UiBuilderEditorReducer(
   runCatching {
     when (
       val recordFree =
-        RecordFreeExport.generate(document, catalog.platform, packComponents = packComponents)
+        RecordFreeExport.generate(
+          document,
+          catalog.platform,
+          packComponents = packComponents,
+          assets = document.widgetAssetBytes(assetBytes),
+        )
     ) {
       is RecordFreeExport.Generated.Refused -> recordFree.reasons
       // It generates. The gate below would still refuse it — that is the whole reason these
@@ -4135,4 +4159,25 @@ class UiBuilderEditorReducer(
       .mapNotNull(document.nodes::get)
       .firstNotNullOfOrNull { child -> firstAcceptingSlotBelow(document, child, inserted) }
   }
+}
+
+/**
+ * The picture bytes a widget export inlines, as this editor holds them: carried in the document
+ * when its source is `embedded`, otherwise the bytes the editor has fetched for an uploaded
+ * picture.
+ *
+ * Without them the code pane and the problems panel refused every widget whose background is a
+ * picture ("whose bytes this export could not read") while the server's export, which reads the
+ * asset store, generated the same design perfectly well.
+ */
+internal fun UiBuilderDocument.widgetAssetBytes(
+  fetched: (contentDigest: String) -> ByteArray?
+): WidgetAssetBytes = WidgetAssetBytes { assetKey ->
+  val bytes =
+    when (val asset = resolveAsset(assetKey)) {
+      is ResolvedUiBuilderAsset.Embedded -> asset.bytes
+      is ResolvedUiBuilderAsset.Uploaded -> fetched(asset.contentDigest)
+      else -> null
+    }
+  bytes?.takeIf { it.isNotEmpty() }?.let { kotlin.io.encoding.Base64.Default.encode(it) }
 }

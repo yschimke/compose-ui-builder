@@ -1,8 +1,10 @@
 package ee.schimke.composeai.uibuilder.editor
 
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlin.math.roundToInt
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.put
@@ -104,27 +106,105 @@ private fun JsonObject.dp(field: String): Float? =
   this[field]?.primitiveOrNull()?.doubleOrNull?.toFloat()
 
 /**
- * How [axis] is sized by [chain], read the way the renderer applies it: the last size-deciding
- * modifier on the axis wins, which is also what Compose does with a chain that says two things.
+ * How [axis] is sized by [chain], read the way Compose applies it: the **first** size-deciding
+ * modifier on the axis wins, because an outer modifier fixes the constraints every inner one is
+ * measured against — `fillMaxWidth().width(64.dp)` still fills. A `weight` wins over all of them,
+ * since the parent measures a weighted child at its share before the chain is consulted.
  */
 internal fun sizingOf(
   chain: List<JsonElement>,
   axis: EditorAxis,
   scope: EditorLayoutScope?,
 ): EditorSizing {
-  var sizing: EditorSizing = EditorSizing.Hug
+  // `weight(fill = false)` allots a share without forcing the child to take it, so it decides
+  // nothing about the size and the chain below is read as usual.
+  if (
+    axis.fillsByWeight(scope) &&
+      chain.any {
+        it.modifierType() == "weight" &&
+          (it as JsonObject)["fill"]?.primitiveOrNull()?.booleanOrNull != false
+      }
+  ) {
+    return EditorSizing.Fill
+  }
   chain.forEach { element ->
     val modifier = element as? JsonObject ?: return@forEach
     when (modifier.optionalStringValue("type")) {
       axis.fillType(),
       "fillMaxSize",
-      "matchParentSize" -> sizing = EditorSizing.Fill
-      "weight" -> if (axis.fillsByWeight(scope)) sizing = EditorSizing.Fill
-      axis.fixedType() -> modifier.dp(axis.fixedField())?.let { sizing = EditorSizing.Fixed(it) }
-      "size" -> modifier.dp(axis.fixedField())?.let { sizing = EditorSizing.Fixed(it) }
+      "matchParentSize" -> return EditorSizing.Fill
+      axis.fixedType(),
+      "size" ->
+        modifier.dp(axis.fixedField())?.let {
+          return EditorSizing.Fixed(it)
+        }
     }
   }
-  return sizing
+  return EditorSizing.Hug
+}
+
+/**
+ * How much [chain]'s `scale` modifiers magnify the node as drawn, per axis. The canvas measures a
+ * node after its transforms, so a handle's pixels are divided by this before they become dp —
+ * otherwise a 2x node resized to 120px would be written as 120dp and drawn at 240.
+ */
+internal fun drawnScale(chain: List<JsonElement>, axis: EditorAxis): Float =
+  chain.fold(1f) { product, element ->
+    val modifier = element as? JsonObject
+    if (modifier?.optionalStringValue("type") != "scale") product
+    else {
+      val factor =
+        modifier.dp(if (axis == EditorAxis.Width) "scaleX" else "scaleY")?.takeIf { it > 0f } ?: 1f
+      product * factor
+    }
+  }
+
+/**
+ * The padding [chain] puts between a node's box and its content, as physical (left, top, right,
+ * bottom) in drawn dp — every `padding` in the chain, because each one shrinks what the children
+ * are offered.
+ *
+ * Drawn, not authored: a `scale` earlier in the chain magnifies every padding after it, and the
+ * canvas measures after transforms. Physical, not logical: in a right-to-left document `startDp` is
+ * on the right.
+ */
+internal fun paddingInsets(chain: List<JsonElement>, rtl: Boolean = false): List<Float> {
+  val sums = FloatArray(4)
+  var scaleX = 1f
+  var scaleY = 1f
+  chain.forEach { element ->
+    val modifier = element as? JsonObject ?: return@forEach
+    when (modifier.optionalStringValue("type")) {
+      "scale" -> {
+        scaleX *= modifier.dp("scaleX")?.takeIf { it > 0f } ?: 1f
+        scaleY *= modifier.dp("scaleY")?.takeIf { it > 0f } ?: 1f
+      }
+      "padding" -> {
+        val start = (modifier.dp("startDp") ?: 0f) * scaleX
+        val end = (modifier.dp("endDp") ?: 0f) * scaleX
+        sums[0] += if (rtl) end else start
+        sums[1] += (modifier.dp("topDp") ?: 0f) * scaleY
+        sums[2] += if (rtl) start else end
+        sums[3] += (modifier.dp("bottomDp") ?: 0f) * scaleY
+      }
+    }
+  }
+  return sums.toList()
+}
+
+/**
+ * How much the `scale` modifiers on [nodeId]'s ancestors magnify it, per axis — everything inside a
+ * scaled container is drawn scaled, whichever way round that container's own chain is written.
+ */
+internal fun UiBuilderDocument.ancestorScale(nodeId: String, axis: EditorAxis): Float {
+  var product = 1f
+  var current = location(nodeId)?.nodeId
+  val seen = mutableSetOf<String>()
+  while (current != null && seen.add(current)) {
+    product *= drawnScale(nodes[current]?.modifiers.orEmpty(), axis)
+    current = location(current)?.nodeId
+  }
+  return product
 }
 
 /** The horizontal (or vertical) padding written *before* [index] in [chain], in dp. */

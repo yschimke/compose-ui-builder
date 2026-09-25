@@ -334,12 +334,57 @@ internal fun PinnedDesignCanvas(
         if (dy != 0f) verticalScrollState.dispatchRawDelta(dy)
       }
     }
+    // The zoom a pinch or Ctrl+wheel asked for, and the design point that has to stay under the
+    // hand. Anchored on the design itself — the frame's real origin on screen — rather than on
+    // `scroll + pointer`, because a design smaller than the workspace is centred in it and that
+    // margin is not scroll. Applied once the new scale has been laid out: until then the frame is
+    // where the old scale put it, and the scroll range is the old one's.
+    var zoomAnchor by remember(document.id) { mutableStateOf<ZoomAnchor?>(null) }
+    LaunchedEffect(scale) {
+      val anchor = zoomAnchor ?: return@LaunchedEffect
+      if (anchor.scale != scale) return@LaunchedEffect
+      // One frame to compose and lay out the new scale, one more for its position to land.
+      withFrameNanos {}
+      withFrameNanos {}
+      val drift = anchorDrift(frameOrigin, anchor.designPoint, scale, anchor.focus)
+      horizontalScrollState.dispatchRawDelta(drift.x)
+      verticalScrollState.dispatchRawDelta(drift.y)
+      zoomAnchor = null
+    }
     Box(
       Modifier.fillMaxSize()
         .onGloballyPositioned {
           workspaceBounds = it.boundsInRoot()
           onWorkspaceBounds(workspaceBounds)
         }
+        // Outside the scrolls, so the positions it reads are the workspace's own and it sees a
+        // pinch before the scroll can take one finger of it.
+        .canvasZoomGestures(
+          scale = zoomAnchor?.scale ?: scale,
+          onZoom = { request ->
+            val focus = workspaceBounds.topLeft + request.focus
+            zoomAnchor =
+              ZoomAnchor(
+                scale = request.scale,
+                focus = focus,
+                // A burst keeps the point it started on: the frame has not moved yet, so reading
+                // it again would anchor on where the design was, not where it is going.
+                designPoint = zoomAnchor?.designPoint ?: ((focus - frameOrigin) / scale),
+              )
+            onZoomChanged(request.scale)
+          },
+          onPan = { pan ->
+            // Mid-zoom the anchor owns the scroll, so the pan moves the point it has to land under;
+            // otherwise the pan is the scroll.
+            val pending = zoomAnchor
+            if (pending != null) {
+              zoomAnchor = pending.copy(focus = pending.focus + pan)
+            } else {
+              horizontalScrollState.dispatchRawDelta(-pan.x)
+              verticalScrollState.dispatchRawDelta(-pan.y)
+            }
+          },
+        )
         .horizontalScroll(horizontalScrollState)
         .verticalScroll(verticalScrollState)
     ) {
@@ -686,9 +731,30 @@ internal fun PinnedDesignCanvas(
         selectedBounds != null &&
         dragPosition == null
     ) {
+      val pxPerDp = density.density * scale
+      val rtl = document.environment["layoutDirection"]?.jsonPrimitive?.contentOrNull == "rtl"
+      // Where Fill actually reaches: the parent's box less its own padding, which is the room it
+      // offers its children. Snapping to the outer box made a padded parent's Fill land short of
+      // where the handle was let go.
       val parentBounds =
         document.location(sizing.nodeId)?.nodeId?.let { parentId ->
-          inspection?.nodes?.firstOrNull { it.nodeId == parentId }?.bounds
+          inspection
+            ?.nodes
+            ?.firstOrNull { it.nodeId == parentId }
+            ?.bounds
+            ?.let { outer ->
+              // In the parent's drawn pixels: its ancestors' scales and its own, in chain order.
+              val sx = pxPerDp * document.ancestorScale(parentId, EditorAxis.Width)
+              val sy = pxPerDp * document.ancestorScale(parentId, EditorAxis.Height)
+              val (left, top, right, bottom) =
+                paddingInsets(document.nodes[parentId]?.modifiers.orEmpty(), rtl)
+              UiBuilderPixelBounds(
+                x = outer.x + left * sx,
+                y = outer.y + top * sy,
+                width = (outer.width - (left + right) * sx).coerceAtLeast(0f),
+                height = (outer.height - (top + bottom) * sy).coerceAtLeast(0f),
+              )
+            }
         }
       ResizeHandles(
         sizing = sizing,
@@ -697,7 +763,15 @@ internal fun PinnedDesignCanvas(
         origin = workspaceBounds.topLeft,
         // A design dp is `scale` workspace dp — see [drawScale] — and the root counts in the
         // workspace's pixels.
-        pxPerDp = density.density * scale,
+        pxPerDp = pxPerDp,
+        // Its own scale and every ancestor's: the canvas measured the node after all of them.
+        nodeScale =
+          document.nodes[sizing.nodeId]?.modifiers.orEmpty().let { chain ->
+            drawnScale(chain, EditorAxis.Width) *
+              document.ancestorScale(sizing.nodeId, EditorAxis.Width) to
+              drawnScale(chain, EditorAxis.Height) *
+                document.ancestorScale(sizing.nodeId, EditorAxis.Height)
+          },
         onResizing = { resizing = it },
         onResize = { width, height -> onResize(sizing.nodeId, width, height) },
         modifier = Modifier.matchParentSize().clipToBounds(),

@@ -51,6 +51,8 @@ object PropertyValueKinds {
       "surfaceContainerHighest",
       "primary",
       "onPrimary",
+      "secondary",
+      "onSecondary",
       "tertiary",
       "onTertiary",
       "onSurface",

@@ -5,79 +5,47 @@
 
 package ee.schimke.composeai.uibuilder.editor
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.input.pointer.isSecondaryPressed
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.discovery.ComponentRecordFile
@@ -120,7 +88,6 @@ import ee.schimke.composeai.uibuilder.inspector.UiBuilderPageDestination
 import ee.schimke.composeai.uibuilder.nativeOnlyComponentIds
 import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
-import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
 import ee.schimke.composeai.uibuilder.reference.ReferenceCaptureRequest
 import ee.schimke.composeai.uibuilder.reference.ReferenceComponentCapture
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
@@ -135,7 +102,6 @@ import ee.schimke.composeai.uibuilder.uploadedAssets
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -199,155 +165,6 @@ internal enum class MobileEditorPanel {
   Properties,
   Code,
 }
-
-/** See `UiBuilderEditor`'s `selectionRequest`. [serial] distinguishes two requests for one node. */
-data class EditorSelectionRequest(val nodeId: String, val serial: Int)
-
-data class UiBuilderNewDesignTemplate(
-  val id: String,
-  val label: String,
-  val supportingText: String,
-)
-
-data class UiBuilderNewDesignCatalog(
-  val systemId: String,
-  val label: String,
-  val templates: List<UiBuilderNewDesignTemplate>,
-  /** Which kind of screen it authors; the chooser orders and groups catalogs by it. */
-  val platform: UiBuilderCatalogPlatform = UiBuilderCatalogPlatform.MOBILE,
-)
-
-/**
- * One render of the current design by real Compose on the host, as the editor needs it.
- *
- * An [ImageBitmap] rather than the bytes the route returns: decoding is the host's job, because
- * `wasmJs` and the JVM decode differently and neither belongs in an editor. [refusals] is not an
- * error state — a design the generator cannot express has no native render and the reasons are the
- * actionable half, exactly as in the code pane. [failure] is the transport failing, which is a
- * different sentence: try again versus fix the design.
- */
-data class UiBuilderNativeRender(
-  val image: ImageBitmap? = null,
-  val refusals: List<String> = emptyList(),
-  val failure: String? = null,
-  /**
-   * Design node id → the box it drew, in [image]'s own pixels.
-   *
-   * What turns the frame from a picture into a surface: the selected node is outlined in it, and a
-   * click resolves to the smallest box containing the point. A node the host reports no box for —
-   * one the render never placed — is simply not selectable there, which is the same answer the
-   * inspection snapshot gives for a lazy slot that never composed.
-   */
-  val nodeBounds: Map<String, UiBuilderNativeNodeBounds> = emptyMap(),
-  /**
-   * Where this render can be *watched* rather than looked at, or null when it cannot.
-   *
-   * The compile lane has always stood a live session up behind the still — the same daemon, the
-   * same classes, the Android one on a catalog whose native backend is Android — and the editor has
-   * always thrown the coordinates away. With this present the native pane streams that session and
-   * forwards taps into it; without it the pane draws [image] and says it is a still.
-   */
-  val live: UiBuilderNativeLive? = null,
-)
-
-/**
- * Where a native render's live session is, as the host reported it.
- *
- * Opaque to the editor on purpose: it is the host that knows how to reach a session (which origin,
- * which token, which socket), and the editor's business is only to hand this back to
- * [UiBuilderEditor]'s stream seam and draw what comes out.
- */
-data class UiBuilderNativeLive(val sessionId: String, val previewId: String)
-
-/**
- * One frame off a live native session, already decoded by the host.
- *
- * [image]'s own pixels are the coordinate space every [UiBuilderNativeInput] is stated in, which is
- * why the frame carries the picture and nothing else: the pane scales it to fit and inverts that
- * one factor to place a tap, exactly as it already does for a still render's node boxes.
- */
-data class UiBuilderNativeFrame(val image: ImageBitmap, val sequence: Long = 0)
-
-/**
- * One user input to dispatch into a live native composition.
- *
- * The wire spellings are the daemon's (`click`, `pointerDown`, `pointerMove`, `pointerUp`,
- * `scroll`), named here rather than enumerated because this type crosses into a host that speaks
- * that protocol already and an editor that invents no vocabulary of its own. Coordinates are in the
- * frame's own pixels — see [UiBuilderNativeFrame].
- */
-data class UiBuilderNativeInput(
-  val kind: String,
-  val pixelX: Int,
-  val pixelY: Int,
-  val pointerId: Int = 0,
-  val scrollDeltaY: Float? = null,
-)
-
-/**
- * A live native session, opened by the host and driven by the native pane.
- *
- * Frames arrive as state rather than as a callback so the pane is an ordinary Compose reader of
- * them: the newest frame is the one to draw, an older one that arrives late is not, and a pane that
- * recomposes for another reason redraws what it already had rather than waiting for the next.
- */
-interface UiBuilderNativeStream {
-  /** The newest frame, or null until the first one lands. */
-  val frame: UiBuilderNativeFrame?
-
-  /** Why there is no frame, or null while the stream is healthy or still connecting. */
-  val failure: String?
-
-  /**
-   * Dispatch one input. Dropped silently while the socket is not open, which is the honest no-op.
-   */
-  fun send(input: UiBuilderNativeInput)
-
-  /** Stop streaming and release the session's seat. Idempotent. */
-  fun close()
-}
-
-/** One node's rectangle on a native frame, in that frame's pixels, origin at its top-left. */
-data class UiBuilderNativeNodeBounds(
-  val x: Int,
-  val y: Int,
-  val width: Int,
-  val height: Int,
-) {
-  internal fun contains(px: Float, py: Float): Boolean =
-    px >= x && py >= y && px < x + width && py < y + height
-
-  internal val area: Long
-    get() = width.toLong() * height.toLong()
-}
-
-/** Host-supplied isolated renderer for the editor's authoritative design surface. */
-data class UiBuilderCanvasSurface(
-  val widthDp: Float,
-  val heightDp: Float,
-  val density: Float,
-  val mode: UiBuilderRendererSurfaceModeV2,
-  val positionVersion: Int = 0,
-)
-
-/** One renderer inspection in its native pixels and in the editor root used for hit-testing. */
-data class UiBuilderCanvasInspection(
-  val renderer: UiBuilderInspectionSnapshot,
-  val editor: UiBuilderInspectionSnapshot,
-)
-
-typealias UiBuilderCanvasRenderer =
-  @Composable
-  (
-    document: UiBuilderDocument,
-    surface: UiBuilderCanvasSurface,
-    selectedNodeId: String?,
-    selectionEnabled: Boolean,
-    onNodeSelected: (String) -> Unit,
-    onInspectionSnapshot: (UiBuilderCanvasInspection) -> Unit,
-  ) -> Unit
-
-internal val LocalUiBuilderCanvasRenderer = compositionLocalOf<UiBuilderCanvasRenderer?> { null }
 
 @Composable
 fun UiBuilderEditor(
@@ -1647,7 +1464,15 @@ fun UiBuilderEditor(
   // every node and every property against the catalog, traverses the graph and looks for cycles.
   // Called inline it would run all of that on every recomposition of the inspector — which is
   // every keystroke in a property field and every frame of a drag.
-  val documentProblems = remember(reducer, state.document) { reducer.problems(state.document) }
+  val assetBitmapsByDigest = remember { mutableStateMapOf<String, ImageBitmap?>() }
+  // The encoded bytes too, for catalog runtimes and for the widget export the code pane and the
+  // problems panel run: they draw in a sandboxed frame that is sent the
+  // document and nothing else, so the picture has to travel inside it (`LocalUiBuilderAssetBytes`).
+  val assetBytesByDigest = remember { mutableStateMapOf<String, ByteArray>() }
+  val documentProblems =
+    remember(reducer, state.document, assetBytesByDigest.size) {
+      reducer.problems(state.document) { assetBytesByDigest[it] }
+    }
   // Appended rather than folded into `problems`, which is a pure function of the document and stays
   // one: drift is a fact about another host's library, fetched by whoever is hosting this editor
   // and handed over as state. Keyed on the findings alone, so the cache above survives a fetch.
@@ -1862,10 +1687,6 @@ fun UiBuilderEditor(
   // by too: re-pointing a key at a new picture changes the digest and fetches again, while an edit
   // anywhere else in the design finds its pictures already here. A failed fetch or decode is stored
   // as null so the placeholder is drawn once rather than the request retried every recomposition.
-  val assetBitmapsByDigest = remember { mutableStateMapOf<String, ImageBitmap?>() }
-  // The encoded bytes too, for catalog runtimes: they draw in a sandboxed frame that is sent the
-  // document and nothing else, so the picture has to travel inside it (`LocalUiBuilderAssetBytes`).
-  val assetBytesByDigest = remember { mutableStateMapOf<String, ByteArray>() }
   val uploadedAssets = state.document.uploadedAssets()
   LaunchedEffect(uploadedAssets, resolveDesignAsset) {
     val resolve = resolveDesignAsset ?: return@LaunchedEffect
@@ -1923,7 +1744,9 @@ fun UiBuilderEditor(
   }
   val generatedCode =
     if (state.codePaneVisible || mobilePanel == MobileEditorPanel.Code) {
-      remember(reducer, state.document) { reducer.generatedCode(state.document) }
+      remember(reducer, state.document, assetBytesByDigest.size) {
+        reducer.generatedCode(state.document) { assetBytesByDigest[it] }
+      }
     } else null
   // Named where the document is, not inside the pane: the pane is handed source and has no way to
   // tell which generator wrote it.
@@ -2480,520 +2303,6 @@ fun UiBuilderEditor(
             onCreate = onCreateDesign,
           )
         }
-      }
-    }
-  }
-}
-
-/**
- * A right-click, and where in this element it landed.
- *
- * Compose has no context-click gesture in common code, so this reads the pointer stream directly.
- * It watches the [PointerEventPass.Initial] pass and consumes the press, so a right-click on a
- * layer row does not also start the drag the same row listens for with the left button.
- */
-internal fun Modifier.onSecondaryClick(key: Any?, onClick: (Offset) -> Unit): Modifier =
-  pointerInput(key) {
-    awaitPointerEventScope {
-      while (true) {
-        val event = awaitPointerEvent(PointerEventPass.Initial)
-        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
-          val position = event.changes.firstOrNull()?.position ?: Offset.Zero
-          event.changes.forEach { it.consume() }
-          onClick(position)
-        }
-      }
-    }
-  }
-
-/**
- * The press that becomes a canvas move: hold a node still, then carry it, and land or cancel it on
- * release.
- *
- * Moving a layer is the deliberate act, not the default one — the default is to drop components
- * into slots, where the component's own defaults and the container's layout decide what happens. So
- * the drag arms only after the platform's long-press time with the pointer still: a press that
- * moves sooner is a scroll or a tap, and belongs to the gesture underneath. That friction is the
- * point — a canvas that rearranged itself under every hurried swipe would be a canvas nobody trusts
- * — and the ghost appearing after the hold is what says the node is now in hand.
- *
- * A tap must stay a tap, so nothing is consumed until the hold lands — the selection tap underneath
- * still answers a still press, and a press on empty ground is left to the workspace's scroll. Once
- * a node is picked up every change is consumed, which is what keeps the scroll from chasing the
- * drag; a gesture somebody else took first (a pin, a menu) is left alone entirely.
- *
- * [hitTest] is asked about the **press** position, not the current one: the node picked up is the
- * node that was under the finger, however far the design has scrolled since.
- *
- * **Except with a mouse, over the selection.** Selecting is already the deliberate act the hold
- * stands in for, and a mouse has a wheel to scroll with, so a mouse press inside the selected node
- * is carried as soon as it moves past the slop — the way every desktop design tool moves the thing
- * you just clicked. A finger still holds first: on a touch screen a swipe over the selection is as
- * likely to be a scroll as anything else.
- */
-internal fun Modifier.canvasNodeDrag(
-  key: Any?,
-  enabled: Boolean,
-  /** The press/drag position in this element's local space, as a point in editor root space. */
-  rootPoint: (Offset) -> Offset,
-  /** The deepest node containing a root-space point, or null when the point is over nothing. */
-  hitTest: (Offset) -> String?,
-  /** Whether a root-space point is inside the current selection, where a mouse needs no hold. */
-  insideSelection: (Offset) -> Boolean = { false },
-  onStarted: (String, Offset) -> Unit,
-  onDragged: (Offset) -> Unit,
-  onEnded: (Offset?) -> Unit,
-): Modifier = composed {
-  if (!enabled) {
-    Modifier
-  } else {
-    val currentRootPoint = rememberUpdatedState(rootPoint)
-    val currentHitTest = rememberUpdatedState(hitTest)
-    val currentInsideSelection = rememberUpdatedState(insideSelection)
-    val currentOnStarted = rememberUpdatedState(onStarted)
-    val currentOnDragged = rememberUpdatedState(onDragged)
-    val currentOnEnded = rememberUpdatedState(onEnded)
-    Modifier.pointerInput(key) {
-      awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false)
-        val immediate =
-          down.type != PointerType.Touch &&
-            currentInsideSelection.value(currentRootPoint.value(down.position))
-        // The hold: wait out the long-press timeout with the pointer still and unconsumed. A press
-        // that is released, taken by somebody else, or moved past the slop before the timeout ends
-        // the gesture here, and whatever is underneath — a tap, the workspace's scroll — gets it.
-        val armed =
-          if (immediate) {
-            // No wait: the press is armed the moment it moves, and a release before that is the
-            // selection tap underneath.
-            awaitTouchSlopOrCancellation(down.id) { change, _ -> change.consume() } != null
-          } else
-            withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-              var outcome: Boolean? = null
-              while (outcome == null) {
-                val event = awaitPointerEvent()
-                // A right-drag belongs to the context menu, which took the press in the initial
-                // pass.
-                if (event.buttons.isSecondaryPressed) {
-                  outcome = false
-                  break
-                }
-                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                if (!change.pressed || change.isConsumed) {
-                  outcome = false
-                  break
-                }
-                if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
-                  outcome = false
-                  break
-                }
-              }
-              outcome ?: false
-            } ?: true
-        if (!armed) return@awaitEachGesture
-        val node =
-          currentHitTest.value(currentRootPoint.value(down.position)) ?: return@awaitEachGesture
-        var lastRoot = currentRootPoint.value(down.position)
-        var lastLocal = down.position
-        currentOnStarted.value(node, lastRoot)
-        try {
-          while (true) {
-            val event = awaitPointerEvent()
-            if (event.buttons.isSecondaryPressed) {
-              currentOnEnded.value(null)
-              return@awaitEachGesture
-            }
-            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-            if (change.pressed) {
-              change.consume()
-              if (change.position != lastLocal) {
-                lastLocal = change.position
-                lastRoot = currentRootPoint.value(change.position)
-                currentOnDragged.value(lastRoot)
-              }
-            } else {
-              change.consume()
-              currentOnEnded.value(lastRoot)
-              break
-            }
-          }
-        } catch (cancelled: CancellationException) {
-          currentOnEnded.value(null)
-          throw cancelled
-        }
-      }
-    }
-  }
-}
-
-/**
- * A stroke width that lands as [screenPx] on screen whatever the canvas is zoomed to.
- *
- * Overlays inside the scaled frame are measured in the design's pixels, so a width written in them
- * thins with the zoom — and the marker that says where a drop will land is exactly the affordance a
- * reader needs most when the design is too small to read. Clamped, because a very small scale would
- * otherwise turn a hairline into a band across the design.
- */
-internal fun screenStroke(screenPx: Float, drawScale: Float): Float =
-  if (drawScale <= 0f) screenPx else (screenPx / drawScale).coerceIn(screenPx, screenPx * 8f)
-
-/**
- * The step this frame's auto-scroll should take for a pointer at [offsetInView], or zero.
- *
- * The band is an edge zone, not a line: the deeper the pointer is into it, the faster the scroll,
- * so reaching for the edge slows into the stop rather than jumping. Direction is the edge's — the
- * start edge scrolls back, the end edge scrolls on — and an edge with nothing left to give scrolls
- * nothing, which is what lets the frame-step loop above stop instead of spinning.
- */
-internal fun edgeAutoScrollDelta(
-  offsetInView: Float,
-  viewSize: Float,
-  band: Float,
-  maxStep: Float,
-  scroll: ScrollState,
-): Float {
-  if (maxStep <= 0f) return 0f
-  val strength =
-    when {
-      offsetInView < band -> -1f + offsetInView / band
-      offsetInView > viewSize - band -> (offsetInView - (viewSize - band)) / band
-      else -> return 0f
-    }
-  val remaining =
-    if (strength < 0f) scroll.value.toFloat() else (scroll.maxValue - scroll.value).toFloat()
-  if (remaining <= 0f) return 0f
-  return (strength * maxStep).coerceIn(-remaining, remaining)
-}
-
-/** How close to a workspace edge a drag begins to scroll, and how fast it scrolls there. */
-internal val DRAG_AUTO_SCROLL_BAND_DP = 56f
-internal val DRAG_AUTO_SCROLL_SPEED_DP = 720f
-
-internal fun String.toPresenceColor(): Color {
-  val hex = removePrefix("#")
-  val argb = hex.takeIf { it.length == 8 }?.toULongOrNull(16) ?: return Color(0xff7788aa)
-  return Color(argb.toInt())
-}
-
-/**
- * The selection's values, beside the selection.
- *
- * Deliberately the smallest thing that can be an editor: the properties this node actually carries
- * and the numbers inside its modifiers, each one row, each committed where it is typed. No adding,
- * no removing, no binding and no wrapping — those change what the node *is*, they belong in the
- * panel that has room to say so, and a card floating over the design is the wrong place to be
- * offered them. What is left is the thing people do most while looking at a design: change a number
- * and watch it move.
- */
-@Composable
-private fun SelectionHoverEditor(
-  label: String,
-  fields: List<EditorPropertyField>,
-  modifierFields: List<EditorModifierField>,
-  /** How the node is sized, for the Hug / Fill chips — or null where it cannot be resized. */
-  sizing: EditorNodeSizing? = null,
-  onResize: (EditorSizing?, EditorSizing?) -> Unit = { _, _ -> },
-  /**
-   * `property:<name>` or `modifier:<type>.<field>`, for the control a just-run action should land
-   * in.
-   */
-  focusTarget: String?,
-  onFocusHandled: () -> Unit,
-  onCommitProperty: (String, String) -> Unit,
-  onCommitModifier: (EditorModifierField, String) -> Unit,
-  onTextInputFocusChanged: (Boolean) -> Unit,
-) {
-  Surface(
-    shape = RoundedCornerShape(12.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 4.dp,
-    shadowElevation = 8.dp,
-    modifier = Modifier.semantics { contentDescription = "Selection editor" },
-  ) {
-    Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-      Text(
-        label,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-      Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
-        // First, because it is the one decision every layer has and the one a handle can only
-        // half make: Fill and Hug are a press here, and a number is the handle's, or the field
-        // below it once the handle has written one.
-        sizing?.let { nodeSizing ->
-          listOf(nodeSizing.width, nodeSizing.height)
-            .filter { it.resizable }
-            .forEach { axis ->
-              HoverSizingRow(axis) { chosen ->
-                when (axis.axis) {
-                  EditorAxis.Width -> onResize(chosen, null)
-                  EditorAxis.Height -> onResize(null, chosen)
-                }
-              }
-            }
-        }
-        fields.forEach { field ->
-          HoverEditorRow(
-            label = field.label,
-            value = field.value,
-            control = field.control,
-            choices = field.choices,
-            focused = focusTarget == "property:${field.name}",
-            onFocusHandled = onFocusHandled,
-            onTextInputFocusChanged = onTextInputFocusChanged,
-          ) {
-            onCommitProperty(field.name, it)
-          }
-        }
-        modifierFields.forEach { field ->
-          HoverEditorRow(
-            label = field.label,
-            value = field.value,
-            control =
-              if (field.choices.isEmpty()) EditorPropertyControl.Number
-              else EditorPropertyControl.Enum,
-            choices = field.choices,
-            focused = focusTarget == "modifier:${field.type}.${field.field}",
-            onFocusHandled = onFocusHandled,
-            onTextInputFocusChanged = onTextInputFocusChanged,
-          ) {
-            onCommitModifier(field, it)
-          }
-        }
-        if (fields.isEmpty() && modifierFields.isEmpty()) {
-          Text(
-            "Nothing is set on this layer.",
-            Modifier.padding(vertical = 6.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-          )
-        }
-      }
-    }
-  }
-}
-
-/**
- * One axis of the selection's size as two chips — Hug and Fill — with a fixed size shown as a
- * third, selected, when that is what the node has. The fixed chip is a readout, not a button: the
- * number it would need comes from the handle or from the width field under it.
- */
-@Composable
-private fun HoverSizingRow(axis: EditorAxisSizing, onChoose: (EditorSizing) -> Unit) {
-  val name = if (axis.axis == EditorAxis.Width) "Width" else "Height"
-  Row(
-    Modifier.fillMaxWidth().padding(vertical = 3.dp),
-    verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(4.dp),
-  ) {
-    Text(
-      name,
-      // The same column the rows below it use, less the 4dp the chips gave back.
-      Modifier.width(82.dp),
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelSmall,
-      maxLines = 1,
-    )
-    HoverSizingChip("Hug", "$name hugs content", axis.current == EditorSizing.Hug, true) {
-      onChoose(EditorSizing.Hug)
-    }
-    HoverSizingChip("Fill", "$name fills parent", axis.current == EditorSizing.Fill, axis.canFill) {
-      onChoose(EditorSizing.Fill)
-    }
-    (axis.current as? EditorSizing.Fixed)?.let { fixed ->
-      HoverSizingChip(fixed.label(), "$name fixed at ${fixed.label()}", true, false) {}
-    }
-  }
-}
-
-@Composable
-private fun HoverSizingChip(
-  label: String,
-  description: String,
-  selected: Boolean,
-  enabled: Boolean,
-  onClick: () -> Unit,
-) {
-  Surface(
-    onClick = onClick,
-    enabled = enabled && !selected,
-    shape = RoundedCornerShape(8.dp),
-    color =
-      if (selected) MaterialTheme.colorScheme.secondaryContainer
-      else MaterialTheme.colorScheme.surface,
-    contentColor =
-      if (selected) MaterialTheme.colorScheme.onSecondaryContainer
-      else if (enabled) MaterialTheme.colorScheme.onSurface
-      else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-    border =
-      if (selected) null
-      else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    modifier =
-      Modifier.semantics {
-        contentDescription = description
-        this.selected = selected
-      },
-  ) {
-    Text(
-      label,
-      Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-      style = MaterialTheme.typography.labelSmall,
-      maxLines = 1,
-      softWrap = false,
-    )
-  }
-}
-
-/** One row of the hover editor: what it is called, and the smallest control that can change it. */
-@Composable
-internal fun HoverEditorRow(
-  label: String,
-  value: String,
-  control: EditorPropertyControl,
-  choices: List<String>,
-  focused: Boolean,
-  onFocusHandled: () -> Unit,
-  onTextInputFocusChanged: (Boolean) -> Unit,
-  onCommit: (String) -> Unit,
-) {
-  Row(
-    Modifier.fillMaxWidth().padding(vertical = 3.dp),
-    verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(8.dp),
-  ) {
-    Text(
-      label,
-      Modifier.width(86.dp),
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.labelSmall,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-    )
-    Box(Modifier.weight(1f)) {
-      when (control) {
-        // Committed on the press rather than on a later Apply: a switch that needs confirming is a
-        // switch nobody believes.
-        EditorPropertyControl.Boolean ->
-          Switch(
-            checked = value == "true",
-            onCheckedChange = { onCommit(it.toString()) },
-            modifier = Modifier.semantics { contentDescription = "$label value" },
-          )
-        EditorPropertyControl.Enum ->
-          HoverEnumControl(label = label, value = value, choices = choices, onCommit = onCommit)
-        else ->
-          HoverTextControl(
-            label = label,
-            value = value,
-            focused = focused,
-            onFocusHandled = onFocusHandled,
-            onTextInputFocusChanged = onTextInputFocusChanged,
-            onCommit = onCommit,
-          )
-      }
-    }
-  }
-}
-
-/**
- * A one-line field that commits what was typed when the caret leaves it, or on Enter.
- *
- * No Apply button, which the panel has room for and this does not: the rule here is that leaving
- * the field is the commit, and Enter is the way to say so without moving the pointer.
- */
-@Composable
-private fun HoverTextControl(
-  label: String,
-  value: String,
-  focused: Boolean,
-  onFocusHandled: () -> Unit,
-  onTextInputFocusChanged: (Boolean) -> Unit,
-  onCommit: (String) -> Unit,
-) {
-  var draft by remember(value) { mutableStateOf(value) }
-  // What this field has already sent. Enter commits, and so does losing focus — including the
-  // focus loss that *disposal* is, when the commit's own document change rebuilds this card.
-  // Without remembering it, one press of Enter wrote the same value twice: two revisions, two
-  // undo steps and two rounds to every collaborator for one edit.
-  var sent by remember(value) { mutableStateOf(value) }
-  val requester = remember { FocusRequester() }
-  // A modifier the menu just added lands the caret in its first number, so "add padding" is one
-  // press and then a number rather than a press and a hunt for where it went.
-  LaunchedEffect(focused) {
-    if (focused) {
-      requester.requestFocus()
-      onFocusHandled()
-    }
-  }
-  Surface(
-    shape = RoundedCornerShape(6.dp),
-    color = MaterialTheme.colorScheme.surfaceVariant,
-  ) {
-    BasicTextField(
-      value = draft,
-      onValueChange = { draft = it },
-      singleLine = true,
-      textStyle =
-        MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
-      cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-      modifier =
-        Modifier.fillMaxWidth()
-          .padding(horizontal = 8.dp, vertical = 6.dp)
-          .focusRequester(requester)
-          .onFocusChanged { state ->
-            onTextInputFocusChanged(state.isFocused)
-            if (!state.isFocused && draft != sent) {
-              sent = draft
-              onCommit(draft)
-            }
-          }
-          .onPreviewKeyEvent { event ->
-            if (event.type == KeyEventType.KeyDown && event.key in ENTER_KEYS) {
-              if (draft != sent) {
-                sent = draft
-                onCommit(draft)
-              }
-              true
-            } else false
-          }
-          .semantics { contentDescription = "$label value" },
-    )
-  }
-}
-
-/** The same row for a property whose values the catalog names. */
-@Composable
-private fun HoverEnumControl(
-  label: String,
-  value: String,
-  choices: List<String>,
-  onCommit: (String) -> Unit,
-) {
-  var open by remember(label) { mutableStateOf(false) }
-  Box {
-    TextButton(
-      onClick = { open = true },
-      contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-      modifier = Modifier.semantics { contentDescription = "$label value" },
-    ) {
-      Text(
-        value.ifEmpty { "Choose…" },
-        style = MaterialTheme.typography.bodySmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-    }
-    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-      choices.forEach { choice ->
-        DropdownMenuItem(
-          text = { Text(choice) },
-          onClick = {
-            open = false
-            onCommit(choice)
-          },
-        )
       }
     }
   }

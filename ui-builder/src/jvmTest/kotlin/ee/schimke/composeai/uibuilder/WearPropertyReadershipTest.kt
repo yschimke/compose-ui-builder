@@ -63,10 +63,11 @@ class WearPropertyReadershipTest {
         "ui-builder",
         "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt",
       ) +
-      moduleFile(
-        "ui-builder-export",
-        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearScreenCodeExporter.kt",
-      )
+      listOf(
+          "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearScreenCodeExporter.kt",
+          "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearContentEmitter.kt",
+        )
+        .map { moduleFile("ui-builder-export", it) }
 
   @Test
   fun `every declared Wear property is read somewhere in the Wear lane`() {

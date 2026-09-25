@@ -1860,6 +1860,8 @@ private fun colorTokenOrNull(value: String): Color? =
     "surfaceContainerHighest" -> MaterialTheme.colorScheme.surfaceContainerHighest
     "primary" -> MaterialTheme.colorScheme.primary
     "onPrimary" -> MaterialTheme.colorScheme.onPrimary
+    "secondary" -> MaterialTheme.colorScheme.secondary
+    "onSecondary" -> MaterialTheme.colorScheme.onSecondary
     "tertiary" -> MaterialTheme.colorScheme.tertiary
     "onTertiary" -> MaterialTheme.colorScheme.onTertiary
     "onSurface" -> MaterialTheme.colorScheme.onSurface
@@ -1883,6 +1885,8 @@ private val RESOLVABLE_COLOR_TOKENS =
     "surfaceContainerHighest",
     "primary",
     "onPrimary",
+    "secondary",
+    "onSecondary",
     "tertiary",
     "onTertiary",
     "onSurface",

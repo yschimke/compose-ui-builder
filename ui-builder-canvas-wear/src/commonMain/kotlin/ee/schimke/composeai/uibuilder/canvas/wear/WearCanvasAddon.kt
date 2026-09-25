@@ -41,6 +41,7 @@ import ee.schimke.composeai.uibuilder.canvas.textOverflow
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.hostSpec
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasAdapter
@@ -321,6 +322,8 @@ private val WEAR_CANVAS_ADAPTERS: CanvasAdapterRegistry = canvasAdapterRegistry 
       variant = node.string("variant"),
       enabled = node.bool("enabled", true),
       modifier = modifier,
+      containerColor = node.wearColor("containerColor"),
+      contentColor = node.wearColor("contentColor"),
     ) {
       WearSlot("content")
     }
@@ -364,7 +367,13 @@ private val WEAR_CANVAS_ADAPTERS: CanvasAdapterRegistry = canvasAdapterRegistry 
   }
   draw("wear-m3/card") { WearCanvasCard(node.string("variant"), modifier) { WearSlot("content") } }
   draw("wear-m3/button") {
-    WearCanvasButton(node.string("variant"), node.bool("enabled", true), modifier) {
+    WearCanvasButton(
+      node.string("variant"),
+      node.bool("enabled", true),
+      modifier,
+      containerColor = node.wearColor("containerColor"),
+      contentColor = node.wearColor("contentColor"),
+    ) {
       WearSlot("content")
     }
   }
@@ -378,7 +387,6 @@ private val WEAR_CANVAS_ADAPTERS: CanvasAdapterRegistry = canvasAdapterRegistry 
         text = node.string("text"),
         modifier = modifier,
         hasConfirm = has("confirmButton"),
-        hasDismiss = has("dismissButton"),
       ) {
         Slot("content")
       }
@@ -449,4 +457,12 @@ private val WEAR_CANVAS_ADAPTERS: CanvasAdapterRegistry = canvasAdapterRegistry 
       NativeOnlyPlaceholder(node, modifier) { node.slots.keys.forEach { name -> Slot(name) } }
     }
   }
+}
+
+/** A Wear property's colour: a literal as itself, a role through Wear's own scheme. */
+@Composable
+internal fun UiBuilderNode.wearColor(name: String): Color {
+  val value = string(name)
+  if (value.startsWith("#")) return color(name, Color.Unspecified)
+  return wearThemeColor(value)
 }

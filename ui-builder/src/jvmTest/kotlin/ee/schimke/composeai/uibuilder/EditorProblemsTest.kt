@@ -115,6 +115,65 @@ class EditorProblemsTest {
   }
 
   @Test
+  fun `a widget's background picture exports from the bytes the editor fetched`() {
+    // The server's export reads an uploaded picture from its asset store; the panel and the code
+    // pane run the same emitter in the browser and were handed no bytes at all, so every widget
+    // with a photo background was refused "whose bytes this export could not read" there while the
+    // artifact generated fine. They read what the editor has fetched instead.
+    val widget =
+      weatherWidgetUiBuilderDocument("weather", document.catalogPin, document.environment)
+    val rootId = widget.roots.single()
+    val root = widget.nodes.getValue(rootId)
+    val digest = "sha256:photo"
+    val photo =
+      UiBuilderNode(
+        id = "photo",
+        componentId = "asset/image",
+        properties =
+          JsonObject(
+            mapOf(
+              "assetKey" to
+                JsonObject(
+                  mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("photo"))
+                )
+            )
+          ),
+      )
+    val withPhoto =
+      widget.copy(
+        nodes =
+          widget.nodes +
+            ("photo" to photo) +
+            (rootId to
+              root.copy(
+                slots =
+                  root.slots + ("background" to (root.slots["background"].orEmpty() + "photo"))
+              )),
+        assets =
+          JsonObject(
+            widget.assets +
+              ("photo" to
+                Json.parseToJsonElement(
+                  """{"mediaType":"image/png","contentDigest":"$digest",""" +
+                    """"source":{"type":"uploaded","storageKey":"$digest"}}"""
+                ))
+          ),
+      )
+    fun refusedForBytes(assetBytes: (String) -> ByteArray?) =
+      reducer.problems(withPhoto, assetBytes).filter {
+        it.code == "COMPOSE_EXPORT_REFUSED" && "could not read" in it.message
+      }
+
+    assertTrue(refusedForBytes { null }.isNotEmpty(), "not fetched yet: honestly unreadable")
+    val fetched =
+      byteArrayOf(0x89.toByte(), 'P'.code.toByte(), 'N'.code.toByte(), 'G'.code.toByte())
+    val lookup = { key: String -> fetched.takeIf { key == digest } }
+    assertEquals(emptyList(), refusedForBytes(lookup), "fetched: the panel refuses nothing")
+    val code = assertIs<EditorGeneratedCode.Source>(reducer.generatedCode(withPhoto, lookup))
+    assertTrue(".image(" in code.kotlin, code.kotlin.take(400))
+  }
+
+  @Test
   fun `a widget the emitter genuinely cannot write is still reported`() {
     // The panel is not simply silenced for these designs. 20dp of horizontal padding is a frame the
     // shipped preview params cannot show, so the emitter refuses it — and that refusal, unlike the

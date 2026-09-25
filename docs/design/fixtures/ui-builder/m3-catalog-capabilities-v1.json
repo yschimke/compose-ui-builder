@@ -22,7 +22,7 @@
     },
     "colorTokens": {
       "$comment": "The theme roles a colour property or a background modifier may name, which are the roles the canvas draws. A colour is otherwise a #RRGGBB or #AARRGGBB literal. Mirrored by PropertyValueKinds.CANVAS_COLOR_TOKENS in :ui-builder-export and by the runtime's catalog executor; a test pins the three to this list.",
-      "roles": ["background", "surface", "surfaceContainer", "surfaceContainerLow", "surfaceContainerHigh", "surfaceContainerHighest", "primary", "onPrimary", "tertiary", "onTertiary", "onSurface", "onSurfaceVariant", "outlineVariant", "transparent"]
+      "roles": ["background", "surface", "surfaceContainer", "surfaceContainerLow", "surfaceContainerHigh", "surfaceContainerHighest", "primary", "onPrimary", "secondary", "onSecondary", "tertiary", "onTertiary", "onSurface", "onSurfaceVariant", "outlineVariant", "transparent"]
     },
     "assetRegistry": {
       "$comment": "Every assetKey the catalog itself ships, because these are the assets the canvas draws from its own resources: the two project-owned Jetcaster covers in :ui-builder-artwork, the generated gate-0 cover, and the editor's own insert placeholder. A design extends this set with the keys its assets map pins through the asset lane (PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey}, ui_builder_put_asset; yschimke/compose-preview-server#478). Both reducers refuse any other key at commit (#484).",
