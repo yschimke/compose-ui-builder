@@ -1018,11 +1018,14 @@ private class ComposeEmitter(
     line(level + 1, "icon = {")
     emitChildren(node.slot("icon"), level + 2)
     line(level + 1, "},")
+    // `label` is nullable with no default in Material, so an item without one still names it.
     val label = node.slot("label")
     if (label.isNotEmpty()) {
       line(level + 1, "label = {")
       emitChildren(label, level + 2)
       line(level + 1, "},")
+    } else {
+      line(level + 1, "label = null,")
     }
     line(level + 1, "modifier = ${node.modifierExpression()},")
     line(level, ")")
