@@ -7,6 +7,7 @@ import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.discovery.ComponentSlot
 import ee.schimke.composeai.discovery.ComponentSymbol
 import ee.schimke.composeai.discovery.TargetParameter
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderCanvasAddonApi
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
@@ -76,7 +77,8 @@ internal fun CapabilityCatalog.exportRecord(embedded: ComponentRecordFile?): Com
  * catalog — leaves the renderer keying on component ids exactly as before. See
  * [WasmCapability.canvas].
  */
-internal val CapabilityCatalog.canvasAdapterIds: Map<String, String>
+@UiBuilderCanvasAddonApi
+public val CapabilityCatalog.canvasAdapterIds: Map<String, String>
   get() =
     components
       .mapNotNull { component ->
@@ -85,7 +87,8 @@ internal val CapabilityCatalog.canvasAdapterIds: Map<String, String>
       .toMap()
 
 /** Vocabulary projections carried beside [canvasAdapterIds], keyed by source component id. */
-internal val CapabilityCatalog.canvasAdapterMappings:
+@UiBuilderCanvasAddonApi
+public val CapabilityCatalog.canvasAdapterMappings:
   Map<String, ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1>
   get() =
     components
@@ -102,7 +105,8 @@ internal val CapabilityCatalog.nativeOnlyComponentIds: Set<String>
  * [CapabilityCatalog.previewSurfaces] gives: the wire type is published from another repository,
  * and a catalog that says nothing gets the frame its documents name.
  */
-internal val CapabilityCatalog.frameGeometry: UiBuilderFrameGeometry
+@UiBuilderCanvasAddonApi
+public val CapabilityCatalog.frameGeometry: UiBuilderFrameGeometry
   get() = UiBuilderFrameGeometry.from(statusSemantics)
 
 private fun packComponentRecord(packId: String, component: ComponentCapability): ComponentRecord? {

@@ -89,7 +89,8 @@ conservative.
 > catalog has been rendering its entire kit through the port in `:catalog-desktop` for some time;
 > this repository simply did not know.
 >
-> The port is wired into `:ui-builder` and **all twenty-three** of this catalog's components are
+> The port is wired into the canvas (since moved out of `:ui-builder` into the optional add-on
+> `:ui-builder-canvas-wear`) and **all twenty-three** of this catalog's components are
 > drawn by Wear Compose — the controls, the buttons, the cards, the progress indicators, the edge
 > button, the button group, the three dialogs and both pickers. Several are named in the rule below
 > as examples of what could *never* be drawn here. The 48dp/14.5sp constants that sized the

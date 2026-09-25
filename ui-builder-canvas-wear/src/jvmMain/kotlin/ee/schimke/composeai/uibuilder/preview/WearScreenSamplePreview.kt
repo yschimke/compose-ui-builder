@@ -17,6 +17,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.wearScreenUiBuilderDocument
 import ee.schimke.composeai.uibuilder.frameGeometry
 import kotlinx.serialization.json.Json
@@ -122,7 +123,7 @@ fun WearScreenCodePanePreview() {
  */
 private val wearScreenPreviewCatalog by lazy {
   ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser.parse(
-    previewResource("/wear-m3-capabilities-v1.json")
+    wearPreviewResource("/wear-m3-capabilities-v1.json")
   )
 }
 
@@ -183,3 +184,8 @@ private const val SMALL_ROUND_DP = 192
 private const val LARGE_ROUND_DP = 227
 
 private const val XL_ROUND_DP = 240
+
+/** A resource from `:ui-builder`'s preview fixtures, read off this module's classpath. */
+private fun wearPreviewResource(path: String): String =
+  checkNotNull(UiBuilderDocument::class.java.getResource(path)) { "missing preview resource $path" }
+    .readText()

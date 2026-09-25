@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.canvas.wear.WEAR_DRAWN_ADAPTER_IDS
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -39,49 +40,16 @@ class WearCatalogIsCompleteTest {
       }
       .readText()
 
-  private val rendererSource =
-    java.io
-      .File("src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt")
-      .let { relative ->
-        // Run from the module directory under Gradle; fall back for a repository-root runner.
-        if (relative.isFile) relative else java.io.File("ui-builder/${relative.path}")
-      }
-
   /**
-   * The labels the renderer has a dispatch branch for: component ids and canvas adapter ids alike.
+   * The labels the canvas draws: component ids and canvas adapter ids alike, as registered by the
+   * Wear canvas add-on. Native-only placeholders are not counted — they are the undrawn case.
    *
-   * A component is drawn when the renderer has a case for **its id or for the adapter its catalog
-   * declares** — `wasm.canvas` in the golden, which the editor reads into
-   * `LocalUiBuilderCanvasAdapters` and the renderer dispatches on. That is the whole point of the
-   * adapter field: a catalog whose screen root is not called `wear-m3/screen-scaffold` asks for the
-   * same drawing by naming `frame/round-screen`, so a check that only looked for ids would report
-   * it as undrawn.
-   *
-   * Branch labels are read as any quoted string followed by `->` at the dispatch's own indentation,
-   * because a branch may name several (`ROUND_SCREEN_FRAME, WEAR_SCREEN_SCAFFOLD ->`) and the id
-   * that is still there for a synthesised catalog is a label like any other.
+   * A component is drawn when there is an adapter for **its id or for the adapter its catalog
+   * declares** — `wasm.canvas` in the golden. That is the whole point of the adapter field: a
+   * catalog whose screen root is not called `wear-m3/screen-scaffold` asks for the same drawing by
+   * naming `frame/round-screen`, so a check that only looked for ids would report it as undrawn.
    */
-  private fun drawnLabels(): Set<String> {
-    assertTrue(rendererSource.isFile, "cannot find the renderer source at $rendererSource")
-    val source = rendererSource.readText()
-    // A branch may name a constant rather than a literal (`ROUND_SCREEN_FRAME ->`), so the
-    // constants in this file are resolved first: a check that only read quoted labels would report
-    // a component drawn by a named adapter as undrawn.
-    val constants =
-      Regex("const val ([A-Za-z0-9_]+) = \"([^\"]+)\"").findAll(source).associate {
-        it.groupValues[1] to it.groupValues[2]
-      }
-    val branchLabels =
-      Regex(
-          "^\\s*((?:[A-Za-z0-9_]+|\"[A-Za-z0-9/_.-]+\")(?:\\s*,\\s*(?:[A-Za-z0-9_]+|\"[A-Za-z0-9/_.-]+\"))*)\\s*->",
-          RegexOption.MULTILINE,
-        )
-        .findAll(source)
-        .flatMap { match -> match.groupValues[1].split(",") }
-        .map { it.trim().trim('"') }
-        .toSet()
-    return branchLabels.map { constants[it] ?: it }.toSet()
-  }
+  private fun drawnLabels(): Set<String> = WEAR_DRAWN_ADAPTER_IDS
 
   /** Ids the renderer draws, by the component's own id or by the adapter the catalog gives it. */
   private fun drawnIds(): Set<String> =

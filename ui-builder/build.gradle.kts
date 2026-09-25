@@ -53,6 +53,8 @@ kotlin {
   // catalog entry for the two floors has the full argument, including the runtime cost.
   jvmToolchain(uiBuilderJava.asInt())
 
+  compilerOptions { optIn.add("ee.schimke.composeai.uibuilder.canvas.UiBuilderCanvasAddonApi") }
+
   jvm()
   @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
   wasmJs {
@@ -76,12 +78,8 @@ kotlin {
       // `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md` for why the preview pane owes real components.
       implementation(libs.compose.material3.adaptive)
       implementation(libs.compose.material3.adaptive.layout)
-      // Wear Compose, for real, on the canvas. See `docs/design/UI_BUILDER_WEAR_SCREEN.md`: this
-      // is the CMP port rather than `androidx.wear.compose`, because that one is an Android AAR
-      // with no `wasmJs` variant to resolve. The port keeps the upstream package names, so a
-      // `TransformingLazyColumn` here is `androidx.wear.compose.material3`'s by import.
-      implementation(libs.wearcmp.compose.material3)
-      implementation(libs.wearcmp.compose.foundation)
+      // No Wear Compose here: the Wear and Remote Compose Material 3 canvas is the add-on
+      // `:ui-builder-canvas-wear`, which is the only module that links the Wear port.
       implementation(libs.material.icons.extended)
       @Suppress("DEPRECATION") implementation(compose.ui)
       // These carry no version of their own; the platforms supply them (see the catalog).
@@ -132,6 +130,10 @@ kotlin {
       implementation(project(":ui-builder-runtime")) {
         exclude(group = "ee.schimke.composeai", module = "ui-builder-render-bundle")
       }
+      // The Wear and Remote Compose canvas add-on, found through `ServiceLoader` the way the JVM
+      // hosts find it, so the tests that draw a Wear or Remote design draw it as those hosts do.
+      // Tests of the add-on's own internals live in `:ui-builder-canvas-wear`.
+      implementation(project(":ui-builder-canvas-wear"))
     }
     getByName("jvmMain").dependencies {
       // Feasibility spike only: the saved-document bridge executes ComposeScene against SVGCanvas.
@@ -403,28 +405,6 @@ tasks.named("wasmJsBrowserProductionWebpack") {
   mustRunAfter("wasmJsDevelopmentExecutableCompileSync")
 }
 
-// The packaged renderer bundle is embedded in :ui-builder-runtime's jar and ships in the server, so
-// it carries the production preview and nothing else. `UiBuilderEditorChromePreview` exists to be
-// diffed, not shipped: leaving it in the bundle took it from 478 KB to 1.6 MB, because the editor
-// chrome drags in the whole authoring UI that the document renderer never touches.
-// Inside `afterEvaluate`, because compose-ai-tools 2.8.0 (its #5380) defers the Desktop lane's task
-// registration to `afterEvaluate` on any module applying the Kotlin Multiplatform plugin without
-// `com.android.kotlin.multiplatform.library` — this one — so that a KMP-Android module applying
-// `org.jetbrains.compose` first can still claim the Robolectric lane. `composePreviewBundle` no
-// longer exists while this script body runs, and naming it here failed configuration outright.
-//
-// The plugin registers its `afterEvaluate` during the `plugins { }` block, so it runs before this
-// one and the task is there by the time we name it. `withType(...).configureEach` looks like the
-// order-independent answer and is a trap: the plugin's registration action does
-// `previewIds.set(previewIdsProperty.orElse(emptyList()))`, and under deferred registration that
-// action runs *after* a `configureEach` added earlier — silently resetting the selection to empty.
-// The bundle still built, at 70 previews and 4.9 MB instead of 1 and 2.5 MB.
-afterEvaluate {
-  tasks.named<ee.schimke.composeai.plugin.BundlePreviewTask>("composePreviewBundle") {
-    previewIds.set(
-      listOf(
-        "ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview"
-      )
-    )
-  }
-}
+// The packaged renderer bundle — the server's `ProductionUiBuilderPreview` — is built by
+// `:ui-builder-canvas-wear`, which adds the Wear and Remote Compose canvas to this module's
+// Material 3 one. Nothing consumes this module's own `composePreviewBundle`.

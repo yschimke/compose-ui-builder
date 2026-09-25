@@ -100,10 +100,6 @@ fun DesignKeepTabletPreview() = DesignFixture("google-keep-tablet")
 @Composable
 fun DesignPlayTabletPreview() = DesignFixture("google-play-tablet")
 
-@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
-@Composable
-fun DesignGoogleHomeWearPreview() = DesignFixture("google-home-wear")
-
 @Composable
 private fun DesignFixture(designId: String) {
   UiBuilderSurface(document = designFixtureDocument(designId), editorOverlay = false)

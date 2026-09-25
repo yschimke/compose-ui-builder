@@ -52,10 +52,17 @@ class WearPropertyReadershipTest {
   /** The sources that draw a Wear component on the canvas or write one into generated Kotlin. */
   private val laneSources =
     listOf(
-        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt",
-        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/WearCanvasComponents.kt",
+        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/wear/WearCanvasAddon.kt",
+        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/wear/WearCanvasComponents.kt",
+        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/wear/WearCanvasSurface.kt",
       )
-      .map { moduleFile("ui-builder", it) } +
+      .map { moduleFile("ui-builder-canvas-wear", it) } +
+      // The shared property readers the Wear adapters call — `node.fontWeight()` and friends —
+      // are the Material 3 canvas's own, and still live here.
+      moduleFile(
+        "ui-builder",
+        "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt",
+      ) +
       moduleFile(
         "ui-builder-export",
         "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearScreenCodeExporter.kt",

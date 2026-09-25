@@ -32,6 +32,10 @@ kotlin {
       // OfflineUiBuilderSessionView exposes UiBuilderChrome so embedding hosts can supply native
       // chrome.
       api(project(":ui-builder"))
+      // The Wear and Remote Compose canvas. A JVM host has no browser to load a catalog's Wasm
+      // renderer runtime, so it draws the offline `wear-m3` and `remote-m3` catalogs in-process;
+      // `:ui-builder` finds the add-on on this classpath through `ServiceLoader`.
+      runtimeOnly(project(":ui-builder-canvas-wear"))
       @Suppress("DEPRECATION") implementation(compose.material3)
       implementation(libs.kotlinx.coroutines.core)
     }

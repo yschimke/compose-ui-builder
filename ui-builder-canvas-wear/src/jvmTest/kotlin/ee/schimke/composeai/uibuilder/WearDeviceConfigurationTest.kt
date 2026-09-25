@@ -1,7 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
-import ee.schimke.composeai.uibuilder.canvas.wearDeviceConfiguration
+import ee.schimke.composeai.uibuilder.canvas.wear.wearDeviceConfiguration
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlin.test.Test

@@ -42,7 +42,7 @@ Nine modules, ~125k lines of Kotlin, against ~220k in the server project.
 | `:ui-builder-renderer` | `wasmJs` **only** | ~0.2k | the sandboxed renderer-only runtime |
 | `:ui-builder-artwork` | `jvm`, `wasmJs` | ~0.05k | offline artwork bindings |
 | `:ui-builder-web` | — | — | packages `:ui-builder`'s Wasm output as an archive |
-| `:ui-builder-render-bundle` | — | — | packages `:ui-builder`'s JVM previews as a polyglot bundle |
+| `:ui-builder-render-bundle` | — | — | packages the JVM previews (with the `:ui-builder-canvas-wear` add-on) as a polyglot bundle |
 
 Against that, roughly **13k lines of `:server` are UI-builder glue** (44 files matching
 `*UiBuilder*` / `*Design*`): the HTTP and WebSocket routes, the native-preview lane, the MCP

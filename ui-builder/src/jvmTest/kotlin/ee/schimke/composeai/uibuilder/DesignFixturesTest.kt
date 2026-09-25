@@ -172,12 +172,23 @@ class DesignFixturesTest {
     }
   }
 
-  private fun previewSource(): String =
-    File(
-        System.getProperty("uiBuilderProjectDir") ?: ".",
-        "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/DesignFixturePreviews.kt",
+  // The Wear fixtures' previews live with the Wear canvas, in `:ui-builder-canvas-wear`, since
+  // this module no longer draws Wear.
+  private fun previewSource(): String {
+    val module = File(System.getProperty("uiBuilderProjectDir") ?: ".")
+    return listOf(
+        File(
+          module,
+          "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/DesignFixturePreviews.kt",
+        ),
+        File(
+          module,
+          "../ui-builder-canvas-wear/src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/" +
+            "GoogleHomeWearPreviews.kt",
+        ),
       )
-      .readText()
+      .joinToString("\n") { it.readText() }
+  }
 
   private fun File.fixture(): JsonObject = Json.parseToJsonElement(readText()).jsonObject
 

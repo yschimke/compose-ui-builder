@@ -1,4 +1,4 @@
-package ee.schimke.composeai.uibuilder.canvas
+package ee.schimke.composeai.uibuilder.canvas.wear
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier

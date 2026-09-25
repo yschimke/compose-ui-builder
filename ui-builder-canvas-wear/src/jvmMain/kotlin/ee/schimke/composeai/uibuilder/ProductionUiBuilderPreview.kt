@@ -6,10 +6,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import ee.schimke.composeai.overrides.previewOverrideString
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapterMappings
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapters
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAddons
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogComponentIds
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.canvas.wear.WearCanvasAddon
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.export.REMOTE_TEXT_COMPONENT_ID
@@ -39,6 +41,16 @@ fun ProductionUiBuilderPreview() {
 @Composable
 internal fun ProductionUiBuilderSurface(document: UiBuilderDocument) {
   val catalog = productionPreviewCatalog(document)
+  // Named rather than discovered: this preview is the entry point of the server's render bundle,
+  // whose class reachability is traced from here, so an add-on reached only through
+  // `ServiceLoader` would be dropped from the bundle as unreachable.
+  CompositionLocalProvider(LocalUiBuilderCanvasAddons provides listOf(WearCanvasAddon())) {
+    ProductionCatalogSurface(document, catalog)
+  }
+}
+
+@Composable
+private fun ProductionCatalogSurface(document: UiBuilderDocument, catalog: CapabilityCatalog?) {
   if (catalog == null) {
     UiBuilderSurface(document = document, editorOverlay = false)
   } else {

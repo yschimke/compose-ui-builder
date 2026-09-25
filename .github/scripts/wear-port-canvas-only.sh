@@ -37,7 +37,7 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)
 cd "${repo_root}"
 
 # The one module allowed to link the port: the canvas.
-allowed_module="ui-builder"
+allowed_module="ui-builder-canvas-wear"
 
 status=0
 
@@ -62,6 +62,17 @@ done < <(grep -rl --include='*.gradle.kts' -e 'libs\.wearcmp\.' . \
 # ── 2. The exporter must not import Wear Compose at all ───────────────────────────────────────────
 # It emits `androidx.wear.compose.material3` as TEXT. An actual import means it has linked some
 # implementation of that package, and the only one available off Android is the port.
+# `:ui-builder` is the Material 3 canvas and the editor. The Wear canvas is the add-on
+# `:ui-builder-canvas-wear`; an import of the port here would put it back on the web editor's and
+# the Material 3 renderer runtime's classpath.
+if [[ -d ui-builder/src ]]; then
+  while IFS= read -r hit; do
+    echo "wear-port-canvas-only: :ui-builder imports Wear Compose — ${hit}" >&2
+    echo "  Draw it in :ui-builder-canvas-wear, registered as a UiBuilderCanvasAddon adapter." >&2
+    status=1
+  done < <(grep -rn --include='*.kt' -e '^import androidx\.wear\.compose' -e '^import ee\.schimke\.wearcmp' ui-builder/src || true)
+fi
+
 if [[ -d ui-builder-export/src ]]; then
   while IFS= read -r hit; do
     echo "wear-port-canvas-only: the exporter imports Wear Compose — ${hit}" >&2

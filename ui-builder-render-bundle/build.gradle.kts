@@ -111,8 +111,8 @@ tasks.processResources {
   // with it — which the cache refuses. Copying the two strings here captures two strings.
   val resourceDirectory = bundleResourceDirectory
   val resourceName = bundleResourceName
-  dependsOn(project(":ui-builder").tasks.named("composePreviewBundle"))
-  from(project(":ui-builder").layout.buildDirectory.file("compose-previews/bundle.png")) {
+  dependsOn(project(":ui-builder-canvas-wear").tasks.named("composePreviewBundle"))
+  from(project(":ui-builder-canvas-wear").layout.buildDirectory.file("compose-previews/bundle.png")) {
     into(resourceDirectory)
     rename { resourceName }
   }

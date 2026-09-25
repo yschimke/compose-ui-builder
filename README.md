@@ -19,6 +19,7 @@ for running it.
 | Module | Targets | Package | What it is |
 | --- | --- | --- | --- |
 | `:ui-builder` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder` (model, entry points) and `.editor`, `.canvas`, `.inspector`, `.codegen`, `.svg`, `.reference`, `.preview`, `.capability`, `.client`, `.icons`, `.local` | the editor — canvas, palette, inspector, reducer, exporters, offline service |
+| `:ui-builder-canvas-wear` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.canvas.wear` | optional add-on that draws the Wear Material 3 and Remote widget catalogs in-process (desktop, IntelliJ, render bundle); found by `ServiceLoader`. The browser editor draws those catalogs through their published renderer runtime instead |
 | `:ui-builder-desktop` | JVM desktop | `ee.schimke.composeai.uibuilder.desktop` | native offline desktop app: the window, File menu and installers |
 | `:ui-builder-host-jvm` | JVM | `ee.schimke.composeai.uibuilder.host` | the hosting layer the desktop app and the IntelliJ plugin share: sessions, catalogs, design files, export |
 | `:ui-builder-intellij-plugin` | IntelliJ Platform | `ee.schimke.composeai.uibuilder.intellij` | proof-of-concept Jewel tool-window host for the native editor |

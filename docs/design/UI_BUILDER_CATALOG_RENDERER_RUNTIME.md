@@ -298,6 +298,15 @@ or closing without editing.
    none.
 9. Add the mandatory open-time migration gate and catalog-owned migration documents.
 
+Status of steps 6–8. `wear-m3-catalog` publishes the `wear-m3` and `remote-m3` runtimes, and the
+browser editor mounts a design's pinned runtime whenever its catalog declares one. The Wear canvas
+code and the `ee.schimke.wearcmp` dependencies have left `:ui-builder`: they live in the optional
+add-on `:ui-builder-canvas-wear`, which registers its adapters through `CanvasAdapterRegistry` (a
+`UiBuilderCanvasAddon` found by `ServiceLoader`). Hosts that cannot load a Wasm runtime — the
+desktop app, the IntelliJ plugin and the server's render bundle — keep drawing Wear by adding that
+module. `:ui-builder` itself draws only Material 3, and `.github/scripts/wear-port-canvas-only.sh`
+fails the build if it imports the Wear port again.
+
 The acceptance test is operational, not a unit-test fiction: a running server discovers a new Wear
 runtime without restarting while existing M3, Remote M3, current Wear and an old-Wear upgrade
 comparison remain open in separate tabs, each drawing through its own exact leased runtime. Closing

@@ -1,4 +1,4 @@
-package ee.schimke.composeai.uibuilder.canvas
+package ee.schimke.composeai.uibuilder.canvas.wear
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues

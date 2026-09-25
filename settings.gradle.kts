@@ -177,6 +177,11 @@ rootProject.name = "compose-ui-builder"
 
 include(":ui-builder")
 
+// The Wear and Remote Compose Material 3 canvas, as an add-on to `:ui-builder`'s built-in Material 3
+// one: drawn in-process by the JVM hosts and the server's render bundle, which cannot load a
+// catalog's Wasm renderer runtime. The only module that links the Wear port.
+include(":ui-builder-canvas-wear")
+
 // Native Compose Desktop host for the editor. It is an in-project consumer of the editor's JVM
 // target, not a server seam: it can run the offline protocol without an HTTP host.
 include(":ui-builder-desktop")

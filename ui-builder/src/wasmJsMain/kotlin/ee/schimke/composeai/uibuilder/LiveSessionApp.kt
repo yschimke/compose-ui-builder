@@ -99,6 +99,8 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.skia.Image
@@ -1207,18 +1209,18 @@ private fun LiveSessionApp(
       onCanvasMetrics = ::publishEditorCanvasMetrics,
       onCanvasBoundsChanged = ::publishEditorCanvasBounds,
       onDropTargetChanged = ::publishEditorDropTarget,
-      // `candidate` predates catalog-delivered runtimes. Keep its in-process canvas until every
-      // deployed catalog has been verified through the hosted editor and native-export lanes; it
-      // names no immutable archive, so asking the runtime route for it can only return 404.
+      // The runtime a design draws through: its own pin's, or — for a design pinned `candidate`,
+      // which names no immutable archive — the one its served catalog publishes. That second case
+      // is a design saved before its catalog published a runtime; the in-process canvas only draws
+      // the built-in Material 3 catalog, so an add-on's design without this would draw nothing.
+      // The substitution is display-only: the stored pin is untouched, and the runtime route
+      // still serves only ids the server resolved from the catalog.
       canvasRenderer =
-        if (
-          loadedDocument.catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull == "candidate"
-        ) {
-          null
-        } else {
+        canvasRuntimeId(loadedDocument.catalogPin, loadedCatalog.benchmark.nativeRuntimeId)?.let {
+          runtimeId ->
           { rendered, surface, selectedNodeId, selectionEnabled, onNodeSelected, onInspection ->
             CatalogRuntimeCanvas(
-              rendered,
+              rendered.withNativeRuntimeId(runtimeId),
               surface,
               selectedNodeId,
               selectionEnabled,
@@ -1379,3 +1381,21 @@ private fun LiveSessionApp(
 
 @Serializable
 internal data class BrowserCatalogRecoveryPayload(val preview: CatalogUpgradePreviewV1)
+
+/**
+ * The renderer runtime a design draws through, or null for the in-process canvas.
+ *
+ * The design's own pin wins. A pin of `candidate` falls back to [catalogRuntimeId], the runtime the
+ * served catalog declares, and stays in-process only when that is `candidate` too — the built-in
+ * Material 3 catalog.
+ */
+internal fun canvasRuntimeId(catalogPin: JsonObject, catalogRuntimeId: String): String? =
+  catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull?.takeIf { it != CANDIDATE_RUNTIME }
+    ?: catalogRuntimeId.takeIf { it.isNotBlank() && it != CANDIDATE_RUNTIME }
+
+private const val CANDIDATE_RUNTIME = "candidate"
+
+/** [this] with its pin naming [runtimeId], for the renderer only — never stored. */
+private fun UiBuilderDocument.withNativeRuntimeId(runtimeId: String): UiBuilderDocument =
+  if (catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull == runtimeId) this
+  else copy(catalogPin = JsonObject(catalogPin + ("nativeRuntimeId" to JsonPrimitive(runtimeId))))

@@ -14,10 +14,10 @@ import androidx.compose.ui.unit.Density
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
-import ee.schimke.composeai.uibuilder.canvas.LocalWearSurfaceTransformation
-import ee.schimke.composeai.uibuilder.canvas.WearCanvasButton
-import ee.schimke.composeai.uibuilder.canvas.WearCanvasCard
-import ee.schimke.composeai.uibuilder.canvas.WearCanvasTransformingLazyColumn
+import ee.schimke.composeai.uibuilder.canvas.wear.LocalWearSurfaceTransformation
+import ee.schimke.composeai.uibuilder.canvas.wear.WearCanvasButton
+import ee.schimke.composeai.uibuilder.canvas.wear.WearCanvasCard
+import ee.schimke.composeai.uibuilder.canvas.wear.WearCanvasTransformingLazyColumn
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
