@@ -1,11 +1,22 @@
 package ee.schimke.composeai.uibuilder.preview
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.tooling.preview.Preview
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapters
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.canvasAdapterIds
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.frameGeometry
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 
 /**
@@ -104,10 +115,66 @@ fun DesignPlayTabletPreview() = DesignFixture("google-play-tablet")
 @Composable
 fun DesignGoogleHomeWearPreview() = DesignFixture("google-home-wear")
 
+@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
+@Composable
+fun DesignWearStarterGreetingPreview() = DesignFixture("wear-starter-greeting")
+
+@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
+@Composable
+fun DesignWearStarterListPreview() = DesignFixture("wear-starter-list")
+
+@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
+@Composable
+fun DesignJetcasterWearLibraryPreview() = DesignFixture("jetcaster-wear-library")
+
+@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
+@Composable
+fun DesignJetcasterWearEpisodePreview() = DesignFixture("jetcaster-wear-episode")
+
+@Preview(device = "spec:width=192dp,height=192dp,dpi=320")
+@Composable
+fun DesignJetcasterWearQueuePreview() = DesignFixture("jetcaster-wear-queue")
+
 @Composable
 private fun DesignFixture(designId: String) {
-  UiBuilderSurface(document = designFixtureDocument(designId), editorOverlay = false)
+  PinnedCatalog(designFixtureDocument(designId)) {
+    UiBuilderSurface(document = designFixtureDocument(designId), editorOverlay = false)
+  }
 }
+
+/**
+ * [content] under the canvas adapters, frame geometry and platform of the catalog [document] pins,
+ * the way the editor provides them from the catalog it serves.
+ *
+ * A preview is the host here, and a host that declares nothing gets nothing: a `wear-m3` screen
+ * root has no drawing of its own — its catalog names `frame/round-screen` for it — so every Wear
+ * fixture rendered as the red "Unsupported component: wear-m3/screen-scaffold" box and a black
+ * frame, while the tests that compose the same documents (`WearCatalogAdapters`) drew them
+ * correctly. Limited to catalogs that are not mobile: the phone and tablet fixtures have always
+ * rendered without their catalog's adapters, and those renders are the visual-diff baseline.
+ */
+@Composable
+internal fun PinnedCatalog(document: UiBuilderDocument, content: @Composable () -> Unit) {
+  val systemId =
+    (document.catalogPin["systemId"] as? JsonPrimitive)?.contentOrNull ?: return content()
+  val catalog =
+    pinnedCatalogs.getOrPut(systemId) {
+      UiBuilderDocument::class
+        .java
+        .getResource("/$systemId-capabilities-v1.json")
+        ?.readText()
+        ?.let { CapabilityCatalogParser.parse(it) }
+    }
+  if (catalog == null || catalog.platform == UiBuilderCatalogPlatform.MOBILE) return content()
+  CompositionLocalProvider(
+    LocalUiBuilderCanvasAdapters provides catalog.canvasAdapterIds,
+    LocalUiBuilderFrameGeometry provides catalog.frameGeometry,
+    LocalUiBuilderCatalogPlatform provides catalog.platform.wireValue,
+    content = content,
+  )
+}
+
+private val pinnedCatalogs = HashMap<String, CapabilityCatalog?>()
 
 /** The fixture `designs/<designId>.json`, replayed once per process. */
 internal fun designFixtureDocument(designId: String): UiBuilderDocument =

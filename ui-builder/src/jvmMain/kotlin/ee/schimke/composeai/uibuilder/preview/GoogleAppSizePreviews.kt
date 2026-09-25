@@ -1,6 +1,11 @@
 package ee.schimke.composeai.uibuilder.preview
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 
@@ -79,7 +84,36 @@ fun PlayCompactPreview() = SizedDesignFixture("google-play-tablet")
 
 @Composable
 internal fun SizedDesignFixture(designId: String) {
-  UiBuilderSurface(document = designFixtureDocument(designId), editorOverlay = false)
+  PinnedCatalog(designFixtureDocument(designId)) {
+    UiBuilderSurface(document = designFixtureDocument(designId), editorOverlay = false)
+  }
+}
+
+/**
+ * The design's whole extent, measured the way the editor's canvas measures it: against an unbounded
+ * height, so the stadium is as tall as its content — never shorter than one screenful, which the
+ * round frame enforces itself — rather than stretched to the preview's frame.
+ *
+ * The extent previews used [SizedDesignFixture], which hands the surface the frame's full 760dp. A
+ * scaffold fills the height it is given, so a one-item screen came out as a 760dp stadium with its
+ * edge button pinned to the bottom: a picture of the preview frame, not of the design. Here the
+ * frame only bounds the capture; what is below the content is the preview's background.
+ *
+ * And `unrolled`, which [SizedDesignFixture] never asked for: those previews were the lazy device
+ * mode drawn into a tall frame — scroll indicator, rows scaling at the bottom edge — rather than
+ * the canvas's unrolled stadium they were named after.
+ */
+@Composable
+internal fun ExtentDesignFixture(designId: String) {
+  PinnedCatalog(designFixtureDocument(designId)) {
+    Box(Modifier.fillMaxSize().wrapContentHeight(Alignment.Top, unbounded = true)) {
+      UiBuilderSurface(
+        document = designFixtureDocument(designId),
+        editorOverlay = false,
+        unrolled = true,
+      )
+    }
+  }
 }
 
 /**
@@ -114,8 +148,8 @@ fun GoogleHomeWearLargePreview() = SizedDesignFixture("google-home-wear")
  */
 @WearPreviewSmallRoundExtent
 @Composable
-fun GoogleHomeWearSmallExtentPreview() = SizedDesignFixture("google-home-wear")
+fun GoogleHomeWearSmallExtentPreview() = ExtentDesignFixture("google-home-wear")
 
 @WearPreviewLargeRoundExtent
 @Composable
-fun GoogleHomeWearLargeExtentPreview() = SizedDesignFixture("google-home-wear")
+fun GoogleHomeWearLargeExtentPreview() = ExtentDesignFixture("google-home-wear")
