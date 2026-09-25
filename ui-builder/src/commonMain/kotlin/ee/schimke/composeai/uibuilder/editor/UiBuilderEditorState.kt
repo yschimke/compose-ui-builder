@@ -762,8 +762,13 @@ class UiBuilderEditorReducer(
   fun previewDocument(
     componentId: String,
     variant: EditorCatalogVariant? = null,
-  ): UiBuilderDocument? =
-    previewDocuments.getOrPut(componentId to variant?.value) {
+  ): UiBuilderDocument? {
+    val key = componentId to variant?.value
+    // `getOrPut` treats a stored null as absent, so a component with no picture — a root-only
+    // scaffold — replayed the whole insert on every recomposition of the list. The miss is cached
+    // as a miss.
+    if (key in previewDocuments) return previewDocuments[key]
+    return previewDocuments.getOrPut(key) {
       val state = initial(previewFrame, selectedNodeId = PREVIEW_FRAME_CELL_ID)
       val target = dropTarget(state, componentId)
       val inserted = target?.let {
@@ -771,6 +776,7 @@ class UiBuilderEditorReducer(
       }
       inserted?.takeIf { it.lastOutcome is CommandOutcome.Accepted }?.document?.centeredInFrame()
     }
+  }
 
   /**
    * The inserted component pushed to the middle of the frame.

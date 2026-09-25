@@ -1124,7 +1124,6 @@ private fun DragLivePreviewGhost(
   modifier: Modifier = Modifier,
 ) {
   val rootId = document.roots.firstOrNull() ?: return
-  val renderer = LocalUiBuilderCanvasRenderer.current
   val density = LocalDensity.current
   val widthDp =
     document.environment["widthDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull()
@@ -1147,30 +1146,16 @@ private fun DragLivePreviewGhost(
       val inspection: (UiBuilderInspectionSnapshot) -> Unit = { snapshot ->
         onContentBounds(snapshot.nodes.firstOrNull { it.nodeId == rootId }?.bounds)
       }
-      if (renderer == null) {
-        UiBuilderSurface(
-          document = document,
-          editorOverlay = false,
-          // The same answer the editing surface gives: a list in the air is drawn unrolled, which
-          // is what will land on the extent — not a clipped scroll nobody is dropping.
-          unrolled = true,
-          onInspectionSnapshot = inspection,
-        )
-      } else {
-        renderer(
-          document.withWearWidgetHostShape(LocalWearWidgetHostShape.current),
-          UiBuilderCanvasSurface(
-            widthDp,
-            heightDp,
-            document.renderDensity(density).density,
-            UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED,
-          ),
-          null,
-          false,
-          {},
-          { snapshots -> inspection(snapshots.editor) },
-        )
-      }
+      // In-process, never the pinned runtime: that is a sandboxed iframe booting its own Wasm,
+      // and a drag would have started one on every pick-up just to draw the thing in the air.
+      UiBuilderSurface(
+        document = document,
+        editorOverlay = false,
+        // The same answer the editing surface gives: a list in the air is drawn unrolled, which
+        // is what will land on the extent — not a clipped scroll nobody is dropping.
+        unrolled = true,
+        onInspectionSnapshot = inspection,
+      )
     }
   }
 }
@@ -1241,7 +1226,6 @@ private fun ConstrainedFramePane(
   renderSessionId: String = FRAME_COMPANION_SESSION,
   wearWidgetHostShape: WearWidgetHostShape? = null,
 ) {
-  val renderer = LocalUiBuilderCanvasRenderer.current
   // **Read in the editor's composition, never inside the scene.** A scene starts with no
   // `CompositionLocal`s, so `provides LocalX.current` written in the content lambda below resolves
   // against the scene's empty context and yields each local's default. That is what silently cost
@@ -1293,52 +1277,41 @@ private fun ConstrainedFramePane(
       // by value because a scene starts with none of them, and the list is the pane's own: a
       // design's components, its assets and the host shape it is drawn in are the same ones the
       // canvas beside it uses.
-      if (renderer != null) {
-        renderer(
-          document.withWearWidgetHostShape(wearWidgetHostShape ?: ambientWidgetHostShape),
-          UiBuilderCanvasSurface(
-            widthDp,
-            heightDp,
-            document.renderDensity(LocalDensity.current).density,
-            UiBuilderRendererSurfaceModeV2.DEVICE,
+      //
+      // In-process, never the catalog's pinned runtime: that is a sandboxed iframe booting its own
+      // Wasm, and this pane is drawn once per device in the preview strip and again as the frame
+      // companion — a whole runtime each. The editing canvas is the one place the runtime draws.
+      DeviceSceneHost(
+        key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
+        contentKey = document,
+        sizePx =
+          IntSize(
+            (widthDp * densityRatio).roundToInt(),
+            (heightDp * densityRatio).roundToInt(),
           ),
-          null,
-          false,
-          {},
-          {},
-        )
-      } else
-        DeviceSceneHost(
-          key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
-          contentKey = document,
-          sizePx =
-            IntSize(
-              (widthDp * densityRatio).roundToInt(),
-              (heightDp * densityRatio).roundToInt(),
-            ),
-          density = LocalDensity.current,
-          content = {
-            CompositionLocalProvider(
-              LocalUiBuilderNativeOnly provides nativeOnlyIds,
-              LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
-              LocalUiBuilderCanvasAdapters provides canvasAdapters,
-              LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
-              LocalUiBuilderFrameGeometry provides frameGeometry,
-              LocalUiBuilderCatalogPlatform provides catalogPlatform,
-              LocalWearWidgetHostShape provides (wearWidgetHostShape ?: ambientWidgetHostShape),
-              LocalRemoteComposeDocuments provides remoteDocuments,
-              LocalUiBuilderAssetBitmaps provides assetBitmaps,
-              LocalUiBuilderAssetBytes provides assetBytes,
-            ) {
-              UiBuilderSurface(
-                document = document,
-                editorOverlay = false,
-                renderSessionId = renderSessionId,
-                unrolled = false,
-              )
-            }
-          },
-        )
+        density = LocalDensity.current,
+        content = {
+          CompositionLocalProvider(
+            LocalUiBuilderNativeOnly provides nativeOnlyIds,
+            LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
+            LocalUiBuilderCanvasAdapters provides canvasAdapters,
+            LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
+            LocalUiBuilderFrameGeometry provides frameGeometry,
+            LocalUiBuilderCatalogPlatform provides catalogPlatform,
+            LocalWearWidgetHostShape provides (wearWidgetHostShape ?: ambientWidgetHostShape),
+            LocalRemoteComposeDocuments provides remoteDocuments,
+            LocalUiBuilderAssetBitmaps provides assetBitmaps,
+            LocalUiBuilderAssetBytes provides assetBytes,
+          ) {
+            UiBuilderSurface(
+              document = document,
+              editorOverlay = false,
+              renderSessionId = renderSessionId,
+              unrolled = false,
+            )
+          }
+        },
+      )
     }
   }
 }

@@ -1859,7 +1859,6 @@ fun UiBuilderEditor(
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
     LocalUiBuilderAssetBitmaps provides { digest -> assetBitmapsByDigest[digest] },
     LocalUiBuilderAssetBytes provides { digest -> assetBytesByDigest[digest] },
-    LocalUiBuilderCanvasRenderer provides canvasRenderer,
     // Here for the same reason as the line above it: the canvas, the extent beside it and every
     // variant pane draw the same widget, and all of them should draw the frame being viewed.
     LocalWearWidgetHostShape provides state.wearWidgetHostShape,

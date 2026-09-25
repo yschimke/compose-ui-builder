@@ -559,6 +559,7 @@ private fun MissingAssetPlaceholder(
   contentDescription: String?,
   modifier: Modifier,
 ) {
+  ReportContentMissing()
   val ground = MaterialTheme.colorScheme.surfaceVariant
   val ink = MaterialTheme.colorScheme.onSurfaceVariant
   val semantics =
@@ -784,6 +785,7 @@ internal fun LottiePlaceholder(node: UiBuilderNode, modifier: Modifier) {
   val outline = MaterialTheme.colorScheme.outline
   val json = node.string("json")
   val url = node.string("url")
+  if (json.isEmpty() && url.isEmpty()) ReportContentMissing()
   Column(
     modifier
       .fillMaxWidth()
