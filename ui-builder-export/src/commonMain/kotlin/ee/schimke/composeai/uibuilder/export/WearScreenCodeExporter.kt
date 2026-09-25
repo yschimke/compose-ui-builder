@@ -1210,10 +1210,19 @@ internal class WearContentEmitter(
       else -> null
     }
 
-  /** A `layout/column` holding only texts: a card's or a button's lines, in order. */
+  /**
+   * A `layout/column` holding only texts: a card's or a button's lines, in order.
+   *
+   * Only a column that says nothing of its own. Recognising the lines writes them into the
+   * component's slots and the column itself into nothing, so a column carrying authored modifiers
+   * keeps its place in the content form rather than having them dropped. The native lane's test tag
+   * is the one thing a recognised column does lose: it has no counterpart in the generated code, so
+   * its lines are what a native overlay selects — as a title card's two lines always have been.
+   */
   private fun textLines(nodeId: String): List<String>? {
     val node = document.nodes[nodeId] ?: return null
     if (node.componentId != "layout/column") return null
+    if (node.modifiers.isNotEmpty()) return null
     val children = node.slots["children"].orEmpty()
     if (children.isEmpty()) return null
     if (children.any { document.nodes[it]?.componentId != WearScreenCodeExporter.TEXT }) return null
@@ -1699,15 +1708,31 @@ internal class WearContentEmitter(
    * from. Non-identifier characters are folded to `_`, which is what makes a node id like
    * `slider-1` legal Kotlin.
    */
+  /**
+   * The state names already declared, so two ids that fold to one name — `volume-level` and
+   * `volume_level` both read `volumeLevelValue` — get distinct locals instead of a redeclaration
+   * that does not compile. The first keeps the plain name; later ones take `2`, `3`, … in the order
+   * their nodes are reached, which is document order and so stable across exports.
+   */
+  private val stateNames = mutableSetOf<String>()
+
+  private fun uniqueStateName(nodeId: String, role: String): String {
+    val base = nodeId.stateIdentifier(role)
+    var name = base
+    var index = 2
+    while (!stateNames.add(name)) name = "$base${index++}"
+    return name
+  }
+
   private fun rememberedFloat(nodeId: String, role: String, initial: Float): String {
-    val name = nodeId.stateIdentifier(role)
+    val name = uniqueStateName(nodeId, role)
     usesRememberState = true
     rememberedState += "var $name by remember { mutableFloatStateOf(${initial.dp()}f) }"
     return name
   }
 
   private fun rememberedBoolean(nodeId: String, role: String, initial: Boolean): String {
-    val name = nodeId.stateIdentifier(role)
+    val name = uniqueStateName(nodeId, role)
     usesRememberState = true
     rememberedState += "var $name by remember { mutableStateOf($initial) }"
     return name

@@ -228,6 +228,81 @@ class WearScreenCodeExporterTest {
     )
   }
 
+  /**
+   * Two ids that fold to one Kotlin name get distinct state, not a redeclaration: `volume-level`
+   * and `volume_level` both read `volumeLevelValue`.
+   */
+  @Test
+  fun `node ids that fold to the same state name get distinct locals`() {
+    val base = wearScreenUiBuilderDocument("activity", pin, environment)
+    val list = base.nodes.getValue("wear-list")
+    fun slider(id: String) =
+      UiBuilderNode(
+        id = id,
+        componentId = "wear-m3/slider",
+        properties = JsonObject(mapOf("value" to number(3f))),
+      )
+    val document =
+      base.copy(
+        nodes =
+          base.nodes +
+            ("wear-list" to
+              list.copy(slots = mapOf("items" to listOf("volume-level", "volume_level")))) +
+            ("volume-level" to slider("volume-level")) +
+            ("volume_level" to slider("volume_level"))
+      )
+
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(document))
+        .source
+
+    assertTrue("var volumeLevelValue by remember" in source, source)
+    assertTrue("var volumeLevelValue2 by remember" in source, source)
+    assertTrue("value = volumeLevelValue2," in source, source)
+  }
+
+  /**
+   * A button's lines are written into its slots only when their column says nothing of its own: a
+   * column with authored modifiers keeps the content form, and its modifiers with it.
+   */
+  @Test
+  fun `a button's column with modifiers is not collapsed into slots`() {
+    fun line(id: String, value: String) =
+      UiBuilderNode(
+        id = id,
+        componentId = WearScreenCodeExporter.TEXT,
+        properties = JsonObject(mapOf("text" to text(value))),
+      )
+    val document =
+      withListItems(
+        UiBuilderNode(
+          id = "row",
+          componentId = WearScreenCodeExporter.BUTTON,
+          slots = mapOf("content" to listOf("lines")),
+        ),
+        UiBuilderNode(
+          id = "lines",
+          componentId = "layout/column",
+          modifiers =
+            kotlinx.serialization.json.JsonArray(
+              listOf(
+                JsonObject(mapOf("type" to JsonPrimitive("padding"), "startDp" to JsonPrimitive(8)))
+              )
+            ),
+          slots = mapOf("children" to listOf("title", "detail")),
+        ),
+        line("title", "Episode 140"),
+        line("detail", "Jun 2, 2020"),
+      )
+
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(document))
+        .source
+
+    assertFalse("secondaryLabel" in source, source)
+    assertTrue("Column(modifier = Modifier.padding(start = 8.dp" in source, source)
+  }
+
   /** The Code pane routes a Wear screen here rather than to the Compose gate's record refusal. */
   @Test
   fun `the editor's code pane generates the screen, not a compose refusal`() {
