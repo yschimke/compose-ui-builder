@@ -26,6 +26,7 @@ import ee.schimke.composeai.uibuilder.protocol.ListDesignsRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
+import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -34,12 +35,15 @@ import java.net.http.WebSocket
 import java.time.Duration
 import java.util.Base64
 import java.util.UUID
+import java.util.concurrent.CompletionException
 import java.util.concurrent.CompletionStage
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -138,6 +142,20 @@ internal constructor(
   override val failure = mutableFailure.asStateFlow()
   private val protocol: UiBuilderProtocolHttpClient
   private var updates: UiBuilderProtocolUpdateClient? = null
+  private val updatesMutex = Mutex()
+  private val reconnector =
+    UpdateStreamReconnector(
+      scope,
+      reopen = {
+        refresh()
+        updatesMutex.withLock { updates?.reconnect() ?: openUpdates() }
+      },
+      onStatus = ::reportConnection,
+      onFailed = { failure ->
+        mutableFailure.value = failure.message ?: "remote UI Builder connection failed"
+      },
+    )
+  @Volatile private var connectionStatus: String? = null
 
   override var catalog: CapabilityCatalog =
     OfflineCatalog.forSystem(catalogSystemId).capabilityCatalog()
@@ -160,7 +178,11 @@ internal constructor(
     scope.launch {
       try {
         refresh()
-        connectUpdates()
+        try {
+          updatesMutex.withLock { openUpdates() }
+        } catch (failure: IOException) {
+          reconnector.onDisconnected()
+        }
         consumeSubmissions()
       } catch (failure: Exception) {
         mutableFailure.value = failure.message ?: "remote UI Builder connection failed"
@@ -185,20 +207,26 @@ internal constructor(
       // Waits for the first snapshot instead of dropping an edit made while the design opens.
       val baseRevision =
         mutableSnapshot.filterNotNull().first().snapshot.state.document.revision.toInt()
-      when (
-        val result =
-          protocol.execute(
-            ApplyOperationRequestV1(
-              submission.toProtocolSubmission(actorId, clientId, baseRevision)
-            )
-          )
-      ) {
+      // Built once, so a retry after a dropped connection resends the identical submission and the
+      // server answers it as an idempotent replay rather than applying it twice.
+      val request =
+        ApplyOperationRequestV1(submission.toProtocolSubmission(actorId, clientId, baseRevision))
+      when (val result = executeRetryingTransport(request)) {
         is UiBuilderHttpResult.Response ->
-          if (result.response is OperationOutcomeResponseV1) refresh()
+          if (result.response is OperationOutcomeResponseV1) refreshOrReconnect()
           else mutableFailure.value = "unexpected response while saving the remote design"
         is UiBuilderHttpResult.ServiceError -> mutableFailure.value = result.error.message
-        is UiBuilderHttpResult.SnapshotRequired -> refresh()
+        is UiBuilderHttpResult.SnapshotRequired -> refreshOrReconnect()
       }
+    }
+  }
+
+  /** A refresh the connection dropped under is left to the reconnect, which refreshes first. */
+  private suspend fun refreshOrReconnect() {
+    try {
+      refresh()
+    } catch (failure: IOException) {
+      reconnector.onDisconnected()
     }
   }
 
@@ -220,33 +248,72 @@ internal constructor(
     }
   }
 
-  private fun connectUpdates() {
+  /**
+   * Sends [request], waiting out a lost connection rather than dropping the edit: submissions are
+   * consumed in order, so one that cannot reach the server holds the ones behind it until it does.
+   */
+  private suspend fun executeRetryingTransport(
+    request: ApplyOperationRequestV1
+  ): UiBuilderHttpResult {
+    var attempt = 0
+    while (true) {
+      try {
+        return protocol.execute(request).also { reportConnection(null) }
+      } catch (failure: IOException) {
+        val wait = reconnectDelay(attempt++)
+        reportConnection(
+          "Could not reach the server · retrying the edit in ${wait.inWholeSeconds.coerceAtLeast(1)}s"
+        )
+        delay(wait)
+      }
+    }
+  }
+
+  /**
+   * Shows a connection problem where the session reports failures, and clears it once resolved —
+   * without clearing a failure something else reported in the meantime.
+   */
+  private fun reportConnection(status: String?) {
+    val previous = connectionStatus
+    connectionStatus = status
+    if (status != null) mutableFailure.value = status
+    else if (previous != null) mutableFailure.compareAndSet(previous, null)
+  }
+
+  /** Opens the update stream from the latest snapshot's cursor. Called holding [updatesMutex]. */
+  private fun openUpdates() {
     val sequence = mutableSnapshot.value?.snapshot?.state?.lastSequence
-    updates =
+    val client =
       UiBuilderProtocolUpdateClient(
-          designId = designId,
-          endpoint = "/api/ui-builder/v1/designs/{designId}/updates",
-          initialAfterSequence = sequence,
-          transport =
-            JavaUiBuilderWebSocketTransport(
-              connection.serverOrigin,
-              connection.token,
-              connection.serverHttp.http,
-            ),
-        ) { update ->
-          when (update) {
-            is UiBuilderClientUpdate.Presence,
-            is UiBuilderClientUpdate.Outcome -> Unit
-            is UiBuilderClientUpdate.Snapshot,
-            is UiBuilderClientUpdate.Delta -> scope.launch { runCatching { refresh() } }
-            is UiBuilderClientUpdate.SnapshotRequired ->
-              scope.launch {
-                runCatching { refresh() }
-                updates?.reconnect()
+        designId = designId,
+        endpoint = "/api/ui-builder/v1/designs/{designId}/updates",
+        initialAfterSequence = sequence,
+        transport =
+          JavaUiBuilderWebSocketTransport(
+            connection.serverOrigin,
+            connection.token,
+            connection.serverHttp.http,
+            onClosed = reconnector::onDisconnected,
+          ),
+      ) { update ->
+        when (update) {
+          is UiBuilderClientUpdate.Presence,
+          is UiBuilderClientUpdate.Outcome -> Unit
+          is UiBuilderClientUpdate.Snapshot,
+          is UiBuilderClientUpdate.Delta -> scope.launch { runCatching { refresh() } }
+          is UiBuilderClientUpdate.SnapshotRequired ->
+            scope.launch {
+              runCatching { refresh() }
+              try {
+                updatesMutex.withLock { updates?.reconnect() }
+              } catch (failure: IOException) {
+                reconnector.onDisconnected()
               }
-          }
+            }
         }
-        .also(UiBuilderProtocolUpdateClient::connect)
+      }
+    updates = client
+    client.connect()
   }
 
   override suspend fun renderNative(
@@ -351,11 +418,18 @@ internal class RemoteServerHttp(val origin: URI) {
     }
 }
 
+/**
+ * A `java.net.http` WebSocket transport. [onClosed] reports the current socket closing or failing,
+ * so the session can reconnect; a socket this transport has since replaced reports nothing.
+ */
 private class JavaUiBuilderWebSocketTransport(
   private val origin: URI,
   private val token: String,
   private val http: HttpClient,
+  private val onClosed: () -> Unit,
 ) : UiBuilderWebSocketTransport {
+  private val generation = AtomicInteger()
+
   override fun open(
     request: UiBuilderWebSocketRequest,
     onTextMessage: (String) -> Unit,
@@ -373,19 +447,36 @@ private class JavaUiBuilderWebSocketTransport(
         httpUri.query,
         null,
       )
+    val opened = generation.incrementAndGet()
     val socket =
-      http
-        .newWebSocketBuilder()
-        .header("Authorization", "Bearer $token")
-        .header("X-Compose-Preview-Token", token)
-        .buildAsync(webSocketUri, TextWebSocketListener(onTextMessage))
-        .join()
-    return UiBuilderClientConnection { socket.sendClose(WebSocket.NORMAL_CLOSURE, "closed") }
+      try {
+        http
+          .newWebSocketBuilder()
+          .header("Authorization", "Bearer $token")
+          .header("X-Compose-Preview-Token", token)
+          .buildAsync(
+            webSocketUri,
+            TextWebSocketListener(onTextMessage) { if (generation.get() == opened) onClosed() },
+          )
+          .join()
+      } catch (failure: CompletionException) {
+        throw failure.cause as? IOException ?: IOException(failure.cause ?: failure)
+      }
+    return UiBuilderClientConnection {
+      // Retire this socket first, so the close it provokes is not mistaken for a dropped one.
+      generation.compareAndSet(opened, opened + 1)
+      socket.sendClose(WebSocket.NORMAL_CLOSURE, "closed").exceptionally {
+        socket.abort()
+        socket
+      }
+    }
   }
 }
 
-private class TextWebSocketListener(private val onTextMessage: (String) -> Unit) :
-  WebSocket.Listener {
+private class TextWebSocketListener(
+  private val onTextMessage: (String) -> Unit,
+  private val onClosed: () -> Unit,
+) : WebSocket.Listener {
   private val text = StringBuilder()
 
   override fun onOpen(webSocket: WebSocket) {
@@ -404,6 +495,15 @@ private class TextWebSocketListener(private val onTextMessage: (String) -> Unit)
     }
     webSocket.request(1)
     return null
+  }
+
+  override fun onClose(webSocket: WebSocket, statusCode: Int, reason: String): CompletionStage<*>? {
+    onClosed()
+    return null
+  }
+
+  override fun onError(webSocket: WebSocket, error: Throwable) {
+    onClosed()
   }
 }
 
