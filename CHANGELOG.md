@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.50.0](https://github.com/yschimke/compose-ui-builder/compare/v3.49.0...v3.50.0) (2026-09-25)
+
+
+### Features
+
+* **remote-m3:** offer the core Remote Compose layouts (fit box, flow row, collapsibles) and sharedElement ([#256](https://github.com/yschimke/compose-ui-builder/issues/256)) ([2c895a9](https://github.com/yschimke/compose-ui-builder/commit/2c895a92c6365fc9c04597562a4ce30286c347ee))
+* **ui-builder:** export all five Google samples, idiomatically, and fit them to a phone ([#239](https://github.com/yschimke/compose-ui-builder/issues/239)) ([a6fc556](https://github.com/yschimke/compose-ui-builder/commit/a6fc55668da845e92b532a39901b38d470f10c13))
+* **ui-builder:** host bridge, chrome and theme, so an IDE webview can edit a design it owns ([#249](https://github.com/yschimke/compose-ui-builder/issues/249)) ([7a5cff8](https://github.com/yschimke/compose-ui-builder/commit/7a5cff884d42fbde560815cd95299351b2cca32c))
+* **ui-builder:** navigation suite and scrollable tab row, with the Google designs on them ([#241](https://github.com/yschimke/compose-ui-builder/issues/241)) ([3ab1cf8](https://github.com/yschimke/compose-ui-builder/commit/3ab1cf8646d01dfbf754a5c53970429dee1f7383))
+* **ui-builder:** upstream Wear sample screens as designs, with a guidance critique ([#254](https://github.com/yschimke/compose-ui-builder/issues/254)) ([ff19a0e](https://github.com/yschimke/compose-ui-builder/commit/ff19a0ec8d6a1492c35dc77c5226869986108050))
+
+
+### Bug Fixes
+
+* **ui-builder-export:** keep the native lane's screen name, and use the lists guide's modifier order ([#258](https://github.com/yschimke/compose-ui-builder/issues/258)) ([3e6f2c3](https://github.com/yschimke/compose-ui-builder/commit/3e6f2c38415dbaedacfe96bf227d61882be6a240))
+* **ui-builder-export:** write Wear screens the way the Wear Material 3 guidance does ([#257](https://github.com/yschimke/compose-ui-builder/issues/257)) ([4837143](https://github.com/yschimke/compose-ui-builder/commit/4837143158a713782dd28cebb7d4b80e05977462))
+
 ## [3.49.0](https://github.com/yschimke/compose-ui-builder/compare/v3.48.0...v3.49.0) (2026-09-25)
 
 
