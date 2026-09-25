@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Compose UI Builder Preview</title>
     <!--
+      The import map comes before every module preload below, not after them. Chrome fixes a
+      page's import map the moment it starts resolving a module's imports, and a modulepreload
+      does that as soon as its bytes arrive. On a cold load they are still on the network when the
+      parser reaches the map, so the order never showed; on a reload they come straight from the
+      immutable cache, `uiBuilder.mjs` is resolved first, and `@js-joda/core` fails to resolve —
+      the editor never starts. `ShellImportMapOrderTest` holds this.
+    -->
+    <script type="importmap">
+      { "imports": { "@js-joda/core": "./js-joda.esm.js" } }
+    </script>
+    <!--
       Start the two big downloads now rather than when the module graph reaches them: without these,
       `uiBuilder.wasm` is not requested until `uiBuilder.mjs` and `uiBuilder.import-object.mjs`
       (and everything that imports) have downloaded and parsed one after another. `crossorigin`
@@ -69,9 +80,6 @@
         #ui-builder-boot .boot-bar { animation: none; }
       }
     </style>
-    <script type="importmap">
-      { "imports": { "@js-joda/core": "./js-joda.esm.js" } }
-    </script>
   </head>
   <body>
     <div id="composeApp"></div>
