@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.editor.EditorCatalogItem
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorThemeSettings
+import ee.schimke.composeai.uibuilder.editor.TrackEditorOverlay
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import kotlinx.coroutines.launch
 
@@ -680,6 +681,7 @@ private fun ReferenceComponentMenu(
     ) {
       Text("Component…", maxLines = 1)
     }
+    TrackEditorOverlay(open)
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
       catalogItems.forEach { item ->
         DropdownMenuItem(

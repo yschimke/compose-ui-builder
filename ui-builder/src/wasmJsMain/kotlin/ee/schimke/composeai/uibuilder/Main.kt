@@ -39,6 +39,7 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderHttpResult
 import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolHttpClient
 import ee.schimke.composeai.uibuilder.client.canonicalDocumentHash
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
+import ee.schimke.composeai.uibuilder.editor.EditorOverlays
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasInspection
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasSurface
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
@@ -245,6 +246,9 @@ internal fun CatalogRuntimeCanvas(
   // Compose's window coordinates are canvas pixels and the host `div` is placed in CSS pixels. On
   // a display whose `devicePixelRatio` is not 1 the two differ by exactly this density.
   val pixelsPerCssPixel = LocalDensity.current.density
+  // Read in composition so opening or closing an editor menu recomposes this and re-stacks the
+  // surface: a device frame sits above the canvas to take the pointer, which would bury the menu.
+  val editorOverlayOpen = EditorOverlays.anyOpen
   LaunchedEffect(surfaceId, runtimeId, document.revision) {
     lastInspection = ""
     while (lastInspection.isEmpty()) {
@@ -293,6 +297,7 @@ internal fun CatalogRuntimeCanvas(
       mode = surface.mode.name.lowercase().replace('_', '-'),
       selectedNodeId = selectedNodeId.orEmpty(),
       selectionEnabled = selectionEnabled,
+      editorOverlayOpen = editorOverlayOpen,
     )
   }
   Box(
@@ -457,11 +462,19 @@ private fun updateCatalogRuntimeSurface(
   mode: String,
   selectedNodeId: String,
   selectionEnabled: Boolean,
+  editorOverlayOpen: Boolean,
 ): Unit =
   js(
     """(function () {
       const host = document.getElementById(surfaceId);
       if (!host) return;
+      // A device frame is interactive, so it sits above the canvas (z 20) and takes the pointer —
+      // except while an editor menu or dialog is open, which Compose draws inside that canvas.
+      // Then it drops beneath (z 0, no pointer): the hole the canvas punched keeps it visible, and
+      // the menu is painted over it. Applied before the early returns so a re-stack alone works.
+      const raised = mode === 'device' && !editorOverlayOpen;
+      host.style.pointerEvents = raised ? 'auto' : 'none';
+      host.style.zIndex = raised ? '20' : '0';
       if (!runtimeId || !/^[A-Za-z0-9._-]+$/.test(runtimeId) ||
           runtimeId === 'latest' || runtimeId === 'current') {
         host.textContent = 'This design has no compatible pinned catalog runtime.';
@@ -471,8 +484,6 @@ private fun updateCatalogRuntimeSurface(
         documentJson, widthDp, heightDp, density, mode, selectedNodeId, selectionEnabled
       };
       const compositionKey = documentJson + '|' + widthDp + '|' + heightDp + '|' + density + '|' + mode;
-      host.style.pointerEvents = mode === 'device' ? 'auto' : 'none';
-      host.style.zIndex = mode === 'device' ? '20' : '0';
       let controller = host.__uiBuilderCatalogRuntime;
       if (controller && !controller.disposed && controller.runtimeId === runtimeId &&
           controller.compositionKey === compositionKey) {

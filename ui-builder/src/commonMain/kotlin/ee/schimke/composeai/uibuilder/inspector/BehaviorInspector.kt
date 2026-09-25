@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorStateAction
+import ee.schimke.composeai.uibuilder.editor.TrackEditorOverlay
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_STATE_NAME
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
@@ -323,6 +324,7 @@ internal fun EventActionsInspector(
             else variable.ifBlank { "Choose state" }
           )
         }
+        TrackEditorOverlay(showOperands)
         DropdownMenu(showOperands, { showOperands = false }) {
           choices.forEach { (name, label) ->
             DropdownMenuItem(
@@ -421,6 +423,7 @@ internal fun StateSelectionInspector(
     var choosing by remember { mutableStateOf(false) }
     Box {
       OutlinedButton(onClick = { choosing = true }) { Text(variable.ifEmpty { "Choose state" }) }
+      TrackEditorOverlay(choosing)
       DropdownMenu(expanded = choosing, onDismissRequest = { choosing = false }) {
         document.stateVariables.keys.forEach { name ->
           DropdownMenuItem(

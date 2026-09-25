@@ -339,6 +339,7 @@ internal fun NewDesignDialog(
       form.declared,
     )
   }
+  TrackEditorOverlay(true)
   AlertDialog(
     onDismissRequest = { onDismiss?.invoke() },
     title = { Text("Create a new design") },
@@ -868,6 +869,7 @@ private fun FolderMoveMenu(
     ) {
       Text("Move")
     }
+    TrackEditorOverlay(expanded)
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
       DropdownMenuItem(
         text = { Text("No folder") },

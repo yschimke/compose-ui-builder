@@ -1454,6 +1454,7 @@ internal fun ComponentPacksDialog(
   onToggle: (String) -> Unit,
   onDismiss: () -> Unit,
 ) {
+  TrackEditorOverlay(true)
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text("Component packs") },
@@ -1515,6 +1516,7 @@ internal fun ComponentPacksPanel(
 
 @Composable
 private fun EditorShortcutsDialog(onDismiss: () -> Unit) {
+  TrackEditorOverlay(true)
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text("Keyboard and pointer") },
