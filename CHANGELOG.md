@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.56.0](https://github.com/yschimke/compose-ui-builder/compare/v3.55.0...v3.56.0) (2026-09-25)
+
+
+### Features
+
+* **ui-builder:** visual colour and enum property editors; replay a restore only for its own actor and revision ([#284](https://github.com/yschimke/compose-ui-builder/issues/284)) ([77518e8](https://github.com/yschimke/compose-ui-builder/commit/77518e81bd2f6e773d5be47cd61382bb3c698fcf))
+
+
+### Bug Fixes
+
+* **ui-builder:** an edit re-renders the live catalog runtime frame instead of rebooting it ([#283](https://github.com/yschimke/compose-ui-builder/issues/283)) ([2b9356b](https://github.com/yschimke/compose-ui-builder/commit/2b9356b897966c733d029b90aaff9f717b7447f5))
+
 ## [3.55.0](https://github.com/yschimke/compose-ui-builder/compare/v3.54.0...v3.55.0) (2026-09-25)
 
 
