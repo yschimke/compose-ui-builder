@@ -522,6 +522,7 @@ private fun InspectorBody(
                 TextButton(onClick = { addModifier = true }, enabled = available.isNotEmpty()) {
                   Text("Add modifier")
                 }
+                TrackEditorOverlay(addModifier)
                 DropdownMenu(expanded = addModifier, onDismissRequest = { addModifier = false }) {
                   available.forEach { item ->
                     DropdownMenuItem(
@@ -1155,6 +1156,7 @@ private fun ProblemGroupRow(
         if (problem.replacementProperties.isNotEmpty()) {
           Box {
             TextButton(onClick = { replacementsOpen = true }) { Text("Map to…") }
+            TrackEditorOverlay(replacementsOpen)
             DropdownMenu(
               expanded = replacementsOpen,
               onDismissRequest = { replacementsOpen = false },
@@ -1819,6 +1821,7 @@ internal fun GoogleIconPropertyControl(
     current?.let { Icon(it.imageVector, null, Modifier.size(20.dp)) }
     Text(current?.label ?: "Choose Google icon", Modifier.padding(start = 8.dp))
   }
+  TrackEditorOverlay(expanded)
   DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
     Text(
       "Google Material Icons",

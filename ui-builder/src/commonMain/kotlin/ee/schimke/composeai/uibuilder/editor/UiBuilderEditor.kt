@@ -509,6 +509,12 @@ fun UiBuilderEditor(
    */
   onBrowseDesigns: (() -> Unit)? = null,
   /**
+   * Starts a new design of the reader's own from this one, as it is now, and opens it — or null
+   * where the host cannot. The way somebody who may only look at a design (a public one, or one
+   * shared read-only) takes it somewhere they can change it, and a quick branch for anyone else.
+   */
+  onForkDesign: (() -> Unit)? = null,
+  /**
    * Copies this design into the browser's own storage and opens it there, or null where it cannot.
    *
    * Null in every mode but a live server session: a design already kept in this browser has nowhere
@@ -1949,6 +1955,7 @@ fun UiBuilderEditor(
                     { showNewDesign = true }
                   } else null,
                 onBrowseDesigns = onBrowseDesigns,
+                onForkDesign = onForkDesign,
                 onReconnect = onReconnect,
                 onHelp = onHelp,
                 onCopyAiPrompt = onCopyAiPrompt,
@@ -1970,6 +1977,7 @@ fun UiBuilderEditor(
                     { showNewDesign = true }
                   } else null,
                 onBrowseDesigns = onBrowseDesigns,
+                onForkDesign = onForkDesign,
                 onReconnect = onReconnect,
                 onHelp = onHelp,
                 onCopyAiPrompt = onCopyAiPrompt,

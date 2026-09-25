@@ -175,7 +175,43 @@ public sealed interface UiBuilderServiceRequest {
    * envelope; see [UiBuilderProtocolMapper.toProtocolRequest].
    */
   public data class DeleteDesign(val designId: String) : UiBuilderServiceRequest
+
+  /**
+   * The revisions of a design this service still retains a whole document for, newest first — what
+   * a history view can show, open and restore.
+   *
+   * Needs read. Has no `ui-builder-protocol` request shape; see [RenameDesign].
+   */
+  public data class ListRevisions(val designId: String) : UiBuilderServiceRequest
+
+  /**
+   * Make a retained [revision]'s document the design's current one, as a new revision.
+   *
+   * Forward, never a rewind: everything after [revision] stays in the history and the restore is
+   * itself one operation, so restoring is undone by restoring again. It commits through the same
+   * whole-document replacement a catalog upgrade uses — hash-bound to the document it replaces, so
+   * a restore that raced another edit is refused rather than silently discarding it — and every
+   * open editor resyncs from a snapshot, as it does for an upgrade. Needs write, and [baseRevision]
+   * must be the current revision.
+   *
+   * Has no `ui-builder-protocol` request shape; see [RenameDesign].
+   */
+  public data class RestoreRevision(
+    val designId: String,
+    val revision: Long,
+    val baseRevision: Long,
+    val operationId: String,
+  ) : UiBuilderServiceRequest
 }
+
+/** One retained revision, as [UiBuilderServiceRequest.ListRevisions] reports it. */
+public data class UiBuilderRevisionSummary(
+  val revision: Long,
+  val sequence: Long,
+  val updatedAtEpochMillis: Long?,
+  /** Who committed the operation that produced this revision; null for the design's creation. */
+  val actorId: String?,
+)
 
 /**
  * An admitted collaboration submission. Actor identity is intentionally absent: the service must
@@ -278,6 +314,13 @@ public sealed interface UiBuilderServiceResponse {
 
   /** The design is gone, durably. */
   public data class DesignDeleted(val designId: String) : UiBuilderServiceResponse
+
+  /** [UiBuilderServiceRequest.ListRevisions]'s answer, newest first. */
+  public data class Revisions(
+    val designId: String,
+    val currentRevision: Long,
+    val revisions: List<UiBuilderRevisionSummary>,
+  ) : UiBuilderServiceResponse
 
   public data class Error(val error: UiBuilderServiceError) : UiBuilderServiceResponse
 }

@@ -5,6 +5,7 @@
 
 package ee.schimke.composeai.uibuilder.editor
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -48,8 +51,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
@@ -339,6 +344,7 @@ internal fun NewDesignDialog(
       form.declared,
     )
   }
+  TrackEditorOverlay(true)
   AlertDialog(
     onDismissRequest = { onDismiss?.invoke() },
     title = { Text("Create a new design") },
@@ -555,7 +561,12 @@ data class UiBuilderHomeDesign(
   val folder: String? = null,
   /** Already-formatted, e.g. `updated 3 days ago`. Empty renders nothing. */
   val updatedLabel: String = "",
+  /** The revision the listing saw, so a thumbnail can be asked for at it; null draws none. */
+  val revision: Long? = null,
 )
+
+/** One release's notes for the home screen's **What's new** panel, newest first. */
+data class UiBuilderReleaseNote(val version: String, val date: String, val items: List<String>)
 
 /**
  * The builder's **home page**: what `/ui-builder/` draws when no design is named.
@@ -589,6 +600,10 @@ fun UiBuilderNewDesignScreen(
   onBrowseDesigns: (() -> Unit)? = null,
   /** Moves a design into a personal folder. A null folder returns it to the top level. */
   onMoveDesign: ((designId: String, folder: String?) -> Unit)? = null,
+  /** A design's picture at a revision, as the designs page shows it; null draws no pictures. */
+  loadThumbnail: (suspend (designId: String, revision: Long) -> ImageBitmap?)? = null,
+  /** What changed in the builder lately; empty hides the panel. */
+  releaseNotes: List<UiBuilderReleaseNote> = EMBEDDED_RELEASE_NOTES,
   onCreate:
     (
       catalogSystemId: String,
@@ -626,6 +641,9 @@ fun UiBuilderNewDesignScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
             }
+            // The one-press way in, first: most people arriving here want a blank screen or the
+            // smallest sample, and the full form below is for choosing a kind and a name.
+            QuickStartStrip(form, onCreate)
             val newPanel: @Composable (Modifier) -> Unit = { modifier ->
               NewDesignHomePanel(modifier, form, onCreate)
             }
@@ -637,17 +655,28 @@ fun UiBuilderNewDesignScreen(
                 onCopyDesign = onCopyDesign,
                 onBrowseDesigns = onBrowseDesigns,
                 onMoveDesign = onMoveDesign,
+                loadThumbnail = loadThumbnail,
               )
             }
+            val notesPanel: @Composable (Modifier) -> Unit = { modifier ->
+              if (releaseNotes.isNotEmpty()) WhatsNewPanel(modifier, releaseNotes)
+            }
             val showDesigns = designs.isNotEmpty() || onBrowseDesigns != null
-            if (sideBySide && showDesigns) {
+            if (sideBySide) {
               Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                newPanel(Modifier.weight(1f))
-                designsPanel(Modifier.weight(1f))
+                Column(
+                  Modifier.weight(1f),
+                  verticalArrangement = Arrangement.spacedBy(20.dp),
+                ) {
+                  newPanel(Modifier.fillMaxWidth())
+                  notesPanel(Modifier.fillMaxWidth())
+                }
+                if (showDesigns) designsPanel(Modifier.weight(1.2f))
               }
             } else {
               newPanel(Modifier.fillMaxWidth())
               if (showDesigns) designsPanel(Modifier.fillMaxWidth())
+              notesPanel(Modifier.fillMaxWidth())
             }
           }
         }
@@ -745,6 +774,7 @@ private fun ExistingDesignsPanel(
   onCopyDesign: ((designId: String) -> Unit)?,
   onBrowseDesigns: (() -> Unit)?,
   onMoveDesign: ((designId: String, folder: String?) -> Unit)?,
+  loadThumbnail: (suspend (designId: String, revision: Long) -> ImageBitmap?)? = null,
 ) {
   Surface(
     modifier = modifier,
@@ -756,9 +786,9 @@ private fun ExistingDesignsPanel(
       modifier = Modifier.padding(20.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-      Text("Open a file", style = MaterialTheme.typography.titleMedium)
+      Text("Recent designs", style = MaterialTheme.typography.titleMedium)
       Text(
-        "Open one of your designs or a design shared with you.",
+        "The designs you or others changed most recently.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
@@ -785,50 +815,53 @@ private fun ExistingDesignsPanel(
             )
           }
           group.forEach { design ->
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-              Text(
-                design.title.ifBlank { design.designId },
-                style = MaterialTheme.typography.bodyLarge,
-              )
-              Text(
-                listOf(design.designId, design.catalogSystemId, design.updatedLabel)
-                  .filter { it.isNotBlank() }
-                  .joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-              if (design.folder != null && !grouped) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+              if (loadThumbnail != null) DesignThumbnail(design, loadThumbnail)
+              Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                  "Folder · ${design.folder}",
+                  design.title.ifBlank { design.designId },
+                  style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                  listOf(design.designId, design.catalogSystemId, design.updatedLabel)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" · "),
                   style = MaterialTheme.typography.bodySmall,
                   color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-              }
-              Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (onOpenDesign != null) {
-                  TextButton(
-                    onClick = { onOpenDesign(design.designId) },
-                    modifier =
-                      Modifier.semantics { contentDescription = "Open ${design.designId}" },
-                  ) {
-                    Text("Open")
-                  }
-                }
-                if (onCopyDesign != null) {
-                  TextButton(
-                    onClick = { onCopyDesign(design.designId) },
-                    modifier =
-                      Modifier.semantics { contentDescription = "Start from ${design.designId}" },
-                  ) {
-                    Text("Start from this")
-                  }
-                }
-                if (onMoveDesign != null) {
-                  FolderMoveMenu(
-                    design = design,
-                    folders = folders,
-                    onMove = onMoveDesign,
+                if (design.folder != null && !grouped) {
+                  Text(
+                    "Folder · ${design.folder}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                   )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                  if (onOpenDesign != null) {
+                    TextButton(
+                      onClick = { onOpenDesign(design.designId) },
+                      modifier =
+                        Modifier.semantics { contentDescription = "Open ${design.designId}" },
+                    ) {
+                      Text("Open")
+                    }
+                  }
+                  if (onCopyDesign != null) {
+                    TextButton(
+                      onClick = { onCopyDesign(design.designId) },
+                      modifier =
+                        Modifier.semantics { contentDescription = "Start from ${design.designId}" },
+                    ) {
+                      Text("Start from this")
+                    }
+                  }
+                  if (onMoveDesign != null) {
+                    FolderMoveMenu(
+                      design = design,
+                      folders = folders,
+                      onMove = onMoveDesign,
+                    )
+                  }
                 }
               }
             }
@@ -852,6 +885,112 @@ private fun ExistingDesignsPanel(
   }
 }
 
+/**
+ * One press to a new design: a button per starting point of the kind already selected — for an
+ * Android app, the blank screen and the hello sample — named with the id the form generated.
+ */
+@Composable
+private fun QuickStartStrip(
+  form: NewDesignFormState,
+  onCreate:
+    (
+      catalogSystemId: String,
+      designId: String,
+      templateId: String,
+      state: List<NewDesignState>,
+    ) -> Unit,
+) {
+  Surface(
+    shape = RoundedCornerShape(16.dp),
+    color = MaterialTheme.colorScheme.surface,
+    tonalElevation = 2.dp,
+  ) {
+    FlowRow(
+      modifier = Modifier.fillMaxWidth().padding(16.dp),
+      horizontalArrangement = Arrangement.spacedBy(12.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+      itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+      Text(
+        "New ${form.selectedCatalog.label.lowercase()}",
+        style = MaterialTheme.typography.titleSmall,
+      )
+      form.selectedCatalog.templates.take(QUICK_START_LIMIT).forEachIndexed { index, template ->
+        val create = {
+          onCreate(form.selectedCatalog.systemId, form.designId, template.id, emptyList())
+        }
+        val description = Modifier.semantics { contentDescription = "New from ${template.id}" }
+        if (index == 0) {
+          Button(onClick = create, enabled = form.designIdValid, modifier = description) {
+            Text(template.label)
+          }
+        } else {
+          FilledTonalButton(
+            onClick = create,
+            enabled = form.designIdValid,
+            modifier = description,
+          ) {
+            Text(template.label)
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * The design as it looks now, from the same cached thumbnail its card on the designs page shows.
+ */
+@Composable
+private fun DesignThumbnail(
+  design: UiBuilderHomeDesign,
+  loadThumbnail: suspend (designId: String, revision: Long) -> ImageBitmap?,
+) {
+  val revision = design.revision
+  var picture by remember(design.designId, revision) { mutableStateOf<ImageBitmap?>(null) }
+  LaunchedEffect(design.designId, revision) {
+    if (revision != null)
+      picture = runCatching { loadThumbnail(design.designId, revision) }.getOrNull()
+  }
+  Box(
+    Modifier.size(width = 64.dp, height = 96.dp)
+      .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
+    contentAlignment = Alignment.Center,
+  ) {
+    picture?.let { Image(it, contentDescription = null, contentScale = ContentScale.Fit) }
+  }
+}
+
+/**
+ * **What's new**: the builder's latest release notes, embedded from its changelog at build time.
+ */
+@Composable
+private fun WhatsNewPanel(modifier: Modifier, notes: List<UiBuilderReleaseNote>) {
+  Surface(
+    modifier = modifier,
+    shape = RoundedCornerShape(16.dp),
+    color = MaterialTheme.colorScheme.surface,
+    tonalElevation = 2.dp,
+  ) {
+    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      Text("What's new", style = MaterialTheme.typography.titleMedium)
+      notes.forEach { note ->
+        Text(
+          "${note.version} · ${note.date}",
+          style = MaterialTheme.typography.labelLarge,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        note.items.forEach { item ->
+          Text(
+            "• ${item.replaceFirstChar(Char::uppercaseChar)}",
+            style = MaterialTheme.typography.bodySmall,
+          )
+        }
+      }
+    }
+  }
+}
+
 /** Lets a person keep designs together without making the first folder mandatory. */
 @Composable
 private fun FolderMoveMenu(
@@ -868,6 +1007,7 @@ private fun FolderMoveMenu(
     ) {
       Text("Move")
     }
+    TrackEditorOverlay(expanded)
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
       DropdownMenuItem(
         text = { Text("No folder") },
@@ -915,6 +1055,9 @@ private fun FolderMoveMenu(
 
 /** How many designs the home screen lists before deferring to the full index. */
 private const val HOME_DESIGN_LIMIT = 6
+
+/** Starting points offered as buttons above the form; the rest are one step further in. */
+private const val QUICK_START_LIMIT = 3
 
 /**
  * [designs] under their folders: folders in name order, ignoring case, and the unfiled last. Within

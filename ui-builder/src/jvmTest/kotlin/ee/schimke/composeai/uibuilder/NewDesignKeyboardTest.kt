@@ -4,6 +4,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
@@ -51,7 +52,7 @@ class NewDesignKeyboardTest {
       onNodeWithContentDescription("State name").performTextReplacement("expanded")
       onNodeWithContentDescription("State initial value").performTextReplacement("true")
       onNodeWithContentDescription("State initial value").performImeAction()
-      onNodeWithContentDescription("Create design").performClick()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
 
       assertEquals(
         listOf(NewDesignState("expanded", NewDesignStateType.Flag, JsonPrimitive(true))),
