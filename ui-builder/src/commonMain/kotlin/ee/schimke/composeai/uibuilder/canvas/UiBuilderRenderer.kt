@@ -3174,3 +3174,9 @@ internal const val DEFAULT_SELECTED_DATE = "2024-05-16"
 internal const val DEFAULT_PICKED_HOUR = 10
 
 internal const val DEFAULT_PICKED_MINUTE = 30
+
+/**
+ * This node's `weight` modifier, for a container whose scope applies it — `ButtonGroupScope.weight`
+ * in the Wear add-on, the way `Row` and `Column` here read it for theirs.
+ */
+@UiBuilderCanvasAddonApi fun UiBuilderNode.layoutWeightValue(): Float? = layoutWeight()?.weight

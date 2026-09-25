@@ -59,18 +59,52 @@ class WearScreenCodeExporterTest {
     assertTrue("transforming-lazy-column" !in source, source)
   }
 
-  /** The status strip is `AppScaffold`'s, not `ScreenScaffold`'s, and it is frozen. */
+  /**
+   * The status strip is `AppScaffold`'s, and `AppScaffold` is the app root's rather than the
+   * screen's: the previews wrap the screen in it, frozen at the design's time, and the screen
+   * itself is a `ScreenScaffold` an app can drop into its own navigation.
+   */
   @Test
-  fun `a declared timeText generates the AppScaffold that owns it`() {
-    val source =
+  fun `a declared timeText is the previews' AppScaffold, not the screen's`() {
+    val emitted =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
-          WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment))
-        )
-        .source
+        WearScreenCodeExporter.export(wearScreenUiBuilderDocument("activity", pin, environment))
+      )
+    val source = emitted.source
+    val appScaffold =
+      "AppScaffold(timeText = { TimeText { timeTextCurvedText(\"10:10\") } }) { ActivityScreen() }"
 
+    assertEquals("ActivityScreen", emitted.screenName)
+    val screen = source.substringAfter("fun ActivityScreen() {").substringBefore("\n}\n")
+    assertFalse("AppScaffold" in screen, screen)
+    assertFalse("TimeText" in screen, screen)
+    assertTrue("fun ActivityScreenPreview() {\n    $appScaffold\n}" in source, source)
+    assertTrue("fun ActivityScreenLongPreview() {\n    $appScaffold\n}" in source, source)
+  }
+
+  /**
+   * The native lane renders without the export's previews, so it is handed a wrapper that puts the
+   * screen in its `AppScaffold`: a native render without the status strip would be a picture of a
+   * screen no watch shows.
+   */
+  @Test
+  fun `the native lane is given the screen inside its AppScaffold`() {
+    val emitted =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(
+        WearScreenCodeExporter.export(
+          wearScreenUiBuilderDocument("activity", pin, environment),
+          tagNodes = true,
+        )
+      )
+
+    // The name the lane imports is the design's in both modes; there it is the wrapper.
+    assertEquals("ActivityScreen", emitted.screenName)
+    assertTrue("fun ActivityScreenContent() {" in emitted.source, emitted.source)
     assertTrue(
-      "AppScaffold(timeText = { TimeText { timeTextCurvedText(\"10:10\") } })" in source,
-      source,
+      "fun ActivityScreen() {\n" +
+        "    AppScaffold(timeText = { TimeText { timeTextCurvedText(\"10:10\") } }) { ActivityScreenContent() }\n" +
+        "}" in emitted.source,
+      emitted.source,
     )
   }
 
@@ -84,7 +118,7 @@ class WearScreenCodeExporterTest {
         .source
 
     assertTrue("@WearPreviewDevices" in source, source)
-    assertTrue("fun ActivityScreenPreview() = ActivityScreen()" in source, source)
+    assertTrue("fun ActivityScreenPreview() {" in source, source)
   }
 
   /**
@@ -196,6 +230,81 @@ class WearScreenCodeExporterTest {
     )
   }
 
+  /**
+   * Two ids that fold to one Kotlin name get distinct state, not a redeclaration: `volume-level`
+   * and `volume_level` both read `volumeLevelValue`.
+   */
+  @Test
+  fun `node ids that fold to the same state name get distinct locals`() {
+    val base = wearScreenUiBuilderDocument("activity", pin, environment)
+    val list = base.nodes.getValue("wear-list")
+    fun slider(id: String) =
+      UiBuilderNode(
+        id = id,
+        componentId = "wear-m3/slider",
+        properties = JsonObject(mapOf("value" to number(3f))),
+      )
+    val document =
+      base.copy(
+        nodes =
+          base.nodes +
+            ("wear-list" to
+              list.copy(slots = mapOf("items" to listOf("volume-level", "volume_level")))) +
+            ("volume-level" to slider("volume-level")) +
+            ("volume_level" to slider("volume_level"))
+      )
+
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(document))
+        .source
+
+    assertTrue("var volumeLevelValue by remember" in source, source)
+    assertTrue("var volumeLevelValue2 by remember" in source, source)
+    assertTrue("value = volumeLevelValue2," in source, source)
+  }
+
+  /**
+   * A button's lines are written into its slots only when their column says nothing of its own: a
+   * column with authored modifiers keeps the content form, and its modifiers with it.
+   */
+  @Test
+  fun `a button's column with modifiers is not collapsed into slots`() {
+    fun line(id: String, value: String) =
+      UiBuilderNode(
+        id = id,
+        componentId = WearScreenCodeExporter.TEXT,
+        properties = JsonObject(mapOf("text" to text(value))),
+      )
+    val document =
+      withListItems(
+        UiBuilderNode(
+          id = "row",
+          componentId = WearScreenCodeExporter.BUTTON,
+          slots = mapOf("content" to listOf("lines")),
+        ),
+        UiBuilderNode(
+          id = "lines",
+          componentId = "layout/column",
+          modifiers =
+            kotlinx.serialization.json.JsonArray(
+              listOf(
+                JsonObject(mapOf("type" to JsonPrimitive("padding"), "startDp" to JsonPrimitive(8)))
+              )
+            ),
+          slots = mapOf("children" to listOf("title", "detail")),
+        ),
+        line("title", "Episode 140"),
+        line("detail", "Jun 2, 2020"),
+      )
+
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(document))
+        .source
+
+    assertFalse("secondaryLabel" in source, source)
+    assertTrue("Column(modifier = Modifier.padding(start = 8.dp" in source, source)
+  }
+
   /** The Code pane routes a Wear screen here rather than to the Compose gate's record refusal. */
   @Test
   fun `the editor's code pane generates the screen, not a compose refusal`() {
@@ -240,10 +349,10 @@ class WearScreenCodeExporterTest {
     assertTrue("import dev.johnoreilly.confetti.wear.components.SectionHeader" in source, source)
     assertTrue(
       "SectionHeader(\n" +
-        "                        text = \"Thursday\",\n" +
-        "                        modifier = Modifier.transformedHeight(this, spec),\n" +
-        "                        transformation = SurfaceTransformation(spec),\n" +
-        "                    )" in source,
+        "                    text = \"Thursday\",\n" +
+        "                    modifier = Modifier.transformedHeight(this, spec),\n" +
+        "                    transformation = SurfaceTransformation(spec),\n" +
+        "                )" in source,
       source,
     )
     // The pack id is a design-side name; nothing of it reaches the Kotlin.
@@ -281,13 +390,13 @@ class WearScreenCodeExporterTest {
 
     assertTrue(
       "SessionGroup(\n" +
-        "                        onClick = {},\n" +
-        "                        expanded = true,\n" +
-        "                        count = 3,\n" +
-        "                        content = {\n" +
-        "                            Text(text = \"Talks\")\n" +
-        "                        },\n" +
-        "                    )" in source,
+        "                    onClick = {},\n" +
+        "                    expanded = true,\n" +
+        "                    count = 3,\n" +
+        "                    content = {\n" +
+        "                        Text(text = \"Talks\")\n" +
+        "                    },\n" +
+        "                )" in source,
       source,
     )
     // `SessionGroup` declares no `Modifier`, so the row treatment has nowhere to go and is not

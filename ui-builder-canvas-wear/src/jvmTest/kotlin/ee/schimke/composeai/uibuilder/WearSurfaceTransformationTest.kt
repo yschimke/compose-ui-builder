@@ -156,7 +156,7 @@ class WearSurfaceTransformationTest {
       // The symbol this component was written as, taken from the source rather than assumed: the
       // variant tables decide it, and a rename there must not quietly skip this check.
       val symbol =
-        Regex("\\n\\s{20}([A-Z][A-Za-z]*)\\(").find(source)?.groupValues?.get(1)
+        Regex("\\n\\s{16}([A-Z][A-Za-z]*)\\(").find(source)?.groupValues?.get(1)
           ?: throw AssertionError("no row call found for ${node.componentId} in:\n$source")
       val writesTransformation = "transformation = SurfaceTransformation(spec)" in source
       assertEquals(

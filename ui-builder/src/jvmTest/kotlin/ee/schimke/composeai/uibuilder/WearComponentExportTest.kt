@@ -128,9 +128,9 @@ class WearComponentExportTest {
     assertTrue("""secondaryLabel = { Text(text = "On") },""" in source, source)
     // Controlled, not decorative. A generated screen whose checkbox cannot be ticked is a picture,
     // and the hoisted `var` is what the author would have written by hand.
-    assertTrue("var notify by remember { mutableStateOf(true) }" in source, source)
-    assertTrue("checked = notify," in source, source)
-    assertTrue("onCheckedChange = { notify = it }," in source, source)
+    assertTrue("var notifyChecked by remember { mutableStateOf(true) }" in source, source)
+    assertTrue("checked = notifyChecked," in source, source)
+    assertTrue("onCheckedChange = { notifyChecked = it }," in source, source)
   }
 
   /** `RadioButton`'s callback takes no argument, because a radio row selects itself. */
@@ -148,8 +148,8 @@ class WearComponentExportTest {
       )
 
     assertTrue("RadioButton(" in source, source)
-    assertTrue("selected = daily," in source, source)
-    assertTrue("onSelect = { daily = true }," in source, source)
+    assertTrue("selected = dailySelected," in source, source)
+    assertTrue("onSelect = { dailySelected = true }," in source, source)
     assertTrue("onCheckedChange" !in source, source)
   }
 
@@ -195,7 +195,7 @@ class WearComponentExportTest {
       )
 
     assertTrue("Slider(" in source, source)
-    assertTrue("value = volume," in source, source)
+    assertTrue("value = volumeValue," in source, source)
     assertTrue("valueRange = 0f..10f," in source, source)
     assertTrue("steps = 9," in source, source)
     assertTrue("segmented = true," in source, source)
@@ -308,7 +308,7 @@ class WearComponentExportTest {
 
     assertTrue("import androidx.wear.compose.material3.AlertDialog" in source, source)
     assertTrue("AlertDialog(" in source, source)
-    assertTrue("visible = confirm," in source, source)
+    assertTrue("visible = confirmVisible," in source, source)
     assertTrue("""title = { Text(text = "Delete run?") },""" in source, source)
     // Beside the scaffold, inside `AppScaffold`: the dialog's call must start after the
     // `ScreenScaffold` block has closed.

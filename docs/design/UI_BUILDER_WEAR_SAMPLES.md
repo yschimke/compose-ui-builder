@@ -73,7 +73,9 @@ edge rather than squeezed into it.
 ## Critique: the generated code against the Wear Material 3 guidance
 
 Ordered by how visible the result is on a watch. Every item was read in the exported source (on
-`main`'s exporter, not only the pinned release) and, where it shows, in the native render.
+`main`'s exporter, not only the pinned release) and, where it shows, in the native render. The
+findings are kept as they were written; [what was fixed, and what is left](#what-was-fixed-and-what-is-left)
+records the state since.
 
 ### 1. Authored modifiers never reach the code — full-width rows come out content-width
 
@@ -202,9 +204,30 @@ and there is no `AppCard` branch: `app` falls through to `TitleCard`, silently.
 - `ListHeader` truncation (`maxLines` / `overflow`) reaches the code.
 - Nothing was refused: every sample exports, and every export compiles and draws.
 
-## Where each gap belongs
+## What was fixed, and what is left
 
-| Gap | Owner |
-| --- | --- |
-| 1 modifiers, 2 text properties, 5 padding, 6 group transformation, 7 subtitle / `AppCard`, 8, 9 | this repository — `WearScreenCodeExporter` |
-| 3 button slots, 4 `contentDescription`, 6 weights, 9 dialog defaults and colours | the `wear-m3` catalog's vocabulary (wear-m3-catalog's `@BuilderComponent`s), then the exporter here |
+All but four of the findings are fixed, in `WearScreenCodeExporter`, the synthesised `wear-m3`
+catalog and the canvas. The five samples' generated Kotlin, taken from this exporter, was compiled
+and rendered against AndroidX Wear Compose Material 3 1.7.0-rc01 in wear-m3-catalog's
+Robolectric lane. `WearSampleDesignExportTest` pins each fix against the sample that showed it.
+
+| # | Finding | State |
+| --- | --- | --- |
+| 1 | Authored modifiers dropped | **Fixed.** `modifierChain` writes the node's chain — size, padding, fill, offset, alpha, rotate, scale, zIndex, testTag, and `weight` / `align` where the parent's scope defines them — before the row treatment. A modifier the generator cannot write is refused by name rather than dropped. |
+| 2 | `wear-m3/text` writes only its string | **Fixed.** Style (`MaterialTheme.typography.<role>`), colour (theme role or literal), weight, style, size, line height, spacing, decoration, alignment, min/max lines, soft wrap and overflow; `alignment` / `weight` as the parent-scope modifier they mean. |
+| 3 | Buttons never use their slots | **Fixed in the exporter.** A button holding `[text]`, `[icon, text]`, or either with a column of two texts is written with `icon`, `label` and `secondaryLabel`; anything else keeps the content overload. The catalog still gives `wear-m3/button` one `content` slot, so the shape is recognised rather than declared. |
+| 4 | Icons always `contentDescription = null` | **Fixed.** `wear-m3/icon` declares `contentDescription`, and the export writes it. The samples' icon-only buttons carry the upstream strings. |
+| 5 | List minimum padding for cards only | **Fixed.** Each row takes its own component's minimum: `ListHeaderDefaults` and `TextDefaults` as top/bottom pairs, and `ButtonDefaults`, `ButtonGroupDefaults`, `IconButtonDefaults`, `TextButtonDefaults` and `CardDefaults`. |
+| 6 | `ButtonGroup` weights and transformation | **Fixed.** `wear-m3/icon-button` and `wear-m3/text-button` take `weight` (and size, width, padding, testTag), written as `ButtonGroupScope.weight` and drawn that way on the canvas too. `ButtonGroup` *does* take a `SurfaceTransformation` in 1.7.0-rc01, so it now gets one — the finding's `graphicsLayer` workaround is what upstream wrote before it did. Not fixed: `animateWidth` / animated shapes, which need an interaction source a design has no way to say. |
+| 7 | Card body as `subtitle`; no `AppCard` | **Fixed.** A title card's second and later lines are its content. `variant = "app"` writes `AppCard(appName, title) { … }` and refuses, by node, a card without the two lines it needs. |
+| 8 | `AppScaffold` and a frozen `TimeText` in every screen | **Fixed.** The screen is a `ScreenScaffold` an app drops into its own navigation. The previews wrap it in `AppScaffold` with the design's frozen time. The native lane writes no previews, so there the design's name is an `AppScaffold` wrapper around `<Screen>Content`: its render keeps the status strip, and the name the server imports is unchanged. The scroll-capture guard stays: a long screenshot is a platform feature, not a preview one. |
+| 9 | State named `error_dialog`; empty dialog lambda | **Fixed.** Hoisted state is camelCase with its role (`errorDialogVisible`, `notifyChecked`, `volumeValue`), and a dialog with no content ends at its `)`. |
+| 9 | `AlertDialogDefaults` confirm / dismiss | **Left.** The design still says which button goes in each slot. |
+| 9 | Colour overrides for hierarchy | **Left.** Needs a colour property on the Wear buttons in the catalog, and a canvas to draw it. |
+| 9 | `EdgeButton` font on the JVM canvas | **Left.** The canvas's font rather than the code. |
+
+One lane is still missing for these designs: `ui-builder-designs.yml` compiles every fixture against
+m3-catalog's bundle, so each Wear design is refused there with `Unresolved reference 'wear'`. The
+fix is a second call with the `wear-m3-catalog` bundle, but the reusable workflow in
+compose-preview-server names its artifacts and its sticky comment's marker as constants, so two
+calls collide. It needs a suffix input there first.

@@ -32,6 +32,7 @@ import ee.schimke.composeai.uibuilder.canvas.float
 import ee.schimke.composeai.uibuilder.canvas.fontStyle
 import ee.schimke.composeai.uibuilder.canvas.fontWeight
 import ee.schimke.composeai.uibuilder.canvas.integer
+import ee.schimke.composeai.uibuilder.canvas.layoutWeightValue
 import ee.schimke.composeai.uibuilder.canvas.lineCount
 import ee.schimke.composeai.uibuilder.canvas.string
 import ee.schimke.composeai.uibuilder.canvas.textAlign
@@ -307,8 +308,12 @@ private val WEAR_CANVAS_ADAPTERS: CanvasAdapterRegistry = canvasAdapterRegistry 
     }
   }
   draw("wear-m3/button-group") {
-    WearCanvasButtonGroup(childCount = itemCount("children"), modifier = modifier) { index ->
-      Item("children", index)
+    val document = checkNotNull(LocalUiBuilderSurfaceDocument.current)
+    WearCanvasButtonGroup(
+      weights = node.slots["children"].orEmpty().map { document.nodes[it]?.layoutWeightValue() },
+      modifier = modifier,
+    ) { index, weighted ->
+      Item("children", index, weighted)
     }
   }
   draw("wear-m3/icon-button") {

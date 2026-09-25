@@ -258,6 +258,10 @@
           "iconKey": {
             "type": "enum",
             "value": "settings"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Settings Button"
           }
         }
       }
@@ -295,6 +299,10 @@
           "iconKey": {
             "type": "enum",
             "value": "filled/thumbUp"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Thumbs up Button"
           }
         }
       }
@@ -357,6 +365,10 @@
           "iconKey": {
             "type": "enum",
             "value": "filled/check"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "OK"
           }
         }
       }
@@ -393,10 +405,14 @@
           "iconKey": {
             "type": "enum",
             "value": "filled/close"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Cancel"
           }
         }
       }
     }
   ],
-  "expectedDocumentHash": "c2b13b17ba65d9122222ede7da06e382ac6f7016616c9f38d5ac9ecd5a0db2f3"
+  "expectedDocumentHash": "754972f402bbaf245e4e68586b1c3972b18faaa2f66de107dbed692873912080"
 }
