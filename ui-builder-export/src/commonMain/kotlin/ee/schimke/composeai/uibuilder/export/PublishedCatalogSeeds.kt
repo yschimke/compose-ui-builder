@@ -12,7 +12,6 @@ import kotlinx.serialization.json.JsonPrimitive
  * in-process canvas, its parity tests and [wearScreenUiBuilderDocument] still speak:
  * - `ScreenScaffold`'s clock and scroll indicator are components in its slots, not flags.
  * - A `ListHeader` holds its text as a child.
- * - A title card is `wear-m3/title-card`, with `title` and `subtitle` slots.
  * - Remote text is `remote-m3/remote-text`.
  *
  * A template in the old vocabulary is a document the service refuses, so creating one answered with
@@ -37,17 +36,24 @@ internal object PublishedCatalogSeeds {
     rows: List<Pair<String, String>>,
   ): UiBuilderDocument {
     require(designId.isNotBlank()) { "wear screen design id must not be blank" }
+    // A `wear-m3/card` holding a title and a subtitle, not the published `wear-m3/title-card`: the
+    // catalog declares both, and the renderer runtime it publishes draws only the first (it has no
+    // `title-card` adapter, so the row would be a named placeholder). The Kotlin exporter writes
+    // this
+    // pair as `TitleCard(title, subtitle)` either way.
     val rowNodes = rows.flatMapIndexed { index, (rowTitle, subtitle) ->
       listOf(
         UiBuilderNode(
           id = "row-$index",
-          componentId = "wear-m3/title-card",
+          componentId = "wear-m3/card",
           modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
-          slots =
-            mapOf(
-              "title" to listOf("row-$index-title"),
-              "subtitle" to listOf("row-$index-subtitle"),
-            ),
+          slots = mapOf("content" to listOf("row-$index-lines")),
+        ),
+        UiBuilderNode(
+          id = "row-$index-lines",
+          componentId = "layout/column",
+          modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
+          slots = mapOf("children" to listOf("row-$index-title", "row-$index-subtitle")),
         ),
         text("row-$index-title", rowTitle),
         text("row-$index-subtitle", subtitle),
