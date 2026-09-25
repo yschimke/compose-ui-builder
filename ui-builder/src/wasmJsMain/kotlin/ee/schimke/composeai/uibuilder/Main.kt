@@ -115,6 +115,9 @@ private external fun suppressBrowserContextMenu()
 fun main() {
   val rendererRuntimeId = sandboxRendererRuntimeId()
   if (rendererRuntimeId.isNotEmpty()) {
+    // The sandboxed renderer draws into the page through its own runtime, not Compose, and says
+    // nothing when it is done; the boot screen would sit on top of it.
+    dismissBootScreen()
     MainScope().launch {
       val fixture =
         Json.parseToJsonElement(fetchText("jetcaster-discover-operations-v1.json")).jsonObject
@@ -143,6 +146,7 @@ fun main() {
     // inside a coroutine: the page is blank, and the reason reaches only the console. Say it where
     // a person is looking instead — a blank editor with no explanation is what sent somebody
     // hunting through `chrome://gpu` to find out why their design had "disappeared".
+    dismissBootScreen()
     showWebGlRequiredMessage()
     return
   }
@@ -1945,8 +1949,38 @@ internal fun browserNowMillis(): Long = browserNow().toLong()
 
 @JsFun("() => Date.now()") private external fun browserNow(): Double
 
+/**
+ * The page has settled: the harness's signal (`data-ui-builder-ready`), and the moment the boot
+ * screen gives way to the editor.
+ */
+internal fun markReady() {
+  markReadyAttribute()
+  dismissBootScreen()
+}
+
 @JsFun("() => document.documentElement.setAttribute('data-ui-builder-ready', 'true')")
-internal external fun markReady()
+private external fun markReadyAttribute()
+
+/**
+ * Takes away the boot screen `index.html` draws before any script runs.
+ *
+ * Removed here rather than by `ui-builder-boot.js`, so a host whose CSP refuses that script still
+ * gets its editor back. Idempotent, and a no-op for a shell that has no boot screen.
+ */
+@JsFun(
+  """() => {
+  globalThis.composeUiBuilderBoot?.done();
+  const boot = document.getElementById('ui-builder-boot');
+  if (!boot || boot.dataset.state === 'leaving') return;
+  boot.dataset.state = 'leaving';
+  setTimeout(() => boot.remove(), 200);
+}"""
+)
+internal external fun dismissBootScreen()
+
+/** What the boot screen says the editor is doing, until [dismissBootScreen]. */
+@JsFun("(text) => globalThis.composeUiBuilderBoot?.phase(text)")
+internal external fun bootPhase(text: String)
 
 @JsFun(
   """(kind, revision, sequence) => {

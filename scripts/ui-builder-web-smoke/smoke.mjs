@@ -81,6 +81,11 @@ for (const mode of MODES) {
       { timeout: Number(process.env.SMOKE_READY_TIMEOUT_MS ?? 120_000) },
     );
     ready = true;
+    // The boot screen covers the whole page, so one the editor fails to take away is an editor
+    // nobody can see, however ready it says it is.
+    await page.waitForFunction(() => !document.getElementById('ui-builder-boot'), null, {
+      timeout: 5_000,
+    });
   } catch (error) {
     errors.push(`not ready: ${error.message.split('\n')[0]}`);
   }
