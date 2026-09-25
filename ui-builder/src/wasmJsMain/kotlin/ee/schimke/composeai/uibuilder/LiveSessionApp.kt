@@ -116,6 +116,7 @@ internal fun LiveSessionApp() {
   var config by remember { mutableStateOf<LiveSessionConfig?>(null) }
   var failure by remember { mutableStateOf<String?>(null) }
   LaunchedEffect(Unit) {
+    bootPhase("Checking who you are")
     try {
       config = liveSessionConfig(resolveServerActorId())
     } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
@@ -128,6 +129,7 @@ internal fun LiveSessionApp() {
     }
   }
   failure?.let { message ->
+    LaunchedEffect(Unit) { dismissBootScreen() }
     Column(
       Modifier.fillMaxSize().padding(24.dp),
       verticalArrangement = Arrangement.Center,
@@ -535,28 +537,41 @@ private fun LiveSessionApp(
   }
 
   LaunchedEffect(config) {
-    // A local session can be asked for a catalog this browser has never seen — the first visit to
-    // an origin with the network already gone. That is a sentence, not a crash: the live session
-    // has a server behind it and can let the failure take the page down, and a local one has to
-    // explain itself because there is nothing else left to ask.
-    val availableCatalogs =
-      if (!config.localStorage) loadLiveCatalogs(http)
-      else
-        try {
-          loadLiveCatalogs(http)
-        } catch (failure: Exception) {
-          sessionStatus = "Local · ${failure.message ?: "no catalog is available offline"}"
-          markReady()
-          return@LaunchedEffect
-        }
+    bootPhase("Opening the design")
     // Form-factor order — Mobile, Wear, RemoteCompose — however the host lists them: the chooser
     // is a "what am I making" question, not a catalog registry.
-    catalogCapabilities = availableCatalogs
-    newDesignCatalogs =
-      availableCatalogs.mapNotNull(::newDesignCatalog).sortedBy {
-        NEW_DESIGN_CATALOG_ORDER.indexOf(it.systemId)
-      }
-    if (config.startWithNewDesign) return@LaunchedEffect
+    fun installCatalogList(availableCatalogs: List<CatalogCapabilityV1>) {
+      catalogCapabilities = availableCatalogs
+      newDesignCatalogs =
+        availableCatalogs.mapNotNull(::newDesignCatalog).sortedBy {
+          NEW_DESIGN_CATALOG_ORDER.indexOf(it.systemId)
+        }
+    }
+    if (config.localStorage || config.startWithNewDesign) {
+      // A local session can be asked for a catalog this browser has never seen — the first visit
+      // to an origin with the network already gone. That is a sentence, not a crash: the live
+      // session has a server behind it and can let the failure take the page down, and a local one
+      // has to explain itself because there is nothing else left to ask.
+      val availableCatalogs =
+        if (!config.localStorage) loadLiveCatalogs(http)
+        else
+          try {
+            loadLiveCatalogs(http)
+          } catch (failure: Exception) {
+            sessionStatus = "Local · ${failure.message ?: "no catalog is available offline"}"
+            markReady()
+            return@LaunchedEffect
+          }
+      installCatalogList(availableCatalogs)
+      if (config.startWithNewDesign) return@LaunchedEffect
+    } else {
+      // Beside the open, not ahead of it. The list is every catalog's full capability record —
+      // around a megabyte for the three — and only the New design menu reads it; the design being
+      // opened brings its own catalog in its snapshot. Waiting for it put a round trip and that
+      // megabyte's parse between a person and their design. A failure still takes the page down,
+      // as it did when it came first: this child's exception cancels the effect.
+      launch { installCatalogList(loadLiveCatalogs(http)) }
+    }
     fun installCatalog(capability: CatalogCapabilityV1, revision: Long?) {
       activeCatalogSystemId = capability.benchmark.catalogSystemId
       enabledPacks = readEnabledPacks(activeCatalogSystemId)
@@ -647,6 +662,7 @@ private fun LiveSessionApp(
             ServiceErrorV1(ServiceErrorCodeV1.INTERNAL, "the design could not be opened")
           return@LaunchedEffect
         }
+        bootPhase("Drawing the design")
         installCatalog(response.snapshot.catalog, null)
         acceptSnapshot(response)
         // Without the revision: the page opened at head, whatever the link asked for, and an
