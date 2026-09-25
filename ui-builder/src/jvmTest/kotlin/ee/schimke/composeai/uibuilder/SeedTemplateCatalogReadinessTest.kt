@@ -113,13 +113,12 @@ class SeedTemplateCatalogReadinessTest {
         )
         .reasons
 
-    // The projection's own refusals, the ones no record can answer.
-    // The pane scaffold's refusal. It used to be `layoutMode` itself; the directive and value are
-    // computations the projection now writes, and what is left is what that computation cannot
-    // spell yet — `PaneScaffoldDirective.copy` for this template's authored pane spacing.
+    // The projection's own refusals, the ones no record can answer. The pane scaffold is no longer
+    // one of them: its directive, value and authored pane spacing are all computations the
+    // projection writes, through `PaneScaffoldDirective.copy` for the spacing.
     assertTrue(
-      reasons.any { it.contains("PaneScaffoldDirective") },
-      "no adaptive pane-scaffold refusal: ${reasons.joinToString("; ")}",
+      reasons.none { it.contains("PaneScaffoldDirective") },
+      "the pane scaffold still refuses: ${reasons.joinToString("; ")}",
     )
     assertTrue(
       reasons.any { it.contains("CarouselScope") },

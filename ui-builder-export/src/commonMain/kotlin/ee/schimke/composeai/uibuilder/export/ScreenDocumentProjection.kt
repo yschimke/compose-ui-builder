@@ -1425,10 +1425,13 @@ object ScreenDocumentProjection {
      *
      * `layoutMode` is spent rather than written: `adaptive`, `twoPane` and `expandedTwoPane` all
      * mean "what the directive decides" on the canvas, which is what the computation above is.
-     * `singlePane` caps the directive at one partition, which needs `PaneScaffoldDirective.copy` —
-     * a member this vocabulary cannot call — so it is refused by name, as are a hidden pane and a
-     * pane spacing, for the same reason. Each pane's preferred width is not an argument at all; it
-     * is `Modifier.preferredWidth` on the pane's content, which [paneWidthLink] hands down.
+     * `singlePane` caps the directive at one partition and a pane spacing sets its spacer, exactly
+     * as the canvas adjusts its own directive: one `directive.copy(maxHorizontalPartitions = 1,
+     * horizontalPartitionSpacerSize = …)`, a [ChainLink.member] call, whose result is then both the
+     * `directive` argument and the receiver the value reads its partition count from. A hidden pane
+     * is still refused by name: it means building a `ThreePaneScaffoldValue` by hand. Each pane's
+     * preferred width is not an argument at all; it is `Modifier.preferredWidth` on the pane's
+     * content, which [paneWidthLink] hands down.
      */
     private fun supportingPanes(
       node: DesignNodeV1,
@@ -1441,13 +1444,8 @@ object ScreenDocumentProjection {
           is StringValueV1 -> value.value
           else -> null
         }
-      if (mode == "singlePane") {
-        refuse(
-          "$where.`$PANE_LAYOUT_MODE` is `singlePane`, which caps the scaffold directive at one " +
-            "partition through `PaneScaffoldDirective.copy` — a member call this vocabulary has " +
-            "no form for; leave it `adaptive` to export the library's own answer"
-        )
-      }
+      val adjustments = mutableMapOf<String, ScreenValue>()
+      if (mode == "singlePane") adjustments["maxHorizontalPartitions"] = ScreenValue.Whole(1)
       for (flag in listOf(MAIN_PANE_VISIBLE, SUPPORTING_PANE_VISIBLE)) {
         val visible = (node.properties[flag] as? BooleanValueV1)?.value ?: true
         if (!visible) {
@@ -1457,14 +1455,18 @@ object ScreenDocumentProjection {
           )
         }
       }
-      if (PANE_SPACING_DP in node.properties) {
-        refuse(
-          "$where.`$PANE_SPACING_DP` sets the directive's `horizontalPartitionSpacerSize` through " +
-            "`PaneScaffoldDirective.copy` — a member call this vocabulary has no form for; leave " +
-            "it unset for Material's own 24dp spacer"
-        )
+      val spacing =
+        when (val value = node.properties[PANE_SPACING_DP]) {
+          null -> null
+          is DecimalValueV1 -> value.value
+          is IntegerValueV1 -> value.value.toDouble()
+          else -> refuse("$where.`$PANE_SPACING_DP` is a spacing in dp, which needs a number")
+        }
+      if (spacing != null) {
+        dp(spacing)?.let { adjustments["horizontalPartitionSpacerSize"] = it }
+          ?: refuse("$where.`$PANE_SPACING_DP` is $spacing, which does not survive `Dp`")
       }
-      val directive =
+      val computed =
         ScreenValue.Construct(
           callableFqn = "$ADAPTIVE_LAYOUT.calculatePaneScaffoldDirective",
           positional =
@@ -1476,6 +1478,21 @@ object ScreenDocumentProjection {
             ),
           typeFqn = "$ADAPTIVE_LAYOUT.PaneScaffoldDirective",
         )
+      val directive =
+        if (adjustments.isEmpty()) computed
+        else
+          ScreenValue.Chain(
+            receiver = computed,
+            links =
+              listOf(
+                ChainLink(
+                  "$ADAPTIVE_LAYOUT.PaneScaffoldDirective.copy",
+                  named = adjustments,
+                  member = true,
+                )
+              ),
+            typeFqn = "$ADAPTIVE_LAYOUT.PaneScaffoldDirective",
+          )
       arguments["directive"] = directive
       arguments["value"] =
         ScreenValue.Construct(
@@ -1486,9 +1503,12 @@ object ScreenDocumentProjection {
                 receiver = directive,
                 links =
                   listOf(
+                    // A member of the directive, not an importable extension: the generator
+                    // declares the directive as a typed local and reads the count off it.
                     ChainLink(
                       "$ADAPTIVE_LAYOUT.PaneScaffoldDirective.maxHorizontalPartitions",
                       property = true,
+                      member = true,
                     )
                   ),
                 typeFqn = "kotlin.Int",
@@ -1850,22 +1870,17 @@ object ScreenDocumentProjection {
         FillMaxHeightModifierV1 -> ChainLink("$LAYOUT.fillMaxHeight")
         FillMaxSizeModifierV1 -> ChainLink("$LAYOUT.fillMaxSize")
         is PaddingModifierV1 -> {
-          val axes = buildMap {
-            dp(modifier.startDp)?.let { put("start", it) }
-            dp(modifier.topDp)?.let { put("top", it) }
-            dp(modifier.endDp)?.let { put("end", it) }
-            dp(modifier.bottomDp)?.let { put("bottom", it) }
-          }
           // No usable axis emits `Modifier.padding()`, which is ambiguous between Compose's two
           // fully-defaulted overloads and compiles as neither. Catalog validation checks that the
           // modifier *type* is allowed and not that its axes are numbers, and the renderer reads a
           // bad number as zero, so such a document reaches here rather than being stopped earlier.
-          if (axes.isEmpty()) {
-            reasons += "node `$nodeId` pads with no axis that is a number"
-            null
-          } else {
-            ChainLink("$LAYOUT.padding", named = axes)
-          }
+          val insets =
+            insets(modifier.startDp, modifier.topDp, modifier.endDp, modifier.bottomDp)
+              ?: run {
+                reasons += "node `$nodeId` pads with no axis that is a number"
+                return null
+              }
+          ChainLink("$LAYOUT.padding", positional = insets.first, named = insets.second)
         }
         is SizeModifierV1 -> {
           // `size` has two overloads and neither accepts one named axis: `size(size: Dp)` names
@@ -1875,6 +1890,9 @@ object ScreenDocumentProjection {
           val width = dp(modifier.widthDp)
           val height = dp(modifier.heightDp)
           when {
+            // `size(40.dp)` for a square, as it is written by hand.
+            width != null && width == height ->
+              ChainLink("$LAYOUT.size", positional = listOf(width))
             width != null && height != null ->
               ChainLink("$LAYOUT.size", named = mapOf("width" to width, "height" to height))
             width != null -> ChainLink("$LAYOUT.width", positional = listOf(width))
@@ -2221,6 +2239,45 @@ object ScreenDocumentProjection {
     }
 
     /** A `Dp` for a JSON number, or null when the field was absent or not a number. */
+    /**
+     * Four insets as the arguments `Modifier.padding` and `PaddingValues` are written with by hand,
+     * or null when none of them is a number.
+     *
+     * Both share the same three overloads, so one answer serves both: `(16.dp)` when every side is
+     * the same, `(horizontal = 16.dp, vertical = 8.dp)` when the sides pair up, and otherwise the
+     * sides that are not zero, by name. A zero side is left out because every parameter already
+     * defaults to `0.dp` — `padding(start = 0.dp, top = 12.dp, end = 0.dp, bottom = 0.dp)` and
+     * `padding(top = 12.dp)` are the same modifier. An axis that is not a number was always left
+     * out, and the renderer reads it as zero, so it counts as zero here too.
+     */
+    private fun insets(
+      start: JsonElement?,
+      top: JsonElement?,
+      end: JsonElement?,
+      bottom: JsonElement?,
+    ): Pair<List<ScreenValue>, Map<String, ScreenValue>>? {
+      fun number(value: JsonElement?) = (value as? JsonPrimitive)?.doubleOrNull
+      if (listOf(start, top, end, bottom).all { number(it) == null }) return null
+      val s = number(start) ?: 0.0
+      val t = number(top) ?: 0.0
+      val e = number(end) ?: 0.0
+      val b = number(bottom) ?: 0.0
+      fun named(vararg sides: Pair<String, Double>): Map<String, ScreenValue>? = buildMap {
+        for ((name, amount) in sides) {
+          if (amount != 0.0) put(name, dp(amount) ?: return null)
+        }
+      }
+        .ifEmpty { null }
+      return when {
+        s == t && t == e && e == b -> listOf(dp(s) ?: return null) to emptyMap()
+        s == e && t == b ->
+          emptyList<ScreenValue>() to (named("horizontal" to s, "vertical" to t) ?: return null)
+        else ->
+          emptyList<ScreenValue>() to
+            (named("start" to s, "top" to t, "end" to e, "bottom" to b) ?: return null)
+      }
+    }
+
     private fun dp(value: JsonElement?): ScreenValue? {
       val number = (value as? JsonPrimitive)?.doubleOrNull ?: return null
       return dp(number)
@@ -2452,21 +2509,17 @@ object ScreenDocumentProjection {
           shapeOf(value.value) ?: token(value.value, SHAPE_TOKENS, SHAPE, "shape", where)
         is DimensionValueV1 -> dimension(value, where)
         is PaddingValueV1 -> {
-          val axes = buildMap {
-            dp(value.startDp)?.let { put("start", it) }
-            dp(value.topDp)?.let { put("top", it) }
-            dp(value.endDp)?.let { put("end", it) }
-            dp(value.bottomDp)?.let { put("bottom", it) }
-          }
           // `PaddingValues()` is ambiguous for the same reason `Modifier.padding()` is: every
           // overload is fully defaulted, so an argument list with nothing in it picks none of them.
-          if (axes.isEmpty()) refuse("$where has no axis that is a number")
-          else
-            ScreenValue.Construct(
-              callableFqn = "androidx.compose.foundation.layout.PaddingValues",
-              named = axes,
-              typeFqn = "androidx.compose.foundation.layout.PaddingValues",
-            )
+          val insets =
+            insets(value.startDp, value.topDp, value.endDp, value.bottomDp)
+              ?: return refuse("$where has no axis that is a number")
+          ScreenValue.Construct(
+            callableFqn = "androidx.compose.foundation.layout.PaddingValues",
+            positional = insets.first,
+            named = insets.second,
+            typeFqn = "androidx.compose.foundation.layout.PaddingValues",
+          )
         }
         is EnumValueV1 -> enum(value.value, node.componentId, property, where)
         is BindingValueV1 -> propertyBinding(value, node, property)

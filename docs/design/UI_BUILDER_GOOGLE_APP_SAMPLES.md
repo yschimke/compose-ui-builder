@@ -193,13 +193,13 @@ exports through `CapabilityComposeCodeExporter`, which has a hand-written emitte
 | Photos | ✅ | the gradient lowered to `Box(Modifier.background(Brush.…Gradient(listOf(…))))`; `kotlin.collections` joined the generator's expression packages for `listOf` |
 | Keep | ✅ | `Text.textDecoration` and `FilterChip.shape` on the record; the duplicate `contentDescription` on each icon button removed (its `Icon` already carries it) |
 | Play | ✅ | `PrimaryTabRow` with a literal index; the carousel became a lazy row |
-| Gmail, Calendar | ❌, one reason | `SupportingPaneScaffold` is written as `calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())` and `calculateThreePaneScaffoldValue(…)`, with each pane's width as `Modifier.preferredWidth`. The value needs `directive.maxHorizontalPartitions`, a member read off an expression, and `ScreenGenerator` has no form for one yet |
+| Gmail, Calendar | ✅ | `SupportingPaneScaffold` is written as `calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())` and `calculateThreePaneScaffoldValue(…)`, with each pane's width as `Modifier.preferredWidth`. The value reads `directive.maxHorizontalPartitions`, a `ChainLink.member` read (compose-ai-tools#5569): the generator declares the directive once as a typed local, `val paneScaffoldDirective: PaneScaffoldDirective = …`, and passes it as both arguments |
 
 Calendar's "Up next" items were `m3/list-item`s with a `startAccentColor` bar, which only a draw
 lambda can express; they are a coloured dot beside two lines now, which is also how the app marks
 an event's calendar. Both pane scaffolds dropped their 12 dp `paneSpacingDp` for Material's own
-24 dp partition spacer — `PaneScaffoldDirective.copy` is the same member-call gap, and 24 dp is the
-spacing the adaptive guidance specifies.
+24 dp partition spacer — 24 dp is the spacing the adaptive guidance specifies. A spacing, and
+`singlePane`, now export too, as one `PaneScaffoldDirective.copy(…)` member call.
 
 ## Where each gap belongs
 

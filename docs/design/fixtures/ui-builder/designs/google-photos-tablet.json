@@ -780,15 +780,22 @@
       },
       "node": {
         "id": "photos-chips",
-        "componentId": "layout/flow-row",
+        "componentId": "layout/lazy-row",
         "properties": {
           "horizontalSpacingDp": {
             "type": "float",
             "value": 8.0
           },
-          "verticalSpacingDp": {
-            "type": "float",
-            "value": 8.0
+          "scrollStateKey": {
+            "type": "string",
+            "value": "photos-chips"
+          },
+          "contentPadding": {
+            "type": "padding",
+            "startDp": 16,
+            "topDp": 0,
+            "endDp": 16,
+            "bottomDp": 0
           }
         },
         "modifiers": [
@@ -797,9 +804,9 @@
           },
           {
             "type": "padding",
-            "startDp": 16,
+            "startDp": 0,
             "topDp": 4,
-            "endDp": 16,
+            "endDp": 0,
             "bottomDp": 8
           }
         ]
@@ -810,7 +817,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "photos-chips",
-        "slot": "children"
+        "slot": "items"
       },
       "node": {
         "id": "photos-chip-people",
@@ -872,7 +879,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "photos-chips",
-        "slot": "children"
+        "slot": "items"
       },
       "node": {
         "id": "photos-chip-places",
@@ -935,7 +942,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "photos-chips",
-        "slot": "children"
+        "slot": "items"
       },
       "node": {
         "id": "photos-chip-favourites",
@@ -998,7 +1005,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "photos-chips",
-        "slot": "children"
+        "slot": "items"
       },
       "node": {
         "id": "photos-chip-screenshots",
@@ -1061,7 +1068,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "photos-chips",
-        "slot": "children"
+        "slot": "items"
       },
       "node": {
         "id": "photos-chip-videos",
@@ -1978,5 +1985,5 @@
       }
     }
   ],
-  "expectedDocumentHash": "4d45073a6ed94ca21a7cf09e6a8c4aa77623b393eb36c7023f71aabab2165baa"
+  "expectedDocumentHash": "00449086c3c7b9165d6dc91f2c3458a0fd237f50dcc80532f6fdd8b7b5a43964"
 }

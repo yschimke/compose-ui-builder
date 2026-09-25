@@ -93,7 +93,14 @@ maven-publish = "0.37.0"
 # 2.18.1 is the first release publishing `compose-ai-tools-bom`, which is why this line stops being
 # named by any coordinate below. (2.18.0 exists as a tag and a GitHub Release and is NOT on Central:
 # its publish job died in configuration. Do not pin it.)
-composeai-tools = "2.18.1"
+#
+# 2.24.0 is the first release whose `ScreenGenerator` writes `ChainLink.member` reads
+# (compose-ai-tools#5569), which is how `SupportingPaneScaffold`'s value reads the directive's
+# `maxHorizontalPartitions` and the Gmail and Calendar samples export. It moves with the daemon and
+# contracts pins below, to the set 2.24.0 itself was built against. 2.25.0 (compose-ai-tools#5575)
+# imports same-named extensions that differ by receiver — Gmail's filled and outlined stars — and
+# writes the generated screen the way Compose is written by hand.
+composeai-tools = "2.25.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -149,7 +156,8 @@ composeai-tools = "2.18.1"
 # history records twice over, from the other side. Construction here moves to
 # `Type.Builder(...).build()` and derivation to `newBuilder()`, exactly as contracts 3.0.0 did in
 # #910; `ServeDesignPageStoreTest`'s unknown-enum case still asserts the drop.
-composeai-preview-daemon = "3.8.1"
+# 3.8.3 is what compose-ai-tools 2.24.0 was built against; the two lines move together.
+composeai-preview-daemon = "3.8.3"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
@@ -160,8 +168,9 @@ composeai-preview-daemon = "3.8.1"
 # catalog-renderer runtime manifest, descriptor, iframe and inspection wire types into their shared
 # home, together with canonical integrity framing. 3.5.0 lets a catalog select Browser Preview's
 # exported-artifact renderer and normalize its authored vocabulary onto a canvas adapter. 3.7.0
-# adds the catalog-owned, versioned Compose source-adapter declaration.
-composeai-contracts = "3.7.0"
+# adds the catalog-owned, versioned Compose source-adapter declaration. 3.10.0 is the first release
+# carrying `ChainLink.member` (compose-preview-contracts#108), which `ScreenDocumentProjection` sets.
+composeai-contracts = "3.10.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 rc-players = "1.65.0"
