@@ -224,6 +224,24 @@ tasks.named<Test>("jvmTest") {
   systemProperty("uiBuilderProjectDir", projectDir.absolutePath)
 }
 
+// Canvas frame times over the Jetcaster fixture (#193). Reports, does not gate: `jvmTest` skips the
+// benchmark, and this runs it alone and writes the numbers CI keeps as an artifact.
+tasks.register<Test>("canvasFrameBenchmark") {
+  description = "Measures editor edit-to-canvas time over the Jetcaster fixture."
+  group = "verification"
+  val jvmTest = tasks.named<Test>("jvmTest").get()
+  testClassesDirs = jvmTest.testClassesDirs
+  classpath = jvmTest.classpath
+  javaLauncher.set(jvmTest.javaLauncher)
+  filter.includeTestsMatching("*.CanvasFrameTimeBenchmark")
+  val report = layout.buildDirectory.file("reports/ui-builder/canvas-frame-times.json")
+  outputs.file(report)
+  outputs.upToDateWhen { false }
+  systemProperty("uiBuilder.canvasBenchmark", "true")
+  systemProperty("uiBuilder.canvasBenchmark.report", report.get().asFile.absolutePath)
+  testLogging.showStandardStreams = true
+}
+
 tasks.register<JavaExec>("generateJetcasterComposeFixture") {
   description = "Generate the standalone Jetcaster Compose source from the frozen public document."
   group = "code generation"

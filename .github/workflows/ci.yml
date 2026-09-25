@@ -58,6 +58,16 @@ jobs:
       # here is what fails the build if the *packaging* regresses without the verification task
       # noticing — they are the artifacts a consumer actually resolves.
       - run: ./gradlew :ui-builder-web:webArchive :ui-builder-render-bundle:jar
+      # Edit-to-canvas time over the Jetcaster fixture (#193). Recorded, not gated: a shared runner
+      # is too noisy for an absolute 16ms line, so the numbers are kept to compare across runs.
+      - name: Measure canvas frame times
+        run: ./gradlew :ui-builder:canvasFrameBenchmark
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: canvas-frame-times
+          path: ui-builder/build/reports/ui-builder/canvas-frame-times.json
+          if-no-files-found: ignore
 
   ui-builder-remote-compose:
     runs-on: ubuntu-latest
