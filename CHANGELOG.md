@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.54.0](https://github.com/yschimke/compose-ui-builder/compare/v3.53.0...v3.54.0) (2026-09-25)
+
+
+### Features
+
+* **ui-builder:** public designs, restore, fork, a friendlier home screen; menus above device previews ([#278](https://github.com/yschimke/compose-ui-builder/issues/278)) ([4c2ff0c](https://github.com/yschimke/compose-ui-builder/commit/4c2ff0c7a5ed4334a1b9d2eac5d7cef6f589b1f9))
+
+
+### Bug Fixes
+
+* **ui-builder:** stop booting a runtime iframe per palette tile, and hide what cannot land ([#274](https://github.com/yschimke/compose-ui-builder/issues/274)) ([314b1f6](https://github.com/yschimke/compose-ui-builder/commit/314b1f68893fe242cee9081af7eeb35c9cda9848))
+
+
+### Performance Improvements
+
+* **ui-builder:** ship the production Wasm, preload it, and show a boot screen ([#276](https://github.com/yschimke/compose-ui-builder/issues/276)) ([2512f50](https://github.com/yschimke/compose-ui-builder/commit/2512f50dd5ca01238f778be8ea3cbd9f9d258a88))
+
 ## [3.53.0](https://github.com/yschimke/compose-ui-builder/compare/v3.52.0...v3.53.0) (2026-09-25)
 
 
