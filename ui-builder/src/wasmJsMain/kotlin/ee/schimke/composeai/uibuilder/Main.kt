@@ -1982,14 +1982,16 @@ private external fun markReadyAttribute()
  *
  * Removed here rather than by `ui-builder-boot.js`, so a host whose CSP refuses that script still
  * gets its editor back. Idempotent, and a no-op for a shell that has no boot screen.
+ *
+ * At once, not faded out. [markReady] calls this in the same task that sets the ready attribute, so
+ * nothing that waits for ready can ever see the screen: compose-preview-server's visual harness
+ * screenshots two frames after it, and a 200 ms fade put a half-transparent boot screen in both of
+ * its captures — at different opacities — until the comparison failed on every run.
  */
 @JsFun(
   """() => {
   globalThis.composeUiBuilderBoot?.done();
-  const boot = document.getElementById('ui-builder-boot');
-  if (!boot || boot.dataset.state === 'leaving') return;
-  boot.dataset.state = 'leaving';
-  setTimeout(() => boot.remove(), 200);
+  document.getElementById('ui-builder-boot')?.remove();
 }"""
 )
 internal external fun dismissBootScreen()
