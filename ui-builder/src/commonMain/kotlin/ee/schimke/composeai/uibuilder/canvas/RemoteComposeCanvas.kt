@@ -310,6 +310,7 @@ private fun RemoteComposeDiagnostic(
   /** False for a document that is merely not here yet, which is not the same as a broken one. */
   error: Boolean = true,
 ) {
+  if (error) ReportContentMissing()
   val container =
     if (error) MaterialTheme.colorScheme.errorContainer
     else MaterialTheme.colorScheme.surfaceVariant

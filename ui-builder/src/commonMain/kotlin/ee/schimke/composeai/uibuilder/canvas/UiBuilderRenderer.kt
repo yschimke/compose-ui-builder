@@ -84,6 +84,7 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ProvidedValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
@@ -251,6 +252,23 @@ internal val LocalUiBuilderCanvasAdapterMappings =
   staticCompositionLocalOf<Map<String, CanvasAdapterMappingV1>> { emptyMap() }
 
 internal val LocalUiBuilderNativeOnly = staticCompositionLocalOf<Set<String>> { emptySet() }
+
+/**
+ * Told when a node draws a stand-in for content the author has not given it yet — a Remote Compose
+ * document with no bytes, a Lottie with no animation, a picture with no asset behind it.
+ *
+ * Null on the canvas, where that stand-in is exactly right: it says what to fill. Set by the
+ * component list, where it is not — a tile of a component that has not been given anything draws
+ * its own "fill me in" message, and a palette of error boxes reads as a broken catalog.
+ */
+internal val LocalUiBuilderContentMissing = staticCompositionLocalOf<(() -> Unit)?> { null }
+
+/** Report to [LocalUiBuilderContentMissing], once per composition of the stand-in. */
+@Composable
+internal fun ReportContentMissing() {
+  val report = LocalUiBuilderContentMissing.current ?: return
+  SideEffect { report() }
+}
 
 /**
  * Every component id the catalog offers, so the `else` branch can tell two different things apart.

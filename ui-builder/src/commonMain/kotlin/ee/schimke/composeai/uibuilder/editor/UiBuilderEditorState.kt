@@ -664,6 +664,10 @@ class UiBuilderEditorReducer(
    */
   private fun pasteDestination(state: UiBuilderEditorState): ParentSlot? {
     val clipboard = state.clipboard?.takeIf { it.rootNodeIds.isNotEmpty() } ?: return null
+    // Every copied node, not only the roots: the clipboard outlives the design it was copied from,
+    // and a Column copied out of an m3 screen is a Column remote-m3 has, holding a Button it does
+    // not. The validator refuses that batch — but only after Paste was offered and pressed.
+    if (clipboard.nodes.values.any { it.componentId !in catalog.componentsById }) return null
     val capabilities = clipboard.rootComponentIds.map { catalog.componentsById[it] ?: return null }
     val destination =
       capabilities.map { findDestination(state.document, state.selectedNodeId, it) }.distinct()
@@ -762,8 +766,13 @@ class UiBuilderEditorReducer(
   fun previewDocument(
     componentId: String,
     variant: EditorCatalogVariant? = null,
-  ): UiBuilderDocument? =
-    previewDocuments.getOrPut(componentId to variant?.value) {
+  ): UiBuilderDocument? {
+    val key = componentId to variant?.value
+    // `getOrPut` treats a stored null as absent, so a component with no picture — a root-only
+    // scaffold — replayed the whole insert on every recomposition of the list. The miss is cached
+    // as a miss.
+    if (key in previewDocuments) return previewDocuments[key]
+    return previewDocuments.getOrPut(key) {
       val state = initial(previewFrame, selectedNodeId = PREVIEW_FRAME_CELL_ID)
       val target = dropTarget(state, componentId)
       val inserted = target?.let {
@@ -771,6 +780,7 @@ class UiBuilderEditorReducer(
       }
       inserted?.takeIf { it.lastOutcome is CommandOutcome.Accepted }?.document?.centeredInFrame()
     }
+  }
 
   /**
    * The inserted component pushed to the middle of the frame.
@@ -1011,6 +1021,22 @@ class UiBuilderEditorReducer(
   fun pinnedComponents(state: UiBuilderEditorState): Set<String> =
     state.pinnedComponents ?: catalog.pinnedComponents
 
+  /**
+   * Whether [componentId] has nowhere to go in this design, so the list leaves it out.
+   *
+   * A root-only component — a Wear widget container, a Wear screen scaffold — is exported as the
+   * whole design, so it is refused by both kinds of Add once the design has a root:
+   * `findDestination` finds it no slot and `besideRefusal` no board. Listed anyway, a widget
+   * design's palette opened on three more widget containers it could never take. It stays on an
+   * empty design, where it is the one placement that is right.
+   */
+  fun placeableNowhere(state: UiBuilderEditorState, componentId: String): Boolean =
+    componentId in RecordFreeExport.ROOT_ONLY_COMPONENT_IDS && state.document.roots.isNotEmpty()
+
+  /** How many components the list offers this design, which is what its All row counts. */
+  fun listedComponentCount(state: UiBuilderEditorState): Int =
+    catalog.paletteComponents.count { !placeableNowhere(state, it.componentId) }
+
   fun catalogRows(state: UiBuilderEditorState): List<EditorCatalogRow> {
     val needle = state.catalogQuery.trim().lowercase()
     val filtering = needle.isNotEmpty()
@@ -1021,6 +1047,7 @@ class UiBuilderEditorReducer(
         // the whole point of the switch, and a search that surfaced what the switch hides would
         // make the switch a lie.
         .filter { it.pack == null || it.pack in state.enabledPacks }
+        .filter { !placeableNowhere(state, it.componentId) }
         .filter { it.matches(needle) }
         .sortedWith(compareBy({ it.searchRank(needle) }, EditorCatalogItem::displayName))
     // The declared shelves, then the kind labels an unshelved catalog falls back to — in *kind*

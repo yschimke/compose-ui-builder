@@ -22,9 +22,12 @@ import kotlinx.serialization.json.contentOrNull
 
 /**
  * A catalog runtime is sent a document and a surface size, and nothing else about the pane it
- * fills. So the widget's host shape travels in the document it is sent: without it the runtime drew
- * every preview pane in the default frame, and the Samsung stadium and the Pixel Watch rounded
- * rectangle came out as the same rectangle.
+ * fills. So the widget's host shape travels in the document it is sent.
+ *
+ * The editing canvas is the only surface the runtime draws. The preview panes — one per host shape
+ * — used to be runtime surfaces too, which in the browser is a sandboxed iframe booting its own
+ * Wasm per pane; they are drawn in-process now, in their shape through `LocalWearWidgetHostShape`,
+ * and this pins that none of them reaches the runtime.
  */
 @OptIn(ExperimentalTestApi::class)
 class RuntimeWidgetHostShapeTest {
@@ -70,11 +73,8 @@ class RuntimeWidgetHostShapeTest {
         setOf(WearWidgetHostShape.Default.id),
         shapesFor(UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED),
       )
-      // Each preview pane names its own shape, so the runtime can frame all three.
-      assertEquals(
-        WearWidgetHostShape.entries.map { it.id }.toSet(),
-        shapesFor(UiBuilderRendererSurfaceModeV2.DEVICE),
-      )
+      // No preview pane is a runtime surface: three shapes were three runtimes.
+      assertEquals(emptySet(), shapesFor(UiBuilderRendererSurfaceModeV2.DEVICE))
       // The shape is on the copy a surface is sent, never on the design itself.
       assertTrue(WearWidgetHostShape.ENVIRONMENT_KEY !in widget.environment)
     }

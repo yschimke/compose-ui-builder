@@ -1095,7 +1095,7 @@ fun UiBuilderEditor(
         catalogRows = reducer.catalogRows(state),
         // The rows the palette lists. Subtracting the hidden set's size miscounted a catalog that
         // does not declare a hidden id, since hiding it removed nothing.
-        totalCatalogComponents = catalog.paletteComponents.size,
+        totalCatalogComponents = reducer.listedComponentCount(state),
         pinnedComponents = reducer.pinnedComponents(state),
         packs = catalog.componentPacks,
         onManagePacks = onComponentPacks,
@@ -1859,7 +1859,6 @@ fun UiBuilderEditor(
     LocalRemoteComposeDocuments provides { url -> remoteDocumentsByUrl[url] },
     LocalUiBuilderAssetBitmaps provides { digest -> assetBitmapsByDigest[digest] },
     LocalUiBuilderAssetBytes provides { digest -> assetBytesByDigest[digest] },
-    LocalUiBuilderCanvasRenderer provides canvasRenderer,
     // Here for the same reason as the line above it: the canvas, the extent beside it and every
     // variant pane draw the same widget, and all of them should draw the frame being viewed.
     LocalWearWidgetHostShape provides state.wearWidgetHostShape,

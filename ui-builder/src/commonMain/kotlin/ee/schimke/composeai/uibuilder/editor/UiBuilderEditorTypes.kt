@@ -8,7 +8,6 @@ package ee.schimke.composeai.uibuilder.editor
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
@@ -164,4 +163,7 @@ typealias UiBuilderCanvasRenderer =
     onInspectionSnapshot: (UiBuilderCanvasInspection) -> Unit,
   ) -> Unit
 
-internal val LocalUiBuilderCanvasRenderer = compositionLocalOf<UiBuilderCanvasRenderer?> { null }
+// Deliberately not a composition local. A catalog's pinned renderer is a sandboxed iframe booting
+// its own Wasm runtime, and a local made it one `.current` away from every surface that draws a
+// design: palette tiles, drag ghosts and device panes each started one. It is handed to the editing
+// canvas as a parameter, and nothing else draws with it.
