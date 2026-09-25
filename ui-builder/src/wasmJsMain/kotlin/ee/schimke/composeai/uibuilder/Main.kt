@@ -151,11 +151,16 @@ fun main() {
     showWebGlRequiredMessage()
     return
   }
+  // One registry for the page: the canvas asks it for the family a design names, the typeface
+  // picker for the ones it lists, and a family either loads is then there for both.
+  val fonts = browserFontRegistry()
   ComposeViewport(viewportContainerId = "composeApp") {
-    when {
-      hostBridgeEnabled() -> HostBridgeApp()
-      liveSessionEnabled() -> LiveSessionApp()
-      else -> VisualFixtureApp(captureMode())
+    ProvideUiBuilderFonts(fonts) {
+      when {
+        hostBridgeEnabled() -> HostBridgeApp()
+        liveSessionEnabled() -> LiveSessionApp()
+        else -> VisualFixtureApp(captureMode())
+      }
     }
   }
 }

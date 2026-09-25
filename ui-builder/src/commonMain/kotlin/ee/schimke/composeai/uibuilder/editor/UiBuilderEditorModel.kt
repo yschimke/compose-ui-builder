@@ -17,6 +17,7 @@ import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 
 enum class EditorPropertyControl {
@@ -384,6 +385,16 @@ data class ScreenEnvironmentSettings(
    * means it exports at its own frame alone, which is what every design written before this said.
    */
   val exportDevices: List<String> = emptyList(),
+  /**
+   * The family every type role renders in, or null for the platform default.
+   *
+   * A name, not a font: the host resolves it against what it has loaded
+   * ([ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies]), and a name nothing resolves
+   * still renders — in the default face. Null rather than a "default" sentinel because the protocol
+   * spells "no family" as a reset, and a design that never chose one must read the same as one that
+   * chose and cleared it.
+   */
+  val typeface: String? = null,
 )
 
 fun UiBuilderDocument.screenEnvironmentSettings(): ScreenEnvironmentSettings =
@@ -405,6 +416,8 @@ fun UiBuilderDocument.screenEnvironmentSettings(): ScreenEnvironmentSettings =
       (environment["exportDevices"] as? JsonArray)
         ?.mapNotNull { it.primitiveOrNull()?.content }
         .orEmpty(),
+    typeface =
+      environment["typeface"]?.primitiveOrNull()?.contentOrNull?.takeIf { it.isNotBlank() },
   )
 
 /**

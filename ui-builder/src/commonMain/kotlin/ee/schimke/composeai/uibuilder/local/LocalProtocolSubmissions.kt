@@ -21,6 +21,7 @@ import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveNodePropertyMutationV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.ResetTypefaceEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.RestoreNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetDensityEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetEventBindingMutationV1
@@ -33,6 +34,7 @@ import ee.schimke.composeai.uibuilder.protocol.SetModifiersMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetPropertyMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetThemeEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetTypefaceEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetWidthDpEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.StateVariableV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
@@ -40,6 +42,7 @@ import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.UpdateEnvironmentMutationV1
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.jsonObject
@@ -251,6 +254,9 @@ private fun EnvironmentChangeV1.toDesignOperation(): DesignOperation.SetEnvironm
     // is exactly what the forward direction turns back into this reset.
     ResetExportDevicesEnvironmentChangeV1 ->
       DesignOperation.SetEnvironment("exportDevices", JsonArray(emptyList()))
+    is SetTypefaceEnvironmentChangeV1 ->
+      DesignOperation.SetEnvironment("typeface", JsonPrimitive(value))
+    ResetTypefaceEnvironmentChangeV1 -> DesignOperation.SetEnvironment("typeface", JsonNull)
     else -> null
   }
 

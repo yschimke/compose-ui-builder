@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
@@ -38,9 +39,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -65,10 +69,13 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
+import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.boardItemCount
 import ee.schimke.composeai.uibuilder.canvas.forPlatform
@@ -1539,6 +1546,116 @@ private fun ScreenEnvironmentInspector(
     style = MaterialTheme.typography.labelSmall,
     modifier = Modifier.padding(top = 4.dp),
   )
+  TypefacePicker(
+    selected = current.typeface,
+    onPick = { family ->
+      // From `current`, like the device menus: this control owns one field and commits it alone.
+      dispatch(UiBuilderEditorEvent.UpdateEnvironment(current.copy(typeface = family)))
+    },
+  )
+}
+
+/**
+ * The design's typeface, as a menu whose every option is drawn in the family it names.
+ *
+ * Commits on pick, like the device menus beside it: a typeface is one choice, and the thing to do
+ * after making it is to look at the canvas, not to press Apply. The families are the ones the host
+ * vendors ([LocalUiBuilderFontRegistry]); opening the menu asks for all of them, and each option
+ * switches from the default face to its own as its family arrives. A family the document names that
+ * the host does not ship is still listed, so the menu never claims the design says something it
+ * does not — it just cannot be drawn in its face.
+ */
+@Composable
+private fun TypefacePicker(selected: String?, onPick: (String?) -> Unit) {
+  val registry = LocalUiBuilderFontRegistry.current
+  val families = registry?.families.orEmpty()
+  val faces = LocalUiBuilderFontFamilies.current
+  var expanded by remember { mutableStateOf(false) }
+  LaunchedEffect(registry, selected) { selected?.let { registry?.request(it) } }
+  LaunchedEffect(registry, expanded, families) {
+    if (expanded) families.forEach { registry?.request(it.name) }
+  }
+  val unknown = selected?.takeIf { name -> families.none { it.name == name } }
+  val selectedLabel = families.firstOrNull { it.name == selected }?.label ?: selected
+  Text(
+    "Typeface",
+    style = MaterialTheme.typography.titleSmall,
+    fontWeight = FontWeight.Bold,
+    modifier = Modifier.padding(top = 16.dp),
+  )
+  Text(
+    "Every text style in the design is drawn in this family. Commits as you pick it.",
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.bodySmall,
+  )
+  Box(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+    OutlinedButton(
+      onClick = { expanded = true },
+      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Typeface" },
+    ) {
+      Text(
+        selectedLabel ?: "Default",
+        fontFamily = selected?.let(faces::get),
+        style = MaterialTheme.typography.bodyLarge,
+        maxLines = 1,
+        modifier = Modifier.weight(1f),
+      )
+      Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+    }
+    TrackEditorOverlay(expanded)
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+      TypefaceOption("Default", null, "The platform's own face", selected == null) {
+        expanded = false
+        onPick(null)
+      }
+      families.forEach { family ->
+        TypefaceOption(
+          label = family.label,
+          face = faces[family.name],
+          supporting = if (faces[family.name] == null) "Loading…" else null,
+          selected = family.name == selected,
+        ) {
+          expanded = false
+          onPick(family.name)
+        }
+      }
+      unknown?.let { name ->
+        TypefaceOption(name, null, "Not bundled here — drawn in the default face", true) {
+          expanded = false
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun TypefaceOption(
+  label: String,
+  face: FontFamily?,
+  supporting: String?,
+  selected: Boolean,
+  onClick: () -> Unit,
+) {
+  DropdownMenuItem(
+    text = {
+      Column {
+        Text(label, fontFamily = face, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+        supporting?.let {
+          Text(
+            it,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
+      }
+    },
+    trailingIcon =
+      if (selected) {
+        { Icon(Icons.Filled.Check, contentDescription = "Current typeface", Modifier.size(18.dp)) }
+      } else null,
+    modifier = Modifier.semantics { this.selected = selected },
+    onClick = onClick,
+  )
 }
 
 /**
@@ -1861,7 +1978,7 @@ private fun ColorPropertyControl(
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
-      SwatchRow(tokens, field, scheme, commit)
+      ThemeRoleChips(tokens, field, scheme, commit)
     }
     Text(
       "Colours",
@@ -1869,6 +1986,45 @@ private fun ColorPropertyControl(
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     SwatchRow(INSPECTOR_PRESET_COLORS, field, scheme, commit)
+  }
+}
+
+/**
+ * The design's theme roles by name, each with a small swatch of what it resolves to.
+ *
+ * Names first, because a role is picked for what it means — `onSurfaceVariant` is "quiet text on a
+ * surface" whatever colour this theme happens to give it — and a row of bare dots made that choice
+ * by hue alone, where half the roles of a light theme are near-white and indistinguishable.
+ */
+@Composable
+private fun ThemeRoleChips(
+  roles: List<String>,
+  field: EditorPropertyField,
+  scheme: androidx.compose.material3.ColorScheme,
+  commit: (String) -> Unit,
+) {
+  // Dense: sixteen roles at the 48dp touch floor is a column taller than the rest of the
+  // inspector. The chips are still 32dp tall, which is Material's own chip height.
+  CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+    FlowRow(
+      horizontalArrangement = Arrangement.spacedBy(6.dp),
+      verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+      roles.forEach { role ->
+        val selected = role == field.value
+        FilterChip(
+          selected = selected,
+          onClick = { commit(role) },
+          label = { Text(role, style = MaterialTheme.typography.labelMedium) },
+          leadingIcon = { ColorSwatch(swatchColor(role, scheme), size = 14.dp, selected = false) },
+          modifier =
+            Modifier.semantics {
+              contentDescription = "Use $role for ${field.label.lowercase()}"
+              this.selected = selected
+            },
+        )
+      }
+    }
   }
 }
 

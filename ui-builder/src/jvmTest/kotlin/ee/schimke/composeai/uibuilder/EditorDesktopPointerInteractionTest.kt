@@ -4,9 +4,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -499,7 +501,11 @@ class EditorDesktopPointerInteractionTest {
       onNodeWithContentDescription("Color swatch").assertExists()
 
       // A theme role stays a role, so the text follows the design's theme.
-      onNodeWithContentDescription("Use primary for color").performScrollTo().performClick()
+      // Named, not a bare dot: a role is picked for what it means.
+      onNodeWithContentDescription("Use primary for color")
+        .performScrollTo()
+        .assert(hasText("primary"))
+      onNodeWithContentDescription("Use primary for color").performClick()
       waitForIdle()
       onNodeWithContentDescription("Color property").assertTextEquals("primary")
 

@@ -3262,6 +3262,13 @@ class UiBuilderEditorReducer(
     if (settings.exportDevices != state.document.screenEnvironmentSettings().exportDevices) {
       values["exportDevices"] = JsonArray(settings.exportDevices.map(::JsonPrimitive))
     }
+    // The same only-when-moved rule, for the same reason: a design that never named a family has
+    // no `typeface` key, and folding a null in would turn every frame edit into a typeface reset.
+    // A cleared family is written as JSON null, which the protocol bridge sends as the reset.
+    val typeface = settings.typeface?.takeIf { it.isNotBlank() }
+    if (typeface != state.document.screenEnvironmentSettings().typeface) {
+      values["typeface"] = typeface?.let(::JsonPrimitive) ?: JsonNull
+    }
     val operations = values.mapNotNull { (field, value) ->
       DesignOperation.SetEnvironment(field, value).takeIf {
         state.document.environment[field] != value
