@@ -324,6 +324,9 @@ private enum class MobileEditorPanel {
   Code,
 }
 
+/** See `UiBuilderEditor`'s `selectionRequest`. [serial] distinguishes two requests for one node. */
+data class EditorSelectionRequest(val nodeId: String, val serial: Int)
+
 data class UiBuilderNewDesignTemplate(
   val id: String,
   val label: String,
@@ -779,6 +782,12 @@ fun UiBuilderEditor(
     ) -> Unit)? =
     null,
   onHelp: (() -> Unit)? = null,
+  /**
+   * A selection made outside the editor — a host's own layer tree beside this canvas — to apply as
+   * though the layer had been picked here. A new [EditorSelectionRequest] is a new request, so
+   * choosing the same layer twice selects it twice. Null everywhere the editor owns every way in.
+   */
+  selectionRequest: EditorSelectionRequest? = null,
   /**
    * Copies an OpenCode-ready prompt for working on this live design through MCP.
    *
@@ -1260,6 +1269,11 @@ fun UiBuilderEditor(
     )
   }
   LaunchedEffect(state) { onStateChanged(state) }
+  LaunchedEffect(selectionRequest) {
+    val request = selectionRequest ?: return@LaunchedEffect
+    // A layer the document no longer has — the host's tree lagging an edit — selects nothing.
+    if (request.nodeId in state.document.nodes) selectNodeForEditing(request.nodeId)
+  }
   LaunchedEffect(Unit) { editorFocusRequester.requestFocus() }
   LaunchedEffect(canvasDropHovered, draggedPlan, draggingOverBesideGround, dropTargetLabel) {
     onDropTargetChanged(canvasDropHovered || draggingOverBesideGround, dropTargetLabel)

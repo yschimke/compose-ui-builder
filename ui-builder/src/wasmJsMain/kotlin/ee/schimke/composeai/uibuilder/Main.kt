@@ -147,7 +147,11 @@ fun main() {
     return
   }
   ComposeViewport(viewportContainerId = "composeApp") {
-    if (liveSessionEnabled()) LiveSessionApp() else VisualFixtureApp(captureMode())
+    when {
+      hostBridgeEnabled() -> HostBridgeApp()
+      liveSessionEnabled() -> LiveSessionApp()
+      else -> VisualFixtureApp(captureMode())
+    }
   }
 }
 
