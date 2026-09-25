@@ -132,7 +132,7 @@ class EditorCodePaneTest {
     // refuses.
     assertTrue(code.kotlin.contains("package ${ScreenExportGate.PACKAGE_NAME}"), code.kotlin)
     assertTrue(code.kotlin.contains("Scaffold("), code.kotlin)
-    assertTrue(code.kotlin.contains("Box("), code.kotlin)
+    assertTrue(code.kotlin.contains("Box {"), code.kotlin)
   }
 
   @Test
@@ -173,8 +173,9 @@ class EditorCodePaneTest {
     val after = assertIs<EditorGeneratedCode.Source>(reducer.generatedCode(withText))
     assertTrue(after.kotlin.contains("""Text(text = "Discover""""), after.kotlin)
     // The catalog spells the slot `children`; `Box` names the parameter `content`. The pane reads
-    // the export's own projection, so it prints what compiles rather than what the catalog says.
-    assertTrue(after.kotlin.contains("content = {"), after.kotlin)
+    // the export's own projection, so it prints what compiles rather than what the catalog says —
+    // and `content` is the one slot written as a trailing lambda.
+    assertTrue(after.kotlin.contains("Box {"), after.kotlin)
     assertFalse(after.kotlin.contains("children ="), after.kotlin)
   }
 
