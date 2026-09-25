@@ -669,7 +669,7 @@ internal class WearContentEmitter(
             emit(lines[1], depth + 2) +
             listOf("${pad}${INDENT}},") +
             surfaceArguments(pad + INDENT, nodeId, transformed, "AppCard") +
-            trailingContent(pad, depth, lines.drop(2))
+            trailingContent(pad, depth, lines.drop(2), required = true)
         }
         usesCard = true
         val (title, body) =
@@ -1246,8 +1246,18 @@ internal class WearContentEmitter(
   }
 
   /** A card's trailing content lambda, or its closing parenthesis when there is no body. */
-  private fun trailingContent(pad: String, depth: Int, body: List<String>): List<String> =
-    if (body.isEmpty()) listOf("${pad})")
+  /**
+   * The call's closing, with its content lambda when there is a body. [required] is for a component
+   * whose `content` has no default: `AppCard`'s is non-null, so a two-line app card that ends at
+   * `)` matches no overload, where `TitleCard`'s is nullable and may.
+   */
+  private fun trailingContent(
+    pad: String,
+    depth: Int,
+    body: List<String>,
+    required: Boolean = false,
+  ): List<String> =
+    if (body.isEmpty()) listOf(if (required) "${pad}) {}" else "${pad})")
     else listOf("${pad}) {") + body.flatMap { emit(it, depth + 1) } + listOf("${pad}}")
 
   /** A button's content, as the slots Wear's `Button` publishes. */
