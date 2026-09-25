@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.55.0](https://github.com/yschimke/compose-ui-builder/compare/v3.54.0...v3.55.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ui-builder-export:** pad a Scaffold's content by the padding it is handed ([#279](https://github.com/yschimke/compose-ui-builder/issues/279)) ([2c84373](https://github.com/yschimke/compose-ui-builder/commit/2c8437382c53b2f58df591402cd0aa1d6dd92790))
+* **ui-builder-runtime:** replay a retried restore, and name who made each revision after an upload ([#280](https://github.com/yschimke/compose-ui-builder/issues/280)) ([16bbbea](https://github.com/yschimke/compose-ui-builder/commit/16bbbea865a309ead0fb67cbf28ddc7bd204f2bf))
+* **ui-builder:** take the boot screen away at ready, and package the renderer and fixtures from production Wasm ([#281](https://github.com/yschimke/compose-ui-builder/issues/281)) ([2f8c3bd](https://github.com/yschimke/compose-ui-builder/commit/2f8c3bd128df3e606f41cea9ef70e39f1d10a47a))
+
 ## [3.54.0](https://github.com/yschimke/compose-ui-builder/compare/v3.53.0...v3.54.0) (2026-09-25)
 
 
