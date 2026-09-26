@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.js.ExperimentalWasmJsInterop::class)
+
 package ee.schimke.composeai.uibuilder
 
 import kotlin.test.Test
@@ -16,9 +18,9 @@ import kotlin.test.assertTrue
  *
  * These run on wasmJs rather than in `commonTest` because the function encodes through the
  * browser's own `encodeURIComponent`; a JVM stand-in would be testing a different implementation
- * than the one that ships. [sameOriginRequestUrl] is deliberately not covered here — it reads
- * `window.location`, which is the browser's, not this test's. The performance harness asserts its
- * effect end to end instead, by failing on any 401 the editor provokes against its own server.
+ * than the one that ships. The performance harness asserts [sameOriginRequestUrl]'s effect end to
+ * end, by failing on any 401 the editor provokes against its own server; the tests here that read
+ * `window.location` only pin down that the page's `?token=` is never copied onto a request.
  */
 class BrowserRequestUrlTest {
 
@@ -65,4 +67,49 @@ class BrowserRequestUrlTest {
     assertTrue(prompt.contains("ui-builder-export`"))
     assertFalse(prompt.contains("token="))
   }
+
+  @Test
+  fun `request URLs never copy the page token`() {
+    withPageQuery("?token=operator-secret&actor=github%3Aa") {
+      val request = sameOriginRequestUrl("/api/ui-builder/v1/identity")
+      assertFalse(request.contains("token="), request)
+      assertTrue(request.endsWith("/api/ui-builder/v1/identity"), request)
+      // A caller that built its own query keeps it.
+      assertTrue(sameOriginRequestUrl("/x?token=explicit").endsWith("/x?token=explicit"))
+
+      val socket = nativeStreamUrl("session", "preview")
+      assertFalse(socket.contains("token="), socket)
+      assertTrue(socket.contains("/session/ws/preview?codec=webp"), socket)
+    }
+  }
+
+  @Test
+  fun `the page token is taken out of the address bar and nothing else is`() {
+    withPageQuery("?token=operator-secret&node=hero") {
+      stripPageToken()
+      val location = currentLocation()
+      assertFalse(location.contains("token"), location)
+      assertTrue(location.contains("node=hero"), location)
+    }
+  }
+
+  @Test
+  fun `the page token is not an identity key carried across navigations`() {
+    assertFalse("token" in DESIGN_URL_IDENTITY_KEYS)
+  }
+
+  private fun withPageQuery(query: String, block: () -> Unit) {
+    val original = currentLocation()
+    try {
+      replaceLocation(query)
+      block()
+    } finally {
+      replaceLocation(original)
+    }
+  }
 }
+
+@JsFun("() => window.location.href") private external fun currentLocation(): String
+
+@JsFun("(value) => window.history.replaceState(null, '', value)")
+private external fun replaceLocation(value: String)

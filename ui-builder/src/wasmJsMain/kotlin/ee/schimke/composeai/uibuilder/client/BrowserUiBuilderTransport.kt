@@ -113,8 +113,6 @@ private fun fetchUiBuilder(
       if (url.origin !== window.location.origin) {
         throw new Error('UI-builder HTTP endpoint must be same-origin');
       }
-      var pageToken = new URL(window.location.href).searchParams.get('token');
-      if (pageToken && !url.searchParams.has('token')) url.searchParams.set('token', pageToken);
       return fetch(url.toString(), {
       method: 'POST',
       credentials: 'same-origin',
@@ -161,8 +159,6 @@ internal fun browserUiBuilderWebSocketUrl(
       if (url.origin !== window.location.origin) {
         throw new Error('UI-builder WebSocket endpoint must be same-origin');
       }
-      var pageToken = new URL(window.location.href).searchParams.get('token');
-      if (pageToken && !url.searchParams.has('token')) url.searchParams.set('token', pageToken);
       if (url.protocol === 'http:') url.protocol = 'ws:';
       if (url.protocol === 'https:') url.protocol = 'wss:';
       if (hasAfterSequence) url.searchParams.set('afterSequence', afterSequence);

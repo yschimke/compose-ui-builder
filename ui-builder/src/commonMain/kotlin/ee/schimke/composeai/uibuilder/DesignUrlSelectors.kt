@@ -87,11 +87,13 @@ const val DESIGN_URL_THREAD_KEY: String = "thread"
  * One list, read by both sides of the same question: the browser's canonical rewrite copies exactly
  * these forward, and [designUrlPath] writes none of them. Two lists would eventually disagree, and
  * the way they would disagree is a token riding along in a link somebody pastes into a chat.
- * `token` is in it because the *page's own* URL keeps its credential across the rewrite.
+ *
+ * `token` is deliberately not in it: a browser holds the host's browse credential as a cookie the
+ * host sets when a `?token=` link is first opened, so neither the page's own URL nor a navigation
+ * from it carries one (`stripPageToken` takes a stray one back out of the address bar).
  */
 val DESIGN_URL_IDENTITY_KEYS: List<String> =
   listOf(
-    "token",
     "actor",
     "clientId",
     "displayName",

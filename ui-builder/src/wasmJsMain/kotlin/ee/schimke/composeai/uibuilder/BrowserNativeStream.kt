@@ -162,18 +162,16 @@ internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeS
  * The socket URL for one live session, in the path form the lane reads a session id out of.
  *
  * `/{session}/ws/{preview}` rather than `/ws/{preview}?session=` because the path form is the one
- * the redeemed playground session is reachable under, and the access token the page was opened with
- * rides along so a token-gated host accepts the upgrade.
+ * the redeemed playground session is reachable under. No token rides along: the upgrade is
+ * same-origin, so a token-gated host reads the browse cookie it set when the page was opened.
  */
-private fun nativeStreamUrl(sessionId: String, previewId: String): String =
+internal fun nativeStreamUrl(sessionId: String, previewId: String): String =
   js(
     """(function () {
       var url = new URL(
         '/' + encodeURIComponent(sessionId) + '/ws/' + encodeURIComponent(previewId),
         window.location.href
       );
-      var pageToken = new URL(window.location.href).searchParams.get('token');
-      if (pageToken) url.searchParams.set('token', pageToken);
       url.searchParams.set('codec', 'webp');
       if (url.protocol === 'http:') url.protocol = 'ws:';
       if (url.protocol === 'https:') url.protocol = 'wss:';
