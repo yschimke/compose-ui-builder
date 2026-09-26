@@ -2,15 +2,19 @@ package ee.schimke.composeai.uibuilder
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.MouseButton
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
@@ -73,7 +77,10 @@ class DirectManipulationTest {
       waitForIdle()
       assertEquals(listOf("fillMaxWidth"), state.modifiersOf("dm-a"))
 
-      // The hover editor's chip is the other half of the same decision.
+      // The quick editor's chip is the other half of the same decision. It opens on E now, rather
+      // than for every selection.
+      onRoot().performKeyInput { pressKey(Key.E) }
+      waitForIdle()
       onNodeWithContentDescription("Width hugs content").performClick()
       waitForIdle()
       assertEquals(emptyList(), state.modifiersOf("dm-a"))

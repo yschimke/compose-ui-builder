@@ -43,6 +43,22 @@ val uiBuilderJava = JavaLanguageVersion.of(libs.versions.java.ui.builder.get().t
 
 val uiBuilderLauncher = javaToolchains.launcherFor { languageVersion.set(uiBuilderJava) }
 
+/**
+ * Wear's face for the JVM, under `fonts/` on the classpath: the vendored manifest and Roboto Flex,
+ * which `ensureBundledWearDeviceFonts` registers with the Wear port as `roboto-flex` — the name the
+ * Wear type scale asks for. Without it every JVM render of a Wear screen (the previews, the tests,
+ * the desktop app) is set in the platform's fallback sans. The browser serves the same files from
+ * the bundle's `fonts/` and registers them itself.
+ */
+val stageWearDeviceFonts =
+  tasks.register<Sync>("stageWearDeviceFonts") {
+    from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {
+      include("fonts.json", "RobotoFlex.ttf", "RobotoFlex-OFL.txt")
+      into("fonts")
+    }
+    into(layout.buildDirectory.dir("generated/wearDeviceFonts"))
+  }
+
 // Compile the exact shared-export golden. Keep the source in build output so formatting does not
 // rewrite the generator's spelling; the server test checks every byte against ScreenExportGate.
 val stageBehaviorCompileFixture =
@@ -172,6 +188,7 @@ kotlin {
     getByName("jvmMain")
       .resources
       .srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
+    getByName("jvmMain").resources.srcDir(stageWearDeviceFonts)
     getByName("jvmTest") {
       kotlin.srcDir(stageBehaviorCompileFixture)
       resources.srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))

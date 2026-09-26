@@ -9,6 +9,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -65,6 +68,9 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
@@ -78,6 +84,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -189,10 +196,20 @@ internal fun PinnedDesignCanvas(
   /** The verbs a layer answers to, for the canvas's own context menu. */
   selectionMenu: (() -> Unit) -> List<UiBuilderMenuEntry>,
   /**
-   * The tight editor that follows the selection over the design, or null where there is nothing to
-   * follow. Positioned here, because only the canvas knows where the selected node is drawn.
+   * The selection's quick editor, or null while it is closed. Positioned here, because only the
+   * canvas knows where the design is drawn and where there is room beside it. Given the modifier
+   * that makes a part of it the grip the author moves it by.
    */
-  hoverEditor: (@Composable () -> Unit)?,
+  hoverEditor: (@Composable (dragHandle: Modifier) -> Unit)?,
+  /** A press anywhere else on the canvas closes the quick editor. */
+  onHoverEditorDismiss: () -> Unit = {},
+  /** A double-click on the design, with the node under it — the deepest one, as a click picks. */
+  onNodeDoubleClicked: (String) -> Unit = {},
+  /** The text being typed over in place, drawn over its node; null when none is. */
+  inlineTextEdit: CanvasInlineTextEdit? = null,
+  /** The in-place text is done: the text to commit, or null to leave the node as it was. */
+  onInlineTextDone: (text: String?, focusMovedAway: Boolean) -> Unit = { _, _ -> },
+  onTextInputFocusChanged: (Boolean) -> Unit = {},
   /**
    * How the selected node is sized, for its resize handles, or null where it gets none — see
    * [UiBuilderEditorReducer.sizing].
@@ -291,6 +308,13 @@ internal fun PinnedDesignCanvas(
     // The workspace's own rectangle, so a node's root-space box can be turned into an offset in
     // this box — which is where the hover editor is placed.
     var workspaceBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
+    // What is drawn of the design — the frame and its extent companion — so the quick editor can
+    // open in the empty workspace beside it rather than over it.
+    var designsBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
+    // Where the author dragged the quick editor to, in the workspace's dp; null until they do. Kept
+    // across selections and reopenings: a card somebody put somewhere should stay put.
+    var hoverEditorMoved by remember { mutableStateOf<DpOffset?>(null) }
+    val dismissHoverEditor = rememberUpdatedState(onHoverEditorDismiss)
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
     // While a drag is in the air, the pointer near an edge scrolls the workspace under it.
@@ -351,11 +375,49 @@ internal fun PinnedDesignCanvas(
       verticalScrollState.dispatchRawDelta(drift.y)
       zoomAnchor = null
     }
+    // The node under a press in the workspace, asked at the moment of the press — see
+    // [onDoubleClick] for why the first click's answer is the one kept. Through an updated state,
+    // because the gesture outlives the composition that made it, and the scale and origin it
+    // converts with change when the canvas re-fits.
+    val nodeUnderPress = rememberUpdatedState { position: Offset ->
+      if (!showSelectionOverlay) return@rememberUpdatedState null
+      val point = workspaceBounds.topLeft + position
+      inspection
+        ?.nodes
+        .orEmpty()
+        .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
+        .filter { (_, bounds) ->
+          point.x >= bounds.x &&
+            point.x <= bounds.right &&
+            point.y >= bounds.y &&
+            point.y <= bounds.bottom
+        }
+        .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
+        ?.first
+    }
+    val doubleClicked = rememberUpdatedState(onNodeDoubleClicked)
     Box(
       Modifier.fillMaxSize()
         .onGloballyPositioned {
           workspaceBounds = it.boundsInRoot()
           onWorkspaceBounds(workspaceBounds)
+        }
+        // Here rather than on the frame, because the frame moves between the two clicks when the
+        // first opens a panel; the workspace does not.
+        .onDoubleClick(
+          document.id,
+          capture = { position -> nodeUnderPress.value(position) },
+          onDoubleClick = { nodeId -> doubleClicked.value(nodeId) },
+        )
+        // Clicking somewhere else closes the quick editor. Watched in the initial pass and never
+        // consumed, so the press still selects, drags or pans exactly as it would have. The card
+        // is a sibling drawn over this box, so a press on the card never arrives here.
+        .pointerInput(hoverEditor != null) {
+          if (hoverEditor == null) return@pointerInput
+          awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            dismissHoverEditor.value()
+          }
         }
         // Outside the scrolls, so the positions it reads are the workspace's own and it sees a
         // pinch before the scroll can take one finger of it.
@@ -395,7 +457,10 @@ internal fun PinnedDesignCanvas(
         Modifier.widthIn(min = workspaceWidth).heightIn(min = workspaceHeight),
         contentAlignment = contentAlignment,
       ) {
-        Row(horizontalArrangement = Arrangement.spacedBy((CANVAS_PANE_GAP_DP.value * scale).dp)) {
+        Row(
+          Modifier.onGloballyPositioned { designsBounds = it.boundsInRoot() },
+          horizontalArrangement = Arrangement.spacedBy((CANVAS_PANE_GAP_DP.value * scale).dp),
+        ) {
           Box(Modifier.size((sourceWidth * scale).dp, (expandedHeightDp * scale).dp)) {
             Surface(
               Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
@@ -686,8 +751,8 @@ internal fun PinnedDesignCanvas(
         }
       }
     }
-    // Beside the selected node rather than over it, and outside the scaled frame so the type stays
-    // the size it was designed at however far the design is zoomed out.
+    // Beside the design rather than over it — see [hoverEditorPlacement] — and outside the scaled
+    // frame so the type stays the size it was designed at however far the design is zoomed out.
     val selectedBounds = selectedNodeId?.let { id ->
       inspection?.nodes?.firstOrNull { it.nodeId == id }?.bounds
     }
@@ -704,24 +769,60 @@ internal fun PinnedDesignCanvas(
         dragPosition == null &&
         !resizing
     ) {
-      val left = (selectedBounds.x - workspaceBounds.left).coerceAtLeast(0f)
-      val below = selectedBounds.y + selectedBounds.height - workspaceBounds.top + 8f
-      val above = selectedBounds.y - workspaceBounds.top - 8f
-      val roomBelow = with(density) { (workspaceBounds.height - below).toDp() } > HOVER_EDITOR_ROOM
+      val placed =
+        hoverEditorPlacement(
+          workspace = workspaceBounds,
+          designs = designsBounds,
+          selected = selectedBounds,
+          density = density,
+          workspaceWidth = workspaceWidth,
+          workspaceHeight = workspaceHeight,
+        )
+      val maxX = (workspaceWidth - HOVER_EDITOR_WIDTH).coerceAtLeast(0.dp)
+      val maxY = (workspaceHeight - HOVER_EDITOR_GRIP).coerceAtLeast(0.dp)
+      val position =
+        (hoverEditorMoved ?: placed).let {
+          DpOffset(it.x.coerceIn(0.dp, maxX), it.y.coerceIn(0.dp, maxY))
+        }
+      val currentPosition = rememberUpdatedState(position)
       Box(
         Modifier.align(Alignment.TopStart)
-          .offset(
-            x =
-              with(density) { left.toDp() }
-                .coerceIn(0.dp, (workspaceWidth - HOVER_EDITOR_WIDTH).coerceAtLeast(0.dp)),
-            y =
-              with(density) { (if (roomBelow) below else above).toDp() }
-                .coerceIn(0.dp, workspaceHeight)
-                .let { if (roomBelow) it else (it - HOVER_EDITOR_ROOM).coerceAtLeast(0.dp) },
-          )
+          .offset(x = position.x, y = position.y)
           .width(HOVER_EDITOR_WIDTH)
       ) {
-        hoverEditor()
+        hoverEditor(
+          Modifier.pointerHoverIcon(PointerIcon.Hand).pointerInput(Unit) {
+            detectDragGestures { change, drag ->
+              change.consume()
+              val from = currentPosition.value
+              hoverEditorMoved =
+                DpOffset(
+                  (from.x + drag.x.toDp()).coerceIn(0.dp, maxX),
+                  (from.y + drag.y.toDp()).coerceIn(0.dp, maxY),
+                )
+            }
+          }
+        )
+      }
+    }
+    // Over the node it edits, at least wide enough to type in: a one-letter label is a narrow box.
+    val inlineBounds = inlineTextEdit?.let { edit ->
+      inspection?.nodes?.firstOrNull { it.nodeId == edit.nodeId }?.bounds
+    }
+    if (inlineTextEdit != null && inlineBounds != null) {
+      with(density) {
+        InlineTextEditor(
+          edit = inlineTextEdit,
+          onDone = onInlineTextDone,
+          onTextInputFocusChanged = onTextInputFocusChanged,
+          modifier =
+            Modifier.align(Alignment.TopStart)
+              .offset(
+                x = (inlineBounds.x - workspaceBounds.left - 4.dp.toPx()).coerceAtLeast(0f).toDp(),
+                y = (inlineBounds.y - workspaceBounds.top - 4.dp.toPx()).coerceAtLeast(0f).toDp(),
+              )
+              .widthIn(min = maxOf(inlineBounds.width.toDp() + 8.dp, INLINE_TEXT_MIN_WIDTH)),
+        )
       }
     }
     if (
@@ -1397,9 +1498,56 @@ internal fun VariantPane(
 internal const val VARIANT_LABEL_ROOM_DP = 18f
 
 /** How wide the editor that follows the selection is, and how much room it needs under a node. */
-private val HOVER_EDITOR_WIDTH = 268.dp
+internal val HOVER_EDITOR_WIDTH = 268.dp
 
 private val HOVER_EDITOR_ROOM = 148.dp
+
+/** How much of a dragged quick editor has to stay in the workspace: its title row, the grip. */
+private val HOVER_EDITOR_GRIP = 32.dp
+
+/** Space between the design and a quick editor opened beside it. */
+private val HOVER_EDITOR_GAP = 16.dp
+
+/** The narrowest an in-place text field gets, so a short label still leaves room to type. */
+private val INLINE_TEXT_MIN_WIDTH = 160.dp
+
+/**
+ * Where the quick editor opens, in the workspace's dp: beside the design, never over it, where
+ * there is room.
+ *
+ * To the right of what is drawn first, then to its left, level with the selected node so the eye
+ * does not have to travel far. Only a workspace with no room either side — a design zoomed to fill
+ * it — falls back to beside the node itself, below it or above it, which is where the card always
+ * used to go; there it can be dragged aside.
+ */
+internal fun hoverEditorPlacement(
+  workspace: Rect,
+  designs: Rect,
+  selected: UiBuilderPixelBounds,
+  density: Density,
+  workspaceWidth: Dp,
+  workspaceHeight: Dp,
+): DpOffset =
+  with(density) {
+    val top =
+      (selected.y - workspace.top)
+        .toDp()
+        .coerceIn(0.dp, (workspaceHeight - HOVER_EDITOR_ROOM).coerceAtLeast(0.dp))
+    if (designs != Rect.Zero) {
+      val right = (designs.right - workspace.left).toDp() + HOVER_EDITOR_GAP
+      if (right + HOVER_EDITOR_WIDTH <= workspaceWidth) return DpOffset(right, top)
+      val left = (designs.left - workspace.left).toDp() - HOVER_EDITOR_GAP - HOVER_EDITOR_WIDTH
+      if (left >= 0.dp) return DpOffset(left, top)
+    }
+    val x = (selected.x - workspace.left).coerceAtLeast(0f).toDp()
+    val below = selected.y + selected.height - workspace.top + 8f
+    val above = selected.y - workspace.top - 8f
+    val roomBelow = (workspace.height - below).toDp() > HOVER_EDITOR_ROOM
+    DpOffset(
+      x,
+      if (roomBelow) below.toDp() else (above.toDp() - HOVER_EDITOR_ROOM).coerceAtLeast(0.dp),
+    )
+  }
 
 /**
  * The number a just-added modifier hands the caret to.

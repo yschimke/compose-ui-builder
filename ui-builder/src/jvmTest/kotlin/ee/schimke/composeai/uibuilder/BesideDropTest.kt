@@ -21,6 +21,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -46,6 +47,7 @@ class BesideDropTest {
   fun `a palette drop builds an editable component beside the design`() =
     runDesktopComposeUiTest(width = 1400, height = 900) {
       var frameBounds = Rect.Zero
+      var state: UiBuilderEditorState? = null
       setContent {
         MaterialTheme {
           UiBuilderEditor(
@@ -56,6 +58,7 @@ class BesideDropTest {
             initialInspectorOpen = true,
             initialCanvasZoom = 1f,
             onCanvasBoundsChanged = { frameBounds = it },
+            onStateChanged = { state = it },
           )
         }
       }
@@ -86,10 +89,8 @@ class BesideDropTest {
         onAllNodesWithText("New text").fetchSemanticsNodes().isNotEmpty(),
         "the inserted text is on the canvas",
       )
-      assertTrue(
-        onAllNodesWithText("New text · m3/text").fetchSemanticsNodes().isNotEmpty(),
-        "the selection followed the inserted node",
-      )
+      val selected = state?.let { it.document.nodes[it.selectedNodeId] }
+      assertEquals("m3/text", selected?.componentId, "the selection followed the inserted node")
 
       // Selection opens the inspector, so the newly dropped component can immediately become part
       // of the authored screen rather than remaining its palette default.

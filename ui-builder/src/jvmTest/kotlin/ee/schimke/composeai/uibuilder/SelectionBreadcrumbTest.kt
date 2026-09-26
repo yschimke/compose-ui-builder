@@ -8,8 +8,10 @@ import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
@@ -31,8 +33,16 @@ class SelectionBreadcrumbTest {
   @Test
   fun `the selection's path names every rung, and a rung pressed re-roots the selection`() =
     runDesktopComposeUiTest(width = 1600, height = 1050) {
+      var state: UiBuilderEditorState? = null
       setContent {
-        MaterialTheme { UiBuilderEditor(document, catalog, initialSelectedNodeId = "plan-n1") }
+        MaterialTheme {
+          UiBuilderEditor(
+            document,
+            catalog,
+            initialSelectedNodeId = "plan-n1",
+            onStateChanged = { state = it },
+          )
+        }
       }
       waitForIdle()
 
@@ -43,11 +53,12 @@ class SelectionBreadcrumbTest {
       onNodeWithText("Box").assertExists()
 
       // Pressing the column rung re-roots the selection: the rungs below it leave the bar, and
-      // the tight editor that follows the selection now follows the column.
+      // the selection is now the column.
       onNodeWithText("Column").performClick()
       waitForIdle()
       onNodeWithText("Box").assertDoesNotExist()
-      onNodeWithText("Column · layout/column").assertExists()
+      val selected = state?.let { it.document.nodes[it.selectedNodeId] }
+      assertEquals("layout/column", selected?.componentId)
     }
 
   private companion object {

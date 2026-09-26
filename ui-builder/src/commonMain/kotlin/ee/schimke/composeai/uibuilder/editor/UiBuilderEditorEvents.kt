@@ -79,6 +79,18 @@ sealed interface UiBuilderEditorEvent {
   /** Shows or hides the generated-Kotlin pane under the canvas. */
   data object ToggleCodePane : UiBuilderEditorEvent
 
+  /**
+   * Opens the selection's quick editor, or closes it. Only a single selection has one: the card
+   * edits one node's values.
+   */
+  data object ToggleQuickEditor : UiBuilderEditorEvent
+
+  /** Opens the quick editor, for a route that is about to hand it the caret. */
+  data object ShowQuickEditor : UiBuilderEditorEvent
+
+  /** Closes the quick editor; the selection and the Properties panel are untouched. */
+  data object HideQuickEditor : UiBuilderEditorEvent
+
   /** Shows or hides the strip of revision thumbnails under the canvas. */
   data object ToggleHistoryBar : UiBuilderEditorEvent
 

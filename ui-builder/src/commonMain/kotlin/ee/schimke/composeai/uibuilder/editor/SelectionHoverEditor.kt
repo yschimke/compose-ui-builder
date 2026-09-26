@@ -83,6 +83,11 @@ internal fun SelectionHoverEditor(
   onTextInputFocusChanged: (Boolean) -> Unit,
   /** Closes the card; the selection and the Properties panel are untouched. */
   onDismiss: (() -> Unit)? = null,
+  /**
+   * The grip that moves the card, applied to its title row. The canvas owns where the card is, so
+   * it supplies the gesture; the card only says which part of it is the handle.
+   */
+  dragHandle: Modifier = Modifier,
 ) {
   Surface(
     shape = RoundedCornerShape(12.dp),
@@ -92,10 +97,10 @@ internal fun SelectionHoverEditor(
     modifier = Modifier.semantics { contentDescription = "Selection editor" },
   ) {
     Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
+      Row(dragHandle.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
           label,
-          Modifier.weight(1f, fill = false),
+          Modifier.weight(1f),
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           style = MaterialTheme.typography.labelSmall,
           maxLines = 1,

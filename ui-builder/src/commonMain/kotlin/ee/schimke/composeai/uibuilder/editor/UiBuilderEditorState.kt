@@ -219,6 +219,9 @@ class UiBuilderEditorReducer(
       componentDrift = state.componentDrift.stillDescribing(document),
       layerQuery = state.layerQuery,
       codePaneVisible = state.codePaneVisible,
+      // Only while it is still about the same node: a collaborator who deletes the selection moves
+      // it to a fallback, and the card must not follow onto a node nobody asked to edit.
+      quickEditorOpen = state.quickEditorOpen && rebuilt.selectedNodeId == state.selectedNodeId,
       // The strip survives an authoritative document; what it was *showing* does not. The rebuilt
       // collaboration state carries none of the mutations that built the arriving document, so the
       // revision somebody was looking at is one this editor can no longer picture — the strip
@@ -249,7 +252,16 @@ class UiBuilderEditorReducer(
    *     row the edit just made.
    */
   fun reduce(state: UiBuilderEditorState, event: UiBuilderEditorEvent): UiBuilderEditorState {
-    val next = reduceEvent(state, event)
+    val reduced = reduceEvent(state, event)
+    // The quick editor is about one node. A new selection — a click elsewhere on the canvas, a
+    // layer row, an arrow key, the node an insert lands — closes it rather than moving it onto a
+    // node nobody asked to edit.
+    val next =
+      if (reduced.quickEditorOpen && reduced.selectedNodeId != state.selectedNodeId) {
+        reduced.copy(quickEditorOpen = false)
+      } else {
+        reduced
+      }
     val moved = next.document.revision != state.document.revision
     return if (moved && next.revisionPeek != null) {
       next.copy(revisionPeek = null, revisionCompare = null)
@@ -297,6 +309,11 @@ class UiBuilderEditorReducer(
             else if (state.panes.size > 1) state.panes - event.pane else state.panes
         )
       is UiBuilderEditorEvent.ToggleCodePane -> state.copy(codePaneVisible = !state.codePaneVisible)
+      is UiBuilderEditorEvent.ToggleQuickEditor ->
+        state.copy(quickEditorOpen = !state.quickEditorOpen && state.selection.size == 1)
+      is UiBuilderEditorEvent.ShowQuickEditor ->
+        state.copy(quickEditorOpen = state.selection.size == 1)
+      is UiBuilderEditorEvent.HideQuickEditor -> state.copy(quickEditorOpen = false)
       is UiBuilderEditorEvent.ToggleHistoryBar ->
         // Shutting the strip ends whatever it was showing. A peek that outlived the control it was
         // started from is a canvas stuck at an old revision with nothing on screen saying why.
@@ -1303,6 +1320,23 @@ class UiBuilderEditorReducer(
    * Where the nodes disagree the field is [EditorPropertyField.mixed] and its value is blank, so
    * the control shows nothing rather than one node's value standing in for all of them.
    */
+  /**
+   * The text [nodeId] shows, when it can be typed over in place on the canvas — or null.
+   *
+   * A node qualifies when its `text` property is free text the author wrote: a Text, a Button's
+   * label. A text bound to a state variable does not — typing over it would replace the binding
+   * with a literal, which is not what anyone double-clicking a label means — and nor does anything
+   * whose `text` is a choice from a list.
+   */
+  fun inlineText(state: UiBuilderEditorState, nodeId: String): String? {
+    if (nodeId !in state.document.nodes) return null
+    val field =
+      propertyFields(state.copy(selection = listOf(nodeId))).firstOrNull { it.name == "text" }
+        ?: return null
+    if (field.control != EditorPropertyControl.Text || field.boundVariable != null) return null
+    return field.value
+  }
+
   fun propertyFields(state: UiBuilderEditorState): List<EditorPropertyField> {
     val nodes = state.selection.mapNotNull(state.document.nodes::get)
     val node = nodes.lastOrNull() ?: return emptyList()
