@@ -75,6 +75,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerLayoutType
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
@@ -381,6 +382,16 @@ public val LocalRemoteComposeCaptures:
  * stadium, for the same reason and with the same honesty about it.
  */
 internal val LocalUiBuilderUnrolled = staticCompositionLocalOf { false }
+
+/**
+ * Draw a dialog as its surface, in place, rather than as a window.
+ *
+ * A real `AlertDialog` is a popup: it leaves the layout it was composed in and floats over the
+ * whole host, scrim and all. On the canvas that is the component. In a palette thumbnail it is a
+ * dialog escaping a 104 dp tile and covering the editor, so the component list sets this and gets
+ * the same stand-in an unrolled canvas draws — without unrolling anything else.
+ */
+internal val LocalUiBuilderInlineDialogs = staticCompositionLocalOf { false }
 
 internal enum class UiBuilderRenderStrategy {
   REAL,
@@ -1724,8 +1735,9 @@ private fun RenderNode(
       }
       "m3/dialog" -> {
         if (
-          uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
-            UiBuilderRenderStrategy.AUTHORING_ADAPTER
+          LocalUiBuilderInlineDialogs.current ||
+            uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
+              UiBuilderRenderStrategy.AUTHORING_ADAPTER
         ) {
           BuilderDialogSurface(
             node = node,
@@ -1758,7 +1770,7 @@ private fun RenderNode(
         }
       }
       "m3/date-picker" -> BuilderDatePicker(node, measured)
-      "m3/time-picker" -> BuilderTimePicker(node, measured)
+      "m3/time-picker" -> BuilderTimePicker(node, measured, document.timePickerLayoutType())
       "m3/icon-button" ->
         IconButton(
           onClick = activate,
@@ -3104,7 +3116,11 @@ private fun BuilderDatePicker(node: UiBuilderNode, modifier: Modifier) {
  * the current time, so an unpinned clock face would draw a different picture every minute.
  */
 @Composable
-private fun BuilderTimePicker(node: UiBuilderNode, modifier: Modifier) {
+private fun BuilderTimePicker(
+  node: UiBuilderNode,
+  modifier: Modifier,
+  layoutType: TimePickerLayoutType?,
+) {
   val hour = node.integer("hour", DEFAULT_PICKED_HOUR).coerceIn(0, 23)
   val minute = node.integer("minute", DEFAULT_PICKED_MINUTE).coerceIn(0, 59)
   val is24Hour = node.bool("is24Hour", true)
@@ -3113,7 +3129,23 @@ private fun BuilderTimePicker(node: UiBuilderNode, modifier: Modifier) {
       rememberTimePickerState(initialHour = hour, initialMinute = minute, is24Hour = is24Hour)
     }
   if (node.string("mode") == "input") TimeInput(state = state, modifier = modifier)
+  else if (layoutType != null)
+    TimePicker(state = state, modifier = modifier, layoutType = layoutType)
   else TimePicker(state = state, modifier = modifier)
+}
+
+/**
+ * The clock's layout for the design's own window, or null to leave it to Material.
+ *
+ * Left to Material, `TimePicker` reads the *host* window: a phone design edited in a laptop browser
+ * drew the landscape clock, digits beside the dial, which is not what that phone shows — and in a
+ * palette thumbnail, laid out in a portrait frame, the dial overlapped the minutes. The document's
+ * environment names the window it is designed for; a portrait one gets the vertical clock.
+ */
+private fun UiBuilderDocument.timePickerLayoutType(): TimePickerLayoutType? {
+  val width = environment["widthDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: return null
+  val height = environment["heightDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: return null
+  return if (width > height) TimePickerLayoutType.Horizontal else TimePickerLayoutType.Vertical
 }
 
 /**

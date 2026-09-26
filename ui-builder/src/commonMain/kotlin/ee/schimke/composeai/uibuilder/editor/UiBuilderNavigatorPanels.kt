@@ -53,11 +53,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -108,13 +110,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.LocalReduceMotion
 import ee.schimke.composeai.uibuilder.ParentSlot
 import ee.schimke.composeai.uibuilder.REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.RemoteComposeSource
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderContentMissing
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderInlineDialogs
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderBoard
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvas.boardRootId
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderComponentPacks
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.filterRemoteComposeSources
@@ -385,6 +391,9 @@ private fun InsertPanel(
         span = { row ->
           if (row is EditorCatalogRow.Group) GridItemSpan(maxLineSpan) else GridItemSpan(1)
         },
+        // A heading scrolled off is reused for a heading and a tile for a tile, rather than a
+        // thumbnail's whole rendered subtree being torn down to build a one-line heading.
+        contentType = { row -> row::class },
       ) { row ->
         when (row) {
           is EditorCatalogRow.Group ->
@@ -1001,7 +1010,7 @@ private fun CatalogDragTile(
  * inside it from answering presses of its own.
  */
 @Composable
-private fun CatalogThumbnail(
+internal fun CatalogThumbnail(
   document: UiBuilderDocument?,
   componentId: String,
   label: String,
@@ -1012,10 +1021,13 @@ private fun CatalogThumbnail(
    * curved indicator with no canvas of its own here — is a component with no picture, not a layout.
    */
   container: Boolean,
+  /** Told what the thumbnail ended up drawing. For tests that sweep a whole catalog. */
+  onOutcome: ((CatalogThumbnailOutcome) -> Unit)? = null,
 ) {
   // A component the frame could not hold, a root-only scaffold, has no picture. Better absent than
   // faked, and the same absence every other pictureless tile shows.
   if (document == null) {
+    onOutcome?.let { report -> SideEffect { report(CatalogThumbnailOutcome.NoDocument) } }
     NoPictureThumbnail(label, size)
     return
   }
@@ -1024,6 +1036,7 @@ private fun CatalogThumbnail(
   // to fill; wrong here, where a shelf of error boxes reads as a broken catalog.
   var needsContent by remember(componentId) { mutableStateOf(false) }
   if (needsContent) {
+    onOutcome?.let { report -> SideEffect { report(CatalogThumbnailOutcome.NeedsContent) } }
     NoPictureThumbnail(label, size)
     return
   }
@@ -1031,21 +1044,42 @@ private fun CatalogThumbnail(
   // The panel's brightness, not the catalog's pinned dark: a component drawn in the opposite
   // theme to the list it sits on is a dark block on a light panel — a frame by another name.
   val panelDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-  val themed =
-    remember(document, panelDark) {
-      document.copy(
-        environment =
-          JsonObject(
-            document.environment + ("theme" to JsonPrimitive(if (panelDark) "dark" else "light"))
-          )
-      )
+  // Whether the component filled the default frame and is drawn again in a roomy one — see
+  // [PREVIEW_ROOMY_FRAME]. Saveable so the lazy grid keeps the answer for a tile scrolled out and
+  // back: without it every return would draw the squeezed picture for a frame, then jump.
+  var roomy by rememberSaveable(componentId, label) { mutableStateOf(false) }
+  val roomyFrame =
+    if (LocalUiBuilderCatalogPlatform.current == UiBuilderCatalogPlatform.WEAR.wireValue) {
+      PREVIEW_ROOMY_WEAR_FRAME
+    } else {
+      PREVIEW_ROOMY_FRAME
     }
-  val fallbackScale = size.width.value / PREVIEW_FRAME_WIDTH_DP
-  var contentBounds by remember(document.id) { mutableStateOf<UiBuilderPixelBounds?>(null) }
+  val frame = if (roomy) roomyFrame else PreviewFrameSize.Default
+  val themed =
+    remember(document, panelDark, frame) {
+      document
+        .copy(
+          environment =
+            JsonObject(
+              document.environment + ("theme" to JsonPrimitive(if (panelDark) "dark" else "light"))
+            )
+        )
+        .let { if (frame == PreviewFrameSize.Default) it else it.inPreviewFrame(frame) }
+    }
+  // A miniature gets a square tile rather than the landscape one: what needs the roomy frame is a
+  // picker or a dialog, taller than it is wide, and in a 72 dp high tile it would be a smudge.
+  val tile = if (roomy) DpSize(size.width, size.width) else size
+  // The whole frame inside the tile until the component has been measured: that first snapshot is
+  // the one the roomy-frame question is asked of, and a frame hanging off the tile's edge would be
+  // measured clipped.
+  val fallbackScale = minOf(tile.width.value / frame.widthDp, tile.height.value / frame.heightDp)
+  val fullFrame =
+    with(density) { Size(frame.widthDp.dp.toPx(), frame.heightDp.dp.toPx()) } * fallbackScale
+  var contentBounds by remember(document.id, frame) { mutableStateOf<UiBuilderPixelBounds?>(null) }
   // Measured, and nothing in it has a size: an empty Box, Column or Row lays out at 0x0, so its
   // picture was a blank tile indistinguishable from one that failed to draw.
   var drewNothing by remember(document.id) { mutableStateOf(false) }
-  val tileSize = with(density) { Size(size.width.toPx(), size.height.toPx()) }
+  val tileSize = with(density) { Size(tile.width.toPx(), tile.height.toPx()) }
   val transform =
     thumbnailContentTransform(
       contentBounds = contentBounds,
@@ -1064,7 +1098,7 @@ private fun CatalogThumbnail(
       bottom = bounds.bottom * transform.scale + transform.translation.y + shadowRoom,
     )
   }
-  Box(Modifier.size(size), contentAlignment = Alignment.TopStart) {
+  Box(Modifier.size(tile), contentAlignment = Alignment.TopStart) {
     Box(
       Modifier.matchParentSize().drawWithContent {
         // Nothing until the component has been measured once: the frame around it is not the
@@ -1081,7 +1115,7 @@ private fun CatalogThumbnail(
         // 104x72 tile while the transform below assumes (0, 0): every thumbnail drew shifted up
         // and left, so a Button read as "utton" with its top cut off.
         Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
-          .requiredSize(PREVIEW_FRAME_WIDTH_DP.dp, PREVIEW_FRAME_HEIGHT_DP.dp)
+          .requiredSize(frame.widthDp.dp, frame.heightDp.dp)
           .graphicsLayer {
             // Top-start is intentional. The inspection snapshot below is in post-transform root
             // pixels; a fixed origin lets it recover the component's source-frame bounds without
@@ -1099,6 +1133,11 @@ private fun CatalogThumbnail(
           .clearAndSetSemantics {}
       ) {
         val inspection: (UiBuilderInspectionSnapshot) -> Unit = { snapshot ->
+          // Asked before the first bounds land, so of a snapshot laid out under the fallback
+          // transform: whole, unclipped, at a scale this pass agrees with.
+          if (!roomy && contentBounds == null && thumbnailNeedsRoomyFrame(snapshot, fullFrame)) {
+            roomy = true
+          }
           val next = thumbnailContentBounds(snapshot, transform.scale)
           // Measured under the transform these bounds produce, so each pass reads them back a
           // fraction of a pixel off and would re-transform forever. Only a real change moves it.
@@ -1112,13 +1151,36 @@ private fun CatalogThumbnail(
         // one, that runtime is a sandboxed iframe booting its own Wasm: one per tile was dozens of
         // whole runtimes for one list, each polling for its inspection and each a DOM layer
         // re-placed by hand as the list scrolled. The editing canvas is the one place it draws.
-        CompositionLocalProvider(LocalUiBuilderContentMissing provides { needsContent = true }) {
+        // Reduce motion: a thumbnail is a still picture. Wear's dialogs, indicators and pagers read
+        // it and draw their settled state rather than animating into it — the open-on-phone
+        // dialog otherwise ran its four-second countdown ring every time its tile scrolled into
+        // view, keeping the panel drawing frames for a picture nobody watches. Not
+        // `MotionDurationScale`: that is read from the composition's coroutine context, which a
+        // tile shares with the whole editor.
+        CompositionLocalProvider(
+          LocalUiBuilderContentMissing provides { needsContent = true },
+          LocalReduceMotion provides true,
+          // A Dialog drawn for real opens a window: one per palette tile, floating over the whole
+          // editor with its scrim. Its stand-in draws the same surface inside the tile.
+          LocalUiBuilderInlineDialogs provides true,
+        ) {
           UiBuilderSurface(
             document = themed,
             editorOverlay = false,
             onInspectionSnapshot = inspection,
           )
         }
+      }
+    }
+    onOutcome?.let { report ->
+      SideEffect {
+        report(
+          when {
+            drewNothing -> CatalogThumbnailOutcome.DrewNothing
+            roomy -> CatalogThumbnailOutcome.Miniature
+            else -> CatalogThumbnailOutcome.Drawn
+          }
+        )
       }
     }
     if (drewNothing) {
@@ -1137,6 +1199,56 @@ private fun CatalogThumbnail(
         .semantics { contentDescription = "Drag $label" }
     )
   }
+}
+
+/** What a [CatalogThumbnail] drew, as its latest composition saw it. */
+internal enum class CatalogThumbnailOutcome {
+  /** The component, in the default frame. */
+  Drawn,
+  /** The component filled the default frame, so it is drawn in the roomy one and scaled down. */
+  Miniature,
+  /** Laid out, and nothing in it had a size: an empty container. */
+  DrewNothing,
+  /** It drew its "fill me in" stand-in, so the tile shows no picture. */
+  NeedsContent,
+  /** No thumbnail document could be built: a root-only component the frame cannot hold. */
+  NoDocument,
+}
+
+/**
+ * Whether a component measured in the default frame was squeezed by it, and needs the roomy one.
+ *
+ * Filling the frame's height is the sign: almost nothing is exactly 128 dp tall by choice, and what
+ * reaches it is either a screen that fills whatever it is given — which is better as a miniature of
+ * a screen — or a picker cut short. Filling only the width is ordinary for a text field, a list
+ * item or an app bar, and those read better at the default frame's scale; they escalate only when
+ * they are also most of the frame tall, which is where a clock input or a carousel sits.
+ */
+internal fun thumbnailNeedsRoomyFrame(
+  snapshot: UiBuilderInspectionSnapshot,
+  /** The frame cell's size in the snapshot when nothing clips it: the frame at the tile's scale. */
+  fullFrame: Size,
+): Boolean {
+  // Fractions of the frame cell as the same snapshot measured it, never source pixels recovered
+  // through the tile's transform. And only of a whole cell: the collector's bounds are clipped to
+  // what is on screen, so a tile half scrolled out of the grid measures a short frame, and every
+  // component in it would look as if it filled one.
+  val frame =
+    snapshot.nodes.singleOrNull { it.nodeId == PREVIEW_FRAME_CELL_ID }?.bounds ?: return false
+  if (abs(frame.width - fullFrame.width) > 1f || abs(frame.height - fullFrame.height) > 1f) {
+    return false
+  }
+  val content =
+    snapshot.nodes
+      .filter { it.nodeId != PREVIEW_FRAME_CELL_ID }
+      .mapNotNull { it.bounds }
+      .filter { it.width > 0f && it.height > 0f }
+  if (content.isEmpty()) return false
+  val width = (content.maxOf { it.right } - content.minOf { it.x }) / frame.width
+  val height = (content.maxOf { it.bottom } - content.minOf { it.y }) / frame.height
+  val fillsWidth = width >= 0.99f
+  val fillsHeight = height >= 0.99f
+  return fillsHeight || (fillsWidth && height >= 0.75f)
 }
 
 /** Whether two measurements of a thumbnail's content differ by less than half a source pixel. */

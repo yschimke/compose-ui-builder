@@ -180,6 +180,68 @@ internal const val PREVIEW_FRAME_HEIGHT_DP = 128
 
 internal const val PREVIEW_FRAME_CELL_ID = "catalog-thumbnail-cell"
 
+/**
+ * A frame for a component the default one squeezes.
+ *
+ * A date picker, a clock dial or a dialog is designed for a phone's width and more height than the
+ * default frame has. Laid out in 176 × 128 dp it does not shrink, it crops: the calendar loses its
+ * grid, the dial its numbers. So a thumbnail whose component filled the default frame is drawn
+ * again in this one, at the size Material designs these for, and scaled down as a miniature.
+ */
+internal val PREVIEW_ROOMY_FRAME = PreviewFrameSize(widthDp = 360, heightDp = 640)
+
+/**
+ * The roomy frame for a watch: a large round screen, which is what a Wear picker or dialog fills. A
+ * phone-sized frame would draw a Wear picker stretched across 360 dp it never has on a watch.
+ */
+internal val PREVIEW_ROOMY_WEAR_FRAME = PreviewFrameSize(widthDp = 240, heightDp = 240)
+
+/** The size a thumbnail's component is laid out in, before it is scaled down to its tile. */
+internal data class PreviewFrameSize(val widthDp: Int, val heightDp: Int) {
+  companion object {
+    val Default: PreviewFrameSize =
+      PreviewFrameSize(PREVIEW_FRAME_WIDTH_DP, PREVIEW_FRAME_HEIGHT_DP)
+  }
+}
+
+/**
+ * This thumbnail document with its frame resized: the environment's window and the frame cell's
+ * `size` modifier both, since the cell is what bounds the component and the window is what a
+ * component that reads the screen size — a Wear picker — asks.
+ */
+internal fun UiBuilderDocument.inPreviewFrame(frame: PreviewFrameSize): UiBuilderDocument {
+  val cell = nodes[PREVIEW_FRAME_CELL_ID] ?: return this
+  val size =
+    JsonObject(
+      mapOf(
+        "type" to JsonPrimitive("size"),
+        "widthDp" to JsonPrimitive(frame.widthDp),
+        "heightDp" to JsonPrimitive(frame.heightDp),
+      )
+    )
+  return copy(
+    environment =
+      JsonObject(
+        environment +
+          mapOf(
+            "widthDp" to JsonPrimitive(frame.widthDp),
+            "heightDp" to JsonPrimitive(frame.heightDp),
+          )
+      ),
+    nodes =
+      nodes +
+        (PREVIEW_FRAME_CELL_ID to
+          cell.copy(
+            modifiers =
+              JsonArray(
+                cell.modifiers.map {
+                  if ((it as? JsonObject)?.get("type") == JsonPrimitive("size")) size else it
+                }
+              )
+          )),
+  )
+}
+
 /** The unconstrained cell a drag ghost's component is inserted into. */
 internal const val DRAG_GHOST_CELL_ID = "drag-ghost-cell"
 
@@ -434,7 +496,7 @@ private fun ComponentCapability.plannedChildren(
     }
   }
   if (slot.cardinality.min == 0) return emptyList()
-  val child = defaultChildFor(slot, catalog) ?: return null
+  val child = defaultChildFor(slot, catalog, componentId) ?: return null
   return List(slot.cardinality.min) { child to null }
 }
 
@@ -486,22 +548,29 @@ private fun UiBuilderNode.withStarterProperties(
 private fun defaultChildFor(
   slot: SlotCapability,
   catalog: CapabilityCatalog,
+  /** The component that owns [slot]; its namespace is searched before Material 3's. */
+  ownerId: String,
 ): ComponentCapability? {
-  val preferredId =
+  val preferredName =
     when {
       // Text before icon, for a slot that accepts both. `m3/button` is such a slot, and with the
       // icon branch first every button inserted from the palette arrived holding an icon rather
       // than a label. A slot that means an icon says `IconContent` and not `TextContent`.
       // An A2UI slot takes A2UI components and nothing else, and a text is what an agent puts
-      // in a button, a card or a modal first.
-      A2UI_COMPONENT_TRAIT in slot.acceptedTraits -> A2UI_TEXT
-      "SearchInput" in slot.acceptedTraits -> "m3/search-input-field"
-      "TextContent" in slot.acceptedTraits -> "m3/text"
-      "IconContent" in slot.acceptedTraits -> "m3/icon"
-      "Leaf" in slot.acceptedRoles -> "m3/text"
-      else -> "layout/box"
+      // in a button, a card or a modal first. Its own id, since A2UI names are not lower-case.
+      A2UI_COMPONENT_TRAIT in slot.acceptedTraits ->
+        return catalog.componentsById[A2UI_TEXT]?.takeIf(slot::accepts)
+      "SearchInput" in slot.acceptedTraits -> "search-input-field"
+      "TextContent" in slot.acceptedTraits -> "text"
+      "IconContent" in slot.acceptedTraits -> "icon"
+      "Leaf" in slot.acceptedRoles -> "text"
+      else -> return catalog.componentsById["layout/box"]?.takeIf(slot::accepts)
     }
-  return catalog.componentsById[preferredId]?.takeIf(slot::accepts)
+  // The owner's own namespace first: a Wear slot is filled with `wear-m3/text`, which is the only
+  // text that catalog has. Asking for `m3/text` alone refused every Wear component whose required
+  // slot had no starter seed.
+  return listOf("${ownerId.substringBefore('/')}/$preferredName", "m3/$preferredName")
+    .firstNotNullOfOrNull { id -> catalog.componentsById[id]?.takeIf(slot::accepts) }
 }
 
 /**

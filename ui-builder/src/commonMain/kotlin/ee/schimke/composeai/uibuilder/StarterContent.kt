@@ -224,6 +224,11 @@ internal object StarterContent {
       // `androidx.compose.material.icons`, which both platforms share.
       WearScreenCodeExporter.ICON_BUTTON to mapOf("content" to listOf(wearIcon("favorite"))),
       WearScreenCodeExporter.TEXT_BUTTON to mapOf("content" to listOf(wearText("Button"))),
+      // Required, not only nicer: `content` has a minimum of one, and without a seed the generic
+      // fill went looking for `m3/text` in a catalog that has only `wear-m3/text` and refused the
+      // insert — so a Wear Button or Card could not be added from the palette at all.
+      WearScreenCodeExporter.BUTTON to mapOf("content" to listOf(wearText("Button"))),
+      WearScreenCodeExporter.CARD to mapOf("content" to listOf(wearText("Card"))),
       // Buttons, because `ButtonGroup` lays out buttons — anything else has no scope to be laid
       // out in, and the export refuses it.
       WearScreenCodeExporter.BUTTON_GROUP to
