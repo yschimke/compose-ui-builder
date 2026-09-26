@@ -927,7 +927,7 @@ public class PersistentUiBuilderService(
       )
     }
     val canonical = documentCanonicalBytes(document)
-    val retained = limits.retainedRevisionsFor(canonical.size)
+    val retained = limits.retainedRevisionsFor(documentRetentionBytes(document))
     val outcome =
       AcceptedOutcomeV1(
         operationId,
@@ -2711,7 +2711,7 @@ public class PersistentUiBuilderService(
     val document =
       withIconOutlines(working.document).copy(revision = revision, updatedAtEpochMillis = now)
     val canonical = documentCanonicalBytes(document)
-    val retained = limits.retainedRevisionsFor(canonical.size)
+    val retained = limits.retainedRevisionsFor(documentRetentionBytes(document))
     val outcome =
       AcceptedOutcomeV1(
         submission.operationId(),

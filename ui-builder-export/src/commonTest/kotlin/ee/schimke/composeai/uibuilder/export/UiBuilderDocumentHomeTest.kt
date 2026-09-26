@@ -65,6 +65,22 @@ class UiBuilderDocumentHomeTest {
     assertEquals(null, replayed.document.home)
   }
 
+  @Test
+  fun `normal document decoding degrades an unknown future home kind to unhomed`() {
+    val encoded =
+      json
+        .encodeToString(document(home = UiBuilderDocumentHome.Repo("ui-builder/designs/login.uid")))
+        .replace(
+          "\"home\":{\"kind\":\"repo\",\"path\":\"ui-builder/designs/login.uid\"}",
+          "\"home\":{\"kind\":\"workspace\",\"id\":\"future\"}",
+        )
+
+    val decoded = json.decodeFromString<UiBuilderDocument>(encoded)
+
+    assertEquals(null, decoded.home)
+    assertEquals("login-v2", decoded.id)
+  }
+
   private fun fixture(home: String) =
     json
       .parseToJsonElement(

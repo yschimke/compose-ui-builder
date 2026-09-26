@@ -977,10 +977,8 @@ internal fun forbidden(action: String, designId: String): UiBuilderServiceError 
   UiBuilderServiceError(ServiceErrorCodeV1.FORBIDDEN, "actor may not $action design $designId")
 
 /**
- * The exact bytes a document's hash is taken over, which are also the bytes retaining it costs.
- *
- * Kept as one function so the retention budget is measured on the same canonical form the hash is,
- * and so a commit that needs both pays for the serialization once.
+ * The exact bytes a document's identity hash is taken over. Storage provenance is deliberately
+ * excluded so moving a document does not change its content identity.
  */
 internal fun documentCanonicalBytes(document: DesignDocumentV1): ByteArray =
   canonicalJson(PersistentUiBuilderServiceJson.json.encodeToJsonElement(document.copy(home = null)))
@@ -988,6 +986,18 @@ internal fun documentCanonicalBytes(document: DesignDocumentV1): ByteArray =
 
 internal fun documentHash(document: DesignDocumentV1): String =
   sha256(documentCanonicalBytes(document))
+
+/**
+ * The document bytes charged to retained revision snapshots.
+ *
+ * Unlike [documentCanonicalBytes], this includes [DesignDocumentV1.home]: every retained
+ * [RevisionStateV1] stores that provenance, and omitting a large URL or repository path here could
+ * multiply the configured retention budget by the snapshot ceiling.
+ */
+internal fun documentRetentionBytes(document: DesignDocumentV1): Int =
+  canonicalJson(PersistentUiBuilderServiceJson.json.encodeToJsonElement(document))
+    .encodeToByteArray()
+    .size
 
 /**
  * How many revisions of a document costing [documentBytes] this design may retain.

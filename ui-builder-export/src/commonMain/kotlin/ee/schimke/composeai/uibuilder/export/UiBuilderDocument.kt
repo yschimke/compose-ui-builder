@@ -2,12 +2,19 @@ package ee.schimke.composeai.uibuilder.export
 
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.nullable
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonClassDiscriminator
+import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -39,6 +46,42 @@ sealed interface UiBuilderDocumentHome {
   data class Repo(val path: String) : UiBuilderDocumentHome {
     init {
       require(path.isNotBlank()) { "a repository home needs a path" }
+    }
+  }
+}
+
+/**
+ * A document home reader that preserves known homes and degrades a future kind to unhomed.
+ *
+ * `ignoreUnknownKeys` handles fields added to a known kind, but kotlinx.serialization's generated
+ * sealed serializer rejects an unknown discriminator before it can apply that policy. Homes are
+ * provenance, not document content, so an older builder must still open and edit such a document.
+ */
+internal object NullableUiBuilderDocumentHomeSerializer : KSerializer<UiBuilderDocumentHome?> {
+  override val descriptor: SerialDescriptor = UiBuilderDocumentHome.serializer().nullable.descriptor
+
+  override fun serialize(encoder: Encoder, value: UiBuilderDocumentHome?) {
+    val jsonEncoder = encoder as? JsonEncoder ?: error("document homes require JSON")
+    val element =
+      when (value) {
+        null -> JsonNull
+        else -> jsonEncoder.json.encodeToJsonElement(UiBuilderDocumentHome.serializer(), value)
+      }
+    jsonEncoder.encodeJsonElement(element)
+  }
+
+  override fun deserialize(decoder: Decoder): UiBuilderDocumentHome? {
+    val jsonDecoder = decoder as? JsonDecoder ?: error("document homes require JSON")
+    val element = jsonDecoder.decodeJsonElement()
+    if (element is JsonNull) return null
+    val home = element.jsonObject
+    val payload = JsonObject(home - "kind")
+    return when (home["kind"]?.jsonPrimitive?.contentOrNull) {
+      "server" ->
+        jsonDecoder.json.decodeFromJsonElement(UiBuilderDocumentHome.Server.serializer(), payload)
+      "repo" ->
+        jsonDecoder.json.decodeFromJsonElement(UiBuilderDocumentHome.Repo.serializer(), payload)
+      else -> null
     }
   }
 }
@@ -94,7 +137,9 @@ data class UiBuilderDocument(
    * Kept absent for every document written before homes existed: an old document is deliberately
    * not guessed to belong to the checkout or to whichever server happened to open it.
    */
-  @EncodeDefault(EncodeDefault.Mode.NEVER) val home: UiBuilderDocumentHome? = null,
+  @EncodeDefault(EncodeDefault.Mode.NEVER)
+  @Serializable(with = NullableUiBuilderDocumentHomeSerializer::class)
+  val home: UiBuilderDocumentHome? = null,
 )
 
 @OptIn(ExperimentalSerializationApi::class)

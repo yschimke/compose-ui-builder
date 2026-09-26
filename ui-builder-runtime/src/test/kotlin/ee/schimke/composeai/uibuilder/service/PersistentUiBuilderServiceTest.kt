@@ -56,6 +56,30 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `revision retention charges the storage home that every snapshot keeps`() {
+    val limits =
+      UiBuilderServiceLimits(
+        retainedRevisionSnapshots = 64,
+        retainedRevisionBytes = 8_000,
+        minimumRetainedRevisionSnapshots = 2,
+      )
+    val unhomed = document()
+    val homed = unhomed.copy(home = DesignHomeV1.Repo("designs/${"nested/".repeat(2_000)}a.uid"))
+
+    assertEquals(documentHash(unhomed), documentHash(homed), "home is not content identity")
+    assertTrue(documentRetentionBytes(homed) > documentRetentionBytes(unhomed))
+    assertTrue(
+      limits.retainedRevisionsFor(documentRetentionBytes(unhomed)) >
+        limits.minimumRetainedRevisionSnapshots
+    )
+    assertEquals(
+      limits.minimumRetainedRevisionSnapshots,
+      limits.retainedRevisionsFor(documentRetentionBytes(homed)),
+      "a large home must reduce retention to the configured floor",
+    )
+  }
+
+  @Test
   fun `disabled supplied document requests never reach an exporter`() {
     if (UiBuilderBuildFeatures.remoteCompose) return
     val requests = mutableListOf<RevisionPinnedUiBuilderExport>()
