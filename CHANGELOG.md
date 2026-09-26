@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.60.0](https://github.com/yschimke/compose-ui-builder/compare/v3.59.0...v3.60.0) (2026-09-26)
+
+
+### Bug Fixes
+
+* **ui-builder:** device previews draw with the catalog runtime again, and the selection card can be closed ([#293](https://github.com/yschimke/compose-ui-builder/issues/293)) ([3cb853a](https://github.com/yschimke/compose-ui-builder/commit/3cb853ae1e725c21d4c501f5af3aaf0beaa63f91))
+
 ## [3.59.0](https://github.com/yschimke/compose-ui-builder/compare/v3.58.0...v3.59.0) (2026-09-25)
 
 
