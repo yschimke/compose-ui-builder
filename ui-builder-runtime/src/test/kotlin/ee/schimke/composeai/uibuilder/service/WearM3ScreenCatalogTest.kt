@@ -430,11 +430,29 @@ class WearM3ScreenCatalogTest {
             .build(),
         )
         .build()
+    val incompatibleIcon =
+      ComponentCapabilityV1.Builder(
+          "wear-m3/icon",
+          "Icon",
+          "Leaf",
+          WasmCapabilityV1.Builder(
+              platformSupported = JsonPrimitive(false),
+              adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
+            )
+            .build(),
+        )
+        .also {
+          it.properties =
+            listOf("contentDescription", "tint").map { name ->
+              PropertyCapabilityV1.Builder(name, JsonPrimitive("string")).build()
+            }
+        }
+        .build()
     val published =
       base
         .newBuilder()
         .also {
-          it.components = base.components + scaffoldAuxiliary + unsupported
+          it.components = base.components + scaffoldAuxiliary + unsupported + incompatibleIcon
           it.statusSemantics =
             JsonObject(
               base.statusSemantics +
@@ -444,6 +462,7 @@ class WearM3ScreenCatalogTest {
                       putJsonObject("wear-m3/card") { put("group", "Containment") }
                       putJsonObject("wear-m3/scroll-indicator") { put("group", "Scaffolds") }
                       putJsonObject("wear-m3/title-card") { put("group", "Containment") }
+                      putJsonObject("wear-m3/icon") { put("group", "Content") }
                     }
                   }) +
                 ("components" to
@@ -451,6 +470,7 @@ class WearM3ScreenCatalogTest {
                     putJsonObject("wear-m3/card") {}
                     putJsonObject("wear-m3/scroll-indicator") {}
                     putJsonObject("wear-m3/title-card") {}
+                    putJsonObject("wear-m3/icon") {}
                   })
             )
         }
@@ -467,6 +487,7 @@ class WearM3ScreenCatalogTest {
     assertTrue("wear-m3/card" in ids)
     assertTrue("wear-m3/scroll-indicator" in ids)
     assertTrue("wear-m3/title-card" !in ids)
+    assertTrue("wear-m3/icon" !in ids, "a published icon without required iconKey was authorable")
     assertEquals(
       listOf("variant"),
       served.components.single { it.componentId == "wear-m3/card" }.properties.map { it.name },

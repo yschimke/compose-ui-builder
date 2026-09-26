@@ -417,6 +417,13 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     val components =
       catalog.components
         .filter { it.componentId in supported }
+        .filter { component ->
+          if (catalog.platform != WEAR_PLATFORM) true
+          else {
+            val declared = component.properties.mapTo(mutableSetOf()) { it.name }
+            WEAR_REQUIRED_PROPERTIES[component.componentId].orEmpty().all(declared::contains)
+          }
+        }
         .map { component ->
           if (catalog.platform != WEAR_PLATFORM) component
           else
@@ -1168,6 +1175,15 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
         WearScreenCodeExporter.OPEN_ON_PHONE_DIALOG to setOf("visible", "text"),
         WearScreenCodeExporter.DATE_PICKER to setOf("initialDate", "type"),
         WearScreenCodeExporter.TIME_PICKER to setOf("initialTime", "type"),
+      )
+
+    /**
+     * Properties whose absence makes the Wear exporter refuse the component rather than default.
+     */
+    private val WEAR_REQUIRED_PROPERTIES: Map<String, Set<String>> =
+      mapOf(
+        "asset/image" to setOf("assetKey"),
+        WearScreenCodeExporter.ICON to setOf("iconKey"),
       )
 
     public const val CURRENT_CAPABILITY_DIGEST: String = "candidate"
