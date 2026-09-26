@@ -35,6 +35,94 @@ fun UiBuilderDeviceViewPopOutPreview() {
   )
 }
 
+/**
+ * The same on a watch: the real round screen, its list scrolled to the selected row, and that list
+ * drawn whole beside it under the design's Wear theme.
+ */
+@SettledPreview
+@Preview(widthDp = 1600, heightDp = 900)
+@Composable
+fun UiBuilderWearDeviceViewPopOutPreview() {
+  UiBuilderEditor(
+    document = wearDeviceViewPreviewDocument,
+    catalog = editorChromePreviewWearCatalog,
+    initialSelectedNodeId = "row-$WEAR_DEVICE_VIEW_PREVIEW_SELECTED",
+    initialCanvasView = EditorCanvasView.Device,
+    openDefaultPreview = false,
+    exportHost = PREVIEW_EXPORT_HOST,
+  )
+}
+
+private const val WEAR_DEVICE_VIEW_PREVIEW_ROWS = 8
+
+private const val WEAR_DEVICE_VIEW_PREVIEW_SELECTED = 6
+
+/** A round screen: a header over a transforming list of buttons, a few watches tall. */
+private val wearDeviceViewPreviewDocument: UiBuilderDocument by lazy {
+  val rows =
+    (1..WEAR_DEVICE_VIEW_PREVIEW_ROWS).joinToString(",") { index ->
+      val after =
+        if (index == 1) "\"afterNodeId\": \"header\"," else "\"afterNodeId\": \"row-${index - 1}\","
+      """
+      {"operationId": "row-$index", "type": "insertNode",
+       "parent": {"nodeId": "list", "slot": "items"}, $after
+       "node": {"id": "row-$index", "componentId": "wear-m3/button",
+                "properties": {"variant": {"type": "enum", "value": "filled-tonal"}},
+                "modifiers": [{"type": "fillMaxWidth"}]}},
+      {"operationId": "row-$index-label", "type": "insertNode",
+       "parent": {"nodeId": "row-$index", "slot": "content"},
+       "node": {"id": "row-$index-label", "componentId": "wear-m3/text",
+                "properties": {"text": {"type": "string", "value": "Playlist $index"}}}}
+      """
+    }
+  UiBuilderReducer.replay(
+      Json.parseToJsonElement(
+          """
+          {
+            "documentSchema": "compose-ui-builder-document/v1-candidate",
+            "designId": "wear-device-view-preview",
+            "operations": [
+              {
+                "operationId": "create",
+                "type": "createDesign",
+                "title": "Playlists",
+                "catalogPin": {
+                  "systemId": "wear-m3",
+                  "catalogRevision": "candidate",
+                  "capabilityDigest": "candidate",
+                  "nativeRuntimeId": "candidate"
+                },
+                "environment": {
+                  "widthDp": 192, "heightDp": 192, "density": 2.0, "theme": "dark",
+                  "dynamicColor": false, "locale": "en-US", "fontScale": 1.0,
+                  "layoutDirection": "ltr", "windowPosture": "flat",
+                  "browserZoomPercent": 100, "fixedTime": "2024-05-16T12:00:00Z",
+                  "animations": "settled", "networkAccess": false
+                },
+                "stateVariables": {}
+              },
+              {"operationId": "screen", "type": "insertNode", "parent": null,
+               "node": {"id": "screen", "componentId": "wear-m3/screen-scaffold",
+                        "properties": {"timeText": {"type": "string", "value": "10:10"}}}},
+              {"operationId": "list", "type": "insertNode",
+               "parent": {"nodeId": "screen", "slot": "content"},
+               "node": {"id": "list", "componentId": "wear-m3/transforming-lazy-column",
+                        "properties": {"verticalSpacingDp": {"type": "float", "value": 4}},
+                        "modifiers": [{"type": "fillMaxSize"}]}},
+              {"operationId": "header", "type": "insertNode",
+               "parent": {"nodeId": "list", "slot": "items"},
+               "node": {"id": "header", "componentId": "wear-m3/list-header",
+                        "properties": {"text": {"type": "string", "value": "Playlists"}}}},
+              $rows
+            ]
+          }
+          """
+        )
+        .jsonObject
+    )
+    .document
+}
+
 private const val DEVICE_VIEW_PREVIEW_EPISODES = 12
 
 private const val DEVICE_VIEW_PREVIEW_SELECTED = 11

@@ -534,8 +534,10 @@ fun UiBuilderSurface(
   val fontFamily = typeface?.let(LocalUiBuilderFontFamilies.current::get)
   val typography =
     MaterialTheme.typography.let { base -> fontFamily?.let(base::withFontFamily) ?: base }
+  val detachedFrom = LocalUiBuilderDetachedFrom.current
+  val overlayTakesInput = !LocalUiBuilderOverlayPassesInput.current
   val wearScreen =
-    document.roots.singleOrNull()?.let(document.nodes::get)?.let { node ->
+    (detachedFrom ?: document).roots.singleOrNull()?.let(document.nodes::get)?.let { node ->
       val adapter = canvasAdapterIds[node.componentId] ?: node.componentId
       adapter == ROUND_SCREEN_FRAME
     } == true
@@ -550,8 +552,6 @@ fun UiBuilderSurface(
   // was added, and the themed surface under it is still the top of the design. Scanning roots alone
   // dropped the palette, the type scale and the corner radius the moment a themed screen joined a
   // board. `UiBuilderEditorState.themeHost` asks this the same way.
-  val detachedFrom = LocalUiBuilderDetachedFrom.current
-  val overlayTakesInput = !LocalUiBuilderOverlayPassesInput.current
   val themeHost =
     (detachedFrom ?: document).topLevelNodes.firstOrNull { it.componentId == "m3/surface" }
   val primaryColor = themeHost?.themeColor(THEME_PRIMARY)
@@ -675,8 +675,19 @@ fun UiBuilderSurface(
               // `fillMaxSize` overlay there came out zero along that axis and caught no click.
               Modifier.matchParentSize()
                 .then(
-                  if (!overlayTakesInput) Modifier
-                  else
+                  if (!overlayTakesInput) {
+                    // The device frame: every box each drawing of a node reported, so a click on
+                    // any
+                    // copy a loop or a component draws selects that node — the inspection keeps one
+                    // box per id, and hit-testing it found only the copy that measured last.
+                    Modifier.passThroughClick { position ->
+                      overlayBounds
+                        .filterValues { it.contains(position) }
+                        .minByOrNull { (_, rect) -> rect.width * rect.height }
+                        ?.key
+                        ?.let { onNodeSelected?.invoke(it.nodeId) }
+                    }
+                  } else
                     Modifier.pointerInput(overlayBounds.toMap(), onNodeSelected) {
                       detectTapGestures { position ->
                         overlayBounds
@@ -1103,6 +1114,7 @@ private fun RenderNode(
             // always
             // carried the treatment here while the generated screen honoured the property.
             transformation = node.string("transformation") != "none",
+            itemIds = items,
           ) { index, itemModifier ->
             child(items[index], itemModifier)
           }
@@ -1372,6 +1384,9 @@ private fun RenderNode(
           }
         } else {
           val lazyState = rememberLazyListState()
+          host.updateSemanticAction(node.id) {
+            it.copy(scrollToItem = { index -> lazyState.requestScrollToItem(index) })
+          }
           RevealSelectedItem(slot("items"), lazyState::showsWhole) {
             lazyState.animateScrollToItem(it)
           }
@@ -1397,7 +1412,12 @@ private fun RenderNode(
           }
         } else {
           val lazyState = rememberLazyListState()
-          host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
+          host.updateSemanticAction(node.id) {
+            it.copy(
+              scrollBy = lazyState::dispatchRawDelta,
+              scrollToItem = { index -> lazyState.requestScrollToItem(index) },
+            )
+          }
           RevealSelectedItem(slot("items"), lazyState::showsWhole) {
             lazyState.animateScrollToItem(it)
           }
@@ -1426,7 +1446,12 @@ private fun RenderNode(
           }
         } else {
           val lazyState = rememberLazyGridState()
-          host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
+          host.updateSemanticAction(node.id) {
+            it.copy(
+              scrollBy = lazyState::dispatchRawDelta,
+              scrollToItem = { index -> lazyState.requestScrollToItem(index) },
+            )
+          }
           RevealSelectedItem(slot("items"), lazyState::showsWhole) {
             lazyState.animateScrollToItem(it)
           }

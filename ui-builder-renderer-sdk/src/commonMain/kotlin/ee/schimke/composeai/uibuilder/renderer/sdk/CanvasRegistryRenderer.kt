@@ -87,6 +87,15 @@ fun CanvasDocumentScope.RenderCanvasNode(
       dispatchEvent = prepared::dispatch,
       updateState = ::setState,
       recordText = { result -> recordTextLayout(entry.path, result) },
+      registerScrolling = { scrollBy, scrollToItem ->
+        updateSemanticAction(entry.node.id) {
+          it.copy(
+            scrollBy = scrollBy ?: it.scrollBy,
+            scrollToItem = scrollToItem ?: it.scrollToItem,
+          )
+        }
+      },
+      unrolledHorizontally = unrolledHorizontally,
     )
   ) {
     return

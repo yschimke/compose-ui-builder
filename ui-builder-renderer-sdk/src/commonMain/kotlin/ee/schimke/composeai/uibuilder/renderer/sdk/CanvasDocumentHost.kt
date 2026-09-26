@@ -41,6 +41,8 @@ class CanvasDocumentScope
 internal constructor(
   val state: Map<String, String?>,
   val mode: CanvasMode,
+  /** Horizontal scrollers are drawn whole; see [UI_BUILDER_UNROLLED_AXIS_KEY]. */
+  val unrolledHorizontally: Boolean,
   private val updateState: (String, String?) -> Unit,
   private val recordBounds: (UiBuilderInstancePath, LayoutCoordinates) -> Unit,
   private val forgetBounds: (UiBuilderInstancePath) -> Unit,
@@ -103,6 +105,7 @@ fun CanvasDocumentHost(
   content: @Composable CanvasDocumentScope.(CanvasRenderNode, Modifier) -> Unit,
 ) {
   val semanticActions = mutableMapOf<String, UiBuilderSemanticActionEntry>()
+  val ancestry = remember(document) { document.itemAncestryIndex() }
   var surfaceCoordinates by
     remember(document.id, document.revision, renderSessionId) {
       mutableStateOf<LayoutCoordinates?>(null)
@@ -176,6 +179,7 @@ fun CanvasDocumentHost(
     runtimeActionController?.install(
       semanticActions.toMap(),
       size?.let { UiBuilderPixelBounds(0f, 0f, it.width.toFloat(), it.height.toFloat()) },
+      ancestry,
     )
   }
 
@@ -190,6 +194,7 @@ fun CanvasDocumentHost(
     CanvasDocumentScope(
       state = state,
       mode = mode,
+      unrolledHorizontally = document.unrolledHorizontally,
       updateState = { name, value ->
         state[name] = value
         inspection.updateState(state)
@@ -253,6 +258,7 @@ fun CanvasDocumentHost(
           coordinates.size.width.toFloat(),
           coordinates.size.height.toFloat(),
         ),
+        ancestry,
       )
     }
   ) {
@@ -300,4 +306,45 @@ private fun LayoutCoordinates.overlayBoundsOf(node: LayoutCoordinates): Rect =
 @Composable
 private fun FlushForgottenBounds(requests: IntState, flush: () -> Unit) {
   if (requests.intValue > 0) SideEffect(flush)
+}
+
+/**
+ * The document environment key that asks for horizontal scrollers drawn whole: a `LazyRow` as a
+ * `Row`, a carousel's items side by side, a `horizontalScroll` dropped. Set by the editor on the
+ * one surface measured against an unbounded width — the pop-out of a single horizontal container —
+ * and nowhere else. An environment key rather than a surface mode because the renderer protocol's
+ * modes are a closed set this SDK does not publish; see
+ * [CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL] for why an editor sends it only to a runtime that
+ * says it honours it.
+ */
+const val UI_BUILDER_UNROLLED_AXIS_KEY = "uiBuilderUnrolledAxis"
+
+/** Whether this document asks for its horizontal scrollers drawn whole. */
+val UiBuilderDocument.unrolledHorizontally: Boolean
+  get() =
+    (environment[UI_BUILDER_UNROLLED_AXIS_KEY] as? JsonPrimitive)?.contentOrNull == "horizontal"
+
+/**
+ * For each node, the containers holding it, outermost first, and the index of the child in the slot
+ * that leads down to it — what a reveal hands each container's `scrollToItem`.
+ */
+internal fun UiBuilderDocument.itemAncestryIndex(): (String) -> List<Pair<String, Int>> {
+  val parents = buildMap {
+    nodes.values.forEach { parent ->
+      parent.slots.values.forEach { children ->
+        children.forEachIndexed { index, child -> put(child, parent.id to index) }
+      }
+    }
+  }
+  return { nodeId ->
+    val chain = mutableListOf<Pair<String, Int>>()
+    var current = nodeId
+    // Bounded by the node count: a cycle is a malformed document, not a loop to spin in.
+    while (chain.size < nodes.size) {
+      val (parent, index) = parents[current] ?: break
+      chain += parent to index
+      current = parent
+    }
+    chain.asReversed()
+  }
 }

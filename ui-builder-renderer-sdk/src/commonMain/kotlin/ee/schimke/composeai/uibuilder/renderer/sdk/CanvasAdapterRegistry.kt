@@ -83,6 +83,8 @@ fun CanvasRenderNode.renderAdapter(
   dispatchEvent: (String) -> Unit,
   updateState: (String, String?) -> Unit,
   recordText: (TextLayoutResult) -> Unit,
+  registerScrolling: (((Float) -> Float)?, ((Int) -> Unit)?) -> Unit = { _, _ -> },
+  unrolledHorizontally: Boolean = false,
 ): Boolean {
   val adapter = registry[adapterId] ?: return false
   val scope =
@@ -104,6 +106,8 @@ fun CanvasRenderNode.renderAdapter(
       dispatchEvent = dispatchEvent,
       updateState = updateState,
       recordText = recordText,
+      registerScrolling = registerScrolling,
+      unrolledHorizontally = unrolledHorizontally,
     )
   adapter(scope)
   return true
@@ -134,6 +138,14 @@ class CanvasNodeScope(
   private val dispatchEvent: (String) -> Unit,
   private val updateState: (String, String?) -> Unit,
   private val recordText: (TextLayoutResult) -> Unit,
+  private val registerScrolling: (((Float) -> Float)?, ((Int) -> Unit)?) -> Unit = { _, _ -> },
+  /**
+   * The document asks for horizontal scrollers drawn whole ([UI_BUILDER_UNROLLED_AXIS_KEY]): a
+   * lazy-row adapter lays its items out in a `Row` when this is true, because it is being measured
+   * against an unbounded width. A runtime that honours it declares
+   * [CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL].
+   */
+  val unrolledHorizontally: Boolean = false,
 ) {
   @Composable
   fun Slot(name: String, modifier: Modifier = Modifier) {
@@ -177,6 +189,14 @@ class CanvasNodeScope(
   }
 
   fun recordTextLayout(result: TextLayoutResult) = recordText(result)
+
+  /**
+   * How a lazy container this adapter draws is scrolled from the editor: [scrollBy] answers the
+   * `scrollBy` action, [scrollToItem] the `revealNode` one, which scrolls the editor's selection
+   * into a device frame. Call it with the real list state, every composition; either may be null.
+   */
+  fun registerScrolling(scrollBy: ((Float) -> Float)?, scrollToItem: ((Int) -> Unit)?) =
+    registerScrolling.invoke(scrollBy, scrollToItem)
 
   fun value(name: String): JsonPrimitive? =
     (node.properties[name] as? JsonObject)?.get("value") as? JsonPrimitive
