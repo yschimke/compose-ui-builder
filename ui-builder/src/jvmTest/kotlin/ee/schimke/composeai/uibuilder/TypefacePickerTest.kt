@@ -84,6 +84,33 @@ class TypefacePickerTest {
       .forEach { font -> assertTrue(File(fontsDir, font.file).isFile, "missing ${font.file}") }
   }
 
+  /** First load stays free of font traffic: a design without a typeface never fetches anything. */
+  @Test
+  fun `nothing is fetched until a font is asked for`() = runBlocking {
+    var manifestReads = 0
+    var fontReads = 0
+    val registry =
+      UiBuilderFontRegistry(
+        scope = this,
+        readManifest = {
+          manifestReads++
+          File(fontsDir, "fonts.json").readText()
+        },
+        readFont = {
+          fontReads++
+          File(fontsDir, it).readBytes()
+        },
+      )
+    repeat(5) { yield() }
+    assertEquals(0, manifestReads)
+    assertEquals(0, fontReads)
+
+    registry.request("Orbitron")
+    withTimeout(10_000) { while ("Orbitron" !in registry.loaded) yield() }
+    assertEquals(1, manifestReads)
+    assertEquals(2, fontReads, "Orbitron ships a 400 and a 700")
+  }
+
   @Test
   fun `a family loads when it is asked for, and not before`() = runBlocking {
     val registry = diskRegistry(this)

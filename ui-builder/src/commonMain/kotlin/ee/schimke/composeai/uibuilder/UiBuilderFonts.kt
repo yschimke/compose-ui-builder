@@ -52,6 +52,10 @@ fun parseVendoredFontManifest(text: String): VendoredFontManifest =
  * its document names, or the typeface picker, for the options it is about to draw — and [loaded] is
  * snapshot state, so whatever read the missing family recomposes when it arrives.
  *
+ * Nothing happens at construction, the manifest included: a page that never needs a font makes no
+ * font request, and one that does makes it after the first frame, never in the way of it. The
+ * manifest is fetched by the first [request] or [loadFamilies], once.
+ *
  * A family that fails to load is left out rather than retried: the renderer's answer to an
  * unresolved name is the default face, which is the right answer for a font the host cannot fetch
  * too, and retrying on every recomposition would turn one missing file into a request loop.
@@ -72,9 +76,13 @@ class UiBuilderFontRegistry(
   val loaded: SnapshotStateMap<String, FontFamily> = mutableStateMapOf()
 
   private val requested = mutableSetOf<String>()
+  private var manifestRequested = false
   private var manifestLoaded = false
 
-  init {
+  /** Fetch the manifest if nothing has yet, so [families] fills in; the picker's list needs it. */
+  fun loadFamilies() {
+    if (manifestRequested) return
+    manifestRequested = true
     scope.launch {
       families =
         runCatching { parseVendoredFontManifest(readManifest()).families }.getOrDefault(emptyList())
@@ -87,7 +95,7 @@ class UiBuilderFontRegistry(
   /** Start loading [name] if it is a vendored family and nothing has asked for it yet. */
   fun request(name: String) {
     if (!requested.add(name)) return
-    if (manifestLoaded) load(name)
+    if (manifestLoaded) load(name) else loadFamilies()
   }
 
   private fun load(name: String) {
