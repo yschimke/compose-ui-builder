@@ -79,6 +79,7 @@ class StarterContentTest {
                 WearScreenCodeExporter.CARD,
                 WearScreenCodeExporter.BUTTON,
                 WearScreenCodeExporter.LIST_HEADER,
+                WearScreenCodeExporter.TRANSFORMING_LAZY_COLUMN,
               ),
           "$componentId is seeded and no Wear generator writes it",
         )
