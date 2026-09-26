@@ -368,6 +368,18 @@ class WearM3ScreenCatalogTest {
   @Test
   fun `the published Wear shelf withdraws components the exporter cannot write`() {
     val base = testCatalog(id = "wear-m3", platform = "wear", componentId = "wear-m3/card")
+    val scaffoldAuxiliary =
+      ComponentCapabilityV1.Builder(
+          "wear-m3/scroll-indicator",
+          "Scroll Indicator",
+          "Leaf",
+          WasmCapabilityV1.Builder(
+              platformSupported = JsonPrimitive(false),
+              adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
+            )
+            .build(),
+        )
+        .build()
     val unsupported =
       ComponentCapabilityV1.Builder(
           "wear-m3/title-card",
@@ -384,7 +396,7 @@ class WearM3ScreenCatalogTest {
       base
         .newBuilder()
         .also {
-          it.components = base.components + unsupported
+          it.components = base.components + scaffoldAuxiliary + unsupported
           it.statusSemantics =
             JsonObject(
               base.statusSemantics +
@@ -392,12 +404,14 @@ class WearM3ScreenCatalogTest {
                   buildJsonObject {
                     putJsonObject("components") {
                       putJsonObject("wear-m3/card") { put("group", "Containment") }
+                      putJsonObject("wear-m3/scroll-indicator") { put("group", "Scaffolds") }
                       putJsonObject("wear-m3/title-card") { put("group", "Containment") }
                     }
                   }) +
                 ("components" to
                   buildJsonObject {
                     putJsonObject("wear-m3/card") {}
+                    putJsonObject("wear-m3/scroll-indicator") {}
                     putJsonObject("wear-m3/title-card") {}
                   })
             )
@@ -413,6 +427,7 @@ class WearM3ScreenCatalogTest {
     val ids = served.components.mapTo(mutableSetOf()) { it.componentId }
 
     assertTrue("wear-m3/card" in ids)
+    assertTrue("wear-m3/scroll-indicator" in ids)
     assertTrue("wear-m3/title-card" !in ids)
     val menu = served.statusSemantics.getValue("componentMenu").jsonObject
     val menuIds = menu.getValue("components").jsonObject.keys
