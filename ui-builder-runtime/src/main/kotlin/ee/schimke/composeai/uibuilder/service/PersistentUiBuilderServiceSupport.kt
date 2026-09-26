@@ -124,9 +124,17 @@ internal fun PersistedDesignV1.allows(
   action: DesignAccessActionV1,
 ): Boolean = actor.accessIdentities.any { allows(it, action) }
 
-/** True when this actor owns the design outright, or acts for the human who does. */
+/**
+ * True when this actor owns the design itself. Owner-only actions (delete, managing access,
+ * transferring ownership) are never delegated: an actor acting for the owner may read, write and
+ * export through [allows] like any editor, but these stay with the owner's own credential.
+ */
 internal fun DesignAccessControlV1.ownedBy(actor: AuthenticatedUiBuilderActor): Boolean =
-  actor.accessIdentities.any { sameActor(it, ownerActorId) }
+  sameActor(actor.actorId, ownerActorId)
+
+/** True when this actor acts for the design's owner (and so edits it, without owning it). */
+private fun DesignAccessControlV1.delegatedByOwner(actor: AuthenticatedUiBuilderActor): Boolean =
+  actor.onBehalfOfActorId?.let { sameActor(it, ownerActorId) } == true
 
 internal fun PersistedDesignV1.ownedBy(actor: AuthenticatedUiBuilderActor): Boolean =
   access.ownedBy(actor)
@@ -178,6 +186,8 @@ private fun DesignAccessControlV1.requesterAccess(
 ): DesignActorAccessV1 =
   if (ownedBy(actor))
     DesignActorAccessV1(actor.actorId, DesignAccessRoleV1.OWNER, DesignAccessActionV1.entries)
+  else if (delegatedByOwner(actor))
+    DesignActorAccessV1(actor.actorId, DesignAccessRoleV1.EDITOR, DesignAccessActionV1.entries)
   else {
     // A reader who reached the design only because it is public is described by the public grant.
     val grant =

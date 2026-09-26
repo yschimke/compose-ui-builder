@@ -999,8 +999,9 @@ works with the other.
 A design belongs to whoever created it, and nobody else can open it until you say so. Two doors,
 per design:
 
-- **The page.** `/ui-builder/<designId>/access` — visible to the owner, and to an agent
-  acting for them. It lists who can open the design and shares it with somebody else.
+- **The page.** `/ui-builder/<designId>/access` — visible to the owner's own session. It lists
+  who can open the design and shares it with somebody else. An agent acting for the owner can
+  edit the design but not change who has access; sharing stays with the owner.
 - **The MCP tools.** `ui_builder_design_access` reads that list; `ui_builder_share_design` changes
   it, so "share this with @colleague" is one tool call.
 
