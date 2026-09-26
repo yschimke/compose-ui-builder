@@ -10,6 +10,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -72,6 +74,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.CommandOutcome
 import ee.schimke.composeai.uibuilder.DesignRevisionPin
 import ee.schimke.composeai.uibuilder.DesignUrlSelectors
@@ -309,8 +312,21 @@ private fun androidx.compose.foundation.layout.RowScope.MobilePanelButton(
           if (selected == target) "Close ${label.lowercase()} panel"
           else "Open ${label.lowercase()} panel"
       },
+    // A quarter of a phone's width is under 100dp, and the default 12dp either side left
+    // "Components" and "Properties" too little room, so they broke mid-word onto a second line.
+    contentPadding = PaddingValues(horizontal = 4.dp),
   ) {
-    Text(label, fontWeight = if (selected == target) FontWeight.Bold else FontWeight.Normal)
+    // One line, always: a label is a word, and a word broken across two lines is not one. On a
+    // screen narrower than the label needs it shrinks to fit rather than wrapping or clipping.
+    val style = MaterialTheme.typography.labelLarge
+    Text(
+      label,
+      style = style,
+      fontWeight = if (selected == target) FontWeight.Bold else FontWeight.Normal,
+      maxLines = 1,
+      softWrap = false,
+      autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = style.fontSize),
+    )
   }
 }
 
