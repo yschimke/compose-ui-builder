@@ -1225,6 +1225,13 @@ private fun ConstrainedFramePane(
   /** Distinct per pane, for the reason the function doc gives. */
   renderSessionId: String = FRAME_COMPANION_SESSION,
   wearWidgetHostShape: WearWidgetHostShape? = null,
+  /**
+   * The catalog's pinned runtime, for a device preview pane only. A catalog whose components the
+   * in-process renderer cannot draw (remote-m3) otherwise shows each pane as labelled stand-ins.
+   */
+  deviceRenderer: UiBuilderCanvasRenderer? = null,
+  /** Bumped when whatever scrolls this pane moves, so a runtime frame is placed again. */
+  positionVersion: Int = 0,
 ) {
   // **Read in the editor's composition, never inside the scene.** A scene starts with no
   // `CompositionLocal`s, so `provides LocalX.current` written in the content lambda below resolves
@@ -1256,9 +1263,14 @@ private fun ConstrainedFramePane(
           scaleX = scale / densityRatio
           scaleY = scale / densityRatio
           transformOrigin = TransformOrigin(0f, 0f)
-          compositingStrategy = CompositingStrategy.Offscreen
+          // Not offscreen under the runtime, for the editing canvas's reason: its pixels are a DOM
+          // layer reached through a `BlendMode.Clear` hole, and an offscreen buffer would clear the
+          // hole in itself and composite back opaque — the pane blank whenever a menu lowers it.
+          compositingStrategy =
+            if (deviceRenderer == null) CompositingStrategy.Offscreen else CompositingStrategy.Auto
         },
       shape = RoundedCornerShape(0.dp),
+      color = if (deviceRenderer == null) MaterialTheme.colorScheme.surface else Color.Transparent,
       shadowElevation = 0.dp,
     ) {
       // The real composition, deliberately: this pane is the one that answers what a device
@@ -1278,40 +1290,58 @@ private fun ConstrainedFramePane(
       // design's components, its assets and the host shape it is drawn in are the same ones the
       // canvas beside it uses.
       //
-      // In-process, never the catalog's pinned runtime: that is a sandboxed iframe booting its own
-      // Wasm, and this pane is drawn once per device in the preview strip and again as the frame
-      // companion — a whole runtime each. The editing canvas is the one place the runtime draws.
-      DeviceSceneHost(
-        key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
-        contentKey = document,
-        sizePx =
-          IntSize(
-            (widthDp * densityRatio).roundToInt(),
-            (heightDp * densityRatio).roundToInt(),
+      // In-process unless a device pane is handed the catalog's pinned runtime. That runtime is a
+      // sandboxed iframe booting its own Wasm, so the palette, drag ghost and frame companion never
+      // use it; a device pane does, because for a catalog like remote-m3 the in-process renderer
+      // draws only labelled stand-ins, and a preview of those is no preview. One frame per device,
+      // kept alive across edits.
+      if (deviceRenderer != null) {
+        deviceRenderer(
+          document.withWearWidgetHostShape(wearWidgetHostShape ?: ambientWidgetHostShape),
+          UiBuilderCanvasSurface(
+            widthDp,
+            heightDp,
+            document.renderDensity(LocalDensity.current).density,
+            UiBuilderRendererSurfaceModeV2.DEVICE,
+            positionVersion,
           ),
-        density = LocalDensity.current,
-        content = {
-          CompositionLocalProvider(
-            LocalUiBuilderNativeOnly provides nativeOnlyIds,
-            LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
-            LocalUiBuilderCanvasAdapters provides canvasAdapters,
-            LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
-            LocalUiBuilderFrameGeometry provides frameGeometry,
-            LocalUiBuilderCatalogPlatform provides catalogPlatform,
-            LocalWearWidgetHostShape provides (wearWidgetHostShape ?: ambientWidgetHostShape),
-            LocalRemoteComposeDocuments provides remoteDocuments,
-            LocalUiBuilderAssetBitmaps provides assetBitmaps,
-            LocalUiBuilderAssetBytes provides assetBytes,
-          ) {
-            UiBuilderSurface(
-              document = document,
-              editorOverlay = false,
-              renderSessionId = renderSessionId,
-              unrolled = false,
-            )
-          }
-        },
-      )
+          null,
+          false,
+          {},
+          {},
+        )
+      } else
+        DeviceSceneHost(
+          key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
+          contentKey = document,
+          sizePx =
+            IntSize(
+              (widthDp * densityRatio).roundToInt(),
+              (heightDp * densityRatio).roundToInt(),
+            ),
+          density = LocalDensity.current,
+          content = {
+            CompositionLocalProvider(
+              LocalUiBuilderNativeOnly provides nativeOnlyIds,
+              LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
+              LocalUiBuilderCanvasAdapters provides canvasAdapters,
+              LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
+              LocalUiBuilderFrameGeometry provides frameGeometry,
+              LocalUiBuilderCatalogPlatform provides catalogPlatform,
+              LocalWearWidgetHostShape provides (wearWidgetHostShape ?: ambientWidgetHostShape),
+              LocalRemoteComposeDocuments provides remoteDocuments,
+              LocalUiBuilderAssetBitmaps provides assetBitmaps,
+              LocalUiBuilderAssetBytes provides assetBytes,
+            ) {
+              UiBuilderSurface(
+                document = document,
+                editorOverlay = false,
+                renderSessionId = renderSessionId,
+                unrolled = false,
+              )
+            }
+          },
+        )
     }
   }
 }
@@ -1331,7 +1361,13 @@ private val CANVAS_PANE_GAP_DP = 24.dp
  * variant would be the one thing in the strip that is not the design.
  */
 @Composable
-internal fun VariantPane(pane: UiBuilderVariantPane, scale: Float, hostDensity: Density) {
+internal fun VariantPane(
+  pane: UiBuilderVariantPane,
+  scale: Float,
+  hostDensity: Density,
+  deviceRenderer: UiBuilderCanvasRenderer? = null,
+  positionVersion: Int = 0,
+) {
   Column(horizontalAlignment = Alignment.CenterHorizontally) {
     Text(
       pane.label,
@@ -1351,6 +1387,8 @@ internal fun VariantPane(pane: UiBuilderVariantPane, scale: Float, hostDensity: 
       densityRatio = pane.document.renderDensity(hostDensity).density / hostDensity.density,
       renderSessionId = pane.id,
       wearWidgetHostShape = pane.wearWidgetHostShape,
+      deviceRenderer = deviceRenderer,
+      positionVersion = positionVersion,
     )
   }
 }

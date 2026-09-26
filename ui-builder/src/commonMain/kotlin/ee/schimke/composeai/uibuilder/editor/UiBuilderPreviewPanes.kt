@@ -474,6 +474,8 @@ internal fun DesignPreviewPane(
    */
   variants: List<UiBuilderVariantPane>,
   modifier: Modifier = Modifier,
+  /** The catalog's pinned runtime, which draws each device pane when the catalog has one. */
+  deviceRenderer: UiBuilderCanvasRenderer? = null,
 ) {
   val hostDensity = LocalDensity.current
   val panes = document.wearWidgetScaffoldSize()?.let(document::wearWidgetPreviewPanes) ?: variants
@@ -523,8 +525,11 @@ internal fun DesignPreviewPane(
         val perRow = ((maxWidth + gap) / ((widest * scale).dp + gap)).toInt().coerceAtLeast(1)
         // Centred, so a row that fits sits in the middle of the pane rather than in its top-left.
         // `FlowRow` remains a one-column grid when the pane is narrow.
+        // Hoisted so a runtime-drawn pane, a DOM layer placed by hand, is placed again as this
+        // column scrolls rather than staying at the window position it was first given.
+        val scroll = rememberScrollState()
         Column(
-          Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+          Modifier.fillMaxSize().verticalScroll(scroll),
           horizontalAlignment = Alignment.CenterHorizontally,
         ) {
           FlowRow(
@@ -534,7 +539,15 @@ internal fun DesignPreviewPane(
             maxItemsInEachRow = perRow,
           ) {
             panes.forEach { pane ->
-              key(pane.id) { VariantPane(pane = pane, scale = scale, hostDensity = hostDensity) }
+              key(pane.id) {
+                VariantPane(
+                  pane = pane,
+                  scale = scale,
+                  hostDensity = hostDensity,
+                  deviceRenderer = deviceRenderer,
+                  positionVersion = scroll.value,
+                )
+              }
             }
           }
         }

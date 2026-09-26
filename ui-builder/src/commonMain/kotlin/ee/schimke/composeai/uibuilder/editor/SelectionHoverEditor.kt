@@ -5,6 +5,7 @@
 
 package ee.schimke.composeai.uibuilder.editor
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,8 +15,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -35,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -77,6 +81,8 @@ internal fun SelectionHoverEditor(
   onCommitProperty: (String, String) -> Unit,
   onCommitModifier: (EditorModifierField, String) -> Unit,
   onTextInputFocusChanged: (Boolean) -> Unit,
+  /** Closes the card; the selection and the Properties panel are untouched. */
+  onDismiss: (() -> Unit)? = null,
 ) {
   Surface(
     shape = RoundedCornerShape(12.dp),
@@ -86,13 +92,32 @@ internal fun SelectionHoverEditor(
     modifier = Modifier.semantics { contentDescription = "Selection editor" },
   ) {
     Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-      Text(
-        label,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+          label,
+          Modifier.weight(1f, fill = false),
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.labelSmall,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+        if (onDismiss != null) {
+          Box(
+            Modifier.padding(start = 6.dp)
+              .size(20.dp)
+              .clip(CircleShape)
+              .clickable(onClick = onDismiss)
+              .semantics { contentDescription = "Close selection editor" },
+            contentAlignment = Alignment.Center,
+          ) {
+            Text(
+              "\u00D7",
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.labelLarge,
+            )
+          }
+        }
+      }
       Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
         // First, because it is the one decision every layer has and the one a handle can only
         // half make: Fill and Hug are a press here, and a number is the handle's, or the field
