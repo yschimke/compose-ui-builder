@@ -334,6 +334,20 @@ data class UiBuilderBreadcrumbEntry(
   val inSlot: String? = null,
 )
 
+/**
+ * How the editing canvas frames the design — see [UiBuilderEditorState.canvasView].
+ *
+ * [Extent] is the design at its whole height: lists unrolled, scrolling dropped, the frame grown to
+ * the content, which is where an author works on rows nine to twelve as much as on the first four.
+ * [Device] is the design at its frame, where lists clip and scroll the way they do on the device;
+ * selecting inside a scrolling container there pops that one container out beside the frame,
+ * unrolled and editable, so a tablet layout does not have to grow without bound to be edited whole.
+ */
+enum class EditorCanvasView {
+  Extent,
+  Device,
+}
+
 enum class EditorMoveDirection {
   Before,
   After,
@@ -678,6 +692,15 @@ data class UiBuilderEditorState(
    * of looking.
    */
   val variantAxes: Set<EditorVariantAxis> = emptySet(),
+  /**
+   * Whether the editing canvas draws the design at its whole extent or at its device's frame.
+   *
+   * A way of looking, like [variantAxes]: nothing about it is stored, shared or undone, and the
+   * exported screen is the same either way. It lives here rather than beside the zoom because it
+   * changes what the *selection* does — at the frame, a selected row inside a list pops that list
+   * out beside the device — and the selection is state.
+   */
+  val canvasView: EditorCanvasView = EditorCanvasView.Extent,
 ) {
   /** A reference update, which never touches the document and so never becomes a submission. */
   internal fun withReference(reference: ReferenceOverlayState): UiBuilderEditorState =

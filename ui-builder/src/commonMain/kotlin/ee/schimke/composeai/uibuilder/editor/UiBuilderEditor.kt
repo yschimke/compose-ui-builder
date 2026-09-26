@@ -292,6 +292,12 @@ fun UiBuilderEditor(
    */
   initialCanvasZoom: Float? = null,
   /**
+   * How the canvas frames the design when it opens — see [UiBuilderEditorState.canvasView]. The
+   * extent everywhere a person is editing; a preview picturing the device view asks for it here,
+   * for the reason [initialAddBeside] exists.
+   */
+  initialCanvasView: EditorCanvasView = EditorCanvasView.Extent,
+  /**
    * Asks the host to compile and render this design with real Compose, or null where it cannot.
    *
    * Null on a box with no compile lane, and in every preview and test — so the control is absent
@@ -633,6 +639,7 @@ fun UiBuilderEditor(
             inspectorMode = initialInspectorMode,
             addBeside = initialAddBeside,
             variantAxes = initialVariantAxes,
+            canvasView = initialCanvasView,
             codePaneVisible = initialCodePaneVisible,
             historyBarVisible = initialHistoryBarVisible,
             enabledPacks =
@@ -1509,6 +1516,23 @@ fun UiBuilderEditor(
         onZoomChanged = {
           focusEditor()
           canvasZoom = it
+        },
+        canvasView = state.canvasView,
+        onCanvasViewChanged = { view ->
+          focusEditor()
+          dispatch(UiBuilderEditorEvent.SetCanvasView(view))
+        },
+        // What the pop-out's header calls its container: the name the layers panel gives it.
+        nodeLabel = { nodeId ->
+          layerRows
+            .filterIsInstance<EditorLayerRow.Node>()
+            .firstOrNull { it.nodeId == nodeId }
+            ?.row
+            ?.label
+            ?: state.document.nodes[nodeId]?.componentId?.let {
+              catalog.componentsById[it]?.displayName ?: it
+            }
+            ?: nodeId
         },
         // Only while no other pane is showing the frame. The preview pane draws the design at its
         // own frame and at every device it claims; the native pane draws it compiled. Either one

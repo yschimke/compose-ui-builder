@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.requiredWidth
@@ -99,10 +100,12 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogComponentIds
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNativeOnly
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderOverlayPassesInput
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvas.renderDensity
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.frameGeometry
@@ -229,6 +232,16 @@ internal fun PinnedDesignCanvas(
    * twice.
    */
   frameCompanion: Boolean = true,
+  /**
+   * The extent, or the device frame with its scrolling container popped out — see
+   * [EditorCanvasView]. Honoured only where the device view is offered at all: in-process, and
+   * neither on a Wear catalog nor for a Wear widget, whose device views are the preview pane's.
+   */
+  canvasView: EditorCanvasView = EditorCanvasView.Extent,
+  /** Switches the view from the zoom bar, or null to leave the switch out of it. */
+  onCanvasViewChanged: ((EditorCanvasView) -> Unit)? = null,
+  /** What the pop-out's header calls a node. */
+  nodeLabel: (String) -> String = { it },
   contentAlignment: Alignment = Alignment.TopStart,
   modifier: Modifier = Modifier,
 ) {
@@ -251,6 +264,21 @@ internal fun PinnedDesignCanvas(
   val densityRatio = document.renderDensity(density).density / density.density
   var inspection by
     remember(document.id, document.revision) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
+  // A Wear catalog's device is round and the preview pane already draws it; a widget's is the
+  // launcher's host shape, which is the preview pane's too. The catalog runtime draws in a sandbox
+  // this canvas cannot compose a second, re-rooted copy of the design beside.
+  val deviceViewOffered =
+    canvasRenderer == null &&
+      LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.WEAR.wireValue &&
+      document.wearWidgetScaffoldSize() == null
+  val deviceView = deviceViewOffered && canvasView == EditorCanvasView.Device
+  // The container the selection scrolls inside, which is what comes out beside the frame. It
+  // follows the selection and nothing else: select outside it and it goes back in.
+  val popOut =
+    remember(document, selectedNodeId, deviceView, showSelectionOverlay) {
+      if (deviceView && showSelectionOverlay) document.scrollingContainerOf(selectedNodeId)
+      else null
+    }
   BoxWithConstraints(modifier.clipToBounds(), contentAlignment = contentAlignment) {
     // What "fit" means: the largest scale at which the whole frame is on screen. It is no longer
     // capped at 1:1, which is the whole of "autozoom": a 411 x 891 dp phone opened in a desktop
@@ -273,14 +301,62 @@ internal fun PinnedDesignCanvas(
     }
     // Only a design that outgrows its frame gets the second pane. One that fits would be drawn
     // twice identically, and two identical pictures side by side say nothing the one said.
-    val overflowsFrame = expandedHeightDp > sourceHeight + 0.5f
-    // The frame, plus the extent companion when the content outgrows it. Fit frames what is
-    // actually drawn rather than the frame alone: zooming to fit a design whose companion is off
-    // the right edge is not fitting the design.
+    val overflowsFrame = !deviceView && expandedHeightDp > sourceHeight + 0.5f
+    // The device view draws the frame and never grows it: what does not fit is what scrolls.
+    val frameHeightDp = if (deviceView) sourceHeight else expandedHeightDp
+    // The frame's own box in root pixels, unclipped. Both the pop-out's cross size and its offset
+    // are read as a share of it rather than divided by the scale: the inspection's boxes and this
+    // one are reported by the same layout pass, so their ratio is right even in the frame after a
+    // zoom, when either one alone is still the old scale's.
+    var frameRootBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
+    var popOutRootBounds by remember(document.id) { mutableStateOf<Rect?>(null) }
+    val popOutBounds = popOut?.let { container ->
+      inspection?.nodes?.firstOrNull { it.nodeId == container.nodeId }?.bounds
+    }
+    // Kept per container, so a container scrolled out of the frame — and forgotten by the
+    // inspection with it — keeps its pop-out rather than collapsing it to nothing.
+    val popOutCross = remember(document.id) { mutableMapOf<String, Float>() }
+    if (popOut != null && popOutBounds != null && frameRootBounds.width > 0f) {
+      popOutCross[popOut.nodeId] =
+        if (popOut.horizontal) popOutBounds.height / frameRootBounds.height * sourceHeight
+        else popOutBounds.width / frameRootBounds.width * sourceWidth
+    }
+    val popOutCrossDp = popOut?.let { popOutCross[it.nodeId] }
+    // The unrolled length, from the pop-out's own last measurement; until then, one frame's worth.
+    var popOutExtent by remember(document.id) { mutableStateOf<Pair<String, Float>?>(null) }
+    val popOutExtentDp =
+      popOut?.let { container ->
+        popOutExtent?.takeIf { it.first == container.nodeId }?.second
+          ?: if (container.horizontal) sourceWidth else sourceHeight
+      } ?: 0f
+    // Level with the container in the frame, so the connectors run across rather than up.
+    val popOutTopDp =
+      if (popOutBounds != null && frameRootBounds.height > 0f) {
+        ((popOutBounds.y - frameRootBounds.top) / frameRootBounds.height * sourceHeight).coerceIn(
+          0f,
+          sourceHeight,
+        )
+      } else 0f
+    val showPopOut = popOut != null && popOutCrossDp != null
+    val popOutWidthDp =
+      if (!showPopOut) 0f else if (popOut!!.horizontal) popOutExtentDp else popOutCrossDp!!
+    val popOutHeightDp =
+      if (!showPopOut) 0f else if (popOut!!.horizontal) popOutCrossDp!! else popOutExtentDp
+    // The frame, plus the extent companion when the content outgrows it, or the pop-out when one
+    // is open. Fit frames what is actually drawn rather than the frame alone: zooming to fit a
+    // design whose companion is off the right edge is not fitting the design.
     val pairWidth =
-      sourceWidth + (if (overflowsFrame) sourceWidth + CANVAS_PANE_GAP_DP.value else 0f)
+      sourceWidth +
+        (if (overflowsFrame) sourceWidth + CANVAS_PANE_GAP_DP.value else 0f) +
+        (if (showPopOut) popOutWidthDp + CANVAS_PANE_GAP_DP.value else 0f)
     val fitScale =
-      minOf(workspaceWidth.value / pairWidth, workspaceHeight.value / expandedHeightDp)
+      minOf(
+          workspaceWidth.value / pairWidth,
+          workspaceHeight.value / frameHeightDp,
+          if (showPopOut) {
+            (workspaceHeight.value - VARIANT_LABEL_ROOM_DP) / (popOutTopDp + popOutHeightDp)
+          } else Float.MAX_VALUE,
+        )
         .coerceIn(MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM)
     val scale = zoom ?: fitScale
     // The frame is laid out in the design's pixels, so it is drawn back down by the same ratio it
@@ -461,14 +537,18 @@ internal fun PinnedDesignCanvas(
           Modifier.onGloballyPositioned { designsBounds = it.boundsInRoot() },
           horizontalArrangement = Arrangement.spacedBy((CANVAS_PANE_GAP_DP.value * scale).dp),
         ) {
-          Box(Modifier.size((sourceWidth * scale).dp, (expandedHeightDp * scale).dp)) {
+          Box(Modifier.size((sourceWidth * scale).dp, (frameHeightDp * scale).dp)) {
             Surface(
               Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
                 // The frame's width, the content's height, never shorter than the frame — the
                 // extent. `requiredSize` here is what used to cut a long list off at the frame and
-                // leave the rest of it somewhere nobody could edit.
+                // leave the rest of it somewhere nobody could edit; the device view asks for
+                // exactly that, and has the pop-out for the rest.
                 .requiredWidth((sourceWidth * densityRatio).dp)
-                .requiredHeightIn(min = (sourceHeight * densityRatio).dp)
+                .then(
+                  if (deviceView) Modifier.requiredHeight((sourceHeight * densityRatio).dp)
+                  else Modifier.requiredHeightIn(min = (sourceHeight * densityRatio).dp)
+                )
                 // Back into the design's own dp — the unit the environment states the frame in and
                 // the one the extent is compared against above — rather than the workspace's.
                 .onSizeChanged { size ->
@@ -493,6 +573,7 @@ internal fun PinnedDesignCanvas(
                 .onGloballyPositioned {
                   frameBounds = it.boundsInRoot()
                   frameOrigin = it.positionInRoot()
+                  frameRootBounds = it.unclippedRootBounds()
                   onCanvasBounds(frameBounds)
                 }
                 .then(
@@ -570,6 +651,30 @@ internal fun PinnedDesignCanvas(
                     onStarted = onNodeDragStarted,
                     onDragged = onNodeDragged,
                     onEnded = onNodeDragEnded,
+                  )
+                  .then(
+                    if (deviceView && showSelectionOverlay) {
+                      Modifier.onDeviceFrameClick(document.revision) { position ->
+                        val point =
+                          Offset(
+                            frameOrigin.x + position.x * drawScale,
+                            frameOrigin.y + position.y * drawScale,
+                          )
+                        inspection
+                          ?.nodes
+                          .orEmpty()
+                          .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
+                          .filter { (_, bounds) ->
+                            point.x >= bounds.x &&
+                              point.x <= bounds.right &&
+                              point.y >= bounds.y &&
+                              point.y <= bounds.bottom
+                          }
+                          .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
+                          ?.first
+                          ?.let(onNodeSelected)
+                      }
+                    } else Modifier
                   )
                   .then(
                     if (canvasRenderer != null && showSelectionOverlay) {
@@ -651,21 +756,24 @@ internal fun PinnedDesignCanvas(
                   )
                 }
                 if (canvasRenderer == null) {
-                  UiBuilderSurface(
-                    document = document,
-                    editorOverlay = showSelectionOverlay,
-                    selectedNodeId = selectedNodeId,
-                    onNodeSelected = onNodeSelected,
-                    // The extent is a proxy: lists unrolled, scrolling dropped, sized by content.
-                    // Compose will not measure a real scrollable against an unbounded height, so
-                    // this is what lets a long list be drawn — and edited — whole.
-                    unrolled = true,
-                    onInspectionSnapshot = { snapshot ->
-                      inspection = snapshot
-                      onInspectionSnapshot?.invoke(snapshot)
-                    },
-                    onInspectionInvalidated = onInspectionInvalidated,
-                  )
+                  CompositionLocalProvider(LocalUiBuilderOverlayPassesInput provides deviceView) {
+                    UiBuilderSurface(
+                      document = document,
+                      editorOverlay = showSelectionOverlay,
+                      selectedNodeId = selectedNodeId,
+                      onNodeSelected = onNodeSelected,
+                      // The extent is a proxy: lists unrolled, scrolling dropped, sized by content.
+                      // Compose will not measure a real scrollable against an unbounded height, so
+                      // this is what lets a long list be drawn — and edited — whole. The device
+                      // view is the real composition at the frame, lazy lists and all.
+                      unrolled = !deviceView,
+                      onInspectionSnapshot = { snapshot ->
+                        inspection = snapshot
+                        onInspectionSnapshot?.invoke(snapshot)
+                      },
+                      onInspectionInvalidated = onInspectionInvalidated,
+                    )
+                  }
                 } else {
                   Box(
                     Modifier.requiredSize(
@@ -748,8 +856,34 @@ internal fun PinnedDesignCanvas(
               densityRatio = densityRatio,
             )
           }
+          if (showPopOut) {
+            UnrolledContainerPopOut(
+              document = document,
+              container = popOut!!,
+              label = nodeLabel(popOut.nodeId),
+              crossDp = popOutCrossDp!!,
+              extentDp = popOutExtentDp,
+              scale = scale,
+              densityRatio = densityRatio,
+              // The label sits above the pop-out, so it is lifted by the label's room to keep the
+              // drawn box itself level with the container.
+              topOffset = (popOutTopDp * scale - VARIANT_LABEL_ROOM_DP).coerceAtLeast(0f).dp,
+              selectedNodeId = selectedNodeId,
+              onNodeSelected = onNodeSelected,
+              onExtentMeasured = { popOutExtent = popOut.nodeId to it },
+              onRootBounds = { popOutRootBounds = it },
+            )
+          }
         }
       }
+    }
+    if (showPopOut) {
+      PopOutConnectors(
+        container = popOutBounds?.let { Rect(it.x, it.y, it.right, it.bottom) },
+        frame = frameRootBounds,
+        popOut = popOutRootBounds,
+        modifier = Modifier.matchParentSize(),
+      )
     }
     // Beside the design rather than over it — see [hoverEditorPlacement] — and outside the scaled
     // frame so the type stays the size it was designed at however far the design is zoomed out.
@@ -955,6 +1089,12 @@ internal fun PinnedDesignCanvas(
       scale = scale,
       fitting = zoom == null,
       onZoomChanged = onZoomChanged,
+      deviceView = if (deviceViewOffered && onCanvasViewChanged != null) deviceView else null,
+      onDeviceViewChanged = { device ->
+        onCanvasViewChanged?.invoke(
+          if (device) EditorCanvasView.Device else EditorCanvasView.Extent
+        )
+      },
       modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
     )
   }
@@ -1600,6 +1740,9 @@ private fun CanvasZoomControls(
   scale: Float,
   fitting: Boolean,
   onZoomChanged: (Float?) -> Unit,
+  /** Whether the device view is on, or null where it is not offered. */
+  deviceView: Boolean? = null,
+  onDeviceViewChanged: (Boolean) -> Unit = {},
   modifier: Modifier = Modifier,
 ) {
   Surface(
@@ -1627,6 +1770,13 @@ private fun CanvasZoomControls(
       }
       ToolbarToggleAction("Fit to window", UiBuilderChromeIcon.Fit, fitting) {
         onZoomChanged(if (fitting) scale else null)
+      }
+      // Beside the zoom because it is the same kind of question — how the design is framed — and
+      // like the zoom it changes nothing anybody else sees.
+      if (deviceView != null) {
+        ToolbarToggleAction("Device view", UiBuilderChromeIcon.Screen, deviceView) {
+          onDeviceViewChanged(!deviceView)
+        }
       }
     }
   }

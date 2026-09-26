@@ -376,6 +376,26 @@ internal fun CompatibleHorizontalCarousel(
   }
 }
 
+/**
+ * The carousel with every item laid out, for the pop-out that unrolls it sideways — see
+ * [LocalUiBuilderUnrolledHorizontal]. The same padding, spacing and item width as the lazy stand-in
+ * above; a `LazyRow` cannot be measured against the unbounded width this is drawn in.
+ */
+@Composable
+internal fun UnrolledHorizontalCarousel(
+  node: UiBuilderNode,
+  modifier: Modifier,
+  ids: List<String>,
+  child: @Composable (String, Modifier) -> Unit,
+) {
+  Row(
+    modifier.padding(PaddingValues(start = node.float("contentPaddingStartDp").dp)),
+    horizontalArrangement = Arrangement.spacedBy(node.float("itemSpacingDp").dp),
+  ) {
+    ids.forEach { child(it, Modifier.width(node.float("itemWidthDp", 128f).dp)) }
+  }
+}
+
 /** Experimental floating-toolbar identity with deterministic Material surface/row semantics. */
 @Composable
 internal fun CompatibleFloatingToolbar(

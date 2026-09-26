@@ -550,7 +550,10 @@ fun UiBuilderSurface(
   // was added, and the themed surface under it is still the top of the design. Scanning roots alone
   // dropped the palette, the type scale and the corner radius the moment a themed screen joined a
   // board. `UiBuilderEditorState.themeHost` asks this the same way.
-  val themeHost = document.topLevelNodes.firstOrNull { it.componentId == "m3/surface" }
+  val detachedFrom = LocalUiBuilderDetachedFrom.current
+  val overlayTakesInput = !LocalUiBuilderOverlayPassesInput.current
+  val themeHost =
+    (detachedFrom ?: document).topLevelNodes.firstOrNull { it.componentId == "m3/surface" }
   val primaryColor = themeHost?.themeColor(THEME_PRIMARY)
   val backgroundColor = themeHost?.themeColor(THEME_BACKGROUND)
   val surfaceColor = themeHost?.themeColor(THEME_SURFACE)
@@ -605,6 +608,13 @@ fun UiBuilderSurface(
     LocalCanvasAdapterRegistry provides canvasAdapterRegistry,
     LocalUiBuilderUnrolled provides effectiveUnrolled,
     LocalWearWidgetHostShape provides wearWidgetHostShape,
+    // What a lazy container scrolls to; see [RevealSelectedItem]. Recomputed only when the
+    // selection or the design moves, and equal sets keep the reveal from firing again on an edit.
+    LocalUiBuilderRevealChain provides
+      remember(document, selectedNodeId) { document.selectionChain(selectedNodeId).toSet() },
+    // Consumed above: a surface nested inside this one draws a design of its own.
+    LocalUiBuilderDetachedFrom provides null,
+    LocalUiBuilderOverlayPassesInput provides false,
     // The design's content colour, not the host's. `MaterialTheme` below sets none, so text with no
     // colour of its own inherited whatever sat outside this surface: the editor chrome's
     // light-on-dark on the canvas, and the platform default black inside a device pane's scene,
@@ -617,8 +627,13 @@ fun UiBuilderSurface(
       WearCatalogTheme(wearCatalog) {
         val updateExtentInputs = LocalCanvasExtentInputs.current
         Box(
-          renderSurface?.let { Modifier.requiredSize(it.widthDp.dp, it.heightDp.dp) }
-            ?: Modifier.fillMaxSize()
+          (renderSurface?.let { Modifier.requiredSize(it.widthDp.dp, it.heightDp.dp) }
+              ?: Modifier.fillMaxSize())
+            // A detached container has no root surface of its own under it to paint the design's
+            // ground, so its rows would sit on whatever the host happens to be.
+            .then(
+              if (detachedFrom != null) Modifier.background(colorScheme.background) else Modifier
+            )
         ) {
           CanvasDocumentHost(
             document = document,
@@ -635,6 +650,7 @@ fun UiBuilderSurface(
               updateExtentInputs?.invoke(CanvasExtentInputs(document, state))
             },
             onOverlayBounds = { path, rect -> overlayBounds[path] = rect },
+            onOverlayBoundsForgotten = { path -> overlayBounds.remove(path) },
             rootModifier = { entry ->
               when {
                 entry.node.componentId.startsWith("remote-m3/widget-container-") ->
@@ -654,17 +670,26 @@ fun UiBuilderSurface(
             // whichever copy the map happened to answer with.
             val selected = overlayBounds.filterKeys { it.nodeId == selectedNodeId }.values.toList()
             Canvas(
-              Modifier.fillMaxSize().pointerInput(overlayBounds.toMap(), onNodeSelected) {
-                detectTapGestures { position ->
-                  overlayBounds
-                    .filterValues { it.contains(position) }
-                    .minByOrNull { (_, rect) -> rect.width * rect.height }
-                    ?.key
-                    // The editor selects a node, because a node is what its inspector edits. Which
-                    // copy was tapped is the question the selection model has yet to be asked.
-                    ?.let { onNodeSelected?.invoke(it.nodeId) }
-                }
-              }
+              // The design's box, not the incoming constraints: a surface measured against an
+              // unbounded axis — the pop-out beside the device frame — wraps its content, and a
+              // `fillMaxSize` overlay there came out zero along that axis and caught no click.
+              Modifier.matchParentSize()
+                .then(
+                  if (!overlayTakesInput) Modifier
+                  else
+                    Modifier.pointerInput(overlayBounds.toMap(), onNodeSelected) {
+                      detectTapGestures { position ->
+                        overlayBounds
+                          .filterValues { it.contains(position) }
+                          .minByOrNull { (_, rect) -> rect.width * rect.height }
+                          ?.key
+                          // The editor selects a node, because a node is what its inspector
+                          // edits. Which copy was tapped is the question the selection model has
+                          // yet to be asked.
+                          ?.let { onNodeSelected?.invoke(it.nodeId) }
+                      }
+                    }
+                )
             ) {
               selected.forEach { rect ->
                 drawRect(
@@ -692,6 +717,7 @@ private fun RenderNode(
   val navigate = LocalUiBuilderNavigator.current
   val themeCornerRadius = LocalUiBuilderCornerRadius.current
   val nativeOnly = LocalUiBuilderNativeOnly.current
+  val unrolledHorizontal = LocalUiBuilderUnrolledHorizontal.current
   host.RenderCanvasNode(
     entry = entry,
     registry = LocalCanvasAdapterRegistry.current,
@@ -699,12 +725,19 @@ private fun RenderNode(
     onNavigate = navigate,
     handlesClick = { it.componentId in INTERACTIVE_COMPONENTS },
     applyModifier = { current, value ->
-      current.applyCanvasModifier(
-        value = value,
-        mode = host.mode,
-        resolveColor = ::uiBuilderColor,
-        resolveShape = { shapeFor(it, themeCornerRadius = themeCornerRadius) },
-      )
+      // Dropped the way the extent drops `verticalScroll`: a sideways pop-out measures against an
+      // unbounded width, and a scroller there would be a viewport with nothing to clip.
+      if (
+        unrolledHorizontal && (value["type"] as? JsonPrimitive)?.contentOrNull == "horizontalScroll"
+      ) {
+        current
+      } else
+        current.applyCanvasModifier(
+          value = value,
+          mode = host.mode,
+          resolveColor = ::uiBuilderColor,
+          resolveShape = { shapeFor(it, themeCornerRadius = themeCornerRadius) },
+        )
     },
     missingComponent = { label, next -> UnsupportedComponentDiagnostic(label, next) },
   ) {
@@ -1327,14 +1360,29 @@ private fun RenderNode(
           slot("children").forEach { child(it, Modifier) }
         }
       "layout/lazy-row" -> {
-        val lazyState = rememberLazyListState()
-        LazyRow(
-          modifier = measured,
-          state = lazyState,
-          contentPadding = node.obj("contentPadding").paddingValues(),
-          horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
-        ) {
-          items(slot("items"), key = { it }) { child(it, Modifier) }
+        // Unrolled only in a sideways pop-out, the one surface measured against an unbounded
+        // width; the extent is the frame's width and keeps the real row — see
+        // [LocalUiBuilderUnrolledHorizontal].
+        if (unrolledHorizontal) {
+          Row(
+            modifier = measured.padding(node.obj("contentPadding").paddingValues()),
+            horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
+          ) {
+            slot("items").forEach { child(it, Modifier) }
+          }
+        } else {
+          val lazyState = rememberLazyListState()
+          RevealSelectedItem(slot("items"), lazyState::showsWhole) {
+            lazyState.animateScrollToItem(it)
+          }
+          LazyRow(
+            modifier = measured,
+            state = lazyState,
+            contentPadding = node.obj("contentPadding").paddingValues(),
+            horizontalArrangement = Arrangement.spacedBy(node.float("horizontalSpacingDp").dp),
+          ) {
+            items(slot("items"), key = { it }) { child(it, Modifier) }
+          }
         }
       }
       "layout/lazy-column" -> {
@@ -1350,6 +1398,9 @@ private fun RenderNode(
         } else {
           val lazyState = rememberLazyListState()
           host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
+          RevealSelectedItem(slot("items"), lazyState::showsWhole) {
+            lazyState.animateScrollToItem(it)
+          }
           LazyColumn(
             modifier = measured,
             state = lazyState,
@@ -1376,6 +1427,9 @@ private fun RenderNode(
         } else {
           val lazyState = rememberLazyGridState()
           host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
+          RevealSelectedItem(slot("items"), lazyState::showsWhole) {
+            lazyState.animateScrollToItem(it)
+          }
           LazyVerticalGrid(
             columns = GridCells.Adaptive(minimum.dp),
             modifier = measured,
@@ -1401,7 +1455,9 @@ private fun RenderNode(
       }
       "layout/horizontal-carousel" -> {
         val items = slot("items")
-        if (
+        if (unrolledHorizontal) {
+          UnrolledHorizontalCarousel(node, measured, items) { id, next -> child(id, next) }
+        } else if (
           uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
             UiBuilderRenderStrategy.AUTHORING_ADAPTER
         ) {
@@ -1412,6 +1468,10 @@ private fun RenderNode(
         } else {
           val carouselState = rememberCarouselState { items.size }
           host.updateSemanticAction(node.id) { it.copy(scrollBy = carouselState::dispatchRawDelta) }
+          val composedItems = remember(carouselState) { mutableSetOf<String>() }
+          RevealSelectedItem(items, composedItems::contains) {
+            carouselState.animateScrollToItem(it)
+          }
           HorizontalUncontainedCarousel(
             state = carouselState,
             itemWidth = node.float("itemWidthDp", 128f).dp,
@@ -1419,6 +1479,7 @@ private fun RenderNode(
             itemSpacing = node.float("itemSpacingDp").dp,
             contentPadding = PaddingValues(start = node.float("contentPaddingStartDp").dp),
           ) { index ->
+            MarkComposed(composedItems, items[index])
             child(items[index], Modifier)
           }
         }
