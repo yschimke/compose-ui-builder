@@ -1384,6 +1384,9 @@ private fun RenderNode(
           }
         } else {
           val lazyState = rememberLazyListState()
+          host.updateSemanticAction(node.id) {
+            it.copy(scrollToItem = { index -> lazyState.requestScrollToItem(index) })
+          }
           RevealSelectedItem(slot("items"), lazyState::showsWhole) {
             lazyState.animateScrollToItem(it)
           }
@@ -1409,7 +1412,12 @@ private fun RenderNode(
           }
         } else {
           val lazyState = rememberLazyListState()
-          host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
+          host.updateSemanticAction(node.id) {
+            it.copy(
+              scrollBy = lazyState::dispatchRawDelta,
+              scrollToItem = { index -> lazyState.requestScrollToItem(index) },
+            )
+          }
           RevealSelectedItem(slot("items"), lazyState::showsWhole) {
             lazyState.animateScrollToItem(it)
           }
@@ -1438,7 +1446,12 @@ private fun RenderNode(
           }
         } else {
           val lazyState = rememberLazyGridState()
-          host.updateSemanticAction(node.id) { it.copy(scrollBy = lazyState::dispatchRawDelta) }
+          host.updateSemanticAction(node.id) {
+            it.copy(
+              scrollBy = lazyState::dispatchRawDelta,
+              scrollToItem = { index -> lazyState.requestScrollToItem(index) },
+            )
+          }
           RevealSelectedItem(slot("items"), lazyState::showsWhole) {
             lazyState.animateScrollToItem(it)
           }

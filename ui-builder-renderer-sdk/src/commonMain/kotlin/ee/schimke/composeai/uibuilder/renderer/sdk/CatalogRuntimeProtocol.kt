@@ -12,7 +12,9 @@ import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -22,6 +24,16 @@ const val CATALOG_RUNTIME_PROTOCOL_VERSION = UI_BUILDER_RENDERER_PROTOCOL_VERSIO
 const val CATALOG_RUNTIME_PROTOCOL_SCHEMA = UI_BUILDER_RENDERER_PROTOCOL_SCHEMA_V2
 
 typealias CatalogRuntimeMessage = UiBuilderRendererMessageV1
+
+/** Every runtime built on this SDK dispatches [REVEAL_NODE_ACTION]. */
+const val CATALOG_RUNTIME_CAPABILITY_REVEAL_NODE = "revealNode"
+
+/**
+ * The catalog draws a horizontal scroller whole when the document says so — see
+ * [UI_BUILDER_UNROLLED_AXIS_KEY]. Declared by the catalog, never assumed: a lazy row that ignores
+ * the signal is measured against an unbounded width, and the runtime's surface fails.
+ */
+const val CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL = "horizontalUnroll"
 
 sealed interface CatalogRuntimeCommand {
   data class Reply(val message: CatalogRuntimeMessage) : CatalogRuntimeCommand
@@ -63,6 +75,12 @@ private data class DocumentRef(val id: String, val revision: Int)
 class CatalogRuntimeProtocolEndpoint(
   private val runtimeId: String,
   private val protocolVersion: Int = CATALOG_RUNTIME_PROTOCOL_VERSION,
+  /**
+   * What this runtime's catalog adapters honour beyond the SDK's own, announced in `initialized`.
+   * See [CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL]: that one is a promise about the catalog's
+   * lazy-row adapter, which the SDK cannot make on its behalf.
+   */
+  private val capabilities: Set<String> = emptySet(),
 ) {
   private val protocolSchema = rendererProtocolSchema(protocolVersion)
   private var parentOrigin: String? = null
@@ -123,7 +141,22 @@ class CatalogRuntimeProtocolEndpoint(
       "initialize" -> {
         if (lockedOrigin == null) parentOrigin = origin
         CatalogRuntimeCommand.Reply(
-          message.reply("initialized", buildJsonObject { put("interaction", "semantic-actions") })
+          message.reply(
+            "initialized",
+            buildJsonObject {
+              put("interaction", "semantic-actions")
+              // Additive: an editor that predates the list reads `interaction` and ignores this,
+              // and an editor that has it sends nothing a runtime without it would refuse.
+              put(
+                "capabilities",
+                JsonArray(
+                  (setOf(CATALOG_RUNTIME_CAPABILITY_REVEAL_NODE) + capabilities).sorted().map {
+                    JsonPrimitive(it)
+                  }
+                ),
+              )
+            },
+          )
         )
       }
       "renderDocument" -> {
@@ -295,7 +328,8 @@ class CatalogRuntimeProtocolEndpoint(
     }
     val valid =
       when (action.kind) {
-        "activate" -> action.deltaX == null && action.deltaY == null
+        "activate",
+        REVEAL_NODE_ACTION -> action.deltaX == null && action.deltaY == null
         "scrollBy" ->
           action.deltaX == 0.0 &&
             action.deltaY?.let {

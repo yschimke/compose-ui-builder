@@ -1,11 +1,13 @@
 package ee.schimke.composeai.uibuilder.editor
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -29,6 +31,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -46,6 +49,12 @@ import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvas.renderDensity
 import ee.schimke.composeai.uibuilder.canvas.selectionChain
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
+import ee.schimke.composeai.uibuilder.renderer.sdk.CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL
+import ee.schimke.composeai.uibuilder.renderer.sdk.UI_BUILDER_UNROLLED_AXIS_KEY
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
+import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
+import ee.schimke.composeai.uibuilder.renderer.sdk.right
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -75,6 +84,17 @@ internal fun UiBuilderDocument.scrollingContainerOf(nodeId: String?): ScrollingC
       else -> null
     }
   }
+
+/**
+ * Whether [nodeId] is a container whose content scrolls vertically — what a wheel over it moves.
+ */
+internal fun UiBuilderDocument.isVerticalScroller(nodeId: String): Boolean {
+  val node = nodes[nodeId] ?: return false
+  return node.componentId in VERTICAL_SCROLLERS ||
+    node.modifiers.any {
+      ((it as? JsonObject)?.get("type") as? JsonPrimitive)?.contentOrNull == "verticalScroll"
+    }
+}
 
 private val VERTICAL_SCROLLERS =
   setOf("layout/lazy-column", "layout/lazy-grid", "wear-m3/transforming-lazy-column")
@@ -180,6 +200,141 @@ internal fun UnrolledContainerPopOut(
     }
   }
 }
+
+/**
+ * The pop-out on the catalog-runtime path: the same container, drawn by the catalog's own pinned
+ * runtime in `AUTHORING_UNROLLED` rather than by this process.
+ *
+ * Two differences from [UnrolledContainerPopOut], both because a runtime surface is a sandboxed
+ * frame rather than a composition. It is handed its size rather than measuring its own, so the
+ * length is found from what it drew: a first draw into [RUNTIME_POP_OUT_BUDGET_DP], trimmed to the
+ * content's last edge, doubled when the content reaches the edge. And it sits under the editor, as
+ * the extent's runtime does, so a click here is hit-tested against its inspection by the editor.
+ *
+ * A horizontal container reaches this only when the runtime announced
+ * [CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL]; the document is then marked with
+ * [UI_BUILDER_UNROLLED_AXIS_KEY] so the catalog's lazy row lays its items out whole.
+ */
+@Composable
+internal fun RuntimeContainerPopOut(
+  document: UiBuilderDocument,
+  container: ScrollingContainer,
+  label: String,
+  crossDp: Float,
+  extentDp: Float,
+  scale: Float,
+  densityRatio: Float,
+  topOffset: Dp,
+  selectedNodeId: String?,
+  onNodeSelected: (String) -> Unit,
+  onExtentMeasured: (Float) -> Unit,
+  onRootBounds: (Rect) -> Unit,
+  canvasRenderer: UiBuilderCanvasRenderer,
+) {
+  val designDensity = document.renderDensity(LocalDensity.current).density
+  val detached = remember(document, container) { document.detachedAt(container) }
+  val (widthDp, heightDp) = if (container.horizontal) extentDp to crossDp else crossDp to extentDp
+  val drawScale = scale / densityRatio
+  var inspection by
+    remember(container.nodeId, document.revision) {
+      mutableStateOf<UiBuilderInspectionSnapshot?>(null)
+    }
+  var origin by remember { mutableStateOf(Offset.Zero) }
+  Column(Modifier.padding(top = topOffset)) {
+    Text(
+      label,
+      Modifier.height(VARIANT_LABEL_ROOM_DP.dp).widthIn(max = maxOf(widthDp * scale, 120f).dp),
+      color = MaterialTheme.colorScheme.primary,
+      style = MaterialTheme.typography.labelSmall,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
+    Box(Modifier.size((widthDp * scale).dp, (heightDp * scale).dp)) {
+      Box(
+        Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
+          .requiredSize((widthDp * densityRatio).dp, (heightDp * densityRatio).dp)
+          .graphicsLayer {
+            scaleX = drawScale
+            scaleY = drawScale
+            transformOrigin = TransformOrigin(0f, 0f)
+            // Not offscreen: the runtime's pixels are a DOM layer reached through a hole this
+            // punches, which an offscreen buffer would fill back in — see the editing frame.
+            compositingStrategy = CompositingStrategy.Auto
+          }
+          .onGloballyPositioned {
+            val bounds = it.unclippedRootBounds()
+            origin = bounds.topLeft
+            onRootBounds(bounds)
+          }
+          .semantics { contentDescription = "Unrolled $label" }
+          .pointerInput(inspection, onNodeSelected) {
+            detectTapGestures { position ->
+              val point = origin + position * drawScale
+              inspection
+                ?.nodes
+                .orEmpty()
+                .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
+                .filter { (_, bounds) ->
+                  point.x >= bounds.x &&
+                    point.x <= bounds.right &&
+                    point.y >= bounds.y &&
+                    point.y <= bounds.bottom
+                }
+                .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
+                ?.first
+                ?.let(onNodeSelected)
+            }
+          }
+      ) {
+        key(container.nodeId) {
+          canvasRenderer(
+            detached,
+            UiBuilderCanvasSurface(
+              widthDp,
+              heightDp,
+              designDensity,
+              UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED,
+            ),
+            selectedNodeId,
+            true,
+            onNodeSelected,
+          ) { snapshots ->
+            inspection = snapshots.editor
+            // The content's far edge, not the container's: a list that fills its parent fills
+            // whatever it is handed, and would never let the budget shrink to the rows.
+            val edge =
+              snapshots.renderer.nodes
+                .filter { it.nodeId != container.nodeId }
+                .mapNotNull { node ->
+                  node.bounds?.let { if (container.horizontal) it.right else it.bottom }
+                }
+                .maxOrNull() ?: return@canvasRenderer
+            val drawnDp = edge / designDensity
+            val handedDp = if (container.horizontal) widthDp else heightDp
+            onExtentMeasured(
+              if (drawnDp >= handedDp - 1f) (handedDp * 2f).coerceAtMost(MAX_POP_OUT_DP)
+              else drawnDp
+            )
+          }
+        }
+      }
+    }
+  }
+}
+
+/** The container as a document of its own: same nodes, re-rooted, marked sideways if it is. */
+internal fun UiBuilderDocument.detachedAt(container: ScrollingContainer): UiBuilderDocument {
+  val rooted = copy(roots = listOf(container.nodeId))
+  return if (!container.horizontal) rooted
+  else
+    rooted.copy(
+      environment =
+        JsonObject(environment + (UI_BUILDER_UNROLLED_AXIS_KEY to JsonPrimitive("horizontal")))
+    )
+}
+
+/** The runtime protocol's own ceiling on a surface's side. */
+private const val MAX_POP_OUT_DP = 10_000f
 
 /** Keeps the pop-out's remembered geometry out of the frame's. */
 private const val POP_OUT_SESSION = "unrolled-pop-out"

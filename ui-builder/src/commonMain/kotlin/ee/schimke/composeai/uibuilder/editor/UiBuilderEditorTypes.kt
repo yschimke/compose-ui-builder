@@ -144,12 +144,40 @@ data class UiBuilderCanvasSurface(
   val density: Float,
   val mode: UiBuilderRendererSurfaceModeV2,
   val positionVersion: Int = 0,
+  /**
+   * Whether a [DEVICE][UiBuilderRendererSurfaceModeV2.DEVICE] surface takes the pointer itself.
+   *
+   * A device preview pane does: it is a live design, and a press there presses the design's button.
+   * The editing canvas's device view does not. There a click selects, so the runtime is left under
+   * the editor, which hit-tests the press against the runtime's inspection and hands a wheel over a
+   * list to the runtime as a `scrollBy` — see [scroll].
+   */
+  val interactive: Boolean = true,
+  /**
+   * The node the runtime should scroll its lazy containers to, sent as a `revealNode` action each
+   * time it changes. Only to a runtime whose `initialized` reply lists that capability: an older
+   * one leaves its lists where they are.
+   */
+  val revealNodeId: String? = null,
+  /**
+   * The latest wheel over a list the editor handed on; sent once per
+   * [UiBuilderCanvasScroll.sequence].
+   */
+  val scroll: UiBuilderCanvasScroll? = null,
 )
+
+/** A vertical scroll the editor asks one of the runtime's containers to take, in its pixels. */
+data class UiBuilderCanvasScroll(val nodeId: String, val deltaY: Float, val sequence: Int)
 
 /** One renderer inspection in its native pixels and in the editor root used for hit-testing. */
 data class UiBuilderCanvasInspection(
   val renderer: UiBuilderInspectionSnapshot,
   val editor: UiBuilderInspectionSnapshot,
+  /**
+   * What the runtime announced beyond the base protocol — `revealNode`, `horizontalUnroll`. Empty
+   * for a runtime that predates the list, which is how the editor knows to leave those out.
+   */
+  val capabilities: Set<String> = emptySet(),
 )
 
 typealias UiBuilderCanvasRenderer =

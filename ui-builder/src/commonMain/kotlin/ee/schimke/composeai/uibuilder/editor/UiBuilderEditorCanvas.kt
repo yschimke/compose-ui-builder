@@ -71,6 +71,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
@@ -115,6 +116,7 @@ import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
 import ee.schimke.composeai.uibuilder.reference.ReferenceMarkupKind
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayCanvas
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
+import ee.schimke.composeai.uibuilder.renderer.sdk.CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
@@ -266,9 +268,8 @@ internal fun PinnedDesignCanvas(
   var inspection by
     remember(document.id, document.revision) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
   // A widget's device is the launcher's host shape, which the preview pane draws at every shape
-  // there is; a widget has no list to pop out either. The catalog runtime draws in a sandbox this
-  // canvas cannot compose a second, re-rooted copy of the design beside.
-  val deviceViewOffered = canvasRenderer == null && document.wearWidgetScaffoldSize() == null
+  // there is; a widget has no list to pop out either.
+  val deviceViewOffered = document.wearWidgetScaffoldSize() == null
   val deviceView = deviceViewOffered && canvasView == EditorCanvasView.Device
   // A watch at its frame is a round screen, and the square frame's corners are not part of it: the
   // scaffold clips itself, and without this the editor's surface showed in the four corners.
@@ -326,10 +327,19 @@ internal fun PinnedDesignCanvas(
     val popOutCrossDp = popOut?.let { popOutCross[it.nodeId] }
     // The unrolled length, from the pop-out's own last measurement; until then, one frame's worth.
     var popOutExtent by remember(document.id) { mutableStateOf<Pair<String, Float>?>(null) }
+    // What the catalog runtime announced it honours, from the frame's last inspection. Empty
+    // in-process, where nothing is asked.
+    var runtimeCapabilities by remember(document.id) { mutableStateOf(emptySet<String>()) }
+    // The last wheel over one of the runtime's lists, handed on; see the runtime frame below.
+    var runtimeScroll by remember(document.id) { mutableStateOf<UiBuilderCanvasScroll?>(null) }
     val popOutExtentDp =
       popOut?.let { container ->
         popOutExtent?.takeIf { it.first == container.nodeId }?.second
-          ?: if (container.horizontal) sourceWidth else sourceHeight
+          ?: if (canvasRenderer != null) {
+            // A runtime surface is handed its size rather than measuring its own, so the first
+            // draw is into a generous budget the content is then measured inside.
+            RUNTIME_POP_OUT_BUDGET_DP
+          } else if (container.horizontal) sourceWidth else sourceHeight
       } ?: 0f
     // Level with the container in the frame, so the connectors run across rather than up.
     val popOutTopDp =
@@ -339,7 +349,14 @@ internal fun PinnedDesignCanvas(
           sourceHeight,
         )
       } else 0f
-    val showPopOut = popOut != null && popOutCrossDp != null
+    // A runtime draws a horizontal container whole only if its catalog says it does: a lazy row
+    // that ignores the signal is still a scroller, clipped at whatever width it is handed.
+    val showPopOut =
+      popOut != null &&
+        popOutCrossDp != null &&
+        (canvasRenderer == null ||
+          !popOut.horizontal ||
+          CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL in runtimeCapabilities)
     val popOutWidthDp =
       if (!showPopOut) 0f else if (popOut!!.horizontal) popOutExtentDp else popOutCrossDp!!
     val popOutHeightDp =
@@ -753,20 +770,72 @@ internal fun PinnedDesignCanvas(
                     )
                   }
                 } else {
+                  // The runtime's device view: the real composition at the frame, left UNDER the
+                  // editor so a click selects (the tap above hit-tests the runtime's inspection),
+                  // with the selection sent to it to reveal and a wheel over one of its lists
+                  // handed on as that list's `scrollBy`.
                   Box(
                     Modifier.requiredSize(
-                      (sourceWidth * densityRatio).dp,
-                      (expandedHeightDp * densityRatio).dp,
-                    )
+                        (sourceWidth * densityRatio).dp,
+                        (frameHeightDp * densityRatio).dp,
+                      )
+                      .then(
+                        if (!deviceView) Modifier
+                        else
+                          Modifier.pointerInput(document, inspection) {
+                            awaitPointerEventScope {
+                              while (true) {
+                                val event = awaitPointerEvent()
+                                if (event.type != PointerEventType.Scroll) continue
+                                val change = event.changes.firstOrNull() ?: continue
+                                if (change.isConsumed || change.scrollDelta.y == 0f) continue
+                                val point =
+                                  Offset(
+                                    frameOrigin.x + change.position.x * drawScale,
+                                    frameOrigin.y + change.position.y * drawScale,
+                                  )
+                                val target =
+                                  inspection
+                                    ?.nodes
+                                    .orEmpty()
+                                    .filter { document.isVerticalScroller(it.nodeId) }
+                                    .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
+                                    .filter { (_, bounds) ->
+                                      point.x >= bounds.x &&
+                                        point.x <= bounds.right &&
+                                        point.y >= bounds.y &&
+                                        point.y <= bounds.bottom
+                                    }
+                                    .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
+                                    ?.first ?: continue
+                                change.consume()
+                                runtimeScroll =
+                                  UiBuilderCanvasScroll(
+                                    nodeId = target,
+                                    // The runtime scrolls in its own pixels: the design's.
+                                    deltaY =
+                                      change.scrollDelta.y *
+                                        RUNTIME_WHEEL_STEP_DP *
+                                        document.renderDensity(density).density,
+                                    sequence = (runtimeScroll?.sequence ?: 0) + 1,
+                                  )
+                              }
+                            }
+                          }
+                      )
                   ) {
                     canvasRenderer(
                       document.withWearWidgetHostShape(LocalWearWidgetHostShape.current),
                       UiBuilderCanvasSurface(
                         sourceWidth,
-                        expandedHeightDp,
+                        frameHeightDp,
                         document.renderDensity(density).density,
-                        UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED,
+                        if (deviceView) UiBuilderRendererSurfaceModeV2.DEVICE
+                        else UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED,
                         horizontalScrollState.value * 31 + verticalScrollState.value,
+                        interactive = !deviceView,
+                        revealNodeId = if (deviceView) selectedNodeId else null,
+                        scroll = if (deviceView) runtimeScroll else null,
                       ),
                       selectedNodeId,
                       showSelectionOverlay,
@@ -774,11 +843,17 @@ internal fun PinnedDesignCanvas(
                     ) { snapshots ->
                       val snapshot = snapshots.editor
                       inspection = snapshot
-                      val measuredBottom =
-                        snapshots.renderer.nodes.mapNotNull { it.bounds?.bottom }.maxOrNull() ?: 0f
-                      val measuredHeightDp =
-                        measuredBottom / document.renderDensity(density).density
-                      if (measuredHeightDp > expandedHeightDp) expandedHeightDp = measuredHeightDp
+                      runtimeCapabilities = snapshots.capabilities
+                      if (!deviceView) {
+                        val measuredBottom =
+                          snapshots.renderer.nodes.mapNotNull { it.bounds?.bottom }.maxOrNull()
+                            ?: 0f
+                        val measuredHeightDp =
+                          measuredBottom / document.renderDensity(density).density
+                        if (measuredHeightDp > expandedHeightDp) {
+                          expandedHeightDp = measuredHeightDp
+                        }
+                      }
                       onInspectionSnapshot?.invoke(snapshot)
                     }
                   }
@@ -835,22 +910,42 @@ internal fun PinnedDesignCanvas(
             )
           }
           if (showPopOut) {
-            UnrolledContainerPopOut(
-              document = document,
-              container = popOut!!,
-              label = nodeLabel(popOut.nodeId),
-              crossDp = popOutCrossDp!!,
-              extentDp = popOutExtentDp,
-              scale = scale,
-              densityRatio = densityRatio,
-              // The label sits above the pop-out, so it is lifted by the label's room to keep the
-              // drawn box itself level with the container.
-              topOffset = (popOutTopDp * scale - VARIANT_LABEL_ROOM_DP).coerceAtLeast(0f).dp,
-              selectedNodeId = selectedNodeId,
-              onNodeSelected = onNodeSelected,
-              onExtentMeasured = { popOutExtent = popOut.nodeId to it },
-              onRootBounds = { popOutRootBounds = it },
-            )
+            if (canvasRenderer == null) {
+              UnrolledContainerPopOut(
+                document = document,
+                container = popOut!!,
+                label = nodeLabel(popOut.nodeId),
+                crossDp = popOutCrossDp!!,
+                extentDp = popOutExtentDp,
+                scale = scale,
+                densityRatio = densityRatio,
+                // The label sits above the pop-out, so it is lifted by the label's room to keep the
+                // drawn box itself level with the container.
+                topOffset = (popOutTopDp * scale - VARIANT_LABEL_ROOM_DP).coerceAtLeast(0f).dp,
+                selectedNodeId = selectedNodeId,
+                onNodeSelected = onNodeSelected,
+                onExtentMeasured = { popOutExtent = popOut.nodeId to it },
+                onRootBounds = { popOutRootBounds = it },
+              )
+            } else {
+              RuntimeContainerPopOut(
+                document = document,
+                container = popOut!!,
+                label = nodeLabel(popOut.nodeId),
+                crossDp = popOutCrossDp!!,
+                extentDp = popOutExtentDp,
+                scale = scale,
+                densityRatio = densityRatio,
+                // The label sits above the pop-out, so it is lifted by the label's room to keep the
+                // drawn box itself level with the container.
+                topOffset = (popOutTopDp * scale - VARIANT_LABEL_ROOM_DP).coerceAtLeast(0f).dp,
+                selectedNodeId = selectedNodeId,
+                onNodeSelected = onNodeSelected,
+                onExtentMeasured = { popOutExtent = popOut.nodeId to it },
+                onRootBounds = { popOutRootBounds = it },
+                canvasRenderer = canvasRenderer!!,
+              )
+            }
           }
         }
       }
@@ -1571,6 +1666,16 @@ private fun ConstrainedFramePane(
     }
   }
 }
+
+/**
+ * The first length a runtime pop-out is drawn at, before its content has been measured inside it. A
+ * runtime surface is handed its size, so a list longer than this is found by filling it and
+ * doubling; a shorter one is trimmed to what it drew.
+ */
+internal const val RUNTIME_POP_OUT_BUDGET_DP = 2000f
+
+/** How far one wheel notch handed to the runtime scrolls its list, in the design's dp. */
+private const val RUNTIME_WHEEL_STEP_DP = 40f
 
 /** Keeps the companion's remembered geometry out of the editing pane's. */
 private const val FRAME_COMPANION_SESSION = "frame-companion"

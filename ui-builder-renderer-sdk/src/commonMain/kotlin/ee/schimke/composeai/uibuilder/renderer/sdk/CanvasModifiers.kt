@@ -206,6 +206,11 @@ fun Modifier.applyCanvasModifier(
   mode: CanvasMode,
   resolveColor: @Composable (String) -> Color,
   resolveShape: @Composable (String?) -> Shape,
+  /**
+   * Drop `horizontalScroll`, as the unrolled mode drops `verticalScroll`; see
+   * [UI_BUILDER_UNROLLED_AXIS_KEY].
+   */
+  unrolledHorizontally: Boolean = false,
 ): Modifier =
   when (val plan = uiBuilderModifier(value)) {
     UiBuilderModifierPlan.FillMaxSize -> fillMaxSize()
@@ -254,7 +259,8 @@ fun Modifier.applyCanvasModifier(
     is UiBuilderModifierPlan.Scale -> scale(plan.scaleX, plan.scaleY)
     UiBuilderModifierPlan.VerticalScroll ->
       if (mode == CanvasMode.AuthoringUnrolled) this else verticalScroll(rememberScrollState())
-    UiBuilderModifierPlan.HorizontalScroll -> horizontalScroll(rememberScrollState())
+    UiBuilderModifierPlan.HorizontalScroll ->
+      if (unrolledHorizontally) this else horizontalScroll(rememberScrollState())
     is UiBuilderModifierPlan.TestTag -> testTag(plan.tag)
     null -> this
   }

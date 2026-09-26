@@ -43,6 +43,8 @@ private class RuntimeRenderState(initial: PendingRender) {
  */
 fun startCatalogRenderer(
   actionDispatcher: CatalogRuntimeActionDispatcher,
+  /** What the catalog's adapters honour beyond the SDK — see [CatalogRuntimeProtocolEndpoint]. */
+  capabilities: Set<String> = emptySet(),
   content:
     @Composable
     (
@@ -54,7 +56,7 @@ fun startCatalogRenderer(
 ) {
   val runtimeId = runtimeIdFromPath()
   var renderState: RuntimeRenderState? = null
-  endpoint = CatalogRuntimeProtocolEndpoint(runtimeId)
+  endpoint = CatalogRuntimeProtocolEndpoint(runtimeId, capabilities = capabilities)
   installRuntimeReceiver { origin, encoded ->
     when (val command = endpoint.receive(origin, sourceIsParent = true, encoded)) {
       null -> Unit

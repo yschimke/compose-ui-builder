@@ -315,7 +315,7 @@ class CanvasDeviceViewTest {
   private fun bounds(snapshot: UiBuilderInspectionSnapshot?, nodeId: String) =
     snapshot?.nodes?.firstOrNull { it.nodeId == nodeId }?.bounds
 
-  private companion object {
+  internal companion object {
     const val FRAME_DP = 320
     const val ROWS = 30
     const val DEEP_ROW = 27

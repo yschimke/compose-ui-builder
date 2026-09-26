@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Rect
 import ee.schimke.composeai.uibuilder.editor.EditorCanvasView
 import ee.schimke.composeai.uibuilder.editor.PinnedDesignCanvas
+import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasRenderer
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
@@ -18,6 +19,7 @@ internal fun DeviceViewCanvasHost(
   onInspection: (UiBuilderInspectionSnapshot) -> Unit = {},
   onMetrics: (Int, Int) -> Unit = { _, _ -> },
   onFrame: (Rect) -> Unit = {},
+  canvasRenderer: UiBuilderCanvasRenderer? = null,
 ) {
   PinnedDesignCanvas(
     document = document,
@@ -42,5 +44,6 @@ internal fun DeviceViewCanvasHost(
     zoom = 1f,
     onZoomChanged = {},
     canvasView = view,
+    canvasRenderer = canvasRenderer,
   )
 }

@@ -273,9 +273,17 @@ internal fun CatalogRuntimeCanvas(
     MaterialTheme.colorScheme
       .surfaceColorAtElevation(LocalAbsoluteTonalElevation.current)
       .toCssColor()
+  // What the runtime announced in `initialized`: the editor sends a `revealNode` or a sideways
+  // unroll only to a runtime that listed it.
+  var capabilities by remember(surfaceId) { mutableStateOf(emptySet<String>()) }
   LaunchedEffect(surfaceId, runtimeId, document.revision) {
     lastInspection = ""
-    while (lastInspection.isEmpty()) {
+    // For as long as this revision is on screen, not only until its first answer: a reveal or a
+    // wheel handed to the runtime moves its lists, and the inspection the runtime sends back with
+    // the action's reply is the only way the editor learns where the rows went.
+    while (true) {
+      capabilities =
+        readCatalogRuntimeCapabilities(surfaceId).split(',').filter { it.isNotBlank() }.toSet()
       val encoded = readCatalogRuntimeInspection(surfaceId)
       if (encoded.isNotEmpty() && encoded != lastInspection) {
         lastInspection = encoded
@@ -292,10 +300,12 @@ internal fun CatalogRuntimeCanvas(
   // Mapped into the editor whenever either side moves: a new snapshot, or the same snapshot under a
   // zoom or scroll. Mapped only once, the selection and drop overlays stayed where the canvas had
   // been when the runtime first answered, and drifted off the design as soon as it was zoomed.
-  LaunchedEffect(runtimeSnapshot, placement) {
+  LaunchedEffect(runtimeSnapshot, placement, capabilities) {
     val snapshot = runtimeSnapshot ?: return@LaunchedEffect
     val current = coordinates?.takeIf { it.isAttached } ?: return@LaunchedEffect
-    onInspectionSnapshot(UiBuilderCanvasInspection(snapshot, snapshot.inEditorCoordinates(current)))
+    onInspectionSnapshot(
+      UiBuilderCanvasInspection(snapshot, snapshot.inEditorCoordinates(current), capabilities)
+    )
   }
   DisposableEffect(surfaceId) {
     mountCatalogRuntimeSurface(surfaceId)
@@ -323,6 +333,11 @@ internal fun CatalogRuntimeCanvas(
       selectionEnabled = selectionEnabled,
       editorOverlayOpen = editorOverlayOpen,
       backdropColor = backdropColor,
+      interactive = surface.interactive,
+      revealNodeId = surface.revealNodeId.orEmpty(),
+      scrollNodeId = surface.scroll?.nodeId.orEmpty(),
+      scrollDeltaY = surface.scroll?.deltaY ?: 0f,
+      scrollSequence = surface.scroll?.sequence ?: 0,
     )
   }
   Box(
@@ -489,6 +504,11 @@ private fun updateCatalogRuntimeSurface(
   selectionEnabled: Boolean,
   editorOverlayOpen: Boolean,
   backdropColor: String,
+  interactive: Boolean,
+  revealNodeId: String,
+  scrollNodeId: String,
+  scrollDeltaY: Float,
+  scrollSequence: Int,
 ): Unit =
   js(
     """(function () {
@@ -498,7 +518,9 @@ private fun updateCatalogRuntimeSurface(
       // except while an editor menu or dialog is open, which Compose draws inside that canvas.
       // Then it drops beneath (z 0, no pointer): the hole the canvas punched keeps it visible, and
       // the menu is painted over it. Applied before the early returns so a re-stack alone works.
-      const raised = mode === 'device' && !editorOverlayOpen;
+      // The editing canvas's device view is a device frame that is NOT interactive: a click there
+      // selects, so the editor keeps the pointer and hands the runtime its wheel as an action.
+      const raised = mode === 'device' && interactive && !editorOverlayOpen;
       host.style.pointerEvents = raised ? 'auto' : 'none';
       host.style.zIndex = raised ? '20' : '0';
       host.style.background = backdropColor;
@@ -508,7 +530,8 @@ private fun updateCatalogRuntimeSurface(
         return;
       }
       const render = {
-        documentJson, widthDp, heightDp, density, mode, selectedNodeId, selectionEnabled
+        documentJson, widthDp, heightDp, density, mode, selectedNodeId, selectionEnabled,
+        revealNodeId, scrollNodeId, scrollDeltaY, scrollSequence,
       };
       // What the frame is BUILT for: its native pixel size and surface mode are fixed when it is
       // created. The document is not part of it. An edit used to change this key, so every edit
@@ -524,6 +547,7 @@ private fun updateCatalogRuntimeSurface(
         controller.render = render;
         controller.renderLatest();
         controller.drawOverlay();
+        controller.sendActions();
         return;
       }
       if (controller) controller.dispose();
@@ -554,6 +578,12 @@ private fun updateCatalogRuntimeSurface(
       let manifest = null;
       let lastRenderKey = '';
       let latestRenderRequestId = null;
+      // The document revision the runtime has finished drawing, which is the only one an action
+      // may name; null while a newer render is in flight.
+      let renderedRef = null;
+      let capabilities = [];
+      let lastRevealed = '';
+      let lastScrollSequence = 0;
       const pending = new Map();
       controller = {
         runtimeId,
@@ -567,6 +597,7 @@ private fun updateCatalogRuntimeSurface(
           if (!manifest || !frame.contentWindow) return;
           const requestId = surfaceId + '-' + (++sequence);
           const body = type === 'renderDocument' ? payload.document : null;
+          const action = type === 'dispatchAction' ? payload : null;
           // A newer render replaces one still waiting: the frame may conflate them and answer only
           // the last, and a long-lived frame must not keep every superseded request.
           if (type === 'renderDocument') {
@@ -574,8 +605,8 @@ private fun updateCatalogRuntimeSurface(
           }
           pending.set(requestId, {
             type,
-            documentId: body?.id,
-            documentRevision: body?.revision,
+            documentId: body?.id ?? action?.documentId,
+            documentRevision: body?.revision ?? action?.documentRevision,
           });
           frame.contentWindow.postMessage(JSON.stringify({
             schema: 'compose-ui-builder-renderer/v' + manifest.protocolVersion,
@@ -594,6 +625,7 @@ private fun updateCatalogRuntimeSurface(
             current.heightDp + '|' + current.density;
           if (key === lastRenderKey) return;
           lastRenderKey = key;
+          renderedRef = null;
           delete host.__uiBuilderInspection;
           delete host.__uiBuilderInspectionJson;
           const parsed = JSON.parse(current.documentJson);
@@ -608,6 +640,35 @@ private fun updateCatalogRuntimeSurface(
             },
           };
           latestRenderRequestId = this.request('renderDocument', payload);
+        },
+        // The selection to reveal and the wheel to pass on, each sent once. A reveal only to a runtime
+        // that announced `revealNode`: an older one refuses the kind, and its lists stay put.
+        sendActions() {
+          if (!initialized || this.disposed || !renderedRef) return;
+          const current = this.render;
+          const target = current.revealNodeId || '';
+          if (capabilities.includes('revealNode') && target !== lastRevealed) {
+            lastRevealed = target;
+            if (target) this.request('dispatchAction', {
+              documentId: renderedRef.documentId,
+              documentRevision: renderedRef.documentRevision,
+              nodeId: target,
+              kind: 'revealNode',
+            });
+          }
+          const delta = Number(current.scrollDeltaY);
+          if (current.scrollSequence > lastScrollSequence && current.scrollNodeId &&
+              Number.isFinite(delta) && delta !== 0) {
+            lastScrollSequence = current.scrollSequence;
+            this.request('dispatchAction', {
+              documentId: renderedRef.documentId,
+              documentRevision: renderedRef.documentRevision,
+              nodeId: current.scrollNodeId,
+              kind: 'scrollBy',
+              deltaX: 0,
+              deltaY: Math.max(-100000, Math.min(100000, delta)),
+            });
+          }
         },
         drawOverlay() {
           overlay.replaceChildren();
@@ -664,19 +725,37 @@ private fun updateCatalogRuntimeSurface(
             message.protocolVersion !== manifest.protocolVersion ||
             message.runtimeId !== runtimeId || !pending.has(message.requestId)) return;
         const expected = pending.get(message.requestId);
-        const expectedType = expected.type === 'initialize' ? 'initialized' : 'rendered';
+        const expectedType = {
+          initialize: 'initialized',
+          renderDocument: 'rendered',
+          dispatchAction: 'actionDispatched',
+        }[expected.type];
         if (message.type !== 'error' && message.type !== expectedType) return;
-        if (message.type === 'rendered' &&
+        if ((message.type === 'rendered' || message.type === 'actionDispatched') &&
             !validInspection(message.payload?.inspection, expected)) return;
         pending.delete(message.requestId);
         if (message.type === 'initialized') {
           initialized = true;
+          const listed = message.payload?.capabilities;
+          capabilities = Array.isArray(listed)
+            ? listed.filter((value) => typeof value === 'string' && /^[A-Za-z0-9._-]+$/.test(value))
+            : [];
+          host.__uiBuilderCapabilities = capabilities.join(',');
           if (initializing !== null) clearInterval(initializing);
           controller.renderLatest();
         } else if (message.type === 'rendered') {
           // Edits now reach one live frame back to back; an answer for a revision already replaced
           // must not put its selection bounds over the newer drawing.
           if (message.requestId !== latestRenderRequestId) return;
+          host.__uiBuilderInspection = message.payload.inspection;
+          host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
+          renderedRef = { documentId: expected.documentId, documentRevision: expected.documentRevision };
+          controller.drawOverlay();
+          controller.sendActions();
+        } else if (message.type === 'actionDispatched') {
+          // Where the rows went after a reveal or a wheel — unless a newer render has since begun.
+          if (!renderedRef || renderedRef.documentId !== expected.documentId ||
+              renderedRef.documentRevision !== expected.documentRevision) return;
           host.__uiBuilderInspection = message.payload.inspection;
           host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
           controller.drawOverlay();
@@ -720,6 +799,9 @@ private fun updateCatalogRuntimeSurface(
 
 private fun readCatalogRuntimeInspection(surfaceId: String): String =
   js("document.getElementById(surfaceId)?.__uiBuilderInspectionJson || ''")
+
+private fun readCatalogRuntimeCapabilities(surfaceId: String): String =
+  js("document.getElementById(surfaceId)?.__uiBuilderCapabilities || ''")
 
 private fun disposeCatalogRuntimeSurface(surfaceId: String): Unit =
   js(
