@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.60.0](https://github.com/yschimke/compose-ui-builder/compare/v3.59.0...v3.60.0) (2026-09-26)
+
+
+### Bug Fixes
+
+* **ui-builder:** device previews draw with the catalog runtime again, and the selection card can be closed ([#293](https://github.com/yschimke/compose-ui-builder/issues/293)) ([3cb853a](https://github.com/yschimke/compose-ui-builder/commit/3cb853ae1e725c21d4c501f5af3aaf0beaa63f91))
+
+## [3.59.0](https://github.com/yschimke/compose-ui-builder/compare/v3.58.0...v3.59.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ui-builder:** declare the import map before the module preloads, so a reloaded editor starts ([#290](https://github.com/yschimke/compose-ui-builder/issues/290)) ([cab08cc](https://github.com/yschimke/compose-ui-builder/commit/cab08cc11b7fb062ebd21687c73e23b62e7104c7))
+
 ## [3.58.0](https://github.com/yschimke/compose-ui-builder/compare/v3.57.0...v3.58.0) (2026-09-25)
 
 
