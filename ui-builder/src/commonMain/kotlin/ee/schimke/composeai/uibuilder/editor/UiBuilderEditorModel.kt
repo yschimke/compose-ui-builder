@@ -593,6 +593,16 @@ data class UiBuilderEditorState(
    */
   val codePaneVisible: Boolean = false,
   /**
+   * Whether the selection's quick editor — the small card of its values — is open beside the
+   * design.
+   *
+   * Closed by default and closed again whenever the selection moves on. It used to open for every
+   * selection, beside the node, which put a card over the design the author was trying to look at
+   * each time they chose something; the Properties panel is where values live, and this card is the
+   * shortcut to them that is there when asked for. See [UiBuilderEditorEvent.ToggleQuickEditor].
+   */
+  val quickEditorOpen: Boolean = false,
+  /**
    * Whether the strip of revision thumbnails is drawn under the canvas.
    *
    * Off by default and view-only, like [codePaneVisible]: it costs a rebuilt document and a

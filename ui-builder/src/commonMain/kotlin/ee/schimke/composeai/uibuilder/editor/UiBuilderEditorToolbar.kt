@@ -911,6 +911,8 @@ internal fun editorSelectionMenuEntries(
   wrapCandidates: List<EditorCatalogItem>,
   canUnwrap: Boolean,
   onOpenProperties: (() -> Unit)?,
+  /** Opens the quick editor beside the design, or null where the selection has none. */
+  onQuickEdit: (() -> Unit)? = null,
   /** Copies a link that opens this design on this layer, or null where nothing is selected. */
   onCopyLink: (() -> Unit)? = null,
   onDismiss: () -> Unit,
@@ -925,6 +927,19 @@ internal fun editorSelectionMenuEntries(
       UiBuilderMenuEntry.Action("Properties", icon = UiBuilderMenuIcon.Properties) {
         onDismiss()
         onOpenProperties()
+      }
+    )
+  }
+  if (onQuickEdit != null) {
+    add(
+      UiBuilderMenuEntry.Action(
+        "Quick edit",
+        icon = UiBuilderMenuIcon.Properties,
+        contentDescription = "Quick edit beside the design",
+        shortcut = "E",
+      ) {
+        onDismiss()
+        onQuickEdit()
       }
     )
   }
@@ -945,7 +960,9 @@ internal fun editorSelectionMenuEntries(
       )
     )
   }
-  if (onOpenProperties != null || onCopyLink != null) add(UiBuilderMenuEntry.Divider)
+  if (onOpenProperties != null || onQuickEdit != null || onCopyLink != null) {
+    add(UiBuilderMenuEntry.Divider)
+  }
   add(
     UiBuilderMenuEntry.Action(
       "Duplicate",
@@ -1717,6 +1734,24 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
       keys = setOf(Key.Enter, Key.NumPadEnter),
       command = true,
       shift = false,
+    ),
+    // A letter, not Enter: this table is read in the editor's *preview* pass, ahead of every
+    // focused control, and a plain Enter taken here would stop a focused button or layer row from
+    // answering its own Enter. Nothing in the editor answers to a bare E.
+    EditorShortcut(
+      chord = "E",
+      description = "Open or close the selection's quick editor",
+      event = UiBuilderEditorEvent.ToggleQuickEditor,
+      keys = setOf(Key.E),
+      command = false,
+      shift = false,
+    ),
+    EditorShortcut(
+      chord = "Esc",
+      description = "Close the quick editor",
+      event = UiBuilderEditorEvent.HideQuickEditor,
+      keys = setOf(Key.Escape),
+      command = false,
     ),
     EditorShortcut(
       chord = "Ctrl/\u2318+D",
