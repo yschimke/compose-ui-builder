@@ -723,6 +723,8 @@ fun UiBuilderEditor(
   // Which control the hover editor should put the caret in, set by an action that just created the
   // value being edited and cleared the moment it lands.
   var hoverFocusTarget by remember(document.id) { mutableStateOf<String?>(null) }
+  // The node whose text is being typed over on the canvas, and what it said when that started.
+  var inlineTextEdit by remember(document.id) { mutableStateOf<CanvasInlineTextEdit?>(null) }
   var textInputFocused by remember { mutableStateOf(false) }
   // Opened where the URL asked for a panel, on a narrow viewport as much as a wide one. The
   // compact layout draws its docks from this rather than from [inspectorOpen], so initialising only
@@ -902,14 +904,6 @@ fun UiBuilderEditor(
     inspectorOpen = true
     mobilePanel = MobileEditorPanel.Properties
   }
-  // The node whose floating card the author closed. The selection stays (something is always
-  // selected), so the card is hidden for that node until another is chosen or it is chosen again.
-  var hoverDismissedFor by remember { mutableStateOf<String?>(null) }
-  // Any route to a different node — canvas, layers, breadcrumbs, history, Issues — brings the card
-  // back; the one that re-chooses the same node is [selectNodeForEditing]'s.
-  LaunchedEffect(state.selectedNodeId) {
-    if (state.selectedNodeId != hoverDismissedFor) hoverDismissedFor = null
-  }
 
   /**
    * Selection is the beginning of editing, not a separate mode an author has to discover.
@@ -920,8 +914,6 @@ fun UiBuilderEditor(
    * agreement.
    */
   fun selectNodeForEditing(nodeId: String) {
-    // Choosing a node, even the one already chosen, brings its card back after a dismiss.
-    hoverDismissedFor = null
     focusEditor()
     dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
     openProperties()
@@ -1055,6 +1047,8 @@ fun UiBuilderEditor(
           // menu picks is a starting point, not a decision.
           hoverFocusTarget =
             if (adding) MODIFIER_FOCUS_FIELDS[type]?.let { "modifier:$type.$it" } else null
+          // The caret is being handed to the quick editor, so it has to be open to take it.
+          if (hoverFocusTarget != null) dispatch(UiBuilderEditorEvent.ShowQuickEditor)
         }
       },
       canDuplicate = reducer.canDuplicateSelected(state),
@@ -1071,6 +1065,13 @@ fun UiBuilderEditor(
         inspectorOpen = true
         mobilePanel = MobileEditorPanel.Properties
       },
+      onQuickEdit =
+        if (state.selection.size == 1) {
+          {
+            focusEditor()
+            dispatch(UiBuilderEditorEvent.ShowQuickEditor)
+          }
+        } else null,
       // The link names the *anchor* rather than the whole selection: a URL selects one node, and
       // the anchor is the node every other single-selection question in this editor is asked of.
       // Pinned to the revision the host confirmed this layer was in, and offered only where there
@@ -1411,13 +1412,35 @@ fun UiBuilderEditor(
       onInspectionInvalidated = onInspectionInvalidated,
       canvasRenderer = canvasRenderer,
       selectionMenu = selectionMenu,
+      onHoverEditorDismiss = { dispatch(UiBuilderEditorEvent.HideQuickEditor) },
+      // Double-click a label to type over it where it is. Anything without free text of its own
+      // keeps what the click already did: select it.
+      onNodeDoubleClicked = { nodeId ->
+        reducer.inlineText(state, nodeId)?.let { text ->
+          if (state.selectedNodeId != nodeId) dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
+          dispatch(UiBuilderEditorEvent.HideQuickEditor)
+          inlineTextEdit = CanvasInlineTextEdit(nodeId, text)
+        }
+      },
+      inlineTextEdit = inlineTextEdit,
+      onInlineTextDone = { text, focusMovedAway ->
+        val edit = inlineTextEdit
+        inlineTextEdit = null
+        if (edit != null && text != null && text != edit.text) {
+          dispatch(UiBuilderEditorEvent.CommitProperty(edit.nodeId, "text", text))
+        }
+        // Back to the editor's keys after Enter or Esc; a click away keeps what it clicked.
+        if (!focusMovedAway) focusEditor()
+      },
+      onTextInputFocusChanged = { textInputFocused = it },
       hoverEditor =
-        if (state.selection.size != 1 || state.selectedNodeId == hoverDismissedFor) null
+        if (state.selection.size != 1 || !state.quickEditorOpen) null
         else {
-          {
+          { dragHandle ->
             SelectionHoverEditor(
               label = selectionLabel,
-              onDismiss = { hoverDismissedFor = state.selectedNodeId },
+              dragHandle = dragHandle,
+              onDismiss = { dispatch(UiBuilderEditorEvent.HideQuickEditor) },
               // The same rule the panel opens on: what the node carries, which is what the export
               // would write. A hovering card is the last place to list what a component *could*
               // have.

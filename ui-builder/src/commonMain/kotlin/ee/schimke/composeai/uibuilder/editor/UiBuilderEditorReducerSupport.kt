@@ -1052,7 +1052,7 @@ internal fun PropertyCapability.numberBounds(typeNames: Set<String>): EditorNumb
   val step = editor.step ?: if (authored == setOf("integer")) 1.0 else 0.1
   if (!minimum.isFinite() || !maximum.isFinite() || !step.isFinite()) return null
   if (minimum > maximum || step <= 0.0) return null
-  return EditorNumberBounds(minimum, maximum, step, authored == setOf("integer"))
+  return EditorNumberBounds(minimum, maximum, step, authored == setOf("integer") || editor.integer)
 }
 
 internal fun String.humanLabel(): String =
