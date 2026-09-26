@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -1355,12 +1356,16 @@ fun UiBuilderEditor(
       )
     }
   }
+  // The editing surface draws a Wear widget in the editing frame, not in the host shape being
+  // viewed: which container a launcher draws around it is a question for the preview pane, which
+  // draws every shape side by side, and for the native render. Reshaping the surface an author is
+  // editing made the frame they place nodes in change under them. The compact layout has neither
+  // pane, so there the canvas is the only surface a chosen shape can be seen on, and it draws it.
+  var canvasIsOnlySurface by remember { mutableStateOf(false) }
+  val canvasHostShape =
+    if (canvasIsOnlySurface) state.wearWidgetHostShape else WearWidgetHostShape.Default
   val canvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
-    // The editing surface draws a Wear widget in the editing frame, not in the host shape being
-    // viewed: which container a launcher draws around it is a question for the preview pane, which
-    // draws every shape side by side, and for the native render. Reshaping the surface an author is
-    // editing made the frame they place nodes in change under them.
-    CompositionLocalProvider(LocalWearWidgetHostShape provides WearWidgetHostShape.Default) {
+    CompositionLocalProvider(LocalWearWidgetHostShape provides canvasHostShape) {
       PinnedDesignCanvas(
         document = state.document,
         selectedNodeId = state.selectedNodeId,
@@ -1578,8 +1583,10 @@ fun UiBuilderEditor(
    */
   fun promotionTargetFor(piece: ReferencePiece): ParentSlot? {
     val componentId = piece.componentId ?: return null
-    // The canvas's frame, which is the editing one whatever host shape the native pane is showing.
-    val (pointX, pointY) = state.document.referencePieceCentrePx(piece, WearWidgetHostShape.Default)
+    // The canvas's frame: the editing one wherever a pane shows the host shape, the chosen one
+    // where
+    // the canvas is all there is.
+    val (pointX, pointY) = state.document.referencePieceCentrePx(piece, canvasHostShape)
     return reducer.promotionTarget(
       state = state,
       componentId = componentId,
@@ -1955,6 +1962,7 @@ fun UiBuilderEditor(
         // A host drawing the toolbar and rails has taken the width they cost, and its panes are
         // resized by the person rather than by a phone, so it keeps the desktop layout.
         val compact = maxWidth < 840.dp && hostChrome == null
+        SideEffect { canvasIsOnlySurface = compact }
         // A host may put rendered output in its own view (for example IntelliJ's Preview tool
         // window). That surface owns no editor chrome: toolbars, navigator, inspector and status
         // stay with the visual editor instead of being duplicated around a read-only render.
