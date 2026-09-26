@@ -9,6 +9,9 @@ object RemoteDocumentJsonExporter {
   const val INTEGER_PROFILE = "compose-preview-integer-expressions-v1"
   const val STATE_PROFILE = "compose-preview-state-v1"
 
+  /** The most nodes one expanded document may emit, loops and component instances included. */
+  private const val MAX_EXPANDED_NODES = 10_000
+
   sealed interface Result {
     /** Boolean state uses named integers (0/1); the host bridge must use [stateKinds]. */
     data class Emitted(val source: String, val stateKinds: Map<String, String>) : Result
@@ -80,6 +83,16 @@ object RemoteDocumentJsonExporter {
         .forEach { (name, value) -> declare(name, value) }
       validateReferences()
       if (errors.isNotEmpty()) return Result.Refused(errors.distinct())
+      // Counted before anything is built. The emitter's own limit stops a runaway expansion, but
+      // only after it has built ten thousand nodes; a loop nested in a loop reaches that from two
+      // hundred authored rows, and building them is the cost the limit exists to refuse.
+      document.roots
+        .firstOrNull { expandedSize(it) > MAX_EXPANDED_NODES }
+        ?.let {
+          return Result.Refused(
+            listOf("nodes.$it: expanded document exceeds $MAX_EXPANDED_NODES nodes")
+          )
+        }
       val roots = document.roots.mapNotNull { node(it, JsonObject(emptyMap())) }
       val source = buildJsonObject {
         if (strings.isNotEmpty() || usesStateProfile) put("compilerProfile", STATE_PROFILE)
@@ -206,8 +219,52 @@ object RemoteDocumentJsonExporter {
       return supplied
     }
 
+    val expandedSizes = mutableMapOf<String, Int>()
+    val sizing = mutableSetOf<String>()
+
+    /**
+     * How many nodes [node] would emit for [id], capped just past [MAX_EXPANDED_NODES].
+     *
+     * Arguments never change the shape of what a node expands to, so each id is counted once. A
+     * cycle counts as one node: [node] reports it as an error rather than expanding it.
+     */
+    fun expandedSize(id: String): Int {
+      expandedSizes[id]?.let {
+        return it
+      }
+      val raw = document.nodes[id] ?: return 0
+      if (!sizing.add(id)) return 1
+      try {
+        val cap = MAX_EXPANDED_NODES + 1L
+        val placement = raw.component
+        val inner: Long =
+          when {
+            placement != null -> {
+              val key = (placement["componentKey"] as? JsonPrimitive)?.content
+              val root =
+                ((key?.let { document.components[it] } as? JsonObject)?.get("root")
+                    as? JsonPrimitive)
+                  ?.content
+              root?.let { expandedSize(it).toLong() } ?: 0L
+            }
+            raw.componentId == "layout/for-each" -> {
+              val rows =
+                ((raw.properties["data"] as? JsonObject)?.get("values") as? JsonArray)?.size ?: 0
+              val template = raw.slots["template"]?.singleOrNull()
+              rows.toLong() * (template?.let { expandedSize(it).toLong() } ?: 0L)
+            }
+            else -> raw.slots["children"].orEmpty().sumOf { expandedSize(it).toLong() }
+          }
+        return (1L + inner).coerceAtMost(cap).toInt().also { expandedSizes[id] = it }
+      } finally {
+        sizing.remove(id)
+      }
+    }
+
     fun node(id: String, arguments: JsonObject): JsonObject? {
-      require(++emittedNodes <= 10_000) { "nodes.$id: expanded document exceeds 10000 nodes" }
+      require(++emittedNodes <= MAX_EXPANDED_NODES) {
+        "nodes.$id: expanded document exceeds $MAX_EXPANDED_NODES nodes"
+      }
       require(active.size < 128) { "nodes.$id: nesting exceeds 128 levels" }
       val raw = document.nodes[id] ?: return null // Already checked by validateReferences.
       if (!active.add(id)) {
