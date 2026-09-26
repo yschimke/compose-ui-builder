@@ -25,6 +25,30 @@
         "ee.schimke.composeai:compose-preview-daemon-bom"
       ],
       "groupName": "Compose AI Tools and preview daemon"
+    },
+    {
+      "description": "The design-render reusable workflow is pinned to a commit on compose-preview-server's main and bumped by the custom manager below, not the github-actions manager, which only tracks tags.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDepNames": [
+        "yschimke/compose-preview-server"
+      ],
+      "enabled": false
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Bump the pinned commit of compose-preview-server's reusable design-render workflow to the head of its main branch.",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/[^/]+\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "uses: (?<depName>yschimke/compose-preview-server)/\\.github/workflows/[^@\\s]+@(?<currentDigest>[0-9a-f]{40}) # (?<currentValue>main)"
+      ],
+      "datasourceTemplate": "git-refs",
+      "packageNameTemplate": "https://github.com/{{depName}}"
     }
   ]
 }

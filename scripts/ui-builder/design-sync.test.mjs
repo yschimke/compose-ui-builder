@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { test } from "node:test";
-import { documentToOperations, operationsToDocument, publishDirectory } from "./design-sync.mjs";
+import { documentToOperations, operationsToDocument, publishDirectory, validatedServerOrigin } from "./design-sync.mjs";
 
 const designs = new URL("../../docs/design/fixtures/ui-builder/designs/", import.meta.url);
 const files = readdirSync(designs).filter((name) => name.endsWith(".json")).sort();
@@ -48,5 +48,24 @@ test("the published directory is the shape the server's design library reads", (
     // The export gate refuses a document without one, so a published design that lacks it would
     // load and then be unable to produce Kotlin.
     assert.ok(document.environment?.density > 0, `${entry.file} pins no density`);
+  }
+});
+
+test("--server is one https origin, with http only on loopback", () => {
+  assert.equal(validatedServerOrigin("https://preview.example/"), "https://preview.example");
+  assert.equal(validatedServerOrigin("http://localhost:8080"), "http://localhost:8080");
+  assert.equal(validatedServerOrigin("http://127.0.0.1:8080"), "http://127.0.0.1:8080");
+  assert.equal(validatedServerOrigin("http://[::1]:8080"), "http://[::1]:8080");
+  for (const value of [
+    "http://preview.example",
+    "https://preview.example/path",
+    "https://user@preview.example",
+    "https://preview.example?token=secret",
+    "https://preview.example#fragment",
+    "https:preview.example",
+    "ftp://preview.example",
+    "not a url",
+  ]) {
+    assert.throws(() => validatedServerOrigin(value), /https origin/, value);
   }
 });

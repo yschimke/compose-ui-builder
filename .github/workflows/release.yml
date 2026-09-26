@@ -225,8 +225,10 @@ jobs:
       # Deliberately does NOT un-draft: `finish-release` does that once the asset is attached, so
       # the release is never visible to the ivy repository without the zip it asks for.
       - name: Attach the editor assets to the release
+        env:
+          TAG: ${{ needs.release-please.outputs.publish_tag }}
         run: |
-          tag="${{ needs.release-please.outputs.publish_tag }}"
+          tag="$TAG"
           archive="ui-builder-web/build/distributions/compose-preview-ui-builder-web-${PLUGIN_VERSION}.zip"
           intellij_plugin="ui-builder-intellij-plugin/build/distributions/compose-ui-builder-intellij-plugin-${PLUGIN_VERSION}.zip"
           # The digest an instance pins beside the version (compose-preview-server#1035), published
@@ -271,7 +273,9 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
       - name: Publish the draft GitHub release
-        run: gh release edit "${{ needs.release-please.outputs.publish_tag }}" --draft=false --latest
+        env:
+          TAG: ${{ needs.release-please.outputs.publish_tag }}
+        run: gh release edit "$TAG" --draft=false --latest
 
   # The PR half, split from the release half above and run after it, for the phantom-PR reason
   # documented on `release-please`. On an ordinary push this is the only job that does anything.

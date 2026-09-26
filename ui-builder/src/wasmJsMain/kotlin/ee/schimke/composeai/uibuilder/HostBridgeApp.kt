@@ -309,10 +309,16 @@ private external fun hostBridgeRoleName(): String
 /**
  * Hands each `open` to [onOpen] as JSON, so the envelope is decoded once, in Kotlin; each `select`
  * to [onSelect]; and each `invoke` to [onInvoke].
+ *
+ * Only the embedding host speaks this protocol, so only messages from `window.parent` are read. In
+ * a VS Code webview that is the frame VS Code relays `webview.postMessage` through; for a top-level
+ * page (a harness, or a host posting to its own window) `window.parent` is the window itself.
+ * Anything else, such as a frame the editor itself embeds, is ignored.
  */
 @JsFun(
   """(onOpen, onSelect, onInvoke) => {
   globalThis.addEventListener('message', (event) => {
+    if (event.source !== globalThis.parent) return;
     const data = event.data;
     if (!data) return;
     if (data.type === 'compose-ui-builder/open') onOpen(JSON.stringify(data));

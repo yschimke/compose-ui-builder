@@ -1298,23 +1298,27 @@ private fun LiveSessionApp(
           fetchBase64(catalogAssetPath(activeCatalogSystemId, "/render/${source.id}.png"))
         Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
       },
-      // The same fetch, for a URL the *design* names rather than one the palette built. Which URLs
-      // are reachable is [sameOriginRequestUrl]'s rule and not a second policy written here: it
-      // resolves against the page and throws on anything that leaves this origin, so a design
-      // pointing at another host draws that refusal as its own diagnostic rather than quietly
-      // sending this page's token somewhere it does not belong.
-      resolveRemoteComposeUrl = { url -> fetchBase64(url) },
+      // The same fetch, for a URL the *design* names rather than one the palette built. A design
+      // is someone else's data fetched as this viewer, so the URL is held to the routes that serve
+      // Remote Compose documents ([designReferenceUrl]) before [sameOriginRequestUrl] adds the
+      // token. Another host, or any other route on this one, draws that refusal as the node's own
+      // diagnostic.
+      resolveRemoteComposeUrl = { url ->
+        fetchBase64(designReferenceUrl(url, DesignReferenceKind.RemoteComposeDocument))
+      },
       // The design's own uploaded pictures, from the route beside the design API that stores
       // them. Same-origin like everything else here, and read as this page's actor, so a design
       // one may not open has no pictures one may fetch.
       resolveDesignAsset = { assetKey ->
         Base64.decode(fetchBase64("/api/ui-builder/v1/designs/${config.designId}/assets/$assetKey"))
       },
-      // Same-origin, like every other request this page makes: `sameOriginRequestUrl` refuses the
-      // rest, and a builder that made an exception for animation URLs would be a page fetching
-      // arbitrary third-party JSON into a design. An animation served from elsewhere is pasted
-      // into the element's `json` instead, which is the same bytes by a route the host can see.
-      loadLottieAnimation = { url -> fetchText(url) },
+      // Same-origin, and only from the ingested-document route ([designReferenceUrl]): a builder
+      // that made an exception for animation URLs would be a page fetching arbitrary JSON into a
+      // design as this viewer. An animation served from elsewhere is pasted into the element's
+      // `json` instead, which is the same bytes by a route the host can see.
+      loadLottieAnimation = { url ->
+        fetchText(designReferenceUrl(url, DesignReferenceKind.LottieAnimation))
+      },
     )
     LaunchedEffect(loadedDocument.revision) { markReady() }
     // What the URL's selectors resolved to, for the harness and for anybody debugging a link that

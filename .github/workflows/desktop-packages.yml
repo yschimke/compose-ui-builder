@@ -56,9 +56,14 @@ jobs:
       - name: Does this build package for ${{ matrix.os }}?
         id: support
         shell: bash
+        env:
+          TAG: ${{ inputs.tag }}
+          FORMAT: ${{ matrix.format }}
+          EXTENSION: ${{ matrix.extension }}
+          RUNNER_LABEL: ${{ matrix.os }}
         run: |
-          if [ -n "${{ inputs.tag }}" ] && ! grep -q 'TargetFormat.${{ matrix.format }}' ui-builder-desktop/build.gradle.kts; then
-            echo "::notice::${{ inputs.tag }} predates the .${{ matrix.extension }} installer; nothing to build on ${{ matrix.os }}"
+          if [ -n "$TAG" ] && ! grep -q "TargetFormat.$FORMAT" ui-builder-desktop/build.gradle.kts; then
+            echo "::notice::$TAG predates the .$EXTENSION installer; nothing to build on $RUNNER_LABEL"
             echo "supported=false" >> "$GITHUB_OUTPUT"
           else
             echo "supported=true" >> "$GITHUB_OUTPUT"
@@ -77,9 +82,11 @@ jobs:
       - name: Package for ${{ matrix.os }}
         if: ${{ steps.support.outputs.supported == 'true' }}
         shell: bash
+        env:
+          TAG: ${{ inputs.tag }}
         run: |
-          if [ -n "${{ inputs.tag }}" ]; then
-            tag="${{ inputs.tag }}"
+          if [ -n "$TAG" ]; then
+            tag="$TAG"
             export UI_BUILDER_DESKTOP_VERSION="${tag#v}"
           fi
           ./gradlew :ui-builder-desktop:packageDistributionForCurrentOS
@@ -87,10 +94,12 @@ jobs:
         if: ${{ steps.support.outputs.supported == 'true' }}
         id: package
         shell: bash
+        env:
+          EXTENSION: ${{ matrix.extension }}
         run: |
-          package=$(find ui-builder-desktop/build/compose/binaries -type f -name '*.${{ matrix.extension }}' -print -quit)
+          package=$(find ui-builder-desktop/build/compose/binaries -type f -name "*.$EXTENSION" -print -quit)
           if [ -z "$package" ]; then
-            echo "::error::packageDistributionForCurrentOS produced no .${{ matrix.extension }}"
+            echo "::error::packageDistributionForCurrentOS produced no .$EXTENSION"
             exit 1
           fi
           echo "path=$package" >> "$GITHUB_OUTPUT"
@@ -105,4 +114,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release upload "${{ inputs.tag }}" "${{ steps.package.outputs.path }}" --clobber
+          TAG: ${{ inputs.tag }}
+          PACKAGE_PATH: ${{ steps.package.outputs.path }}
+        run: gh release upload "$TAG" "$PACKAGE_PATH" --clobber

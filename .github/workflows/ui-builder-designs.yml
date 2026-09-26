@@ -21,6 +21,10 @@ name: Design Renders
 # The designs are OPERATION LOGS rather than documents (`compose-ui-builder-operations/v1-candidate`),
 # so the lane replays them with this repository's own `scripts/ui-builder/design-sync.mjs` first.
 # That is what `documents: false` selects, and it is the default.
+#
+# Both calls pin the reusable workflow to a commit on compose-preview-server's `main`, not the moving
+# branch, because they hand it write permissions. Renovate's custom manager in `renovate.json` bumps
+# the pin (the `# main` comment is what it matches), so a lane change there arrives here as a PR.
 
 on:
   push:
@@ -42,7 +46,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@main
+    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@c62f9c2349b5cc7a512bd00354592e0694f0cf0a # main
     with:
       # The Material 3 designs, against m3-catalog's own bundle off its delivery branch in the
       # m3-catalog-out output repository. No `lane`: this call keeps the comment and branches it
@@ -59,7 +63,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@main
+    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@c62f9c2349b5cc7a512bd00354592e0694f0cf0a # main
     with:
       # The Wear designs, against wear-m3-catalog's bundle. Compiled against the m3 bundle they fail
       # at `Unresolved reference 'wear'`. `wear-m3` is record-free, so there is no `components`.
