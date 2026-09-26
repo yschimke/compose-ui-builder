@@ -219,7 +219,9 @@ class UiBuilderEditorReducer(
       componentDrift = state.componentDrift.stillDescribing(document),
       layerQuery = state.layerQuery,
       codePaneVisible = state.codePaneVisible,
-      quickEditorOpen = state.quickEditorOpen,
+      // Only while it is still about the same node: a collaborator who deletes the selection moves
+      // it to a fallback, and the card must not follow onto a node nobody asked to edit.
+      quickEditorOpen = state.quickEditorOpen && rebuilt.selectedNodeId == state.selectedNodeId,
       // The strip survives an authoritative document; what it was *showing* does not. The rebuilt
       // collaboration state carries none of the mutations that built the arriving document, so the
       // revision somebody was looking at is one this editor can no longer picture — the strip

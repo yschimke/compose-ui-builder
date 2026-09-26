@@ -1423,13 +1423,14 @@ fun UiBuilderEditor(
         }
       },
       inlineTextEdit = inlineTextEdit,
-      onInlineTextDone = { text ->
+      onInlineTextDone = { text, focusMovedAway ->
         val edit = inlineTextEdit
         inlineTextEdit = null
         if (edit != null && text != null && text != edit.text) {
           dispatch(UiBuilderEditorEvent.CommitProperty(edit.nodeId, "text", text))
         }
-        focusEditor()
+        // Back to the editor's keys after Enter or Esc; a click away keeps what it clicked.
+        if (!focusMovedAway) focusEditor()
       },
       onTextInputFocusChanged = { textInputFocused = it },
       hoverEditor =

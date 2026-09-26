@@ -46,12 +46,13 @@ internal data class CanvasInlineTextEdit(val nodeId: String, val text: String)
  * the new one where it is, rather than finding the same words in a panel across the screen.
  *
  * Enter or clicking away keeps the new text; Esc puts the old one back. [onDone] is told once, with
- * the text to commit or null for a cancel.
+ * the text to commit or null for a cancel, and whether focus went elsewhere — a click away lands on
+ * whatever was clicked, and taking focus back from it would cost that click.
  */
 @Composable
 internal fun InlineTextEditor(
   edit: CanvasInlineTextEdit,
-  onDone: (String?) -> Unit,
+  onDone: (text: String?, focusMovedAway: Boolean) -> Unit,
   onTextInputFocusChanged: (Boolean) -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -63,11 +64,11 @@ internal fun InlineTextEditor(
     }
   // Told once: Enter commits and then the field loses focus, which would commit a second time.
   var finished by remember(edit) { mutableStateOf(false) }
-  fun finish(text: String?) {
+  fun finish(text: String?, focusMovedAway: Boolean = false) {
     if (finished) return
     finished = true
     onTextInputFocusChanged(false)
-    onDone(text)
+    onDone(text, focusMovedAway)
   }
   val focus = remember(edit) { FocusRequester() }
   var focused by remember(edit) { mutableStateOf(false) }
@@ -96,7 +97,7 @@ internal fun InlineTextEditor(
               onTextInputFocusChanged(true)
             } else if (focused) {
               // Clicking away is a yes, the way it is in every design tool's text box.
-              finish(value.text)
+              finish(value.text, focusMovedAway = true)
             }
           }
           .onPreviewKeyEvent { event ->

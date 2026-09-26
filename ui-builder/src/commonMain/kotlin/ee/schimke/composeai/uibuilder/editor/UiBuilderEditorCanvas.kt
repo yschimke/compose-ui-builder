@@ -208,7 +208,7 @@ internal fun PinnedDesignCanvas(
   /** The text being typed over in place, drawn over its node; null when none is. */
   inlineTextEdit: CanvasInlineTextEdit? = null,
   /** The in-place text is done: the text to commit, or null to leave the node as it was. */
-  onInlineTextDone: (String?) -> Unit = {},
+  onInlineTextDone: (text: String?, focusMovedAway: Boolean) -> Unit = { _, _ -> },
   onTextInputFocusChanged: (Boolean) -> Unit = {},
   /**
    * How the selected node is sized, for its resize handles, or null where it gets none — see

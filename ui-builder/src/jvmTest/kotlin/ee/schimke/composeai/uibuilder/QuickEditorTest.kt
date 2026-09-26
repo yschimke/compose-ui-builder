@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.getBoundsInRoot
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextReplacement
@@ -71,6 +73,30 @@ class QuickEditorTest {
     assertTrue(reducer.reduce(reopened, UiBuilderEditorEvent.SelectNode(other)).quickEditorOpen)
     assertFalse(reducer.reduce(reopened, UiBuilderEditorEvent.HideQuickEditor).quickEditorOpen)
     assertFalse(reducer.reduce(reopened, UiBuilderEditorEvent.ToggleQuickEditor).quickEditorOpen)
+  }
+
+  @Test
+  fun `a collaborator deleting the selected node closes it, and any other change keeps it`() {
+    val label = document.nodes.values.first { it.componentId == "m3/text" }
+    val open =
+      reducer.reduce(
+        reducer.initial(document, selectedNodeId = label.id),
+        UiBuilderEditorEvent.ShowQuickEditor,
+      )
+
+    assertTrue(reducer.reconciled(open, document.copy(revision = 999)).quickEditorOpen)
+
+    val without =
+      document.copy(
+        revision = 999,
+        nodes =
+          (document.nodes - label.id).mapValues { (_, node) ->
+            node.copy(slots = node.slots.mapValues { (_, ids) -> ids - label.id })
+          },
+      )
+    val reconciled = reducer.reconciled(open, without)
+    assertTrue(reconciled.selectedNodeId != label.id)
+    assertFalse(reconciled.quickEditorOpen, "the card followed onto the fallback selection")
   }
 
   @Test
@@ -168,6 +194,30 @@ class QuickEditorTest {
       onAllNodesWithText("Podcast details").assertCountEquals(0)
       // Typing over a label is not a request for its properties.
       onNodeWithContentDescription("Selection editor").assertDoesNotExist()
+    }
+
+  @Test
+  fun `clicking another field commits the text and leaves the caret where it was clicked`() =
+    runDesktopComposeUiTest(width = 1600, height = 1050) {
+      setContent {
+        MaterialTheme { UiBuilderEditor(document, catalog, chrome = PointerTestUiBuilderChrome) }
+      }
+      waitForIdle()
+      val label = onAllNodesWithText("Podcast details").onFirst().getBoundsInRoot()
+      onRoot().performMouseInput {
+        doubleClick(
+          Offset(((label.left + label.right) / 2).toPx(), ((label.top + label.bottom) / 2).toPx())
+        )
+      }
+      waitForIdle()
+      onNodeWithContentDescription("Edit text in place").performTextReplacement("Show details")
+
+      onNodeWithContentDescription("Property search").performClick()
+      waitForIdle()
+
+      onNodeWithContentDescription("Edit text in place").assertDoesNotExist()
+      onAllNodesWithText("Show details").onFirst().assertExists()
+      onNodeWithContentDescription("Property search").assertIsFocused()
     }
 
   private companion object {
