@@ -9,6 +9,9 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.LocalAbsoluteTonalElevation
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
@@ -254,6 +258,13 @@ internal fun CatalogRuntimeCanvas(
   // Read in composition so opening or closing an editor menu recomposes this and re-stacks the
   // surface: a device frame sits above the canvas to take the pointer, which would bury the menu.
   val editorOverlayOpen = EditorOverlays.anyOpen
+  // What shows wherever the design leaves the frame uncovered: a widget's rounded corners, a round
+  // host shape. The frame and the runtime are transparent there, and the hole punched for them
+  // reaches the page itself — white — so the host paints the colour of the panel it sits in.
+  val backdropColor =
+    MaterialTheme.colorScheme
+      .surfaceColorAtElevation(LocalAbsoluteTonalElevation.current)
+      .toCssColor()
   LaunchedEffect(surfaceId, runtimeId, document.revision) {
     lastInspection = ""
     while (lastInspection.isEmpty()) {
@@ -303,6 +314,7 @@ internal fun CatalogRuntimeCanvas(
       selectedNodeId = selectedNodeId.orEmpty(),
       selectionEnabled = selectionEnabled,
       editorOverlayOpen = editorOverlayOpen,
+      backdropColor = backdropColor,
     )
   }
   Box(
@@ -468,6 +480,7 @@ private fun updateCatalogRuntimeSurface(
   selectedNodeId: String,
   selectionEnabled: Boolean,
   editorOverlayOpen: Boolean,
+  backdropColor: String,
 ): Unit =
   js(
     """(function () {
@@ -480,6 +493,7 @@ private fun updateCatalogRuntimeSurface(
       const raised = mode === 'device' && !editorOverlayOpen;
       host.style.pointerEvents = raised ? 'auto' : 'none';
       host.style.zIndex = raised ? '20' : '0';
+      host.style.background = backdropColor;
       if (!runtimeId || !/^[A-Za-z0-9._-]+$/.test(runtimeId) ||
           runtimeId === 'latest' || runtimeId === 'current') {
         host.textContent = 'This design has no compatible pinned catalog runtime.';
@@ -2547,3 +2561,10 @@ internal const val LOCAL_REFERENCE_UNAVAILABLE =
 
 internal const val LOCAL_NATIVE_RENDER_UNAVAILABLE =
   "A native render is drawn by the server from the stored design, and this design is kept in this browser."
+
+/** `#rrggbbaa`, the CSS form of a Compose colour. */
+private fun Color.toCssColor(): String {
+  val argb = toArgb()
+  val rgba = (argb shl 8) or ((argb ushr 24) and 0xFF)
+  return "#" + rgba.toUInt().toString(16).padStart(8, '0')
+}
