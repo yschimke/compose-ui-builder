@@ -258,6 +258,7 @@ composeai-daemon-bom = { module = "ee.schimke.composeai:compose-preview-daemon-b
 composeai-rc-players-bom = { module = "ee.schimke.composeai:rc-players-bom", version.ref = "rc-players" }
 composeai-preview-data-api = { module = "ee.schimke.composeai:preview-data-api" }
 composeai-preview-discovery = { module = "ee.schimke.composeai:preview-discovery" }
+composeai-preview-annotations = { module = "ee.schimke.composeai:preview-annotations" }
 # `screen-model` is the generator compiled for wasmJs as well as the JVM, which is what lets the
 # browser editor reach the same `ScreenGenerator` the server exports with.
 composeai-screen-model = { module = "ee.schimke.composeai:screen-model" }

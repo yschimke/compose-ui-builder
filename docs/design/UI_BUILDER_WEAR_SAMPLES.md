@@ -67,8 +67,24 @@ a scaffold fills the height it is given, so the one-item greeting was a 760dp st
 button pinned to the bottom. `ExtentDesignFixture` measures the unrolled surface against an unbounded
 height, as the editor's extent does, so the stadium is as tall as its content and never shorter than
 the one screenful the round frame enforces (`heightIn(min = width)`). The frame now only bounds the
-capture; a design taller than it (`google-home-wear` is about five screens) is cut at the frame's
-edge rather than squeezed into it.
+capture; a design taller than it is cut at the frame's edge rather than squeezed into it.
+
+**Then the frame itself was the wrong size.** A fixed `760dp` frame made every extent a 760dp PNG,
+the one-screen greeting included, with the stadium at the top and transparency below it. The extent
+annotations now name no size at all, so the renderer *wraps*: it composes into its sandbox and
+crops the capture to what was drawn, and the stadium is the image. That sandbox is fixed at 400 x
+800dp (`DeviceDimensions.SANDBOX_WIDTH_DP` / `SANDBOX_HEIGHT_DP` in compose-ai-tools' discovery, which no annotation in plugin 2.26.0 changes), because an offscreen scene needs finite bounds before it
+can measure anything, and a `fillMaxSize` inside an unbounded one has no answer. So an unrolled
+design has to fit in it. `google-home-wear` was about five screens and was cut off in every extent
+capture; it keeps one of everything it is used for — a switch on and off, a slider, a sub-header,
+two app cards, the edge button — and drops the other five rooms. The extent is one composition,
+not a stitched scroll: wear-m3-catalog's `@ScrollingPreview(LONG)` has no such ceiling because it
+scrolls the real list and joins the frames, which an unrolled column has no scroll to do.
+
+Nor was a `…LargePreview` ever a large watch. A Wear screen is drawn at the diameter the
+*document* names, and every fixture pins `widthDp: 192`, so the 240dp previews drew a 192dp watch in
+a 240dp frame. The fixtures now write the preview's watch over the environment, the same override
+the editor's device strip applies (`withEnvironmentOverrides`).
 
 ## Critique: the generated code against the Wear Material 3 guidance
 

@@ -21,80 +21,88 @@ import androidx.compose.runtime.Composable
  */
 @WearPreviewSmallRound
 @Composable
-fun WearStarterGreetingSmallPreview() = SizedDesignFixture("wear-starter-greeting")
+fun WearStarterGreetingSmallPreview() = SizedDesignFixture("wear-starter-greeting", watchDp = 192)
 
 @WearPreviewLargeRound
 @Composable
-fun WearStarterGreetingLargePreview() = SizedDesignFixture("wear-starter-greeting")
+fun WearStarterGreetingLargePreview() = SizedDesignFixture("wear-starter-greeting", watchDp = 240)
 
 @WearPreviewSmallRoundExtent
 @Composable
-fun WearStarterGreetingSmallExtentPreview() = ExtentDesignFixture("wear-starter-greeting")
+fun WearStarterGreetingSmallExtentPreview() =
+  ExtentDesignFixture("wear-starter-greeting", watchDp = 192)
 
 @WearPreviewLargeRoundExtent
 @Composable
-fun WearStarterGreetingLargeExtentPreview() = ExtentDesignFixture("wear-starter-greeting")
+fun WearStarterGreetingLargeExtentPreview() =
+  ExtentDesignFixture("wear-starter-greeting", watchDp = 240)
 
 @WearPreviewSmallRound
 @Composable
-fun WearStarterListSmallPreview() = SizedDesignFixture("wear-starter-list")
+fun WearStarterListSmallPreview() = SizedDesignFixture("wear-starter-list", watchDp = 192)
 
 @WearPreviewLargeRound
 @Composable
-fun WearStarterListLargePreview() = SizedDesignFixture("wear-starter-list")
+fun WearStarterListLargePreview() = SizedDesignFixture("wear-starter-list", watchDp = 240)
 
 @WearPreviewSmallRoundExtent
 @Composable
-fun WearStarterListSmallExtentPreview() = ExtentDesignFixture("wear-starter-list")
+fun WearStarterListSmallExtentPreview() = ExtentDesignFixture("wear-starter-list", watchDp = 192)
 
 @WearPreviewLargeRoundExtent
 @Composable
-fun WearStarterListLargeExtentPreview() = ExtentDesignFixture("wear-starter-list")
+fun WearStarterListLargeExtentPreview() = ExtentDesignFixture("wear-starter-list", watchDp = 240)
 
 @WearPreviewSmallRound
 @Composable
-fun JetcasterWearLibrarySmallPreview() = SizedDesignFixture("jetcaster-wear-library")
+fun JetcasterWearLibrarySmallPreview() = SizedDesignFixture("jetcaster-wear-library", watchDp = 192)
 
 @WearPreviewLargeRound
 @Composable
-fun JetcasterWearLibraryLargePreview() = SizedDesignFixture("jetcaster-wear-library")
+fun JetcasterWearLibraryLargePreview() = SizedDesignFixture("jetcaster-wear-library", watchDp = 240)
 
 @WearPreviewSmallRoundExtent
 @Composable
-fun JetcasterWearLibrarySmallExtentPreview() = ExtentDesignFixture("jetcaster-wear-library")
+fun JetcasterWearLibrarySmallExtentPreview() =
+  ExtentDesignFixture("jetcaster-wear-library", watchDp = 192)
 
 @WearPreviewLargeRoundExtent
 @Composable
-fun JetcasterWearLibraryLargeExtentPreview() = ExtentDesignFixture("jetcaster-wear-library")
+fun JetcasterWearLibraryLargeExtentPreview() =
+  ExtentDesignFixture("jetcaster-wear-library", watchDp = 240)
 
 @WearPreviewSmallRound
 @Composable
-fun JetcasterWearEpisodeSmallPreview() = SizedDesignFixture("jetcaster-wear-episode")
+fun JetcasterWearEpisodeSmallPreview() = SizedDesignFixture("jetcaster-wear-episode", watchDp = 192)
 
 @WearPreviewLargeRound
 @Composable
-fun JetcasterWearEpisodeLargePreview() = SizedDesignFixture("jetcaster-wear-episode")
+fun JetcasterWearEpisodeLargePreview() = SizedDesignFixture("jetcaster-wear-episode", watchDp = 240)
 
 @WearPreviewSmallRoundExtent
 @Composable
-fun JetcasterWearEpisodeSmallExtentPreview() = ExtentDesignFixture("jetcaster-wear-episode")
+fun JetcasterWearEpisodeSmallExtentPreview() =
+  ExtentDesignFixture("jetcaster-wear-episode", watchDp = 192)
 
 @WearPreviewLargeRoundExtent
 @Composable
-fun JetcasterWearEpisodeLargeExtentPreview() = ExtentDesignFixture("jetcaster-wear-episode")
+fun JetcasterWearEpisodeLargeExtentPreview() =
+  ExtentDesignFixture("jetcaster-wear-episode", watchDp = 240)
 
 @WearPreviewSmallRound
 @Composable
-fun JetcasterWearQueueSmallPreview() = SizedDesignFixture("jetcaster-wear-queue")
+fun JetcasterWearQueueSmallPreview() = SizedDesignFixture("jetcaster-wear-queue", watchDp = 192)
 
 @WearPreviewLargeRound
 @Composable
-fun JetcasterWearQueueLargePreview() = SizedDesignFixture("jetcaster-wear-queue")
+fun JetcasterWearQueueLargePreview() = SizedDesignFixture("jetcaster-wear-queue", watchDp = 240)
 
 @WearPreviewSmallRoundExtent
 @Composable
-fun JetcasterWearQueueSmallExtentPreview() = ExtentDesignFixture("jetcaster-wear-queue")
+fun JetcasterWearQueueSmallExtentPreview() =
+  ExtentDesignFixture("jetcaster-wear-queue", watchDp = 192)
 
 @WearPreviewLargeRoundExtent
 @Composable
-fun JetcasterWearQueueLargeExtentPreview() = ExtentDesignFixture("jetcaster-wear-queue")
+fun JetcasterWearQueueLargeExtentPreview() =
+  ExtentDesignFixture("jetcaster-wear-queue", watchDp = 240)

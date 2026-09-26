@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.preview
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.tooling.preview.Preview
+import ee.schimke.composeai.preview.SettledPreview
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapters
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
@@ -111,26 +112,34 @@ fun DesignKeepTabletPreview() = DesignFixture("google-keep-tablet")
 @Composable
 fun DesignPlayTabletPreview() = DesignFixture("google-play-tablet")
 
+// Settled, as `WearPreviewSmallRound` is: the real `ScreenScaffold` grows its edge button in, so
+// a first-frame capture of a Wear design has none.
+@SettledPreview
 @Preview(device = "spec:width=192dp,height=192dp,dpi=320")
 @Composable
 fun DesignGoogleHomeWearPreview() = DesignFixture("google-home-wear")
 
+@SettledPreview
 @Preview(device = "spec:width=192dp,height=192dp,dpi=320")
 @Composable
 fun DesignWearStarterGreetingPreview() = DesignFixture("wear-starter-greeting")
 
+@SettledPreview
 @Preview(device = "spec:width=192dp,height=192dp,dpi=320")
 @Composable
 fun DesignWearStarterListPreview() = DesignFixture("wear-starter-list")
 
+@SettledPreview
 @Preview(device = "spec:width=192dp,height=192dp,dpi=320")
 @Composable
 fun DesignJetcasterWearLibraryPreview() = DesignFixture("jetcaster-wear-library")
 
+@SettledPreview
 @Preview(device = "spec:width=192dp,height=192dp,dpi=320")
 @Composable
 fun DesignJetcasterWearEpisodePreview() = DesignFixture("jetcaster-wear-episode")
 
+@SettledPreview
 @Preview(device = "spec:width=192dp,height=192dp,dpi=320")
 @Composable
 fun DesignJetcasterWearQueuePreview() = DesignFixture("jetcaster-wear-queue")
