@@ -1417,10 +1417,15 @@ private fun ConstrainedFramePane(
         DeviceSceneHost(
           key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
           contentKey = document,
+          // The Surface's own pixels: it is `widthDp * densityRatio` *dp* wide, so the scene is
+          // that
+          // times the host's density. Sized as that many pixels instead, it matched only at host
+          // density 1; on a 2.625x screen a 216dp widget was laid out in 82dp of room, clipped, and
+          // drawn in the top-left third of its frame.
           sizePx =
             IntSize(
-              (widthDp * densityRatio).roundToInt(),
-              (heightDp * densityRatio).roundToInt(),
+              (widthDp * densityRatio * LocalDensity.current.density).roundToInt(),
+              (heightDp * densityRatio * LocalDensity.current.density).roundToInt(),
             ),
           density = LocalDensity.current,
           content = {
