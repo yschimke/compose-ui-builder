@@ -69,7 +69,9 @@ fun UiBuilderCommentPinsOverMarkupPreview() {
  * Four threads, chosen to cover the four things a thread can be about and the two who can say it.
  *
  * One on a mark (the arrow), one on a node, one on a bare point, and one resolved — plus a reply
- * from an agent, so the badge that tells a person from an agent is drawn rather than assumed.
+ * from an agent, so the badge that tells a person from an agent is drawn rather than assumed. The
+ * ids are the host's real shapes, so each name is drawn with its account beside it, and Sam's —
+ * whose name is their login — collapses to the handle alone.
  */
 private val commentsPreviewBoard =
   DesignCommentBoard(
@@ -84,14 +86,14 @@ private val commentsPreviewBoard =
             listOf(
               DesignComment(
                 id = "c-1",
-                authorId = "yuri",
+                authorId = "github:yschimke",
                 displayName = "Yuri",
                 body = "This arrow is pointing at the wrong card — the hero is the one below.",
                 createdAtEpochMillis = 100,
               ),
               DesignComment(
                 id = "c-2",
-                authorId = "agent-review",
+                authorId = "agent:3f9a0c1d",
                 displayName = "Review agent",
                 kind = DesignCommentAuthorKind.Agent,
                 body =
@@ -109,8 +111,8 @@ private val commentsPreviewBoard =
             listOf(
               DesignComment(
                 id = "c-3",
-                authorId = "sam",
-                displayName = "Sam",
+                authorId = "github:sam-designs",
+                displayName = "sam-designs",
                 body = "Two columns on a phone is tight. Can we drop to one under 400dp?",
                 createdAtEpochMillis = 300,
               )
@@ -124,7 +126,7 @@ private val commentsPreviewBoard =
             listOf(
               DesignComment(
                 id = "c-4",
-                authorId = "yuri",
+                authorId = "github:yschimke",
                 displayName = "Yuri",
                 body = "Nothing lives in this gap. Is it meant to?",
                 createdAtEpochMillis = 200,
@@ -135,13 +137,13 @@ private val commentsPreviewBoard =
           id = "t-done",
           anchor = DesignCommentAnchor(markId = "mark-box"),
           resolved = true,
-          resolvedBy = "yuri",
+          resolvedBy = "github:yschimke",
           updatedAtEpochMillis = 150,
           comments =
             listOf(
               DesignComment(
                 id = "c-5",
-                authorId = "agent-review",
+                authorId = "agent:3f9a0c1d",
                 displayName = "Review agent",
                 kind = DesignCommentAuthorKind.Agent,
                 body = "The header is 8dp short of the mock. Fixed at revision 41.",
