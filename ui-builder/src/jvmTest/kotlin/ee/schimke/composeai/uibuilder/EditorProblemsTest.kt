@@ -11,6 +11,7 @@ import ee.schimke.composeai.uibuilder.export.RootSurfaceGround
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.wearScreenUiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.weatherWidgetUiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -112,6 +113,38 @@ class EditorProblemsTest {
     // And the pane and the panel agree, which is the property that broke: one said "here is your
     // widget's Kotlin" while the other said two of its nodes could not be written.
     assertIs<EditorGeneratedCode.Source>(reducer.generatedCode(widget))
+  }
+
+  @Test
+  fun `a wear screen is not judged by the Compose emitter that never writes it`() {
+    // The Code pane shows the screen's Kotlin — `WearScreenCodeExporter` writes it — while the
+    // panel listed a problem per Wear composable, "no typed call emitter exists for TitleCard":
+    // the generic Compose exporter's answer about a language it does not write. It used to be one
+    // row only because a catalog naming no symbol gave every node the same message.
+    val wearCatalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))
+    val screen =
+      wearScreenUiBuilderDocument(
+        designId = "wear-screen-problems",
+        catalogPin =
+          JsonObject(
+            mapOf(
+              "systemId" to JsonPrimitive("wear-m3"),
+              "catalogRevision" to JsonPrimitive("wear-screen-scaffold-v1"),
+              "capabilityDigest" to JsonPrimitive("candidate"),
+              "nativeRuntimeId" to JsonPrimitive("candidate"),
+            )
+          ),
+        environment = document.environment,
+      )
+    val wearReducer = UiBuilderEditorReducer(wearCatalog)
+
+    val reported =
+      wearReducer.problems(screen).filter {
+        it.code in setOf("MISSING_CODE_CAPABILITY", "UNSUPPORTED_CODE_COMPONENT")
+      }
+
+    assertEquals(emptyList(), reported, "this screen exports; no emitter row should say otherwise")
+    assertIs<EditorGeneratedCode.Source>(wearReducer.generatedCode(screen))
   }
 
   @Test
