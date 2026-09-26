@@ -2,11 +2,14 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.REMOTE_CONTENT_COMPONENT_IDS
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
+import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.inspectUiBuilderArgumentBindings
 import ee.schimke.composeai.uibuilder.export.propertyMatches
 import ee.schimke.composeai.uibuilder.export.stateBindingMatchesCatalog
@@ -372,39 +375,45 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   }
 
   /**
-   * The published Wear artifact describes the whole upstream library; the builder offers only the
-   * subset its Compose exporter can write today.
+   * Published platform artifacts describe their whole upstream libraries; the builder offers only
+   * the subsets its Compose exporters can write today.
    *
    * A catalog row is an authoring promise, not documentation. Leaving `wear-m3/title-card` or
    * `wear-m3/app-card` on the shelf accepted a valid document that [WearScreenCodeExporter] then
    * refused by name. The exporter intentionally models those APIs as variants of `wear-m3/card`, so
    * exposing the upstream ids as additional components is not a harmless alias.
    *
-   * Filter the two keyed status tables with the capability list. `componentMenu` drives the shelf;
-   * `components` drives the published Wasm adapter metadata. Keeping either entry after removing
-   * its capability would leave two contradictory descriptions of what this served catalog owns.
+   * The same rule applies to Remote Compose's icons and pager indicators, whose required runtime
+   * arguments cannot yet be generated. Filter the two keyed status tables with the capability list.
+   * `componentMenu` drives the shelf; `components` drives the published Wasm adapter metadata.
    */
-  private fun withWearExporterVocabulary(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {
-    if (catalog.platform != WEAR_PLATFORM) return catalog
+  private fun withExporterVocabulary(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {
     val supported =
-      setOf(
-        WearScreenCodeExporter.SCAFFOLD,
-        WearScreenCodeExporter.TRANSFORMING_LAZY_COLUMN,
-        WearScreenCodeExporter.LIST_HEADER,
-        WearScreenCodeExporter.TEXT,
-        WearScreenCodeExporter.CARD,
-        WearScreenCodeExporter.BUTTON,
-        // The published scaffold vocabulary models these as slot children. The export projection
-        // consumes them as scaffold settings rather than emitting standalone composables, but a
-        // published new-design seed still has to pass catalog validation before it reaches that
-        // projection.
-        "wear-m3/time-text",
-        "wear-m3/scroll-indicator",
-        "layout/box",
-        "layout/column",
-        "layout/row",
-        "asset/image",
-      ) + WearScreenCodeExporter.NATIVE_ONLY_COMPONENT_IDS
+      when (catalog.platform) {
+        WEAR_PLATFORM ->
+          setOf(
+            WearScreenCodeExporter.SCAFFOLD,
+            WearScreenCodeExporter.TRANSFORMING_LAZY_COLUMN,
+            WearScreenCodeExporter.LIST_HEADER,
+            WearScreenCodeExporter.TEXT,
+            WearScreenCodeExporter.CARD,
+            WearScreenCodeExporter.BUTTON,
+            // The published scaffold vocabulary models these as slot children. The export
+            // projection consumes them as scaffold settings rather than emitting standalone
+            // composables, but a published new-design seed still has to pass catalog validation.
+            "wear-m3/time-text",
+            "wear-m3/scroll-indicator",
+            "layout/box",
+            "layout/column",
+            "layout/row",
+            "asset/image",
+          ) + WearScreenCodeExporter.NATIVE_ONLY_COMPONENT_IDS
+        "remote-compose" ->
+          REMOTE_CONTENT_COMPONENT_IDS +
+            WearWidgetScaffoldSize.entries.map(WearWidgetScaffoldSize::componentId) +
+            AdaptiveWearWidget.COMPONENT_ID
+        else -> return catalog
+      }
     val components = catalog.components.filter { it.componentId in supported }
     val retained = components.mapTo(mutableSetOf()) { it.componentId }
     val semantics =
@@ -440,9 +449,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   // is the whole point, and an overlay would have quietly kept the set of possible catalogs closed.
   private val availableCatalogs =
     synthesisedCatalogs +
-      published.mapValues { (_, catalog) ->
-        withBuilderVocabulary(withWearExporterVocabulary(catalog))
-      }
+      published.mapValues { (_, catalog) -> withBuilderVocabulary(withExporterVocabulary(catalog)) }
   private val catalogs =
     catalogSystemIds
       .also { require(it.isNotEmpty()) { "at least one UI-builder catalog must be enabled" } }

@@ -3,8 +3,13 @@ package ee.schimke.composeai.uibuilder.service
 import ee.schimke.composeai.uibuilder.export.REMOTE_CONTENT_COMPONENT_IDS
 import ee.schimke.composeai.uibuilder.export.REMOTE_CONTENT_MODIFIERS
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
+import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.WasmAdapterStatusV1
+import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * The `remote-m3` palette against the generator's vocabulary, in the repository that owns both.
@@ -59,6 +64,42 @@ class RemoteM3VocabularyParityTest {
           it.componentId to it.modifierCapabilities.filterNot { m -> m in REMOTE_CONTENT_MODIFIERS }
         }
         .filterValues { it.isNotEmpty() },
+    )
+  }
+
+  @Test
+  fun `a published Remote component with no exporter answer is withdrawn`() {
+    val base = PublishedCatalogFixtures.catalog("remote-m3")
+    val unsupported =
+      ComponentCapabilityV1.Builder(
+          "remote-m3/remote-icon",
+          "Remote Icon",
+          "Leaf",
+          WasmCapabilityV1.Builder(
+              platformSupported = JsonPrimitive(true),
+              adapterStatus = WasmAdapterStatusV1.SUPPORTED,
+            )
+            .build(),
+        )
+        .build()
+    val published = base.newBuilder().also { it.components = base.components + unsupported }.build()
+    val served =
+      CurrentM3UiBuilderCatalogExecutor.Builder()
+        .also {
+          it.catalogSystemIds = setOf("remote-m3")
+          it.published = mapOf("remote-m3" to published)
+        }
+        .build()
+        .listCatalogs()
+        .single()
+
+    assertFalse(served.components.any { it.componentId == "remote-m3/remote-icon" })
+    assertEquals(
+      emptyList(),
+      served.components
+        .filterNot { it.componentId.startsWith("remote-m3/widget-container-") }
+        .map { it.componentId }
+        .filterNot { it in REMOTE_CONTENT_COMPONENT_IDS },
     )
   }
 }

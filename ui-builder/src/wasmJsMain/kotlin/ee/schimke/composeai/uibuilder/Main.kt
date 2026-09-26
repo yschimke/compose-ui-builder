@@ -1596,35 +1596,36 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
         label = "Wear widget",
         platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
         templates =
-          listOf(
-            UiBuilderNewDesignTemplate(
-              id = "wear-widget-small",
-              label = "Small widget",
-              supportingText = "216×76dp host with a single content slot.",
-            ),
-            UiBuilderNewDesignTemplate(
-              id = "wear-widget-large",
-              label = "Large widget",
-              supportingText = "216×124dp host with a single content slot.",
-            ),
-            UiBuilderNewDesignTemplate(
-              id = AdaptiveWearWidget.TEMPLATE_ID,
-              label = "Adaptive widget (experimental)",
-              supportingText =
-                "Headline, supporting and action slots, laid out for both sizes: Small drops " +
-                  "the supporting line.",
-            ),
-          ) +
-            // The two worked samples, after the empty scaffolds rather than before them: a blank
-            // host is what someone starting their own widget wants, and a sample is what someone
-            // asking "can this express a real one?" wants.
-            WearWidgetSample.entries.map {
+          (listOf(
               UiBuilderNewDesignTemplate(
-                id = it.templateId,
-                label = it.label,
-                supportingText = it.supportingText,
-              )
-            },
+                id = "wear-widget-small",
+                label = "Small widget",
+                supportingText = "216×76dp host with a single content slot.",
+              ),
+              UiBuilderNewDesignTemplate(
+                id = "wear-widget-large",
+                label = "Large widget",
+                supportingText = "216×124dp host with a single content slot.",
+              ),
+              UiBuilderNewDesignTemplate(
+                id = AdaptiveWearWidget.TEMPLATE_ID,
+                label = "Adaptive widget (experimental)",
+                supportingText =
+                  "Headline, supporting and action slots, laid out for both sizes: Small drops " +
+                    "the supporting line.",
+              ),
+            ) +
+              // The two worked samples, after the empty scaffolds rather than before them: a blank
+              // host is what someone starting their own widget wants, and a sample is what someone
+              // asking "can this express a real one?" wants.
+              WearWidgetSample.entries.map {
+                UiBuilderNewDesignTemplate(
+                  id = it.templateId,
+                  label = it.label,
+                  supportingText = it.supportingText,
+                )
+              })
+            .filter { it.id in UiBuilderNewDesignSeed.templateIds("remote-m3") },
       )
     "wear-m3" ->
       UiBuilderNewDesignCatalog(
