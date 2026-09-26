@@ -57,3 +57,33 @@ internal fun catalogAssetPath(catalogSystemId: String, path: String): String =
 
 @JsFun("(value) => encodeURIComponent(value)")
 internal external fun encodeUriComponent(value: String): String
+
+/**
+ * [url], a URL written into a design, resolved against the page, or a refusal unless it is
+ * same-origin and one of [kind]'s routes ([DesignReferenceKind.allows]). The token is still added
+ * by [sameOriginRequestUrl] on the way out; this only narrows which paths may receive it.
+ */
+internal fun designReferenceUrl(url: String, kind: DesignReferenceKind): String {
+  val resolved = resolveOnPage(url)
+  val path = resolved?.let(::pathnameOf)
+  require(path != null && kind.allows(path)) {
+    "a design's ${kind.label} must be served from this server's own document routes: $url"
+  }
+  return resolved
+}
+
+@JsFun(
+  """(url) => {
+    try {
+      const resolved = new URL(url, window.location.href);
+      if (resolved.origin !== window.location.origin) return null;
+      resolved.hash = '';
+      return resolved.toString();
+    } catch (e) {
+      return null;
+    }
+  }"""
+)
+private external fun resolveOnPage(url: String): String?
+
+@JsFun("(url) => new URL(url).pathname") private external fun pathnameOf(url: String): String

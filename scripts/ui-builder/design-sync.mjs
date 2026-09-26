@@ -81,9 +81,36 @@ export function operationsToDocument(fixture, { designId = fixture.designId, tit
   return { ...document, id: designId, title: title ?? document.title, revision: 0, nodes };
 }
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/**
+ * `server` as a bare https origin (http only on loopback), or a refusal naming the rule. The same
+ * rule as `validatedServerOrigin` in `:ui-builder-host-jvm`'s `RemotePreviewClient.kt`: the token
+ * goes to this origin and nowhere else.
+ */
+export function validatedServerOrigin(server) {
+  const refusal = new Error("--server must be an https origin (http is allowed only on loopback)");
+  let url;
+  try {
+    url = new URL(server);
+  } catch {
+    throw refusal;
+  }
+  const bare = url.username === "" && url.password === "" && url.search === "" && url.hash === "";
+  const rootPath = url.pathname === "" || url.pathname === "/";
+  const scheme = url.protocol === "https:" || (url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname));
+  // `new URL("https:host")` parses as `https://host/`; the JVM rule treats that as opaque, so
+  // insist on the `//` authority form here too.
+  const authority = /^[a-z][a-z0-9+.-]*:\/\//i.test(server.trim());
+  if (!url.hostname || !bare || !rootPath || !scheme || !authority) throw refusal;
+  return url.origin;
+}
+
 async function mcpCall(server, tool, args, token) {
-  const response = await fetch(new URL("/mcp", server), {
+  const response = await fetch(new URL("/mcp", validatedServerOrigin(server)), {
     method: "POST",
+    // The token is for this origin only; a redirect would carry the custom header elsewhere.
+    redirect: "error",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",

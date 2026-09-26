@@ -22,6 +22,7 @@ import ee.schimke.composeai.uibuilder.host.RemoteUiBuilderConnection
 import ee.schimke.composeai.uibuilder.host.RemoteUiBuilderDesign
 import ee.schimke.composeai.uibuilder.host.UiBuilderSession
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import java.net.URI
 import java.nio.file.Path
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -477,11 +478,29 @@ automatically adopts each valid saved version in the open visual editor and Prev
 private fun remoteAgentPrompt(
   connection: RemoteUiBuilderConnection,
   design: RemoteUiBuilderDesign,
-): String =
-  """Work on Compose UI Builder design `${design.designId}` at ${connection.serverOrigin}.
-Read the `compose-ui-builder` skill first, connect to ${connection.mcpEndpoint}, request your own
-short-lived ui-builder-read, ui-builder-write and ui-builder-export grant, then open design
-`${design.designId}`. Do not ask for or reuse the IDE's bearer token."""
+): String = remoteAgentPrompt(connection.serverOrigin, connection.mcpEndpoint, design.designId)
+
+/**
+ * The server's own design-id rule (`ServeUiBuilderDesignLibrary`). The id arrives from the server
+ * and lands in text handed to an agent, so anything outside it is left out of that text.
+ */
+private val REMOTE_DESIGN_ID = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
+
+internal fun remoteAgentPrompt(serverOrigin: URI, mcpEndpoint: URI, designId: String): String {
+  val grant =
+    "Read the `compose-ui-builder` skill first, connect to $mcpEndpoint, request your own\n" +
+      "short-lived ui-builder-read, ui-builder-write and ui-builder-export grant"
+  val noToken = "Do not ask for or reuse the IDE's bearer token."
+  return if (REMOTE_DESIGN_ID.matches(designId)) {
+    """Work on Compose UI Builder design `$designId` at $serverOrigin.
+$grant, then open design
+`$designId`. $noToken"""
+  } else {
+    """Work on the Compose UI Builder design open in IntelliJ, at $serverOrigin.
+$grant, then ask which design to open: the server named this one with an id
+IntelliJ does not recognise as a design id. $noToken"""
+  }
+}
 
 private fun projectStoragePath(project: Project): Path =
   Path.of(PathManager.getSystemPath(), "compose-ui-builder", project.locationHash)
