@@ -159,10 +159,10 @@ public sealed interface UiBuilderServiceRequest {
    *
    * **Owner only** — not a grantee, however wide its grant, and not an actor that merely holds a
    * write capability on the host. That is the guard `AGENT_ACCESS_GRANTS.md` argues for: an agent
-   * must not be able to wipe somebody else's work. An agent acting under an approved grant owns
-   * what it created *as the person who approved it*, so a session can clean up after itself and
-   * cannot reach past that. The operator's [UiBuilderAdminPort.adminDeleteDesign] remains the way
-   * to remove a design whose owner is gone.
+   * must not be able to wipe somebody else's work. A design an agent creates under an approved
+   * grant is owned by the person who approved it, and only that person's own session deletes it:
+   * acting on someone's behalf edits their designs but never deletes them. The operator's
+   * [UiBuilderAdminPort.adminDeleteDesign] remains the way to remove a design whose owner is gone.
    *
    * The owner may delete a design the service refuses to *serve*: an unusable document is not an
    * unknown access list, so ownership is checked against the record the design loaded with, and
