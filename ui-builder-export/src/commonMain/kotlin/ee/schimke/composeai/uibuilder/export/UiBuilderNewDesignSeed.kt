@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.DesignHomeV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -167,7 +168,9 @@ private val seedJson = Json {
  * shape, and a mapping written twice is a mapping that can disagree with itself.
  */
 fun UiBuilderDocument.toDesignDocumentV1(): DesignDocumentV1 =
-  seedJson.decodeFromString(seedJson.encodeToString(this))
+  seedJson
+    .decodeFromString<DesignDocumentV1>(seedJson.encodeToString(this))
+    .copy(home = home?.toDesignHomeV1())
 
 /**
  * The released v1 service document as the candidate document, which is [toDesignDocumentV1]
@@ -180,7 +183,21 @@ fun UiBuilderDocument.toDesignDocumentV1(): DesignDocumentV1 =
  * disagree with the first.
  */
 fun DesignDocumentV1.toUiBuilderDocument(): UiBuilderDocument =
-  seedJson.decodeFromString(seedJson.encodeToString(this))
+  seedJson
+    .decodeFromString<UiBuilderDocument>(seedJson.encodeToString(this))
+    .copy(home = home?.toUiBuilderDocumentHome())
+
+fun UiBuilderDocumentHome.toDesignHomeV1(): DesignHomeV1 =
+  when (this) {
+    is UiBuilderDocumentHome.Server -> DesignHomeV1.Server(url, designId)
+    is UiBuilderDocumentHome.Repo -> DesignHomeV1.Repo(path)
+  }
+
+fun DesignHomeV1.toUiBuilderDocumentHome(): UiBuilderDocumentHome =
+  when (this) {
+    is DesignHomeV1.Server -> UiBuilderDocumentHome.Server(url, designId)
+    is DesignHomeV1.Repo -> UiBuilderDocumentHome.Repo(path)
+  }
 
 /**
  * One node of the released document as the candidate node — [toUiBuilderDocument] for a node, so a

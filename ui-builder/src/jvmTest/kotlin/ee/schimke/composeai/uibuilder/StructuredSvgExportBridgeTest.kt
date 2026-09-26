@@ -11,6 +11,7 @@ import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocumentHome
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.svg.JvmSkiaStructuredSvgRecorder
 import ee.schimke.composeai.uibuilder.svg.JvmStructuredSvgRasterAssets
@@ -378,6 +379,7 @@ class StructuredSvgExportBridgeTest {
       document.copy(
         id = "saved-text-design",
         revision = 7,
+        home = UiBuilderDocumentHome.Repo("ui-builder/designs/saved-text-design.uid"),
         roots = listOf(node.id),
         nodes = mapOf(node.id to node),
       )
@@ -397,6 +399,7 @@ class StructuredSvgExportBridgeTest {
     assertTrue(first.svg.contains("Search for a podcast"))
     assertTrue(first.svg.contains("id=\"compose-ui-builder-export\""))
     assertTrue(first.svg.contains("revision=7"))
+    assertTrue(first.svg.contains("home=repository ui-builder/designs/saved-text-design.uid"))
     assertFalse(first.svg.contains("<image"))
     assertFalse(Regex("(?:href|src)=\"https?://").containsMatchIn(first.svg))
     assertEquals("skia-svg-canvas/0.144.6", first.producer)

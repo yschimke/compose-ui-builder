@@ -2,17 +2,52 @@ package ee.schimke.composeai.uibuilder.export
 
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
+/** The location that remains authoritative when this document is copied elsewhere. */
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+@JsonClassDiscriminator("kind")
+sealed interface UiBuilderDocumentHome {
+  /** A persisted design served by a UI-builder host. */
+  @Serializable
+  @SerialName("server")
+  data class Server(val url: String, val designId: String) : UiBuilderDocumentHome {
+    init {
+      require(url.isNotBlank()) { "a server home needs a URL" }
+      require(designId.isNotBlank()) { "a server home needs a design id" }
+    }
+  }
+
+  /** A versioned design file in the checkout that owns it. */
+  @Serializable
+  @SerialName("repo")
+  data class Repo(val path: String) : UiBuilderDocumentHome {
+    init {
+      require(path.isNotBlank()) { "a repository home needs a path" }
+    }
+  }
+}
+
+fun UiBuilderDocumentHome.description(): String =
+  when (this) {
+    is UiBuilderDocumentHome.Server -> "server $url design $designId"
+    is UiBuilderDocumentHome.Repo -> "repository $path"
+  }
 
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
@@ -53,6 +88,13 @@ data class UiBuilderDocument(
   @EncodeDefault(EncodeDefault.Mode.NEVER) val components: JsonObject = JsonObject(emptyMap()),
   /** Starter template identity retained by persisted designs; it does not affect interpretation. */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val template: String? = null,
+  /**
+   * Where this design is canonical, when it has one.
+   *
+   * Kept absent for every document written before homes existed: an old document is deliberately
+   * not guessed to belong to the checkout or to whichever server happened to open it.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val home: UiBuilderDocumentHome? = null,
 )
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -106,6 +148,7 @@ object UiBuilderReducer {
               nodes = emptyMap(),
               assets = operation.obj("assets"),
               components = operation.obj("components"),
+              home = operation.home(),
             )
           outcomes[operationId] = 0
         }
@@ -200,3 +243,10 @@ fun JsonObject.optionalString(name: String): String? =
 fun JsonObject.obj(name: String): JsonObject = this[name]?.jsonObject ?: JsonObject(emptyMap())
 
 fun JsonObject.array(name: String): JsonArray = this[name]?.jsonArray ?: JsonArray(emptyList())
+
+private val documentJson = Json { classDiscriminator = "type" }
+
+private fun JsonObject.home(): UiBuilderDocumentHome? =
+  this["home"]
+    ?.takeUnless { it is JsonNull }
+    ?.let { documentJson.decodeFromJsonElement(UiBuilderDocumentHome.serializer(), it) }

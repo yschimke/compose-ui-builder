@@ -34,6 +34,7 @@ export function replayCandidateOperations(input) {
         // without the key here would hash differently in the two languages, which is the one thing
         // the cross-language hash exists to catch.
         assets: clone(command.assets ?? {}),
+        ...(command.home ? { home: clone(command.home) } : {}),
       };
       outcomes.set(command.operationId, { revision: 0 });
       continue;

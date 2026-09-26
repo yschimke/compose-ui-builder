@@ -25,6 +25,29 @@
     "id": { "type": "string", "minLength": 1 },
     "title": { "type": "string" },
     "revision": { "type": "integer", "minimum": 0 },
+    "home": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "url", "designId"],
+          "properties": {
+            "kind": { "const": "server" },
+            "url": { "type": "string", "minLength": 1 },
+            "designId": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "path"],
+          "properties": {
+            "kind": { "const": "repo" },
+            "path": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "catalogPin": {
       "type": "object",
       "required": ["systemId"],

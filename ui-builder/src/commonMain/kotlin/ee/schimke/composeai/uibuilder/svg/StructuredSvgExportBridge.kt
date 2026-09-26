@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.codegen.DocumentExportProvenance
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.canonicalJson
+import ee.schimke.composeai.uibuilder.export.description
 import ee.schimke.composeai.uibuilder.sha256Hex
 
 enum class StructuredSvgRecorderKind {
@@ -174,6 +175,7 @@ fun executeSavedDocumentSvgExport(
     SvgExportMetadata(
       designId = document.id,
       revision = document.revision,
+      home = document.home?.description(),
       documentContentSha256 = job.pin.documentContentSha256,
       catalogPinCanonicalJson = job.pin.catalogPinCanonicalJson,
       environmentCanonicalJson = job.pin.environmentCanonicalJson,
@@ -196,6 +198,7 @@ fun executeSavedDocumentSvgExport(
 private data class SvgExportMetadata(
   val designId: String,
   val revision: Int,
+  val home: String?,
   val documentContentSha256: String,
   val catalogPinCanonicalJson: String,
   val environmentCanonicalJson: String,
@@ -207,6 +210,7 @@ private data class SvgExportMetadata(
   fun canonicalText(): String = buildString {
     append("designId=").append(designId).append(';')
     append("revision=").append(revision).append(';')
+    home?.let { append("home=").append(it).append(';') }
     append("documentContentSha256=").append(documentContentSha256).append(';')
     append("catalogPin=").append(catalogPinCanonicalJson).append(';')
     append("environment=").append(environmentCanonicalJson).append(';')
