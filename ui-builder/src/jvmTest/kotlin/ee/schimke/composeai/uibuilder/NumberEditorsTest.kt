@@ -31,11 +31,29 @@ class NumberEditorsTest {
         catalog.components.flatMap { component ->
           component.properties
             .filter { it.name !in THEME_PROPERTIES && it.isNumber() && it.editor == null }
-            .map { "$systemId ${component.componentId}.${it.name}" }
+            .map { "${component.componentId}.${it.name}" }
+            .filter { it !in NOT_YET_DRAWN }
+            .map { "$systemId $it" }
         }
       }
 
     assertEquals(emptyList(), missing, "numbers with no editor")
+  }
+
+  private companion object {
+    /**
+     * Numbers nothing on the canvas or in the Compose export reads yet, so an editor for them would
+     * accept values the preview and the exported source both discard. Material Symbols' variable
+     * axes feed only the runtime's outline registry: `BuilderIcon` and the emitter draw from
+     * `iconKey`. They get editors in the change that teaches those two to use the outline.
+     */
+    val NOT_YET_DRAWN =
+      setOf(
+        "m3/icon.iconFill",
+        "m3/icon.iconWeight",
+        "m3/icon.iconGrade",
+        "m3/icon.iconOpticalSize",
+      )
   }
 
   private fun ee.schimke.composeai.uibuilder.capability.PropertyCapability.isNumber(): Boolean {

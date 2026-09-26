@@ -608,14 +608,6 @@ object CapabilityCatalogParser {
       // A fraction, and the only value this component has. Bounded 0..1 because that is what both
       // Material indicators take, so the control cannot author a progress the renderer clamps away.
       ("m3/progress-indicator" to "progress") to numberEditor(0.0, 1.0, 0.05),
-      // Material Symbols' variable axes, which the runtime draws the icon's outline with. The
-      // ranges are the font's own: fill 0 to 1, weight 100 to 700, grade -25 to 200, optical size
-      // 20
-      // to 48.
-      ("m3/icon" to "iconFill") to numberEditor(0.0, 1.0, 0.1),
-      ("m3/icon" to "iconWeight") to numberEditor(100.0, 700.0, 50.0),
-      ("m3/icon" to "iconGrade") to numberEditor(-25.0, 200.0, 25.0),
-      ("m3/icon" to "iconOpticalSize") to numberEditor(20.0, 48.0, 1.0),
       // A count; zero is Compose's own "no limit", which is how the canvas reads it.
       ("layout/flow-row" to "maxItemsInEachRow") to countEditor(0.0, 100.0),
       // Dimensions the `…Dp` rule cannot reach because the Compose exporter is not what writes
