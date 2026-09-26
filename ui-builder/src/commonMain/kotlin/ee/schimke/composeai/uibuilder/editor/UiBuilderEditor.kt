@@ -487,6 +487,14 @@ fun UiBuilderEditor(
    */
   hostChrome: UiBuilderHostChrome? = null,
   /**
+   * Receives generated Kotlin when a host-owned Code control is invoked.
+   *
+   * A host such as VS Code can open it in a real, unsaved Kotlin editor instead of making a second
+   * editor pane inside a webview. The normal browser and desktop code dock are unchanged when this
+   * is null.
+   */
+  onGeneratedCode: ((EditorGeneratedCode) -> Unit)? = null,
+  /**
    * The colours of the editor's own UI. [UiBuilderEditorTheme.Default] everywhere but a host that
    * themes it to match its own panels.
    */
@@ -2244,22 +2252,31 @@ fun UiBuilderEditor(
                         },
                       onClick = {
                         focusEditor()
-                        val mode = entry.inspectorMode()
-                        if (mode == null) {
-                          dispatch(UiBuilderEditorEvent.ToggleCodePane)
+                        if (
+                          entry == EditorDock.Code && hostChrome != null && onGeneratedCode != null
+                        ) {
+                          onGeneratedCode(
+                            reducer.generatedCode(state.document) { assetBytesByDigest[it] }
+                          )
                         } else {
-                          if (state.codePaneVisible) {
+                          val mode = entry.inspectorMode()
+                          if (mode == null) {
                             dispatch(UiBuilderEditorEvent.ToggleCodePane)
-                          }
-                          inspectorOpen = dock != entry
-                          if (inspectorOpen) dispatch(UiBuilderEditorEvent.ShowInspector(mode))
-                          // The panel and the strip are one control. They are the same history
-                          // asked two questions — what was done, and what it looked like — and a
-                          // second switch would only let somebody have half of it.
-                          if (
-                            entry == EditorDock.History && inspectorOpen != state.historyBarVisible
-                          ) {
-                            dispatch(UiBuilderEditorEvent.ToggleHistoryBar)
+                          } else {
+                            if (state.codePaneVisible) {
+                              dispatch(UiBuilderEditorEvent.ToggleCodePane)
+                            }
+                            inspectorOpen = dock != entry
+                            if (inspectorOpen) dispatch(UiBuilderEditorEvent.ShowInspector(mode))
+                            // The panel and the strip are one control. They are the same history
+                            // asked two questions — what was done, and what it looked like — and a
+                            // second switch would only let somebody have half of it.
+                            if (
+                              entry == EditorDock.History &&
+                                inspectorOpen != state.historyBarVisible
+                            ) {
+                              dispatch(UiBuilderEditorEvent.ToggleHistoryBar)
+                            }
                           }
                         }
                       },

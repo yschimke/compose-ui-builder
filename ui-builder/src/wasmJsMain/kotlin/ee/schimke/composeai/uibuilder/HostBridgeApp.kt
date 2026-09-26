@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.editor.EditorSelectionRequest
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
@@ -50,9 +51,9 @@ import kotlinx.serialization.json.jsonObject
  * - **out**, through `composeUiBuilderHost.postMessage`: `ready` once the listener is installed,
  *   `changed` with the whole document after each edit, `chrome` with the toolbar and rail controls
  *   the host draws in place of the editor's own (`UiBuilderHostChrome`; the editor role draws
- *   neither), `selection` with the selected layer's id (empty for none), `error` when an `open`
- *   cannot be read, and `open-link` for a URL the host should open, since a webview cannot
- *   navigate.
+ *   neither), `selection` with the selected layer's id (empty for none), `generated-code` with the
+ *   export Kotlin when the host invokes `dock.code`, `error` when an `open` cannot be read, and
+ *   `open-link` for a URL the host should open, since a webview cannot navigate.
  *
  * The page may also define `composeUiBuilderHost.readTheme()` and send `{ type:
  * "compose-ui-builder/theme", theme }` when its theme changes, to draw the editor's own UI in the
@@ -130,6 +131,7 @@ internal fun HostBridgeApp() {
           onHelp = { postHostOpenLink(UI_BUILDER_GUIDE_URL) },
           selectionRequest = selectionRequest,
           hostChrome = hostChrome,
+          onGeneratedCode = ::postHostGeneratedCode,
           theme = theme,
           // The split the IntelliJ plugin makes: the editor tab is the canvas, and the devices
           // and configurations are a view of their own beside it (the `preview` role). The layer
@@ -379,6 +381,15 @@ private fun postHostError(message: String) =
 
 private fun postHostOpenLink(url: String) =
   postToHost(hostMessage("compose-ui-builder/open-link", "url", url))
+
+/** The host owns the destination: VS Code opens this in an untitled Kotlin document. */
+private fun postHostGeneratedCode(code: EditorGeneratedCode) =
+  when (code) {
+    is EditorGeneratedCode.Source ->
+      postToHost(hostMessage("compose-ui-builder/generated-code", "kotlin", code.kotlin))
+    is EditorGeneratedCode.Refused ->
+      postHostError("Generated code is unavailable: ${code.reasons.joinToString("; ")}")
+  }
 
 /**
  * [UiBuilderHostAction] as JSON. A wire class here rather than `@Serializable` on the common model:
