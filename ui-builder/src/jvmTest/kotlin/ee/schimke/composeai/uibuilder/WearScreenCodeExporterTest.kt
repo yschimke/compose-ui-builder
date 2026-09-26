@@ -230,6 +230,36 @@ class WearScreenCodeExporterTest {
     )
   }
 
+  @Test
+  fun `a published ListHeader emits the text in its content slot`() {
+    val base = wearScreenUiBuilderDocument("activity", pin, environment)
+    val document =
+      base.copy(
+        nodes =
+          base.nodes +
+            ("list-header" to
+              base.nodes
+                .getValue("list-header")
+                .copy(
+                  properties = JsonObject(emptyMap()),
+                  slots = mapOf("content" to listOf("published-header-text")),
+                )) +
+            ("published-header-text" to
+              UiBuilderNode(
+                id = "published-header-text",
+                componentId = "wear-m3/text",
+                properties = JsonObject(mapOf("text" to text("Published title"))),
+              ))
+      )
+
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(document))
+        .source
+
+    assertTrue("Text(text = \"Published title\")" in source, source)
+    assertFalse("Text(text = \"\")" in source, source)
+  }
+
   /**
    * Two ids that fold to one Kotlin name get distinct state, not a redeclaration: `volume-level`
    * and `volume_level` both read `volumeLevelValue`.

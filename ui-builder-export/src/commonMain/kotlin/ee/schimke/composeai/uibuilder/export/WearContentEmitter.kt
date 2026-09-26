@@ -198,23 +198,30 @@ internal class WearContentEmitter(
       // padded `m3/text`, and the generated screen came out 31.5dp shorter than the design.
       WearScreenCodeExporter.LIST_HEADER -> {
         usesListHeader = true
-        usesText = true
-        // `maxLines` and `overflow` are the label's, and the label is this `Text`: upstream's
-        // `ListHeader` takes a content lambda rather than a string, so they belong here rather than
-        // on the header. Both were declared and read by nobody — a design that truncated its header
-        // to one line got as many as the string wrapped to.
-        val label = node.labelArguments()
+        val content = node.slots["content"].orEmpty()
         listOf("${pad}ListHeader(") +
           surfaceArguments(pad + INDENT, nodeId, transformed, "ListHeader") +
           listOf("${pad}) {") +
-          (if (label.isEmpty()) {
-            listOf("${pad}${INDENT}Text(text = ${node.string("text").quoted()})")
+          if (content.isNotEmpty()) {
+            // The published Wear catalog models a ListHeader the way the Compose API does: its
+            // label is a node in the `content` slot. Emit that node rather than looking for the
+            // retired catalog's inline `text` property, otherwise every newly created published
+            // screen exports an empty header.
+            content.flatMap { emit(it, depth + 1) }
           } else {
-            listOf("${pad}${INDENT}Text(") +
-              listOf("${pad}${INDENT}${INDENT}text = ${node.string("text").quoted()},") +
-              label.map { "${pad}${INDENT}${INDENT}$it," } +
-              listOf("${pad}${INDENT})")
-          }) +
+            usesText = true
+            // The retired in-process catalog stored the label directly on ListHeader. Keep that
+            // shape readable for existing designs while their legacy catalog pin remains valid.
+            val label = node.labelArguments()
+            if (label.isEmpty()) {
+              listOf("${pad}${INDENT}Text(text = ${node.string("text").quoted()})")
+            } else {
+              listOf("${pad}${INDENT}Text(") +
+                listOf("${pad}${INDENT}${INDENT}text = ${node.string("text").quoted()},") +
+                label.map { "${pad}${INDENT}${INDENT}$it," } +
+                listOf("${pad}${INDENT})")
+            }
+          } +
           listOf("${pad}}")
       }
       WearScreenCodeExporter.CARD -> {

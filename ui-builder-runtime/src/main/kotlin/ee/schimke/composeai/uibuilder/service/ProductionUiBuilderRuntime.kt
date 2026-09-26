@@ -489,34 +489,37 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val references = catalogs.mapValues { (_, catalog) -> referenceOf(catalog) }
 
   /**
-   * Every reference a stored design may be pinned to for a catalog this deployment serves.
+   * Frozen vocabularies for designs pinned to the retired in-process Wear and Remote catalogs.
    *
-   * A catalog's reference is built from its `benchmark`, and the SOURCE changes it: the synthesised
-   * `remote-m3` states `wear-widget-scaffolds-v1` where the published one takes a content-hash
-   * revision. So flipping `--ui-builder-published-catalogs` -- one variable, documented as per
-   * catalog and reversible -- used to strand every design persisted against the other source:
-   * `resolve` returned null, `unusableReason` turned that into `CATALOG_UNAVAILABLE`, and the
-   * runtime offered no upgrade path (#796).
-   *
-   * Both sources' references are accepted for the same `systemId`. No history is kept and nothing
-   * is persisted: the catalog the OTHER source would serve is already in this process --
-   * `synthesisedCatalogs` still holds its entry while the published one is being served -- so its
-   * reference is simply computed. Neither `withPacks` nor `withBuilderVocabulary` touches
-   * `benchmark`, so the value computed here is the one that catalog would carry if it were the one
-   * being served.
-   *
-   * ONE DIRECTION ONLY, and the asymmetry is in what the process holds rather than in this map. The
-   * synthesised catalog is generated here and always resident, so a server on the published source
-   * can always compute the synthesised reference. `ServeRunner` fetches a published file only for
-   * the ids `--ui-builder-published-catalogs` names, so a server that has flipped BACK has never
-   * seen the published file and cannot know the reference it would have produced.
-   * `CatalogSourceFlipTest` asserts that gap rather than leaving it to be discovered; #818's
-   * re-pinning is what closes it.
+   * They are resolution-only: [listCatalogs] continues to expose the repository-published catalog
+   * and new designs therefore use only its vocabulary. Returning the published catalog for a legacy
+   * pin is not compatibility, because ids such as `remote-m3/lottie`,
+   * `remote-m3/widget-container-adaptive`, and `m3/text` disappeared from that vocabulary. The
+   * exact old capability snapshot is what makes those stored designs editable and exportable while
+   * still allowing an explicit preview/upgrade to the current catalog.
+   */
+  private val legacyCatalogs: Map<String, CatalogCapabilityV1> =
+    catalogSystemIds
+      .mapNotNull { systemId ->
+        LEGACY_SYNTHESISED_REFERENCES[systemId]?.let {
+          val legacy = packagedLegacyCatalog(systemId)
+          systemId to legacy.withPacks(packs.filter { pack -> pack.platform == legacy.platform })
+        }
+      }
+      .toMap()
+
+  /**
+   * Every current reference a stored design may be pinned to for a catalog this deployment serves.
+   * The packaged M3 and A2UI catalogs can still also be injected through [published], so retain
+   * references for both sources there. Wear and Remote have no synthesised current catalog anymore;
+   * their retired references resolve through [legacyCatalogs] instead, where the matching frozen
+   * vocabulary can actually validate the document.
    *
    * This does NOT weaken the check that catches a document drifting from its catalog. The accepted
-   * set is only ever the references of the SAME catalog id as this build can produce it; a pin
-   * naming a revision from neither source is still refused, and a document that no longer fits the
-   * catalog still fails the component checks below on their own terms.
+   * set is only ever the references of the same current catalog id as this build can produce it; a
+   * pin naming a revision from neither current source nor the exact legacy snapshot is still
+   * refused, and a document that no longer fits its resolved catalog still fails the component
+   * checks below on its own terms.
    */
   private val acceptedReferences: Map<String, Set<CatalogReferenceV1>> =
     catalogs.mapValues { (systemId, catalog) ->
@@ -524,40 +527,46 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
         referenceOf(catalog),
         synthesisedCatalogs[systemId]?.let(::referenceOf),
         published[systemId]?.let(::referenceOf),
-        LEGACY_SYNTHESISED_REFERENCES[systemId],
       )
     }
-  private val components = catalogs.mapValues { (_, catalog) ->
-    catalog.components.associateBy { it.componentId }
-  }
 
   override fun listCatalogs(): List<CatalogCapabilityV1> = catalogs.values.toList()
 
   override fun resolve(reference: CatalogReferenceV1): CatalogCapabilityV1? =
     catalogs[reference.systemId]?.takeIf {
       reference in acceptedReferences.getValue(reference.systemId)
-    }
+    } ?: legacyCatalogs[reference.systemId]?.takeIf { referenceOf(it) == reference }
 
   override fun reference(catalog: CatalogCapabilityV1): CatalogReferenceV1? =
-    catalog.benchmark.catalogSystemId.takeIf { catalogs[it] == catalog }?.let(references::get)
+    catalog.benchmark.catalogSystemId.let { systemId ->
+      when (catalog) {
+        catalogs[systemId] -> references[systemId]
+        legacyCatalogs[systemId] -> referenceOf(catalog)
+        else -> null
+      }
+    }
 
   override fun validate(
     document: DesignDocumentV1,
     catalog: CatalogCapabilityV1,
   ): UiBuilderCatalogIssue? {
     val systemId = catalog.benchmark.catalogSystemId
-    if (catalog != catalogs[systemId])
+    val isCurrent = catalog == catalogs[systemId]
+    val isLegacy = catalog == legacyCatalogs[systemId]
+    if (!isCurrent && !isLegacy)
       return issue("CATALOG_MISMATCH", "catalog is not an enabled UI-builder catalog")
     // Moves with `resolve`, and must: `unusableReason` calls `resolve` first and this second, so
     // accepting a pin there and refusing it here would turn a stored design's CATALOG_UNAVAILABLE
     // into an INTERNAL "invalid stored design" -- the same dead design, now blaming the document.
-    if (document.catalogPin !in acceptedReferences.getValue(systemId)) {
+    val acceptedPins =
+      if (isLegacy) setOf(referenceOf(catalog)) else acceptedReferences.getValue(systemId)
+    if (document.catalogPin !in acceptedPins) {
       return issue(
         "CATALOG_PIN_MISMATCH",
         "document catalog pin names no catalog source this deployment serves",
       )
     }
-    val catalogComponents = components.getValue(systemId)
+    val catalogComponents = catalog.components.associateBy { it.componentId }
     val encodedDocument = json.encodeToJsonElement(document).jsonObject
     val encodedNodes = encodedDocument.getValue("nodes").jsonObject
     val argumentBindings = inspectUiBuilderArgumentBindings(document.toUiBuilderDocument())
@@ -825,9 +834,10 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     val value = node.properties[property] ?: return null
     // Undeclared is `validate`'s finding, and a wrapper the value rules do not speak about — a
     // state binding, a number — is answered by `jsonType` there too.
-    components[catalog.benchmark.catalogSystemId]?.get(node.componentId)?.properties?.firstOrNull {
-      it.name == property
-    } ?: return null
+    catalog.components
+      .associateBy { it.componentId }[node.componentId]
+      ?.properties
+      ?.firstOrNull { it.name == property } ?: return null
     return when {
       isColourProperty(property) -> colourWriteIssue(node, property, value)
       property == ASSET_KEY_PROPERTY ->
@@ -1026,6 +1036,33 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
         }
         .bufferedReader(Charsets.UTF_8)
         .use { it.readText() }
+
+    private fun packagedLegacyCatalog(systemId: String): CatalogCapabilityV1 {
+      require(systemId in LEGACY_SYNTHESISED_REFERENCES) {
+        "no legacy UI-builder catalog is packaged for $systemId"
+      }
+      val resource = "/ee/schimke/composeai/uibuilder/catalogs/$systemId-legacy-v1.json"
+      return checkNotNull(
+          CurrentM3UiBuilderCatalogExecutor::class.java.getResourceAsStream(resource)
+        ) {
+          "packaged legacy UI-builder catalog is missing for $systemId"
+        }
+        .bufferedReader(Charsets.UTF_8)
+        .use { json.decodeFromString<CatalogCapabilityV1>(it.readText()) }
+        .also { catalog ->
+          val expected = LEGACY_SYNTHESISED_REFERENCES.getValue(systemId)
+          require(catalog.benchmark.catalogSystemId == expected.systemId) {
+            "unexpected legacy catalog system"
+          }
+          require(catalog.benchmark.catalogRevision == expected.catalogRevision) {
+            "unexpected legacy catalog revision"
+          }
+          require(catalog.benchmark.nativeRuntimeId == expected.nativeRuntimeId) {
+            "unexpected legacy native runtime"
+          }
+        }
+        .let(::validateCatalogStructure)
+    }
   }
 }
 
@@ -1650,10 +1687,14 @@ private fun projectedAssets(
 }
 
 private fun validateCatalog(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {
-  require(catalog.schema.isNotBlank()) { "catalog schema must not be blank" }
   require(catalog.benchmark.catalogSystemId == "m3-catalog") { "unexpected catalog system" }
   require(catalog.benchmark.catalogRevision == "candidate") { "unexpected catalog revision" }
   require(catalog.benchmark.nativeRuntimeId == "candidate") { "unexpected native runtime" }
+  return validateCatalogStructure(catalog)
+}
+
+private fun validateCatalogStructure(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {
+  require(catalog.schema.isNotBlank()) { "catalog schema must not be blank" }
   require(catalog.components.isNotEmpty()) { "catalog must contain components" }
   require(catalog.components.map { it.componentId }.distinct().size == catalog.components.size) {
     "catalog component ids must be unique"

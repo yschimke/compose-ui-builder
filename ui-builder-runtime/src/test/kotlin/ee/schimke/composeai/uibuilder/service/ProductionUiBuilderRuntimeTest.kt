@@ -459,6 +459,55 @@ class ProductionUiBuilderRuntimeTest {
   }
 
   @Test
+  fun `a retired Remote pin resolves against its frozen vocabulary rather than the published one`() {
+    val legacy = PublishedCatalogFixtures.catalog("remote-m3")
+    val published =
+      legacy
+        .newBuilder()
+        .also {
+          it.benchmark =
+            legacy.benchmark
+              .newBuilder()
+              .also { benchmark -> benchmark.catalogRevision = "published-content-sha" }
+              .build()
+          it.components =
+            legacy.components.filterNot {
+              it.componentId in
+                setOf(
+                  "m3/text",
+                  "remote-m3/lottie",
+                  "remote-m3/widget-container-adaptive",
+                )
+            }
+        }
+        .build()
+    val catalogs =
+      CurrentM3UiBuilderCatalogExecutor(
+        catalogSystemIds = setOf("remote-m3"),
+        published = mapOf("remote-m3" to published),
+      )
+    val oldDocument =
+      document()
+        .copy(
+          catalogPin =
+            assertNotNull(
+              CurrentM3UiBuilderCatalogExecutor.LEGACY_SYNTHESISED_REFERENCES["remote-m3"]
+            ),
+          roots = listOf("text"),
+          nodes = mapOf("text" to document().nodes.getValue("text")),
+        )
+
+    val listed = catalogs.listCatalogs().single()
+    val resolved = assertNotNull(catalogs.resolve(oldDocument.catalogPin))
+
+    assertTrue(listed.components.none { it.componentId == "m3/text" })
+    assertTrue(resolved.components.any { it.componentId == "m3/text" })
+    assertNull(catalogs.validate(oldDocument, resolved))
+    assertEquals(oldDocument.catalogPin, catalogs.reference(resolved))
+    assertNotEquals(oldDocument.catalogPin, assertNotNull(catalogs.reference(listed)))
+  }
+
+  @Test
   fun `runtime owns one deterministic packaged renderer bundle`() {
     val first = PackagedUiBuilderRenderBundle.copyTo(stateDirectory.resolve("bundle"))
     val repeated = PackagedUiBuilderRenderBundle.copyTo(stateDirectory.resolve("bundle"))

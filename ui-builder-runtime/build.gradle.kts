@@ -73,6 +73,18 @@ tasks.processResources {
     into("ee/schimke/composeai/uibuilder/catalogs")
     rename { "m3-catalog-v1.json" }
   }
+  // These are compatibility snapshots, not discoverable catalogs. A document written against a
+  // retired in-process Wear or Remote catalog must still resolve against the vocabulary its pin
+  // named; validating it against the newer published vocabulary can reject components that only
+  // the legacy catalog declared. The executor loads these only for that exact historical pin.
+  from(rootProject.file("docs/design/fixtures/ui-builder/remote-m3-capabilities-v1.json")) {
+    into("ee/schimke/composeai/uibuilder/catalogs")
+    rename { "remote-m3-legacy-v1.json" }
+  }
+  from(rootProject.file("docs/design/fixtures/ui-builder/wear-m3-capabilities-v1.json")) {
+    into("ee/schimke/composeai/uibuilder/catalogs")
+    rename { "wear-m3-legacy-v1.json" }
+  }
 }
 
 tasks.withType<Test>().configureEach {
