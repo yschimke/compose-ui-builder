@@ -9,8 +9,13 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.emptyContainerSchematic
 import ee.schimke.composeai.uibuilder.editor.sameThumbnailBounds
 import ee.schimke.composeai.uibuilder.editor.thumbnailContentTransform
+import ee.schimke.composeai.uibuilder.editor.thumbnailNeedsRoomyFrame
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionGeneration
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderNodeInspection
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderSemanticsInspection
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -155,6 +160,54 @@ class CatalogThumbnailTest {
   }
 
   @Test
+  fun `a picker that fills the frame's height is drawn as a miniature`() {
+    // The date picker, laid out in 176 × 128 and scaled by half: it takes every pixel it is given.
+    val snapshot = snapshot(frame = bounds(0f, 0f, 88f, 64f), bounds(0f, 0f, 88f, 64f))
+
+    assertTrue(thumbnailNeedsRoomyFrame(snapshot, Size(88f, 64f)))
+  }
+
+  @Test
+  fun `a width-filling list item keeps the default frame`() {
+    // 176 × 72 of a 176 × 128 frame: full width is what a list item, text field or app bar does.
+    val snapshot = snapshot(frame = bounds(0f, 0f, 88f, 64f), bounds(0f, 14f, 88f, 36f))
+
+    assertTrue(!thumbnailNeedsRoomyFrame(snapshot, Size(88f, 64f)))
+  }
+
+  @Test
+  fun `a frame clipped by the viewport is not judged`() {
+    // A tile half scrolled out of the grid: the collector's bounds are clipped to what is on
+    // screen, so the frame reads short and the list item inside it would look as if it filled it.
+    val snapshot = snapshot(frame = bounds(0f, 0f, 88f, 30f), bounds(0f, 0f, 88f, 30f))
+
+    assertTrue(!thumbnailNeedsRoomyFrame(snapshot, Size(88f, 64f)))
+  }
+
+  private fun bounds(x: Float, y: Float, width: Float, height: Float) =
+    UiBuilderPixelBounds(x = x, y = y, width = width, height = height)
+
+  private fun snapshot(frame: UiBuilderPixelBounds, content: UiBuilderPixelBounds) =
+    UiBuilderInspectionSnapshot(
+      documentId = "catalog-thumbnail-frame",
+      documentRevision = 0,
+      generation =
+        UiBuilderInspectionGeneration(
+          "catalog-thumbnail-frame@0",
+          expectedAuthoredNodeIds = listOf(CELL, "component"),
+          expectedAuthoredTextNodeIds = emptyList(),
+          measuredNodeIds = listOf(CELL, "component"),
+          measuredTextNodeIds = emptyList(),
+        ),
+      nodes =
+        listOf(
+          UiBuilderNodeInspection(CELL, "layout/box", frame, semantics = semantics),
+          UiBuilderNodeInspection("component", "m3/date-picker", content, semantics = semantics),
+        ),
+      slots = emptyList(),
+    )
+
+  @Test
   fun `an empty container sketches the arrangement its name promises`() {
     assertEquals(ContainerSchematic.Stacked, emptyContainerSchematic("layout/column"))
     assertEquals(ContainerSchematic.Stacked, emptyContainerSchematic("layout/flow-column"))
@@ -176,6 +229,11 @@ class CatalogThumbnailTest {
 
   private fun kotlinx.serialization.json.JsonObject?.orEmpty() =
     this ?: emptyMap<String, kotlinx.serialization.json.JsonElement>()
+
+  private companion object {
+    const val CELL = "catalog-thumbnail-cell"
+    val semantics = UiBuilderSemanticsInspection(role = "box", actions = emptyList())
+  }
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 }

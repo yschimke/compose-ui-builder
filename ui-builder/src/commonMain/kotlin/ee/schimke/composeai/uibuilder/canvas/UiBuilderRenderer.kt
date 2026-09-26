@@ -382,6 +382,16 @@ public val LocalRemoteComposeCaptures:
  */
 internal val LocalUiBuilderUnrolled = staticCompositionLocalOf { false }
 
+/**
+ * Draw a dialog as its surface, in place, rather than as a window.
+ *
+ * A real `AlertDialog` is a popup: it leaves the layout it was composed in and floats over the
+ * whole host, scrim and all. On the canvas that is the component. In a palette thumbnail it is a
+ * dialog escaping a 104 dp tile and covering the editor, so the component list sets this and gets
+ * the same stand-in an unrolled canvas draws — without unrolling anything else.
+ */
+internal val LocalUiBuilderInlineDialogs = staticCompositionLocalOf { false }
+
 internal enum class UiBuilderRenderStrategy {
   REAL,
   AUTHORING_ADAPTER,
@@ -1724,8 +1734,9 @@ private fun RenderNode(
       }
       "m3/dialog" -> {
         if (
-          uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
-            UiBuilderRenderStrategy.AUTHORING_ADAPTER
+          LocalUiBuilderInlineDialogs.current ||
+            uiBuilderRenderStrategy(node.componentId, LocalUiBuilderUnrolled.current) ==
+              UiBuilderRenderStrategy.AUTHORING_ADAPTER
         ) {
           BuilderDialogSurface(
             node = node,
