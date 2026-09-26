@@ -150,6 +150,17 @@ export function assertHomeOverwriteAllowed(sourceHome, existingFixture, force = 
   }
 }
 
+/** The home an exported fixture keeps when replacing an existing fixture. */
+export function homeForFixtureOverwrite(sourceHome, existingFixture, force = false) {
+  assertHomeOverwriteAllowed(sourceHome, existingFixture, force);
+  const targetHome = fixtureHome(existingFixture);
+  // A legacy server document has no home to contribute. Silently dropping the repository's
+  // existing canonical home would turn the original into an untracked copy, so preserve it unless
+  // the caller explicitly asks for replacement semantics with --force.
+  if (!force && !sourceHome && targetHome) return clone(targetHome);
+  return sourceHome;
+}
+
 /**
  * Write the convention directory a catalog project publishes designs from:
  * `<out>/index.json` plus one `DesignDocumentV1` per fixture. The server reads exactly this
@@ -194,10 +205,13 @@ async function main(argv) {
     const reply = await mcpCall(server, "ui_builder_get_design", { designId: target }, token);
     const document = reply.snapshot?.state?.document ?? reply.document;
     if (!document) throw new Error(`no document in the reply for ${target}`);
-    const fixture = documentToOperations(document, { designId: flag(argv, "--design-id") ?? target });
+    let exportDocument = document;
     if (existsSync(out)) {
-      assertHomeOverwriteAllowed(document.home, JSON.parse(readFileSync(out, "utf8")), argv.includes("--force"));
+      const existingFixture = JSON.parse(readFileSync(out, "utf8"));
+      const home = homeForFixtureOverwrite(document.home, existingFixture, argv.includes("--force"));
+      exportDocument = { ...document, home };
     }
+    const fixture = documentToOperations(exportDocument, { designId: flag(argv, "--design-id") ?? target });
     writeFileSync(out, `${JSON.stringify(fixture, null, 2)}\n`);
     console.log(`${out}: ${target} at revision ${document.revision}, ${Object.keys(document.nodes).length} nodes, ${fixture.expectedDocumentHash.slice(0, 12)}`);
     return 0;

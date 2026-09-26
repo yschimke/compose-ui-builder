@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   assertHomeOverwriteAllowed,
   documentToOperations,
+  homeForFixtureOverwrite,
   operationsToDocument,
   publishDirectory,
   validatedServerOrigin,
@@ -46,6 +47,15 @@ test("a copy cannot replace a different canonical home without force", () => {
 
   assert.throws(() => assertHomeOverwriteAllowed(copyHome, fixture), /--force/);
   assert.doesNotThrow(() => assertHomeOverwriteAllowed(copyHome, fixture, true));
+});
+
+test("an unhomed source preserves the existing fixture home unless forced", () => {
+  const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
+  const targetHome = { kind: "repo", path: "ui-builder/designs/original.uid" };
+  fixture.operations[0].home = targetHome;
+
+  assert.deepEqual(homeForFixtureOverwrite(undefined, fixture), targetHome);
+  assert.equal(homeForFixtureOverwrite(undefined, fixture, true), undefined);
 });
 
 test("the published directory is the shape the server's design library reads", () => {

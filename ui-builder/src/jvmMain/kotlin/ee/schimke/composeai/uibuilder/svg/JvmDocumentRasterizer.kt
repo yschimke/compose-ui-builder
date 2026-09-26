@@ -105,7 +105,7 @@ object JvmDocumentRasterizer {
   }
 }
 
-/** Adds a standards-compliant PNG text chunk before IEND without changing rendered pixels. */
+/** Adds a standards-compliant UTF-8 PNG international-text chunk before IEND. */
 internal fun ByteArray.withDocumentMetadata(document: UiBuilderDocument): ByteArray {
   val iend = indexOfIend()
   val text = buildString {
@@ -114,8 +114,11 @@ internal fun ByteArray.withDocumentMetadata(document: UiBuilderDocument): ByteAr
     document.home?.let { append(";home=").append(it.description()) }
   }
     .encodeToByteArray()
-  val payload = "compose-ui-builder\u0000".encodeToByteArray() + text
-  val type = "tEXt".encodeToByteArray()
+  // iTXt: keyword, compression flag/method, language tag, translated keyword, then UTF-8 text.
+  // The two optional strings are empty and the text is uncompressed. Unlike tEXt, this represents
+  // arbitrary Unicode in design ids, server URLs and repository paths without mojibake.
+  val payload = "compose-ui-builder\u0000".encodeToByteArray() + byteArrayOf(0, 0, 0, 0) + text
+  val type = "iTXt".encodeToByteArray()
   val output = ByteArrayOutputStream(size + payload.size + 12)
   output.write(this, 0, iend)
   output.writeInt(payload.size)
