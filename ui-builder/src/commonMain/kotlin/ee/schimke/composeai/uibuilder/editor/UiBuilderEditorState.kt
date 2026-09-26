@@ -238,6 +238,7 @@ class UiBuilderEditorReducer(
       // off one Add after being switched on.
       addBeside = state.addBeside,
       variantAxes = state.variantAxes,
+      canvasView = state.canvasView,
     )
   }
 
@@ -346,6 +347,7 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.InsertComponentBeside ->
         insertBeside(state, event.componentId, variant = event.variant)
       UiBuilderEditorEvent.ToggleAddBeside -> state.copy(addBeside = !state.addBeside)
+      is UiBuilderEditorEvent.SetCanvasView -> state.copy(canvasView = event.view)
       is UiBuilderEditorEvent.TogglePinnedComponent ->
         state.copy(pinnedComponents = pinnedComponents(state).toggled(event.componentId))
       is UiBuilderEditorEvent.ToggleVariantAxis ->

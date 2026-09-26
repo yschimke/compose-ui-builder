@@ -98,6 +98,25 @@ class UiBuilderInspectionCollector(
     publish()
   }
 
+  /**
+   * Drops what [nodeId] last reported, because the composable that measured it has left the
+   * composition.
+   *
+   * A lazy layout disposes an item that scrolls out, and nothing else would ever take its box back:
+   * the last position it was placed at stayed in the snapshot for good, so a press over the empty
+   * place a scrolled-away row used to occupy selected that row. Unknown ids are ignored rather than
+   * refused — the node may have been deleted by the very edit whose recomposition disposed it. One
+   * snapshot for the lot, however many left together.
+   */
+  fun forgetNodeBounds(vararg nodeIds: String) {
+    var changed = false
+    nodeIds.forEach { nodeId ->
+      if (bounds.remove(nodeId) != null) changed = true
+      if (textLayouts.remove(nodeId) != null) changed = true
+    }
+    if (changed) publish()
+  }
+
   fun recordTextLayout(
     nodeId: String,
     lineCount: Int,

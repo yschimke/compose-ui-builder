@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -50,6 +51,10 @@ fun CanvasDocumentScope.RenderCanvasNode(
   missingComponent: @Composable (String, Modifier) -> Unit,
   fallback: @Composable CanvasNodeFallbackScope.() -> Unit,
 ) {
+  // Unconditional, and the decision taken at disposal: an effect entered only in device mode would
+  // leave the composition — and forget every box — the moment the canvas switched to the extent,
+  // while the nodes themselves stayed put and never reported again.
+  DisposableEffect(entry.path) { onDispose { forgetNodeBounds(entry.path) } }
   val prepared =
     entry.prepare(
       modifier = modifier,

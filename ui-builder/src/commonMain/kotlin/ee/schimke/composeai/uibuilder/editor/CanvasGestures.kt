@@ -217,3 +217,33 @@ internal fun String.toPresenceColor(): Color {
   val argb = hex.takeIf { it.length == 8 }?.toULongOrNull(16) ?: return Color(0xff7788aa)
   return Color(argb.toInt())
 }
+
+/**
+ * A primary click on the device frame, taken before the design can act on it.
+ *
+ * The device view's lists are real, so the design has to see the wheel and the drag that scroll
+ * them — which is why its selection cannot be the overlay the extent draws on top, which takes the
+ * whole pointer stream. This watches from above in the [PointerEventPass.Initial] pass instead and
+ * lets everything through except a press that comes back up where it went down: that is a click,
+ * its release is consumed so the button under it does not also fire, and [onClick] is told where it
+ * landed. A press that travels past the touch slop is somebody scrolling, and is left alone.
+ */
+internal fun Modifier.onDeviceFrameClick(key: Any?, onClick: (Offset) -> Unit): Modifier =
+  pointerInput(key) {
+    awaitEachGesture {
+      val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+      if (currentEvent.buttons.isSecondaryPressed) return@awaitEachGesture
+      while (true) {
+        val event = awaitPointerEvent(PointerEventPass.Initial)
+        val change = event.changes.firstOrNull { it.id == down.id } ?: return@awaitEachGesture
+        if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+          return@awaitEachGesture
+        }
+        if (!change.pressed) {
+          change.consume()
+          onClick(change.position)
+          return@awaitEachGesture
+        }
+      }
+    }
+  }

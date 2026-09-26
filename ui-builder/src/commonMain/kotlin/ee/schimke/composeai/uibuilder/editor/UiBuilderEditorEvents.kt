@@ -184,6 +184,9 @@ sealed interface UiBuilderEditorEvent {
    */
   data class TogglePinnedComponent(val componentId: String) : UiBuilderEditorEvent
 
+  /** Draws the editing canvas at the design's extent or at its device frame. */
+  data class SetCanvasView(val view: EditorCanvasView) : UiBuilderEditorEvent
+
   /** Switches one unstored variant axis of the strip on or off. */
   data class ToggleVariantAxis(val axis: EditorVariantAxis) : UiBuilderEditorEvent
 
