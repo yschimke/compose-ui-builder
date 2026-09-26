@@ -60,10 +60,73 @@ data class DesignComment(
   val body: String,
   val createdAtEpochMillis: Long = 0,
 ) {
-  /** What to show beside the words: the name they chose, falling back to the identity. */
+  /** What to show beside the words, as one line: see [commentAuthorLabel]. */
   val author: String
-    get() = displayName.ifBlank { authorId }
+    get() = commentAuthorLabel(this).text
 }
+
+/**
+ * Who a comment is from, in the pieces the thread UI draws.
+ *
+ * [name] is what the poster chose to be called, [account] is the account the host says posted it,
+ * and [agent] draws the agent badge. The name is the poster's own label and the account is not, so
+ * the two are shown side by side whenever they say different things.
+ */
+data class CommentAuthorLabel(
+  val name: String,
+  /** The account behind [name] — `@login`, or a shortened raw id — or null when it adds nothing. */
+  val account: String? = null,
+  val agent: Boolean = false,
+) {
+  /** The whole label on one line, e.g. `Yuri · @yschimke` or `Review agent · agent`. */
+  val text: String
+    get() = listOfNotNull(name, account, AGENT_BADGE.takeIf { agent }).joinToString(" · ")
+}
+
+/**
+ * The label for [comment]'s author: the display name with the posting account next to it.
+ * - `github:yschimke` named "Yuri" is `Yuri · @yschimke`; named "yschimke", or unnamed, is just
+ *   `@yschimke`.
+ * - `agent:<fingerprint>` is marked as an agent; the fingerprint means nothing to a reader, so the
+ *   badge stands in for the account.
+ * - Any other id is shown as it is, shortened when it is long, and dropped when the name repeats
+ *   it.
+ * - An id the host has replaced with a `collaborator-` pseudonym, which it does for a reader who
+ *   reaches the design only through its public link, shows the display name as sent and no account:
+ *   the pseudonym is not anybody's account.
+ */
+fun commentAuthorLabel(comment: DesignComment): CommentAuthorLabel {
+  val id = comment.authorId.trim()
+  val name = comment.displayName.trim()
+  val agent = comment.kind == DesignCommentAuthorKind.Agent || id.startsWith(AGENT_ID_PREFIX)
+  if (id.isEmpty() || id.startsWith(PSEUDONYM_ID_PREFIX)) {
+    return CommentAuthorLabel(name.ifEmpty { UNNAMED_AUTHOR }, agent = agent)
+  }
+  if (id.startsWith(AGENT_ID_PREFIX)) {
+    return CommentAuthorLabel(name.ifEmpty { "Agent" }, agent = true)
+  }
+  val login = id.removePrefix(GITHUB_ID_PREFIX).takeIf { id.startsWith(GITHUB_ID_PREFIX) }
+  val account =
+    if (!login.isNullOrEmpty()) "@$login"
+    else if (id.length > MAX_RAW_ID_LENGTH) id.take(MAX_RAW_ID_LENGTH - 1) + "…" else id
+  val repeatsAccount =
+    name.isEmpty() ||
+      name.equals(account, ignoreCase = true) ||
+      name.equals(id, ignoreCase = true) ||
+      (!login.isNullOrEmpty() && name.equals(login, ignoreCase = true))
+  return if (repeatsAccount) CommentAuthorLabel(account, agent = agent)
+  else CommentAuthorLabel(name, account, agent)
+}
+
+private const val GITHUB_ID_PREFIX = "github:"
+private const val AGENT_ID_PREFIX = "agent:"
+
+/** The host's stand-in for somebody else's id when the reader sees the design only publicly. */
+private const val PSEUDONYM_ID_PREFIX = "collaborator-"
+
+private const val UNNAMED_AUTHOR = "Collaborator"
+private const val AGENT_BADGE = "agent"
+private const val MAX_RAW_ID_LENGTH = 24
 
 /**
  * Who said it — a person or an agent.

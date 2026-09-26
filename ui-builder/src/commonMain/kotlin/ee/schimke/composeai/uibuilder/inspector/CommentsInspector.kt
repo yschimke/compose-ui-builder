@@ -51,10 +51,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.editor.DesignCommentAnchor
-import ee.schimke.composeai.uibuilder.editor.DesignCommentAuthorKind
 import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.editor.DesignCommentDraft
 import ee.schimke.composeai.uibuilder.editor.DesignCommentThread
+import ee.schimke.composeai.uibuilder.editor.commentAuthorLabel
 import ee.schimke.composeai.uibuilder.reference.ReferenceMark
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import kotlin.math.roundToInt
@@ -352,17 +352,35 @@ private fun CommentThreadCard(
     val visible = if (expanded) thread.comments else listOfNotNull(thread.opening)
     visible.forEach { comment ->
       Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        val author = commentAuthorLabel(comment)
+        Row(
+          Modifier.semantics(mergeDescendants = true) { contentDescription = author.text },
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
           Text(
-            comment.author,
+            author.name,
+            Modifier.weight(1f, fill = false),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
           )
-          if (comment.kind == DesignCommentAuthorKind.Agent) {
+          // The account that posted it, beside the name the poster chose: the name is theirs to
+          // pick, the account is the host's to state.
+          author.account?.let {
+            Text(
+              " · $it",
+              style = MaterialTheme.typography.labelSmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+            )
+          }
+          if (author.agent) {
             Text(
               " · agent",
               style = MaterialTheme.typography.labelSmall,
               color = MaterialTheme.colorScheme.primary,
+              maxLines = 1,
             )
           }
         }
