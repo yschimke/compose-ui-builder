@@ -43,7 +43,7 @@ object A2uiDocumentExporter {
 
   private const val ROOT_ID = "root"
   private val SINGLE_CHILD_SLOTS = setOf("child", "trigger", "content")
-  private val LITERAL_WRAPPERS = setOf("string", "int", "float", "bool", "enum", "object", "list")
+  private val LITERAL_WRAPPERS = setOf("string", "int", "float", "bool", "enum")
 
   sealed interface Result {
     /**
@@ -72,7 +72,7 @@ object A2uiDocumentExporter {
     }
 
     val components = buildJsonArray {
-      for (node in reachable(document, rootId)) {
+      for (node in reachable(document, rootId, reasons)) {
         val where = "nodes.${node.id}"
         val type = node.componentId.removePrefix(COMPONENT_PREFIX)
         if (!node.componentId.startsWith(COMPONENT_PREFIX) || type.isEmpty()) {
@@ -146,16 +146,28 @@ object A2uiDocumentExporter {
     return Result.Emitted(messages, messages.joinToString("\n") { canonicalJson(it) } + "\n")
   }
 
-  /** The root first, then every node reachable through slots, each once, in slot order. */
-  private fun reachable(document: UiBuilderDocument, rootId: String?): List<UiBuilderNode> {
+  /**
+   * The root first, then every node reachable through slots, each once, in slot order. A reference
+   * to a node the document does not contain is refused: emitting it would hand the client a
+   * component graph with a dangling id, which it cannot draw.
+   */
+  private fun reachable(
+    document: UiBuilderDocument,
+    rootId: String?,
+    reasons: MutableList<String>,
+  ): List<UiBuilderNode> {
     val seen = linkedMapOf<String, UiBuilderNode>()
-    fun visit(id: String) {
+    fun visit(id: String, from: String) {
       if (id in seen) return
-      val node = document.nodes[id] ?: return
+      val node = document.nodes[id]
+      if (node == null) {
+        reasons += "$from: references `$id`, which is not a node of this design"
+        return
+      }
       seen[id] = node
-      node.slots.values.flatten().forEach(::visit)
+      for ((slot, children) in node.slots) children.forEach { visit(it, "nodes.$id.slots.$slot") }
     }
-    rootId?.let(::visit)
+    rootId?.let { visit(it, "roots") }
     return seen.values.toList()
   }
 
@@ -169,6 +181,34 @@ object A2uiDocumentExporter {
     val type = (wrapper["type"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return value
     return when (type) {
       in LITERAL_WRAPPERS -> wrapper["value"] ?: JsonNull
+      // Structured values, as the builder's reducer writes them: an object's members under
+      // `fields`, a list's elements under `values`, each of which may itself be a wrapper.
+      "object" -> {
+        val fields = wrapper["fields"] as? JsonObject
+        if (fields == null) {
+          reasons += "$where: an `object` value carries its members under `fields`"
+          null
+        } else {
+          buildJsonObject {
+            for ((key, member) in fields) {
+              lowerValue(member, "$where.fields.$key", document, reasons)?.let { put(key, it) }
+            }
+          }
+        }
+      }
+      "list" -> {
+        val values = wrapper["values"] as? JsonArray
+        if (values == null) {
+          reasons += "$where: a `list` value carries its elements under `values`"
+          null
+        } else {
+          JsonArray(
+            values.mapIndexedNotNull { i, element ->
+              lowerValue(element, "$where.values[$i]", document, reasons)
+            }
+          )
+        }
+      }
       "state" -> {
         val variable = (wrapper["variable"] as? JsonPrimitive)?.content
         if (variable == null || !document.stateVariables.containsKey(variable)) {

@@ -81,8 +81,16 @@ class A2uiDocumentExporterTest {
               buildJsonObject {
                 put("type", "object")
                 put(
-                  "value",
-                  buildJsonObject { put("event", buildJsonObject { put("name", "book") }) },
+                  "fields",
+                  buildJsonObject {
+                    put(
+                      "event",
+                      buildJsonObject {
+                        put("type", "object")
+                        put("fields", buildJsonObject { put("name", wrapped("string", "book")) })
+                      },
+                    )
+                  },
                 )
               },
             )
@@ -221,5 +229,68 @@ class A2uiDocumentExporterTest {
         )
       )
     assertTrue(refused.reasons.single().startsWith("roots:"))
+  }
+
+  @Test
+  fun `list values are unwrapped element by element`() {
+    val tabs =
+      listOf(
+        UiBuilderNode(
+          "tabs",
+          "a2ui/Tabs",
+          properties =
+            buildJsonObject {
+              put(
+                "tabs",
+                buildJsonObject {
+                  put("type", "list")
+                  put(
+                    "values",
+                    buildJsonArray {
+                      add(
+                        buildJsonObject {
+                          put("type", "object")
+                          put(
+                            "fields",
+                            buildJsonObject {
+                              put("title", wrapped("string", "Flights"))
+                              put("child", wrapped("string", "flights"))
+                            },
+                          )
+                        }
+                      )
+                    },
+                  )
+                },
+              )
+            },
+        )
+      )
+    val emitted =
+      assertIs<A2uiDocumentExporter.Result.Emitted>(A2uiDocumentExporter.export(document(tabs)))
+    val root =
+      (emitted.messages.last()["updateComponents"]!!.jsonObject["components"] as JsonArray)[0]
+    assertEquals(
+      Json.parseToJsonElement(
+        """{"id":"root","component":"Tabs","tabs":[{"title":"Flights","child":"flights"}]}"""
+      ),
+      root,
+    )
+  }
+
+  @Test
+  fun `a reference to a missing node is refused`() {
+    val refused =
+      assertIs<A2uiDocumentExporter.Result.Refused>(
+        A2uiDocumentExporter.export(
+          document(
+            listOf(UiBuilderNode("card", "a2ui/Card", slots = mapOf("child" to listOf("gone"))))
+          )
+        )
+      )
+    assertEquals(
+      listOf("nodes.card.slots.child: references `gone`, which is not a node of this design"),
+      refused.reasons,
+    )
   }
 }
