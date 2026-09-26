@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -1355,160 +1356,174 @@ fun UiBuilderEditor(
       )
     }
   }
+  // The editing surface draws a Wear widget in the editing frame, not in the host shape being
+  // viewed: which container a launcher draws around it is a question for the preview pane, which
+  // draws every shape side by side, and for the native render. Reshaping the surface an author is
+  // editing made the frame they place nodes in change under them. The compact layout has neither
+  // pane, so there the canvas is the only surface a chosen shape can be seen on, and it draws it.
+  var canvasIsOnlySurface by remember { mutableStateOf(false) }
+  val canvasHostShape =
+    if (canvasIsOnlySurface) state.wearWidgetHostShape else WearWidgetHostShape.Default
   val canvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
-    PinnedDesignCanvas(
-      document = state.document,
-      selectedNodeId = state.selectedNodeId,
-      onNodeSelected = { selectNodeForEditing(it) },
-      onCanvasMetrics = { width, height, scale -> onCanvasMetrics(width, height, scale) },
-      onCanvasBounds = {
-        canvasBounds = it
-        onCanvasBoundsChanged(it)
-      },
-      dropHovered = canvasDropHovered,
-      dropPlan = draggedPlan,
-      slotPlaceholders = slotPlaceholders,
-      // A catalogue drag carries the component as the ghost, drawn at landing size; a canvas move
-      // carries the subtree it picked up, built from the same document the canvas is drawing.
-      dragPreview = dragGhostPreview,
-      dragPreviewBitmap = draggedRemoteThumbnail,
-      moveDragPreview = moveDragGhostPreview,
-      dragGhostLabel = dragGhostLabel,
-      dragPosition = catalogDragPosition,
-      moveOrigin =
-        draggedNodeId?.let { id ->
-          canvasInspection?.nodes?.firstOrNull { node -> node.nodeId == id }?.bounds
+    CompositionLocalProvider(LocalWearWidgetHostShape provides canvasHostShape) {
+      PinnedDesignCanvas(
+        document = state.document,
+        selectedNodeId = state.selectedNodeId,
+        onNodeSelected = { selectNodeForEditing(it) },
+        onCanvasMetrics = { width, height, scale -> onCanvasMetrics(width, height, scale) },
+        onCanvasBounds = {
+          canvasBounds = it
+          onCanvasBoundsChanged(it)
         },
-      onCanvasScroll = { canvasScroll = it },
-      onWorkspaceBounds = { canvasWorkspaceBounds = it },
-      showSelectionOverlay = showSelectionOverlay,
-      moveDragEnabled = true,
-      onNodeDragStarted = { nodeId, position ->
-        focusEditor()
-        if (nodeId != state.selectedNodeId) dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
-        draggedNodeId = nodeId
-        catalogDragPosition = position
-      },
-      onNodeDragged = { position -> catalogDragPosition = position },
-      onNodeDragEnded = { position ->
-        val nodeId = draggedNodeId
-        val plan = nodeId?.let { id -> position?.let { canvasMovePlan(id, it) } }
-        if (nodeId != null && plan != null) {
-          dispatch(UiBuilderEditorEvent.MoveNodeInto(nodeId, plan.target, plan.afterNodeId))
-        }
-        draggedNodeId = null
-        catalogDragPosition = null
-      },
-      reference = state.reference,
-      onMarkDrawn = { kind, points ->
-        dispatch(UiBuilderEditorEvent.AddReferenceMark(kind, points))
-      },
-      onPieceMoved = { pieceId, dx, dy ->
-        dispatch(UiBuilderEditorEvent.MoveReferencePiece(pieceId, dx, dy))
-      },
-      collaborators = collaborators,
-      commentThreads = comments.pinned(state.reference.marks),
-      selectedThreadId = selectedThreadId,
-      onCommentThreadSelected = { threadId ->
-        selectThread(threadId)
-        dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Comments))
-      },
-      onInspectionSnapshot = { snapshot ->
-        canvasInspection = snapshot
-        onInspectionSnapshot?.invoke(snapshot)
-      },
-      onInspectionInvalidated = onInspectionInvalidated,
-      canvasRenderer = canvasRenderer,
-      selectionMenu = selectionMenu,
-      onHoverEditorDismiss = { dispatch(UiBuilderEditorEvent.HideQuickEditor) },
-      // Double-click a label to type over it where it is. Anything without free text of its own
-      // keeps what the click already did: select it.
-      onNodeDoubleClicked = { nodeId ->
-        reducer.inlineText(state, nodeId)?.let { text ->
-          if (state.selectedNodeId != nodeId) dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
-          dispatch(UiBuilderEditorEvent.HideQuickEditor)
-          inlineTextEdit = CanvasInlineTextEdit(nodeId, text)
-        }
-      },
-      inlineTextEdit = inlineTextEdit,
-      onInlineTextDone = { text, focusMovedAway ->
-        val edit = inlineTextEdit
-        inlineTextEdit = null
-        if (edit != null && text != null && text != edit.text) {
-          dispatch(UiBuilderEditorEvent.CommitProperty(edit.nodeId, "text", text))
-        }
-        // Back to the editor's keys after Enter or Esc; a click away keeps what it clicked.
-        if (!focusMovedAway) focusEditor()
-      },
-      onTextInputFocusChanged = { textInputFocused = it },
-      hoverEditor =
-        if (state.selection.size != 1 || !state.quickEditorOpen) null
-        else {
-          { dragHandle ->
-            SelectionHoverEditor(
-              label = selectionLabel,
-              dragHandle = dragHandle,
-              onDismiss = { dispatch(UiBuilderEditorEvent.HideQuickEditor) },
-              // The same rule the panel opens on: what the node carries, which is what the export
-              // would write. A hovering card is the last place to list what a component *could*
-              // have.
-              fields =
-                reducer.propertyFields(state).filter { field ->
-                  field.written ||
-                    field.required ||
-                    field.boundVariable != null ||
-                    field.error != null
-                },
-              modifierFields = reducer.modifierFields(state),
-              sizing = reducer.sizing(state),
-              onResize = { width, height ->
-                state.selectedNodeId?.let {
-                  dispatch(UiBuilderEditorEvent.ResizeNode(it, width, height))
-                }
-              },
-              focusTarget = hoverFocusTarget,
-              onFocusHandled = { hoverFocusTarget = null },
-              onCommitProperty = { name, value ->
-                state.selectedNodeId?.let {
-                  dispatch(UiBuilderEditorEvent.CommitProperty(it, name, value))
-                }
-              },
-              onCommitModifier = { field, value ->
-                state.selectedNodeId?.let {
-                  dispatch(
-                    UiBuilderEditorEvent.SetModifierValue(
-                      it,
-                      field.type,
-                      field.field,
-                      value,
-                      field.index,
-                    )
-                  )
-                }
-              },
-              onTextInputFocusChanged = { textInputFocused = it },
-            )
+        dropHovered = canvasDropHovered,
+        dropPlan = draggedPlan,
+        slotPlaceholders = slotPlaceholders,
+        // A catalogue drag carries the component as the ghost, drawn at landing size; a canvas move
+        // carries the subtree it picked up, built from the same document the canvas is drawing.
+        dragPreview = dragGhostPreview,
+        dragPreviewBitmap = draggedRemoteThumbnail,
+        moveDragPreview = moveDragGhostPreview,
+        dragGhostLabel = dragGhostLabel,
+        dragPosition = catalogDragPosition,
+        moveOrigin =
+          draggedNodeId?.let { id ->
+            canvasInspection?.nodes?.firstOrNull { node -> node.nodeId == id }?.bounds
+          },
+        onCanvasScroll = { canvasScroll = it },
+        onWorkspaceBounds = { canvasWorkspaceBounds = it },
+        showSelectionOverlay = showSelectionOverlay,
+        moveDragEnabled = true,
+        onNodeDragStarted = { nodeId, position ->
+          focusEditor()
+          if (nodeId != state.selectedNodeId) dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
+          draggedNodeId = nodeId
+          catalogDragPosition = position
+        },
+        onNodeDragged = { position -> catalogDragPosition = position },
+        onNodeDragEnded = { position ->
+          val nodeId = draggedNodeId
+          val plan = nodeId?.let { id -> position?.let { canvasMovePlan(id, it) } }
+          if (nodeId != null && plan != null) {
+            dispatch(UiBuilderEditorEvent.MoveNodeInto(nodeId, plan.target, plan.afterNodeId))
+          }
+          draggedNodeId = null
+          catalogDragPosition = null
+        },
+        reference = state.reference,
+        onMarkDrawn = { kind, points ->
+          dispatch(UiBuilderEditorEvent.AddReferenceMark(kind, points))
+        },
+        onPieceMoved = { pieceId, dx, dy ->
+          dispatch(UiBuilderEditorEvent.MoveReferencePiece(pieceId, dx, dy))
+        },
+        collaborators = collaborators,
+        commentThreads = comments.pinned(state.reference.marks),
+        selectedThreadId = selectedThreadId,
+        onCommentThreadSelected = { threadId ->
+          selectThread(threadId)
+          dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Comments))
+        },
+        onInspectionSnapshot = { snapshot ->
+          canvasInspection = snapshot
+          onInspectionSnapshot?.invoke(snapshot)
+        },
+        onInspectionInvalidated = onInspectionInvalidated,
+        canvasRenderer = canvasRenderer,
+        selectionMenu = selectionMenu,
+        onHoverEditorDismiss = { dispatch(UiBuilderEditorEvent.HideQuickEditor) },
+        // Double-click a label to type over it where it is. Anything without free text of its own
+        // keeps what the click already did: select it.
+        onNodeDoubleClicked = { nodeId ->
+          reducer.inlineText(state, nodeId)?.let { text ->
+            if (state.selectedNodeId != nodeId) dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
+            dispatch(UiBuilderEditorEvent.HideQuickEditor)
+            inlineTextEdit = CanvasInlineTextEdit(nodeId, text)
           }
         },
-      sizing = reducer.sizing(state),
-      onResize = { nodeId, width, height ->
-        focusEditor()
-        dispatch(UiBuilderEditorEvent.ResizeNode(nodeId, width, height))
-      },
-      zoom = canvasZoom,
-      onZoomChanged = {
-        focusEditor()
-        canvasZoom = it
-      },
-      // Only while no other pane is showing the frame. The preview pane draws the design at its
-      // own frame and at every device it claims; the native pane draws it compiled. Either one is a
-      // better answer to "what does someone see on the device?" than a third copy inside the
-      // editing surface — which is what this companion is, and why a Wear screen was showing the
-      // same round frame three times across two panes.
-      frameCompanion = state.panes.none { it == EditorPane.Preview || it == EditorPane.Native },
-      contentAlignment = alignment,
-      modifier = modifier,
-    )
+        inlineTextEdit = inlineTextEdit,
+        onInlineTextDone = { text, focusMovedAway ->
+          val edit = inlineTextEdit
+          inlineTextEdit = null
+          if (edit != null && text != null && text != edit.text) {
+            dispatch(UiBuilderEditorEvent.CommitProperty(edit.nodeId, "text", text))
+          }
+          // Back to the editor's keys after Enter or Esc; a click away keeps what it clicked.
+          if (!focusMovedAway) focusEditor()
+        },
+        onTextInputFocusChanged = { textInputFocused = it },
+        hoverEditor =
+          if (state.selection.size != 1 || !state.quickEditorOpen) null
+          else {
+            { dragHandle ->
+              SelectionHoverEditor(
+                label = selectionLabel,
+                dragHandle = dragHandle,
+                onDismiss = { dispatch(UiBuilderEditorEvent.HideQuickEditor) },
+                // The same rule the panel opens on: what the node carries, which is what the export
+                // would write. A hovering card is the last place to list what a component *could*
+                // have.
+                fields =
+                  reducer.propertyFields(state).filter { field ->
+                    field.written ||
+                      field.required ||
+                      field.boundVariable != null ||
+                      field.error != null
+                  },
+                modifierFields = reducer.modifierFields(state),
+                sizing = reducer.sizing(state),
+                onResize = { width, height ->
+                  state.selectedNodeId?.let {
+                    dispatch(UiBuilderEditorEvent.ResizeNode(it, width, height))
+                  }
+                },
+                focusTarget = hoverFocusTarget,
+                onFocusHandled = { hoverFocusTarget = null },
+                onCommitProperty = { name, value ->
+                  state.selectedNodeId?.let {
+                    dispatch(UiBuilderEditorEvent.CommitProperty(it, name, value))
+                  }
+                },
+                onCommitModifier = { field, value ->
+                  state.selectedNodeId?.let {
+                    dispatch(
+                      UiBuilderEditorEvent.SetModifierValue(
+                        it,
+                        field.type,
+                        field.field,
+                        value,
+                        field.index,
+                      )
+                    )
+                  }
+                },
+                onTextInputFocusChanged = { textInputFocused = it },
+              )
+            }
+          },
+        sizing = reducer.sizing(state),
+        onResize = { nodeId, width, height ->
+          focusEditor()
+          dispatch(UiBuilderEditorEvent.ResizeNode(nodeId, width, height))
+        },
+        zoom = canvasZoom,
+        onZoomChanged = {
+          focusEditor()
+          canvasZoom = it
+        },
+        // Only while no other pane is showing the frame. The preview pane draws the design at its
+        // own frame and at every device it claims; the native pane draws it compiled. Either one
+        // is a better answer to "what does someone see on the device?" than a third copy inside
+        // the editing surface.
+        //
+        // And never for a Wear design, whose device view is the preview pane's to draw: the
+        // editing surface is the extent, and a round watch beside it is the same screen twice.
+        frameCompanion =
+          LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.WEAR.wireValue &&
+            state.panes.none { it == EditorPane.Preview || it == EditorPane.Native },
+        contentAlignment = alignment,
+        modifier = modifier,
+      )
+    }
   }
   // Cached against the document, because it is not cheap and depends on nothing else: it walks
   // every node and every property against the catalog, traverses the graph and looks for cycles.
@@ -1568,7 +1583,10 @@ fun UiBuilderEditor(
    */
   fun promotionTargetFor(piece: ReferencePiece): ParentSlot? {
     val componentId = piece.componentId ?: return null
-    val (pointX, pointY) = state.document.referencePieceCentrePx(piece, state.wearWidgetHostShape)
+    // The canvas's frame: the editing one wherever a pane shows the host shape, the chosen one
+    // where
+    // the canvas is all there is.
+    val (pointX, pointY) = state.document.referencePieceCentrePx(piece, canvasHostShape)
     return reducer.promotionTarget(
       state = state,
       componentId = componentId,
@@ -1594,7 +1612,7 @@ fun UiBuilderEditor(
   // than showing the frame the design used to have — a stale native render beside a live canvas is
   // the exact disagreement this pane exists to expose.
   // Keyed on the host shape as well, so switching the frame re-renders rather than leaving the
-  // pane showing the widget in the container the canvas has stopped drawing.
+  // pane showing the widget in the container that was chosen before.
   LaunchedEffect(nativeRequested, state.document.revision, state.wearWidgetHostShape) {
     if (!nativeRequested) return@LaunchedEffect
     nativePending = true
@@ -1944,6 +1962,7 @@ fun UiBuilderEditor(
         // A host drawing the toolbar and rails has taken the width they cost, and its panes are
         // resized by the person rather than by a phone, so it keeps the desktop layout.
         val compact = maxWidth < 840.dp && hostChrome == null
+        SideEffect { canvasIsOnlySurface = compact }
         // A host may put rendered output in its own view (for example IntelliJ's Preview tool
         // window). That surface owns no editor chrome: toolbars, navigator, inspector and status
         // stay with the visual editor instead of being duplicated around a read-only render.

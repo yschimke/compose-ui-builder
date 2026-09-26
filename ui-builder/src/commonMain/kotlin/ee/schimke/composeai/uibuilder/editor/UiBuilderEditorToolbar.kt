@@ -425,9 +425,13 @@ internal fun EditorToolbar(
         WorkspacePanesMenu(panes, availablePanes, previewSurfaces, nativeAvailable, dispatch)
       }
       // Beside the panes menu, because they are the two "what am I looking at" choices: which panes
-      // are open, and which host frame the design is drawn inside.
+      // are open, and which host frame the native render is drawn inside. Only while that pane is
+      // open: the editing surface always draws the editing frame, and the preview pane draws every
+      // shape at once, so the native render is the one view a single choice still steers.
       state.document.wearWidgetScaffoldSize()?.let { size ->
-        WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
+        if (EditorPane.Native in panes) {
+          WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
+        }
       }
       if (collaborators.isNotEmpty()) {
         Spacer(Modifier.width(6.dp))
