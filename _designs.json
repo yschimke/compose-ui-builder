@@ -1,0 +1,113 @@
+{
+  "schema": "compose-ui-builder-design-renders/v1",
+  "designs": [
+    {
+      "id": "google-calendar-tablet",
+      "file": "google-calendar-tablet.png",
+      "sha256": "011e1a6ad32d055b16b108f0f18d89db5fbf117b2478e86554d157116b3e07c8",
+      "bytes": 177979
+    },
+    {
+      "id": "google-gmail-tablet",
+      "file": "google-gmail-tablet.png",
+      "sha256": "29798d4262cc2d3f17f95825f6e089505e1b61277f17b08462d054741e0b695a",
+      "bytes": 418439
+    },
+    {
+      "id": "google-keep-tablet",
+      "file": "google-keep-tablet.png",
+      "sha256": "29e3540667c2e04b76da9a85188699094edb2240cd92a112ba1a212758d6b6b5",
+      "bytes": 218865
+    },
+    {
+      "id": "google-photos-tablet",
+      "file": "google-photos-tablet.png",
+      "sha256": "2715e8d350b8086f8665de76065ba02c167d6b05904ab4edbfd90be8731195fc",
+      "bytes": 122812
+    },
+    {
+      "id": "google-play-tablet",
+      "file": "google-play-tablet.png",
+      "sha256": "85179961d97ed05cf3db8c91a206a61f653c5546e1158cc52bfd500d647fb319",
+      "bytes": 196367
+    },
+    {
+      "id": "ui-builder-code-pane",
+      "file": "ui-builder-code-pane.png",
+      "sha256": "39634fb996f0693e51844dfee2829b9f877b285296ed6ea89e891e60ad446b36",
+      "bytes": 487496
+    },
+    {
+      "id": "ui-builder-insert-packs",
+      "file": "ui-builder-insert-packs.png",
+      "sha256": "8e590cd8651b9ca6cb1c7d3af3bf33b8533968e6a8f9dad6147002c4f73b258a",
+      "bytes": 223994
+    },
+    {
+      "id": "ui-builder-layers-issues",
+      "file": "ui-builder-layers-issues.png",
+      "sha256": "e763ea8acf97f25e75c83ff2fc466fb70ea2cc0f861713ef5e748d2416bf84b8",
+      "bytes": 351201
+    },
+    {
+      "id": "ui-builder-menus",
+      "file": "ui-builder-menus.png",
+      "sha256": "0b79ee937008cfe70d385328f557a176984d8bd619d13440a7003fc13be8955c",
+      "bytes": 217294
+    },
+    {
+      "id": "ui-builder-mobile",
+      "file": "ui-builder-mobile.png",
+      "sha256": "25e29d6eb320cb2f4701320534480702f6c60574f4d5a1da381a7f520964bae1",
+      "bytes": 100532
+    },
+    {
+      "id": "ui-builder-native-both",
+      "file": "ui-builder-native-both.png",
+      "sha256": "538782abd194a0e7577e7b55217747825b9b1409bb22108cbf1266f574fd565d",
+      "bytes": 196709
+    },
+    {
+      "id": "ui-builder-new-design-dialog",
+      "file": "ui-builder-new-design-dialog.png",
+      "sha256": "7648cb8f3c860ea881a4e5fe18a8aec5943b14afa735d92c59df61c20267a612",
+      "bytes": 106154
+    },
+    {
+      "id": "ui-builder-new-design-screen",
+      "file": "ui-builder-new-design-screen.png",
+      "sha256": "1805a2067cf642b6a35de9bcfde98b404eff82326a58ded471d25e89b5eeea5f",
+      "bytes": 102648
+    },
+    {
+      "id": "ui-builder-packs-dialog",
+      "file": "ui-builder-packs-dialog.png",
+      "sha256": "8c8cb82d6441aefc3e1e2e9774e99217145dcab330bf7d209c6361ab9fc6f5a2",
+      "bytes": 97761
+    },
+    {
+      "id": "ui-builder-screen-dock",
+      "file": "ui-builder-screen-dock.png",
+      "sha256": "3786399eb43adb44a9a5030c0f3c9b4b507d3fd9df0bd6ec59e0c4eeda4aa33b",
+      "bytes": 288067
+    },
+    {
+      "id": "ui-builder-shortcuts-dialog",
+      "file": "ui-builder-shortcuts-dialog.png",
+      "sha256": "f78a93ab04e7055d65d11351baedecbd863d74aab966f6c5781af155711e0625",
+      "bytes": 159022
+    },
+    {
+      "id": "ui-builder-talk-dock",
+      "file": "ui-builder-talk-dock.png",
+      "sha256": "d0865cb1dc6e885679a3ffb2da281b24999a46bdc3e260e3c4e9199b8831607e",
+      "bytes": 274228
+    },
+    {
+      "id": "ui-builder-theme-dock",
+      "file": "ui-builder-theme-dock.png",
+      "sha256": "cb8a85d0045487aafb8126e79a222f5ef4e307dd7f8c1e873ae0f0a8adc524be",
+      "bytes": 212063
+    }
+  ]
+}
