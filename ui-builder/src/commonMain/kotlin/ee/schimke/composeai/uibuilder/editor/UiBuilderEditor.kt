@@ -509,6 +509,12 @@ fun UiBuilderEditor(
    */
   onBrowseDesigns: (() -> Unit)? = null,
   /**
+   * Starts a new design of the reader's own from this one, as it is now, and opens it — or null
+   * where the host cannot. The way somebody who may only look at a design (a public one, or one
+   * shared read-only) takes it somewhere they can change it, and a quick branch for anyone else.
+   */
+  onForkDesign: (() -> Unit)? = null,
+  /**
    * Copies this design into the browser's own storage and opens it there, or null where it cannot.
    *
    * Null in every mode but a live server session: a design already kept in this browser has nowhere
@@ -896,6 +902,15 @@ fun UiBuilderEditor(
     inspectorOpen = true
     mobilePanel = MobileEditorPanel.Properties
   }
+  // The node whose floating card the author closed. The selection stays (something is always
+  // selected), so the card is hidden for that node until another is chosen or it is chosen again.
+  var hoverDismissedFor by remember { mutableStateOf<String?>(null) }
+  // Any route to a different node — canvas, layers, breadcrumbs, history, Issues — brings the card
+  // back; the one that re-chooses the same node is [selectNodeForEditing]'s.
+  LaunchedEffect(state.selectedNodeId) {
+    if (state.selectedNodeId != hoverDismissedFor) hoverDismissedFor = null
+  }
+
   /**
    * Selection is the beginning of editing, not a separate mode an author has to discover.
    *
@@ -905,6 +920,8 @@ fun UiBuilderEditor(
    * agreement.
    */
   fun selectNodeForEditing(nodeId: String) {
+    // Choosing a node, even the one already chosen, brings its card back after a dismiss.
+    hoverDismissedFor = null
     focusEditor()
     dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
     openProperties()
@@ -1325,6 +1342,7 @@ fun UiBuilderEditor(
         document = state.document,
         variants = previewPanes,
         modifier = modifier,
+        deviceRenderer = canvasRenderer,
       )
     }
   }
@@ -1394,11 +1412,12 @@ fun UiBuilderEditor(
       canvasRenderer = canvasRenderer,
       selectionMenu = selectionMenu,
       hoverEditor =
-        if (state.selection.size != 1) null
+        if (state.selection.size != 1 || state.selectedNodeId == hoverDismissedFor) null
         else {
           {
             SelectionHoverEditor(
               label = selectionLabel,
+              onDismiss = { hoverDismissedFor = state.selectedNodeId },
               // The same rule the panel opens on: what the node carries, which is what the export
               // would write. A hovering card is the last place to list what a component *could*
               // have.
@@ -1949,6 +1968,7 @@ fun UiBuilderEditor(
                     { showNewDesign = true }
                   } else null,
                 onBrowseDesigns = onBrowseDesigns,
+                onForkDesign = onForkDesign,
                 onReconnect = onReconnect,
                 onHelp = onHelp,
                 onCopyAiPrompt = onCopyAiPrompt,
@@ -1970,6 +1990,7 @@ fun UiBuilderEditor(
                     { showNewDesign = true }
                   } else null,
                 onBrowseDesigns = onBrowseDesigns,
+                onForkDesign = onForkDesign,
                 onReconnect = onReconnect,
                 onHelp = onHelp,
                 onCopyAiPrompt = onCopyAiPrompt,

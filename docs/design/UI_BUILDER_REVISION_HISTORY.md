@@ -162,17 +162,20 @@ the same answer.
 
 ## 6. Open questions
 
-- **Restore-to-revision.** The strip can show revision 12 and cannot make the design be revision 12.
-  The honest implementation is a *forward* command — a batch that writes the differences the diff
-  already computes — rather than a rewind of the document, because a shared design cannot be moved
-  backwards under a collaborator. The diff is the ingredient; the command is not built.
+- **Restore-to-revision — built on the server, not yet in the strip.** The service now answers
+  `ListRevisions` and `RestoreRevision` (compose-ui-builder's runtime), and the server's
+  `/ui-builder/{id}/history` page shows every retained revision as a picture with **Open** (the
+  pinned read-only view), **Restore** and **Fork**. A restore is *forward*: it commits the retained
+  document as a new revision through the same hash-bound whole-document replacement a catalog
+  upgrade uses, so a stale restore is refused and collaborators resync from a snapshot rather than
+  being moved backwards. Fork makes a new design, owned by whoever forks, from any retained
+  revision. The editor's strip still reaches only the session's own floor; pointing its peek at a
+  "Restore this" is the remaining step.
+- **Server-side history.** Answered by the above: the service keeps up to 128 whole revisions
+  within a 2 MiB budget per design, and the history page draws the newest 48.
 - **The peek on a phone.** The strip is composed in the desktop workspace only. The compact layout's
   bottom docks are the place for it, and the review pane needs a different shape there — two
   side-by-side frames at 400 dp is not a comparison anybody can read.
-- **Server-side history.** Reaching below the client's floor means asking the server for the
-  document at a revision. `get_revision_diff` already returns durable events after a cursor, so the
-  data is there; what is missing is a rewind on the service side and a decision about how much
-  history a design keeps.
 - **A link to a revision.** See [§2](#2-how-it-fits-with-the-versions-view) — deliberately absent for
   now, and the pinned-revision link is the existing answer.
 - **Publishing the strip.** A design whose renders reach the delivery branch has both timelines. The

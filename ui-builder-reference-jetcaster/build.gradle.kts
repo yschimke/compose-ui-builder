@@ -35,9 +35,14 @@ kotlin {
 tasks.register<Sync>("wasmFrontendDist") {
   description = "Assemble the independent Jetcaster Discover Compose/Wasm reference."
   group = "distribution"
-  dependsOn("wasmJsDevelopmentExecutableCompileSync", "processSkikoRuntimeForKWasm")
+  dependsOn("compileProductionExecutableKotlinWasmJsOptimize", "processSkikoRuntimeForKWasm")
   dependsOn("wasmJsProcessResources")
-  from(layout.buildDirectory.dir("compileSync/wasmJs/main/developmentExecutable/kotlin"))
+  // The production executable after Binaryen, as `:ui-builder`'s `wasmFrontendDist` ships: the
+  // development one is several times larger and slower to compile in the browser. `optimized/`, not
+  // `kotlin/`, which is the production IR before Binaryen has run. Source maps stay behind.
+  from(layout.buildDirectory.dir("compileSync/wasmJs/main/productionExecutable/optimized")) {
+    exclude("*.map")
+  }
   from(layout.buildDirectory.dir("compose/skiko-runtime-processed-wasmjs")) {
     include("skiko.mjs", "skiko.wasm")
   }

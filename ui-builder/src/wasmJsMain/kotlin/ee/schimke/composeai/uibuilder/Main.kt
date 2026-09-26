@@ -9,6 +9,9 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.LocalAbsoluteTonalElevation
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
@@ -39,6 +43,7 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderHttpResult
 import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolHttpClient
 import ee.schimke.composeai.uibuilder.client.canonicalDocumentHash
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
+import ee.schimke.composeai.uibuilder.editor.EditorOverlays
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasInspection
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCanvasSurface
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
@@ -115,6 +120,9 @@ private external fun suppressBrowserContextMenu()
 fun main() {
   val rendererRuntimeId = sandboxRendererRuntimeId()
   if (rendererRuntimeId.isNotEmpty()) {
+    // The sandboxed renderer draws into the page through its own runtime, not Compose, and says
+    // nothing when it is done; the boot screen would sit on top of it.
+    dismissBootScreen()
     MainScope().launch {
       val fixture =
         Json.parseToJsonElement(fetchText("jetcaster-discover-operations-v1.json")).jsonObject
@@ -143,14 +151,20 @@ fun main() {
     // inside a coroutine: the page is blank, and the reason reaches only the console. Say it where
     // a person is looking instead — a blank editor with no explanation is what sent somebody
     // hunting through `chrome://gpu` to find out why their design had "disappeared".
+    dismissBootScreen()
     showWebGlRequiredMessage()
     return
   }
+  // One registry for the page: the canvas asks it for the family a design names, the typeface
+  // picker for the ones it lists, and a family either loads is then there for both.
+  val fonts = browserFontRegistry()
   ComposeViewport(viewportContainerId = "composeApp") {
-    when {
-      hostBridgeEnabled() -> HostBridgeApp()
-      liveSessionEnabled() -> LiveSessionApp()
-      else -> VisualFixtureApp(captureMode())
+    ProvideUiBuilderFonts(fonts) {
+      when {
+        hostBridgeEnabled() -> HostBridgeApp()
+        liveSessionEnabled() -> LiveSessionApp()
+        else -> VisualFixtureApp(captureMode())
+      }
     }
   }
 }
@@ -241,6 +255,16 @@ internal fun CatalogRuntimeCanvas(
   // Compose's window coordinates are canvas pixels and the host `div` is placed in CSS pixels. On
   // a display whose `devicePixelRatio` is not 1 the two differ by exactly this density.
   val pixelsPerCssPixel = LocalDensity.current.density
+  // Read in composition so opening or closing an editor menu recomposes this and re-stacks the
+  // surface: a device frame sits above the canvas to take the pointer, which would bury the menu.
+  val editorOverlayOpen = EditorOverlays.anyOpen
+  // What shows wherever the design leaves the frame uncovered: a widget's rounded corners, a round
+  // host shape. The frame and the runtime are transparent there, and the hole punched for them
+  // reaches the page itself — white — so the host paints the colour of the panel it sits in.
+  val backdropColor =
+    MaterialTheme.colorScheme
+      .surfaceColorAtElevation(LocalAbsoluteTonalElevation.current)
+      .toCssColor()
   LaunchedEffect(surfaceId, runtimeId, document.revision) {
     lastInspection = ""
     while (lastInspection.isEmpty()) {
@@ -289,6 +313,8 @@ internal fun CatalogRuntimeCanvas(
       mode = surface.mode.name.lowercase().replace('_', '-'),
       selectedNodeId = selectedNodeId.orEmpty(),
       selectionEnabled = selectionEnabled,
+      editorOverlayOpen = editorOverlayOpen,
+      backdropColor = backdropColor,
     )
   }
   Box(
@@ -437,8 +463,8 @@ private fun positionCatalogRuntimeSurface(
       const controller = host.__uiBuilderCatalogRuntime;
       if (controller?.frame) {
         controller.frame.style.transform = 'scale(' +
-          (Math.max(0, width) / controller.nativeWidth) + ',' +
-          (Math.max(0, height) / controller.nativeHeight) + ')';
+          (Math.max(0, width) / controller.frameWidth) + ',' +
+          (Math.max(0, height) / controller.frameHeight) + ')';
       }
     })()"""
   )
@@ -453,11 +479,21 @@ private fun updateCatalogRuntimeSurface(
   mode: String,
   selectedNodeId: String,
   selectionEnabled: Boolean,
+  editorOverlayOpen: Boolean,
+  backdropColor: String,
 ): Unit =
   js(
     """(function () {
       const host = document.getElementById(surfaceId);
       if (!host) return;
+      // A device frame is interactive, so it sits above the canvas (z 20) and takes the pointer —
+      // except while an editor menu or dialog is open, which Compose draws inside that canvas.
+      // Then it drops beneath (z 0, no pointer): the hole the canvas punched keeps it visible, and
+      // the menu is painted over it. Applied before the early returns so a re-stack alone works.
+      const raised = mode === 'device' && !editorOverlayOpen;
+      host.style.pointerEvents = raised ? 'auto' : 'none';
+      host.style.zIndex = raised ? '20' : '0';
+      host.style.background = backdropColor;
       if (!runtimeId || !/^[A-Za-z0-9._-]+$/.test(runtimeId) ||
           runtimeId === 'latest' || runtimeId === 'current') {
         host.textContent = 'This design has no compatible pinned catalog runtime.';
@@ -466,13 +502,19 @@ private fun updateCatalogRuntimeSurface(
       const render = {
         documentJson, widthDp, heightDp, density, mode, selectedNodeId, selectionEnabled
       };
-      const compositionKey = documentJson + '|' + widthDp + '|' + heightDp + '|' + density + '|' + mode;
-      host.style.pointerEvents = mode === 'device' ? 'auto' : 'none';
-      host.style.zIndex = mode === 'device' ? '20' : '0';
+      // What the frame is BUILT for: its native pixel size and surface mode are fixed when it is
+      // created. The document is not part of it. An edit used to change this key, so every edit
+      // tore the frame down and cold-booted the catalog's whole Wasm runtime again -- a blank pane
+      // for as long as that took -- when a live frame takes the new document in one message.
+      // The device pixel ratio too: the frame's CSS size is derived from it, and browser zoom
+      // changes it.
+      const pixelRatio = globalThis.devicePixelRatio || 1;
+      const compositionKey = widthDp + '|' + heightDp + '|' + density + '|' + mode + '|' + pixelRatio;
       let controller = host.__uiBuilderCatalogRuntime;
       if (controller && !controller.disposed && controller.runtimeId === runtimeId &&
           controller.compositionKey === compositionKey) {
         controller.render = render;
+        controller.renderLatest();
         controller.drawOverlay();
         return;
       }
@@ -484,10 +526,16 @@ private fun updateCatalogRuntimeSurface(
       frame.sandbox = 'allow-scripts';
       const nativeWidth = Math.max(1, widthDp * density);
       const nativeHeight = Math.max(1, heightDp * density);
-      frame.style.cssText = 'position:absolute;top:0;left:0;width:' + nativeWidth +
-        'px;height:' + nativeHeight + 'px;border:0;background:transparent;transform-origin:top left;' +
-        'transform:scale(' + (host.clientWidth / nativeWidth) + ',' +
-        (host.clientHeight / nativeHeight) + ')';
+      // The runtime lays out in DEVICE pixels, like any Compose canvas: a frame whose CSS size was
+      // the native size drew the design into 1/devicePixelRatio of itself, the top-left 38% on a
+      // 2.625x phone and white beyond. Sized at native / ratio CSS pixels, its device pixels are
+      // the native ones, which is also what its inspection bounds are reported in.
+      const frameWidth = nativeWidth / pixelRatio;
+      const frameHeight = nativeHeight / pixelRatio;
+      frame.style.cssText = 'position:absolute;top:0;left:0;width:' + frameWidth +
+        'px;height:' + frameHeight + 'px;border:0;background:transparent;transform-origin:top left;' +
+        'transform:scale(' + (host.clientWidth / frameWidth) + ',' +
+        (host.clientHeight / frameHeight) + ')';
       const overlay = document.createElement('div');
       overlay.setAttribute('aria-label', 'Editor selection overlay');
       overlay.style.cssText = 'position:absolute;inset:0;z-index:1;overflow:hidden';
@@ -497,19 +545,25 @@ private fun updateCatalogRuntimeSurface(
       let initializing = null;
       let manifest = null;
       let lastRenderKey = '';
+      let latestRenderRequestId = null;
       const pending = new Map();
       controller = {
         runtimeId,
         compositionKey,
         frame,
-        nativeWidth,
-        nativeHeight,
+        frameWidth,
+        frameHeight,
         render,
         disposed: false,
         request(type, payload) {
           if (!manifest || !frame.contentWindow) return;
           const requestId = surfaceId + '-' + (++sequence);
           const body = type === 'renderDocument' ? payload.document : null;
+          // A newer render replaces one still waiting: the frame may conflate them and answer only
+          // the last, and a long-lived frame must not keep every superseded request.
+          if (type === 'renderDocument') {
+            for (const [id, entry] of pending) if (entry.type === 'renderDocument') pending.delete(id);
+          }
           pending.set(requestId, {
             type,
             documentId: body?.id,
@@ -523,6 +577,7 @@ private fun updateCatalogRuntimeSurface(
             type,
             payload: payload || {},
           }), '*');
+          return requestId;
         },
         renderLatest() {
           if (!initialized || this.disposed) return;
@@ -544,7 +599,7 @@ private fun updateCatalogRuntimeSurface(
               surfaceId,
             },
           };
-          this.request('renderDocument', payload);
+          latestRenderRequestId = this.request('renderDocument', payload);
         },
         drawOverlay() {
           overlay.replaceChildren();
@@ -611,6 +666,9 @@ private fun updateCatalogRuntimeSurface(
           if (initializing !== null) clearInterval(initializing);
           controller.renderLatest();
         } else if (message.type === 'rendered') {
+          // Edits now reach one live frame back to back; an answer for a revision already replaced
+          // must not put its selection bounds over the newer drawing.
+          if (message.requestId !== latestRenderRequestId) return;
           host.__uiBuilderInspection = message.payload.inspection;
           host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
           controller.drawOverlay();
@@ -1433,7 +1491,12 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
               id = "blank",
               label = "Blank screen",
               supportingText = "A Material scaffold with an empty content container.",
-            )
+            ),
+            UiBuilderNewDesignTemplate(
+              id = UiBuilderNewDesignSeed.HELLO_TEMPLATE,
+              label = "Hello sample",
+              supportingText = "The same scaffold with a headline and a line of text to edit.",
+            ),
           ),
       )
     "remote-m3" ->
@@ -1945,8 +2008,40 @@ internal fun browserNowMillis(): Long = browserNow().toLong()
 
 @JsFun("() => Date.now()") private external fun browserNow(): Double
 
+/**
+ * The page has settled: the harness's signal (`data-ui-builder-ready`), and the moment the boot
+ * screen gives way to the editor.
+ */
+internal fun markReady() {
+  markReadyAttribute()
+  dismissBootScreen()
+}
+
 @JsFun("() => document.documentElement.setAttribute('data-ui-builder-ready', 'true')")
-internal external fun markReady()
+private external fun markReadyAttribute()
+
+/**
+ * Takes away the boot screen `index.html` draws before any script runs.
+ *
+ * Removed here rather than by `ui-builder-boot.js`, so a host whose CSP refuses that script still
+ * gets its editor back. Idempotent, and a no-op for a shell that has no boot screen.
+ *
+ * At once, not faded out. [markReady] calls this in the same task that sets the ready attribute, so
+ * nothing that waits for ready can ever see the screen: compose-preview-server's visual harness
+ * screenshots two frames after it, and a 200 ms fade put a half-transparent boot screen in both of
+ * its captures — at different opacities — until the comparison failed on every run.
+ */
+@JsFun(
+  """() => {
+  globalThis.composeUiBuilderBoot?.done();
+  document.getElementById('ui-builder-boot')?.remove();
+}"""
+)
+internal external fun dismissBootScreen()
+
+/** What the boot screen says the editor is doing, until [dismissBootScreen]. */
+@JsFun("(text) => globalThis.composeUiBuilderBoot?.phase(text)")
+internal external fun bootPhase(text: String)
 
 @JsFun(
   """(kind, revision, sequence) => {
@@ -2466,3 +2561,10 @@ internal const val LOCAL_REFERENCE_UNAVAILABLE =
 
 internal const val LOCAL_NATIVE_RENDER_UNAVAILABLE =
   "A native render is drawn by the server from the stored design, and this design is kept in this browser."
+
+/** `#rrggbbaa`, the CSS form of a Compose colour. */
+private fun Color.toCssColor(): String {
+  val argb = toArgb()
+  val rgba = (argb shl 8) or ((argb ushr 24) and 0xFF)
+  return "#" + rgba.toUInt().toString(16).padStart(8, '0')
+}

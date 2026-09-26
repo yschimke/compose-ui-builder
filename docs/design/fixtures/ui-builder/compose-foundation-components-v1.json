@@ -346,7 +346,7 @@
         },
         {
           "name": "content",
-          "type": "@Composable () -> Unit",
+          "type": "@Composable (PaddingValues) -> Unit",
           "hasDefault": false,
           "composableSlot": true
         }

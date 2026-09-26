@@ -25,6 +25,9 @@ import kotlin.concurrent.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 public data class UiBuilderCatalogIssue(
   val code: String,
@@ -757,6 +760,8 @@ public class PersistentUiBuilderService(
       is UiBuilderServiceRequest.ExportDesign -> designId
       is UiBuilderServiceRequest.RenameDesign -> designId
       is UiBuilderServiceRequest.DeleteDesign -> designId
+      is UiBuilderServiceRequest.ListRevisions -> designId
+      is UiBuilderServiceRequest.RestoreRevision -> designId
       UiBuilderServiceRequest.ListCatalogs,
       is UiBuilderServiceRequest.ExportDocument,
       is UiBuilderServiceRequest.CreateDesign,
@@ -1084,7 +1089,116 @@ public class PersistentUiBuilderService(
         error("export is executed outside the service lock")
       is UiBuilderServiceRequest.RenameDesign -> rename(call.actor, request)
       is UiBuilderServiceRequest.DeleteDesign -> delete(call.actor, request.designId)
+      is UiBuilderServiceRequest.ListRevisions -> revisions(call.actor, request.designId)
+      is UiBuilderServiceRequest.RestoreRevision -> restore(call.actor, request)
     }
+
+  /** See [UiBuilderServiceRequest.ListRevisions]. */
+  private fun revisions(actor: AuthenticatedUiBuilderActor, designId: String): LockedExecution {
+    val design = persisted.designs[designId] ?: return serviceError(notFound(designId))
+    if (!design.allows(actor, DesignAccessActionV1.READ)) {
+      return serviceError(forbidden("read", designId))
+    }
+    // The commit audit first, the operation log over it: an asset upload clears the log but keeps
+    // the revisions, and records its author only in the audit, so reading the log alone would
+    // name nobody for every revision at or before the upload.
+    val authors =
+      design.audit
+        .filter { it.kind == AuditKindV1.COMMIT }
+        .associate { it.sequence to it.actorId } +
+        design.history.associate { it.outcome.sequence to it.submission.actorId() }
+    return LockedExecution(
+      UiBuilderServiceResponse.Revisions(
+        designId,
+        design.document.revision,
+        design.revisionSnapshots
+          .sortedByDescending { it.document.revision }
+          .map { state ->
+            UiBuilderRevisionSummary(
+              revision = state.document.revision,
+              sequence = state.sequence,
+              updatedAtEpochMillis = state.document.updatedAtEpochMillis,
+              actorId = authors[state.sequence],
+            )
+          },
+      )
+    )
+  }
+
+  /**
+   * See [UiBuilderServiceRequest.RestoreRevision]. Built as the wire operation it is recorded as
+   * and handed to [apply], so it shares everything a submission gets there: the write check,
+   * idempotency on [UiBuilderServiceRequest.RestoreRevision.operationId], the rate limit, quotas,
+   * the history record and the broadcast to subscribers.
+   */
+  private fun restore(
+    actor: AuthenticatedUiBuilderActor,
+    request: UiBuilderServiceRequest.RestoreRevision,
+  ): LockedExecution {
+    val design =
+      persisted.designs[request.designId] ?: return serviceError(notFound(request.designId))
+    if (!design.allows(actor, DesignAccessActionV1.READ)) {
+      return serviceError(notFound(request.designId))
+    }
+    // A retry of a restore that already committed: the mutation below is derived from the current
+    // document, which that restore changed, so rebuilding it would fingerprint differently and be
+    // refused as a reused operation id. Answer with the recorded outcome instead, as [apply] does
+    // for any replayed submission — but only to the actor that may write, and only when what was
+    // recorded under this id is this actor's restore of this revision. Anything else reusing the
+    // id is refused exactly as [apply] refuses it.
+    design.operationOutcomes[request.operationId]?.let { prior ->
+      if (!design.allows(actor, DesignAccessActionV1.WRITE)) {
+        return serviceError(forbidden("write", request.designId))
+      }
+      if (!prior.isRestoreOf(request.revision, actor)) {
+        return LockedExecution(
+          UiBuilderServiceResponse.OperationOutcome(
+            rejected(
+              request.operationId,
+              design.document.revision,
+              RejectionCodeV1.OPERATION_ID_REUSED,
+              "operation id was already used by a different submission",
+            )
+          )
+        )
+      }
+      val outcome =
+        when (val original = prior.outcome) {
+          is AcceptedOutcomeV1 -> original.copy(idempotentReplay = true)
+          is RejectedOutcomeV1 -> original
+        }
+      return LockedExecution(UiBuilderServiceResponse.OperationOutcome(outcome))
+    }
+    val target =
+      design.revisionSnapshots.firstOrNull { it.document.revision == request.revision }?.document
+        ?: return serviceError(
+          UiBuilderServiceError(
+            code = ServiceErrorCodeV1.SNAPSHOT_REQUIRED,
+            message = "revision ${request.revision} is no longer retained for ${request.designId}",
+            currentRevision = design.document.revision,
+            retainedFromSequence = design.retainedSnapshotFromSequence(),
+          )
+        )
+    return apply(
+      actor,
+      UiBuilderSubmission.Batch(
+        designId = request.designId,
+        operationId = request.operationId,
+        clientId = RESTORE_CLIENT_ID,
+        baseRevision = request.baseRevision,
+        operations =
+          listOf(
+            CatalogUpgradeMutationV1(
+              sourceCatalogPin = design.document.catalogPin,
+              targetCatalogPin = target.catalogPin,
+              sourceDocumentHash = documentHash(design.document),
+              targetDocumentHash = documentHash(target),
+              previewDigest = RESTORE_DIGEST_PREFIX + request.revision,
+            )
+          ),
+      ),
+    )
+  }
 
   /**
    * See [UiBuilderServiceRequest.RenameDesign] for why this is not a mutation. The current
@@ -1286,7 +1400,9 @@ public class PersistentUiBuilderService(
     // walking a thousand designs ten pages at a time must not pay for all of them ten times.
     val candidates = buildList {
       persisted.designs.values
-        .filter { it.allows(actor, DesignAccessActionV1.READ) }
+        // Personally: a design that is readable only because it is public is not one of this
+        // actor's designs, and listing it would list every public design to everyone.
+        .filter { it.access.allowsPersonally(actor, DesignAccessActionV1.READ) }
         .forEach { add(it.document.id to { it.listItem(actor) }) }
       // A design the store could not read is listed too, when its quarantine knows who owns it:
       // a design the owner cannot see is one they cannot delete, and the file manager is where
@@ -1296,7 +1412,7 @@ public class PersistentUiBuilderService(
       quarantinedDesigns.forEach { (designId, record) ->
         val header = record.header ?: return@forEach
         if (designId != record.designId || designId in persisted.designs) return@forEach
-        if (!header.access.allows(actor, DesignAccessActionV1.READ)) return@forEach
+        if (!header.access.allowsPersonally(actor, DesignAccessActionV1.READ)) return@forEach
         add(designId to { header.quarantinedListItem(designId, actor) })
       }
     }
@@ -1558,6 +1674,18 @@ public class PersistentUiBuilderService(
             return serviceError(
               ServiceErrorCodeV1.BAD_REQUEST,
               "ownership changes require transferOwnership",
+            )
+          }
+          // Everyone may be let in to look, never to change: a public design that anyone could
+          // write would be a design with no owner in any sense that matters.
+          if (
+            target == UiBuilderPublicAccess.ANYONE_ACTOR_ID &&
+              (mutation.role != DesignAccessRoleV1.VIEWER ||
+                mutation.allowedActions.any { it !in UiBuilderPublicAccess.PUBLIC_ACTIONS })
+          ) {
+            return serviceError(
+              ServiceErrorCodeV1.BAD_REQUEST,
+              "a public design may only be shared as a viewer that reads and exports",
             )
           }
           val grant =
@@ -2313,6 +2441,9 @@ public class PersistentUiBuilderService(
         "a catalog upgrade requires the current revision",
       )
     }
+    if (mutation.previewDigest.startsWith(RESTORE_DIGEST_PREFIX)) {
+      return reduceRestore(design, actor, command, mutation)
+    }
     if (mutation.sourceCatalogPin != source.catalogPin) {
       return reject("catalog upgrade source pin does not match the stored design")
     }
@@ -2378,6 +2509,75 @@ public class PersistentUiBuilderService(
       ),
       emptyList(),
       targetOperationId = compensationTarget,
+      targetUndoOperationId = null,
+    )
+  }
+
+  /**
+   * A restore, recorded as the whole-document replacement it is: [RESTORE_DIGEST_PREFIX] plus the
+   * revision in the digest, and both hashes binding it to exactly the documents it replaces and
+   * brings back. Nothing is taken on trust from the wire — the retained revision is looked up again
+   * here and its hash must match — so the only way to commit one is to name a revision this design
+   * really had.
+   */
+  private fun reduceRestore(
+    design: PersistedDesignV1,
+    actor: AuthenticatedUiBuilderActor,
+    command: DesignCommandV1,
+    mutation: CatalogUpgradeMutationV1,
+  ): ReductionResult {
+    val source = design.document
+    fun reject(message: String) =
+      rejectedReduction(design, command.operationId, RejectionCodeV1.INVALID_COMMAND, message)
+    val revision =
+      mutation.previewDigest.removePrefix(RESTORE_DIGEST_PREFIX).toLongOrNull()
+        ?: return reject("restore names no revision")
+    val retained =
+      design.revisionSnapshots.firstOrNull { it.document.revision == revision }?.document
+        ?: return reject("revision $revision is no longer retained")
+    if (
+      mutation.sourceDocumentHash != documentHash(source) ||
+        mutation.targetDocumentHash != documentHash(retained) ||
+        mutation.sourceCatalogPin != source.catalogPin ||
+        mutation.targetCatalogPin != retained.catalogPin ||
+        mutation.compensatesCatalogUpgradeOperationId != null
+    ) {
+      return reject("restore does not match the design it would replace")
+    }
+    if (revision == source.revision) return reject("revision $revision is already current")
+    catalogs.resolve(retained.catalogPin)
+      ?: return rejectedReduction(
+        design,
+        command.operationId,
+        RejectionCodeV1.INVALID_DOCUMENT,
+        "revision $revision's catalog is not served by this runtime",
+      )
+    // Content from the past, identity and clock from now: [accept] stamps the new revision.
+    val restored =
+      retained.copy(
+        title = source.title,
+        revision = source.revision,
+        createdAtEpochMillis = source.createdAtEpochMillis,
+        updatedAtEpochMillis = source.updatedAtEpochMillis,
+      )
+    return accept(
+      design,
+      actor,
+      command,
+      // Positions are derived afresh, as a created design's are: the retained document is whole,
+      // and the positions kept for the current one describe nodes that may no longer exist. A node
+      // coming back is no longer a tombstone.
+      WorkingDesign(restored, design.tombstones - restored.nodes.keys, derivePositions(restored)),
+      listOf(
+        CatalogUpgradeChangeRecordV1(
+          sourceCatalogPin = mutation.sourceCatalogPin,
+          targetCatalogPin = mutation.targetCatalogPin,
+          sourceDocumentHash = mutation.sourceDocumentHash,
+          targetDocumentHash = mutation.targetDocumentHash,
+        )
+      ),
+      emptyList(),
+      targetOperationId = null,
       targetUndoOperationId = null,
     )
   }
@@ -3816,6 +4016,39 @@ private fun conservativeDecodedBase64Bytes(encoded: String): Long {
     }
   return completeGroups.toLong() * 3 + remainderBytes - padding
 }
+
+/**
+ * Whether this recorded submission is [actor]'s restore of [revision] — the only record a
+ * [UiBuilderServiceRequest.RestoreRevision] retry may replay. Read off the fingerprint, which is
+ * the canonical wire command, so it needs nothing beyond what the record already keeps.
+ */
+private fun OperationOutcomeRecordV1.isRestoreOf(
+  revision: Long,
+  actor: AuthenticatedUiBuilderActor,
+): Boolean = runCatching {
+  val command = Json.parseToJsonElement(fingerprint).jsonObject
+  val digest =
+    command["operations"]
+      ?.jsonArray
+      ?.singleOrNull()
+      ?.jsonObject
+      ?.get("previewDigest")
+      ?.jsonPrimitive
+      ?.content
+  command["actorId"]?.jsonPrimitive?.content == actor.actorId &&
+    command["clientId"]?.jsonPrimitive?.content == RESTORE_CLIENT_ID &&
+    digest == RESTORE_DIGEST_PREFIX + revision
+}
+  .getOrDefault(false)
+
+/** The client id a restore is recorded under; nothing else submits as it. */
+private const val RESTORE_CLIENT_ID = "history-restore"
+
+/**
+ * Marks a whole-document replacement as a restore of the revision that follows it, rather than a
+ * previewed catalog upgrade; see `reduceRestore`.
+ */
+private const val RESTORE_DIGEST_PREFIX = "restore-revision:"
 
 private data class WorkingDesign(
   val document: DesignDocumentV1,

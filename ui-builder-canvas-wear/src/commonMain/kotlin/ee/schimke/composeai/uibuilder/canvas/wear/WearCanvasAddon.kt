@@ -214,7 +214,8 @@ private val WEAR_CANVAS_ADAPTERS: CanvasAdapterRegistry = canvasAdapterRegistry 
       frame = frame,
       screenWidthDp = document.wearScreenWidthDp(frame),
       edgeButton = { next -> Slot("edgeButton", next) },
-      hasEdgeButton = has("edgeButton"),
+      edgeButtonSize =
+        node.slots["edgeButton"]?.firstOrNull()?.let { document.nodes[it]?.string("size") ?: "" },
     ) { next ->
       Slot("content", next)
     }

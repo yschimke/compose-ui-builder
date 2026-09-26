@@ -22,6 +22,16 @@ val embedComponentRecord =
     )
   }
 
+val embedReleaseNotes =
+  tasks.register<EmbedReleaseNotes>("embedReleaseNotes") {
+    changelog.set(rootProject.file("CHANGELOG.md"))
+    output.set(
+      layout.buildDirectory.file(
+        "generated/releaseNotes/ee/schimke/composeai/uibuilder/editor/EmbeddedReleaseNotes.kt"
+      )
+    )
+  }
+
 val ktfmtCli = configurations.create("ktfmtCli")
 
 dependencies { ktfmtCli(variantOf(libs.ktfmt.cli) { classifier("with-dependencies") }) }
@@ -68,6 +78,7 @@ kotlin {
       kotlin.srcDir(
         embedComponentRecord.map { layout.buildDirectory.dir("generated/componentRecord") }
       )
+      kotlin.srcDir(embedReleaseNotes.map { layout.buildDirectory.dir("generated/releaseNotes") })
     }
     commonMain.dependencies {
       @Suppress("DEPRECATION") implementation(compose.runtime)
@@ -375,17 +386,43 @@ tasks.register<CheckWindowSidecarVersion>("checkWindowSidecarVersion") {
 
 tasks.named("check") { dependsOn("checkWindowSidecarVersion") }
 
+// The PRODUCTION executable, after Binaryen: dead code eliminated, optimised, no debug names. This
+// is what a browser downloads and compiles before it can draw anything. The development executable
+// it replaced was a 74 MB `uiBuilder.wasm` (13.3 MB gzipped); this one is 28.8 MB (5.9 MB), and
+// every host of this archive — compose-preview-server, the VS Code webview — pays that difference
+// on each cold open. `optimized/`, not the sibling `kotlin/`: that one is the production IR before
+// Binaryen has run, and still 61 MB. The development executable is still what
+// `wasmJsBrowserDevelopmentRun` serves for local work.
+val wasmExecutableDir =
+  layout.buildDirectory.dir("compileSync/wasmJs/main/productionExecutable/optimized")
+val skikoRuntimeDir = layout.buildDirectory.dir("compose/skiko-runtime-processed-wasmjs")
+
 tasks.register<Sync>("wasmFrontendDist") {
   description = "Assemble the standalone Compose UI builder Wasm fixture."
   group = "distribution"
-  dependsOn("wasmJsDevelopmentExecutableCompileSync", "processSkikoRuntimeForKWasm")
+  dependsOn("compileProductionExecutableKotlinWasmJsOptimize", "processSkikoRuntimeForKWasm")
   dependsOn("wasmJsProcessResources")
-  from(layout.buildDirectory.dir("compileSync/wasmJs/main/developmentExecutable/kotlin"))
-  from(layout.buildDirectory.dir("compose/skiko-runtime-processed-wasmjs")) {
-    include("skiko.mjs", "skiko.wasm")
+  from(wasmExecutableDir) {
+    // Source maps point at sources nobody serving the archive has; they are dead weight in it.
+    exclude("*.map")
   }
+  from(skikoRuntimeDir) { include("skiko.mjs", "skiko.wasm") }
   from(layout.buildDirectory.dir("kotlin-multiplatform-resources/aggregated-resources/wasmJs"))
   from(layout.projectDirectory.dir("src/wasmJsMain/resources")) { include("index.html") }
+  // The boot screen's progress bar counts decoded Wasm bytes, which only the build knows ahead of
+  // time: behind a compressing proxy `Content-Length` is the compressed size, or absent.
+  val wasmFiles =
+    listOf(
+      wasmExecutableDir.get().file("uiBuilder.wasm").asFile,
+      skikoRuntimeDir.get().file("skiko.wasm").asFile,
+    )
+  from(layout.projectDirectory.dir("src/wasmJsMain/resources")) {
+    include("ui-builder-boot.js")
+    filter { line ->
+      if ("@UI_BUILDER_WASM_BYTES@" !in line) line
+      else line.replace("@UI_BUILDER_WASM_BYTES@", wasmFiles.sumOf { it.length() }.toString())
+    }
+  }
   from(rootProject.layout.projectDirectory.dir("assets/js-joda")) { include("js-joda.esm.js") }
   from(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder")) {
     include(

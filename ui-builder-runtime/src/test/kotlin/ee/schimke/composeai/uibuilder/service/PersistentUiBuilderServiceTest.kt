@@ -173,6 +173,248 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `a public design opens for anyone, read-only, and is listed only to its own people`() {
+    val service = service()
+    create(service)
+    val stranger = AuthenticatedUiBuilderActor("anonymous")
+
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(execute(service, stranger, UiBuilderServiceRequest.OpenDesign("design"))).code,
+      "private is still the default",
+    )
+
+    // Anyone may be let in to look — never to change.
+    assertEquals(
+      ServiceErrorCodeV1.BAD_REQUEST,
+      error(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.UpdateDesignAccess(
+              "design",
+              0,
+              listOf(
+                GrantActorAccessMutationV1(
+                  UiBuilderPublicAccess.ANYONE_ACTOR_ID,
+                  DesignAccessRoleV1.EDITOR,
+                  DesignAccessActionV1.entries,
+                )
+              ),
+            ),
+          )
+        )
+        .code,
+    )
+    assertIs<UiBuilderServiceResponse.DesignAccess>(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.UpdateDesignAccess(
+          "design",
+          0,
+          listOf(
+            GrantActorAccessMutationV1(
+              UiBuilderPublicAccess.ANYONE_ACTOR_ID,
+              DesignAccessRoleV1.VIEWER,
+              UiBuilderPublicAccess.PUBLIC_ACTIONS,
+            )
+          ),
+        ),
+      )
+    )
+
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, stranger, UiBuilderServiceRequest.OpenDesign("design"))
+    )
+    assertEquals(
+      UiBuilderPublicAccess.PUBLIC_ACTIONS,
+      assertIs<UiBuilderServiceResponse.DesignActions>(
+          execute(service, stranger, UiBuilderServiceRequest.GetDesignActions("design"))
+        )
+        .actions,
+    )
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(
+          execute(
+            service,
+            stranger,
+            UiBuilderServiceRequest.ApplyOperation(
+              batch("public-write", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1()))
+            ),
+          )
+        )
+        .code,
+    )
+    // Readable by everyone is not "mine": a stranger's list stays empty, the owner's does not.
+    assertTrue(
+      assertIs<UiBuilderServiceResponse.Designs>(
+          execute(service, stranger, UiBuilderServiceRequest.ListDesigns(null, 10))
+        )
+        .designs
+        .isEmpty()
+    )
+    assertEquals(
+      listOf("design"),
+      assertIs<UiBuilderServiceResponse.Designs>(
+          execute(service, owner, UiBuilderServiceRequest.ListDesigns(null, 10))
+        )
+        .designs
+        .map { it.designId },
+    )
+  }
+
+  @Test
+  fun `a retained revision is listed and restored forward as a new revision`() {
+    val service = service()
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("add-first", 0, InsertNodeMutationV1(textNode("first"), NodeLocationV1()))
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("edit-first", 1, SetPropertyMutationV1("first", "text", StringValueV1("second")))
+        ),
+      )
+    )
+    val listed =
+      assertIs<UiBuilderServiceResponse.Revisions>(
+        execute(service, owner, UiBuilderServiceRequest.ListRevisions("design"))
+      )
+    assertEquals(2, listed.currentRevision)
+    assertEquals(listOf(2L, 1L, 0L), listed.revisions.map { it.revision })
+    assertEquals(owner.actorId, listed.revisions.first().actorId)
+
+    // Somebody the design was never shared with sees no history of it.
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(execute(service, outsider, UiBuilderServiceRequest.ListRevisions("design"))).code,
+    )
+
+    // Stale base: refused rather than silently discarding the newer edit.
+    assertEquals(
+      RejectionCodeV1.REVISION_MISMATCH,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 1, "restore-stale"),
+          )
+        )
+        .code,
+    )
+
+    val restored =
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 2, "restore-1"),
+        )
+      )
+    assertEquals(3, restored.committedRevision)
+    // A retry whose first answer was lost replays that answer rather than being refused.
+    val replayed =
+      accepted(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 2, "restore-1"),
+        )
+      )
+    assertTrue(replayed.idempotentReplay)
+    assertEquals(3, replayed.committedRevision)
+    // The same id for a different revision, or for an ordinary edit, is a reused id — never a
+    // replay that reports a restore nobody made.
+    assertEquals(
+      RejectionCodeV1.OPERATION_ID_REUSED,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.RestoreRevision("design", 0, baseRevision = 3, "restore-1"),
+          )
+        )
+        .code,
+    )
+    assertEquals(
+      RejectionCodeV1.OPERATION_ID_REUSED,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 3, "edit-first"),
+          )
+        )
+        .code,
+    )
+    // A collaborator who may read but not write is refused, never told the restore succeeded.
+    grant(service, owner, viewer, 0, listOf(DesignAccessActionV1.READ))
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(
+          execute(
+            service,
+            viewer,
+            UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 3, "restore-1"),
+          )
+        )
+        .code,
+    )
+    // And somebody who may not even read is answered as for a design that is not there, rather
+    // than told a restore succeeded.
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      error(
+          execute(
+            service,
+            outsider,
+            UiBuilderServiceRequest.RestoreRevision("design", 1, baseRevision = 3, "restore-1"),
+          )
+        )
+        .code,
+    )
+    val document = currentDocument(service)
+    assertEquals(3, document.revision)
+    assertTrue("first" in document.nodes)
+    assertNull(document.nodes.getValue("first").properties["text"], "the later edit is undone")
+
+    // Forward, never a rewind: restoring the newest revision again brings the edit back.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.RestoreRevision("design", 2, baseRevision = 3, "restore-2"),
+      )
+    )
+    assertEquals(
+      StringValueV1("second"),
+      currentDocument(service).nodes.getValue("first").properties["text"],
+    )
+
+    // An editor keeps working on a restored design.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("after-restore", 4, DeleteNodeMutationV1("first"))
+        ),
+      )
+    )
+  }
+
+  @Test
   fun `an agent acting for a person reaches the designs that person owns`() {
     val service = service()
     create(service)

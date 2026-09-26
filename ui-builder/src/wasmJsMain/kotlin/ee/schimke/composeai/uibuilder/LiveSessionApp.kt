@@ -118,6 +118,7 @@ internal fun LiveSessionApp() {
   var config by remember { mutableStateOf<LiveSessionConfig?>(null) }
   var failure by remember { mutableStateOf<String?>(null) }
   LaunchedEffect(Unit) {
+    bootPhase("Checking who you are")
     try {
       config = liveSessionConfig(resolveServerActorId())
     } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
@@ -130,6 +131,7 @@ internal fun LiveSessionApp() {
     }
   }
   failure?.let { message ->
+    LaunchedEffect(Unit) { dismissBootScreen() }
     Column(
       Modifier.fillMaxSize().padding(24.dp),
       verticalArrangement = Arrangement.Center,
@@ -254,6 +256,7 @@ private fun LiveSessionApp(
               it.updatedAtEpochMillis
                 ?.let { at -> "updated ${formatLocalDateTime(at.toDouble())}" }
                 .orEmpty(),
+            revision = it.revision,
           )
         }
   }
@@ -537,28 +540,41 @@ private fun LiveSessionApp(
   }
 
   LaunchedEffect(config) {
-    // A local session can be asked for a catalog this browser has never seen — the first visit to
-    // an origin with the network already gone. That is a sentence, not a crash: the live session
-    // has a server behind it and can let the failure take the page down, and a local one has to
-    // explain itself because there is nothing else left to ask.
-    val availableCatalogs =
-      if (!config.localStorage) loadLiveCatalogs(http)
-      else
-        try {
-          loadLiveCatalogs(http)
-        } catch (failure: Exception) {
-          sessionStatus = "Local · ${failure.message ?: "no catalog is available offline"}"
-          markReady()
-          return@LaunchedEffect
-        }
+    bootPhase("Opening the design")
     // Form-factor order — Mobile, Wear, RemoteCompose — however the host lists them: the chooser
     // is a "what am I making" question, not a catalog registry.
-    catalogCapabilities = availableCatalogs
-    newDesignCatalogs =
-      availableCatalogs.mapNotNull(::newDesignCatalog).sortedBy {
-        NEW_DESIGN_CATALOG_ORDER.indexOf(it.systemId)
-      }
-    if (config.startWithNewDesign) return@LaunchedEffect
+    fun installCatalogList(availableCatalogs: List<CatalogCapabilityV1>) {
+      catalogCapabilities = availableCatalogs
+      newDesignCatalogs =
+        availableCatalogs.mapNotNull(::newDesignCatalog).sortedBy {
+          NEW_DESIGN_CATALOG_ORDER.indexOf(it.systemId)
+        }
+    }
+    if (config.localStorage || config.startWithNewDesign) {
+      // A local session can be asked for a catalog this browser has never seen — the first visit
+      // to an origin with the network already gone. That is a sentence, not a crash: the live
+      // session has a server behind it and can let the failure take the page down, and a local one
+      // has to explain itself because there is nothing else left to ask.
+      val availableCatalogs =
+        if (!config.localStorage) loadLiveCatalogs(http)
+        else
+          try {
+            loadLiveCatalogs(http)
+          } catch (failure: Exception) {
+            sessionStatus = "Local · ${failure.message ?: "no catalog is available offline"}"
+            markReady()
+            return@LaunchedEffect
+          }
+      installCatalogList(availableCatalogs)
+      if (config.startWithNewDesign) return@LaunchedEffect
+    } else {
+      // Beside the open, not ahead of it. The list is every catalog's full capability record —
+      // around a megabyte for the three — and only the New design menu reads it; the design being
+      // opened brings its own catalog in its snapshot. Waiting for it put a round trip and that
+      // megabyte's parse between a person and their design. A failure still takes the page down,
+      // as it did when it came first: this child's exception cancels the effect.
+      launch { installCatalogList(loadLiveCatalogs(http)) }
+    }
     fun installCatalog(capability: CatalogCapabilityV1, revision: Long?) {
       activeCatalogSystemId = capability.benchmark.catalogSystemId
       enabledPacks = readEnabledPacks(activeCatalogSystemId)
@@ -649,6 +665,7 @@ private fun LiveSessionApp(
             ServiceErrorV1(ServiceErrorCodeV1.INTERNAL, "the design could not be opened")
           return@LaunchedEffect
         }
+        bootPhase("Drawing the design")
         installCatalog(response.snapshot.catalog, null)
         acceptSnapshot(response)
         // Without the revision: the page opened at head, whatever the link asked for, and an
@@ -992,6 +1009,17 @@ private fun LiveSessionApp(
             }
           }
         } else null,
+      loadThumbnail =
+        if (localSession == null) {
+          { designId, revision ->
+            val encoded =
+              fetchBase64(
+                "/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/thumbnail.png" +
+                  "?revision=$revision"
+              )
+            Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
+          }
+        } else null,
       onCreate = createDesign,
     )
     LaunchedEffect(newDesignCatalogs) { markReady() }
@@ -1123,6 +1151,12 @@ private fun LiveSessionApp(
       newDesignCatalogs = newDesignCatalogs,
       onCreateDesign = createDesign,
       onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
+      // A fork of the design as it is now, owned by whoever presses it: the copy route reads the
+      // source as the caller, so this lends nothing a reader could not already open.
+      onForkDesign =
+        if (localSession == null) {
+          { navigateToCopyDesign(config.designId, NewDesignNames.random()) }
+        } else null,
       onHelp = ::openUiBuilderGuide,
       onCopyAiPrompt =
         if (localSession != null || !isDesignUrlPathSafe(config.designId)) null

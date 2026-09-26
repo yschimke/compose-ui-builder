@@ -1,15 +1,23 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.*
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
+import ee.schimke.composeai.uibuilder.editor.UiBuilderReleaseNote
 import ee.schimke.composeai.uibuilder.editor.homeDesignFolders
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * The builder's home page: the screen `/ui-builder/` draws when no design is named.
@@ -58,11 +66,42 @@ class UiBuilderHomeScreenTest {
     onAllNodesWithText("Mobile").assertCountEquals(2)
     onNodeWithText("Adaptive app").assertIsDisplayed()
     onNodeWithText("List-detail screen").assertIsDisplayed()
-    onNodeWithText("Open a file").assertIsDisplayed()
+    onNodeWithText("Recent designs").assertIsDisplayed()
     onNodeWithText("Morning player").assertIsDisplayed()
     onNodeWithText("morning-player · m3-catalog · updated yesterday").assertIsDisplayed()
     onNodeWithContentDescription("All designs").assertIsDisplayed()
   }
+
+  /**
+   * A preview hands the form a fixed name so its render is the same every time; the app passes
+   * nothing and a person gets a generated one.
+   */
+  @Test
+  fun `a given design name is pre-filled, and the app's default is a generated one`() =
+    runComposeUiTest {
+      var initial by mutableStateOf<String?>("sunny-otter")
+      var createdId: String? = null
+      setContent {
+        key(initial) {
+          UiBuilderNewDesignScreen(
+            catalogs = catalogs,
+            initialCatalogSystemId = "m3-catalog",
+            initialDesignId = initial,
+            onCreate = { _, designId, _, _ -> createdId = designId },
+          )
+        }
+      }
+      onNodeWithContentDescription("Design ID").assertTextContains("sunny-otter")
+      onNodeWithText("Create").performScrollTo().performClick()
+      assertEquals("sunny-otter", createdId)
+
+      initial = null
+      waitForIdle()
+      onNodeWithText("Create").performScrollTo().performClick()
+      val generated = assertNotNull(createdId)
+      assertNotEquals("sunny-otter", generated)
+      assertTrue(generated.isNotBlank())
+    }
 
   @Test
   fun `opening and copying name the design they were pressed on`() = runComposeUiTest {
@@ -173,7 +212,7 @@ class UiBuilderHomeScreenTest {
       )
     }
 
-    onNodeWithContentDescription("Create design").performClick()
+    onNodeWithContentDescription("Create design").performScrollTo().performClick()
     val submitted = checkNotNull(created)
     assertEquals("m3-catalog", submitted[0])
     assertEquals("blank", submitted[2])
@@ -182,6 +221,35 @@ class UiBuilderHomeScreenTest {
   }
 
   /** A host with no index and nothing to copy shows the create panel alone, as it always did. */
+  @Test
+  fun `the quick start creates a blank screen or the hello sample in one press`() =
+    runComposeUiTest {
+      val submitted = mutableListOf<String>()
+      setContent {
+        UiBuilderNewDesignScreen(
+          catalogs =
+            listOf(
+              UiBuilderNewDesignCatalog(
+                "m3-catalog",
+                "Android app",
+                listOf(
+                  UiBuilderNewDesignTemplate("blank", "Blank screen", ""),
+                  UiBuilderNewDesignTemplate("hello", "Hello sample", ""),
+                ),
+              )
+            ),
+          initialCatalogSystemId = "m3-catalog",
+          releaseNotes = listOf(UiBuilderReleaseNote("9.9.0", "2026-09-25", listOf("a new thing"))),
+          onCreate = { catalog, _, template, _ -> submitted += "$catalog/$template" },
+        )
+      }
+      onNodeWithText("What's new").performScrollTo().assertIsDisplayed()
+      onNodeWithText("• A new thing").performScrollTo().assertIsDisplayed()
+      onNodeWithContentDescription("New from hello").performScrollTo().performClick()
+      onNodeWithContentDescription("New from blank").performScrollTo().performClick()
+      assertEquals(listOf("m3-catalog/hello", "m3-catalog/blank"), submitted)
+    }
+
   @Test
   fun `the designs panel is absent where the host offers neither`() = runComposeUiTest {
     setContent {
@@ -193,7 +261,7 @@ class UiBuilderHomeScreenTest {
     }
 
     onNodeWithText("Create from a template").assertIsDisplayed()
-    onNodeWithText("Open a file").assertDoesNotExist()
+    onNodeWithText("Recent designs").assertDoesNotExist()
   }
 }
 

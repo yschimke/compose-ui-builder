@@ -16,8 +16,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -170,7 +173,7 @@ fun CanvasDocumentHost(
           bounds.bottom,
         )
         surfaceCoordinates?.let { surface ->
-          onOverlayBounds(path, surface.localBoundingBoxOf(coordinates, clipBounds = false))
+          onOverlayBounds(path, surface.overlayBoundsOf(coordinates))
         }
       },
       recordText = { path, result ->
@@ -218,3 +221,18 @@ private fun UiBuilderNode.textContentTopPaddingDp(): Float =
       }
     }
     .toFloat()
+
+/**
+ * [node]'s bounds in this surface's coordinates.
+ *
+ * A node drawn inside a `Dialog` or a popup is laid out in that layer's own hierarchy, not the
+ * surface's, and `localBoundingBoxOf` refuses a pair with no common ancestor: it threw from the
+ * positioning pass, so a design holding an `m3/dialog` took the whole canvas down with it. Both
+ * hierarchies share the window, so such a node is mapped through window space instead.
+ */
+private fun LayoutCoordinates.overlayBoundsOf(node: LayoutCoordinates): Rect =
+  if (node.findRootCoordinates() == findRootCoordinates()) {
+    localBoundingBoxOf(node, clipBounds = false)
+  } else {
+    node.boundsInWindow().translate(-positionInWindow())
+  }

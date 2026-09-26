@@ -241,3 +241,96 @@ abstract class CheckWindowSidecarVersion : org.gradle.api.DefaultTask() {
     }
   }
 }
+
+/**
+ * The newest releases' notes from the repository's `CHANGELOG.md`, embedded as Kotlin so the home
+ * screen can say what changed without fetching anything.
+ *
+ * Read from the file release-please writes, so the notes are exactly what was released and need no
+ * second copy. Features are shown and fixes only for a release that has no features; the links and
+ * commit hashes are dropped, because the home screen is not the place to read them.
+ */
+abstract class EmbedReleaseNotes : org.gradle.api.DefaultTask() {
+  @get:org.gradle.api.tasks.InputFile
+  @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.NONE)
+  abstract val changelog: org.gradle.api.file.RegularFileProperty
+
+  /** How many releases to keep. */
+  @get:org.gradle.api.tasks.Input abstract val releases: org.gradle.api.provider.Property<Int>
+
+  @get:org.gradle.api.tasks.OutputFile abstract val output: org.gradle.api.file.RegularFileProperty
+
+  init {
+    releases.convention(4)
+  }
+
+  @org.gradle.api.tasks.TaskAction
+  fun embed() {
+    val notes = parseReleaseNotes(changelog.get().asFile.readText(), releases.get())
+    fun literal(value: String) =
+      "\"" +
+        value
+          .replace("\\", "\\\\")
+          .replace("\"", "\\\"")
+          .replace("$", "\\$")
+          .replace("\n", " ") +
+        "\""
+    val body =
+      notes.joinToString(",\n") { (version, date, items) ->
+        "  UiBuilderReleaseNote(${literal(version)}, ${literal(date)}, listOf(" +
+          items.joinToString(", ") { literal(it) } +
+          "))"
+      }
+    val file = output.get().asFile
+    file.parentFile.mkdirs()
+    file.writeText(
+      "// Generated from CHANGELOG.md by :ui-builder:embedReleaseNotes. Do not edit.\n" +
+        "package ee.schimke.composeai.uibuilder.editor\n\n" +
+        "internal val EMBEDDED_RELEASE_NOTES: List<UiBuilderReleaseNote> =\n" +
+        "  listOf(\n$body\n  )\n"
+    )
+  }
+
+  companion object {
+    private val RELEASE = Regex("""^## \[?([0-9][^\]\s]*)\]?(?:\([^)]*\))?\s*\(([^)]*)\)""")
+    private val SECTION = Regex("""^### (.+)$""")
+    private val ITEM = Regex("""^\* (.+)$""")
+
+    /** `(version, date, items)` for the newest [limit] releases, newest first. */
+    fun parseReleaseNotes(text: String, limit: Int): List<Triple<String, String, List<String>>> {
+      data class Release(
+        val version: String,
+        val date: String,
+        val features: MutableList<String> = mutableListOf(),
+        val fixes: MutableList<String> = mutableListOf(),
+      )
+      val releases = mutableListOf<Release>()
+      var section = ""
+      for (line in text.lines()) {
+        val header = RELEASE.find(line)
+        if (header != null) {
+          if (releases.size == limit) break
+          releases += Release(header.groupValues[1], header.groupValues[2])
+          section = ""
+          continue
+        }
+        SECTION.find(line)?.let { section = it.groupValues[1].trim().lowercase() }
+        val item = ITEM.find(line)?.groupValues?.get(1) ?: continue
+        val release = releases.lastOrNull() ?: continue
+        val clean =
+          item
+            .replace(Regex("""\s*\(\[[^\]]*\]\([^)]*\)\)"""), "")
+            .replace(Regex("""^\*\*[^*]+:\*\*\s*"""), "")
+            .trim()
+        if (clean.isEmpty()) continue
+        when (section) {
+          "features" -> release.features += clean
+          "bug fixes" -> release.fixes += clean
+        }
+      }
+      return releases.map {
+        Triple(it.version, it.date, (it.features.ifEmpty { it.fixes }).take(4))
+      }
+    }
+  }
+}

@@ -4,8 +4,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -14,6 +17,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.rightClick
@@ -472,6 +476,68 @@ class EditorDesktopPointerInteractionTest {
             .boundVariable,
         )
       }
+    }
+
+  @Test
+  fun `colour swatches write a theme role or a literal colour in one press`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+      onNodeWithContentDescription("Property search").performTextReplacement("color")
+      onNodeWithContentDescription("Add Color property").performClick()
+      onNodeWithContentDescription("Color swatch").assertExists()
+
+      // A theme role stays a role, so the text follows the design's theme.
+      // Named, not a bare dot: a role is picked for what it means.
+      onNodeWithContentDescription("Use primary for color")
+        .performScrollTo()
+        .assert(hasText("primary"))
+      onNodeWithContentDescription("Use primary for color").performClick()
+      waitForIdle()
+      onNodeWithContentDescription("Color property").assertTextEquals("primary")
+
+      onNodeWithContentDescription("Use #FF1A73E8 for color").performScrollTo().performClick()
+      waitForIdle()
+      onNodeWithContentDescription("Color property").assertTextEquals("#FF1A73E8")
+      onNodeWithContentDescription("Use #FF1A73E8 for color").assertIsSelected()
+      runOnIdle { assertNotNull(latest) }
+    }
+
+  @Test
+  fun `the enum menu ticks the current value`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialSelectedNodeId = "main-episode-title",
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+      onNodeWithContentDescription("Style property").performClick()
+      onNodeWithText("bodyLarge").performClick()
+      waitForIdle()
+      onNodeWithContentDescription("Style property").performClick()
+      onNodeWithContentDescription("Current value").assertExists()
+      assertEquals(1, onAllNodesWithContentDescription("Current value").fetchSemanticsNodes().size)
     }
 
   @Test

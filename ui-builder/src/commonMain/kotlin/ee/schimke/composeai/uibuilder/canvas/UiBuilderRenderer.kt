@@ -82,6 +82,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -128,6 +129,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
+import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
 import ee.schimke.composeai.uibuilder.editor.THEME_BACKGROUND
@@ -489,6 +491,10 @@ fun UiBuilderSurface(
   // surface refuses to draw.
   val typeface =
     document.environment["typeface"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+  // Asked for here, where the name is read: the registry loads a family only when something needs
+  // it, and the map below is snapshot state, so this recomposes in the family once it arrives.
+  val fontRegistry = LocalUiBuilderFontRegistry.current
+  LaunchedEffect(fontRegistry, typeface) { typeface?.let { fontRegistry?.request(it) } }
   val fontFamily = typeface?.let(LocalUiBuilderFontFamilies.current::get)
   val typography =
     MaterialTheme.typography.let { base -> fontFamily?.let(base::withFontFamily) ?: base }

@@ -1,5 +1,88 @@
 # Changelog
 
+## [3.61.0](https://github.com/yschimke/compose-ui-builder/compare/v3.60.0...v3.61.0) (2026-09-26)
+
+
+### Features
+
+* **ui-builder:** load the vendored fonts, pick the design's typeface, and name theme colours ([#292](https://github.com/yschimke/compose-ui-builder/issues/292)) ([6e3b220](https://github.com/yschimke/compose-ui-builder/commit/6e3b220b4bc27814697c93de72af78c97f22643e))
+
+
+### Bug Fixes
+
+* **ui-builder:** keep the edge button in the scaffold's slot, and the compact dock's labels on one line ([#298](https://github.com/yschimke/compose-ui-builder/issues/298)) ([e29abc4](https://github.com/yschimke/compose-ui-builder/commit/e29abc4a8b9adc89b7da3ff16f9d07a0aefdaf6e))
+
+
+### Performance Improvements
+
+* **ui-builder:** keep fonts off first load, and fetch them from the immutable bundle prefix ([#297](https://github.com/yschimke/compose-ui-builder/issues/297)) ([d36fc7c](https://github.com/yschimke/compose-ui-builder/commit/d36fc7ca6c0e625bf07a0d115caad44008cae3c8))
+
+## [3.60.0](https://github.com/yschimke/compose-ui-builder/compare/v3.59.0...v3.60.0) (2026-09-26)
+
+
+### Bug Fixes
+
+* **ui-builder:** device previews draw with the catalog runtime again, and the selection card can be closed ([#293](https://github.com/yschimke/compose-ui-builder/issues/293)) ([3cb853a](https://github.com/yschimke/compose-ui-builder/commit/3cb853ae1e725c21d4c501f5af3aaf0beaa63f91))
+
+## [3.59.0](https://github.com/yschimke/compose-ui-builder/compare/v3.58.0...v3.59.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ui-builder:** declare the import map before the module preloads, so a reloaded editor starts ([#290](https://github.com/yschimke/compose-ui-builder/issues/290)) ([cab08cc](https://github.com/yschimke/compose-ui-builder/commit/cab08cc11b7fb062ebd21687c73e23b62e7104c7))
+
+## [3.58.0](https://github.com/yschimke/compose-ui-builder/compare/v3.57.0...v3.58.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ui-builder:** the pinned runtime frame fills its surface on a high-density screen ([#288](https://github.com/yschimke/compose-ui-builder/issues/288)) ([9be6efc](https://github.com/yschimke/compose-ui-builder/commit/9be6efc9ce3b21b823badd4a219b1a6db52abc07))
+
+## [3.57.0](https://github.com/yschimke/compose-ui-builder/compare/v3.56.0...v3.57.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ui-builder:** export m3/dialog through the component record, as AlertDialog ([#286](https://github.com/yschimke/compose-ui-builder/issues/286)) ([cf78874](https://github.com/yschimke/compose-ui-builder/commit/cf78874e5459d2cad2c10dc0e3ac5fdad5f73cbf))
+
+## [3.56.0](https://github.com/yschimke/compose-ui-builder/compare/v3.55.0...v3.56.0) (2026-09-25)
+
+
+### Features
+
+* **ui-builder:** visual colour and enum property editors; replay a restore only for its own actor and revision ([#284](https://github.com/yschimke/compose-ui-builder/issues/284)) ([77518e8](https://github.com/yschimke/compose-ui-builder/commit/77518e81bd2f6e773d5be47cd61382bb3c698fcf))
+
+
+### Bug Fixes
+
+* **ui-builder:** an edit re-renders the live catalog runtime frame instead of rebooting it ([#283](https://github.com/yschimke/compose-ui-builder/issues/283)) ([2b9356b](https://github.com/yschimke/compose-ui-builder/commit/2b9356b897966c733d029b90aaff9f717b7447f5))
+
+## [3.55.0](https://github.com/yschimke/compose-ui-builder/compare/v3.54.0...v3.55.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ui-builder-export:** pad a Scaffold's content by the padding it is handed ([#279](https://github.com/yschimke/compose-ui-builder/issues/279)) ([2c84373](https://github.com/yschimke/compose-ui-builder/commit/2c8437382c53b2f58df591402cd0aa1d6dd92790))
+* **ui-builder-runtime:** replay a retried restore, and name who made each revision after an upload ([#280](https://github.com/yschimke/compose-ui-builder/issues/280)) ([16bbbea](https://github.com/yschimke/compose-ui-builder/commit/16bbbea865a309ead0fb67cbf28ddc7bd204f2bf))
+* **ui-builder:** take the boot screen away at ready, and package the renderer and fixtures from production Wasm ([#281](https://github.com/yschimke/compose-ui-builder/issues/281)) ([2f8c3bd](https://github.com/yschimke/compose-ui-builder/commit/2f8c3bd128df3e606f41cea9ef70e39f1d10a47a))
+
+## [3.54.0](https://github.com/yschimke/compose-ui-builder/compare/v3.53.0...v3.54.0) (2026-09-25)
+
+
+### Features
+
+* **ui-builder:** public designs, restore, fork, a friendlier home screen; menus above device previews ([#278](https://github.com/yschimke/compose-ui-builder/issues/278)) ([4c2ff0c](https://github.com/yschimke/compose-ui-builder/commit/4c2ff0c7a5ed4334a1b9d2eac5d7cef6f589b1f9))
+
+
+### Bug Fixes
+
+* **ui-builder:** stop booting a runtime iframe per palette tile, and hide what cannot land ([#274](https://github.com/yschimke/compose-ui-builder/issues/274)) ([314b1f6](https://github.com/yschimke/compose-ui-builder/commit/314b1f68893fe242cee9081af7eeb35c9cda9848))
+
+
+### Performance Improvements
+
+* **ui-builder:** ship the production Wasm, preload it, and show a boot screen ([#276](https://github.com/yschimke/compose-ui-builder/issues/276)) ([2512f50](https://github.com/yschimke/compose-ui-builder/commit/2512f50dd5ca01238f778be8ea3cbd9f9d258a88))
+
 ## [3.53.0](https://github.com/yschimke/compose-ui-builder/compare/v3.52.0...v3.53.0) (2026-09-25)
 
 

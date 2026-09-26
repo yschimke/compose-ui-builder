@@ -335,7 +335,7 @@ private fun previewLiteral(type: String, value: String) =
  * and a preview claiming a design belongs to a catalog it does not is a lie the renderer happens
  * not to check.
  */
-private val wearWidgetSampleCatalogPin: JsonObject =
+internal val wearWidgetSampleCatalogPin: JsonObject =
   Json.parseToJsonElement(
       """
       {
@@ -353,7 +353,7 @@ private val wearWidgetSampleCatalogPin: JsonObject =
  * render lane's diff meaningless. The watch surface itself is drawn by the scaffold, so nothing
  * here is claiming a device.
  */
-private val wearWidgetSampleEnvironment: JsonObject =
+internal val wearWidgetSampleEnvironment: JsonObject =
   Json.parseToJsonElement(
       """
       {

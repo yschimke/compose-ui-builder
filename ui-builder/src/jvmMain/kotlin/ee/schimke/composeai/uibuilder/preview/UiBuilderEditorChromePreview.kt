@@ -242,7 +242,7 @@ private fun remoteComposePaletteThumbnail(source: RemoteComposeSource): ImageBit
  * once: its layer row is above the fold and the text it carries is in the rendered canvas, so a
  * change to either the naming rule or the property inspector shows up here.
  */
-private const val EDITOR_CHROME_PREVIEW_SELECTION = "search-placeholder"
+internal const val EDITOR_CHROME_PREVIEW_SELECTION = "search-placeholder"
 
 /**
  * The inspector with a layout container selected.
@@ -264,7 +264,7 @@ fun UiBuilderLayoutInspectorPreview() {
   )
 }
 
-private val editorChromePreviewDocument: UiBuilderDocument by lazy {
+internal val editorChromePreviewDocument: UiBuilderDocument by lazy {
   UiBuilderReducer.replay(
       Json.parseToJsonElement(previewResource("/jetcaster-discover-operations-v1.json")).jsonObject
     )
@@ -364,6 +364,8 @@ fun UiBuilderLargeIssuesTriagePreview() {
 @Composable
 fun UiBuilderNewDesignPreview() {
   UiBuilderNewDesignScreen(
+    // Fixed, not random: the app rolls a new name each time, and so would every render of this.
+    initialDesignId = "sunny-otter",
     catalogs =
       listOf(
         UiBuilderNewDesignCatalog(

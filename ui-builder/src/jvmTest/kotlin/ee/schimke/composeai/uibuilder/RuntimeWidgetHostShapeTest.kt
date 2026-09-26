@@ -73,8 +73,12 @@ class RuntimeWidgetHostShapeTest {
         setOf(WearWidgetHostShape.Default.id),
         shapesFor(UiBuilderRendererSurfaceModeV2.AUTHORING_UNROLLED),
       )
-      // No preview pane is a runtime surface: three shapes were three runtimes.
-      assertEquals(emptySet(), shapesFor(UiBuilderRendererSurfaceModeV2.DEVICE))
+      // Each device preview pane is drawn by the runtime in its own host's shape: the in-process
+      // renderer cannot draw a remote-m3 widget, so a pane without the runtime showed stand-ins.
+      assertEquals(
+        WearWidgetHostShape.entries.map { it.id }.toSet(),
+        shapesFor(UiBuilderRendererSurfaceModeV2.DEVICE),
+      )
       // The shape is on the copy a surface is sent, never on the design itself.
       assertTrue(WearWidgetHostShape.ENVIRONMENT_KEY !in widget.environment)
     }

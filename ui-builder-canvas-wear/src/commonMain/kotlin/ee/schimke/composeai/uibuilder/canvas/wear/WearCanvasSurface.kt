@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +23,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,10 +40,13 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.ScrollInfoProvider
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.ScreenScaffoldDefaults
 import androidx.wear.compose.material3.ScreenStage
 import androidx.wear.compose.material3.ScrollIndicator
 import androidx.wear.compose.material3.scrollAway
@@ -158,11 +165,24 @@ internal fun WearScreenScaffold(
   frame: UiBuilderFrameGeometry,
   screenWidthDp: Int,
   edgeButton: @Composable (Modifier) -> Unit,
-  hasEdgeButton: Boolean,
+  /** The edge button's `size`, or null when the `edgeButton` slot is empty. */
+  edgeButtonSize: String?,
   content: @Composable (Modifier) -> Unit,
 ) {
   val width = screenWidthDp.dp
-  val padding = wearScreenContentPadding(screenWidthDp, frame)
+  val hasEdgeButton = edgeButtonSize != null
+  val unrolled = LocalUiBuilderUnrolled.current
+  val screenPadding = wearScreenContentPadding(screenWidthDp, frame)
+  // `ScreenScaffold`'s edge button takes the space BELOW its list rather than a place on top of it:
+  // the scaffold extends the list's bottom content padding by the button's height, so the last row
+  // settles above the button instead of under it. Without that the button sat over whatever row
+  // the list ended on, and over the first screenful on a list that had not scrolled at all.
+  val padding =
+    if (edgeButtonSize != null && !unrolled) {
+      screenPadding.withBottom(wearEdgeButtonReservedHeight(edgeButtonSize))
+    } else {
+      screenPadding
+    }
   // Wear Material 3 is dark-first and its `background` is pure black — measured off the reference
   // render, not read from the editor theme, which is the bug the widget container's default
   // background comments: reading the theme made the watch go white in a light editor.
@@ -206,11 +226,28 @@ internal fun WearScreenScaffold(
       // This is intentionally not `Column.padding(padding)`: native `ScreenScaffold` hands the
       // padding to its `TransformingLazyColumn`, where it belongs to the list's scroll range. An
       // outer padded viewport leaves the final row clipped at the round frame when it reaches end.
-      if (LocalUiBuilderUnrolled.current) {
+      if (unrolled) {
         // The extent is deliberately not a viewport. Keep its ordinary inset so every item is
         // legible, including the first and last ones, while the frame pane below uses the real
         // lazy-list content-padding path.
-        Column(Modifier.fillMaxWidth().padding(padding)) { content(Modifier.fillMaxWidth()) }
+        //
+        // The edge button is the end of the scroll, so on the extent it follows the last row, in
+        // the slot the scaffold keeps for it, and hugs the bottom cap. Overlaid on the extent it
+        // covered the last rows of every list long enough to need one.
+        Column(
+          Modifier.fillMaxWidth()
+            .padding(
+              padding.withBottom(if (hasEdgeButton) width * WEAR_EDGE_BUTTON_INSET else null)
+            )
+        ) {
+          content(Modifier.fillMaxWidth())
+          if (hasEdgeButton) {
+            edgeButton(
+              Modifier.align(Alignment.CenterHorizontally)
+                .padding(top = ScreenScaffoldDefaults.EdgeButtonSpacing)
+            )
+          }
+        }
       } else {
         content(Modifier.fillMaxSize())
       }
@@ -245,9 +282,13 @@ internal fun WearScreenScaffold(
         modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().padding(end = 2.dp),
       )
     }
-    if (hasEdgeButton) {
-      // The edge button hugs the bottom curve, which on the extent is the bottom cap. Placed
-      // rather than sized: `EdgeButton` takes its shape from the screen and this cannot draw that.
+    // In a viewport the edge button is revealed by the scroll, as `ScreenScaffold` reveals it: it
+    // grows in as the list reaches its end and shrinks away as the list scrolls back up. A frame
+    // drawn at rest shows the list at its top, so a list longer than the screen shows no button,
+    // and one that fits, or a screen that does not scroll, shows it. Drawing it unconditionally
+    // put it over the first screenful of every long list.
+    val edgeButtonRevealed by remember(listState) { derivedStateOf { !listState.canScrollForward } }
+    if (hasEdgeButton && !unrolled && edgeButtonRevealed) {
       edgeButton(
         Modifier.align(Alignment.BottomCenter).padding(bottom = width * WEAR_EDGE_BUTTON_INSET)
       )
@@ -412,6 +453,36 @@ private const val WEAR_TIME_TEXT_SP = 14.5f
 
 /** How far the edge button floats off the bottom cap, as a fraction of the diameter. */
 private const val WEAR_EDGE_BUTTON_INSET = 0.04f
+
+/**
+ * The bottom content padding `ScreenScaffold` gives its list when it holds an edge button.
+ *
+ * The button's maximum height for its size, its own vertical padding either side, and the spacing
+ * the scaffold keeps between it and the last row. The heights are the port's `EdgeButtonSize`
+ * values (46, 56, 70 and 96 dp), which the library keeps `internal`; the two paddings are read from
+ * the library, not restated.
+ */
+private fun wearEdgeButtonReservedHeight(size: String): Dp {
+  val height =
+    when (size) {
+      "extra-small" -> 46.dp
+      "medium" -> 70.dp
+      "large" -> 96.dp
+      else -> 56.dp
+    }
+  return height +
+    ScreenScaffoldDefaults.EdgeButtonMinSpacing * 2 +
+    ScreenScaffoldDefaults.EdgeButtonSpacing
+}
+
+/** These padding values with [bottom] in place of their own; null keeps the bottom as it is. */
+private fun PaddingValues.withBottom(bottom: Dp?): PaddingValues =
+  PaddingValues(
+    start = calculateStartPadding(LayoutDirection.Ltr),
+    top = calculateTopPadding(),
+    end = calculateEndPadding(LayoutDirection.Ltr),
+    bottom = bottom ?: calculateBottomPadding(),
+  )
 
 /**
  * The Wear components this catalog publishes and the browser cannot draw, as ids.

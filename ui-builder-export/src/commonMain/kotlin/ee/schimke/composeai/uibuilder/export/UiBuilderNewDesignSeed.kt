@@ -49,6 +49,12 @@ object UiBuilderNewDesignSeed {
   const val WEAR_LIST_TEMPLATE: String = "wear-list"
 
   /**
+   * The blank screen with a headline and a line of text in it: the smallest design that already
+   * shows something, for a person who wants to see the builder do anything before they learn it.
+   */
+  const val HELLO_TEMPLATE: String = "hello"
+
+  /**
    * The templates [document] can seed for a catalog, which is what a caller is validated against.
    */
   fun templateIds(
@@ -65,6 +71,7 @@ object UiBuilderNewDesignSeed {
           if (vocabulary == Vocabulary.PACKAGED) setOf(AdaptiveWearWidget.TEMPLATE_ID)
           else emptySet()
       "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
+      "m3-catalog" -> setOf("blank", HELLO_TEMPLATE, DEFAULT_TEMPLATE)
       else -> setOf("blank", DEFAULT_TEMPLATE)
     }
 
@@ -147,6 +154,12 @@ object UiBuilderNewDesignSeed {
             if (templateId == "wear-widget-large") WearWidgetScaffoldSize.Large
             else WearWidgetScaffoldSize.Small,
         )
+      templateId == HELLO_TEMPLATE ->
+        helloUiBuilderDocument(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = mobileScreenEnvironment(environment),
+        )
       templateId == "blank" ->
         blankUiBuilderDocument(
           designId = designId,
@@ -209,6 +222,12 @@ object UiBuilderNewDesignSeed {
           size =
             if (templateId == "wear-widget-large") WearWidgetScaffoldSize.Large
             else WearWidgetScaffoldSize.Small,
+        )
+      templateId == HELLO_TEMPLATE ->
+        helloUiBuilderDocument(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = mobileScreenEnvironment(environment),
         )
       templateId == "blank" ->
         blankUiBuilderDocument(

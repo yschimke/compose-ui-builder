@@ -109,6 +109,7 @@ internal fun HostBridgeApp() {
         if (!hostChrome.invoke(id)) postHostError("no editor action '$id' right now")
       },
     )
+    bootPhase("Waiting for the design")
     postHostReady()
   }
   val design = opened ?: return

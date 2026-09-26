@@ -216,14 +216,20 @@ internal fun CollaborationState.applyOperation(
         copy(
           document =
             document.copy(
-              environment = JsonObject(document.environment + (operation.field to operation.value))
+              // JSON null is how an optional field is cleared (a typeface reset), and a cleared
+              // field is an absent one, so the document reads as if it had never been set.
+              environment =
+                JsonObject(
+                  if (operation.value is JsonNull) document.environment - operation.field
+                  else document.environment + (operation.field to operation.value)
+                )
             )
         )
       val change =
         EnvironmentChange(
           operation.field,
           before,
-          operation.value,
+          operation.value.takeUnless { it is JsonNull },
           environmentVersions[operation.field],
         )
       trace.environmentTouches += operation.field
@@ -557,7 +563,7 @@ private fun CollaborationState.compensateEnvironment(
 ): CollaborationState {
   val value = if (undo) change.before else change.after
   val environment =
-    if (value == null) document.environment - change.field
+    if (value == null || value is JsonNull) document.environment - change.field
     else document.environment + (change.field to value)
   return copy(document = document.copy(environment = JsonObject(environment)))
 }

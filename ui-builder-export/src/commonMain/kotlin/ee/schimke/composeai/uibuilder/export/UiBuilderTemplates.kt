@@ -476,6 +476,47 @@ fun blankUiBuilderDocument(
 }
 
 /**
+ * [blankUiBuilderDocument] with a headline and a sentence in a column: the trivial sample the home
+ * screen offers beside the blank one, so a first design already draws something to select.
+ */
+fun helloUiBuilderDocument(
+  designId: String,
+  catalogPin: JsonObject,
+  environment: JsonObject,
+): UiBuilderDocument {
+  val blank = blankUiBuilderDocument(designId, catalogPin, environment)
+  val contentId = "screen-content"
+  val columnId = "hello-column"
+  fun text(id: String, value: String) =
+    UiBuilderNode(
+      id = id,
+      componentId = "m3/text",
+      properties = JsonObject(mapOf("text" to literal("string", JsonPrimitive(value)))),
+      modifiers = JsonArray(emptyList()),
+    )
+  return blank.copy(
+    title = "Hello, Compose",
+    nodes =
+      blank.nodes +
+        mapOf(
+          contentId to
+            blank.nodes.getValue(contentId).copy(slots = mapOf("children" to listOf(columnId))),
+          columnId to
+            UiBuilderNode(
+              id = columnId,
+              componentId = "layout/column",
+              properties = JsonObject(emptyMap()),
+              modifiers = JsonArray(emptyList()),
+              slots = mapOf("children" to listOf("hello-headline", "hello-body")),
+            ),
+          "hello-headline" to text("hello-headline", "Hello, Compose"),
+          "hello-body" to
+            text("hello-body", "Select this text and change it, or drag in a component."),
+        ),
+  )
+}
+
+/**
  * The wire declaration for one variable.
  *
  * `persistence` is `preview`, the only value a design authored in a browser can honestly claim:
