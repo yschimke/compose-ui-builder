@@ -454,6 +454,60 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `acting for the owner edits the design but never shares, transfers or deletes it`() {
+    val service = service()
+    create(service)
+    val delegate = AuthenticatedUiBuilderActor("github:guest", onBehalfOfActorId = owner.actorId)
+
+    for (mutation in
+      listOf(
+        GrantActorAccessMutationV1(
+          delegate.actorId,
+          DesignAccessRoleV1.EDITOR,
+          DesignAccessActionV1.entries,
+        ),
+        TransferDesignOwnershipMutationV1(delegate.actorId),
+      )) {
+      assertEquals(
+        ServiceErrorCodeV1.FORBIDDEN,
+        error(
+            execute(
+              service,
+              delegate,
+              UiBuilderServiceRequest.UpdateDesignAccess("design", 0, listOf(mutation)),
+            )
+          )
+          .code,
+      )
+    }
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(execute(service, delegate, UiBuilderServiceRequest.DeleteDesign("design"))).code,
+    )
+
+    val row =
+      assertIs<UiBuilderServiceResponse.Designs>(
+          execute(service, delegate, UiBuilderServiceRequest.ListDesigns(null, 10))
+        )
+        .designs
+        .single()
+    assertEquals(DesignAccessRoleV1.EDITOR, row.requesterAccess.role)
+    assertEquals(delegate.actorId, row.requesterAccess.actorId)
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, delegate, UiBuilderServiceRequest.OpenDesign("design"))
+    )
+    assertEquals(
+      owner.actorId,
+      assertIs<UiBuilderServiceResponse.DesignAccess>(
+          execute(service, owner, UiBuilderServiceRequest.GetDesignAccess("design"))
+        )
+        .access
+        .ownerActorId,
+      "ownership did not move",
+    )
+  }
+
+  @Test
   fun `a design an agent creates for a person is owned by that person`() {
     val service = service()
     val delegate = AuthenticatedUiBuilderActor("agent:abc123", onBehalfOfActorId = owner.actorId)
@@ -471,9 +525,14 @@ class PersistentUiBuilderServiceTest {
       execute(service, owner, UiBuilderServiceRequest.OpenDesign("design")),
       "the person who approved the grant can open what the agent made — the whole point",
     )
-    // And the delegate keeps working through its principal for as long as the grant lives.
-    assertIs<UiBuilderServiceResponse.DesignAccess>(
-      execute(service, delegate, UiBuilderServiceRequest.GetDesignAccess("design"))
+    // The delegate keeps editing through its principal for as long as the grant lives, but
+    // managing access stays with the owner's own credential.
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, delegate, UiBuilderServiceRequest.OpenDesign("design"))
+    )
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(execute(service, delegate, UiBuilderServiceRequest.GetDesignAccess("design"))).code,
     )
     assertIs<UiBuilderServiceResponse.Error>(
       execute(service, outsider, UiBuilderServiceRequest.OpenDesign("design"))
@@ -3083,11 +3142,15 @@ class PersistentUiBuilderServiceTest {
     val updates = mutableListOf<UiBuilderServiceUpdate>()
     val subscription =
       service.subscribe(UiBuilderSubscriptionCall(editor, "design", 0), updates::add)
-    // An agent acting for the owner is the owner for this purpose, as for every other.
+    // Acting for the owner is not being the owner: a delegate may edit, never delete.
     val delegate = AuthenticatedUiBuilderActor("agent:abc", onBehalfOfActorId = "owner")
     assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(execute(service, delegate, UiBuilderServiceRequest.DeleteDesign("design"))).code,
+    )
+    assertEquals(
       UiBuilderServiceResponse.DesignDeleted("design"),
-      execute(service, delegate, UiBuilderServiceRequest.DeleteDesign("design")),
+      execute(service, owner, UiBuilderServiceRequest.DeleteDesign("design")),
     )
     subscription.close()
     assertEquals(
