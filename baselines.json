@@ -476,7 +476,7 @@
     "functionName": "UiBuilderCommentsPanelPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderCommentsPanelPreview-557e08f3.png",
-    "sha256": "69df5c007556792a26b5faf72cfe2581c44f02139524f5b9ad53bae89427212e",
+    "sha256": "33ae513f1fc357b65f72f2bd3e939c2d90da0c1d72b998bf7381e9fa0c3b7c44",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderCommentsPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderAdaptivePaneVariantsPreview": {
@@ -732,7 +732,7 @@
     "functionName": "UiBuilderUnexportablePalettePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderUnexportablePalettePreview-2c6c35dc.png",
-    "sha256": "b72b8e12fa4783d4cef6cad8e84ccd769cfe6bb44c97feac6150fa9877257fe1",
+    "sha256": "6a9aeb7af9b3654649171b9103d15871fc7a0edca4d87317189ea1d4f69ffee9",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderVariantStripPreview": {
