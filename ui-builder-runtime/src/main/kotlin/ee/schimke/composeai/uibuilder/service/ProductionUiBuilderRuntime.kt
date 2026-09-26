@@ -414,7 +414,21 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
             AdaptiveWearWidget.COMPONENT_ID
         else -> return catalog
       }
-    val components = catalog.components.filter { it.componentId in supported }
+    val components =
+      catalog.components
+        .filter { it.componentId in supported }
+        .map { component ->
+          if (catalog.platform != WEAR_PLATFORM) component
+          else
+            component
+              .newBuilder()
+              .also {
+                val exported = WEAR_EXPORTED_PROPERTIES[component.componentId].orEmpty()
+                it.properties =
+                  component.properties.filter { property -> property.name in exported }
+              }
+              .build()
+        }
     val retained = components.mapTo(mutableSetOf()) { it.componentId }
     val semantics =
       catalog.statusSemantics.mapValues { (key, value) ->
@@ -582,18 +596,21 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           val legacy = packagedLegacyCatalog(systemId)
           val runtimeId = nativeRuntimeIds[systemId]
           val compatible =
-            if (runtimeId == null) legacy
-            else
-              legacy
-                .newBuilder()
-                .also {
+            legacy
+              .newBuilder()
+              .also {
+                // A legacy pin selects an old vocabulary, not an old host. Keep the formats this
+                // deployment can actually produce identical to the current catalog it serves.
+                it.exportCapabilities = catalogs.getValue(systemId).exportCapabilities
+                runtimeId?.let { selectedRuntimeId ->
                   it.benchmark =
                     legacy.benchmark
                       .newBuilder()
-                      .also { benchmark -> benchmark.nativeRuntimeId = runtimeId }
+                      .also { benchmark -> benchmark.nativeRuntimeId = selectedRuntimeId }
                       .build()
                 }
-                .build()
+              }
+              .build()
           systemId to
             compatible.withPacks(packs.filter { pack -> pack.platform == compatible.platform })
         }
@@ -1094,6 +1111,65 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     }
 
     private val COLOR_LITERAL = Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?")
+
+    /** Properties the Wear exporter reads from each retained published component. */
+    private val WEAR_EXPORTED_PROPERTIES: Map<String, Set<String>> =
+      mapOf(
+        "layout/box" to emptySet(),
+        "layout/column" to emptySet(),
+        "layout/row" to emptySet(),
+        "asset/image" to setOf("assetKey", "contentDescription", "contentScale", "alignment"),
+        WearScreenCodeExporter.SCAFFOLD to
+          setOf("edgeButtonSpacingDp", "timeText", "scrollIndicator"),
+        WearScreenCodeExporter.TRANSFORMING_LAZY_COLUMN to
+          setOf("verticalSpacingDp", "transformation"),
+        WearScreenCodeExporter.LIST_HEADER to setOf("text", "maxLines", "overflow"),
+        WearScreenCodeExporter.TEXT to
+          setOf(
+            "text",
+            "style",
+            "color",
+            "fontSizeSp",
+            "fontStyle",
+            "fontWeight",
+            "letterSpacingSp",
+            "textDecoration",
+            "textAlign",
+            "lineHeightSp",
+            "overflow",
+            "softWrap",
+            "maxLines",
+            "minLines",
+            "alignment",
+            "weight",
+          ),
+        WearScreenCodeExporter.CARD to
+          setOf("variant", "stableKey", "containerColor", "contentColor"),
+        WearScreenCodeExporter.BUTTON to
+          setOf("variant", "enabled", "containerColor", "contentColor"),
+        WearScreenCodeExporter.TIME_TEXT to setOf("maxSweepAngle", "backgroundColor"),
+        WearScreenCodeExporter.SCROLL_INDICATOR to setOf("reverseDirection"),
+        WearScreenCodeExporter.ICON to setOf("iconKey", "contentDescription", "sizeDp"),
+        WearScreenCodeExporter.ICON_BUTTON to setOf("variant", "containerColor", "contentColor"),
+        WearScreenCodeExporter.TEXT_BUTTON to setOf("variant"),
+        WearScreenCodeExporter.LIST_SUB_HEADER to setOf("text", "maxLines", "overflow"),
+        WearScreenCodeExporter.CHECKBOX_BUTTON to setOf("checked", "label", "secondaryLabel"),
+        WearScreenCodeExporter.SWITCH_BUTTON to setOf("checked", "label", "secondaryLabel"),
+        WearScreenCodeExporter.RADIO_BUTTON to setOf("selected", "label", "secondaryLabel"),
+        WearScreenCodeExporter.SLIDER to
+          setOf("value", "valueFrom", "valueTo", "steps", "segmented"),
+        WearScreenCodeExporter.STEPPER to setOf("value", "valueFrom", "valueTo", "steps"),
+        WearScreenCodeExporter.PROGRESS_INDICATOR to setOf("variant", "progress", "segments"),
+        WearScreenCodeExporter.EDGE_BUTTON to
+          setOf("size", "enabled", "containerColor", "contentColor"),
+        WearScreenCodeExporter.BUTTON_GROUP to emptySet(),
+        WearScreenCodeExporter.ALERT_DIALOG to setOf("visible", "title", "text"),
+        WearScreenCodeExporter.CONFIRMATION_DIALOG to setOf("visible", "variant", "text"),
+        WearScreenCodeExporter.OPEN_ON_PHONE_DIALOG to setOf("visible", "text"),
+        WearScreenCodeExporter.DATE_PICKER to setOf("initialDate", "type"),
+        WearScreenCodeExporter.TIME_PICKER to setOf("initialTime", "type"),
+      )
+
     public const val CURRENT_CAPABILITY_DIGEST: String = "candidate"
     public const val DEFAULT_CATALOG_SYSTEM_ID: String = "m3-catalog"
     public const val REMOTE_M3_CATALOG_SYSTEM_ID: String = "remote-m3"

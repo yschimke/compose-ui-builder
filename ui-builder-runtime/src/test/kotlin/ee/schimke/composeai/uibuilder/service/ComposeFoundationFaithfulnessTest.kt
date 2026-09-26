@@ -96,7 +96,20 @@ class ComposeFoundationFaithfulnessTest {
       new.components.map { it.componentId },
       "the $systemId foundation donates a different vocabulary, or in a different order",
     )
-    assertEquals(old.donated(), new.components, "a donated component differs field-for-field")
+    if (systemId == CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID) {
+      // The served Wear catalog deliberately removes properties its exporter does not consume.
+      // The foundation remains the complete cross-platform donor, so compare every other field
+      // here; WearM3ScreenCatalogTest pins the exporter-shaped property vocabulary separately.
+      fun ComponentCapabilityV1.withoutProperties() =
+        newBuilder().also { it.properties = emptyList() }.build()
+      assertEquals(
+        old.donated().map { it.withoutProperties() },
+        new.components.map { it.withoutProperties() },
+        "a donated component differs outside its exporter-shaped property vocabulary",
+      )
+    } else {
+      assertEquals(old.donated(), new.components, "a donated component differs field-for-field")
+    }
   }
 
   /**

@@ -510,12 +510,28 @@ class ProductionUiBuilderRuntimeTest {
   @Test
   fun `a retired pin preserves the host selected native runtime`() {
     val runtimeId = "remote-m3-p2-host"
+    val hostExports =
+      ExportCapabilitiesV1.Builder()
+        .also {
+          it.composeCode = true
+          it.svg = true
+          it.png = true
+          it.remoteJson = true
+          it.remoteDocument = true
+        }
+        .build()
+    val published =
+      PublishedCatalogFixtures.catalog("remote-m3")
+        .newBuilder()
+        .also { it.exportCapabilities = hostExports }
+        .build()
     val catalogs =
       CurrentM3UiBuilderCatalogExecutor.Builder()
         .also {
           it.catalogSystemIds = setOf("remote-m3")
-          it.published = mapOf("remote-m3" to PublishedCatalogFixtures.catalog("remote-m3"))
+          it.published = mapOf("remote-m3" to published)
           it.nativeRuntimeIds = mapOf("remote-m3" to runtimeId)
+          it.exportCapabilities = hostExports
         }
         .build()
     val sourcePin =
@@ -525,6 +541,7 @@ class ProductionUiBuilderRuntimeTest {
     val resolved = assertNotNull(catalogs.resolve(hostPin))
 
     assertEquals(runtimeId, resolved.benchmark.nativeRuntimeId)
+    assertEquals(catalogs.listCatalogs().single().exportCapabilities, resolved.exportCapabilities)
     assertEquals(hostPin, catalogs.reference(resolved))
     assertEquals(resolved, catalogs.resolve(sourcePin), "the packaged source pin remains readable")
     assertNull(

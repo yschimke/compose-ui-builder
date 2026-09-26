@@ -4,6 +4,7 @@ import ee.schimke.composeai.uibuilder.protocol.CatalogBenchmarkV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ExportCapabilitiesV1
+import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.WasmAdapterStatusV1
 import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
 import kotlin.test.Test
@@ -104,7 +105,7 @@ class WearM3ScreenCatalogTest {
     val scaffold = wear.components.single { it.componentId == "wear-m3/screen-scaffold" }
 
     assertEquals(
-      listOf("timeText", "scrollIndicator", "background"),
+      listOf("timeText", "scrollIndicator"),
       scaffold.properties.map { it.name },
     )
     // `overlays` is the third and it is not a content slot: Wear's dialogs take a `visible` flag
@@ -113,6 +114,24 @@ class WearM3ScreenCatalogTest {
     // full-screen dialog into a scrolling item.
     assertEquals(listOf("content", "edgeButton", "overlays"), scaffold.slots.map { it.name })
     assertEquals("Scaffold", scaffold.role)
+  }
+
+  @Test
+  fun `the Wear shelf keeps exporter-handled list and header properties`() {
+    assertEquals(
+      listOf("verticalSpacingDp", "transformation"),
+      wear.components
+        .single { it.componentId == "wear-m3/transforming-lazy-column" }
+        .properties
+        .map { it.name },
+    )
+    assertEquals(
+      listOf("text", "maxLines", "overflow"),
+      wear.components
+        .single { it.componentId == "wear-m3/list-sub-header" }
+        .properties
+        .map { it.name },
+    )
   }
 
   /**
@@ -367,7 +386,26 @@ class WearM3ScreenCatalogTest {
 
   @Test
   fun `the published Wear shelf withdraws components the exporter cannot write`() {
-    val base = testCatalog(id = "wear-m3", platform = "wear", componentId = "wear-m3/card")
+    val original = testCatalog(id = "wear-m3", platform = "wear", componentId = "wear-m3/card")
+    val base =
+      original
+        .newBuilder()
+        .also {
+          it.components =
+            listOf(
+              original.components
+                .single()
+                .newBuilder()
+                .also { card ->
+                  card.properties =
+                    listOf("variant", "enabled", "shape", "onLongClickLabel").map { name ->
+                      PropertyCapabilityV1.Builder(name, JsonPrimitive("string")).build()
+                    }
+                }
+                .build()
+            )
+        }
+        .build()
     val scaffoldAuxiliary =
       ComponentCapabilityV1.Builder(
           "wear-m3/scroll-indicator",
@@ -429,6 +467,19 @@ class WearM3ScreenCatalogTest {
     assertTrue("wear-m3/card" in ids)
     assertTrue("wear-m3/scroll-indicator" in ids)
     assertTrue("wear-m3/title-card" !in ids)
+    assertEquals(
+      listOf("variant"),
+      served.components.single { it.componentId == "wear-m3/card" }.properties.map { it.name },
+      "the shelf offers only properties the Wear exporter consumes",
+    )
+    assertEquals(
+      setOf("assetKey", "contentDescription", "contentScale", "alignment"),
+      served.components
+        .single { it.componentId == "asset/image" }
+        .properties
+        .mapTo(mutableSetOf()) { it.name },
+      "borrowed foundation components retain only properties the Wear exporter consumes",
+    )
     val menu = served.statusSemantics.getValue("componentMenu").jsonObject
     val menuIds = menu.getValue("components").jsonObject.keys
     assertEquals(ids, menuIds)
