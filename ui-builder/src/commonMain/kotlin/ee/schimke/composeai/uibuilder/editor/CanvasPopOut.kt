@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -160,14 +161,20 @@ internal fun UnrolledContainerPopOut(
           LocalUiBuilderDetachedFrom provides document,
           LocalUiBuilderUnrolledHorizontal provides container.horizontal,
         ) {
-          UiBuilderSurface(
-            document = detached,
-            editorOverlay = true,
-            selectedNodeId = selectedNodeId,
-            onNodeSelected = onNodeSelected,
-            renderSessionId = POP_OUT_SESSION,
-            unrolled = true,
-          )
+          // Keyed by the container as well as by the design. A selection that moves to another list
+          // in the same revision re-roots this surface, and its overlay and inspection are keyed on
+          // the session: shared, the first list's boxes stayed under the second list's rows — an
+          // unrolled surface forgets nothing it drew — and, being smaller, took their clicks.
+          key(container.nodeId) {
+            UiBuilderSurface(
+              document = detached,
+              editorOverlay = true,
+              selectedNodeId = selectedNodeId,
+              onNodeSelected = onNodeSelected,
+              renderSessionId = "$POP_OUT_SESSION:${container.nodeId}",
+              unrolled = true,
+            )
+          }
         }
       }
     }

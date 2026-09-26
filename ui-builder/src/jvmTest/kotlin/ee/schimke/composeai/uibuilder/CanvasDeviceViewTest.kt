@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
@@ -17,6 +18,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -51,6 +53,8 @@ import kotlinx.serialization.json.jsonObject
 class CanvasDeviceViewTest {
   private val list = replay(listFixture(rows = ROWS))
   private val row = replay(rowFixture(chips = CHIPS))
+  private val twoLists = replay(twoListsFixture())
+  private val loop = replay(loopFixture())
   private val catalog =
     CapabilityCatalogParser.parse(
       checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
@@ -196,6 +200,68 @@ class CanvasDeviceViewTest {
       )
     }
 
+  /**
+   * Moving the selection from one list to another in the same revision re-roots the pop-out on a
+   * different container. Its geometry has to start again with it: the boxes the first list's rows
+   * left behind sat under the second list's rows and, being smaller, won the click.
+   */
+  @Test
+  fun `a pop-out re-rooted on another list forgets the first list's boxes`() =
+    runDesktopComposeUiTest(width = 900, height = 700) {
+      var selected by mutableStateOf<String?>("a-2")
+      setContent {
+        DeviceViewCanvasHost(
+          twoLists,
+          view = EditorCanvasView.Device,
+          selectedNodeId = selected,
+          onSelected = { selected = it },
+        )
+      }
+      waitForIdle()
+      popOutNode("A2").assertExistsInPopOut("the first list is out")
+
+      selected = "b-1"
+      waitForIdle()
+      // At the row's left edge, which is where the first list's shorter label used to be.
+      val target = popOutNode("Bravo 2").getUnclippedBoundsInRoot()
+      onRoot().performTouchInput {
+        click(
+          Offset(
+            (target.left.value + 3f) * density,
+            (target.top + target.bottom).value / 2f * density,
+          )
+        )
+      }
+      waitForIdle()
+
+      assertEquals("b-2", selected, "the click lands on the list that is out now")
+    }
+
+  /**
+   * A `for-each` draws one authored node several times, and the inspection keeps one box per id —
+   * whichever copy measured last. The device frame's click reads every copy's box instead, so any
+   * copy selects the node rather than whatever ancestor happened to hold the point.
+   */
+  @Test
+  fun `a click on any copy a loop draws selects its template`() =
+    runDesktopComposeUiTest(width = 900, height = 700) {
+      var selected: String? = null
+      setContent {
+        DeviceViewCanvasHost(
+          loop,
+          view = EditorCanvasView.Device,
+          onSelected = { selected = it },
+        )
+      }
+      waitForIdle()
+
+      // The first of three copies; the last one drawn is two cells further down.
+      onRoot().performTouchInput { click(Offset(CELL_DP / 2f * density, CELL_DP / 2f * density)) }
+      waitForIdle()
+
+      assertEquals("cell", selected, "the first copy selects the template it is a copy of")
+    }
+
   /** The switch lives in the zoom bar, and only where the device view can be drawn at all. */
   @Test
   fun `the zoom bar switches the editor between the extent and the device frame`() =
@@ -255,6 +321,7 @@ class CanvasDeviceViewTest {
     const val DEEP_ROW = 27
     const val CLICKED_ROW = 20
     const val CHIPS = 12
+    const val CELL_DP = 24
 
     fun replay(operations: String): UiBuilderDocument =
       UiBuilderReducer.replay(Json.parseToJsonElement(operations).jsonObject).document
@@ -289,6 +356,44 @@ class CanvasDeviceViewTest {
         ${children("chips", "items", "chip", "Chip", chips)}
         """,
       )
+
+    /** Two lists side by side: short labels on the left, longer ones on the right. */
+    fun twoListsFixture(): String =
+      fixture(
+        "canvas-device-two-lists",
+        """
+        {"operationId": "row", "type": "insertNode", "parent": null,
+         "node": {"id": "row", "componentId": "layout/row",
+                  "modifiers": [{"type": "fillMaxSize"}]}},
+        {"operationId": "list-a", "type": "insertNode",
+         "parent": {"nodeId": "row", "slot": "children"},
+         "node": {"id": "list-a", "componentId": "layout/lazy-column"}},
+        {"operationId": "list-b", "type": "insertNode",
+         "parent": {"nodeId": "row", "slot": "children"}, "afterNodeId": "list-a",
+         "node": {"id": "list-b", "componentId": "layout/lazy-column"}},
+        ${children("list-a", "items", "a", "A", 20).replace("\"A ", "\"A")},
+        ${children("list-b", "items", "b", "Bravo", 3)}
+        """,
+      )
+
+    /** One 24dp cell, drawn three times down the frame by a loop over three rows. */
+    fun loopFixture(): String {
+      val row =
+        """{"type": "object", "fields": {"shade": {"type": "color", "value": "#FF40C463"}}}"""
+      return fixture(
+        "canvas-device-loop",
+        """
+        {"operationId": "loop", "type": "insertNode", "parent": null,
+         "node": {"id": "loop", "componentId": "layout/for-each",
+                  "properties": {"data": {"type": "list", "values": [$row, $row, $row]}}}},
+        {"operationId": "cell", "type": "insertNode",
+         "parent": {"nodeId": "loop", "slot": "template"},
+         "node": {"id": "cell", "componentId": "m3/surface",
+                  "properties": {"containerColor": {"type": "binding", "value": "shade"}},
+                  "modifiers": [{"type": "size", "widthDp": $CELL_DP, "heightDp": $CELL_DP}]}}
+        """,
+      )
+    }
 
     fun children(parent: String, slot: String, id: String, label: String, count: Int) =
       (1..count).joinToString(",") { index ->

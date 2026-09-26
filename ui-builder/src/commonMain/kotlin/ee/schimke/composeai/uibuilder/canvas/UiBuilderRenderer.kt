@@ -675,8 +675,19 @@ fun UiBuilderSurface(
               // `fillMaxSize` overlay there came out zero along that axis and caught no click.
               Modifier.matchParentSize()
                 .then(
-                  if (!overlayTakesInput) Modifier
-                  else
+                  if (!overlayTakesInput) {
+                    // The device frame: every box each drawing of a node reported, so a click on
+                    // any
+                    // copy a loop or a component draws selects that node — the inspection keeps one
+                    // box per id, and hit-testing it found only the copy that measured last.
+                    Modifier.passThroughClick { position ->
+                      overlayBounds
+                        .filterValues { it.contains(position) }
+                        .minByOrNull { (_, rect) -> rect.width * rect.height }
+                        ?.key
+                        ?.let { onNodeSelected?.invoke(it.nodeId) }
+                    }
+                  } else
                     Modifier.pointerInput(overlayBounds.toMap(), onNodeSelected) {
                       detectTapGestures { position ->
                         overlayBounds

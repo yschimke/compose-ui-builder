@@ -655,30 +655,6 @@ internal fun PinnedDesignCanvas(
                     onEnded = onNodeDragEnded,
                   )
                   .then(
-                    if (deviceView && showSelectionOverlay) {
-                      Modifier.onDeviceFrameClick(document.revision) { position ->
-                        val point =
-                          Offset(
-                            frameOrigin.x + position.x * drawScale,
-                            frameOrigin.y + position.y * drawScale,
-                          )
-                        inspection
-                          ?.nodes
-                          .orEmpty()
-                          .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
-                          .filter { (_, bounds) ->
-                            point.x >= bounds.x &&
-                              point.x <= bounds.right &&
-                              point.y >= bounds.y &&
-                              point.y <= bounds.bottom
-                          }
-                          .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
-                          ?.first
-                          ?.let(onNodeSelected)
-                      }
-                    } else Modifier
-                  )
-                  .then(
                     if (canvasRenderer != null && showSelectionOverlay) {
                       Modifier.pointerInput(document.revision, inspection) {
                         detectTapGestures { position ->
