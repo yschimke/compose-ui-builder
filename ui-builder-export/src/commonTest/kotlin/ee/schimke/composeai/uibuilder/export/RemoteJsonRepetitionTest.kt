@@ -183,12 +183,18 @@ class RemoteJsonRepetitionTest {
         slots = mapOf("template" to listOf("red")),
       )
     val outer = inner.copy(id = "outer", slots = mapOf("template" to listOf("inner")))
-    refused(
-      base.copy(
-        roots = listOf("outer"),
-        nodes = base.nodes + mapOf("outer" to outer, "inner" to inner),
-      ),
-      "expanded document exceeds 10000 nodes",
-    )
+    val result =
+      assertIs<RemoteDocumentJsonExporter.Result.Refused>(
+        RemoteDocumentJsonExporter.export(
+          base.copy(
+            roots = listOf("outer"),
+            nodes = base.nodes + mapOf("outer" to outer, "inner" to inner),
+          )
+        )
+      )
+    // Refused by the count, naming the root, rather than by the emitter tripping its limit
+    // part-way through building ten thousand nodes: that took long enough to time out a browser
+    // test run.
+    assertEquals(listOf("nodes.outer: expanded document exceeds 10000 nodes"), result.reasons)
   }
 }
