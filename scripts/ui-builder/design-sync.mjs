@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import { candidateDocumentHash, replayCandidateOperations } from "./replay-candidate.mjs";
 
 /**
@@ -145,7 +146,7 @@ export function fixtureHome(fixture) {
 
 export function assertHomeOverwriteAllowed(sourceHome, existingFixture, force = false) {
   const targetHome = fixtureHome(existingFixture);
-  if (!force && sourceHome && targetHome && JSON.stringify(sourceHome) !== JSON.stringify(targetHome)) {
+  if (!force && sourceHome && targetHome && !isDeepStrictEqual(sourceHome, targetHome)) {
     throw new Error("refusing to overwrite a design copy with a different canonical home; pass --force to replace it");
   }
 }

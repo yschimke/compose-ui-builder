@@ -49,6 +49,22 @@ test("a copy cannot replace a different canonical home without force", () => {
   assert.doesNotThrow(() => assertHomeOverwriteAllowed(copyHome, fixture, true));
 });
 
+test("equivalent canonical homes do not depend on JSON key order", () => {
+  const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
+  fixture.operations[0].home = {
+    kind: "server",
+    url: "https://preview.example",
+    designId: "original",
+  };
+  const reordered = {
+    designId: "original",
+    url: "https://preview.example",
+    kind: "server",
+  };
+
+  assert.doesNotThrow(() => assertHomeOverwriteAllowed(reordered, fixture));
+});
+
 test("an unhomed source preserves the existing fixture home unless forced", () => {
   const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
   const targetHome = { kind: "repo", path: "ui-builder/designs/original.uid" };
