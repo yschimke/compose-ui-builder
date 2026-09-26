@@ -409,6 +409,15 @@ object CapabilityCatalogParser {
     EDITOR_OVERRIDES[componentId to property.name]?.let {
       return it
     }
+    // A Wear component edits like its Material 3 counterpart where the two share a property: a Wear
+    // Slider's `value` is the same number in the same units as `m3/slider`'s. Without this every
+    // one
+    // of them was `Unsupported` — a slider nobody could move, a Text whose size nobody could set —
+    // because the overrides above are keyed on the Material 3 ids.
+    COUNTERPARTS[componentId]?.let { counterpart -> EDITOR_OVERRIDES[counterpart to property.name] }
+      ?.let {
+        return it
+      }
     // Every A2UI component declares `weight`, its share of a Row or Column, and none of them is a
     // `…Dp`: without this the one layout number the protocol has would be `Unsupported` on all
     // eighteen. Same range as `m3/text`'s weight.
@@ -549,6 +558,20 @@ object CapabilityCatalogParser {
       AdaptiveWearWidget.COMPONENT_ID,
     )
 
+  /**
+   * Components that edit like another where they share a property name — see [editorMetadata]. A
+   * Stepper is a slider drawn as two buttons, so it takes the slider's ranges too.
+   */
+  private val COUNTERPARTS: Map<String, String> =
+    mapOf(
+      "wear-m3/text" to "m3/text",
+      "wear-m3/list-header" to "m3/text",
+      "wear-m3/list-sub-header" to "m3/text",
+      "wear-m3/slider" to "m3/slider",
+      "wear-m3/stepper" to "m3/slider",
+      "wear-m3/progress-indicator" to "m3/progress-indicator",
+    )
+
   private val EDITOR_OVERRIDES =
     mapOf(
       ("layout/supporting-pane-scaffold" to "mainPanePreferredWidthDp") to
@@ -578,6 +601,8 @@ object CapabilityCatalogParser {
       // A fraction, and the only value this component has. Bounded 0..1 because that is what both
       // Material indicators take, so the control cannot author a progress the renderer clamps away.
       ("m3/progress-indicator" to "progress") to numberEditor(0.0, 1.0, 0.05),
+      // Wear's segmented ring: how many arcs it is cut into. A count, so the `…Dp` rule misses it.
+      ("wear-m3/progress-indicator" to "segments") to numberEditor(1.0, 64.0, 1.0),
       // A slider's range and its value are numbers in the design's own units — not dimensions, so
       // the `…Dp` rule cannot reach them, and a slider whose ends nobody can set is a slider stuck
       // between zero and one.
