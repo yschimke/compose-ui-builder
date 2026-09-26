@@ -1,0 +1,11 @@
+{
+  "schema": "compose-ui-builder-design-renders/v1",
+  "designs": [
+    {
+      "id": "google-home-wear",
+      "file": "google-home-wear.png",
+      "sha256": "64ff8a701ca77a1ded62d11296c51869eb948001ba13666c26fc16bfd93f5343",
+      "bytes": 15172
+    }
+  ]
+}
