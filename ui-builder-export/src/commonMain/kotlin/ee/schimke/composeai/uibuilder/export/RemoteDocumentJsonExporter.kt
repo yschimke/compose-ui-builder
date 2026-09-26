@@ -86,13 +86,15 @@ object RemoteDocumentJsonExporter {
       // Counted before anything is built. The emitter's own limit stops a runaway expansion, but
       // only after it has built ten thousand nodes; a loop nested in a loop reaches that from two
       // hundred authored rows, and building them is the cost the limit exists to refuse.
-      document.roots
-        .firstOrNull { expandedSize(it) > MAX_EXPANDED_NODES }
-        ?.let {
-          return Result.Refused(
-            listOf("nodes.$it: expanded document exceeds $MAX_EXPANDED_NODES nodes")
+      // The emitter's count runs across every root, so the check totals them too.
+      val expanded = document.roots.sumOf { expandedSize(it, JsonObject(emptyMap())).toLong() }
+      if (expanded > MAX_EXPANDED_NODES)
+        return Result.Refused(
+          listOf(
+            "nodes.${document.roots.joinToString(",")}: expanded document exceeds " +
+              "$MAX_EXPANDED_NODES nodes"
           )
-        }
+        )
       val roots = document.roots.mapNotNull { node(it, JsonObject(emptyMap())) }
       val source = buildJsonObject {
         if (strings.isNotEmpty() || usesStateProfile) put("compilerProfile", STATE_PROFILE)
@@ -219,46 +221,74 @@ object RemoteDocumentJsonExporter {
       return supplied
     }
 
-    val expandedSizes = mutableMapOf<String, Int>()
+    val expandedSizes = mutableMapOf<Pair<String, JsonObject>, Int>()
     val sizing = mutableSetOf<String>()
 
     /**
-     * How many nodes [node] would emit for [id], capped just past [MAX_EXPANDED_NODES].
+     * How many nodes [node] would emit for [id] under [arguments], capped just past
+     * [MAX_EXPANDED_NODES].
      *
-     * Arguments never change the shape of what a node expands to, so each id is counted once. A
-     * cycle counts as one node: [node] reports it as an error rather than expanding it.
+     * It follows [node]'s own reading of the tree: a placement's arguments are resolved against the
+     * scope it sits in, and a loop's rows are read after its `data` binding is resolved, so a loop
+     * whose rows arrive through a component argument is counted by the rows it will get. A cycle
+     * counts as one node: [node] reports it as an error rather than expanding it.
      */
-    fun expandedSize(id: String): Int {
-      expandedSizes[id]?.let {
+    fun expandedSize(id: String, arguments: JsonObject): Int {
+      val key = id to arguments
+      expandedSizes[key]?.let {
         return it
       }
       val raw = document.nodes[id] ?: return 0
       if (!sizing.add(id)) return 1
       try {
-        val cap = MAX_EXPANDED_NODES + 1L
+        val quiet = { value: JsonElement -> sizingResolve(value, arguments) }
         val placement = raw.component
         val inner: Long =
           when {
             placement != null -> {
-              val key = (placement["componentKey"] as? JsonPrimitive)?.content
+              val componentKey = (placement["componentKey"] as? JsonPrimitive)?.content
               val root =
-                ((key?.let { document.components[it] } as? JsonObject)?.get("root")
+                ((componentKey?.let { document.components[it] } as? JsonObject)?.get("root")
                     as? JsonPrimitive)
                   ?.content
-              root?.let { expandedSize(it).toLong() } ?: 0L
+              val supplied =
+                JsonObject(
+                  (placement["arguments"] as? JsonObject).orEmpty().mapValues { quiet(it.value) }
+                )
+              root?.let { expandedSize(it, supplied).toLong() } ?: 0L
             }
             raw.componentId == "layout/for-each" -> {
-              val rows =
-                ((raw.properties["data"] as? JsonObject)?.get("values") as? JsonArray)?.size ?: 0
+              val data = raw.properties["data"]?.let(quiet) as? JsonObject
+              val rows = (data?.get("values") as? JsonArray).orEmpty()
               val template = raw.slots["template"]?.singleOrNull()
-              rows.toLong() * (template?.let { expandedSize(it).toLong() } ?: 0L)
+              var total = 0L
+              if (template != null) {
+                // Stops at the cap: rows with distinct fields are each counted afresh, and past
+                // the limit the answer is already known.
+                for (row in rows) {
+                  val fields = (row as? JsonObject)?.get("fields") as? JsonObject ?: continue
+                  total += expandedSize(template, fields)
+                  if (total > MAX_EXPANDED_NODES) break
+                }
+              }
+              total
             }
-            else -> raw.slots["children"].orEmpty().sumOf { expandedSize(it).toLong() }
+            else -> raw.slots["children"].orEmpty().sumOf { expandedSize(it, arguments).toLong() }
           }
-        return (1L + inner).coerceAtMost(cap).toInt().also { expandedSizes[id] = it }
+        return (1L + inner).coerceAtMost(MAX_EXPANDED_NODES + 1L).toInt().also {
+          expandedSizes[key] = it
+        }
       } finally {
         sizing.remove(id)
       }
+    }
+
+    /** [resolve] without recording an error: the emitter reports a bad binding when it meets it. */
+    fun sizingResolve(value: JsonElement, arguments: JsonObject): JsonElement {
+      val binding =
+        (value as? JsonObject)?.takeIf { it["type"] == JsonPrimitive("binding") } ?: return value
+      val key = (binding["value"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+      return key?.let { arguments[it] } ?: value
     }
 
     fun node(id: String, arguments: JsonObject): JsonObject? {

@@ -197,4 +197,68 @@ class RemoteJsonRepetitionTest {
     // test run.
     assertEquals(listOf("nodes.outer: expanded document exceeds 10000 nodes"), result.reasons)
   }
+
+  private fun rowsOf(count: Int) =
+    obj(
+      """{"type":"list","values":[${List(count) { """{"type":"object","fields":{}}""" }.joinToString(",")}]}"""
+    )
+
+  private fun expansionRefusal(document: UiBuilderDocument): List<String> =
+    assertIs<RemoteDocumentJsonExporter.Result.Refused>(RemoteDocumentJsonExporter.export(document))
+      .reasons
+
+  @Test
+  fun `a loop whose rows arrive through a component argument is counted by those rows`() {
+    val base = remoteJsonRepetitionFixture(1)
+    val loop =
+      UiBuilderNode(
+        "bound-loop",
+        "layout/for-each",
+        properties = obj("""{"data":{"type":"binding","value":"rows"}}"""),
+        slots = mapOf("template" to listOf("red")),
+      )
+    val placed =
+      UiBuilderNode(
+        "placed",
+        "design/component-instance",
+        component =
+          JsonObject(
+            mapOf(
+              "componentKey" to JsonPrimitive("big"),
+              "arguments" to JsonObject(mapOf("rows" to rowsOf(10_001))),
+            )
+          ),
+      )
+    assertEquals(
+      listOf("nodes.placed: expanded document exceeds 10000 nodes"),
+      expansionRefusal(
+        base.copy(
+          roots = listOf("placed"),
+          nodes = base.nodes + mapOf("placed" to placed, "bound-loop" to loop),
+          components = obj("""{"big":{"name":"Big","root":"bound-loop"}}"""),
+        )
+      ),
+    )
+  }
+
+  @Test
+  fun `roots are counted together, as the emitter counts them`() {
+    val base = remoteJsonRepetitionFixture(1)
+    fun loop(id: String) =
+      UiBuilderNode(
+        id,
+        "layout/for-each",
+        properties = JsonObject(mapOf("data" to rowsOf(6_000))),
+        slots = mapOf("template" to listOf("red")),
+      )
+    assertEquals(
+      listOf("nodes.a,b: expanded document exceeds 10000 nodes"),
+      expansionRefusal(
+        base.copy(
+          roots = listOf("a", "b"),
+          nodes = base.nodes + mapOf("a" to loop("a"), "b" to loop("b")),
+        )
+      ),
+    )
+  }
 }
