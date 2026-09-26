@@ -1,0 +1,41 @@
+{
+  "schema": "compose-ui-builder-design-renders/v1",
+  "designs": [
+    {
+      "id": "google-home-wear",
+      "file": "google-home-wear.png",
+      "sha256": "64ff8a701ca77a1ded62d11296c51869eb948001ba13666c26fc16bfd93f5343",
+      "bytes": 15172
+    },
+    {
+      "id": "jetcaster-wear-episode",
+      "file": "jetcaster-wear-episode.png",
+      "sha256": "a25bfb8b92bd34619cca5c9651288a1cea021acc856bff81fac478c6c6f98dbc",
+      "bytes": 23618
+    },
+    {
+      "id": "jetcaster-wear-library",
+      "file": "jetcaster-wear-library.png",
+      "sha256": "e5e352f1fc44a5f2027624d45590a3c0c2bfb66d97fdf176919a397b8b85bf71",
+      "bytes": 21455
+    },
+    {
+      "id": "jetcaster-wear-queue",
+      "file": "jetcaster-wear-queue.png",
+      "sha256": "13bc1b06d1a5605314f3118228e67d234746afdfd77a3f844d99714f6d5ad6f7",
+      "bytes": 23799
+    },
+    {
+      "id": "wear-starter-greeting",
+      "file": "wear-starter-greeting.png",
+      "sha256": "b67bf3f8fcbe13b5114f61c8f0914bb30c9a19dbfd2d7879b198696e073c9536",
+      "bytes": 11786
+    },
+    {
+      "id": "wear-starter-list",
+      "file": "wear-starter-list.png",
+      "sha256": "8981cd5299c6436708789034e1771d7de1f54af6b90cac19896831a9efbcb23f",
+      "bytes": 19794
+    }
+  ]
+}
