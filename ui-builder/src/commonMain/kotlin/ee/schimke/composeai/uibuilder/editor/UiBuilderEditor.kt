@@ -1772,6 +1772,7 @@ fun UiBuilderEditor(
   val generatedCodeCaption =
     if (state.document.isWearWidget()) "Wear widget · Remote Compose"
     else if (catalog.platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE) "Remote Compose source"
+    else if (catalog.platform == UiBuilderCatalogPlatform.A2UI) "A2UI messages · Compose"
     else "Compose export · ${ScreenExportGate.PACKAGE_NAME}"
   val propertyFields = reducer.propertyFields(state)
   // Which of those a binding must reach as a comparison rather than a bare read. Computed beside

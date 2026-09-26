@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 class A2uiDocumentExporterTest {
@@ -231,9 +232,13 @@ class A2uiDocumentExporterTest {
     assertTrue(refused.reasons.single().startsWith("roots:"))
   }
 
+  /**
+   * `Tabs` nests its bodies in `[{title, child}]`, so the builder holds them in a `tabs` slot (each
+   * one a placed node the export reaches) and the titles in a `titles` list beside it.
+   */
   @Test
-  fun `list values are unwrapped element by element`() {
-    val tabs =
+  fun `tabs zip their slot with their titles and emit every body`() {
+    val nodes =
       listOf(
         UiBuilderNode(
           "tabs",
@@ -241,40 +246,40 @@ class A2uiDocumentExporterTest {
           properties =
             buildJsonObject {
               put(
-                "tabs",
+                "titles",
                 buildJsonObject {
                   put("type", "list")
-                  put(
-                    "values",
-                    buildJsonArray {
-                      add(
-                        buildJsonObject {
-                          put("type", "object")
-                          put(
-                            "fields",
-                            buildJsonObject {
-                              put("title", wrapped("string", "Flights"))
-                              put("child", wrapped("string", "flights"))
-                            },
-                          )
-                        }
-                      )
-                    },
-                  )
+                  put("values", buildJsonArray { add(wrapped("string", "Flights")) })
                 },
               )
             },
-        )
+          slots = mapOf("tabs" to listOf("flights", "hotels")),
+        ),
+        UiBuilderNode(
+          "flights",
+          "a2ui/Text",
+          properties = buildJsonObject { put("text", wrapped("string", "No flights")) },
+        ),
+        UiBuilderNode(
+          "hotels",
+          "a2ui/Text",
+          properties = buildJsonObject { put("text", wrapped("string", "No hotels")) },
+        ),
       )
     val emitted =
-      assertIs<A2uiDocumentExporter.Result.Emitted>(A2uiDocumentExporter.export(document(tabs)))
-    val root =
-      (emitted.messages.last()["updateComponents"]!!.jsonObject["components"] as JsonArray)[0]
+      assertIs<A2uiDocumentExporter.Result.Emitted>(A2uiDocumentExporter.export(document(nodes)))
+    val components =
+      emitted.messages.last()["updateComponents"]!!.jsonObject["components"] as JsonArray
     assertEquals(
       Json.parseToJsonElement(
-        """{"id":"root","component":"Tabs","tabs":[{"title":"Flights","child":"flights"}]}"""
+        """{"id":"root","component":"Tabs","tabs":[""" +
+          """{"title":"Flights","child":"flights"},{"title":"Tab 2","child":"hotels"}]}"""
       ),
-      root,
+      components[0],
+    )
+    assertEquals(
+      listOf("root", "flights", "hotels"),
+      components.map { it.jsonObject["id"]!!.jsonPrimitive.content },
     )
   }
 

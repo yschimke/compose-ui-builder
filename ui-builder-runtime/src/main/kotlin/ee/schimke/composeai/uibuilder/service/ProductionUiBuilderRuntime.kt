@@ -211,6 +211,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       DEFAULT_CATALOG_SYSTEM_ID to baseCatalog,
       REMOTE_M3_CATALOG_SYSTEM_ID to remoteM3Catalog(baseCatalog),
       WEAR_M3_CATALOG_SYSTEM_ID to wearM3Catalog(baseCatalog),
+      A2UI_CATALOG_SYSTEM_ID to a2uiCatalog(baseCatalog),
     )
 
   /**
@@ -434,21 +435,32 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
               }
             it.exportCapabilities =
               RemoteDocumentExportSupport.capabilities(
-                catalog.exportCapabilities
-                  .newBuilder()
-                  .also { it.composeCode = composeExportFor(systemId) }
-                  .build(),
-                json =
-                  catalog.platform == "remote-compose" &&
-                    RemoteDocumentExportSupport.jsonFormat?.let {
-                      RemoteDocumentExportSupport.supports(exportCapabilities, it)
-                    } == true,
-                document =
-                  catalog.platform == "remote-compose" &&
-                    RemoteDocumentExportSupport.documentFormat?.let {
-                      RemoteDocumentExportSupport.supports(exportCapabilities, it)
-                    } == true,
-              )
+                  catalog.exportCapabilities
+                    .newBuilder()
+                    .also { it.composeCode = composeExportFor(systemId) }
+                    .build(),
+                  json =
+                    catalog.platform == "remote-compose" &&
+                      RemoteDocumentExportSupport.jsonFormat?.let {
+                        RemoteDocumentExportSupport.supports(exportCapabilities, it)
+                      } == true,
+                  document =
+                    catalog.platform == "remote-compose" &&
+                      RemoteDocumentExportSupport.documentFormat?.let {
+                        RemoteDocumentExportSupport.supports(exportCapabilities, it)
+                      } == true,
+                )
+                .let { capabilities ->
+                  // An A2UI design's JSON is the A2UI messages, not Remote Compose, so it is not
+                  // behind the Remote Compose authoring flag: offered wherever the host says its
+                  // executor writes JSON (`remoteJson`, the one JSON flag the contract has).
+                  if (catalog.platform != A2UI_PLATFORM) capabilities
+                  else
+                    capabilities
+                      .newBuilder()
+                      .also { a2ui -> a2ui.remoteJson = exportCapabilities.remoteJson }
+                      .build()
+                }
           }
           .build()
           .withPacks(packs.filter { it.platform == catalog.platform })
@@ -974,6 +986,12 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     public const val DEFAULT_CATALOG_SYSTEM_ID: String = "m3-catalog"
     public const val REMOTE_M3_CATALOG_SYSTEM_ID: String = "remote-m3"
     public const val WEAR_M3_CATALOG_SYSTEM_ID: String = "wear-m3"
+
+    /**
+     * The A2UI basic catalog v0.9.1 as a builder palette; see `a2uiCatalog`. The same id
+     * `:ui-builder-export`'s `A2uiDocumentExporter.CATALOG_SYSTEM_ID` names.
+     */
+    public const val A2UI_CATALOG_SYSTEM_ID: String = "a2ui-catalog"
 
     /** The `statusSemantics` key a catalog declares its platform under. */
     public const val PLATFORM_KEY: String = "platform"

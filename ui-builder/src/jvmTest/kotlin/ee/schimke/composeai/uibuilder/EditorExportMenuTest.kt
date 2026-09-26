@@ -41,6 +41,16 @@ class EditorExportMenuTest {
   }
 
   @Test
+  fun `an A2UI catalog offers its messages as A2UI JSON in every build`() {
+    val formats = exportFormatsFor(svg = false, png = true, a2uiJson = true)
+    assertEquals(listOf(EditorExportFormat.Png, EditorExportFormat.A2uiJson), formats)
+    val labels = exportMenuEntries(formats).flatten().map { it.label }
+    assertTrue("Copy A2UI JSON" in labels, labels.toString())
+    assertTrue("Download A2UI JSON" in labels, labels.toString())
+    assertEquals("json", EditorExportFormat.A2uiJson.extension)
+  }
+
+  @Test
   fun `the menu lists every verb for every format the catalog can render, verb by verb`() {
     val groups = exportMenuEntries(exportFormatsFor(svg = true, png = true))
 

@@ -56,6 +56,7 @@ class SynthesisedCatalogGoldenTest {
           CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+          CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID,
         )
     )
 
@@ -70,6 +71,11 @@ class SynthesisedCatalogGoldenTest {
   }
 
   @Test
+  fun `the a2ui catalog matches its checked-in golden`() {
+    assertGolden(CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID)
+  }
+
+  @Test
   fun `both goldens declare their own catalog id and platform`() {
     // Cheap, and it is the pair of fields the whole contract turns on: a catalog is identified by
     // its id and grouped by its platform WORD, and a golden that agreed with the other one about
@@ -81,6 +87,9 @@ class SynthesisedCatalogGoldenTest {
     assertEquals("remote-m3", remote["benchmark"]?.let { (it as JsonObject) }?.catalogSystemId())
     assertEquals("wear", wear.platform())
     assertEquals("remote-compose", remote.platform())
+    val a2ui = catalog(CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID)
+    assertEquals("a2ui-catalog", (a2ui["benchmark"] as JsonObject).catalogSystemId())
+    assertEquals("a2ui", a2ui.platform())
   }
 
   private fun assertGolden(systemId: String) {

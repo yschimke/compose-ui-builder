@@ -44,6 +44,7 @@ import ee.schimke.composeai.uibuilder.client.preparePropertyDelta
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
 import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
+import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS
@@ -64,6 +65,7 @@ import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.encodeNewDesignStates
@@ -581,6 +583,8 @@ private fun LiveSessionApp(
         CapabilityCatalogParser.parse(
           Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
         )
+      val a2ui =
+        UiBuilderCatalogPlatform.from(capability.statusSemantics) == UiBuilderCatalogPlatform.A2UI
       documentPreviewAvailable =
         RemoteDocumentExportSupport.documentFormat?.let {
           RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
@@ -596,10 +600,12 @@ private fun LiveSessionApp(
         BrowserExportHost(
           designId = config.designId,
           supportsLinks = !config.localStorage,
-          suppliedDocument = {
+          // A2UI messages are lowered from the document on the server, without Remote Compose, so
+          // that format submits the current draft whatever the Remote Compose flag says.
+          suppliedDocument = { format ->
             val current = latestEditorDocument ?: document
             current?.takeIf {
-              UiBuilderBuildFeatures.remoteCompose &&
+              (UiBuilderBuildFeatures.remoteCompose || format == EditorExportFormat.A2uiJson) &&
                 (config.localStorage ||
                   (revision == null && authoritativeDocument?.toUiBuilderDocument() != it))
             }
@@ -611,13 +617,18 @@ private fun LiveSessionApp(
                 capability.exportCapabilities.png &&
                   (!config.localStorage || UiBuilderBuildFeatures.remoteCompose),
               json =
-                RemoteDocumentExportSupport.jsonFormat?.let {
-                  RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
-                } == true,
+                !a2ui &&
+                  RemoteDocumentExportSupport.jsonFormat?.let {
+                    RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
+                  } == true,
               rc =
-                RemoteDocumentExportSupport.documentFormat?.let {
-                  RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
-                } == true,
+                !a2ui &&
+                  RemoteDocumentExportSupport.documentFormat?.let {
+                    RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
+                  } == true,
+              // The host's JSON flag, read without the Remote Compose one: for an A2UI catalog the
+              // JSON it writes is the A2UI messages.
+              a2uiJson = a2ui && capability.exportCapabilities.remoteJson,
             ),
           revision = revision,
         )

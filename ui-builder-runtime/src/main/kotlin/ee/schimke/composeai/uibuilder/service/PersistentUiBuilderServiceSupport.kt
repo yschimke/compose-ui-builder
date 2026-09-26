@@ -820,7 +820,12 @@ internal fun CatalogCapabilityV1.supports(format: ExportFormatV1): Boolean =
     // and no catalog here sets either, so both are refused at this gate until something can write
     // one. Wired rather than folded into an `else`, so the next format added still fails this
     // compile instead of silently reading as unsupported — which is what this `when` is for.
-    ExportFormatV1.JSON -> UiBuilderBuildFeatures.remoteCompose && exportCapabilities.remoteJson
+    //
+    // An A2UI catalog's JSON is its A2UI messages rather than Remote Compose, so the Remote
+    // Compose authoring flag does not gate it; the capability alone decides.
+    ExportFormatV1.JSON ->
+      (UiBuilderBuildFeatures.remoteCompose || platform == A2UI_PLATFORM) &&
+        exportCapabilities.remoteJson
     ExportFormatV1.RC -> UiBuilderBuildFeatures.remoteCompose && exportCapabilities.remoteDocument
   }
 

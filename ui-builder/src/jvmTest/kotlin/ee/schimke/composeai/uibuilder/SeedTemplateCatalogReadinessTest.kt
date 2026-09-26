@@ -4,8 +4,10 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.client.toProtocolDocument
+import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import java.io.File
@@ -14,7 +16,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Every seed template, against the catalog it is offered for: does it validate, and does it
@@ -38,12 +42,13 @@ class SeedTemplateCatalogReadinessTest {
   private val fixture =
     Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
 
-  /** The three catalogs the builder serves, each with its frozen capability document. */
+  /** The catalogs the builder serves, each with its frozen capability document. */
   private val catalogs: Map<String, CapabilityCatalog> =
     mapOf(
       "m3-catalog" to catalog("/m3-catalog-capabilities-v1.json"),
       "wear-m3" to catalog("/wear-m3-capabilities-v1.json"),
       "remote-m3" to catalog("/remote-m3-capabilities-v1.json"),
+      A2uiDocumentExporter.CATALOG_SYSTEM_ID to catalog("/a2ui-catalog-capabilities-v1.json"),
     )
 
   @Test
@@ -84,6 +89,34 @@ class SeedTemplateCatalogReadinessTest {
     }
 
     assertEquals(emptyList(), failures, failures.joinToString("\n"))
+  }
+
+  /**
+   * An A2UI design's Kotlin is the app that sends it; its other output is the payload itself. Every
+   * A2UI template has to produce both, and the Kotlin above has to be sending exactly the
+   * components the JSON carries.
+   */
+  @Test
+  fun `every A2UI template exports its messages as A2UI JSON`() {
+    val systemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID
+    val catalog = catalogs.getValue(systemId)
+    assertEquals(UiBuilderCatalogPlatform.A2UI, catalog.platform)
+    UiBuilderNewDesignSeed.templateIds(systemId).sorted().forEach { templateId ->
+      val document = seed(systemId, templateId)
+      val messages =
+        assertIs<A2uiDocumentExporter.Result.Emitted>(
+          A2uiDocumentExporter.export(document),
+          "$systemId/$templateId",
+        )
+      val components =
+        messages.messages.last().getValue("updateComponents").jsonObject.getValue("components")
+          as JsonArray
+      val kotlin = assertIs<Generated.Source>(generate(catalog, document)).kotlin
+      components.forEach { component ->
+        val id = component.jsonObject.getValue("id").jsonPrimitive.content
+        assertTrue("id = \"$id\"" in kotlin, "$systemId/$templateId: the Kotlin does not send $id")
+      }
+    }
   }
 
   /**

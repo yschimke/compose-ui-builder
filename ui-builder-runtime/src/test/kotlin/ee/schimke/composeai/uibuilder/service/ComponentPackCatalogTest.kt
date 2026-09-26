@@ -29,13 +29,19 @@ class ComponentPackCatalogTest {
       CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
       CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
       CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+      CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID,
     )
 
   @Test
   fun `every packaged catalog declares its platform`() {
     val catalogs = PublishedCatalogFixtures.executor(catalogSystemIds = all).listCatalogs()
     assertEquals(
-      mapOf("m3-catalog" to "mobile", "remote-m3" to "remote-compose", "wear-m3" to "wear"),
+      mapOf(
+        "m3-catalog" to "mobile",
+        "remote-m3" to "remote-compose",
+        "wear-m3" to "wear",
+        "a2ui-catalog" to "a2ui",
+      ),
       catalogs.associate { it.benchmark.catalogSystemId to it.platform },
     )
   }
@@ -78,8 +84,9 @@ class ComponentPackCatalogTest {
       menu.getValue("groupOrder").jsonArray.first().jsonPrimitive.content,
     )
 
-    // Neither the Wear screen nor the Wear widget can call a phone application's composables.
-    listOf("remote-m3", "wear-m3").forEach { other ->
+    // Neither the Wear screen nor the Wear widget can call a phone application's composables, and
+    // an A2UI client can draw nothing but its catalog.
+    listOf("remote-m3", "wear-m3", "a2ui-catalog").forEach { other ->
       val catalog = byId.getValue(other)
       assertTrue(catalog.components.none { it.componentId.startsWith("confetti-mobile/") }, other)
       assertNull(catalog.statusSemantics["componentPacks"], other)

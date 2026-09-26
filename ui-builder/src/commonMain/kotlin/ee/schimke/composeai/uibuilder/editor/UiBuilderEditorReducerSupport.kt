@@ -224,6 +224,10 @@ internal fun PropertyCapability.literalDefault(): JsonObject {
 /** The catalog's own id for a loop over the design's rows. */
 private const val FOR_EACH_COMPONENT_ID = "layout/for-each"
 
+/** The trait every `a2ui-catalog` component carries and every one of its slots accepts. */
+private const val A2UI_COMPONENT_TRAIT = "A2uiComponent"
+private const val A2UI_TEXT = "a2ui/Text"
+
 /** The rows a freshly inserted `layout/for-each` carries: three, each naming one `label`. */
 private fun starterRows(): JsonObject =
   JsonObject(
@@ -470,7 +474,9 @@ private fun UiBuilderNode.withStarterProperties(
   val seeded =
     starter?.properties?.filter { (name, encoded) ->
       val property = capability.propertiesByName[name] ?: return@filter false
-      val value = encoded["value"] ?: return@filter false
+      // A structured value — an `object` or `list` wrapper — has no single `value` to check
+      // against an allowed set, and a property with such a set is never structured.
+      val value = encoded["value"] ?: return@filter property.allowedValues.isEmpty()
       property.allowedValues.isEmpty() || value in property.allowedValues
     }
   if (seeded.isNullOrEmpty()) return this
@@ -486,6 +492,9 @@ private fun defaultChildFor(
       // Text before icon, for a slot that accepts both. `m3/button` is such a slot, and with the
       // icon branch first every button inserted from the palette arrived holding an icon rather
       // than a label. A slot that means an icon says `IconContent` and not `TextContent`.
+      // An A2UI slot takes A2UI components and nothing else, and a text is what an agent puts
+      // in a button, a card or a modal first.
+      A2UI_COMPONENT_TRAIT in slot.acceptedTraits -> A2UI_TEXT
       "SearchInput" in slot.acceptedTraits -> "m3/search-input-field"
       "TextContent" in slot.acceptedTraits -> "m3/text"
       "IconContent" in slot.acceptedTraits -> "m3/icon"

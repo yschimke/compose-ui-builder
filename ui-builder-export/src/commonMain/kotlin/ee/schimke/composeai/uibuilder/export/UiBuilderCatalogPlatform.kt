@@ -42,7 +42,13 @@ enum class UiBuilderCatalogPlatform(
   WEAR("wear", "Wear"),
 
   /** A Remote Compose document — a Wear widget body — played rather than composed. */
-  REMOTE_COMPOSE("remote-compose", "Remote Compose");
+  REMOTE_COMPOSE("remote-compose", "Remote Compose"),
+
+  /**
+   * An A2UI surface: a protocol document an agent sends, drawn by whichever client holds the
+   * catalog. Its own platform because nothing from any other one can be sent to an A2UI client.
+   */
+  A2UI("a2ui", "A2UI");
 
   companion object {
     const val KEY: String = "platform"

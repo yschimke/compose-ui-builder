@@ -5,7 +5,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -15,13 +14,16 @@ import kotlinx.serialization.json.put
  * agent would send to draw it: `createSurface`, then `updateDataModel` when the design declares
  * state, then one `updateComponents` carrying every component.
  *
- * An A2UI design has no Kotlin to generate — the client already holds the catalog; what varies is
- * the payload — so this is the export, the way [RemoteDocumentJsonExporter] is for Remote Compose.
+ * What varies between two A2UI designs is the payload — the client already holds the catalog — so
+ * this is the export, the way [RemoteDocumentJsonExporter] is for Remote Compose. The Kotlin an
+ * Android app writes to send the same payload to its own processor is [A2uiComposeExporter], which
+ * renders this object's [lower] rather than lowering the design a second time.
  *
  * The lowering is deliberately literal, because the protocol already is the builder's shape:
  * * a node's `componentId` minus the `a2ui/` prefix is the A2UI `component`;
  * * its slots are A2UI child references — a single-child slot (`child`, `trigger`, `content`)
- *   becomes an id, any other slot (`children`) an id list;
+ *   becomes an id, any other slot (`children`) an id list, except `Tabs`' `tabs` slot, which
+ *   becomes the `{title, child}` entries the protocol nests its bodies in;
  * * a property wrapper (`{"type":"string","value":…}` and the other literal kinds) becomes its bare
  *   value, and a `{"type":"state","variable":"x"}` reference becomes the data binding
  *   `{"path":"/x"}`, reading the `stateVariables` initial values this export writes into the
@@ -41,9 +43,31 @@ object A2uiDocumentExporter {
   const val BASIC_CATALOG_ID: String =
     "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
 
+  /** The builder catalog whose palette this lowers: the A2UI basic catalog, packaged here. */
+  const val CATALOG_SYSTEM_ID: String = "a2ui-catalog"
+
   private const val ROOT_ID = "root"
   private val SINGLE_CHILD_SLOTS = setOf("child", "trigger", "content")
   private val LITERAL_WRAPPERS = setOf("string", "int", "float", "bool", "enum")
+
+  /**
+   * A2UI's `Tabs` holds its bodies inside an array of `{title, child}` objects rather than as a
+   * child list, so the builder models it as a `tabs` slot (every body a placed, reachable node)
+   * plus a builder-only `titles` list, and this zips the two back into the protocol's shape.
+   */
+  private const val TABS = "Tabs"
+  private const val TABS_SLOT = "tabs"
+  private const val TAB_TITLES = "titles"
+
+  private fun tabEntries(ids: List<String>, titles: JsonArray?): JsonArray =
+    JsonArray(
+      ids.mapIndexed { index, id ->
+        buildJsonObject {
+          put("title", titles?.getOrNull(index) ?: JsonPrimitive("Tab ${index + 1}"))
+          put("child", id)
+        }
+      }
+    )
 
   sealed interface Result {
     /**
@@ -55,11 +79,27 @@ object A2uiDocumentExporter {
     data class Refused(val reasons: List<String>) : Result
   }
 
-  fun export(
-    document: UiBuilderDocument,
-    surfaceId: String = document.id,
-    catalogId: String = BASIC_CATALOG_ID,
-  ): Result {
+  /**
+   * The design as A2UI's own shapes — the `updateComponents` component list and the data model a
+   * surface is created with — before either is framed as a message.
+   *
+   * Public because two renderings share it: [export] writes it as the JSON Lines an agent streams,
+   * and [A2uiComposeExporter] writes the same lowering as the Kotlin an Android app sends to its
+   * own message processor. One lowering, so the payload in the Kotlin and the payload in the JSON
+   * cannot disagree about a design, and a refusal is the same refusal in both.
+   */
+  sealed interface Lowered {
+    /**
+     * @param components the `updateComponents` entries in send order, the root (renamed `root`)
+     *   first, each carrying its `id` and `component`.
+     * @param data the surface's data model: every declared state variable's initial value.
+     */
+    data class Components(val components: List<JsonObject>, val data: JsonObject) : Lowered
+
+    data class Refused(val reasons: List<String>) : Lowered
+  }
+
+  fun lower(document: UiBuilderDocument): Lowered {
     val reasons = mutableListOf<String>()
     if (document.roots.size != 1) {
       reasons +=
@@ -71,7 +111,7 @@ object A2uiDocumentExporter {
       reasons += "nodes.root: `root` is reserved for the design's root node, which is `$rootId`"
     }
 
-    val components = buildJsonArray {
+    val components = buildList {
       for (node in reachable(document, rootId, reasons)) {
         val where = "nodes.${node.id}"
         val type = node.componentId.removePrefix(COMPONENT_PREFIX)
@@ -91,13 +131,23 @@ object A2uiDocumentExporter {
           buildJsonObject {
             put("id", rename(node.id))
             put("component", type)
+            var tabTitles: JsonArray? = null
             for ((name, value) in node.properties) {
               val lowered = lowerValue(value, "$where.properties.$name", document, reasons)
-              if (lowered != null) put(name, lowered)
+              if (type == TABS && name == TAB_TITLES) {
+                tabTitles = lowered as? JsonArray
+                if (lowered != null && tabTitles == null) {
+                  reasons += "$where.properties.$name: tab titles are a list"
+                }
+              } else if (lowered != null) {
+                put(name, lowered)
+              }
             }
             for ((slot, children) in node.slots) {
               val ids = children.map(rename)
-              if (slot in SINGLE_CHILD_SLOTS) {
+              if (type == TABS && slot == TABS_SLOT) {
+                put(slot, tabEntries(ids, tabTitles))
+              } else if (slot in SINGLE_CHILD_SLOTS) {
                 if (ids.size > 1) reasons += "$where.slots.$slot: A2UI `$slot` takes one component"
                 ids.firstOrNull()?.let { put(slot, it) }
               } else {
@@ -108,8 +158,20 @@ object A2uiDocumentExporter {
         )
       }
     }
-    if (reasons.isNotEmpty()) return Result.Refused(reasons)
+    return if (reasons.isNotEmpty()) Lowered.Refused(reasons)
+    else Lowered.Components(components, initialData(document))
+  }
 
+  fun export(
+    document: UiBuilderDocument,
+    surfaceId: String = document.id,
+    catalogId: String = BASIC_CATALOG_ID,
+  ): Result {
+    val lowered =
+      when (val lowered = lower(document)) {
+        is Lowered.Refused -> return Result.Refused(lowered.reasons)
+        is Lowered.Components -> lowered
+      }
     val messages = buildList {
       add(
         envelope(
@@ -120,15 +182,14 @@ object A2uiDocumentExporter {
           },
         )
       )
-      val data = initialData(document)
-      if (data.isNotEmpty()) {
+      if (lowered.data.isNotEmpty()) {
         add(
           envelope(
             "updateDataModel",
             buildJsonObject {
               put("surfaceId", surfaceId)
               put("path", "/")
-              put("value", data)
+              put("value", lowered.data)
             },
           )
         )
@@ -138,7 +199,7 @@ object A2uiDocumentExporter {
           "updateComponents",
           buildJsonObject {
             put("surfaceId", surfaceId)
-            put("components", components)
+            put("components", JsonArray(lowered.components))
           },
         )
       )

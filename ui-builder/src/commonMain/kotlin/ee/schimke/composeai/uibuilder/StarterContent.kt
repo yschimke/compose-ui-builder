@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -111,6 +112,38 @@ internal object StarterContent {
       "remote-m3/remote-stepper" to mapOf("value" to starterFraction(0.5)),
     )
 
+  /**
+   * The A2UI basic catalog's required values that no neutral default can supply.
+   *
+   * Each is required by the catalog's own schema and none is a string, so the generic default — an
+   * empty string — would be refused by validation and the insert with it: a Button has to say what
+   * it dispatches, a Slider needs its `max`, a CheckBox its state, a ChoicePicker its options and
+   * the selection among them. Seeded to the smallest value that draws as the component, so a drop
+   * from the palette is a component rather than a refusal. Lists and objects use the builder's own
+   * `list` and `object` wrappers, which the A2UI export lowers to plain JSON.
+   */
+  private val A2UI_PROPERTIES: Map<String, Map<String, JsonObject>> =
+    mapOf(
+      "a2ui/Button" to mapOf("action" to a2uiEvent("submit")),
+      "a2ui/CheckBox" to
+        mapOf("label" to starterLiteral("string", "Checkbox"), "value" to starterBool(true)),
+      "a2ui/Slider" to mapOf("value" to starterNumber(50), "max" to starterNumber(100)),
+      "a2ui/TextField" to mapOf("label" to starterLiteral("string", "Label")),
+      "a2ui/ChoicePicker" to
+        mapOf(
+          "options" to
+            starterList(
+              listOf("One", "Two", "Three").map { label ->
+                starterObject(
+                  "label" to starterLiteral("string", label),
+                  "value" to starterLiteral("string", label.lowercase()),
+                )
+              }
+            ),
+          "value" to starterList(listOf(starterLiteral("string", "one"))),
+        ),
+    )
+
   private val PROPERTY_TABLE: Map<String, Map<String, JsonObject>> =
     mapOf(
       "shape/colour-dot" to
@@ -162,7 +195,7 @@ internal object StarterContent {
       WearScreenCodeExporter.CONFIRMATION_DIALOG to
         mapOf("text" to starterLiteral("string", "Done"), "visible" to starterBool(true)),
       WearScreenCodeExporter.OPEN_ON_PHONE_DIALOG to mapOf("visible" to starterBool(true)),
-    ) + REMOTE_MATERIAL_3_PROPERTIES
+    ) + REMOTE_MATERIAL_3_PROPERTIES + A2UI_PROPERTIES
 
   private val TABLE: Map<String, Map<String, List<StarterNode>>> =
     mapOf(
@@ -170,6 +203,17 @@ internal object StarterContent {
       // `TextContent` *and* `IconContent`, the icon branch was tested first, and so every button
       // inserted from the palette arrived as a button containing a clock.
       "m3/button" to mapOf("content" to listOf(text("Button", "labelLarge"))),
+      // The same reason, in the A2UI palette: a button is its label.
+      "a2ui/Button" to
+        mapOf(
+          "child" to
+            listOf(
+              StarterNode(
+                componentId = "a2ui/Text",
+                properties = mapOf("text" to starterLiteral("string", "Button")),
+              )
+            )
+        ),
       // The example from the goal. `content` takes exactly one `IconContent` child, so the only
       // decision here is which icon — and any icon reads as an icon button, while the enum's first
       // entry (`accessTime`) reads as a clock somebody forgot to change.
@@ -495,3 +539,13 @@ private fun starterFraction(value: Double): JsonObject =
 
 private fun starterBool(value: Boolean): JsonObject =
   JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(value)))
+
+private fun starterObject(vararg fields: Pair<String, JsonObject>): JsonObject =
+  JsonObject(mapOf("type" to JsonPrimitive("object"), "fields" to JsonObject(mapOf(*fields))))
+
+private fun starterList(values: List<JsonObject>): JsonObject =
+  JsonObject(mapOf("type" to JsonPrimitive("list"), "values" to JsonArray(values)))
+
+/** An A2UI `action` that dispatches the event [name] to the agent. */
+private fun a2uiEvent(name: String): JsonObject =
+  starterObject("event" to starterObject("name" to starterLiteral("string", name)))
