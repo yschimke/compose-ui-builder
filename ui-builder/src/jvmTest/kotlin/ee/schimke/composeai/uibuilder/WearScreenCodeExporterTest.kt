@@ -113,6 +113,52 @@ class WearScreenCodeExporterTest {
   }
 
   @Test
+  fun `omitted published scaffold slots disable optional chrome`() {
+    val published = publishedScaffold()
+    val root = published.nodes.getValue("wear-screen")
+    val omitted =
+      published.copy(
+        nodes =
+          published.nodes +
+            ("wear-screen" to root.copy(slots = root.slots - "timeText" - "scrollIndicator"))
+      )
+
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(omitted)).source
+
+    assertTrue("AppScaffold { ActivityScreen() }" in source, source)
+    assertTrue("scrollIndicator = null," in source, source)
+    assertTrue("ScrollIndicator(listState)" !in source, source)
+  }
+
+  @Test
+  fun `the frozen legacy revision keeps property defaults when chrome properties are absent`() {
+    val legacyPin = JsonObject(mapOf("catalogRevision" to JsonPrimitive("wear-screen-scaffold-v1")))
+    val legacy = wearScreenUiBuilderDocument("activity", legacyPin, environment)
+    val root = legacy.nodes.getValue("wear-screen")
+    val withoutProperties =
+      legacy.copy(
+        nodes =
+          legacy.nodes +
+            ("wear-screen" to
+              root.copy(
+                properties =
+                  JsonObject(
+                    root.properties.filterKeys { it != "timeText" && it != "scrollIndicator" }
+                  )
+              ))
+      )
+
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(
+          WearScreenCodeExporter.export(withoutProperties)
+        )
+        .source
+
+    assertTrue("ScrollIndicator(listState)" in source, source)
+  }
+
+  @Test
   fun `published scaffold auxiliary properties are generated`() {
     val published = publishedScaffold()
     val authored =

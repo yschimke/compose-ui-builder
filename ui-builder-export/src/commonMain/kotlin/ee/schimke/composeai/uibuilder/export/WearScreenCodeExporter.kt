@@ -113,13 +113,22 @@ object WearScreenCodeExporter {
     }
 
     val refusals = mutableListOf<String>()
-    val publishedTimeText = "timeText" in root.slots
+    // Published scaffold chrome is expressed only as optional slots. A valid document may omit an
+    // optional slot key altogether, so key presence cannot distinguish it from the retired
+    // property-shaped scaffold. The frozen revision remains the unambiguous compatibility marker;
+    // retain the property check for old unpinned fixtures and documents.
+    val legacyScaffold =
+      document.catalogPin["catalogRevision"]?.jsonPrimitive?.contentOrNull ==
+        LEGACY_CATALOG_REVISION ||
+        "timeText" in root.properties ||
+        "scrollIndicator" in root.properties
+    val publishedTimeText = !legacyScaffold
     val timeTextNode =
       if (publishedTimeText) root.auxiliary("timeText", TIME_TEXT, document, refusals) else null
     val timeText =
       if (publishedTimeText) timeTextNode?.let { ScaffoldTimeText(it, WEAR_FROZEN_CLOCK) }
       else root.text("timeText")?.let { ScaffoldTimeText(node = null, text = it) }
-    val publishedScrollIndicator = "scrollIndicator" in root.slots
+    val publishedScrollIndicator = !legacyScaffold
     val scrollIndicatorNode =
       if (publishedScrollIndicator)
         root.auxiliary("scrollIndicator", SCROLL_INDICATOR, document, refusals)
@@ -365,6 +374,8 @@ object WearScreenCodeExporter {
   const val TIME_TEXT = "wear-m3/time-text"
 
   const val SCROLL_INDICATOR = "wear-m3/scroll-indicator"
+
+  private const val LEGACY_CATALOG_REVISION = "wear-screen-scaffold-v1"
 
   const val TRANSFORMING_LAZY_COLUMN = "wear-m3/transforming-lazy-column"
 

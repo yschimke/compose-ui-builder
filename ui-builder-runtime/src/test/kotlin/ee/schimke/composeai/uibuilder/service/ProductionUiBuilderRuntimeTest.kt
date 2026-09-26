@@ -508,6 +508,32 @@ class ProductionUiBuilderRuntimeTest {
   }
 
   @Test
+  fun `a retired pin preserves the host selected native runtime`() {
+    val runtimeId = "remote-m3-p2-host"
+    val catalogs =
+      CurrentM3UiBuilderCatalogExecutor.Builder()
+        .also {
+          it.catalogSystemIds = setOf("remote-m3")
+          it.published = mapOf("remote-m3" to PublishedCatalogFixtures.catalog("remote-m3"))
+          it.nativeRuntimeIds = mapOf("remote-m3" to runtimeId)
+        }
+        .build()
+    val sourcePin =
+      assertNotNull(CurrentM3UiBuilderCatalogExecutor.LEGACY_SYNTHESISED_REFERENCES["remote-m3"])
+    val hostPin = sourcePin.copy(nativeRuntimeId = runtimeId)
+
+    val resolved = assertNotNull(catalogs.resolve(hostPin))
+
+    assertEquals(runtimeId, resolved.benchmark.nativeRuntimeId)
+    assertEquals(hostPin, catalogs.reference(resolved))
+    assertEquals(resolved, catalogs.resolve(sourcePin), "the packaged source pin remains readable")
+    assertNull(
+      catalogs.resolve(hostPin.copy(nativeRuntimeId = "remote-m3-p2-other")),
+      "an arbitrary runtime id must not float to the legacy implementation",
+    )
+  }
+
+  @Test
   fun `runtime owns one deterministic packaged renderer bundle`() {
     val first = PackagedUiBuilderRenderBundle.copyTo(stateDirectory.resolve("bundle"))
     val repeated = PackagedUiBuilderRenderBundle.copyTo(stateDirectory.resolve("bundle"))

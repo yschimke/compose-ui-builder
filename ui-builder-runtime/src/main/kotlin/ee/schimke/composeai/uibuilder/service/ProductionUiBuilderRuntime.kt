@@ -580,10 +580,31 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       .mapNotNull { systemId ->
         LEGACY_SYNTHESISED_REFERENCES[systemId]?.let {
           val legacy = packagedLegacyCatalog(systemId)
-          systemId to legacy.withPacks(packs.filter { pack -> pack.platform == legacy.platform })
+          val runtimeId = nativeRuntimeIds[systemId]
+          val compatible =
+            if (runtimeId == null) legacy
+            else
+              legacy
+                .newBuilder()
+                .also {
+                  it.benchmark =
+                    legacy.benchmark
+                      .newBuilder()
+                      .also { benchmark -> benchmark.nativeRuntimeId = runtimeId }
+                      .build()
+                }
+                .build()
+          systemId to
+            compatible.withPacks(packs.filter { pack -> pack.platform == compatible.platform })
         }
       }
       .toMap()
+
+  /** Exact legacy pins accepted by this host, including its selected native runtime id. */
+  private val legacyReferences: Map<String, Set<CatalogReferenceV1>> =
+    legacyCatalogs.mapValues { (systemId, catalog) ->
+      setOf(referenceOf(catalog), LEGACY_SYNTHESISED_REFERENCES.getValue(systemId))
+    }
 
   /**
    * Every current reference a stored design may be pinned to for a catalog this deployment serves.
@@ -612,7 +633,10 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   override fun resolve(reference: CatalogReferenceV1): CatalogCapabilityV1? =
     catalogs[reference.systemId]?.takeIf {
       reference in acceptedReferences.getValue(reference.systemId)
-    } ?: legacyCatalogs[reference.systemId]?.takeIf { referenceOf(it) == reference }
+    }
+      ?: legacyCatalogs[reference.systemId]?.takeIf {
+        reference in legacyReferences.getValue(reference.systemId)
+      }
 
   override fun reference(catalog: CatalogCapabilityV1): CatalogReferenceV1? =
     catalog.benchmark.catalogSystemId.let { systemId ->
@@ -636,7 +660,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     // accepting a pin there and refusing it here would turn a stored design's CATALOG_UNAVAILABLE
     // into an INTERNAL "invalid stored design" -- the same dead design, now blaming the document.
     val acceptedPins =
-      if (isLegacy) setOf(referenceOf(catalog)) else acceptedReferences.getValue(systemId)
+      if (isLegacy) legacyReferences.getValue(systemId) else acceptedReferences.getValue(systemId)
     if (document.catalogPin !in acceptedPins) {
       return issue(
         "CATALOG_PIN_MISMATCH",
