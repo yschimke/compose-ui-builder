@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.62.0](https://github.com/yschimke/compose-ui-builder/compare/v3.61.0...v3.62.0) (2026-09-26)
+
+
+### Features
+
+* **ui-builder-export:** export A2UI palette designs as A2UI v0.9 messages ([#302](https://github.com/yschimke/compose-ui-builder/issues/302)) ([fa7ecf0](https://github.com/yschimke/compose-ui-builder/commit/fa7ecf0ad0ac443c9c2fba88721b631e4eea38ce))
+* **ui-builder:** package the A2UI basic catalog ([#304](https://github.com/yschimke/compose-ui-builder/issues/304)) ([53590b6](https://github.com/yschimke/compose-ui-builder/commit/53590b6a6fec8ddf4a7dd5f1e93af364e20b5fb7))
+
+
+### Bug Fixes
+
+* **editor:** a round or rounded device preview shows the panel, not white, in its corners ([#300](https://github.com/yschimke/compose-ui-builder/issues/300)) ([36c637d](https://github.com/yschimke/compose-ui-builder/commit/36c637db18492c601af1415282a26f499365168c))
+* **runtime:** keep owner-only design actions with the owner's own identity ([#303](https://github.com/yschimke/compose-ui-builder/issues/303)) ([2ce33e3](https://github.com/yschimke/compose-ui-builder/commit/2ce33e3964405ac1012f4c5c06b8bd230e6742a7))
+* **ui-builder:** draw every catalog's palette thumbnails whole, as miniatures when they need room ([#307](https://github.com/yschimke/compose-ui-builder/issues/307)) ([e97153d](https://github.com/yschimke/compose-ui-builder/commit/e97153de80defcee726ad410c981820441cb5607))
+* **ui-builder:** draw Wear viewports with the real ScreenScaffold, and size previews to the watch ([#306](https://github.com/yschimke/compose-ui-builder/issues/306)) ([1c24bc4](https://github.com/yschimke/compose-ui-builder/commit/1c24bc4a1abf22aef5f8d6198d3e1e4d11cc70b6))
+
 ## [3.61.0](https://github.com/yschimke/compose-ui-builder/compare/v3.60.0...v3.61.0) (2026-09-26)
 
 
