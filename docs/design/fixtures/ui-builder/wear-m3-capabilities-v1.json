@@ -8,7 +8,12 @@
     },
     "components": [
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.ScreenScaffold"
+                ],
+                "symbol": "ScreenScaffold"
+            },
             "componentId": "wear-m3/screen-scaffold",
             "displayName": "Wear screen · ScreenScaffold",
             "modifierCapabilities": [],
@@ -97,7 +102,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.foundation.lazy.TransformingLazyColumn"
+                ],
+                "symbol": "TransformingLazyColumn"
+            },
             "componentId": "wear-m3/transforming-lazy-column",
             "displayName": "Transforming lazy column",
             "modifierCapabilities": [
@@ -181,7 +191,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.ListHeader"
+                ],
+                "symbol": "ListHeader"
+            },
             "componentId": "wear-m3/list-header",
             "displayName": "List header",
             "modifierCapabilities": [],
@@ -234,7 +249,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.Text"
+                ],
+                "symbol": "Text"
+            },
             "componentId": "wear-m3/text",
             "displayName": "Text",
             "modifierCapabilities": [
@@ -439,7 +459,15 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.TitleCard",
+                    "androidx.wear.compose.material3.AppCard",
+                    "androidx.wear.compose.material3.OutlinedCard",
+                    "androidx.wear.compose.material3.Card"
+                ],
+                "symbol": "TitleCard"
+            },
             "componentId": "wear-m3/card",
             "displayName": "Card",
             "modifierCapabilities": [
@@ -537,7 +565,15 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.Button",
+                    "androidx.wear.compose.material3.FilledTonalButton",
+                    "androidx.wear.compose.material3.OutlinedButton",
+                    "androidx.wear.compose.material3.ChildButton"
+                ],
+                "symbol": "Button"
+            },
             "componentId": "wear-m3/button",
             "displayName": "Button",
             "modifierCapabilities": [
@@ -642,7 +678,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.Icon"
+                ],
+                "symbol": "Icon"
+            },
             "componentId": "wear-m3/icon",
             "displayName": "Icon",
             "modifierCapabilities": [],
@@ -12124,7 +12165,16 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.IconButton",
+                    "androidx.wear.compose.material3.FilledIconButton",
+                    "androidx.wear.compose.material3.FilledTonalIconButton",
+                    "androidx.wear.compose.material3.FilledVariantIconButton",
+                    "androidx.wear.compose.material3.OutlinedIconButton"
+                ],
+                "symbol": "IconButton"
+            },
             "componentId": "wear-m3/icon-button",
             "displayName": "Icon button",
             "modifierCapabilities": [
@@ -12197,7 +12247,16 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.TextButton",
+                    "androidx.wear.compose.material3.FilledTextButton",
+                    "androidx.wear.compose.material3.FilledTonalTextButton",
+                    "androidx.wear.compose.material3.FilledVariantTextButton",
+                    "androidx.wear.compose.material3.OutlinedTextButton"
+                ],
+                "symbol": "TextButton"
+            },
             "componentId": "wear-m3/text-button",
             "displayName": "Text button",
             "modifierCapabilities": [
@@ -12256,7 +12315,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.ListSubHeader"
+                ],
+                "symbol": "ListSubHeader"
+            },
             "componentId": "wear-m3/list-sub-header",
             "displayName": "List sub-header",
             "modifierCapabilities": [],
@@ -12308,7 +12372,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.CheckboxButton"
+                ],
+                "symbol": "CheckboxButton"
+            },
             "componentId": "wear-m3/checkbox-button",
             "displayName": "Checkbox button",
             "modifierCapabilities": [],
@@ -12360,7 +12429,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.SwitchButton"
+                ],
+                "symbol": "SwitchButton"
+            },
             "componentId": "wear-m3/switch-button",
             "displayName": "Switch button",
             "modifierCapabilities": [],
@@ -12412,7 +12486,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.RadioButton"
+                ],
+                "symbol": "RadioButton"
+            },
             "componentId": "wear-m3/radio-button",
             "displayName": "Radio button",
             "modifierCapabilities": [],
@@ -12464,7 +12543,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.Slider"
+                ],
+                "symbol": "Slider"
+            },
             "componentId": "wear-m3/slider",
             "displayName": "Slider",
             "modifierCapabilities": [],
@@ -12541,7 +12625,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.Stepper"
+                ],
+                "symbol": "Stepper"
+            },
             "componentId": "wear-m3/stepper",
             "displayName": "Stepper",
             "modifierCapabilities": [],
@@ -12620,7 +12709,15 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.CircularProgressIndicator",
+                    "androidx.wear.compose.material3.SegmentedCircularProgressIndicator",
+                    "androidx.wear.compose.material3.LinearProgressIndicator",
+                    "androidx.wear.compose.material3.ArcProgressIndicator"
+                ],
+                "symbol": "CircularProgressIndicator"
+            },
             "componentId": "wear-m3/progress-indicator",
             "displayName": "Progress indicator",
             "modifierCapabilities": [],
@@ -12680,7 +12777,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.EdgeButton"
+                ],
+                "symbol": "EdgeButton"
+            },
             "componentId": "wear-m3/edge-button",
             "displayName": "Edge button",
             "modifierCapabilities": [],
@@ -12731,7 +12833,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.ButtonGroup"
+                ],
+                "symbol": "ButtonGroup"
+            },
             "componentId": "wear-m3/button-group",
             "displayName": "Button group",
             "modifierCapabilities": [],
@@ -12770,7 +12877,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.AlertDialog"
+                ],
+                "symbol": "AlertDialog"
+            },
             "componentId": "wear-m3/alert-dialog",
             "displayName": "Alert dialog",
             "modifierCapabilities": [],
@@ -12857,7 +12969,14 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.ConfirmationDialog",
+                    "androidx.wear.compose.material3.SuccessConfirmationDialog",
+                    "androidx.wear.compose.material3.FailureConfirmationDialog"
+                ],
+                "symbol": "ConfirmationDialog"
+            },
             "componentId": "wear-m3/confirmation-dialog",
             "displayName": "Confirmation dialog",
             "modifierCapabilities": [],
@@ -12911,7 +13030,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.OpenOnPhoneDialog"
+                ],
+                "symbol": "OpenOnPhoneDialog"
+            },
             "componentId": "wear-m3/open-on-phone-dialog",
             "displayName": "Open on phone dialog",
             "modifierCapabilities": [],
@@ -12954,7 +13078,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.DatePicker"
+                ],
+                "symbol": "DatePicker"
+            },
             "componentId": "wear-m3/date-picker",
             "displayName": "Date picker",
             "modifierCapabilities": [],
@@ -12998,7 +13127,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.material3.TimePicker"
+                ],
+                "symbol": "TimePicker"
+            },
             "componentId": "wear-m3/time-picker",
             "displayName": "Time picker",
             "modifierCapabilities": [],

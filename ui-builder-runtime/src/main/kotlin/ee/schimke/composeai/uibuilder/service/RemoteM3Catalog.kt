@@ -6,6 +6,7 @@ import ee.schimke.composeai.discovery.TargetParameter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.CodeCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.SlotCapabilityV1
@@ -346,7 +347,12 @@ private fun remoteMaterial3Components(
                   "catalog names; the widget plays `${record.symbol.name}` itself."
             }
             .build()
-        it.code = null
+        // What the Remote emitter writes for it, from the same record: the simple name, as the
+        // packaged Material 3 catalog writes its own, and the callable as the import.
+        it.code =
+          CodeCapabilityV1.Builder(record.symbol.name)
+            .also { code -> code.imports = listOf(record.symbol.callable) }
+            .build()
         it.svg =
           blockedSvg
             ?.newBuilder()

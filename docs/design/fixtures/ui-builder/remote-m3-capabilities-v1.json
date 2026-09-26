@@ -1804,7 +1804,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteAppCard"
+                ],
+                "symbol": "RemoteAppCard"
+            },
             "componentId": "remote-m3/remote-app-card",
             "displayName": "App card",
             "modifierCapabilities": [
@@ -1961,7 +1966,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteButtonGroup"
+                ],
+                "symbol": "RemoteButtonGroup"
+            },
             "componentId": "remote-m3/remote-button-group",
             "displayName": "Button group",
             "modifierCapabilities": [
@@ -2038,7 +2048,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteCircularProgressIndicator"
+                ],
+                "symbol": "RemoteCircularProgressIndicator"
+            },
             "componentId": "remote-m3/remote-circular-progress-indicator",
             "displayName": "Circular progress indicator",
             "modifierCapabilities": [
@@ -2142,7 +2157,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteLinearProgressIndicator"
+                ],
+                "symbol": "RemoteLinearProgressIndicator"
+            },
             "componentId": "remote-m3/remote-linear-progress-indicator",
             "displayName": "Linear progress indicator",
             "modifierCapabilities": [
@@ -2226,7 +2246,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteCurvedProgressIndicator"
+                ],
+                "symbol": "RemoteCurvedProgressIndicator"
+            },
             "componentId": "remote-m3/remote-curved-progress-indicator",
             "displayName": "Curved progress indicator",
             "modifierCapabilities": [
@@ -2370,7 +2395,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteButton"
+                ],
+                "symbol": "RemoteButton"
+            },
             "componentId": "remote-m3/remote-button",
             "displayName": "Button",
             "modifierCapabilities": [
@@ -2468,7 +2498,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteCompactButton"
+                ],
+                "symbol": "RemoteCompactButton"
+            },
             "componentId": "remote-m3/remote-compact-button",
             "displayName": "Compact button",
             "modifierCapabilities": [
@@ -2584,7 +2619,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteCard"
+                ],
+                "symbol": "RemoteCard"
+            },
             "componentId": "remote-m3/remote-card",
             "displayName": "Card",
             "modifierCapabilities": [
@@ -2675,7 +2715,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteOutlinedCard"
+                ],
+                "symbol": "RemoteOutlinedCard"
+            },
             "componentId": "remote-m3/remote-outlined-card",
             "displayName": "Outlined card",
             "modifierCapabilities": [
@@ -2773,7 +2818,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteCheckboxButton"
+                ],
+                "symbol": "RemoteCheckboxButton"
+            },
             "componentId": "remote-m3/remote-checkbox-button",
             "displayName": "Checkbox button",
             "modifierCapabilities": [
@@ -2908,7 +2958,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteSwitchButton"
+                ],
+                "symbol": "RemoteSwitchButton"
+            },
             "componentId": "remote-m3/remote-switch-button",
             "displayName": "Switch button",
             "modifierCapabilities": [
@@ -3043,7 +3098,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteRadioButton"
+                ],
+                "symbol": "RemoteRadioButton"
+            },
             "componentId": "remote-m3/remote-radio-button",
             "displayName": "Radio button",
             "modifierCapabilities": [
@@ -3178,7 +3238,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteSplitCheckboxButton"
+                ],
+                "symbol": "RemoteSplitCheckboxButton"
+            },
             "componentId": "remote-m3/remote-split-checkbox-button",
             "displayName": "Split checkbox button",
             "modifierCapabilities": [
@@ -3300,7 +3365,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteSplitSwitchButton"
+                ],
+                "symbol": "RemoteSplitSwitchButton"
+            },
             "componentId": "remote-m3/remote-split-switch-button",
             "displayName": "Split switch button",
             "modifierCapabilities": [
@@ -3422,7 +3492,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteSplitRadioButton"
+                ],
+                "symbol": "RemoteSplitRadioButton"
+            },
             "componentId": "remote-m3/remote-split-radio-button",
             "displayName": "Split radio button",
             "modifierCapabilities": [
@@ -3544,7 +3619,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteSlider"
+                ],
+                "symbol": "RemoteSlider"
+            },
             "componentId": "remote-m3/remote-slider",
             "displayName": "Slider",
             "modifierCapabilities": [
@@ -3679,7 +3759,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteStepper"
+                ],
+                "symbol": "RemoteStepper"
+            },
             "componentId": "remote-m3/remote-stepper",
             "displayName": "Stepper",
             "modifierCapabilities": [
@@ -3823,7 +3908,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteEdgeButton"
+                ],
+                "symbol": "RemoteEdgeButton"
+            },
             "componentId": "remote-m3/remote-edge-button",
             "displayName": "Edge button",
             "modifierCapabilities": [
@@ -3918,7 +4008,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteIconButton"
+                ],
+                "symbol": "RemoteIconButton"
+            },
             "componentId": "remote-m3/remote-icon-button",
             "displayName": "Icon button",
             "modifierCapabilities": [
@@ -4016,7 +4111,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteTextButton"
+                ],
+                "symbol": "RemoteTextButton"
+            },
             "componentId": "remote-m3/remote-text-button",
             "displayName": "Text button",
             "modifierCapabilities": [
@@ -4114,7 +4214,12 @@
             }
         },
         {
-            "code": null,
+            "code": {
+                "imports": [
+                    "androidx.wear.compose.remote.material3.RemoteTitleCard"
+                ],
+                "symbol": "RemoteTitleCard"
+            },
             "componentId": "remote-m3/remote-title-card",
             "displayName": "Title card",
             "modifierCapabilities": [
