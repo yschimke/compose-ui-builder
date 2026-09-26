@@ -167,6 +167,7 @@ kotlin {
       // with the empty version, out of `:ui-builder:wasmJsNpmAggregated`.
       implementation(project.dependencies.platform(libs.composeai.daemon.bom))
       implementation(libs.composeai.data.preview.overrides.runtime)
+      implementation(libs.composeai.preview.annotations)
     }
     getByName("jvmMain")
       .resources

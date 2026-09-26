@@ -1,13 +1,15 @@
 package ee.schimke.composeai.uibuilder.preview
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
+import ee.schimke.composeai.uibuilder.editor.withEnvironmentOverrides
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * The five Google-app sample designs, drawn at three window sizes each.
@@ -83,10 +85,9 @@ fun PlayMediumPreview() = SizedDesignFixture("google-play-tablet")
 fun PlayCompactPreview() = SizedDesignFixture("google-play-tablet")
 
 @Composable
-internal fun SizedDesignFixture(designId: String) {
-  PinnedCatalog(designFixtureDocument(designId)) {
-    UiBuilderSurface(document = designFixtureDocument(designId), editorOverlay = false)
-  }
+internal fun SizedDesignFixture(designId: String, watchDp: Int? = null) {
+  val document = designFixtureDocument(designId).onWatch(watchDp)
+  PinnedCatalog(document) { UiBuilderSurface(document = document, editorOverlay = false) }
 }
 
 /**
@@ -104,17 +105,34 @@ internal fun SizedDesignFixture(designId: String) {
  * the canvas's unrolled stadium they were named after.
  */
 @Composable
-internal fun ExtentDesignFixture(designId: String) {
-  PinnedCatalog(designFixtureDocument(designId)) {
-    Box(Modifier.fillMaxSize().wrapContentHeight(Alignment.Top, unbounded = true)) {
+internal fun ExtentDesignFixture(designId: String, watchDp: Int? = null) {
+  val document = designFixtureDocument(designId).onWatch(watchDp)
+  PinnedCatalog(document) {
+    Box(Modifier.wrapContentSize(Alignment.TopCenter, unbounded = true)) {
       UiBuilderSurface(
-        document = designFixtureDocument(designId),
+        document = document,
         editorOverlay = false,
         unrolled = true,
       )
     }
   }
 }
+
+/**
+ * This design on a round watch of [watchDp], the way the editor's device strip puts it on one.
+ *
+ * A Wear screen is drawn at the diameter the DOCUMENT names, not at the preview's frame — the frame
+ * only bounds the capture. Every Wear fixture pins `widthDp: 192`, so the 240dp previews drew a
+ * 192dp watch in a 240dp frame and checked nothing the small one had not. The editor's
+ * `variantPanes` answers this by writing the device's size over the environment; this is the same
+ * override, so a preview and a device pane cannot disagree about the watch.
+ */
+private fun UiBuilderDocument.onWatch(watchDp: Int?): UiBuilderDocument =
+  if (watchDp == null) this
+  else
+    withEnvironmentOverrides(
+      mapOf("widthDp" to JsonPrimitive(watchDp), "heightDp" to JsonPrimitive(watchDp))
+    )
 
 /**
  * The Wear screen at the two round sizes it is checked on, matching its own `exportDevices`.
@@ -128,11 +146,11 @@ internal fun ExtentDesignFixture(designId: String) {
  */
 @WearPreviewSmallRound
 @Composable
-fun GoogleHomeWearSmallPreview() = SizedDesignFixture("google-home-wear")
+fun GoogleHomeWearSmallPreview() = SizedDesignFixture("google-home-wear", watchDp = 192)
 
 @WearPreviewLargeRound
 @Composable
-fun GoogleHomeWearLargePreview() = SizedDesignFixture("google-home-wear")
+fun GoogleHomeWearLargePreview() = SizedDesignFixture("google-home-wear", watchDp = 240)
 
 /**
  * The same screen as a long screenshot, which is the only way to see a Wear list's whole extent.
@@ -148,8 +166,8 @@ fun GoogleHomeWearLargePreview() = SizedDesignFixture("google-home-wear")
  */
 @WearPreviewSmallRoundExtent
 @Composable
-fun GoogleHomeWearSmallExtentPreview() = ExtentDesignFixture("google-home-wear")
+fun GoogleHomeWearSmallExtentPreview() = ExtentDesignFixture("google-home-wear", watchDp = 192)
 
 @WearPreviewLargeRoundExtent
 @Composable
-fun GoogleHomeWearLargeExtentPreview() = ExtentDesignFixture("google-home-wear")
+fun GoogleHomeWearLargeExtentPreview() = ExtentDesignFixture("google-home-wear", watchDp = 240)
