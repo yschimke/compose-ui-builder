@@ -487,6 +487,14 @@
     "sha256": "5b7330e0a08f1eaf1127029b9479a66751bc4d17a04430251288d90f89e28d97",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderDeviceViewPreview.kt"
   },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderDeviceViewPreviewKt.UiBuilderWearDeviceViewPopOutPreview": {
+    "captureLabel": "",
+    "functionName": "UiBuilderWearDeviceViewPopOutPreview",
+    "module": "ui-builder",
+    "renderBasename": "UiBuilderWearDeviceViewPopOutPreview-ee606353.png",
+    "sha256": "b0f46cc740e1573bb045f5734cb8d442d19839e3d286cc7a6ef9f77bbab4c972",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderDeviceViewPreview.kt"
+  },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderAdaptivePaneVariantsPreview": {
     "captureLabel": "",
     "functionName": "UiBuilderAdaptivePaneVariantsPreview",
@@ -500,7 +508,7 @@
     "functionName": "UiBuilderBesideRefusalPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderBesideRefusalPreview-9f4ae0af.png",
-    "sha256": "e14562b415f04cc001177f4298b67ec39b52bc17556cb0486f51daf3e36ccc0c",
+    "sha256": "6dfef6e46b43d0dfa3d9fe91c76398907210bb8a2ff6e7a8c423d6691c92d1cd",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderBoardBeforePreview": {
@@ -1044,7 +1052,7 @@
     "functionName": "WearScreenCodePanePreview",
     "module": "ui-builder",
     "renderBasename": "WearScreenCodePanePreview-81971946.png",
-    "sha256": "98e151219ffc8435afa2babc64557ec9133a53d63be956f28c784c221dc987be",
+    "sha256": "b5c3ffb0066f70b4e96209c978da3da13e864252e6c5709022eecb53cac0ed01",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearScreenSamplePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearScreenSamplePreviewKt.WearScreenSamplePreview": {
