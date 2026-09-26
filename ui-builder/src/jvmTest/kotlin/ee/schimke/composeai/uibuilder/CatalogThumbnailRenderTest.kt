@@ -88,35 +88,10 @@ class CatalogThumbnailRenderTest {
     )
 
   @Test
-  fun `a2ui-catalog tiles show no picture, and nothing escapes or animates`() =
-    assertSheet(
-      "a2ui-catalog",
-      // None, by construction for now: the thumbnail frame is a `layout/box`, which A2UI's catalog
-      // does not have, so no insert into it validates — and the canvas draws every A2UI component
-      // as a named placeholder anyway, which a tile's name already says. When A2UI components draw
-      // as themselves, this list is the thing that should shrink.
-      rootOnly =
-        setOf(
-          "a2ui/Text",
-          "a2ui/Image",
-          "a2ui/Icon",
-          "a2ui/Video",
-          "a2ui/AudioPlayer",
-          "a2ui/Row",
-          "a2ui/Column",
-          "a2ui/List",
-          "a2ui/Card",
-          "a2ui/Tabs",
-          "a2ui/Modal",
-          "a2ui/Divider",
-          "a2ui/Button",
-          "a2ui/TextField",
-          "a2ui/CheckBox",
-          "a2ui/ChoicePicker",
-          "a2ui/Slider",
-          "a2ui/DateTimeInput",
-        ),
-    )
+  fun `a2ui-catalog thumbnails all draw`() =
+    // Framed by `a2ui/Column`, the catalog's own list container: it has no `layout/box`, and a box
+    // frame was refused for every component, so the shelf drew as bare tiles.
+    assertSheet("a2ui-catalog")
 
   private fun assertSheet(
     systemId: String,

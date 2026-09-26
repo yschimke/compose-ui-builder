@@ -180,6 +180,14 @@ internal const val PREVIEW_FRAME_HEIGHT_DP = 128
 
 internal const val PREVIEW_FRAME_CELL_ID = "catalog-thumbnail-cell"
 
+/** The frame's container where the catalog has one, and the slot every frame holds its child in. */
+internal const val FRAME_BOX = "layout/box"
+
+internal const val FRAME_SLOT = "children"
+
+/** The list containers that frame a single child without spreading it, preferred over the rest. */
+internal val FRAME_PREFERRED = setOf("box", "column")
+
 /**
  * A frame for a component the default one squeezes.
  *
