@@ -424,10 +424,11 @@ object CapabilityCatalogParser {
       ?.let {
         return it
       }
-    // Every A2UI component declares `weight`, its share of a Row or Column, and none of them is a
-    // `…Dp`: without this the one layout number the protocol has would be `Unsupported` on all
-    // eighteen. Same range as `m3/text`'s weight.
-    if (componentId.startsWith("a2ui/") && property.name == "weight") {
+    // `weight` is a node's share of its Row or Column, whatever the node is — a Column in a Row, a
+    // flow row, a collapsible column, every A2UI component — and it is never a `…Dp`, so without
+    // this it was `Unsupported` everywhere but the few components with an override. Same range as
+    // `m3/text`'s weight.
+    if (property.name == "weight") {
       return numberEditor(0.1, 100.0, 0.1)
     }
     // A colour property is a colour control, by the name rule `PropertyValueKinds` states. Two
@@ -607,6 +608,31 @@ object CapabilityCatalogParser {
       // A fraction, and the only value this component has. Bounded 0..1 because that is what both
       // Material indicators take, so the control cannot author a progress the renderer clamps away.
       ("m3/progress-indicator" to "progress") to numberEditor(0.0, 1.0, 0.05),
+      // Material Symbols' variable axes, which the runtime draws the icon's outline with. The
+      // ranges are the font's own: fill 0 to 1, weight 100 to 700, grade -25 to 200, optical size
+      // 20
+      // to 48.
+      ("m3/icon" to "iconFill") to numberEditor(0.0, 1.0, 0.1),
+      ("m3/icon" to "iconWeight") to numberEditor(100.0, 700.0, 50.0),
+      ("m3/icon" to "iconGrade") to numberEditor(-25.0, 200.0, 25.0),
+      ("m3/icon" to "iconOpticalSize") to numberEditor(20.0, 48.0, 1.0),
+      // A count; zero is Compose's own "no limit", which is how the canvas reads it.
+      ("layout/flow-row" to "maxItemsInEachRow") to countEditor(0.0, 100.0),
+      // Dimensions the `…Dp` rule cannot reach because the Compose exporter is not what writes
+      // them: a loop's spacing and a collapsible layout's are Remote Compose's, a Wear list's and a
+      // Wear icon's are the Wear generator's, a custom slot's size is the frame the canvas draws
+      // for it, and a search bar's corner is a projection target of the screen exporter.
+      ("layout/for-each" to "verticalSpacingDp") to spacingEditor(),
+      ("layout/collapsible-column" to "verticalSpacingDp") to spacingEditor(),
+      ("layout/collapsible-row" to "horizontalSpacingDp") to spacingEditor(),
+      ("wear-m3/transforming-lazy-column" to "verticalSpacingDp") to spacingEditor(),
+      ("wear-m3/icon" to "sizeDp") to numberEditor(1.0, 512.0, 1.0),
+      ("remote-compose/custom" to "widthDp") to numberEditor(0.0, MAXIMUM_AUTHORED_DP, 1.0),
+      ("remote-compose/custom" to "heightDp") to numberEditor(0.0, MAXIMUM_AUTHORED_DP, 1.0),
+      ("m3/search-bar" to "shapeDp") to numberEditor(0.0, MAXIMUM_AUTHORED_DP, 1.0),
+      // Fractions.
+      ("shape/radial-gradient" to "innerAlpha") to numberEditor(0.0, 1.0, 0.05),
+      ("remote-m3/lottie" to "progress") to numberEditor(0.0, 1.0, 0.05),
       // Wear's segmented ring: how many arcs it is cut into. A count, so the `…Dp` rule misses it.
       ("wear-m3/progress-indicator" to "segments") to countEditor(1.0, 64.0),
       // A slider's range and its value are numbers in the design's own units — not dimensions, so
@@ -672,6 +698,9 @@ object CapabilityCatalogParser {
       maximum = maximum,
       step = step,
     )
+
+  /** Arrangement spacing, which may be negative: that is how children are made to overlap. */
+  private fun spacingEditor() = numberEditor(-MAXIMUM_AUTHORED_DP, MAXIMUM_AUTHORED_DP, 1.0)
 
   private fun countEditor(minimum: Double, maximum: Double) =
     numberEditor(minimum, maximum, 1.0).copy(integer = true)

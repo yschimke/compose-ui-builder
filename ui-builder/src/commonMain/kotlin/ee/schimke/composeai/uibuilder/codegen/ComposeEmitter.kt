@@ -865,6 +865,11 @@ internal class ComposeEmitter(
     line(level + 1, "expanded = ${node.boolValue("expanded")},")
     line(level + 1, "onExpandedChange = {},")
     line(level + 1, "tonalElevation = ${node.number("tonalElevationDp").dpLiteral()},")
+    // Only when authored: absent, Material's own input-field shape is the right default, and the
+    // renderer draws the same one.
+    if ("shapeDp" in node.properties) {
+      line(level + 1, "shape = RoundedCornerShape(${node.number("shapeDp").dpLiteral()}),")
+    }
     line(level + 1, "${node.modifierArgument()},")
     line(level, ") {")
     emitChildren(node.slot("expandedContent"), level + 1)
@@ -3258,7 +3263,7 @@ private val HANDLED_FIELDS =
     "m3/radio-button" to HandledFields(setOf("selected", "enabled"), events = setOf("click")),
     "m3/search-bar" to
       HandledFields(
-        setOf("expanded", "tonalElevationDp"),
+        setOf("expanded", "tonalElevationDp", "shapeDp"),
         slots = setOf("inputField", "expandedContent"),
       ),
     "m3/search-input-field" to
