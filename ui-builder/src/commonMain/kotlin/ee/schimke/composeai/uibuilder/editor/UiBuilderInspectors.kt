@@ -1571,6 +1571,8 @@ private fun TypefacePicker(selected: String?, onPick: (String?) -> Unit) {
   val families = registry?.families.orEmpty()
   val faces = LocalUiBuilderFontFamilies.current
   var expanded by remember { mutableStateOf(false) }
+  // The list is wanted only once the Screen panel is open, which is well after first load.
+  LaunchedEffect(registry) { registry?.loadFamilies() }
   LaunchedEffect(registry, selected) { selected?.let { registry?.request(it) } }
   LaunchedEffect(registry, expanded, families) {
     if (expanded) families.forEach { registry?.request(it.name) }
