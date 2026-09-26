@@ -812,10 +812,14 @@ internal fun PinnedDesignCanvas(
                                 runtimeScroll =
                                   UiBuilderCanvasScroll(
                                     nodeId = target,
-                                    // The runtime scrolls in its own pixels: the design's.
+                                    // The runtime scrolls in its own pixels, the design's. On
+                                    // the web, the only host with a runtime, the wheel's delta is
+                                    // already CSS pixels (about 100 a notch), and a CSS pixel is
+                                    // one of the editor's dp: so it is only converted, never
+                                    // multiplied by a per-notch step, which threw a list its
+                                    // whole length on one notch.
                                     deltaY =
                                       change.scrollDelta.y *
-                                        RUNTIME_WHEEL_STEP_DP *
                                         document.renderDensity(density).density,
                                     sequence = (runtimeScroll?.sequence ?: 0) + 1,
                                   )
@@ -1673,9 +1677,6 @@ private fun ConstrainedFramePane(
  * doubling; a shorter one is trimmed to what it drew.
  */
 internal const val RUNTIME_POP_OUT_BUDGET_DP = 2000f
-
-/** How far one wheel notch handed to the runtime scrolls its list, in the design's dp. */
-private const val RUNTIME_WHEEL_STEP_DP = 40f
 
 /** Keeps the companion's remembered geometry out of the editing pane's. */
 private const val FRAME_COMPANION_SESSION = "frame-companion"
