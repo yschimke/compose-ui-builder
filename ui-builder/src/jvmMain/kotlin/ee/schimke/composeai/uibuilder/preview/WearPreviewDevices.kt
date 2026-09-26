@@ -8,9 +8,9 @@ import ee.schimke.composeai.preview.SettledPreview
  *
  * `androidx.wear.compose.ui.tooling.preview` ships exactly these — `@WearPreviewSmallRound`,
  * `@WearPreviewLargeRound`, `@WearPreviewDevices` — and the generated Kotlin a Wear design exports
- * uses them, because that code compiles against Wear Compose. This module cannot: that artifact is
- * an Android AAR, and `:ui-builder` is a Kotlin Multiplatform module whose JVM target has no
- * Android classpath. It is the same wall that stops the canvas drawing real Wear Compose.
+ * uses them. This module cannot: that tooling artifact is an Android AAR, and `:ui-builder` is a
+ * Kotlin Multiplatform module whose JVM target has no Android classpath. (The components are
+ * another matter — the canvas draws them with the Compose Multiplatform port of Wear Compose.)
  *
  * So these are the local equivalents, carrying the same geometry under the same names, and the
  * point of them is that the geometry is written once. A `spec:` string repeated at each preview is

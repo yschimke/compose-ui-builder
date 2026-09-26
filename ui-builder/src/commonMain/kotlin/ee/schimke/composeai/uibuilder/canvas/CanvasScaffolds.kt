@@ -87,7 +87,6 @@ import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
 import ee.schimke.composeai.uibuilder.decodeUiBuilderAssetBitmap
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
-import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import ee.schimke.composeai.uibuilder.resolveAsset
 import kotlinx.serialization.json.JsonObject
 
@@ -355,8 +354,9 @@ private fun UnfoldedSupportingPaneScaffold(
 }
 
 /**
- * Material's uncontained carousel is not on the dependency floor; this preserves its data/layout
- * contract.
+ * The carousel on the unrolled extent only. A device frame draws Material's real
+ * `HorizontalUncontainedCarousel`; the extent measures against an unbounded height, which the real
+ * carousel cannot take, so this lays the same items out on the same data contract.
  */
 @Composable
 internal fun CompatibleHorizontalCarousel(
@@ -662,31 +662,22 @@ private fun GeneratedCoverPlaceholder(modifier: Modifier) {
 }
 
 /**
- * The Wear components this catalog publishes and the browser cannot draw, as ids.
- *
- * Derived from `WearScreenCodeExporter`'s own constants rather than listed again: the generator and
- * the canvas have to agree about which ids these are, and two lists is two chances not to.
- */
-internal val WEAR_NATIVE_ONLY: Set<String> = WearScreenCodeExporter.NATIVE_ONLY_COMPONENT_IDS
-
-/**
- * A Wear component the canvas names instead of drawing.
+ * A component the canvas names instead of drawing: a pack's, whose classes the browser cannot link.
  *
  * ## Why this is the honest shape, and not a gap
  *
  * `docs/design/UI_BUILDER_WEAR_SCREEN.md` rules out one thing exactly: *do not fabricate a
- * component in the Wasm canvas to stand in for a library the canvas cannot link*. Wear Material 3
- * is an Android AAR; a `CheckboxButton` drawn here would be a Material 3 `Checkbox` in a row at a
- * width, a corner radius and a label baseline read off a screenshot — an impression of upstream
- * with nothing in this build to check it against, and wrong silently.
+ * component in the canvas to stand in for a library the canvas cannot link*. A lookalike would be
+ * an impression of upstream with nothing in this build to check it against, and wrong silently.
  *
  * So it is not drawn. What is drawn is the node's *identity and place*: a dashed outline carrying
  * the component's name, sized by whatever the layout gives it, with its children inside. That is
- * enough to author with — you can see the row is there, select it, reorder it, put an icon in it —
- * and it claims nothing about size, colour or shape. The picture comes from the native lane, which
- * compiles this design's own generated Kotlin against real Wear Compose on the Android daemon;
- * `wear-m3` declares that lane authoritative and this canvas approximate, and the editor's render
- * surface menu says so where a renderer is chosen.
+ * enough to author with, and it claims nothing about size, colour or shape. The picture comes from
+ * the native lane, which compiles the design's generated Kotlin against the real library.
+ *
+ * Wear Material 3 used to be drawn this way too, when the canvas had no Wear library to link. It
+ * has the Compose Multiplatform port now, and every Wear component is drawn by it — which is the
+ * rule above applied, not relaxed: where the real library can be linked, it is the one that draws.
  *
  * A dashed outline rather than [UnsupportedComponentDiagnostic]'s error container, because nothing
  * is wrong. The component is in the catalog, it exports, and it renders — just not here.

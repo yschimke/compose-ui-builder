@@ -89,10 +89,10 @@ fun WearScreenBreakpointsPreview() {
 /**
  * The Code pane on the Wear screen: the Kotlin the design generates.
  *
- * This is the half the canvas cannot show. `Modifier.transformedHeight(this, spec)` and
- * `SurfaceTransformation(spec)` are on every row of the emitted `TransformingLazyColumn` — they are
- * what a Wear list *is* — while the stadium above draws a plain Column, so reading the two together
- * is how an author knows what the browser is standing in for.
+ * The Kotlin is what ships. The canvas draws the same `TransformingLazyColumn` rows with
+ * `Modifier.transformedHeight(this, spec)` and `SurfaceTransformation(spec)` in a device frame;
+ * only the unrolled extent lays the rows out as a plain column, at the width a row has at the
+ * centre of the screen, because it has no viewport to transform them against.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable

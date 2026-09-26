@@ -160,12 +160,18 @@ fun main() {
   // One registry for the page: the canvas asks it for the family a design names, the typeface
   // picker for the ones it lists, and a family either loads is then there for both.
   val fonts = browserFontRegistry()
-  ComposeViewport(viewportContainerId = "composeApp") {
-    ProvideUiBuilderFonts(fonts) {
-      when {
-        hostBridgeEnabled() -> HostBridgeApp()
-        liveSessionEnabled() -> LiveSessionApp()
-        else -> VisualFixtureApp(captureMode())
+  // Wear's face first, and only then the first frame: the Wear port resolves the type scale's
+  // `roboto-flex` once, so a Wear screen composed before it was registered would keep the fallback
+  // sans for the life of the page. The file is the bundle's own, cached for good.
+  MainScope().launch {
+    fonts.registerWearDeviceFonts()
+    ComposeViewport(viewportContainerId = "composeApp") {
+      ProvideUiBuilderFonts(fonts) {
+        when {
+          hostBridgeEnabled() -> HostBridgeApp()
+          liveSessionEnabled() -> LiveSessionApp()
+          else -> VisualFixtureApp(captureMode())
+        }
       }
     }
   }
