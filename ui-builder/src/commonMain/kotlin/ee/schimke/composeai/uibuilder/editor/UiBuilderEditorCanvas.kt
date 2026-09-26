@@ -1357,13 +1357,15 @@ private fun ConstrainedFramePane(
         // The device's frame in the design's own pixels, like the extent beside it: this pane
         // exists to say what a device shows, and it can only say it at the density the device has.
         .requiredSize((widthDp * densityRatio).dp, (heightDp * densityRatio).dp)
-        // Clipped before it is scrolled: the frame is the device's edge, and content past it is
-        // what the person scrolls to rather than something that spills onto the canvas.
-        .clip(RoundedCornerShape(0.dp))
         .graphicsLayer {
           scaleX = scale / densityRatio
           scaleY = scale / densityRatio
           transformOrigin = TransformOrigin(0f, 0f)
+          // Clipped at the device's edge: content past it is what the person scrolls to rather than
+          // something that spills onto the canvas. Inside the layer rather than before it, so the
+          // clip scales with the frame. A clip outside it stays at the unscaled size, and any scale
+          // above the density ratio magnified the design into a box it could not grow.
+          clip = true
           // Not offscreen under the runtime, for the editing canvas's reason: its pixels are a DOM
           // layer reached through a `BlendMode.Clear` hole, and an offscreen buffer would clear the
           // hole in itself and composite back opaque — the pane blank whenever a menu lowers it.

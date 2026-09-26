@@ -498,20 +498,19 @@ internal fun DesignPreviewPane(
         // row then always shows at least one frame whole, and the rest are reached by scrolling
         // rather than by squeezing every phone in the row down to a thumbnail.
         //
-        // Capped at 1:1 against the design's own pixels — the ceiling is the *smallest* density
-        // ratio in the row, because one scale serves all of them. [ConstrainedFramePane] lays the
-        // frame out in the design's pixels and clips there, so a scale past that ratio magnifies
-        // the composition into a clip it cannot grow: the design is drawn bigger and the right of
-        // it disappears. That is not a hypothetical — on a 2.625× render host with a 1× design it
-        // is every frame in this row.
+        // Capped at whichever is larger of 1:1 against the design's pixels and 1:1 against its dp.
+        // A 2x watch in a 1x host still draws at its own pixels. A 1x widget in a 2.625x host is no
+        // longer held to its pixels, which drew it at 38%, a strip nobody could read: that cap
+        // existed because the frame clipped before it was scaled, and [ConstrainedFramePane] now
+        // clips inside its scaled layer, so a frame can be magnified.
         val tallest = panes.maxOf { it.heightDp }
         val widest = panes.maxOf { it.widthDp }
-        val oneToOne = panes.minOf {
+        val oneToOnePixels = panes.minOf {
           it.document.renderDensity(hostDensity).density / hostDensity.density
         }
         val scale =
           minOf(maxHeight.value / (tallest + VARIANT_LABEL_ROOM_DP), maxWidth.value / widest)
-            .coerceIn(MIN_CANVAS_ZOOM, maxOf(oneToOne, MIN_CANVAS_ZOOM))
+            .coerceIn(MIN_CANVAS_ZOOM, maxOf(oneToOnePixels, 1f))
         // How many frames fit across the pane at that scale, and the whole of "should this be a
         // grid?". A watch frame is 192dp and a pane is often 700dp wide, so the row that answered
         // a phone question — one frame per screen, the rest scrolled off the right — put three
