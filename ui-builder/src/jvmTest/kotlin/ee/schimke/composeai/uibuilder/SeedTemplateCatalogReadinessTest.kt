@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
+import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed.Vocabulary.PACKAGED
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -51,11 +52,32 @@ class SeedTemplateCatalogReadinessTest {
       A2uiDocumentExporter.CATALOG_SYSTEM_ID to catalog("/a2ui-catalog-capabilities-v1.json"),
     )
 
+  /** Catalogs as served from their repositories, rather than the retired packaged definitions. */
+  private val publishedCatalogs: Map<String, CapabilityCatalog> =
+    mapOf(
+      "m3-catalog" to catalog("/published/m3-catalog-capabilities-v1.json"),
+      "wear-m3" to catalog("/published/wear-m3-capabilities-v1.json"),
+      "remote-m3" to catalog("/published/remote-m3-capabilities-v1.json"),
+    )
+
+  @Test
+  fun `every template validates against its published catalog`() {
+    val failures = publishedCatalogs.flatMap { (systemId, catalog) ->
+      UiBuilderNewDesignSeed.templateIds(systemId).sorted().mapNotNull { templateId ->
+        val validation = CapabilityValidator(catalog).validate(seed(systemId, templateId))
+        if (validation.structurallyValid) null
+        else "$systemId/$templateId: ${validation.issues.joinToString { it.message }}"
+      }
+    }
+
+    assertEquals(emptyList(), failures, failures.joinToString("\n"))
+  }
+
   @Test
   fun `every template of every catalog validates against that catalog`() {
     val failures = catalogs.flatMap { (systemId, catalog) ->
-      UiBuilderNewDesignSeed.templateIds(systemId).sorted().mapNotNull { templateId ->
-        val document = seed(systemId, templateId)
+      UiBuilderNewDesignSeed.templateIds(systemId, PACKAGED).sorted().mapNotNull { templateId ->
+        val document = seed(systemId, templateId, PACKAGED)
         val validation = CapabilityValidator(catalog).validate(document)
         if (validation.structurallyValid) null
         else "$systemId/$templateId: ${validation.issues.joinToString { it.message }}"
@@ -68,11 +90,11 @@ class SeedTemplateCatalogReadinessTest {
   @Test
   fun `every template but jetcaster generates source`() {
     val failures = catalogs.flatMap { (systemId, catalog) ->
-      UiBuilderNewDesignSeed.templateIds(systemId)
+      UiBuilderNewDesignSeed.templateIds(systemId, PACKAGED)
         .sorted()
         .filter { "$systemId/$it" !in NOT_EXPORTABLE }
         .mapNotNull { templateId ->
-          when (val outcome = generate(catalog, seed(systemId, templateId))) {
+          when (val outcome = generate(catalog, seed(systemId, templateId, PACKAGED))) {
             is Generated.Source -> {
               // Kept on disk: what a catalog repository's round-trip test would compile, and the
               // only readable evidence that "it generates" means a composable and not a comment.
@@ -137,7 +159,7 @@ class SeedTemplateCatalogReadinessTest {
   @Test
   fun `jetcaster refuses for reasons no component record fixes`() {
     val catalog = catalogs.getValue("m3-catalog")
-    val document = seed("m3-catalog", "jetcaster")
+    val document = seed("m3-catalog", "jetcaster", PACKAGED)
 
     val reasons =
       assertIs<Generated.Refused>(
@@ -211,7 +233,11 @@ class SeedTemplateCatalogReadinessTest {
     }
   }
 
-  private fun seed(systemId: String, templateId: String): UiBuilderDocument =
+  private fun seed(
+    systemId: String,
+    templateId: String,
+    vocabulary: UiBuilderNewDesignSeed.Vocabulary = UiBuilderNewDesignSeed.Vocabulary.PUBLISHED,
+  ): UiBuilderDocument =
     UiBuilderNewDesignSeed.document(
       designId = "$systemId-$templateId",
       catalogSystemId = systemId,
@@ -219,6 +245,7 @@ class SeedTemplateCatalogReadinessTest {
       catalogRevision = "readiness",
       nativeRuntimeId = "readiness",
       fixture = fixture,
+      vocabulary = vocabulary,
     )
 
   private fun catalog(path: String): CapabilityCatalog =

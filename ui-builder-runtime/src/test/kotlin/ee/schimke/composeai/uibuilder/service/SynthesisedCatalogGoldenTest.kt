@@ -12,16 +12,12 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 /**
- * `wear-m3` and `remote-m3`, as JSON, checked in.
+ * The catalogs this build still synthesises, as JSON, checked in.
  *
  * ## Why a golden of something we generate
  *
- * These two catalogs are written in Kotlin **here** — synthesised from the packaged Material 3 one
- * at startup, some 1,300 lines of authored capabilities, shelves, variant properties and slot
- * policy for components this repository has never compiled. The plan
- * ([`UI_BUILDER_CATALOG_CONTRACT.md`](../../../../../../../../docs/design/UI_BUILDER_CATALOG_CONTRACT.md))
- * moves that knowledge into the repositories that own it, where it is published as data and read
- * here rather than constructed here.
+ * Wear and Remote Compose are no longer generated here; their repositories publish them. A2UI
+ * remains built in during the staged extraction, so its golden continues to guard that definition.
  *
  * The first step of that is neither writing a loader nor deleting a generator. It is **writing down
  * what the generators currently produce**, because:
@@ -54,21 +50,9 @@ class SynthesisedCatalogGoldenTest {
       catalogSystemIds =
         setOf(
           CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
-          CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
-          CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID,
         )
     )
-
-  @Test
-  fun `the wear-m3 catalog matches its checked-in golden`() {
-    assertGolden(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID)
-  }
-
-  @Test
-  fun `the remote-m3 catalog matches its checked-in golden`() {
-    assertGolden(CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID)
-  }
 
   @Test
   fun `the a2ui catalog matches its checked-in golden`() {
@@ -76,17 +60,7 @@ class SynthesisedCatalogGoldenTest {
   }
 
   @Test
-  fun `both goldens declare their own catalog id and platform`() {
-    // Cheap, and it is the pair of fields the whole contract turns on: a catalog is identified by
-    // its id and grouped by its platform WORD, and a golden that agreed with the other one about
-    // either would be a golden of the wrong catalog.
-    val wear = catalog(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID)
-    val remote = catalog(CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID)
-
-    assertEquals("wear-m3", wear["benchmark"]?.let { (it as JsonObject) }?.catalogSystemId())
-    assertEquals("remote-m3", remote["benchmark"]?.let { (it as JsonObject) }?.catalogSystemId())
-    assertEquals("wear", wear.platform())
-    assertEquals("remote-compose", remote.platform())
+  fun `the A2UI golden declares its own catalog id and platform`() {
     val a2ui = catalog(CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID)
     assertEquals("a2ui-catalog", (a2ui["benchmark"] as JsonObject).catalogSystemId())
     assertEquals("a2ui", a2ui.platform())

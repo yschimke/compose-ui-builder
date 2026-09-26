@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
  */
 class WearWidgetContainerCatalogTest {
   private val catalog =
-    CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = linkedSetOf("m3-catalog", "remote-m3"))
+    PublishedCatalogFixtures.executor(catalogSystemIds = linkedSetOf("m3-catalog", "remote-m3"))
       .listCatalogs()
       .single { it.benchmark.catalogSystemId == "remote-m3" }
 

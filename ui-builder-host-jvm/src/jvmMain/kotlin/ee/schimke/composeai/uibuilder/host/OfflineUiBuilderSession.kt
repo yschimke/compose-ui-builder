@@ -436,7 +436,11 @@ public enum class OfflineCatalog(
 
   /** Every template [seed] accepts, from the same seed the web host's New design form offers. */
   val templateIds: Set<String>
-    get() = UiBuilderNewDesignSeed.templateIds(systemId)
+    get() =
+      UiBuilderNewDesignSeed.templateIds(
+        systemId,
+        UiBuilderNewDesignSeed.Vocabulary.PACKAGED,
+      )
 
   fun seed(
     designId: String,
@@ -458,6 +462,7 @@ public enum class OfflineCatalog(
         nativeRuntimeId = nativeRuntimeId,
         fixture =
           Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject,
+        vocabulary = UiBuilderNewDesignSeed.Vocabulary.PACKAGED,
       )
     }
 

@@ -236,7 +236,13 @@ internal fun openHostDesign(messageJson: String, generation: Int): HostOpenedDes
     } else {
       requireNotNull(seed) { "the design file is empty and the host sent no seed" }
       val systemId = catalog.benchmark.catalogSystemId
-      require(seed.templateId in UiBuilderNewDesignSeed.templateIds(systemId)) {
+      require(
+        seed.templateId in
+          UiBuilderNewDesignSeed.templateIds(
+            systemId,
+            UiBuilderNewDesignSeed.Vocabulary.PACKAGED,
+          )
+      ) {
         "catalog '$systemId' has no template '${seed.templateId}'"
       }
       UiBuilderNewDesignSeed.document(
@@ -246,6 +252,7 @@ internal fun openHostDesign(messageJson: String, generation: Int): HostOpenedDes
         catalogRevision = catalog.benchmark.catalogRevision,
         nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
         fixture = Json.parseToJsonElement(seed.fixture).jsonObject,
+        vocabulary = UiBuilderNewDesignSeed.Vocabulary.PACKAGED,
       )
     }
   // Never a design against another catalog's components — see [catalogPinMismatch].

@@ -21,6 +21,15 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 object UiBuilderNewDesignSeed {
 
+  /** Which catalog vocabulary a new design is written against. */
+  enum class Vocabulary {
+    /** The catalog definition and renderer published by the catalog repository. */
+    PUBLISHED,
+
+    /** The legacy packaged definition used by offline, in-process hosts. */
+    PACKAGED,
+  }
+
   /** The template a URL that names none is asking for. */
   const val DEFAULT_TEMPLATE: String = "jetcaster"
 
@@ -46,11 +55,16 @@ object UiBuilderNewDesignSeed {
   /**
    * The templates [document] can seed for a catalog, which is what a caller is validated against.
    */
-  fun templateIds(catalogSystemId: String): Set<String> =
+  fun templateIds(
+    catalogSystemId: String,
+    vocabulary: Vocabulary = Vocabulary.PUBLISHED,
+  ): Set<String> =
     when (catalogSystemId) {
       "remote-m3" ->
-        setOf("wear-widget-small", "wear-widget-large", AdaptiveWearWidget.TEMPLATE_ID) +
-          WearWidgetSample.entries.map(WearWidgetSample::templateId)
+        setOf("wear-widget-small", "wear-widget-large") +
+          WearWidgetSample.entries.map(WearWidgetSample::templateId) +
+          if (vocabulary == Vocabulary.PACKAGED) setOf(AdaptiveWearWidget.TEMPLATE_ID)
+          else emptySet()
       "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
       A2uiDocumentExporter.CATALOG_SYSTEM_ID -> setOf(A2UI_TEMPLATE)
       "m3-catalog" -> setOf("blank", HELLO_TEMPLATE, DEFAULT_TEMPLATE)
@@ -74,6 +88,7 @@ object UiBuilderNewDesignSeed {
     nativeRuntimeId: String,
     fixture: JsonObject,
     state: List<NewDesignState> = emptyList(),
+    vocabulary: Vocabulary = Vocabulary.PUBLISHED,
   ): UiBuilderDocument {
     require(designId.isNotBlank()) { "a new design needs an id" }
     val fixtureDocument = UiBuilderReducer.replay(fixture).document
@@ -87,6 +102,39 @@ object UiBuilderNewDesignSeed {
       )
     val environment = fixtureDocument.environment
     val widgetSample = WearWidgetSample.forTemplate(templateId)
+    if (vocabulary == Vocabulary.PUBLISHED) {
+      when {
+        catalogSystemId == "remote-m3" && widgetSample != null ->
+          return PublishedCatalogSeeds.remoteWidget(
+            widgetSample.document(
+              designId = designId,
+              catalogPin = catalogPin,
+              environment = environment,
+            )
+          )
+        catalogSystemId == "wear-m3" ->
+          return PublishedCatalogSeeds.wearScreen(
+            designId = designId,
+            catalogPin = catalogPin,
+            environment = wearScreenEnvironment(environment),
+            title = if (templateId == WEAR_LIST_TEMPLATE) "Activity" else "Title",
+            rows =
+              if (templateId == WEAR_LIST_TEMPLATE) (1..6).map { "Session $it" to "${it * 4} min" }
+              else emptyList(),
+          )
+        catalogSystemId == "remote-m3" ->
+          return PublishedCatalogSeeds.remoteWidget(
+            wearWidgetUiBuilderDocument(
+              designId = designId,
+              catalogPin = catalogPin,
+              environment = environment,
+              size =
+                if (templateId == "wear-widget-large") WearWidgetScaffoldSize.Large
+                else WearWidgetScaffoldSize.Small,
+            )
+          )
+      }
+    }
     return when {
       catalogSystemId == "remote-m3" && widgetSample != null ->
         widgetSample.document(
@@ -148,7 +196,12 @@ object UiBuilderNewDesignSeed {
           environment = mobileScreenEnvironment(environment),
           state = state,
         )
-      else -> fixtureDocument.copy(id = designId, revision = 0, catalogPin = catalogPin)
+      else ->
+        fixtureDocument.copy(id = designId, revision = 0, catalogPin = catalogPin).let { document ->
+          if (vocabulary == Vocabulary.PUBLISHED)
+            PublishedCatalogSeeds.withoutNodes(document, setOf("m3/snackbar-host"))
+          else document
+        }
     }
   }
 }

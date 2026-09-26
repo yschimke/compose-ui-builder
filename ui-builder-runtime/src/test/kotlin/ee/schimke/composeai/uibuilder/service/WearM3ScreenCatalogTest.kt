@@ -11,6 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -203,20 +204,26 @@ class WearM3ScreenCatalogTest {
   }
 
   @Test
-  fun `a published catalog wins over the synthesised one of the same id, and says so`() {
+  fun `wear-m3 and remote-m3 are served only from a published file`() {
+    for (id in listOf("wear-m3", "remote-m3")) {
+      val failure =
+        assertFailsWith<IllegalArgumentException> {
+          CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = setOf("m3-catalog", id))
+        }
+      assertTrue(id in failure.message.orEmpty(), failure.message.orEmpty())
+    }
+  }
+
+  @Test
+  fun `a published wear-m3 is its own shelf plus the wear builder vocabulary, and says so`() {
     val executor =
       CurrentM3UiBuilderCatalogExecutor(
-        catalogSystemIds = setOf("wear-m3", "remote-m3"),
-        published = mapOf("wear-m3" to testCatalog(id = "wear-m3")),
+        catalogSystemIds = setOf("wear-m3"),
+        published = mapOf("wear-m3" to testCatalog(id = "wear-m3", platform = "wear")),
       )
 
-    // Per catalog and reversible: `wear-m3` reads its published file, `remote-m3` keeps the Kotlin,
-    // and the source of each is answerable rather than inferred from the shelf's contents.
-    assertEquals(
-      mapOf("wear-m3" to "published", "remote-m3" to "synthesised"),
-      executor.catalogSources,
-    )
-    val wear = executor.listCatalogs().first { it.benchmark.catalogSystemId == "wear-m3" }
+    assertEquals(mapOf("wear-m3" to "published"), executor.catalogSources)
+    val wear = executor.listCatalogs().single()
     // The catalog's own component is the published one, and only that one: nothing of the
     // synthesised Wear shelf survives, which is what "wins over" means.
     assertEquals(
@@ -253,7 +260,7 @@ class WearM3ScreenCatalogTest {
       .toSortedSet()
 
   /** The smallest thing that is a catalog: one component and an id. */
-  private fun testCatalog(id: String = "test-catalog") =
+  private fun testCatalog(id: String = "test-catalog", platform: String? = null) =
     CatalogCapabilityV1.Builder(
         "compose-catalog-capabilities/v1",
         CatalogBenchmarkV1.Builder(id, "ui-builder.json", id, "sha256:test", "candidate").build(),
@@ -272,6 +279,12 @@ class WearM3ScreenCatalogTest {
         ),
       )
       .also {
+        platform?.let { declared ->
+          it.statusSemantics =
+            JsonObject(
+              mapOf(CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive(declared))
+            )
+        }
         it.exportCapabilities =
           ExportCapabilitiesV1.Builder()
             .also {

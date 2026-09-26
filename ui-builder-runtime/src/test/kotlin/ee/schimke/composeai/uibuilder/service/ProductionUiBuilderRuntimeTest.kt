@@ -349,7 +349,7 @@ class ProductionUiBuilderRuntimeTest {
 
     // The registry is the catalog's, and every catalog derived from the base one inherits it.
     val everyCatalog =
-      CurrentM3UiBuilderCatalogExecutor(
+      PublishedCatalogFixtures.executor(
           catalogSystemIds = linkedSetOf("m3-catalog", "remote-m3", "wear-m3")
         )
         .listCatalogs()
@@ -383,7 +383,7 @@ class ProductionUiBuilderRuntimeTest {
   @Test
   fun `only explicitly enabled catalogs get independent exact pins`() {
     val catalogs =
-      CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = linkedSetOf("m3-catalog", "remote-m3"))
+      PublishedCatalogFixtures.executor(catalogSystemIds = linkedSetOf("m3-catalog", "remote-m3"))
 
     assertEquals(
       listOf("m3-catalog", "remote-m3"),

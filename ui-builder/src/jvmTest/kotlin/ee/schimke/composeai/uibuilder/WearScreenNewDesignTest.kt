@@ -30,6 +30,7 @@ class WearScreenNewDesignTest {
       catalogRevision = "wear-screen-scaffold-v1",
       nativeRuntimeId = "candidate",
       fixture = fixture,
+      vocabulary = UiBuilderNewDesignSeed.Vocabulary.PACKAGED,
     )
 
   @Test

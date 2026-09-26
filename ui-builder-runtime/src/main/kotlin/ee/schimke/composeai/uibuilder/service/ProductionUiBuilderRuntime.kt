@@ -206,11 +206,13 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       .newBuilder()
       .also { it.exportCapabilities = exportCapabilities }
       .build()
+  /**
+   * Catalogs this build owns. Wear and Remote Compose arrive only through [published]; A2UI stays
+   * built in until its repository publishes the same vocabulary and can be cut over separately.
+   */
   private val synthesisedCatalogs =
     mapOf(
       DEFAULT_CATALOG_SYSTEM_ID to baseCatalog,
-      REMOTE_M3_CATALOG_SYSTEM_ID to remoteM3Catalog(baseCatalog),
-      WEAR_M3_CATALOG_SYSTEM_ID to wearM3Catalog(baseCatalog),
       A2UI_CATALOG_SYSTEM_ID to a2uiCatalog(baseCatalog),
     )
 
@@ -279,9 +281,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     }
 
   private fun platformFor(catalog: CatalogCapabilityV1): String =
-    catalog.declaredPlatform
-      ?: synthesisedCatalogs[catalog.benchmark.catalogSystemId]?.platform
-      ?: DEFAULT_PLATFORM
+    catalog.declaredPlatform ?: DEFAULT_PLATFORM
 
   private fun donorFor(catalog: CatalogCapabilityV1): CatalogCapabilityV1 =
     platformFor(catalog).let { platform ->
@@ -524,6 +524,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
         referenceOf(catalog),
         synthesisedCatalogs[systemId]?.let(::referenceOf),
         published[systemId]?.let(::referenceOf),
+        LEGACY_SYNTHESISED_REFERENCES[systemId],
       )
     }
   private val components = catalogs.mapValues { (_, catalog) ->
@@ -986,6 +987,21 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     public const val DEFAULT_CATALOG_SYSTEM_ID: String = "m3-catalog"
     public const val REMOTE_M3_CATALOG_SYSTEM_ID: String = "remote-m3"
     public const val WEAR_M3_CATALOG_SYSTEM_ID: String = "wear-m3"
+
+    /** References written by the retired in-process Wear and Remote catalog definitions. */
+    internal val LEGACY_SYNTHESISED_REFERENCES: Map<String, CatalogReferenceV1> =
+      mapOf(
+          REMOTE_M3_CATALOG_SYSTEM_ID to "wear-widget-scaffolds-v1",
+          WEAR_M3_CATALOG_SYSTEM_ID to "wear-screen-scaffold-v1",
+        )
+        .mapValues { (systemId, revision) ->
+          CatalogReferenceV1(
+            systemId = systemId,
+            catalogRevision = revision,
+            capabilityDigest = CURRENT_CAPABILITY_DIGEST,
+            nativeRuntimeId = "candidate",
+          )
+        }
 
     /**
      * The A2UI basic catalog v0.9.1 as a builder palette; see `a2uiCatalog`. The same id

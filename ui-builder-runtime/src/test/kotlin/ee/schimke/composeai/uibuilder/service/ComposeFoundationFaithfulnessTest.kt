@@ -44,7 +44,7 @@ import kotlinx.serialization.json.JsonPrimitive
 class ComposeFoundationFaithfulnessTest {
 
   private val executor =
-    CurrentM3UiBuilderCatalogExecutor(
+    PublishedCatalogFixtures.executor(
       catalogSystemIds =
         linkedSetOf(
           CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
@@ -234,11 +234,13 @@ class ComposeFoundationFaithfulnessTest {
    * exercises; that hop goes with `synthesisedCatalogs` at #819 step 3.
    */
   @Test
-  fun `a declared platform beats the id, and no declaration still falls back to it`() {
+  fun `a declared platform decides the vocabulary, and the id does not`() {
     val wearVocabulary =
       synthesised(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID).donated().map {
         it.componentId
       }
+    val mobileVocabulary =
+      foundationFor(synthesised(DEFAULT_CATALOG_SYSTEM_ID)).components.map { it.componentId }
 
     fun vocabularyOf(catalog: CatalogCapabilityV1) =
       CurrentM3UiBuilderCatalogExecutor(
@@ -253,14 +255,16 @@ class ComposeFoundationFaithfulnessTest {
 
     assertEquals(
       wearVocabulary.toSortedSet(),
-      vocabularyOf(stub()).toSortedSet(),
-      "a published catalog that declares no platform stopped falling back to its id",
+      vocabularyOf(stub(platform = "wear")).toSortedSet(),
+      "a catalog declaring wear lost the wear vocabulary",
     )
     assertEquals(
-      foundationFor(synthesised(DEFAULT_CATALOG_SYSTEM_ID))
-        .components
-        .map { it.componentId }
-        .toSortedSet(),
+      mobileVocabulary.toSortedSet(),
+      vocabularyOf(stub()).toSortedSet(),
+      "a catalog declaring no platform was handed a vocabulary off its id",
+    )
+    assertEquals(
+      mobileVocabulary.toSortedSet(),
       vocabularyOf(stub(platform = "mobile")).toSortedSet(),
       "the catalog's own declaration lost to its id",
     )
