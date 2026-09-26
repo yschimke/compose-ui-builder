@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.61.0](https://github.com/yschimke/compose-ui-builder/compare/v3.60.0...v3.61.0) (2026-09-26)
+
+
+### Features
+
+* **ui-builder:** load the vendored fonts, pick the design's typeface, and name theme colours ([#292](https://github.com/yschimke/compose-ui-builder/issues/292)) ([6e3b220](https://github.com/yschimke/compose-ui-builder/commit/6e3b220b4bc27814697c93de72af78c97f22643e))
+
+
+### Bug Fixes
+
+* **ui-builder:** keep the edge button in the scaffold's slot, and the compact dock's labels on one line ([#298](https://github.com/yschimke/compose-ui-builder/issues/298)) ([e29abc4](https://github.com/yschimke/compose-ui-builder/commit/e29abc4a8b9adc89b7da3ff16f9d07a0aefdaf6e))
+
+
+### Performance Improvements
+
+* **ui-builder:** keep fonts off first load, and fetch them from the immutable bundle prefix ([#297](https://github.com/yschimke/compose-ui-builder/issues/297)) ([d36fc7c](https://github.com/yschimke/compose-ui-builder/commit/d36fc7ca6c0e625bf07a0d115caad44008cae3c8))
+
 ## [3.60.0](https://github.com/yschimke/compose-ui-builder/compare/v3.59.0...v3.60.0) (2026-09-26)
 
 
