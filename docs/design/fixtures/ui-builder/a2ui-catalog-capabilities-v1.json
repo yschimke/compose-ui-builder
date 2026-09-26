@@ -688,9 +688,9 @@
                         "array",
                         "object"
                     ],
-                    "name": "tabs",
-                    "notes": "An array of objects, where each object defines a tab with a title and a child component.",
-                    "required": true
+                    "name": "titles",
+                    "notes": "Each tab's title, by position in the `tabs` slot. Builder-only: the export zips it with the slot into A2UI's `tabs` array of `{title, child}`, and titles a tab it does not cover `Tab <n>`.",
+                    "required": false
                 },
                 {
                     "allowedValues": [],
@@ -708,7 +708,23 @@
                 }
             ],
             "role": "Container",
-            "slots": [],
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "A2uiComponent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "tabs",
+                    "ordered": true
+                }
+            ],
             "svg": {
                 "blocksExport": true,
                 "fallback": "none",

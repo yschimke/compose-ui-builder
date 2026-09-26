@@ -142,6 +142,26 @@
                 "a2ui/Text",
                 "a2ui/TextField",
                 "a2ui/Video"
+            ],
+            "a2ui/Tabs.tabs": [
+                "a2ui/AudioPlayer",
+                "a2ui/Button",
+                "a2ui/Card",
+                "a2ui/CheckBox",
+                "a2ui/ChoicePicker",
+                "a2ui/Column",
+                "a2ui/DateTimeInput",
+                "a2ui/Divider",
+                "a2ui/Icon",
+                "a2ui/Image",
+                "a2ui/List",
+                "a2ui/Modal",
+                "a2ui/Row",
+                "a2ui/Slider",
+                "a2ui/Tabs",
+                "a2ui/Text",
+                "a2ui/TextField",
+                "a2ui/Video"
             ]
         },
         "m3-catalog": {

@@ -142,7 +142,6 @@ internal object StarterContent {
             ),
           "value" to starterList(listOf(starterLiteral("string", "one"))),
         ),
-      "a2ui/Tabs" to mapOf("tabs" to starterList(emptyList())),
     )
 
   private val PROPERTY_TABLE: Map<String, Map<String, JsonObject>> =

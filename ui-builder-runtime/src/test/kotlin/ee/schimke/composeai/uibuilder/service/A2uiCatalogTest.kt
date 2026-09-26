@@ -130,10 +130,12 @@ class A2uiCatalogTest {
     val column = byId.getValue("a2ui/Column").slots.single()
     assertEquals("children", column.name)
     assertEquals(0 to null, column.cardinality.let { it.min to it.max })
-    // Tabs' `tabs` is a list of records, not a slot.
+    // Tabs' bodies are a slot, so each is a placed node; the titles ride beside them.
     val tabs = byId.getValue("a2ui/Tabs")
-    assertTrue(tabs.slots.isEmpty())
-    assertTrue(tabs.properties.single { it.name == "tabs" }.required)
+    assertEquals(listOf("tabs"), tabs.slots.map { it.name })
+    assertEquals(0 to null, tabs.slots.single().cardinality.let { it.min to it.max })
+    assertTrue(tabs.properties.none { it.name == "tabs" })
+    assertFalse(tabs.properties.single { it.name == "titles" }.required)
   }
 
   @Test

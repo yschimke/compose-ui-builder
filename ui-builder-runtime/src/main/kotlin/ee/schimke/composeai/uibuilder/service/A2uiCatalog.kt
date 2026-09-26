@@ -576,12 +576,13 @@ private val A2UI_BASIC_CATALOG: List<A2uiComponent> =
       summary = "A set of tabs, each with a title and a corresponding child component.",
       properties =
         listOf(
+          // The protocol's `tabs` is `[{title, child}]`: the bodies are the `tabs` slot, so each
+          // is a placed node the export reaches, and the titles ride beside them by position.
           a2uiProperty(
-            "tabs",
+            "titles",
             LIST,
-            required = true,
             notes =
-              "An array of objects, where each object defines a tab with a title and a child component.",
+              "Each tab's title, by position in the `tabs` slot. Builder-only: the export zips it with the slot into A2UI's `tabs` array of `{title, child}`, and titles a tab it does not cover `Tab <n>`.",
           ),
           a2uiProperty("accessibility", OBJECT, notes = "A2UI type: AccessibilityAttributes."),
           a2uiProperty(
@@ -591,6 +592,7 @@ private val A2UI_BASIC_CATALOG: List<A2uiComponent> =
               "The relative weight of the component within a Row or Column. Note: this may ONLY be set when the component is a direct descendant of a Row or Column.",
           ),
         ),
+      slots = listOf(A2uiSlot("tabs", single = false, required = true)),
     ),
     A2uiComponent(
       name = "Modal",

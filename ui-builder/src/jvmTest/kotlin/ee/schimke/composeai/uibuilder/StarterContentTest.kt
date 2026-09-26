@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
 import ee.schimke.composeai.uibuilder.capability.accepts
+import ee.schimke.composeai.uibuilder.editor.EditorPropertyControl
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
@@ -287,6 +288,42 @@ class StarterContentTest {
         component.componentId,
       )
     }
+  }
+
+  /**
+   * A2UI's numbers are neither `…Dp` nor declared with a range, so without the catalog's editor
+   * rules a dropped Slider would keep its starter `value` and `max` forever and every component's
+   * `weight` would be `Unsupported`.
+   */
+  @Test
+  fun `an A2UI slider's range, value and weight are editable numbers`() {
+    val a2uiReducer = UiBuilderEditorReducer(a2uiCatalog)
+    val seed =
+      UiBuilderNewDesignSeed.document(
+        designId = "a2ui-slider",
+        catalogSystemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
+        templateId = UiBuilderNewDesignSeed.A2UI_TEMPLATE,
+        catalogRevision = "test",
+        nativeRuntimeId = "test",
+        fixture =
+          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
+      )
+    val initial = a2uiReducer.initial(seed, selectedNodeId = seed.roots.single())
+    val inserted =
+      a2uiReducer.reduce(
+        initial,
+        UiBuilderEditorEvent.InsertComponent(
+          "a2ui/Slider",
+          assertNotNull(a2uiReducer.dropTarget(initial, "a2ui/Slider")),
+        ),
+      )
+    assertIs<CommandOutcome.Accepted>(inserted.lastOutcome)
+    val fields = a2uiReducer.propertyFields(inserted).associateBy { it.name }
+
+    listOf("min", "max", "value", "weight").forEach {
+      assertEquals(EditorPropertyControl.Number, assertNotNull(fields[it], it).control, it)
+    }
+    assertEquals(0.1, assertNotNull(fields["weight"]).numberBounds?.minimum)
   }
 
   @Test

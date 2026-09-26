@@ -22,7 +22,8 @@ import kotlinx.serialization.json.put
  * The lowering is deliberately literal, because the protocol already is the builder's shape:
  * * a node's `componentId` minus the `a2ui/` prefix is the A2UI `component`;
  * * its slots are A2UI child references — a single-child slot (`child`, `trigger`, `content`)
- *   becomes an id, any other slot (`children`) an id list;
+ *   becomes an id, any other slot (`children`) an id list, except `Tabs`' `tabs` slot, which
+ *   becomes the `{title, child}` entries the protocol nests its bodies in;
  * * a property wrapper (`{"type":"string","value":…}` and the other literal kinds) becomes its bare
  *   value, and a `{"type":"state","variable":"x"}` reference becomes the data binding
  *   `{"path":"/x"}`, reading the `stateVariables` initial values this export writes into the
@@ -48,6 +49,25 @@ object A2uiDocumentExporter {
   private const val ROOT_ID = "root"
   private val SINGLE_CHILD_SLOTS = setOf("child", "trigger", "content")
   private val LITERAL_WRAPPERS = setOf("string", "int", "float", "bool", "enum")
+
+  /**
+   * A2UI's `Tabs` holds its bodies inside an array of `{title, child}` objects rather than as a
+   * child list, so the builder models it as a `tabs` slot (every body a placed, reachable node)
+   * plus a builder-only `titles` list, and this zips the two back into the protocol's shape.
+   */
+  private const val TABS = "Tabs"
+  private const val TABS_SLOT = "tabs"
+  private const val TAB_TITLES = "titles"
+
+  private fun tabEntries(ids: List<String>, titles: JsonArray?): JsonArray =
+    JsonArray(
+      ids.mapIndexed { index, id ->
+        buildJsonObject {
+          put("title", titles?.getOrNull(index) ?: JsonPrimitive("Tab ${index + 1}"))
+          put("child", id)
+        }
+      }
+    )
 
   sealed interface Result {
     /**
@@ -111,13 +131,23 @@ object A2uiDocumentExporter {
           buildJsonObject {
             put("id", rename(node.id))
             put("component", type)
+            var tabTitles: JsonArray? = null
             for ((name, value) in node.properties) {
               val lowered = lowerValue(value, "$where.properties.$name", document, reasons)
-              if (lowered != null) put(name, lowered)
+              if (type == TABS && name == TAB_TITLES) {
+                tabTitles = lowered as? JsonArray
+                if (lowered != null && tabTitles == null) {
+                  reasons += "$where.properties.$name: tab titles are a list"
+                }
+              } else if (lowered != null) {
+                put(name, lowered)
+              }
             }
             for ((slot, children) in node.slots) {
               val ids = children.map(rename)
-              if (slot in SINGLE_CHILD_SLOTS) {
+              if (type == TABS && slot == TABS_SLOT) {
+                put(slot, tabEntries(ids, tabTitles))
+              } else if (slot in SINGLE_CHILD_SLOTS) {
                 if (ids.size > 1) reasons += "$where.slots.$slot: A2UI `$slot` takes one component"
                 ids.firstOrNull()?.let { put(slot, it) }
               } else {

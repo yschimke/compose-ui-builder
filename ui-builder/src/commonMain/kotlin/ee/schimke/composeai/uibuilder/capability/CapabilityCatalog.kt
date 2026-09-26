@@ -409,6 +409,12 @@ object CapabilityCatalogParser {
     EDITOR_OVERRIDES[componentId to property.name]?.let {
       return it
     }
+    // Every A2UI component declares `weight`, its share of a Row or Column, and none of them is a
+    // `…Dp`: without this the one layout number the protocol has would be `Unsupported` on all
+    // eighteen. Same range as `m3/text`'s weight.
+    if (componentId.startsWith("a2ui/") && property.name == "weight") {
+      return numberEditor(0.1, 100.0, 0.1)
+    }
     // A colour property is a colour control, by the name rule `PropertyValueKinds` states. Two
     // colours had this by override and the other twenty were plain text fields, so the inspector
     // wrote `containerColor` on an app bar as a `string` — the very spelling both reducers now
@@ -589,6 +595,13 @@ object CapabilityCatalogParser {
       ("m3/primary-scrollable-tab-row" to "selectedIndex") to numberEditor(0.0, 32.0, 1.0),
       ("m3/time-picker" to "hour") to numberEditor(0.0, 23.0, 1.0),
       ("m3/time-picker" to "minute") to numberEditor(0.0, 59.0, 1.0),
+      // A2UI's Slider: the range and the value are in the payload's own units, like `m3/slider`.
+      ("a2ui/Slider" to "min") to
+        numberEditor(-MAXIMUM_AUTHORED_VALUE, MAXIMUM_AUTHORED_VALUE, 1.0),
+      ("a2ui/Slider" to "max") to
+        numberEditor(-MAXIMUM_AUTHORED_VALUE, MAXIMUM_AUTHORED_VALUE, 1.0),
+      ("a2ui/Slider" to "value") to
+        numberEditor(-MAXIMUM_AUTHORED_VALUE, MAXIMUM_AUTHORED_VALUE, 0.1),
     ) +
       WEAR_WIDGET_CONTAINER_IDS.flatMap(::widgetContainerEditors) +
       REMOTE_MATERIAL_3_NUMBER_EDITORS

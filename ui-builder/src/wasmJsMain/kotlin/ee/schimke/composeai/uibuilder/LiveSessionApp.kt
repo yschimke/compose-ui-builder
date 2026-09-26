@@ -44,6 +44,7 @@ import ee.schimke.composeai.uibuilder.client.preparePropertyDelta
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
 import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
+import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS
@@ -599,10 +600,12 @@ private fun LiveSessionApp(
         BrowserExportHost(
           designId = config.designId,
           supportsLinks = !config.localStorage,
-          suppliedDocument = {
+          // A2UI messages are lowered from the document on the server, without Remote Compose, so
+          // that format submits the current draft whatever the Remote Compose flag says.
+          suppliedDocument = { format ->
             val current = latestEditorDocument ?: document
             current?.takeIf {
-              UiBuilderBuildFeatures.remoteCompose &&
+              (UiBuilderBuildFeatures.remoteCompose || format == EditorExportFormat.A2uiJson) &&
                 (config.localStorage ||
                   (revision == null && authoritativeDocument?.toUiBuilderDocument() != it))
             }

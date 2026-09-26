@@ -58,7 +58,7 @@ internal class BrowserExportHost(
    */
   private val revision: Long? = null,
   override val supportsLinks: Boolean = true,
-  private val suppliedDocument: (() -> UiBuilderDocument?)? = null,
+  private val suppliedDocument: ((EditorExportFormat) -> UiBuilderDocument?)? = null,
 ) : UiBuilderExportHost {
 
   override suspend fun copyPicture(format: EditorExportFormat): String {
@@ -112,7 +112,7 @@ internal class BrowserExportHost(
 
   private fun currentDocument(format: EditorExportFormat): String? =
     if (format == EditorExportFormat.Svg) null
-    else suppliedDocument?.invoke()?.let { Json.encodeToString(it.toDesignDocumentV1()) }
+    else suppliedDocument?.invoke(format)?.let { Json.encodeToString(it.toDesignDocumentV1()) }
 
   private fun suppliedPath(format: EditorExportFormat): String =
     "$UI_BUILDER_DOCUMENT_EXPORT_PATH/export.${format.extension}"
