@@ -1,5 +1,9 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.*
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
@@ -10,7 +14,10 @@ import ee.schimke.composeai.uibuilder.editor.homeDesignFolders
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * The builder's home page: the screen `/ui-builder/` draws when no design is named.
@@ -64,6 +71,37 @@ class UiBuilderHomeScreenTest {
     onNodeWithText("morning-player · m3-catalog · updated yesterday").assertIsDisplayed()
     onNodeWithContentDescription("All designs").assertIsDisplayed()
   }
+
+  /**
+   * A preview hands the form a fixed name so its render is the same every time; the app passes
+   * nothing and a person gets a generated one.
+   */
+  @Test
+  fun `a given design name is pre-filled, and the app's default is a generated one`() =
+    runComposeUiTest {
+      var initial by mutableStateOf<String?>("sunny-otter")
+      var createdId: String? = null
+      setContent {
+        key(initial) {
+          UiBuilderNewDesignScreen(
+            catalogs = catalogs,
+            initialCatalogSystemId = "m3-catalog",
+            initialDesignId = initial,
+            onCreate = { _, designId, _, _ -> createdId = designId },
+          )
+        }
+      }
+      onNodeWithContentDescription("Design ID").assertTextContains("sunny-otter")
+      onNodeWithText("Create").performScrollTo().performClick()
+      assertEquals("sunny-otter", createdId)
+
+      initial = null
+      waitForIdle()
+      onNodeWithText("Create").performScrollTo().performClick()
+      val generated = assertNotNull(createdId)
+      assertNotEquals("sunny-otter", generated)
+      assertTrue(generated.isNotBlank())
+    }
 
   @Test
   fun `opening and copying name the design they were pressed on`() = runComposeUiTest {
