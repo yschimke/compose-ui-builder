@@ -181,8 +181,10 @@ composeai-preview-daemon = "3.8.3"
 # adds the catalog-owned, versioned Compose source-adapter declaration. 3.10.0 is the first release
 # carrying `ChainLink.member` (compose-preview-contracts#108), which `ScreenDocumentProjection` sets.
 # 3.11.0 adds `ScreenNode.slotParameters` and `ScreenValue.SlotParameterRead`
-# (compose-preview-contracts#115), which the projection uses to pad a Scaffold's content.
-composeai-contracts = "3.11.0"
+# (compose-preview-contracts#115), which the projection uses to pad a Scaffold's content. 3.12.0
+# adds `DesignHomeV1` and `DesignDocumentV1.home` (compose-preview-contracts#116), the canonical
+# location this branch persists and protects across server/repository copies.
+composeai-contracts = "3.12.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 rc-players = "1.65.0"
