@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "bfbee3123c490667951dfa9361a72a774631f99e",
+    "generatedFrom": "187d96032640deee2b01b5e2ef7188089152329f",
     "previews": {
         "ui-builder/ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview": {
             "path": "renders/ui-builder/ProductionUiBuilderPreview-a424cc38.png",
@@ -964,6 +964,13 @@
             "path": "renders/ui-builder/UiBuilderBoardBeforePreview-009f1e6e.png",
             "versions": [
                 {
+                    "blob": "275b9ef5b6fc82fd93f3998514e76614c951b715",
+                    "commit": "187d96032640deee2b01b5e2ef7188089152329f",
+                    "date": "2026-09-26T10:19:55Z",
+                    "sourceSha": "e97153de",
+                    "commits": 1
+                },
+                {
                     "blob": "fa4f357d4bbe83e7e8c4a4a2f83ec6692b1222ae",
                     "commit": "5a96a38cb67560849b5e5cb642c0fcd69b769534",
                     "date": "2026-09-26T06:38:28Z",
@@ -971,13 +978,20 @@
                     "commits": 1
                 }
             ],
-            "observations": 1,
+            "observations": 2,
             "unstable": false,
             "flapCount": 0
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderBoardPreview": {
             "path": "renders/ui-builder/UiBuilderBoardPreview-4f265e12.png",
             "versions": [
+                {
+                    "blob": "a7be4f0704540a2271a04006d47c42cf4dd1e2dd",
+                    "commit": "187d96032640deee2b01b5e2ef7188089152329f",
+                    "date": "2026-09-26T10:19:55Z",
+                    "sourceSha": "e97153de",
+                    "commits": 1
+                },
                 {
                     "blob": "59e3cd4841975b5e95b26d87fc362cf26fbcca6e",
                     "commit": "5a96a38cb67560849b5e5cb642c0fcd69b769534",
@@ -986,7 +1000,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 1,
+            "observations": 2,
             "unstable": false,
             "flapCount": 0
         },
@@ -1039,6 +1053,13 @@
             "path": "renders/ui-builder/UiBuilderComponentVariantsPreview-34f70555.png",
             "versions": [
                 {
+                    "blob": "ceb07ebfb76a653d420da92dd85cf1fafc948271",
+                    "commit": "187d96032640deee2b01b5e2ef7188089152329f",
+                    "date": "2026-09-26T10:19:55Z",
+                    "sourceSha": "e97153de",
+                    "commits": 1
+                },
+                {
                     "blob": "dbfd5138057bf1b95725cd1f7f910fec8a1b5113",
                     "commit": "5a96a38cb67560849b5e5cb642c0fcd69b769534",
                     "date": "2026-09-26T06:38:28Z",
@@ -1046,7 +1067,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 1,
+            "observations": 2,
             "unstable": false,
             "flapCount": 0
         },
@@ -1129,6 +1150,13 @@
             "path": "renders/ui-builder/UiBuilderEditorChromePreview-7201c9a1.png",
             "versions": [
                 {
+                    "blob": "fa7ef9a22ca5fdf2ee79b8587aea7e0902e25e37",
+                    "commit": "187d96032640deee2b01b5e2ef7188089152329f",
+                    "date": "2026-09-26T10:19:55Z",
+                    "sourceSha": "e97153de",
+                    "commits": 1
+                },
+                {
                     "blob": "8bed1db01107c13108a9d10f5549803c708b24df",
                     "commit": "408f540b372f7325b67a656625ff2efcaf43b5f3",
                     "date": "2026-09-26T06:43:51Z",
@@ -1143,7 +1171,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 2,
+            "observations": 3,
             "unstable": false,
             "flapCount": 0
         },
@@ -1441,6 +1469,13 @@
             "path": "renders/ui-builder/UiBuilderUnexportablePalettePreview-2c6c35dc.png",
             "versions": [
                 {
+                    "blob": "eb6f97da1f280042b5d23c76a26e85a4b4553d4f",
+                    "commit": "187d96032640deee2b01b5e2ef7188089152329f",
+                    "date": "2026-09-26T10:19:55Z",
+                    "sourceSha": "e97153de",
+                    "commits": 1
+                },
+                {
                     "blob": "67688c30e56f0c0061c5ad0d46faaa6d5f33185e",
                     "commit": "5a96a38cb67560849b5e5cb642c0fcd69b769534",
                     "date": "2026-09-26T06:38:28Z",
@@ -1448,7 +1483,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 1,
+            "observations": 2,
             "unstable": false,
             "flapCount": 0
         },
@@ -1552,6 +1587,13 @@
             "path": "renders/ui-builder/UiBuilderLaptopWindowPreview-4044873a.png",
             "versions": [
                 {
+                    "blob": "b4c1f95b58ceb6536e82c58a418ea55c0d3d16e4",
+                    "commit": "187d96032640deee2b01b5e2ef7188089152329f",
+                    "date": "2026-09-26T10:19:55Z",
+                    "sourceSha": "e97153de",
+                    "commits": 1
+                },
+                {
                     "blob": "06ae6614ef34f97882aece651b0804e1172b3f78",
                     "commit": "408f540b372f7325b67a656625ff2efcaf43b5f3",
                     "date": "2026-09-26T06:43:51Z",
@@ -1566,13 +1608,20 @@
                     "commits": 1
                 }
             ],
-            "observations": 2,
+            "observations": 3,
             "unstable": false,
             "flapCount": 0
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorScenarioPreviewsKt.UiBuilderLightThemePreview": {
             "path": "renders/ui-builder/UiBuilderLightThemePreview-8fd9f6b2.png",
             "versions": [
+                {
+                    "blob": "47ce399bd3cfdb206aa0b6f7ddbdbffbe80c3ffe",
+                    "commit": "187d96032640deee2b01b5e2ef7188089152329f",
+                    "date": "2026-09-26T10:19:55Z",
+                    "sourceSha": "e97153de",
+                    "commits": 1
+                },
                 {
                     "blob": "6a769ef57f4458b5c325366e3b6c9744d51e5ef6",
                     "commit": "408f540b372f7325b67a656625ff2efcaf43b5f3",
@@ -1588,7 +1637,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 2,
+            "observations": 3,
             "unstable": false,
             "flapCount": 0
         },
