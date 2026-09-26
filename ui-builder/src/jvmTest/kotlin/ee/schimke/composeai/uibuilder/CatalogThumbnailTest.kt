@@ -62,6 +62,28 @@ class CatalogThumbnailTest {
     }
   }
 
+  /**
+   * A catalog with no `layout/box` frames its thumbnails with its own list container. A2UI's
+   * palette is `a2ui/<Component>` and nothing else, and a box frame was refused for all of them.
+   */
+  @Test
+  fun `every A2UI component draws its own insert, framed by the catalog's own column`() {
+    val a2ui = CapabilityCatalogParser.parse(resource("/a2ui-catalog-capabilities-v1.json"))
+    val a2uiReducer = UiBuilderEditorReducer(a2ui)
+    a2ui.components.forEach { component ->
+      val document =
+        assertNotNull(
+          a2uiReducer.previewDocument(component.componentId),
+          "${component.componentId} has no thumbnail",
+        )
+      assertEquals(emptyList(), CapabilityValidator(a2ui).validate(document).issues)
+      val frame = document.nodes.getValue(document.roots.single())
+      assertEquals("a2ui/Column", frame.componentId)
+      assertTrue(frame.modifiers.isEmpty(), "A2UI takes no modifiers, so the frame carries none")
+      assertTrue(document.nodes.values.any { it.componentId == component.componentId })
+    }
+  }
+
   @Test
   fun `a variant's thumbnail carries the variant`() {
     val outlined =

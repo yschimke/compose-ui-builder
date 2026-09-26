@@ -812,7 +812,7 @@ class UiBuilderEditorReducer(
    */
   private fun UiBuilderDocument.centeredInFrame(): UiBuilderDocument {
     val cell = nodes[PREVIEW_FRAME_CELL_ID] ?: return this
-    val childId = cell.slots["children"]?.singleOrNull() ?: return this
+    val childId = cell.slots[FRAME_SLOT]?.singleOrNull() ?: return this
     val child = nodes[childId] ?: return this
     if (
       "align" !in (catalog.componentsById[child.componentId]?.modifierCapabilities ?: return this)
@@ -836,6 +836,33 @@ class UiBuilderEditorReducer(
   }
 
   private val previewDocuments = mutableMapOf<Pair<String, String?>, UiBuilderDocument?>()
+
+  /**
+   * The container a thumbnail's (and a drag ghost's) component is inserted into, from this
+   * catalog's own vocabulary.
+   *
+   * `layout/box` wherever the catalog has it, which is every catalog the builder defines. A catalog
+   * that brings its own layout vocabulary instead — A2UI, whose palette is `a2ui/<Component>` and
+   * nothing else — has no box, and a frame built from one was refused by the validator for every
+   * component, so the whole shelf drew as bare tiles. Such a catalog is framed by its own list
+   * container: the first with an unbounded `children` slot, a `…/box` or `…/column` by preference
+   * because they stack a single child without spreading it. Only a catalog with no such container
+   * at all keeps the box, and its tiles keep the plain handle as before.
+   */
+  private val frameComponentId: String by lazy {
+    if (FRAME_BOX in catalog.componentsById) return@lazy FRAME_BOX
+    val lists =
+      catalog.components.filter { component ->
+        component.slots.any { it.name == FRAME_SLOT && it.cardinality.max == null }
+      }
+    (lists.firstOrNull { it.componentId.substringAfterLast('/').lowercase() in FRAME_PREFERRED }
+        ?: lists.firstOrNull())
+      ?.componentId ?: FRAME_BOX
+  }
+
+  private val frameModifiers: List<String> by lazy {
+    catalog.componentsById[frameComponentId]?.modifierCapabilities.orEmpty()
+  }
 
   internal fun debugPreviewFrame(): UiBuilderDocument = previewFrame
 
@@ -894,24 +921,30 @@ class UiBuilderEditorReducer(
           PREVIEW_FRAME_CELL_ID to
             UiBuilderNode(
               id = PREVIEW_FRAME_CELL_ID,
-              componentId = "layout/box",
-              // No properties: `layout/box` declares no alignment of its own, and the validator
-              // refuses a property the catalog does not know — which is the whole insert refused,
-              // and every thumbnail with it.
+              componentId = frameComponentId,
+              // No properties: the frame's container declares no alignment of its own, and the
+              // validator refuses a property the catalog does not know — which is the whole insert
+              // refused, and every thumbnail with it.
               properties = JsonObject(emptyMap()),
+              // The fixed size only where the container takes a `size` modifier. A catalog that
+              // lays out without modifiers (A2UI) gets a cell that wraps its component instead;
+              // the environment's width and height still bound the surface, and the tile crops
+              // to what was drawn either way.
               modifiers =
                 JsonArray(
-                  listOf(
-                    JsonObject(
-                      mapOf(
-                        "type" to JsonPrimitive("size"),
-                        "widthDp" to JsonPrimitive(PREVIEW_FRAME_WIDTH_DP),
-                        "heightDp" to JsonPrimitive(PREVIEW_FRAME_HEIGHT_DP),
+                  if ("size" !in frameModifiers) emptyList()
+                  else
+                    listOf(
+                      JsonObject(
+                        mapOf(
+                          "type" to JsonPrimitive("size"),
+                          "widthDp" to JsonPrimitive(PREVIEW_FRAME_WIDTH_DP),
+                          "heightDp" to JsonPrimitive(PREVIEW_FRAME_HEIGHT_DP),
+                        )
                       )
                     )
-                  )
                 ),
-              slots = mapOf("children" to emptyList()),
+              slots = mapOf(FRAME_SLOT to emptyList()),
             )
         ),
     )
@@ -991,10 +1024,10 @@ class UiBuilderEditorReducer(
             DRAG_GHOST_CELL_ID to
               UiBuilderNode(
                 id = DRAG_GHOST_CELL_ID,
-                componentId = "layout/box",
+                componentId = frameComponentId,
                 properties = JsonObject(emptyMap()),
                 modifiers = JsonArray(emptyList()),
-                slots = mapOf("children" to emptyList()),
+                slots = mapOf(FRAME_SLOT to emptyList()),
               )
           ),
       )
