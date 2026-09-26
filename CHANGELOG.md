@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.64.0](https://github.com/yschimke/compose-ui-builder/compare/v3.63.0...v3.64.0) (2026-09-26)
+
+
+### Features
+
+* **ui-builder:** device view for Wear lists and through the catalog runtime ([#326](https://github.com/yschimke/compose-ui-builder/issues/326)) ([3860363](https://github.com/yschimke/compose-ui-builder/commit/3860363463158518fdde0e18bf9eb7b8c9a9d83d))
+* **ui-builder:** device view with an unrolled pop-out of the selected scrolling container ([#325](https://github.com/yschimke/compose-ui-builder/issues/325)) ([a2f6150](https://github.com/yschimke/compose-ui-builder/commit/a2f6150f5705bde4cc8bcc39239904ada09c2ccf))
+
+
+### Bug Fixes
+
+* **build:** keep Binaryen off a busy runner, and let the Kotlin daemon return its heap ([#318](https://github.com/yschimke/compose-ui-builder/issues/318)) ([6da466e](https://github.com/yschimke/compose-ui-builder/commit/6da466e04257ddcec9c93b79b07a6068b869fb3f))
+* **ui-builder:** draw Wear widget previews at their own size in a denser host ([#323](https://github.com/yschimke/compose-ui-builder/issues/323)) ([24b5368](https://github.com/yschimke/compose-ui-builder/commit/24b536848d4160647adafae9937c9b8a73408629))
+* **ui-builder:** frame A2UI palette thumbnails with the catalog's own column ([#316](https://github.com/yschimke/compose-ui-builder/issues/316)) ([ac21329](https://github.com/yschimke/compose-ui-builder/commit/ac2132943e36ebefbb1521e6322fe51a8315949d))
+* **ui-builder:** leave Wear device and widget-host views to the preview pane ([#321](https://github.com/yschimke/compose-ui-builder/issues/321)) ([61a6ed9](https://github.com/yschimke/compose-ui-builder/commit/61a6ed983ae6f7d4b847aac43e2bccf8bec481d1))
+* **ui-builder:** size a device pane's scene in the host's pixels ([#324](https://github.com/yschimke/compose-ui-builder/issues/324)) ([2b1e1b0](https://github.com/yschimke/compose-ui-builder/commit/2b1e1b0e1f2d68b3bf800051260fbd771dade722))
+* **ui-builder:** Wear miniatures on the watch face, spaced starter lists, and an editor for every number ([#317](https://github.com/yschimke/compose-ui-builder/issues/317)) ([ce62403](https://github.com/yschimke/compose-ui-builder/commit/ce62403ffc3b3ca476c4e0075c56b061b5a111a1))
+
 ## [3.63.0](https://github.com/yschimke/compose-ui-builder/compare/v3.62.0...v3.63.0) (2026-09-26)
 
 
