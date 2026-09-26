@@ -6,6 +6,7 @@ import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import ee.schimke.composeai.uibuilder.export.inspectUiBuilderArgumentBindings
 import ee.schimke.composeai.uibuilder.export.propertyMatches
 import ee.schimke.composeai.uibuilder.export.stateBindingMatchesCatalog
@@ -78,6 +79,8 @@ private fun defaultExportCapabilities(): ExportCapabilitiesV1 =
       it.png = false
     }
     .build()
+
+private const val WEAR_PLATFORM = "wear"
 
 /**
  * The explicitly enabled production catalogs admitted by the v1 service.
@@ -368,11 +371,72 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       .build()
   }
 
+  /**
+   * The published Wear artifact describes the whole upstream library; the builder offers only the
+   * subset its Compose exporter can write today.
+   *
+   * A catalog row is an authoring promise, not documentation. Leaving `wear-m3/title-card` or
+   * `wear-m3/app-card` on the shelf accepted a valid document that [WearScreenCodeExporter] then
+   * refused by name. The exporter intentionally models those APIs as variants of `wear-m3/card`, so
+   * exposing the upstream ids as additional components is not a harmless alias.
+   *
+   * Filter the two keyed status tables with the capability list. `componentMenu` drives the shelf;
+   * `components` drives the published Wasm adapter metadata. Keeping either entry after removing
+   * its capability would leave two contradictory descriptions of what this served catalog owns.
+   */
+  private fun withWearExporterVocabulary(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {
+    if (catalog.platform != WEAR_PLATFORM) return catalog
+    val supported =
+      setOf(
+        WearScreenCodeExporter.SCAFFOLD,
+        WearScreenCodeExporter.TRANSFORMING_LAZY_COLUMN,
+        WearScreenCodeExporter.LIST_HEADER,
+        WearScreenCodeExporter.TEXT,
+        WearScreenCodeExporter.CARD,
+        WearScreenCodeExporter.BUTTON,
+        "layout/box",
+        "layout/column",
+        "layout/row",
+        "asset/image",
+      ) + WearScreenCodeExporter.NATIVE_ONLY_COMPONENT_IDS
+    val components = catalog.components.filter { it.componentId in supported }
+    val retained = components.mapTo(mutableSetOf()) { it.componentId }
+    val semantics =
+      catalog.statusSemantics.mapValues { (key, value) ->
+        when (key) {
+          "components",
+          "builtins" ->
+            (value as? JsonObject)?.let { table -> JsonObject(table.filterKeys { it in retained }) }
+              ?: value
+          "componentMenu" ->
+            (value as? JsonObject)?.let { menu ->
+              val entries = menu["components"] as? JsonObject
+              if (entries == null) value
+              else
+                JsonObject(
+                  menu + ("components" to JsonObject(entries.filterKeys { it in retained }))
+                )
+            } ?: value
+          else -> value
+        }
+      }
+    return catalog
+      .newBuilder()
+      .also {
+        it.components = components
+        it.statusSemantics = JsonObject(semantics)
+      }
+      .build()
+  }
+
   // A published catalog wins over the synthesised one of the same id. The map is the union rather
   // than an overlay of the synthesised keys, so an id nothing here synthesises is servable — that
   // is the whole point, and an overlay would have quietly kept the set of possible catalogs closed.
   private val availableCatalogs =
-    synthesisedCatalogs + published.mapValues { (_, catalog) -> withBuilderVocabulary(catalog) }
+    synthesisedCatalogs +
+      published.mapValues { (_, catalog) ->
+        withBuilderVocabulary(withWearExporterVocabulary(catalog))
+      }
   private val catalogs =
     catalogSystemIds
       .also { require(it.isNotEmpty()) { "at least one UI-builder catalog must be enabled" } }

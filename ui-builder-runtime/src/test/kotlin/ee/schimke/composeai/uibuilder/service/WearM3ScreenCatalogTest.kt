@@ -13,9 +13,12 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 /**
  * The `wear-m3` authoring surface: what it admits, and what it says when asked for something else.
@@ -219,7 +222,15 @@ class WearM3ScreenCatalogTest {
     val executor =
       CurrentM3UiBuilderCatalogExecutor(
         catalogSystemIds = setOf("wear-m3"),
-        published = mapOf("wear-m3" to testCatalog(id = "wear-m3", platform = "wear")),
+        published =
+          mapOf(
+            "wear-m3" to
+              testCatalog(
+                id = "wear-m3",
+                platform = "wear",
+                componentId = "wear-m3/text",
+              )
+          ),
       )
 
     assertEquals(mapOf("wear-m3" to "published"), executor.catalogSources)
@@ -227,7 +238,7 @@ class WearM3ScreenCatalogTest {
     // The catalog's own component is the published one, and only that one: nothing of the
     // synthesised Wear shelf survives, which is what "wins over" means.
     assertEquals(
-      listOf("test-catalog/only"),
+      listOf("wear-m3/text"),
       wear.components.map { it.componentId }.filterNot { it in builderVocabulary },
     )
     // Plus the builder's own vocabulary, which is not the catalog's to publish and so not the
@@ -260,13 +271,17 @@ class WearM3ScreenCatalogTest {
       .toSortedSet()
 
   /** The smallest thing that is a catalog: one component and an id. */
-  private fun testCatalog(id: String = "test-catalog", platform: String? = null) =
+  private fun testCatalog(
+    id: String = "test-catalog",
+    platform: String? = null,
+    componentId: String = "test-catalog/only",
+  ) =
     CatalogCapabilityV1.Builder(
         "compose-catalog-capabilities/v1",
         CatalogBenchmarkV1.Builder(id, "ui-builder.json", id, "sha256:test", "candidate").build(),
         listOf(
           ComponentCapabilityV1.Builder(
-              "test-catalog/only",
+              componentId,
               "Only",
               "Leaf",
               WasmCapabilityV1.Builder(
@@ -348,6 +363,63 @@ class WearM3ScreenCatalogTest {
         }
         .sorted(),
     )
+  }
+
+  @Test
+  fun `the published Wear shelf withdraws components the exporter cannot write`() {
+    val base = testCatalog(id = "wear-m3", platform = "wear", componentId = "wear-m3/card")
+    val unsupported =
+      ComponentCapabilityV1.Builder(
+          "wear-m3/title-card",
+          "Title Card",
+          "Container",
+          WasmCapabilityV1.Builder(
+              platformSupported = JsonPrimitive(false),
+              adapterStatus = WasmAdapterStatusV1.UNSUPPORTED,
+            )
+            .build(),
+        )
+        .build()
+    val published =
+      base
+        .newBuilder()
+        .also {
+          it.components = base.components + unsupported
+          it.statusSemantics =
+            JsonObject(
+              base.statusSemantics +
+                ("componentMenu" to
+                  buildJsonObject {
+                    putJsonObject("components") {
+                      putJsonObject("wear-m3/card") { put("group", "Containment") }
+                      putJsonObject("wear-m3/title-card") { put("group", "Containment") }
+                    }
+                  }) +
+                ("components" to
+                  buildJsonObject {
+                    putJsonObject("wear-m3/card") {}
+                    putJsonObject("wear-m3/title-card") {}
+                  })
+            )
+        }
+        .build()
+    val served =
+      CurrentM3UiBuilderCatalogExecutor(
+          catalogSystemIds = setOf("wear-m3"),
+          published = mapOf("wear-m3" to published),
+        )
+        .listCatalogs()
+        .single()
+    val ids = served.components.mapTo(mutableSetOf()) { it.componentId }
+
+    assertTrue("wear-m3/card" in ids)
+    assertTrue("wear-m3/title-card" !in ids)
+    val menu = served.statusSemantics.getValue("componentMenu").jsonObject
+    val menuIds = menu.getValue("components").jsonObject.keys
+    assertEquals(ids, menuIds)
+    val adapterIds = served.statusSemantics.getValue("components").jsonObject.keys
+    assertTrue(adapterIds.all(ids::contains), adapterIds.toString())
+    assertTrue("wear-m3/title-card" !in adapterIds)
   }
 
   /**
