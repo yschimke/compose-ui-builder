@@ -127,6 +127,7 @@ object WearScreenCodeExporter {
     val scrollIndicator =
       if (publishedScrollIndicator) scrollIndicatorNode != null
       else root.flag("scrollIndicator") ?: true
+    val edgeButtonSpacing = root.number("edgeButtonSpacingDp")
     val emitter = WearContentEmitter(document, refusals, tagNodes, packComponents)
     val contentIds = root.slots["content"].orEmpty()
     val body =
@@ -171,7 +172,9 @@ object WearScreenCodeExporter {
             appendLine("package $packageName")
             appendLine()
           }
-          (emitter.imports(timeText != null, previews) + timeText.orEmptyImports())
+          (emitter.imports(timeText != null, previews) +
+              timeText.orEmptyImports() +
+              if (edgeButtonSpacing != null) listOf("androidx.compose.ui.unit.dp") else emptyList())
             .distinct()
             .forEach { appendLine("import $it") }
           appendLine()
@@ -191,6 +194,9 @@ object WearScreenCodeExporter {
           append("${INDENT}ScreenScaffold(scrollState = listState")
           emitter.rootModifier(rootId)?.let { append(", modifier = $it") }
           appendLine(",")
+          edgeButtonSpacing?.let {
+            appendLine("${INDENT}${INDENT}edgeButtonSpacing = ${it.sourceNumber()}.dp,")
+          }
           // The indicator is the design's choice, and the capture guard is not. The guard stays on
           // both arms: a long screenshot composites many frames into one image, and an indicator
           // painted at a different offset in every slice lands as a column of dashes down the
@@ -341,6 +347,8 @@ object WearScreenCodeExporter {
   }
 
   private fun Float.sourceFloat(): String = "${toString().removeSuffix(".0")}f"
+
+  private fun Float.sourceNumber(): String = toString().removeSuffix(".0")
 
   /** The scaffold's `timeText`, or null when the design declares none. */
   private fun UiBuilderNode.text(name: String): String? =

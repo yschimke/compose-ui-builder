@@ -148,6 +148,32 @@ class WearScreenCodeExporterTest {
     assertTrue("ScrollIndicator(listState, reverseDirection = true)" in source, source)
   }
 
+  @Test
+  fun `published edge button spacing is generated`() {
+    val base = wearScreenUiBuilderDocument("activity", pin, environment, edgeButtonLabel = "Start")
+    val document =
+      base.copy(
+        nodes =
+          base.nodes +
+            ("wear-screen" to
+              base.nodes
+                .getValue("wear-screen")
+                .copy(
+                  properties =
+                    JsonObject(
+                      base.nodes.getValue("wear-screen").properties +
+                        ("edgeButtonSpacingDp" to number(12f))
+                    )
+                ))
+      )
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(document))
+        .source
+
+    assertTrue("edgeButtonSpacing = 12.dp," in source, source)
+    assertTrue("import androidx.compose.ui.unit.dp" in source, source)
+  }
+
   /**
    * The native lane renders without the export's previews, so it is handed a wrapper that puts the
    * screen in its `AppScaffold`: a native render without the status strip would be a picture of a
