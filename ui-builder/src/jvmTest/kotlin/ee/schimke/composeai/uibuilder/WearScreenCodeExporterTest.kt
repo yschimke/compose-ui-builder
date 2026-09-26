@@ -82,6 +82,72 @@ class WearScreenCodeExporterTest {
     assertTrue("fun ActivityScreenLongPreview() {\n    $appScaffold\n}" in source, source)
   }
 
+  @Test
+  fun `published scaffold auxiliary slots control the generated chrome`() {
+    val published = publishedScaffold()
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(published))
+        .source
+
+    assertTrue("TimeText { timeTextCurvedText(\"10:10\") }" in source, source)
+    assertTrue("ScrollIndicator(listState)" in source, source)
+
+    val root = published.nodes.getValue("wear-screen")
+    val withoutChrome =
+      published.copy(
+        nodes =
+          published.nodes +
+            ("wear-screen" to
+              root.copy(
+                slots =
+                  root.slots + ("timeText" to emptyList()) + ("scrollIndicator" to emptyList())
+              ))
+      )
+    val withoutSource =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(withoutChrome))
+        .source
+
+    assertTrue("AppScaffold { ActivityScreen() }" in withoutSource, withoutSource)
+    assertTrue("scrollIndicator = null," in withoutSource, withoutSource)
+    assertTrue("ScrollIndicator(listState)" !in withoutSource, withoutSource)
+  }
+
+  @Test
+  fun `published scaffold auxiliary properties are generated`() {
+    val published = publishedScaffold()
+    val authored =
+      published.copy(
+        nodes =
+          published.nodes +
+            ("time-text" to
+              published.nodes
+                .getValue("time-text")
+                .copy(
+                  properties =
+                    JsonObject(
+                      mapOf(
+                        "maxSweepAngle" to number(180f),
+                        "backgroundColor" to text("#123456"),
+                      )
+                    )
+                )) +
+            ("scroll-indicator" to
+              published.nodes
+                .getValue("scroll-indicator")
+                .copy(properties = JsonObject(mapOf("reverseDirection" to bool(true)))))
+      )
+    val source =
+      assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(authored))
+        .source
+
+    assertTrue(
+      "TimeText(maxSweepAngle = 180f, backgroundColor = Color(0xFF123456))" in source,
+      source,
+    )
+    assertTrue("import androidx.compose.ui.graphics.Color" in source, source)
+    assertTrue("ScrollIndicator(listState, reverseDirection = true)" in source, source)
+  }
+
   /**
    * The native lane renders without the export's previews, so it is handed a wrapper that puts the
    * screen in its `AppScaffold`: a native render without the status strip would be a picture of a
@@ -501,6 +567,33 @@ class WearScreenCodeExporterTest {
         base.nodes +
           ("wear-list" to list.copy(slots = mapOf("items" to listOf(items.first().id)))) +
           items.associateBy { it.id }
+    )
+  }
+
+  private fun publishedScaffold(): UiBuilderDocument {
+    val base = wearScreenUiBuilderDocument("activity", pin, environment)
+    val root = base.nodes.getValue("wear-screen")
+    return base.copy(
+      nodes =
+        base.nodes +
+          ("wear-screen" to
+            root.copy(
+              properties =
+                JsonObject(
+                  root.properties.filterKeys { it != "timeText" && it != "scrollIndicator" }
+                ),
+              slots =
+                root.slots +
+                  ("timeText" to listOf("time-text")) +
+                  ("scrollIndicator" to listOf("scroll-indicator")),
+            )) +
+          ("time-text" to
+            UiBuilderNode(id = "time-text", componentId = WearScreenCodeExporter.TIME_TEXT)) +
+          ("scroll-indicator" to
+            UiBuilderNode(
+              id = "scroll-indicator",
+              componentId = WearScreenCodeExporter.SCROLL_INDICATOR,
+            ))
     )
   }
 

@@ -401,8 +401,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
             // The published scaffold vocabulary models these as slot children. The export
             // projection consumes them as scaffold settings rather than emitting standalone
             // composables, but a published new-design seed still has to pass catalog validation.
-            "wear-m3/time-text",
-            "wear-m3/scroll-indicator",
+            WearScreenCodeExporter.TIME_TEXT,
+            WearScreenCodeExporter.SCROLL_INDICATOR,
             "layout/box",
             "layout/column",
             "layout/row",

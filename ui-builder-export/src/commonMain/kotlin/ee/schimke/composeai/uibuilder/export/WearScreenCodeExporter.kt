@@ -4,6 +4,7 @@ import ee.schimke.composeai.discovery.ComponentRecord
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -112,6 +113,20 @@ object WearScreenCodeExporter {
     }
 
     val refusals = mutableListOf<String>()
+    val publishedTimeText = "timeText" in root.slots
+    val timeTextNode =
+      if (publishedTimeText) root.auxiliary("timeText", TIME_TEXT, document, refusals) else null
+    val timeText =
+      if (publishedTimeText) timeTextNode?.let { ScaffoldTimeText(it, WEAR_FROZEN_CLOCK) }
+      else root.text("timeText")?.let { ScaffoldTimeText(node = null, text = it) }
+    val publishedScrollIndicator = "scrollIndicator" in root.slots
+    val scrollIndicatorNode =
+      if (publishedScrollIndicator)
+        root.auxiliary("scrollIndicator", SCROLL_INDICATOR, document, refusals)
+      else null
+    val scrollIndicator =
+      if (publishedScrollIndicator) scrollIndicatorNode != null
+      else root.flag("scrollIndicator") ?: true
     val emitter = WearContentEmitter(document, refusals, tagNodes, packComponents)
     val contentIds = root.slots["content"].orEmpty()
     val body =
@@ -140,7 +155,6 @@ object WearScreenCodeExporter {
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
     val name = document.screenIdentifier()
-    val timeText = root.text("timeText")
     // The native lane renders the composable named [Result.Emitted.screenName] and writes no
     // previews, so there the screen is the `AppScaffold` wrapper under the design's name and the
     // scaffold body moves to `<Screen>Content`. The name the lane imports is the same in both
@@ -157,7 +171,9 @@ object WearScreenCodeExporter {
             appendLine("package $packageName")
             appendLine()
           }
-          emitter.imports(timeText != null, previews).forEach { appendLine("import $it") }
+          (emitter.imports(timeText != null, previews) + timeText.orEmptyImports())
+            .distinct()
+            .forEach { appendLine("import $it") }
           appendLine()
           appendLine("@Composable")
           appendLine("fun $screenFunction() {")
@@ -181,9 +197,14 @@ object WearScreenCodeExporter {
           // edge. `LocalScrollCaptureInProgress` is the platform's own signal for that — Android's
           // system long-screenshot sets it — so reading it is app behaviour rather than a preview
           // concession.
-          if (root.flag("scrollIndicator") ?: true) {
+          if (scrollIndicator) {
+            val reverseDirection =
+              scrollIndicatorNode
+                ?.flag("reverseDirection")
+                ?.let { ", reverseDirection = $it" }
+                .orEmpty()
             appendLine(
-              "${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
+              "${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState$reverseDirection) },"
             )
           } else {
             appendLine("${INDENT}${INDENT}scrollIndicator = null,")
@@ -202,7 +223,7 @@ object WearScreenCodeExporter {
           // a design that declares one gets the pair, frozen, around the screen.
           val appScaffold =
             if (timeText != null)
-              "AppScaffold(timeText = { TimeText { timeTextCurvedText(${timeText.quoted()}) } }) { $screenFunction() }"
+              "AppScaffold(timeText = { ${timeText.call()} }) { $screenFunction() }"
             else "AppScaffold { $screenFunction() }"
           if (previews) {
             appendLine()
@@ -245,6 +266,82 @@ object WearScreenCodeExporter {
 
   private fun refuse(reason: String) = Result.Refused(listOf(reason))
 
+  private data class ScaffoldTimeText(val node: UiBuilderNode?, val text: String) {
+    private val backgroundColor = node?.color("backgroundColor")
+
+    fun call(): String {
+      val arguments = buildList {
+        node?.number("maxSweepAngle")?.let { add("maxSweepAngle = ${it.sourceFloat()}") }
+        backgroundColor?.let { add("backgroundColor = ${it.expression}") }
+      }
+      val parameters =
+        arguments.takeIf { it.isNotEmpty() }?.joinToString(prefix = "(", postfix = ")").orEmpty()
+      return "TimeText$parameters { timeTextCurvedText(${text.quoted()}) }"
+    }
+
+    fun imports(): List<String> = backgroundColor?.imports.orEmpty()
+  }
+
+  private data class SourceColor(val expression: String, val imports: List<String>)
+
+  private fun ScaffoldTimeText?.orEmptyImports(): List<String> = this?.imports().orEmpty()
+
+  private fun UiBuilderNode.auxiliary(
+    slot: String,
+    expectedComponentId: String,
+    document: UiBuilderDocument,
+    refusals: MutableList<String>,
+  ): UiBuilderNode? {
+    val ids = slots[slot].orEmpty()
+    if (ids.size > 1) {
+      refusals +=
+        "the screen scaffold's `$slot` slot takes one component; this design has ${ids.size}"
+      return null
+    }
+    val id = ids.firstOrNull() ?: return null
+    val node = document.nodes[id]
+    if (node == null) {
+      refusals += "the screen scaffold's `$slot` node `$id` is missing"
+      return null
+    }
+    if (node.componentId != expectedComponentId) {
+      refusals +=
+        "the screen scaffold's `$slot` node `$id` is `${node.componentId}`, not `$expectedComponentId`"
+      return null
+    }
+    return node
+  }
+
+  private fun UiBuilderNode.number(name: String): Float? =
+    (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.floatOrNull
+
+  private fun UiBuilderNode.color(name: String): SourceColor? {
+    val value = text(name) ?: return null
+    return when {
+      value.startsWith("#") -> {
+        val hex = value.removePrefix("#").uppercase()
+        val argb = if (hex.length == 6) "FF$hex" else hex
+        SourceColor("Color(0x$argb)", listOf("androidx.compose.ui.graphics.Color"))
+      }
+      value == "transparent" ->
+        SourceColor("Color.Transparent", listOf("androidx.compose.ui.graphics.Color"))
+      else -> {
+        val role =
+          when (value) {
+            "surface" -> "surfaceContainer"
+            "surfaceContainerHighest" -> "surfaceContainerHigh"
+            else -> value
+          }
+        SourceColor(
+          "MaterialTheme.colorScheme.$role",
+          listOf("androidx.wear.compose.material3.MaterialTheme"),
+        )
+      }
+    }
+  }
+
+  private fun Float.sourceFloat(): String = "${toString().removeSuffix(".0")}f"
+
   /** The scaffold's `timeText`, or null when the design declares none. */
   private fun UiBuilderNode.text(name: String): String? =
     (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.contentOrNull?.takeIf {
@@ -256,6 +353,10 @@ object WearScreenCodeExporter {
     (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.booleanOrNull
 
   const val SCAFFOLD = "wear-m3/screen-scaffold"
+
+  const val TIME_TEXT = "wear-m3/time-text"
+
+  const val SCROLL_INDICATOR = "wear-m3/scroll-indicator"
 
   const val TRANSFORMING_LAZY_COLUMN = "wear-m3/transforming-lazy-column"
 

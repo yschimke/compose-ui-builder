@@ -750,7 +750,7 @@ private const val WEAR_LIST_SPACING_DP = 4f
  * the top margin the content lays out around, because the list's top content padding is what makes
  * room for it.
  */
-private const val WEAR_FROZEN_CLOCK = "10:10"
+internal const val WEAR_FROZEN_CLOCK = "10:10"
 
 /**
  * The rows the Wear screen template opens on.
