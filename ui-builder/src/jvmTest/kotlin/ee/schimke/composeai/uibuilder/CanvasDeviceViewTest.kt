@@ -1,6 +1,5 @@
 package ee.schimke.composeai.uibuilder
 
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -22,13 +21,11 @@ import androidx.compose.ui.test.runDesktopComposeUiTest
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorCanvasView
-import ee.schimke.composeai.uibuilder.editor.PinnedDesignCanvas
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
-import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.right
@@ -65,7 +62,11 @@ class CanvasDeviceViewTest {
       var view by mutableStateOf(EditorCanvasView.Extent)
       var measured = 0 to 0
       setContent {
-        CanvasHost(list, view = view, onMetrics = { width, height -> measured = width to height })
+        DeviceViewCanvasHost(
+          list,
+          view = view,
+          onMetrics = { width, height -> measured = width to height },
+        )
       }
       waitForIdle()
       val extent = measured
@@ -84,7 +85,7 @@ class CanvasDeviceViewTest {
       var snapshot: UiBuilderInspectionSnapshot? = null
       var frame = Rect.Zero
       setContent {
-        CanvasHost(
+        DeviceViewCanvasHost(
           list,
           view = EditorCanvasView.Device,
           selectedNodeId = selected,
@@ -115,7 +116,7 @@ class CanvasDeviceViewTest {
     runDesktopComposeUiTest(width = 900, height = 700) {
       var selected by mutableStateOf<String?>("row-2")
       setContent {
-        CanvasHost(
+        DeviceViewCanvasHost(
           list,
           view = EditorCanvasView.Device,
           selectedNodeId = selected,
@@ -136,7 +137,9 @@ class CanvasDeviceViewTest {
   @Test
   fun `a lazy row pops out as one row, left to right`() =
     runDesktopComposeUiTest(width = 900, height = 700) {
-      setContent { CanvasHost(row, view = EditorCanvasView.Device, selectedNodeId = "chip-$CHIPS") }
+      setContent {
+        DeviceViewCanvasHost(row, view = EditorCanvasView.Device, selectedNodeId = "chip-$CHIPS")
+      }
       waitForIdle()
 
       val boxes = (1..CHIPS).map { popOutNode("Chip $it").getUnclippedBoundsInRoot() }
@@ -153,7 +156,7 @@ class CanvasDeviceViewTest {
     runDesktopComposeUiTest(width = 900, height = 700) {
       var snapshot: UiBuilderInspectionSnapshot? = null
       setContent {
-        CanvasHost(list, view = EditorCanvasView.Device, onInspection = { snapshot = it })
+        DeviceViewCanvasHost(list, view = EditorCanvasView.Device, onInspection = { snapshot = it })
       }
       waitForIdle()
       assertNotNull(bounds(snapshot, "row-1"), "the first row is on screen to begin with")
@@ -175,7 +178,7 @@ class CanvasDeviceViewTest {
     runDesktopComposeUiTest(width = 900, height = 700) {
       var snapshot: UiBuilderInspectionSnapshot? = null
       setContent {
-        CanvasHost(list, view = EditorCanvasView.Device, onInspection = { snapshot = it })
+        DeviceViewCanvasHost(list, view = EditorCanvasView.Device, onInspection = { snapshot = it })
       }
       waitForIdle()
       val before = assertNotNull(bounds(snapshot, "row-1")).y
@@ -245,42 +248,6 @@ class CanvasDeviceViewTest {
 
   private fun bounds(snapshot: UiBuilderInspectionSnapshot?, nodeId: String) =
     snapshot?.nodes?.firstOrNull { it.nodeId == nodeId }?.bounds
-
-  @Composable
-  private fun CanvasHost(
-    document: UiBuilderDocument,
-    view: EditorCanvasView,
-    selectedNodeId: String? = null,
-    onSelected: (String) -> Unit = {},
-    onInspection: (UiBuilderInspectionSnapshot) -> Unit = {},
-    onMetrics: (Int, Int) -> Unit = { _, _ -> },
-    onFrame: (Rect) -> Unit = {},
-  ) {
-    PinnedDesignCanvas(
-      document = document,
-      selectedNodeId = selectedNodeId,
-      onNodeSelected = onSelected,
-      onCanvasMetrics = { width, height, _ -> onMetrics(width, height) },
-      onCanvasBounds = onFrame,
-      dropHovered = false,
-      showSelectionOverlay = true,
-      reference = ReferenceOverlayState(mintedIds = 0),
-      onMarkDrawn = { _, _ -> },
-      onPieceMoved = { _, _, _ -> },
-      collaborators = emptyList(),
-      commentThreads = emptyList(),
-      selectedThreadId = null,
-      onCommentThreadSelected = {},
-      onInspectionSnapshot = onInspection,
-      onInspectionInvalidated = null,
-      selectionMenu = { emptyList() },
-      hoverEditor = null,
-      // Pinned, so the pop-out opening does not re-fit the frame under the assertions.
-      zoom = 1f,
-      onZoomChanged = {},
-      canvasView = view,
-    )
-  }
 
   private companion object {
     const val FRAME_DP = 320

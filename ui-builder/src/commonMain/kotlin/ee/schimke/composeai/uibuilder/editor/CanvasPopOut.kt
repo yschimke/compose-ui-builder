@@ -75,7 +75,8 @@ internal fun UiBuilderDocument.scrollingContainerOf(nodeId: String?): ScrollingC
     }
   }
 
-private val VERTICAL_SCROLLERS = setOf("layout/lazy-column", "layout/lazy-grid")
+private val VERTICAL_SCROLLERS =
+  setOf("layout/lazy-column", "layout/lazy-grid", "wear-m3/transforming-lazy-column")
 
 private val HORIZONTAL_SCROLLERS = setOf("layout/lazy-row", "layout/horizontal-carousel")
 

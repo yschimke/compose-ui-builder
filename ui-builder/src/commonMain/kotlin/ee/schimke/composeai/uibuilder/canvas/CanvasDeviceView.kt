@@ -7,6 +7,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 
 /**
@@ -102,6 +103,13 @@ internal fun LazyListState.showsWhole(key: String): Boolean {
   val item = info.visibleItemsInfo.firstOrNull { it.key == key } ?: return false
   return item.offset >= info.viewportStartOffset &&
     item.offset + item.size <= info.viewportEndOffset
+}
+
+/** By index: a Wear list's rows carry no keys of their own. */
+internal fun TransformingLazyColumnState.showsWhole(index: Int): Boolean {
+  val info = layoutInfo
+  val item = info.visibleItems.firstOrNull { it.index == index } ?: return false
+  return item.offset >= 0 && item.offset + item.transformedHeight <= info.viewportSize.height
 }
 
 internal fun LazyGridState.showsWhole(key: String): Boolean {

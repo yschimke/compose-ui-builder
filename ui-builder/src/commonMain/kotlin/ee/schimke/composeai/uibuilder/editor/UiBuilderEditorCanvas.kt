@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Add
@@ -234,8 +235,8 @@ internal fun PinnedDesignCanvas(
   frameCompanion: Boolean = true,
   /**
    * The extent, or the device frame with its scrolling container popped out — see
-   * [EditorCanvasView]. Honoured only where the device view is offered at all: in-process, and
-   * neither on a Wear catalog nor for a Wear widget, whose device views are the preview pane's.
+   * [EditorCanvasView]. Honoured only where the device view is offered at all: in-process, and not
+   * for a Wear widget, whose device views are the preview pane's.
    */
   canvasView: EditorCanvasView = EditorCanvasView.Extent,
   /** Switches the view from the zoom bar, or null to leave the switch out of it. */
@@ -264,14 +265,15 @@ internal fun PinnedDesignCanvas(
   val densityRatio = document.renderDensity(density).density / density.density
   var inspection by
     remember(document.id, document.revision) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
-  // A Wear catalog's device is round and the preview pane already draws it; a widget's is the
-  // launcher's host shape, which is the preview pane's too. The catalog runtime draws in a sandbox
-  // this canvas cannot compose a second, re-rooted copy of the design beside.
-  val deviceViewOffered =
-    canvasRenderer == null &&
-      LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.WEAR.wireValue &&
-      document.wearWidgetScaffoldSize() == null
+  // A widget's device is the launcher's host shape, which the preview pane draws at every shape
+  // there is; a widget has no list to pop out either. The catalog runtime draws in a sandbox this
+  // canvas cannot compose a second, re-rooted copy of the design beside.
+  val deviceViewOffered = canvasRenderer == null && document.wearWidgetScaffoldSize() == null
   val deviceView = deviceViewOffered && canvasView == EditorCanvasView.Device
+  // A watch at its frame is a round screen, and the square frame's corners are not part of it: the
+  // scaffold clips itself, and without this the editor's surface showed in the four corners.
+  val roundFrame =
+    deviceView && LocalUiBuilderCatalogPlatform.current == UiBuilderCatalogPlatform.WEAR.wireValue
   // The container the selection scrolls inside, which is what comes out beside the frame. It
   // follows the selection and nothing else: select outside it and it goes back in.
   val popOut =
@@ -580,7 +582,7 @@ internal fun PinnedDesignCanvas(
                   if (dropHovered) Modifier.border(1.dp, MaterialTheme.colorScheme.primary)
                   else Modifier
                 ),
-              shape = RoundedCornerShape(0.dp),
+              shape = if (roundFrame) CircleShape else RoundedCornerShape(0.dp),
               color =
                 if (canvasRenderer == null) MaterialTheme.colorScheme.surface
                 else Color.Transparent,

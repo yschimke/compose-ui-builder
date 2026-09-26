@@ -534,8 +534,10 @@ fun UiBuilderSurface(
   val fontFamily = typeface?.let(LocalUiBuilderFontFamilies.current::get)
   val typography =
     MaterialTheme.typography.let { base -> fontFamily?.let(base::withFontFamily) ?: base }
+  val detachedFrom = LocalUiBuilderDetachedFrom.current
+  val overlayTakesInput = !LocalUiBuilderOverlayPassesInput.current
   val wearScreen =
-    document.roots.singleOrNull()?.let(document.nodes::get)?.let { node ->
+    (detachedFrom ?: document).roots.singleOrNull()?.let(document.nodes::get)?.let { node ->
       val adapter = canvasAdapterIds[node.componentId] ?: node.componentId
       adapter == ROUND_SCREEN_FRAME
     } == true
@@ -550,8 +552,6 @@ fun UiBuilderSurface(
   // was added, and the themed surface under it is still the top of the design. Scanning roots alone
   // dropped the palette, the type scale and the corner radius the moment a themed screen joined a
   // board. `UiBuilderEditorState.themeHost` asks this the same way.
-  val detachedFrom = LocalUiBuilderDetachedFrom.current
-  val overlayTakesInput = !LocalUiBuilderOverlayPassesInput.current
   val themeHost =
     (detachedFrom ?: document).topLevelNodes.firstOrNull { it.componentId == "m3/surface" }
   val primaryColor = themeHost?.themeColor(THEME_PRIMARY)
@@ -1103,6 +1103,7 @@ private fun RenderNode(
             // always
             // carried the treatment here while the generated screen honoured the property.
             transformation = node.string("transformation") != "none",
+            itemIds = items,
           ) { index, itemModifier ->
             child(items[index], itemModifier)
           }

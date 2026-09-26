@@ -218,12 +218,20 @@ internal fun WearCanvasTransformingLazyColumn(
    * transformation off in order to stitch.
    */
   transformation: Boolean = true,
+  /**
+   * The node id of each row, for scrolling the one holding the selection into view — see
+   * [RevealSelectedItem]. Empty where nothing asks.
+   */
+  itemIds: List<String> = emptyList(),
   item: @Composable (Int, Modifier) -> Unit,
 ) {
   val provided = LocalWearScreenListState.current
   val remembered = rememberTransformingLazyColumnState()
   // The scaffold's state when this list is inside one, so the clock and the indicator can see it.
   val state = provided ?: remembered
+  RevealSelectedItem(itemIds, { id -> state.showsWhole(itemIds.indexOf(id)) }) {
+    state.animateScrollToItem(it)
+  }
   val spec = rememberTransformationSpec()
   TransformingLazyColumn(
     state = state,
