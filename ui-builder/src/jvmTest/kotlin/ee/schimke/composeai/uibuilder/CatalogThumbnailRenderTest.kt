@@ -106,7 +106,9 @@ class CatalogThumbnailRenderTest {
         }
       }
     val outcomes = mutableMapOf<Tile, CatalogThumbnailOutcome>()
-    runDesktopComposeUiTest(width = SHEET_WIDTH, height = 1600) {
+    // Landscape, like the laptop window the editor usually runs in: a component that reads the host
+    // window rather than its frame (Material's TimePicker did) shows up here.
+    runDesktopComposeUiTest(width = SHEET_WIDTH, height = 1200) {
       // The clock is driven by hand, so an animating thumbnail shows up as a changed picture
       // rather than as a test that never goes idle.
       mainClock.autoAdvance = false
