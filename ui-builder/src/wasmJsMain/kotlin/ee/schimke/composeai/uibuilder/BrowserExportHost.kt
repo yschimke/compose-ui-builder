@@ -68,7 +68,8 @@ internal class BrowserExportHost(
       try {
         when (format) {
           EditorExportFormat.Svg,
-          EditorExportFormat.Json -> awaitJsString(copySvgTextPromise(url, document))
+          EditorExportFormat.Json,
+          EditorExportFormat.A2uiJson -> awaitJsString(copySvgTextPromise(url, document))
           EditorExportFormat.Png -> awaitJsString(copyPngImagePromise(url, document))
           EditorExportFormat.Rc -> return "Use Download to save the binary document"
         }
@@ -77,6 +78,7 @@ internal class BrowserExportHost(
       }
     return if (outcome.isNotEmpty()) outcome
     else if (format == EditorExportFormat.Json) "JSON source copied"
+    else if (format == EditorExportFormat.A2uiJson) "A2UI messages copied"
     else "${format.label} copied — paste it into Figma"
   }
 

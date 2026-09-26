@@ -14,6 +14,7 @@ public final class ee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilder
 }
 
 public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCatalogExecutor : ee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor {
+	public static final field A2UI_CATALOG_SYSTEM_ID Ljava/lang/String;
 	public static final field ASSET_KEY_PROPERTY Ljava/lang/String;
 	public static final field ASSET_REGISTRY_KEY Ljava/lang/String;
 	public static final field COLOR_TOKENS_KEY Ljava/lang/String;

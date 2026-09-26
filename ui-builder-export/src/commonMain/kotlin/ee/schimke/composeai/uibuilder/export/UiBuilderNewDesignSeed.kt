@@ -37,6 +37,13 @@ object UiBuilderNewDesignSeed {
   const val HELLO_TEMPLATE: String = "hello"
 
   /**
+   * An A2UI surface: one `Column` root holding a headline. The column is the root because A2UI
+   * draws a surface from a single component named `root`, and a column is what an agent almost
+   * always sends there.
+   */
+  const val A2UI_TEMPLATE: String = "a2ui-column"
+
+  /**
    * The templates [document] can seed for a catalog, which is what a caller is validated against.
    */
   fun templateIds(catalogSystemId: String): Set<String> =
@@ -45,6 +52,7 @@ object UiBuilderNewDesignSeed {
         setOf("wear-widget-small", "wear-widget-large", AdaptiveWearWidget.TEMPLATE_ID) +
           WearWidgetSample.entries.map(WearWidgetSample::templateId)
       "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
+      A2uiDocumentExporter.CATALOG_SYSTEM_ID -> setOf(A2UI_TEMPLATE)
       "m3-catalog" -> setOf("blank", HELLO_TEMPLATE, DEFAULT_TEMPLATE)
       else -> setOf("blank", DEFAULT_TEMPLATE)
     }
@@ -100,6 +108,14 @@ object UiBuilderNewDesignSeed {
           designId = designId,
           catalogPin = catalogPin,
           environment = wearScreenEnvironment(environment),
+        )
+      // Whatever template was asked for: the A2UI catalog has one, and its palette holds nothing
+      // the Material 3 templates below are made of.
+      catalogSystemId == A2uiDocumentExporter.CATALOG_SYSTEM_ID ->
+        a2uiUiBuilderDocument(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = mobileScreenEnvironment(environment),
         )
       catalogSystemId == "remote-m3" && templateId == AdaptiveWearWidget.TEMPLATE_ID ->
         AdaptiveWearWidget.newDocument(

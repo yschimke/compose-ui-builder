@@ -45,6 +45,13 @@ enum class EditorExportFormat(
   Png("PNG", "png"),
   Json("JSON", "json"),
   Rc("Remote document (.rc)", "rc"),
+
+  /**
+   * An A2UI design's messages — `createSurface`, `updateDataModel`, `updateComponents` — as the
+   * JSON Lines an agent streams. The same `json` route as [Json]: the host's executor answers it
+   * for the catalog the design is pinned to, and an A2UI catalog is never a Remote Compose one.
+   */
+  A2uiJson("A2UI JSON", "json"),
 }
 
 /** What the host does with a design's picture; see [EditorExportFormat]. */
@@ -89,6 +96,7 @@ sealed interface EditorExportMenuEntry {
           EditorExportFormat.Png -> "Paste anywhere as a picture"
           EditorExportFormat.Json -> "Editable Remote Compose source"
           EditorExportFormat.Rc -> "Use Download to save the binary document"
+          EditorExportFormat.A2uiJson -> "The messages an agent sends to draw this surface"
         }
   }
 
@@ -150,9 +158,12 @@ fun exportFormatsFor(
   png: Boolean,
   json: Boolean = false,
   rc: Boolean = false,
+  a2uiJson: Boolean = false,
 ): List<EditorExportFormat> = buildList {
   if (svg) add(EditorExportFormat.Svg)
   if (png) add(EditorExportFormat.Png)
   if (UiBuilderBuildFeatures.remoteCompose && json) add(EditorExportFormat.Json)
   if (UiBuilderBuildFeatures.remoteCompose && rc) add(EditorExportFormat.Rc)
+  // Not behind the Remote Compose flag: an A2UI design's JSON is its A2UI messages.
+  if (a2uiJson) add(EditorExportFormat.A2uiJson)
 }

@@ -64,6 +64,7 @@ import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.encodeNewDesignStates
@@ -581,6 +582,8 @@ private fun LiveSessionApp(
         CapabilityCatalogParser.parse(
           Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
         )
+      val a2ui =
+        UiBuilderCatalogPlatform.from(capability.statusSemantics) == UiBuilderCatalogPlatform.A2UI
       documentPreviewAvailable =
         RemoteDocumentExportSupport.documentFormat?.let {
           RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
@@ -611,13 +614,18 @@ private fun LiveSessionApp(
                 capability.exportCapabilities.png &&
                   (!config.localStorage || UiBuilderBuildFeatures.remoteCompose),
               json =
-                RemoteDocumentExportSupport.jsonFormat?.let {
-                  RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
-                } == true,
+                !a2ui &&
+                  RemoteDocumentExportSupport.jsonFormat?.let {
+                    RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
+                  } == true,
               rc =
-                RemoteDocumentExportSupport.documentFormat?.let {
-                  RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
-                } == true,
+                !a2ui &&
+                  RemoteDocumentExportSupport.documentFormat?.let {
+                    RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
+                  } == true,
+              // The host's JSON flag, read without the Remote Compose one: for an A2UI catalog the
+              // JSON it writes is the A2UI messages.
+              a2uiJson = a2ui && capability.exportCapabilities.remoteJson,
             ),
           revision = revision,
         )

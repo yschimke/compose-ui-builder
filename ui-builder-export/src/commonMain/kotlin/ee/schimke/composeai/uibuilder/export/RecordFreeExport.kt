@@ -31,6 +31,18 @@ object RecordFreeExport {
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
   ): Generated? {
+    // An A2UI design is never a widget or a Wear screen, and every one of its designs has Kotlin:
+    // the app-side program that sends its payload to AndroidX's A2UI processor. Asked first so a
+    // design pinned to the A2UI catalog is answered by the A2UI emitter whatever its root is — a
+    // root outside the palette is then that emitter's refusal, named, rather than a fall-through to
+    // a generator that has never heard of `a2ui/`.
+    if (platform == UiBuilderCatalogPlatform.A2UI) {
+      return when (val result = A2uiComposeExporter.export(document, packageName)) {
+        is A2uiComposeExporter.Result.Emitted ->
+          Generated.Emitted(result.source, result.composableName)
+        is A2uiComposeExporter.Result.Refused -> Generated.Refused(result.reasons)
+      }
+    }
     generate(document, packageName, packComponents = packComponents, assets = assets)?.let {
       return it
     }
@@ -56,7 +68,28 @@ object RecordFreeExport {
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
   ): Generated? {
     if (!applies(document, platform)) return null
-    if (!document.isRecordFree()) {
+    if (platform == UiBuilderCatalogPlatform.A2UI) {
+      // What the candidate document cannot carry, refused here rather than dropped by the
+      // conversion below: A2UI states accessibility and visibility as properties of its own
+      // components, and has no token or asset registry to resolve a binding against.
+      val unsupported = buildList {
+        if (document.tokenBindings.isNotEmpty())
+          add("tokenBindings: A2UI has no design tokens; write the value on the component")
+        document.nodes.forEach { (id, node) ->
+          if (node.predicate != null)
+            add("nodes.$id.predicate: A2UI has no conditional nodes to lower a predicate to")
+          if (node.accessibility != null)
+            add("nodes.$id.accessibility: set the component's own `accessibility` property instead")
+          if (node.assetBindings.isNotEmpty())
+            add("nodes.$id.assetBindings: an A2UI image or video names its `url` directly")
+          if (node.tokenBindings.isNotEmpty())
+            add(
+              "nodes.$id.tokenBindings: A2UI has no design tokens; write the value on the component"
+            )
+        }
+      }
+      if (unsupported.isNotEmpty()) return Generated.Refused(unsupported)
+    } else if (!document.isRecordFree()) {
       val unsupported = buildList {
         if (document.tokenBindings.isNotEmpty())
           add("tokenBindings: resolve catalog tokens before Remote Kotlin export")
@@ -84,7 +117,9 @@ object RecordFreeExport {
   }
 
   fun applies(document: DesignDocumentV1, platform: UiBuilderCatalogPlatform): Boolean =
-    (UiBuilderBuildFeatures.remoteCompose && platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE) ||
+    platform == UiBuilderCatalogPlatform.A2UI ||
+      (UiBuilderBuildFeatures.remoteCompose &&
+        platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE) ||
       document.isRecordFree()
 
   /**

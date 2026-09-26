@@ -54,6 +54,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.editor.supportingText
+import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NewDesignState
@@ -1471,7 +1472,8 @@ internal suspend fun loadLiveCatalogs(
   }
 
 /** The chooser's order. Anything not named here (there is nothing today) sorts first. */
-internal val NEW_DESIGN_CATALOG_ORDER = listOf("m3-catalog", "wear-m3", "remote-m3")
+internal val NEW_DESIGN_CATALOG_ORDER =
+  listOf("m3-catalog", "wear-m3", "remote-m3", A2uiDocumentExporter.CATALOG_SYSTEM_ID)
 
 /**
  * Labelled by what a person is making — a phone screen, a watch screen, a RemoteCompose widget —
@@ -1556,6 +1558,22 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
               label = "Activity list",
               supportingText = "Six title cards under a list header, row for row the reference's.",
             ),
+          ),
+      )
+    A2uiDocumentExporter.CATALOG_SYSTEM_ID ->
+      UiBuilderNewDesignCatalog(
+        systemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
+        label = "A2UI surface",
+        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
+        templates =
+          listOf(
+            UiBuilderNewDesignTemplate(
+              id = UiBuilderNewDesignSeed.A2UI_TEMPLATE,
+              label = "Column",
+              supportingText =
+                "A Column root with a headline: exports as A2UI messages and as the Kotlin " +
+                  "that sends them.",
+            )
           ),
       )
     // A catalog this build has no templates for — one an operator enabled that the chooser has

@@ -517,6 +517,58 @@ fun helloUiBuilderDocument(
 }
 
 /**
+ * A new A2UI design: an `a2ui/Column` root with one `a2ui/Text` headline in it.
+ *
+ * The smallest surface that already draws something and already exports: [A2uiDocumentExporter]
+ * renames the column `root`, which is the id an A2UI client draws a surface from, and the headline
+ * gives the canvas, the Code pane and the JSON export something to show before anything is dragged
+ * in.
+ */
+fun a2uiUiBuilderDocument(
+  designId: String,
+  catalogPin: JsonObject,
+  environment: JsonObject,
+): UiBuilderDocument {
+  require(designId.isNotBlank()) { "a2ui design id must not be blank" }
+  val columnId = "a2ui-column"
+  val headlineId = "a2ui-headline"
+  return UiBuilderDocument(
+    schema = "compose-ui-builder-document/v1-candidate",
+    id = designId,
+    title = "Untitled A2UI surface",
+    revision = 0,
+    catalogPin = catalogPin,
+    environment = environment,
+    stateVariables = JsonObject(emptyMap()),
+    roots = listOf(columnId),
+    nodes =
+      mapOf(
+        columnId to
+          UiBuilderNode(
+            id = columnId,
+            componentId = "${A2uiDocumentExporter.COMPONENT_PREFIX}Column",
+            properties = JsonObject(emptyMap()),
+            modifiers = JsonArray(emptyList()),
+            slots = mapOf("children" to listOf(headlineId)),
+          ),
+        headlineId to
+          UiBuilderNode(
+            id = headlineId,
+            componentId = "${A2uiDocumentExporter.COMPONENT_PREFIX}Text",
+            properties =
+              JsonObject(
+                mapOf(
+                  "text" to literal("string", JsonPrimitive("Hello, A2UI")),
+                  "variant" to literal("enum", JsonPrimitive("h2")),
+                )
+              ),
+            modifiers = JsonArray(emptyList()),
+          ),
+      ),
+  )
+}
+
+/**
  * The wire declaration for one variable.
  *
  * `persistence` is `preview`, the only value a design authored in a browser can honestly claim:
