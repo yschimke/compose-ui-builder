@@ -87,8 +87,42 @@ class CatalogThumbnailRenderTest {
       needsContent = setOf("remote-compose/document", "asset/image", "remote-m3/lottie"),
     )
 
+  @Test
+  fun `a2ui-catalog tiles show no picture, and nothing escapes or animates`() =
+    assertSheet(
+      "a2ui-catalog",
+      // None, by construction for now: the thumbnail frame is a `layout/box`, which A2UI's catalog
+      // does not have, so no insert into it validates — and the canvas draws every A2UI component
+      // as a named placeholder anyway, which a tile's name already says. When A2UI components draw
+      // as themselves, this list is the thing that should shrink.
+      rootOnly =
+        setOf(
+          "a2ui/Text",
+          "a2ui/Image",
+          "a2ui/Icon",
+          "a2ui/Video",
+          "a2ui/AudioPlayer",
+          "a2ui/Row",
+          "a2ui/Column",
+          "a2ui/List",
+          "a2ui/Card",
+          "a2ui/Tabs",
+          "a2ui/Modal",
+          "a2ui/Divider",
+          "a2ui/Button",
+          "a2ui/TextField",
+          "a2ui/CheckBox",
+          "a2ui/ChoicePicker",
+          "a2ui/Slider",
+          "a2ui/DateTimeInput",
+        ),
+    )
+
   private fun assertSheet(
     systemId: String,
+    /**
+     * Components with no thumbnail document: root-only ones, or a catalog the frame cannot hold.
+     */
     rootOnly: Set<String> = emptySet(),
     miniatures: Set<String> = emptySet(),
     /** Components that are nothing until given a document, an asset or an animation. */

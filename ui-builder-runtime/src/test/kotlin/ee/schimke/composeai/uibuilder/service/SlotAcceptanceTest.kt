@@ -48,6 +48,7 @@ class SlotAcceptanceTest {
             CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
             CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
             CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
+            CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID,
           )
       )
       .listCatalogs()

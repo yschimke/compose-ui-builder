@@ -32,12 +32,14 @@ import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_CLICK_COMPONENTS
 import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
 import ee.schimke.composeai.uibuilder.codegen.ComposeExportSeverity
 import ee.schimke.composeai.uibuilder.embeddedComponentRecord
+import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.InlineRemoteContentExporter
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.RootSurfaceGround
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
+import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WidgetAssetBytes
@@ -1865,7 +1867,43 @@ class UiBuilderEditorReducer(
   fun generatedCode(
     document: UiBuilderDocument,
     assetBytes: (contentDigest: String) -> ByteArray? = { null },
-  ): EditorGeneratedCode = screenCode(document, assetBytes).withRemoteContent(document)
+  ): EditorGeneratedCode =
+    screenCode(document, assetBytes).withRemoteContent(document).withA2uiMessages(document)
+
+  /**
+   * An A2UI design's other output, under its Kotlin: the messages an agent streams to draw the same
+   * surface, one pretty-printed message per block, as line comments so the pane stays one Kotlin
+   * file a person can paste.
+   *
+   * Both come from `A2uiDocumentExporter.lower`, so the payload the Kotlin sends and the JSON shown
+   * here are the same payload; a design that refuses one has already refused the other, and is left
+   * as that refusal.
+   */
+  private fun EditorGeneratedCode.withA2uiMessages(
+    document: UiBuilderDocument
+  ): EditorGeneratedCode {
+    if (catalog.platform != UiBuilderCatalogPlatform.A2UI || this !is EditorGeneratedCode.Source) {
+      return this
+    }
+    val exported =
+      runCatching { A2uiDocumentExporter.export(document) }.getOrNull()
+        as? A2uiDocumentExporter.Result.Emitted ?: return this
+    val messages =
+      exported.messages.joinToString("\n") { message ->
+        a2uiMessageJson.encodeToString(JsonObject.serializer(), message).lines().joinToString(
+          "\n"
+        ) {
+          "// $it"
+        }
+      }
+    return EditorGeneratedCode.Source(
+      kotlin.trimEnd() +
+        "\n\n// A2UI messages — what an agent streams to draw this surface, one per line on the " +
+        "wire:\n" +
+        messages +
+        "\n"
+    )
+  }
 
   /**
    * The `@RemoteComposable` bodies of the design's inline remote content, joined to [screenCode].
@@ -4215,3 +4253,6 @@ internal fun UiBuilderDocument.widgetAssetBytes(
     }
   bytes?.takeIf { it.isNotEmpty() }?.let { kotlin.io.encoding.Base64.Default.encode(it) }
 }
+
+/** The Code pane's rendering of an A2UI message: indented, because a person reads it there. */
+private val a2uiMessageJson = kotlinx.serialization.json.Json { prettyPrint = true }

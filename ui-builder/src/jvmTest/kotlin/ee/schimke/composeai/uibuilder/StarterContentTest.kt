@@ -5,12 +5,15 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
 import ee.schimke.composeai.uibuilder.capability.accepts
+import ee.schimke.composeai.uibuilder.editor.EditorPropertyControl
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
@@ -38,8 +41,16 @@ class StarterContentTest {
   private val remoteCatalog =
     CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
 
+  /** The A2UI basic catalog, whose required values are seeded against it. */
+  private val a2uiCatalog =
+    CapabilityCatalogParser.parse(resource("/a2ui-catalog-capabilities-v1.json"))
+
   private fun catalogFor(componentId: String) =
-    if (componentId.startsWith("remote-m3/")) remoteCatalog else catalog
+    when {
+      componentId.startsWith("remote-m3/") -> remoteCatalog
+      componentId.startsWith("a2ui/") -> a2uiCatalog
+      else -> catalog
+    }
 
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document =
@@ -231,6 +242,88 @@ class StarterContentTest {
       val issues = validator.validate(inserted.document).issues
       assertTrue(issues.isEmpty(), "${component.componentId} inserted invalid: $issues")
     }
+  }
+
+  /**
+   * The same property for the A2UI palette, into its own seed: every one of the eighteen inserts
+   * into the column and leaves a valid document, which is what the seeded `action`, `max`, `value`
+   * and `options` are for — each is required by A2UI's schema and none has a neutral default.
+   */
+  @Test
+  fun `inserting any A2UI component into the A2UI seed leaves a valid document`() {
+    val a2uiReducer = UiBuilderEditorReducer(a2uiCatalog)
+    val validator = CapabilityValidator(a2uiCatalog)
+    val seed =
+      UiBuilderNewDesignSeed.document(
+        designId = "a2ui-inserts",
+        catalogSystemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
+        templateId = UiBuilderNewDesignSeed.A2UI_TEMPLATE,
+        catalogRevision = "test",
+        nativeRuntimeId = "test",
+        fixture =
+          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
+      )
+    assertEquals(18, a2uiCatalog.components.size)
+    a2uiCatalog.components.forEach { component ->
+      val initial = a2uiReducer.initial(seed, selectedNodeId = seed.roots.single())
+      val target =
+        assertNotNull(
+          a2uiReducer.dropTarget(initial, component.componentId),
+          "${component.componentId} has nowhere to go in the seed's column",
+        )
+      val inserted =
+        a2uiReducer.reduce(
+          initial,
+          UiBuilderEditorEvent.InsertComponent(component.componentId, target),
+        )
+      assertIs<CommandOutcome.Accepted>(
+        inserted.lastOutcome,
+        "${component.componentId} did not insert: ${inserted.lastOutcome}",
+      )
+      val issues = validator.validate(inserted.document).issues
+      assertTrue(issues.isEmpty(), "${component.componentId} inserted invalid: $issues")
+      // And what was inserted still exports: the palette offers nothing the export refuses.
+      assertIs<A2uiDocumentExporter.Result.Emitted>(
+        A2uiDocumentExporter.export(inserted.document),
+        component.componentId,
+      )
+    }
+  }
+
+  /**
+   * A2UI's numbers are neither `…Dp` nor declared with a range, so without the catalog's editor
+   * rules a dropped Slider would keep its starter `value` and `max` forever and every component's
+   * `weight` would be `Unsupported`.
+   */
+  @Test
+  fun `an A2UI slider's range, value and weight are editable numbers`() {
+    val a2uiReducer = UiBuilderEditorReducer(a2uiCatalog)
+    val seed =
+      UiBuilderNewDesignSeed.document(
+        designId = "a2ui-slider",
+        catalogSystemId = A2uiDocumentExporter.CATALOG_SYSTEM_ID,
+        templateId = UiBuilderNewDesignSeed.A2UI_TEMPLATE,
+        catalogRevision = "test",
+        nativeRuntimeId = "test",
+        fixture =
+          Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject,
+      )
+    val initial = a2uiReducer.initial(seed, selectedNodeId = seed.roots.single())
+    val inserted =
+      a2uiReducer.reduce(
+        initial,
+        UiBuilderEditorEvent.InsertComponent(
+          "a2ui/Slider",
+          assertNotNull(a2uiReducer.dropTarget(initial, "a2ui/Slider")),
+        ),
+      )
+    assertIs<CommandOutcome.Accepted>(inserted.lastOutcome)
+    val fields = a2uiReducer.propertyFields(inserted).associateBy { it.name }
+
+    listOf("min", "max", "value", "weight").forEach {
+      assertEquals(EditorPropertyControl.Number, assertNotNull(fields[it], it).control, it)
+    }
+    assertEquals(0.1, assertNotNull(fields["weight"]).numberBounds?.minimum)
   }
 
   @Test
