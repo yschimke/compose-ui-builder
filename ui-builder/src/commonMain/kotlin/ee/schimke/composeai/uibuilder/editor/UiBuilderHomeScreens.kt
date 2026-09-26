@@ -78,9 +78,10 @@ import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
 private fun rememberNewDesignFormState(
   catalogs: List<UiBuilderNewDesignCatalog>,
   initialCatalogSystemId: String,
+  initialDesignId: String?,
 ): NewDesignFormState =
-  remember(catalogs, initialCatalogSystemId) {
-    NewDesignFormState(catalogs, initialCatalogSystemId)
+  remember(catalogs, initialCatalogSystemId, initialDesignId) {
+    NewDesignFormState(catalogs, initialCatalogSystemId, initialDesignId)
   }
 
 /**
@@ -94,6 +95,7 @@ private fun rememberNewDesignFormState(
 private class NewDesignFormState(
   val catalogs: List<UiBuilderNewDesignCatalog>,
   initialCatalogSystemId: String,
+  initialDesignId: String?,
 ) {
   private val initialCatalog =
     catalogs.firstOrNull { it.systemId == initialCatalogSystemId } ?: catalogs.first()
@@ -102,7 +104,7 @@ private class NewDesignFormState(
   var selectedTemplateId by mutableStateOf(initialCatalog.templates.firstOrNull()?.id.orEmpty())
   // Pre-filled, so a design can be created in one click; a person who wants their own name
   // overwrites it, and one who wants another roll asks for it.
-  var designId by mutableStateOf(NewDesignNames.random())
+  var designId by mutableStateOf(initialDesignId ?: NewDesignNames.random())
   var declared by mutableStateOf(listOf<NewDesignState>())
   // Folded away until asked for: most new designs declare no state at all, and the three
   // controls it takes to add one made the dialog read as a form with a required last section.
@@ -327,6 +329,8 @@ internal fun NewDesignDialog(
   catalogs: List<UiBuilderNewDesignCatalog>,
   initialCatalogSystemId: String,
   onDismiss: (() -> Unit)?,
+  /** The pre-filled name; null rolls a random one, which is what a person should see. */
+  initialDesignId: String? = null,
   onCreate:
     (
       catalogSystemId: String,
@@ -335,7 +339,7 @@ internal fun NewDesignDialog(
       state: List<NewDesignState>,
     ) -> Unit,
 ) {
-  val form = rememberNewDesignFormState(catalogs, initialCatalogSystemId)
+  val form = rememberNewDesignFormState(catalogs, initialCatalogSystemId, initialDesignId)
   val submit = {
     onCreate(
       form.selectedCatalog.systemId,
@@ -604,6 +608,11 @@ fun UiBuilderNewDesignScreen(
   loadThumbnail: (suspend (designId: String, revision: Long) -> ImageBitmap?)? = null,
   /** What changed in the builder lately; empty hides the panel. */
   releaseNotes: List<UiBuilderReleaseNote> = EMBEDDED_RELEASE_NOTES,
+  /**
+   * The pre-filled design name. Null, the app's case, rolls a random one; a preview passes a fixed
+   * name so its render does not change every time it is drawn.
+   */
+  initialDesignId: String? = null,
   onCreate:
     (
       catalogSystemId: String,
@@ -613,7 +622,7 @@ fun UiBuilderNewDesignScreen(
     ) -> Unit,
 ) {
   require(catalogs.isNotEmpty()) { "new design screen requires at least one catalog" }
-  val form = rememberNewDesignFormState(catalogs, initialCatalogSystemId)
+  val form = rememberNewDesignFormState(catalogs, initialCatalogSystemId, initialDesignId)
   MaterialTheme(colorScheme = EditorColors) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
       BoxWithConstraints {

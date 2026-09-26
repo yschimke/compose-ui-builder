@@ -365,6 +365,8 @@ fun UiBuilderLargeIssuesTriagePreview() {
 @Composable
 fun UiBuilderNewDesignPreview() {
   UiBuilderNewDesignScreen(
+    // Fixed, not random: the app rolls a new name each time, and so would every render of this.
+    initialDesignId = "sunny-otter",
     catalogs =
       listOf(
         UiBuilderNewDesignCatalog(
