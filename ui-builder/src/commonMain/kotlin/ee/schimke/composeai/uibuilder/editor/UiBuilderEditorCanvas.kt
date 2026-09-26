@@ -1230,6 +1230,8 @@ private fun ConstrainedFramePane(
    * in-process renderer cannot draw (remote-m3) otherwise shows each pane as labelled stand-ins.
    */
   deviceRenderer: UiBuilderCanvasRenderer? = null,
+  /** Bumped when whatever scrolls this pane moves, so a runtime frame is placed again. */
+  positionVersion: Int = 0,
 ) {
   // **Read in the editor's composition, never inside the scene.** A scene starts with no
   // `CompositionLocal`s, so `provides LocalX.current` written in the content lambda below resolves
@@ -1261,9 +1263,14 @@ private fun ConstrainedFramePane(
           scaleX = scale / densityRatio
           scaleY = scale / densityRatio
           transformOrigin = TransformOrigin(0f, 0f)
-          compositingStrategy = CompositingStrategy.Offscreen
+          // Not offscreen under the runtime, for the editing canvas's reason: its pixels are a DOM
+          // layer reached through a `BlendMode.Clear` hole, and an offscreen buffer would clear the
+          // hole in itself and composite back opaque — the pane blank whenever a menu lowers it.
+          compositingStrategy =
+            if (deviceRenderer == null) CompositingStrategy.Offscreen else CompositingStrategy.Auto
         },
       shape = RoundedCornerShape(0.dp),
+      color = if (deviceRenderer == null) MaterialTheme.colorScheme.surface else Color.Transparent,
       shadowElevation = 0.dp,
     ) {
       // The real composition, deliberately: this pane is the one that answers what a device
@@ -1296,6 +1303,7 @@ private fun ConstrainedFramePane(
             heightDp,
             document.renderDensity(LocalDensity.current).density,
             UiBuilderRendererSurfaceModeV2.DEVICE,
+            positionVersion,
           ),
           null,
           false,
@@ -1358,6 +1366,7 @@ internal fun VariantPane(
   scale: Float,
   hostDensity: Density,
   deviceRenderer: UiBuilderCanvasRenderer? = null,
+  positionVersion: Int = 0,
 ) {
   Column(horizontalAlignment = Alignment.CenterHorizontally) {
     Text(
@@ -1379,6 +1388,7 @@ internal fun VariantPane(
       renderSessionId = pane.id,
       wearWidgetHostShape = pane.wearWidgetHostShape,
       deviceRenderer = deviceRenderer,
+      positionVersion = positionVersion,
     )
   }
 }

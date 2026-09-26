@@ -525,8 +525,11 @@ internal fun DesignPreviewPane(
         val perRow = ((maxWidth + gap) / ((widest * scale).dp + gap)).toInt().coerceAtLeast(1)
         // Centred, so a row that fits sits in the middle of the pane rather than in its top-left.
         // `FlowRow` remains a one-column grid when the pane is narrow.
+        // Hoisted so a runtime-drawn pane, a DOM layer placed by hand, is placed again as this
+        // column scrolls rather than staying at the window position it was first given.
+        val scroll = rememberScrollState()
         Column(
-          Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+          Modifier.fillMaxSize().verticalScroll(scroll),
           horizontalAlignment = Alignment.CenterHorizontally,
         ) {
           FlowRow(
@@ -542,6 +545,7 @@ internal fun DesignPreviewPane(
                   scale = scale,
                   hostDensity = hostDensity,
                   deviceRenderer = deviceRenderer,
+                  positionVersion = scroll.value,
                 )
               }
             }

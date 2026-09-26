@@ -905,6 +905,11 @@ fun UiBuilderEditor(
   // The node whose floating card the author closed. The selection stays (something is always
   // selected), so the card is hidden for that node until another is chosen or it is chosen again.
   var hoverDismissedFor by remember { mutableStateOf<String?>(null) }
+  // Any route to a different node — canvas, layers, breadcrumbs, history, Issues — brings the card
+  // back; the one that re-chooses the same node is [selectNodeForEditing]'s.
+  LaunchedEffect(state.selectedNodeId) {
+    if (state.selectedNodeId != hoverDismissedFor) hoverDismissedFor = null
+  }
 
   /**
    * Selection is the beginning of editing, not a separate mode an author has to discover.
