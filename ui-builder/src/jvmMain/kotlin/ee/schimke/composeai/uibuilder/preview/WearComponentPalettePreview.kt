@@ -1,6 +1,10 @@
 package ee.schimke.composeai.uibuilder.preview
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -13,33 +17,36 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * What the canvas shows for the Wear components it deliberately does not draw.
+ * The Wear components on the canvas, one row each: every one drawn by the Wear Compose port.
  *
  * ## What this preview is for
  *
- * `wear-m3` now publishes seventeen components with no Material 3 counterpart — the selection
- * controls, the sliders, the pickers, the dialogs — and the canvas draws **none** of them, on
- * purpose. `androidx.wear.compose:compose-material3` is an Android AAR, a Wasm build can never link
- * one, and
- * [`docs/design/UI_BUILDER_WEAR_SCREEN.md`](../../../../../../../docs/design/UI_BUILDER_WEAR_SCREEN.md)
- * rules out assembling a lookalike from Material 3 pieces: an impression of upstream with nothing
- * in this build to check it against is wrong silently, which is the worst way to be wrong in a
- * surface an author trusts.
+ * It used to be the picture of the opposite decision. When the canvas had no Wear library to link,
+ * each of these was a dashed placeholder carrying its name, and this preview said that a row which
+ * started drawing a real component would be a regression. The port changed that: the canvas draws
+ * the real `CheckboxButton`, `Slider`, `DatePicker` and the rest, and a row that went back to a
+ * placeholder, or to a lookalike, is now the regression.
  *
- * So each one is a dashed outline carrying its name, its label where it has one, and its children.
- * This preview is the picture of that decision, and the reason it exists rather than being left
- * uncaptured: the placeholder is a real visual surface, and the next change to it should be diffed
- * without anyone remembering to look. The *components* are looked at somewhere else entirely — the
- * native render lane compiles this design's own generated Kotlin against real Wear Compose on the
- * Android/Robolectric daemon, which is what `wear-m3` declares authoritative.
+ * It had also stopped drawing anything. It composed the surface without the pinned catalog's canvas
+ * adapters, so the screen root had no drawing and the capture was the red *Unsupported component:
+ * wear-m3/screen-scaffold* box — the bug the design-fixture previews were fixed for, which this one
+ * never got. It goes through [PinnedCatalog] now.
  *
- * A row here that starts drawing a Wear component rather than naming one is a regression, not an
- * improvement.
+ * Unrolled and wrapped, like the extent fixtures: the palette is taller than a watch, and the point
+ * is every row.
  */
-@Preview(widthDp = 200, heightDp = 620)
+@Preview
 @Composable
-fun WearNativeOnlyPlaceholderPreview() {
-  UiBuilderSurface(document = wearComponentPaletteDocument, editorOverlay = false)
+fun WearComponentPalettePreview() {
+  PinnedCatalog(wearComponentPaletteDocument) {
+    Box(Modifier.wrapContentSize(Alignment.TopCenter, unbounded = true)) {
+      UiBuilderSurface(
+        document = wearComponentPaletteDocument,
+        editorOverlay = false,
+        unrolled = true,
+      )
+    }
+  }
 }
 
 /**
@@ -81,6 +88,33 @@ private val wearComponentPaletteDocument: UiBuilderDocument by lazy {
         ),
       )
       rows.forEachIndexed { index, (componentId, properties) ->
+        // A group of two buttons, as the palette inserts one: an empty group draws nothing.
+        val groupChildren =
+          if (componentId == WearScreenCodeExporter.BUTTON_GROUP) {
+            listOf("Play", "Queue").mapIndexed { button, label ->
+              val buttonId = "row-$index-button-$button"
+              val labelId = "$buttonId-label"
+              put(
+                buttonId,
+                UiBuilderNode(
+                  id = buttonId,
+                  componentId = WearScreenCodeExporter.BUTTON,
+                  slots = mapOf("content" to listOf(labelId)),
+                ),
+              )
+              put(
+                labelId,
+                UiBuilderNode(
+                  id = labelId,
+                  componentId = WearScreenCodeExporter.TEXT,
+                  properties = JsonObject(mapOf("text" to wearLiteral(label))),
+                ),
+              )
+              buttonId
+            }
+          } else {
+            emptyList()
+          }
         put(
           "row-$index",
           UiBuilderNode(
@@ -88,6 +122,7 @@ private val wearComponentPaletteDocument: UiBuilderDocument by lazy {
             componentId = componentId,
             properties = JsonObject(properties.mapValues { (_, value) -> wearLiteral(value) }),
             modifiers = JsonArray(emptyList()),
+            slots = if (groupChildren.isEmpty()) emptyMap() else mapOf("children" to groupChildren),
           ),
         )
       }

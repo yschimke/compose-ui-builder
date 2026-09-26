@@ -65,9 +65,8 @@ internal fun CapabilityCatalog.exportRecord(embedded: ComponentRecordFile?): Com
 /**
  * The components this catalog declares and the canvas cannot draw as themselves — every pack's.
  *
- * The renderer draws each as a named placeholder rather than as an error, the same shape as
- * `wear-m3`'s native-only components: the component is in the catalog, it exports and it renders on
- * the native lane, just not here.
+ * The renderer draws each as a named placeholder rather than as an error: the component is in the
+ * catalog, it exports and it renders on the native lane, just not here.
  */
 /**
  * Which canvas adapter each component wants, for the ids whose catalog names one.

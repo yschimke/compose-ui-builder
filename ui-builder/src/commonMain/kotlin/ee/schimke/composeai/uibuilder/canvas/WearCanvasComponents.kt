@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.canvas
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -473,6 +474,13 @@ internal fun WearCanvasButtonGroup(
   modifier: Modifier = Modifier,
   child: @Composable (index: Int, modifier: Modifier) -> Unit,
 ) {
+  // The catalog lets a group be empty (`children` has a minimum of zero), and the library's measure
+  // takes the tallest child with `maxOf`, which throws on none: one emptied group took the whole
+  // canvas down. An empty group has nothing to draw, so it draws nothing, at the group's width.
+  if (weights.isEmpty()) {
+    Box(modifier.fillMaxWidth())
+    return
+  }
   ButtonGroup(modifier = modifier.fillMaxWidth()) {
     // Each child's `weight` is `ButtonGroupScope.weight`, which only this scope can write, so the
     // group applies it rather than the child's own chain — the way `Row` and `Column` read

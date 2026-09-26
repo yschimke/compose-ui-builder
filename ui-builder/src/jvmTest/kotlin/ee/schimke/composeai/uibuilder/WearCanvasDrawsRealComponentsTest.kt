@@ -1,5 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
@@ -9,7 +12,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.wearcmp.port.WearFonts
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -90,6 +95,52 @@ class WearCanvasDrawsRealComponentsTest {
           .fetchSemanticsNodes()
           .isNotEmpty(),
         "the sub-header's label is not in the composition",
+      )
+    }
+
+  @Test
+  fun `an empty button group draws nothing rather than taking the canvas down`() =
+    runDesktopComposeUiTest(width = 400, height = 1600) {
+      // The catalog allows a group with no children, and the library's `ButtonGroup` throws
+      // measuring one. Both the unrolled extent and a device frame compose it.
+      val design = wearDesign()
+      val list = design.nodes.getValue("home-list")
+      val group = UiBuilderNode(id = "empty-group", componentId = "wear-m3/button-group")
+      val withGroup =
+        design.copy(
+          nodes =
+            design.nodes +
+              ("empty-group" to group) +
+              ("home-list" to
+                list.copy(
+                  slots =
+                    list.slots + ("items" to listOf("empty-group") + list.slots.getValue("items"))
+                ))
+        )
+      var unrolled by mutableStateOf(true)
+      setContent { WearCatalogAdapters { UiBuilderSurface(withGroup, unrolled = unrolled) } }
+      for (mode in listOf(true, false)) {
+        unrolled = mode
+        waitForIdle()
+        assertTrue(
+          onAllNodesWithText("Home", substring = true, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .isNotEmpty(),
+          "the screen around an empty group did not draw (unrolled = $unrolled)",
+        )
+      }
+    }
+
+  @Test
+  fun `a Wear surface sets Wear text in the face the type scale names`() =
+    runDesktopComposeUiTest(width = 400, height = 1600) {
+      // The Wear type scale asks for `roboto-flex` by name. Unregistered, the port falls back to
+      // the platform's sans, which is wider: the clock lost a digit and watch-width labels wrapped.
+      setContent { WearCatalogAdapters { UiBuilderSurface(wearDesign(), unrolled = true) } }
+      waitForIdle()
+      assertTrue(
+        WearFonts.isRegistered(WearFonts.RobotoFlex),
+        "Wear's `roboto-flex` was not registered with the port before the screen composed",
       )
     }
 }

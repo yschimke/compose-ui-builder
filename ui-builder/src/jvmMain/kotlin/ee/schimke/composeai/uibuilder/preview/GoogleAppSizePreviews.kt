@@ -138,11 +138,8 @@ private fun UiBuilderDocument.onWatch(watchDp: Int?): UiBuilderDocument =
  * The Wear screen at the two round sizes it is checked on, matching its own `exportDevices`.
  *
  * A Wear list's hard question is where it wraps, and 48dp is a quarter of the small round's width —
- * so a row that fits one and not the other is the common case rather than a corner one. The canvas
- * draws the long-screenshot stadium rather than real Wear Compose (`androidx.wear.compose` is an
- * Android AAR the Wasm renderer cannot link), which is why the generated Kotlin is the other half
- * of reading this: it carries `Modifier.transformedHeight` and `SurfaceTransformation` on every
- * row.
+ * so a row that fits one and not the other is the common case rather than a corner one. These are
+ * the device frames, drawn by the Wear Compose port's real `ScreenScaffold`.
  */
 @WearPreviewSmallRound
 @Composable

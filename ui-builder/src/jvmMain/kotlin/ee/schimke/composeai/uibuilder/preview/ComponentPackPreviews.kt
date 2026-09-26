@@ -37,10 +37,9 @@ import kotlinx.serialization.json.put
  *
  * [PackPlaceholderPreview] is a Material 3 column holding a Confetti `SessionCard` beside the
  * catalog's own text. The canvas cannot link Confetti's classes, so the pack node is drawn as a
- * named, captioned outline — the same honest shape `wear-m3`'s native-only components take (see
- * `WearNativeOnlyPlaceholderPreview`) — and the picture of the real component comes from the native
- * lane, compiled against the `confetti-mobile` bundle. A row here that started drawing the card
- * would be a regression, not an improvement.
+ * named, captioned outline, and the picture of the real component comes from the native lane,
+ * compiled against the `confetti-mobile` bundle. A row here that started drawing a lookalike of the
+ * card would be a regression; one that drew the real card, once the canvas can link it, would not.
  */
 @Preview(widthDp = 500, heightDp = 300)
 @Composable

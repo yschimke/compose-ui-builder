@@ -45,6 +45,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -53,6 +54,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -61,6 +64,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.PrimaryTabRow
@@ -95,7 +99,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
@@ -103,7 +106,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -124,10 +126,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -137,15 +137,18 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.wear.compose.foundation.ScrollInfoProvider
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.AppScaffold
+import androidx.wear.compose.material3.ColorScheme as WearColorScheme
 import androidx.wear.compose.material3.LocalContentColor as WearLocalContentColor
+import androidx.wear.compose.material3.MaterialTheme as WearMaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.ScreenScaffoldDefaults
-import androidx.wear.compose.material3.ScreenStage
 import androidx.wear.compose.material3.ScrollIndicator
 import androidx.wear.compose.material3.Text as WearText
-import androidx.wear.compose.material3.scrollAway
+import androidx.wear.compose.material3.TimeSource
+import androidx.wear.compose.material3.TimeText
+import androidx.wear.compose.material3.timeTextCurvedText
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
@@ -158,6 +161,7 @@ import ee.schimke.composeai.uibuilder.editor.THEME_PRIMARY
 import ee.schimke.composeai.uibuilder.editor.THEME_SURFACE
 import ee.schimke.composeai.uibuilder.editor.THEME_TYPE_SCALE
 import ee.schimke.composeai.uibuilder.editor.supportingText
+import ee.schimke.composeai.uibuilder.ensureBundledWearDeviceFonts
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_CUSTOM_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
@@ -203,7 +207,6 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.uiBuilderModifier
 import ee.schimke.composeai.uibuilder.withFontFamily
 import ee.schimke.wearcmp.port.LocalWearDeviceConfiguration
 import ee.schimke.wearcmp.port.WearDeviceConfiguration
-import kotlin.math.PI
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -234,10 +237,10 @@ private val LocalUiBuilderCornerRadius = staticCompositionLocalOf { 16f }
 /**
  * Component ids the catalog declares and this canvas draws as named placeholders — a pack's.
  *
- * Provided by the editor from the catalog rather than compiled in like [WEAR_NATIVE_ONLY], because
- * a pack's components arrive at run time and this renderer cannot know them: they are whatever
- * another catalog's record proved a call site for. Empty by default, so every other host of this
- * surface — the previews, the renderer bundle — is unchanged.
+ * Provided by the editor from the catalog rather than compiled in, because a pack's components
+ * arrive at run time and this renderer cannot know them: they are whatever another catalog's record
+ * proved a call site for. Empty by default, so every other host of this surface — the previews, the
+ * renderer bundle — is unchanged.
  */
 /**
  * Component id to canvas adapter id, as the catalog names them.
@@ -493,6 +496,8 @@ fun UiBuilderSurface(
    */
   wearWidgetHostShape: WearWidgetHostShape = LocalWearWidgetHostShape.current,
 ) {
+  // Wear's face, before anything below can read the Wear type scale: the port resolves it once.
+  ensureBundledWearDeviceFonts()
   val overlayBounds =
     remember(document.id, document.revision, renderSessionId) {
       mutableStateMapOf<UiBuilderInstancePath, Rect>()
@@ -564,9 +569,8 @@ fun UiBuilderSurface(
       onSurfaceVariant = contentColor ?: baseColorScheme.onSurfaceVariant,
     )
   val typeScale = themeHost?.float(THEME_TYPE_SCALE, 1f)?.coerceIn(0.75f, 1.5f) ?: 1f
-  // 26dp on a Wear screen: measured off the reference card's corner, where the first drawn row is
-  // inset 26dp from each side and reaches full width 26dp down. Material 3's 16dp default draws a
-  // recognisably different card, and the card is most of what a Wear list is.
+  // Wear's large corner on a Wear screen — see [WEAR_CARD_CORNER_RADIUS_DP]. Material 3's 16dp
+  // default draws a recognisably different card, and the card is most of what a Wear list is.
   val cornerRadius =
     themeHost?.float(THEME_CORNER_RADIUS, 16f)?.coerceIn(0f, 48f)
       ?: if (wearScreen) WEAR_CARD_CORNER_RADIUS_DP else 16f
@@ -577,8 +581,9 @@ fun UiBuilderSurface(
   // Wear catalog is one whose components are drawn with the Wear port, and that is the catalog's
   // statement rather than something to be inferred from a namespace. A board holding one Wear card
   // needs a watch as much as a whole screen does, and so does a shelf thumbnail of one picker.
+  val wearCatalog = LocalUiBuilderCatalogPlatform.current == UiBuilderCatalogPlatform.WEAR.wireValue
   val wearDevice =
-    if (LocalUiBuilderCatalogPlatform.current == UiBuilderCatalogPlatform.WEAR.wireValue) {
+    if (wearCatalog) {
       arrayOf<ProvidedValue<*>>(
         LocalWearDeviceConfiguration provides
           document.wearDeviceConfiguration(LocalUiBuilderFrameGeometry.current)
@@ -609,64 +614,66 @@ fun UiBuilderSurface(
     *wearDevice,
   ) {
     MaterialTheme(colorScheme = colorScheme, typography = typography) {
-      val updateExtentInputs = LocalCanvasExtentInputs.current
-      Box(
-        renderSurface?.let { Modifier.requiredSize(it.widthDp.dp, it.heightDp.dp) }
-          ?: Modifier.fillMaxSize()
-      ) {
-        CanvasDocumentHost(
-          document = document,
-          adapterIds = canvasAdapterIds,
-          adapterMappings = canvasAdapterMappings,
-          mode = if (effectiveUnrolled) CanvasMode.AuthoringUnrolled else CanvasMode.Device,
-          density = density,
-          modifier = Modifier.fillMaxSize(),
-          renderSessionId = renderSessionId,
-          runtimeActionController = runtimeActionController,
-          onInspectionSnapshot = onInspectionSnapshot,
-          onInspectionInvalidated = onInspectionInvalidated,
-          onStateSnapshot = { state ->
-            updateExtentInputs?.invoke(CanvasExtentInputs(document, state))
-          },
-          onOverlayBounds = { path, rect -> overlayBounds[path] = rect },
-          rootModifier = { entry ->
-            when {
-              entry.node.componentId.startsWith("remote-m3/widget-container-") ->
-                Modifier.align(Alignment.Center)
-              // A screen is taller than its frame by design — the stadium IS the scroll extent —
-              // so it is pinned to the top and centred across, the way a long screenshot reads.
-              entry.adapterId == ROUND_SCREEN_FRAME -> Modifier.align(Alignment.TopCenter)
-              else -> Modifier
-            }
-          },
-        ) { entry, rootModifier ->
-          RenderNode(document = document, entry = entry, host = this, modifier = rootModifier)
-        }
-        if (editorOverlay) {
-          // Every box the selected node drew, not one: a node id is what the editor selects, and
-          // once a node can draw more than once the outline follows all of them rather than
-          // whichever copy the map happened to answer with.
-          val selected = overlayBounds.filterKeys { it.nodeId == selectedNodeId }.values.toList()
-          Canvas(
-            Modifier.fillMaxSize().pointerInput(overlayBounds.toMap(), onNodeSelected) {
-              detectTapGestures { position ->
-                overlayBounds
-                  .filterValues { it.contains(position) }
-                  .minByOrNull { (_, rect) -> rect.width * rect.height }
-                  ?.key
-                  // The editor selects a node, because a node is what its inspector edits. Which
-                  // copy was tapped is the question the selection model has yet to be asked.
-                  ?.let { onNodeSelected?.invoke(it.nodeId) }
+      WearCatalogTheme(wearCatalog) {
+        val updateExtentInputs = LocalCanvasExtentInputs.current
+        Box(
+          renderSurface?.let { Modifier.requiredSize(it.widthDp.dp, it.heightDp.dp) }
+            ?: Modifier.fillMaxSize()
+        ) {
+          CanvasDocumentHost(
+            document = document,
+            adapterIds = canvasAdapterIds,
+            adapterMappings = canvasAdapterMappings,
+            mode = if (effectiveUnrolled) CanvasMode.AuthoringUnrolled else CanvasMode.Device,
+            density = density,
+            modifier = Modifier.fillMaxSize(),
+            renderSessionId = renderSessionId,
+            runtimeActionController = runtimeActionController,
+            onInspectionSnapshot = onInspectionSnapshot,
+            onInspectionInvalidated = onInspectionInvalidated,
+            onStateSnapshot = { state ->
+              updateExtentInputs?.invoke(CanvasExtentInputs(document, state))
+            },
+            onOverlayBounds = { path, rect -> overlayBounds[path] = rect },
+            rootModifier = { entry ->
+              when {
+                entry.node.componentId.startsWith("remote-m3/widget-container-") ->
+                  Modifier.align(Alignment.Center)
+                // A screen is taller than its frame by design — the stadium IS the scroll extent —
+                // so it is pinned to the top and centred across, the way a long screenshot reads.
+                entry.adapterId == ROUND_SCREEN_FRAME -> Modifier.align(Alignment.TopCenter)
+                else -> Modifier
               }
-            }
-          ) {
-            selected.forEach { rect ->
-              drawRect(
-                Color(0xff6750a4),
-                rect.topLeft,
-                rect.size,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
-              )
+            },
+          ) { entry, rootModifier ->
+            RenderNode(document = document, entry = entry, host = this, modifier = rootModifier)
+          }
+          if (editorOverlay) {
+            // Every box the selected node drew, not one: a node id is what the editor selects, and
+            // once a node can draw more than once the outline follows all of them rather than
+            // whichever copy the map happened to answer with.
+            val selected = overlayBounds.filterKeys { it.nodeId == selectedNodeId }.values.toList()
+            Canvas(
+              Modifier.fillMaxSize().pointerInput(overlayBounds.toMap(), onNodeSelected) {
+                detectTapGestures { position ->
+                  overlayBounds
+                    .filterValues { it.contains(position) }
+                    .minByOrNull { (_, rect) -> rect.width * rect.height }
+                    ?.key
+                    // The editor selects a node, because a node is what its inspector edits. Which
+                    // copy was tapped is the question the selection model has yet to be asked.
+                    ?.let { onNodeSelected?.invoke(it.nodeId) }
+                }
+              }
+            ) {
+              selected.forEach { rect ->
+                drawRect(
+                  Color(0xff6750a4),
+                  rect.topLeft,
+                  rect.size,
+                  style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
+                )
+              }
             }
           }
         }
@@ -777,7 +784,6 @@ private fun RenderNode(
         WearScreenScaffold(
           node = node,
           modifier = measured,
-          frame = LocalUiBuilderFrameGeometry.current,
           screenWidthDp = document.wearScreenWidthDp(LocalUiBuilderFrameGeometry.current),
           edgeButton = { next -> slot("edgeButton").forEach { child(it, next) } },
           hasEdgeButton = slot("edgeButton").isNotEmpty(),
@@ -815,7 +821,7 @@ private fun RenderNode(
           enabled = node.bool("enabled", true),
           modifier = measured,
           label = {
-            if (slot("label").isEmpty()) Text(node.string("label"))
+            if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
           },
           secondaryLabel =
@@ -824,7 +830,7 @@ private fun RenderNode(
                   slot("secondaryLabel").forEach { wearChild(it, Modifier) }
                 })
               node.string("secondaryLabel").isNotEmpty() -> ({
-                  Text(node.string("secondaryLabel"))
+                  WearText(node.string("secondaryLabel"))
                 })
               else -> null
             },
@@ -845,7 +851,7 @@ private fun RenderNode(
           enabled = node.bool("enabled", true),
           modifier = measured,
           label = {
-            if (slot("label").isEmpty()) Text(node.string("label"))
+            if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
           },
           secondaryLabel =
@@ -854,7 +860,7 @@ private fun RenderNode(
                   slot("secondaryLabel").forEach { wearChild(it, Modifier) }
                 })
               node.string("secondaryLabel").isNotEmpty() -> ({
-                  Text(node.string("secondaryLabel"))
+                  WearText(node.string("secondaryLabel"))
                 })
               else -> null
             },
@@ -865,7 +871,7 @@ private fun RenderNode(
           enabled = node.bool("enabled", true),
           modifier = measured,
           label = {
-            if (slot("label").isEmpty()) Text(node.string("label"))
+            if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
           },
           secondaryLabel =
@@ -874,7 +880,7 @@ private fun RenderNode(
                   slot("secondaryLabel").forEach { wearChild(it, Modifier) }
                 })
               node.string("secondaryLabel").isNotEmpty() -> ({
-                  Text(node.string("secondaryLabel"))
+                  WearText(node.string("secondaryLabel"))
                 })
               else -> null
             },
@@ -1762,17 +1768,20 @@ private fun RenderNode(
             icon = { slot("icon").forEach { child(it, Modifier) } },
             title = { slot("title").forEach { child(it, Modifier) } },
             text = { slot("text").forEach { child(it, Modifier) } },
-            shape = RoundedCornerShape(node.float("shapeDp", DIALOG_CORNER_DP).dp),
+            shape =
+              node.dimension("shapeDp")?.let(::RoundedCornerShape) ?: AlertDialogDefaults.shape,
             containerColor =
               node.color("containerColor", MaterialTheme.colorScheme.surfaceContainerHigh),
-            tonalElevation = node.float("tonalElevationDp", DIALOG_TONAL_ELEVATION_DP).dp,
+            tonalElevation =
+              node.dimension("tonalElevationDp") ?: AlertDialogDefaults.TonalElevation,
           )
         }
       }
       "m3/date-picker" -> BuilderDatePicker(node, measured)
       "m3/time-picker" -> BuilderTimePicker(node, measured, document.timePickerLayoutType())
       "m3/icon-button" ->
-        IconButton(
+        BuilderIconButton(
+          variant = node.string("variant"),
           onClick = activate,
           modifier =
             measured
@@ -1857,20 +1866,9 @@ private fun RenderNode(
             .clip(CircleShape)
             .background(Color(parseArgb(node.string("color"))))
         )
-      // A Wear component with no Material 3 counterpart, drawn as a named placeholder and not as a
-      // lookalike. See [NativeOnlyPlaceholder] for why this is the honest shape rather than a
-      // gap in the implementation.
-      in WEAR_NATIVE_ONLY ->
-        NativeOnlyPlaceholder(node, measured) {
-          // Every slot's children, flattened. A placeholder cannot lay a child out the way the real
-          // component would — that is what makes it a placeholder — but dropping the children would
-          // hide whole subtrees from the layers panel's counterpart on the canvas, and an icon
-          // inside an icon button is the thing an author is looking for.
-          node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
-        }
       // A pack's component: declared by the catalog, proven by another catalog's record, and drawn
-      // here as its name and place for the reason the Wear ones are — the browser cannot link the
-      // classes that draw it. The caption says whose it is, because a `Session Card` on a Material
+      // here as its name and place — the browser cannot link the classes that draw it. The caption
+      // says whose it is, because a `Session Card` on a Material
       // 3 palette is a thing worth being told came from Confetti.
       in nativeOnly ->
         NativeOnlyPlaceholder(node, measured, caption = node.componentId.substringBefore('/')) {
@@ -1983,8 +1981,8 @@ private fun UiBuilderDocument.wearScreenWidthDp(frame: UiBuilderFrameGeometry): 
  * The frame the document names, by [wearScreenWidthDp]'s rule, so the stand-in scaffold and the
  * components inside it cannot disagree about the screen they are on. Both axes are the diameter: a
  * round watch's screen is as tall as it is wide, and the port reads `screenHeightDp` for its
- * vertical content padding (10%) and its list's minimum vertical content padding (23%) — the two
- * numbers [wearScreenContentPadding] interpolates from the same diameter.
+ * vertical content padding (10%) and its list's minimum vertical content padding (23%), which
+ * `ScreenScaffoldDefaults.contentPadding` computes from this configuration.
  *
  * `isScreenRound` is true because a Wear design in this builder is drawn on a round watch — the
  * scaffold stand-in is a stadium for that reason — and the remaining fields stay at the port's
@@ -2039,9 +2037,8 @@ internal val LocalUiBuilderFrameGeometry = staticCompositionLocalOf { UiBuilderF
  *
  * The geometry comes from that render and from `ScreenScaffoldPaddingProbeTest` in wear-m3-catalog,
  * which composes the real `AppScaffold` / `ScreenScaffold` / `TransformingLazyColumn` under
- * Robolectric and reports what the scaffold hands its list. See [wearScreenContentPadding] and
- * [WEAR_TIME_TEXT_TOP_DP]. Guessed fractions is what this used to be, and they were wrong in both
- * axes.
+ * Robolectric and reports what the scaffold hands its list. The content padding is now the
+ * library's own `ScreenScaffoldDefaults.contentPadding`, which that probe was measuring.
  *
  * ## Only the extent is drawn by hand
  *
@@ -2063,7 +2060,6 @@ internal val LocalUiBuilderFrameGeometry = staticCompositionLocalOf { UiBuilderF
 private fun WearScreenScaffold(
   node: UiBuilderNode,
   modifier: Modifier,
-  frame: UiBuilderFrameGeometry,
   screenWidthDp: Int,
   edgeButton: @Composable (Modifier) -> Unit,
   hasEdgeButton: Boolean,
@@ -2071,22 +2067,38 @@ private fun WearScreenScaffold(
 ) {
   val width = screenWidthDp.dp
   val unrolled = LocalUiBuilderUnrolled.current
-  val padding = wearScreenContentPadding(screenWidthDp, frame)
-  // Wear Material 3 is dark-first and its `background` is pure black — measured off the reference
-  // render, not read from the editor theme, which is the bug the widget container's default
-  // background comments: reading the theme made the watch go white in a light editor.
-  val background = node.color("background", WEAR_SCREEN_BACKGROUND)
+  // What `ScreenScaffold` gives its list, from the library: it computes it off the watch that
+  // `LocalWearDeviceConfiguration` names, which this surface sets from the design's own frame. It
+  // was a table measured off the real scaffold and interpolated between sizes, and the "not a
+  // clean fraction" it had to explain was the library rounding each side up to a whole dp.
+  val padding = ScreenScaffoldDefaults.contentPadding
+  // Wear's own `background`, from the Wear theme rather than the editor's: reading the editor
+  // theme is the bug the widget container's default background comments, where the watch went
+  // white in a light editor.
+  val background = node.color("background", WearMaterialTheme.colorScheme.background)
   val timeText = node.string("timeText")
   val scrollIndicator = node.bool("scrollIndicator", true)
   // **The list's state, owned here and shared.** `ScreenScaffold` exists to hold one list: it hands
   // the list its `contentPadding`, its scroll indicator reads where that list is, and
-  // `AppScaffold`'s
-  // clock scrolls away as it moves. None of that can happen if the scaffold and the list each
-  // remember their own state, which is what the canvas did — the clock sat still and the indicator
-  // was absent, because neither could see the list. The real scaffold wires this by construction;
-  // this is the stand-in doing the same thing by hand.
+  // `AppScaffold`'s clock scrolls away as it moves. None of that can happen if the scaffold and the
+  // list each remember their own state, so the list reads this one through a local.
   val listState = rememberTransformingLazyColumnState()
-  val scrollInfo = remember(listState) { ScrollInfoProvider(listState) }
+  // The clock is the library's `TimeText`, told the design's time rather than the system's so a
+  // render is deterministic. It used to be drawn here glyph by glyph, on the premise that Compose
+  // Multiplatform cannot curve text; the port's `CurvedText` does, through Skia.
+  val clock: @Composable () -> Unit = {
+    if (timeText.isNotEmpty()) {
+      val source = remember(timeText) { FixedTimeSource(timeText) }
+      TimeText(timeSource = source) { time ->
+        // The trailing space is a workaround for the port, not a design choice. Its Skia
+        // `CurvedTextDelegate.doDraw` truncates when the text is more than a pixel wider than the
+        // sweep the layout allotted it, and `TimeText` is allotted slightly less than its text,
+        // so the last glyph was dropped: "10:10" drew "10:1". Padded, the glyph dropped is the
+        // space. Remove the pad when the port stops truncating text that fits.
+        timeTextCurvedText("$time ")
+      }
+    }
+  }
   Box(
     modifier =
       modifier
@@ -2150,8 +2162,8 @@ private fun WearScreenScaffold(
       // bottom content padding by the button's MEASURED height, and grows the button in as the
       // list reaches its end. The padding it hands its content is what the list reads.
       //
-      // The clock stays ours, below: `TimeText` belongs to `AppScaffold`, and the curved one here
-      // is measured against the reference in a way the port's is not yet checked.
+      // Inside the real `AppScaffold`, which is what draws the clock and scrolls it away as the
+      // list the `ScreenScaffold` registers with it moves.
       val body: @Composable BoxScope.(PaddingValues) -> Unit = { scaffoldPadding ->
         CompositionLocalProvider(
           LocalWearScreenListState provides listState,
@@ -2166,147 +2178,42 @@ private fun WearScreenScaffold(
         } else {
           null
         }
-      if (hasEdgeButton) {
-        ScreenScaffold(
-          scrollState = listState,
-          edgeButton = { edgeButton(Modifier) },
-          contentPadding = padding,
-          timeText = null,
-          scrollIndicator = indicator,
-          content = body,
-        )
-      } else {
-        ScreenScaffold(
-          scrollState = listState,
-          contentPadding = padding,
-          timeText = null,
-          scrollIndicator = indicator,
-          content = body,
-        )
-      }
-    }
-    // Overlaid, not a band above the content. `TimeText` belongs to `AppScaffold` and is drawn
-    // over the screen; what makes room for it is the list's own top content padding, which is
-    // already applied above. Drawing it as a row that displaced the content — which this did —
-    // pushed every row down by the height of a clock the real screen draws on top of nothing.
-    //
-    // And it **scrolls away**, through the library's own modifier rather than a hand-rolled fade:
-    // `scrollAway` is what `AppScaffold` applies to its time text, driven by the
-    // `ScrollInfoProvider`
-    // the real `ScreenScaffold` publishes. The provider here is the library's own adapter for this
-    // exact state, and the stage is what the scaffold passes: `Scrolling` while the finger or the
-    // side button is moving the list, `Idle` once it settles.
-    if (timeText.isNotEmpty()) {
-      Box(
-        Modifier.matchParentSize().scrollAway(scrollInfo) {
-          if (listState.isScrollInProgress) ScreenStage.Scrolling else ScreenStage.Idle
+      AppScaffold(timeText = clock, containerColor = background) {
+        if (hasEdgeButton) {
+          ScreenScaffold(
+            scrollState = listState,
+            edgeButton = { edgeButton(Modifier) },
+            contentPadding = padding,
+            scrollIndicator = indicator,
+            content = body,
+          )
+        } else {
+          ScreenScaffold(
+            scrollState = listState,
+            contentPadding = padding,
+            scrollIndicator = indicator,
+            content = body,
+          )
         }
-      ) {
-        WearCurvedTimeText(timeText, Modifier.fillMaxSize())
       }
+    }
+    // The extent has no `AppScaffold` — it has no viewport for one to scroll the clock away in — so
+    // the clock is drawn over the top cap, on the circle a watch has there, and it stays put.
+    if (unrolled) {
+      Box(Modifier.align(Alignment.TopCenter).size(width)) { clock() }
     }
   }
 }
 
-/**
- * What `ScreenScaffold` hands its `TransformingLazyColumn` as `contentPadding`, by screen diameter.
- *
- * Measured, not derived. `ScreenScaffoldPaddingProbeTest` in yschimke/wear-m3-catalog composes the
- * real thing under Robolectric at each round size and reports the `PaddingValues`; these are its
- * numbers for Wear Compose Material 3 1.7.0-beta02, cross-checked against the stitched
- * `ScrollMode.LONG` render of that repository's `TransformingLazyColumn` component — bottom padding
- * on the reference is 20dp at 192, 23dp at 225 and 24dp at 240, which is this table.
- *
- * Neither axis is a clean fraction of the diameter, which is why guessing failed: horizontal runs
- * 5.21%, 5.29%, 5.42% and vertical 10.42%, 10.13%, 10.00%. Between and beyond the measured sizes
- * this interpolates rather than extrapolating a fraction, because the three points are what is
- * known.
- */
-private fun wearScreenContentPadding(
-  screenWidthDp: Int,
-  frame: UiBuilderFrameGeometry,
-): PaddingValues {
-  val padding = frame.paddingFor(screenWidthDp)
-  return PaddingValues(horizontal = padding.horizontalDp.dp, vertical = padding.verticalDp.dp)
-}
-
-/**
- * The clock, drawn along the top of the round viewport the way `TimeText` draws it.
- *
- * ## Why bother curving it
- *
- * Because it is curved, and a straight `10:10` was the one piece of chrome on the canvas that was a
- * different *shape* from the thing it stands for. Everything else here is measured against a real
- * render; this was measured against one too, and then drawn flat, which put the glyphs in the right
- * band and the wrong arc.
- *
- * ## How, without curved-text support
- *
- * Compose Multiplatform has no `drawTextOnPath`. It does not need one for this: each character is
- * measured on its own, placed at the top of the viewport circle, and the whole glyph rotated about
- * the circle's centre by the angle its position along the arc implies. Advance is the character's
- * own measured width over the radius, so the spacing follows the face rather than a guess, and the
- * string is centred by starting half its total angular width anticlockwise of the top.
- *
- * The circle is the *viewport's*, not the extent's — centre at `(width / 2, width / 2)` — which is
- * the circle a watch actually has, whatever the extent below it is doing.
- */
-@Composable
-private fun WearCurvedTimeText(text: String, modifier: Modifier) {
-  val measurer = rememberTextMeasurer()
-  val style =
-    LocalTextStyle.current.copy(
-      color = WEAR_SCREEN_TIME_TEXT,
-      fontSize = WEAR_TIME_TEXT_SP.sp,
-      fontWeight = FontWeight.Medium,
-    )
-  val glyphs = remember(text, style) { text.map { measurer.measure(it.toString(), style) } }
-  Canvas(modifier) {
-    val centre = Offset(size.width / 2f, size.width / 2f)
-    // The arc the glyph *centres* ride on: the viewport radius less the measured distance from the
-    // top of the screen to the middle of the reference's digits.
-    val radius = size.width / 2f - WEAR_TIME_TEXT_CENTRE_DP.dp.toPx()
-    if (radius <= 0f) return@Canvas
-    val total = glyphs.sumOf { it.size.width.toDouble() }.toFloat()
-    var travelled = -total / 2f
-    glyphs.forEach { glyph ->
-      val width = glyph.size.width.toFloat()
-      val height = glyph.size.height.toFloat()
-      // Radians along the arc to this glyph's centre, then degrees for the rotation.
-      val degrees = ((travelled + width / 2f) / radius) * 180f / PI.toFloat()
-      withTransform({ rotate(degrees = degrees, pivot = centre) }) {
-        drawText(
-          textLayoutResult = glyph,
-          topLeft = Offset(centre.x - width / 2f, centre.y - radius - height / 2f),
-        )
-      }
-      travelled += width
-    }
-  }
+/** The design's time, always: a render that read the system clock could not be diffed. */
+private class FixedTimeSource(private val time: String) : TimeSource {
+  @Composable override fun currentTime(): String = time
 }
 
 /** `wearos_small_round` and `wearos_xl_round` from `DeviceDimensions`, as the accepted range. */
 private const val WEAR_SMALL_ROUND_DP = 192
 
 private const val WEAR_XL_ROUND_DP = 240
-
-/**
- * Wear Material 3's dark scheme, as the reference render actually draws it.
- *
- * Sampled from wear-m3-catalog's stitched `TransformingLazyColumn` capture rather than copied from
- * a token table: the question the canvas has to answer is what the screen looks like, and these are
- * the pixels it has. `onSurfaceVariant` is the one nobody guesses — Wear's is a warm `#FFDCC2`, not
- * the grey a Material 3 dark scheme puts there, and a subtitle is where it shows.
- */
-private val WEAR_SCREEN_BACKGROUND = Color(0xFF000000)
-
-private val WEAR_SCREEN_TIME_TEXT = Color(0xFFC5C5C6)
-
-private val WEAR_SCREEN_SURFACE_CONTAINER = Color(0xFF332E3C)
-
-private val WEAR_SCREEN_ON_SURFACE = Color(0xFFF6EDFF)
-
-private val WEAR_SCREEN_ON_SURFACE_VARIANT = Color(0xFFFFDCC2)
 
 /**
  * The drawing that frames a round screen: a stadium at the frame's width, the clock over it, and
@@ -2319,43 +2226,67 @@ private val WEAR_SCREEN_ON_SURFACE_VARIANT = Color(0xFFFFDCC2)
  */
 private const val ROUND_SCREEN_FRAME = "frame/round-screen"
 
-/** Measured off the reference card: inset 26dp at its top row, full width 26dp down. */
+/**
+ * Wear's large corner, which its cards use: `MaterialTheme.shapes.large` is 26dp. A number rather
+ * than the shape because [LocalUiBuilderCornerRadius] is one, read by mobile nodes as a radius.
+ */
 private const val WEAR_CARD_CORNER_RADIUS_DP = 26f
 
 /**
- * The subset of a Material 3 scheme a Wear design actually draws through, in Wear's own values.
+ * The Material 3 scheme a Wear design's mobile-side pieces draw through, taken from Wear's own.
  *
- * The canvas installs this one mobile `MaterialTheme` for its own chrome — the editor's menus, the
- * labels, the placeholders — and the Wear components drawn inside it read their own library's
- * tokens, which is why only the roles those components resolve through it are replaced. The rest
- * stay Material 3's dark scheme, because a colour this catalog has never drawn is a colour nobody
- * has measured, and inventing one would put a number in the picture that no watch produced.
+ * The canvas installs one mobile `MaterialTheme` for its own chrome and for the few mobile nodes a
+ * Wear design can hold (an icon's tint, text with no colour of its own), and the Wear components
+ * inside read the port's theme, which [WearCatalogTheme] installs. This is Wear's default
+ * `ColorScheme` role for role, so the two cannot disagree. It used to be colours sampled off a
+ * reference render, and sampling put a value under the wrong role: the warm `#FFDCC2` was filed as
+ * `onSurfaceVariant` and is Wear's `tertiary`, and `#F6EDFF` stood in for `onBackground`, which is
+ * `onSurface`.
  */
 private val WearDarkColorScheme =
-  darkColorScheme(
-    background = WEAR_SCREEN_BACKGROUND,
-    onBackground = WEAR_SCREEN_ON_SURFACE,
-    surface = WEAR_SCREEN_SURFACE_CONTAINER,
-    surfaceContainer = WEAR_SCREEN_SURFACE_CONTAINER,
-    surfaceContainerLow = WEAR_SCREEN_SURFACE_CONTAINER,
-    surfaceContainerHigh = WEAR_SCREEN_SURFACE_CONTAINER,
-    surfaceContainerHighest = WEAR_SCREEN_SURFACE_CONTAINER,
-    onSurface = WEAR_SCREEN_ON_SURFACE,
-    onSurfaceVariant = WEAR_SCREEN_ON_SURFACE_VARIANT,
-  )
+  WearColorScheme().let { wear ->
+    darkColorScheme(
+      primary = wear.primary,
+      onPrimary = wear.onPrimary,
+      primaryContainer = wear.primaryContainer,
+      onPrimaryContainer = wear.onPrimaryContainer,
+      secondary = wear.secondary,
+      onSecondary = wear.onSecondary,
+      secondaryContainer = wear.secondaryContainer,
+      onSecondaryContainer = wear.onSecondaryContainer,
+      tertiary = wear.tertiary,
+      onTertiary = wear.onTertiary,
+      tertiaryContainer = wear.tertiaryContainer,
+      onTertiaryContainer = wear.onTertiaryContainer,
+      background = wear.background,
+      onBackground = wear.onBackground,
+      surface = wear.surfaceContainer,
+      onSurface = wear.onSurface,
+      onSurfaceVariant = wear.onSurfaceVariant,
+      surfaceContainerLow = wear.surfaceContainerLow,
+      surfaceContainer = wear.surfaceContainer,
+      surfaceContainerHigh = wear.surfaceContainerHigh,
+      surfaceContainerHighest = wear.surfaceContainerHigh,
+      outline = wear.outline,
+      outlineVariant = wear.outlineVariant,
+      error = wear.error,
+      onError = wear.onError,
+      errorContainer = wear.errorContainer,
+      onErrorContainer = wear.onErrorContainer,
+    )
+  }
 
 /**
- * How far below the top of the screen the clock's glyph centres ride, measured.
+ * The port's own theme, for a catalog drawn with the port.
  *
- * On the reference the digits occupy 5.5..18dp down — at 192, 225 and 240dp alike, a constant,
- * which is the sort of thing only measuring tells you — so their centres sit 11.75dp in. The arc is
- * the viewport radius less a dp under that: a glyph rotated about the circle rides slightly lower
- * than its flat twin, and this is the value that lands the curved box where the reference's is.
+ * Nothing installed it: every Wear component read `LocalColorScheme`'s default, which happens to be
+ * the same `ColorScheme()`, so the screens looked right with no theme behind them. Installing it is
+ * what makes the theme a thing the canvas sets rather than an accident it relies on.
  */
-private const val WEAR_TIME_TEXT_CENTRE_DP = 10.75f
-
-/** Sized so "10:10" measures the reference's 41.5dp; Wear's clock is bigger than it looks. */
-private const val WEAR_TIME_TEXT_SP = 14.5f
+@Composable
+private fun WearCatalogTheme(wear: Boolean, content: @Composable () -> Unit) {
+  if (wear) WearMaterialTheme(content = content) else content()
+}
 
 // `WEAR_LIST_HEADER_HEIGHT_DP` (48f) and `WEAR_LIST_HEADER_SP` (14.5f) stood here. Both were
 // measured off upstream renders to size a `Box`+`Text` replica of `ListHeader`, and both are gone
@@ -3036,13 +2967,12 @@ private fun BuilderDialogSurface(
   hasText: Boolean,
   buttons: @Composable RowScope.(Modifier) -> Unit,
 ) {
-  val corner = node.dimension("shapeDp") ?: DIALOG_CORNER_DP.dp
   Surface(
     modifier = modifier.widthIn(min = DIALOG_MINIMUM_WIDTH_DP.dp, max = DIALOG_MAXIMUM_WIDTH_DP.dp),
-    shape = RoundedCornerShape(corner),
+    shape = node.dimension("shapeDp")?.let(::RoundedCornerShape) ?: AlertDialogDefaults.shape,
     color = node.color("containerColor", MaterialTheme.colorScheme.surfaceContainerHigh),
     contentColor = MaterialTheme.colorScheme.onSurface,
-    tonalElevation = node.dimension("tonalElevationDp") ?: DIALOG_TONAL_ELEVATION_DP.dp,
+    tonalElevation = node.dimension("tonalElevationDp") ?: AlertDialogDefaults.TonalElevation,
   ) {
     Column(
       Modifier.padding(DIALOG_PADDING_DP.dp),
@@ -3175,7 +3105,31 @@ internal fun isoDateToEpochMillis(value: String): Long? {
   return epochDay * 86_400_000L
 }
 
-/** Material 3 dialog geometry, from `AlertDialogDefaults` and the dialog spec. */
+/**
+ * The Material 3 icon button the design's `variant` names — `IconButton`, `FilledIconButton`,
+ * `FilledTonalIconButton` or `OutlinedIconButton`, which are four functions, not a style argument.
+ * The catalog has always offered the four and the canvas drew every one as the standard button.
+ */
+@Composable
+private fun BuilderIconButton(
+  variant: String,
+  onClick: () -> Unit,
+  modifier: Modifier,
+  enabled: Boolean,
+  content: @Composable () -> Unit,
+) {
+  when (variant) {
+    "filled" -> FilledIconButton(onClick, modifier, enabled, content = content)
+    "tonal" -> FilledTonalIconButton(onClick, modifier, enabled, content = content)
+    "outlined" -> OutlinedIconButton(onClick, modifier, enabled, content = content)
+    else -> IconButton(onClick, modifier, enabled, content = content)
+  }
+}
+
+/**
+ * `AlertDialogDefaults`' shape and tonal elevation, as numbers, for the code exporter: generated
+ * code writes the value out. The canvas reads `AlertDialogDefaults` itself.
+ */
 internal const val DIALOG_CORNER_DP = 28f
 
 internal const val DIALOG_TONAL_ELEVATION_DP = 6f

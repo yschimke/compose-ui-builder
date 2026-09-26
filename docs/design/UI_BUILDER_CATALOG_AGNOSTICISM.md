@@ -39,6 +39,14 @@ records three of them as accepted gaps.
 | `WEAR_TIME_TEXT_CENTRE_DP`, `WEAR_TIME_TEXT_SP` | the clock | `frame.geometry.timeText` |
 | `WEAR_EDGE_BUTTON_INSET` | the edge button's placement | `frame.geometry` (a sibling of the above) |
 
+**Since then, most of these rows have gone.** The pane with a viewport draws the Wear port's real
+`AppScaffold`, `ScreenScaffold` and `TimeText` inside the port's own `MaterialTheme`, so the
+content padding is `ScreenScaffoldDefaults.contentPadding`, the colours are Wear's `ColorScheme()`,
+the clock is the library's, and the edge-button inset no longer exists. What is left in the
+renderer is the diameter range and `WEAR_CARD_CORNER_RADIUS_DP` (Wear's `shapes.large`, as a
+number for mobile nodes). The catalog's `frame.geometry.contentPadding` is still declared, and is
+still what the diameter range is read from.
+
 `wear-m3-catalog`'s own `ui-builder.policy.json` already declares the first two rows, written by a
 test (`ScreenScaffoldContentPaddingTest` composes the real `ScreenScaffold` at each round size and
 asserts the committed file equals its measurement), and

@@ -1008,9 +1008,16 @@ internal class ComposeEmitter(
       } else {
         ""
       }
+    val function =
+      when (node.string("variant")) {
+        "filled" -> "FilledIconButton"
+        "tonal" -> "FilledTonalIconButton"
+        "outlined" -> "OutlinedIconButton"
+        else -> "IconButton"
+      }
     line(
       level,
-      "IconButton(onClick = {}, modifier = ${node.modifierExpression()}$selectedBackground) {",
+      "$function(onClick = {}, modifier = ${node.modifierExpression()}$selectedBackground) {",
     )
     emitChildren(node.slot("content"), level + 1)
     line(level, "}")
@@ -3236,7 +3243,7 @@ private val HANDLED_FIELDS =
     "m3/icon" to HandledFields(setOf("iconKey", "contentDescription", "color", "sizeDp")),
     "m3/icon-button" to
       HandledFields(
-        setOf("alignment", "contentDescription", "selected", "sizeDp"),
+        setOf("alignment", "contentDescription", "selected", "sizeDp", "variant"),
         slots = setOf("content"),
       ),
     "m3/list-item" to
