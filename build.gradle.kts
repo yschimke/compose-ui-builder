@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask
+import org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenExec
 
 plugins {
   base
@@ -141,8 +142,19 @@ val wasmLinkLane =
     maxParallelUsages.set(1)
   }
 
+// The Binaryen pass shares the lane. Each production executable is linked by the Kotlin daemon and
+// then optimised by `wasm-opt`, a native process outside both daemons, and the lane above only
+// covered the first half. `wasm-opt` peaks at 5.6 GB on `:ui-builder`'s executable, measured on a
+// 16 GB, 4-core machine shaped like `ubuntu-latest`, and it ran while the renderer's link held the
+// Kotlin daemon at 6.6 GB: 14.2 GB in use before CI's test JVMs are counted. On CI the runner
+// was killed there, "The runner has received a shutdown signal", during
+// `:ui-builder-renderer:compileProductionExecutableKotlinWasmJsOptimize`, on `main` and on PRs.
+// Same type-based matching, for the same reason. The lane alone took the peak to 13.6 GB: the idle
+// daemon still held its committed heap, which `kotlin.daemon.jvmargs` now returns (see
+// `gradle.properties`). Both together measured 8.4 GB.
 subprojects {
   tasks.withType<KotlinJsIrLink>().configureEach { usesService(wasmLinkLane) }
+  tasks.withType<BinaryenExec>().configureEach { usesService(wasmLinkLane) }
 }
 
 // Kotlin registers this root task after the Wasm projects are configured. Its action already treats
