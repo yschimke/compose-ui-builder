@@ -66,7 +66,10 @@ export function replayCandidateOperations(input) {
 }
 
 export function candidateDocumentHash(document) {
-  const canonical = JSON.stringify(canonicalize(document));
+  // A home says where this content is authoritative; moving or stamping that identity must not
+  // turn otherwise identical content into a new revision.
+  const { home: _home, ...content } = document;
+  const canonical = JSON.stringify(canonicalize(content));
   return createHash("sha256").update(canonical).digest("hex");
 }
 

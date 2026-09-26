@@ -983,7 +983,7 @@ internal fun forbidden(action: String, designId: String): UiBuilderServiceError 
  * and so a commit that needs both pays for the serialization once.
  */
 internal fun documentCanonicalBytes(document: DesignDocumentV1): ByteArray =
-  canonicalJson(PersistentUiBuilderServiceJson.json.encodeToJsonElement(document))
+  canonicalJson(PersistentUiBuilderServiceJson.json.encodeToJsonElement(document.copy(home = null)))
     .encodeToByteArray()
 
 internal fun documentHash(document: DesignDocumentV1): String =

@@ -7,6 +7,7 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 
 class UiBuilderDocumentHomeTest {
   private val json = Json {
@@ -41,6 +42,47 @@ class UiBuilderDocumentHomeTest {
       document.toDesignDocumentV1().toUiBuilderDocument().home,
     )
   }
+
+  @Test
+  fun `candidate replay ignores future home fields`() {
+    val replayed =
+      UiBuilderReducer.replay(
+        fixture(
+          """{"kind":"server","url":"https://preview.coo.ee","designId":"login-v2","region":"eu"}"""
+        )
+      )
+
+    assertEquals(
+      UiBuilderDocumentHome.Server("https://preview.coo.ee", "login-v2"),
+      replayed.document.home,
+    )
+  }
+
+  @Test
+  fun `candidate replay degrades an unknown future home kind to unhomed`() {
+    val replayed = UiBuilderReducer.replay(fixture("""{"kind":"workspace","id":"future"}"""))
+
+    assertEquals(null, replayed.document.home)
+  }
+
+  private fun fixture(home: String) =
+    json
+      .parseToJsonElement(
+        """
+        {
+          "documentSchema":"compose-ui-builder-document/v1-candidate",
+          "designId":"login-v2",
+          "operations":[{
+            "operationId":"create",
+            "type":"createDesign",
+            "title":"Login",
+            "home":$home
+          }]
+        }
+        """
+          .trimIndent()
+      )
+      .jsonObject
 
   private fun document(home: UiBuilderDocumentHome? = null) =
     UiBuilderDocument(

@@ -244,9 +244,16 @@ fun JsonObject.obj(name: String): JsonObject = this[name]?.jsonObject ?: JsonObj
 
 fun JsonObject.array(name: String): JsonArray = this[name]?.jsonArray ?: JsonArray(emptyList())
 
-private val documentJson = Json { classDiscriminator = "type" }
+private val documentJson = Json {
+  classDiscriminator = "type"
+  ignoreUnknownKeys = true
+}
 
 private fun JsonObject.home(): UiBuilderDocumentHome? =
   this["home"]
     ?.takeUnless { it is JsonNull }
-    ?.let { documentJson.decodeFromJsonElement(UiBuilderDocumentHome.serializer(), it) }
+    ?.let { home ->
+      val kind = (home as? JsonObject)?.get("kind")?.jsonPrimitive?.contentOrNull
+      if (kind !in setOf("server", "repo")) null
+      else documentJson.decodeFromJsonElement(UiBuilderDocumentHome.serializer(), home)
+    }

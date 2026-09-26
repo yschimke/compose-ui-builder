@@ -11,7 +11,6 @@
     "revision",
     "catalogPin",
     "environment",
-    "stateVariables",
     "roots",
     "nodes"
   ],
@@ -35,7 +34,7 @@
             "url": { "type": "string", "minLength": 1 },
             "designId": { "type": "string", "minLength": 1 }
           },
-          "additionalProperties": false
+          "additionalProperties": true
         },
         {
           "type": "object",
@@ -44,7 +43,7 @@
             "kind": { "const": "repo" },
             "path": { "type": "string", "minLength": 1 }
           },
-          "additionalProperties": false
+          "additionalProperties": true
         }
       ]
     },

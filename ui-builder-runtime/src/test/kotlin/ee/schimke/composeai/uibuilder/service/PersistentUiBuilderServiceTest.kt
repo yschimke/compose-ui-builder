@@ -44,6 +44,18 @@ class PersistentUiBuilderServiceTest {
   private val outsider = AuthenticatedUiBuilderActor("outsider")
 
   @Test
+  fun `document identity excludes its storage home`() {
+    val document = document()
+
+    assertEquals(
+      documentHash(document),
+      documentHash(
+        document.copy(home = DesignHomeV1.Server("https://preview.coo.ee", document.id))
+      ),
+    )
+  }
+
+  @Test
   fun `disabled supplied document requests never reach an exporter`() {
     if (UiBuilderBuildFeatures.remoteCompose) return
     val requests = mutableListOf<RevisionPinnedUiBuilderExport>()

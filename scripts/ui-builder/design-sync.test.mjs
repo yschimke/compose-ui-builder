@@ -5,6 +5,7 @@ import {
   assertHomeOverwriteAllowed,
   documentToOperations,
   homeForFixtureOverwrite,
+  normalizeHome,
   operationsToDocument,
   publishDirectory,
   validatedServerOrigin,
@@ -40,6 +41,18 @@ test("canonical home survives the fixture and document round trip", () => {
   assert.deepEqual(replayed.home, document.home);
 });
 
+test("canonical home does not change the document content hash", () => {
+  const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
+  const document = operationsToDocument(fixture);
+
+  const homed = documentToOperations({
+    ...document,
+    home: { kind: "repo", path: "ui-builder/designs/login-v2.uid" },
+  });
+
+  assert.equal(homed.expectedDocumentHash, fixture.expectedDocumentHash);
+});
+
 test("a copy cannot replace a different canonical home without force", () => {
   const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
   fixture.operations[0].home = { kind: "repo", path: "ui-builder/designs/original.uid" };
@@ -63,6 +76,23 @@ test("equivalent canonical homes do not depend on JSON key order", () => {
   };
 
   assert.doesNotThrow(() => assertHomeOverwriteAllowed(reordered, fixture));
+});
+
+test("server homes normalize scheme, host, default port and trailing slash", () => {
+  const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
+  fixture.operations[0].home = {
+    kind: "server",
+    url: "https://preview.coo.ee",
+    designId: "original",
+  };
+  const equivalent = {
+    kind: "server",
+    url: "HTTPS://Preview.Coo.Ee:443/",
+    designId: "original",
+  };
+
+  assert.deepEqual(normalizeHome(equivalent), fixture.operations[0].home);
+  assert.doesNotThrow(() => assertHomeOverwriteAllowed(equivalent, fixture));
 });
 
 test("an unhomed source preserves the existing fixture home unless forced", () => {

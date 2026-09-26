@@ -144,9 +144,24 @@ export function fixtureHome(fixture) {
   return fixture?.operations?.find((operation) => operation.type === "createDesign")?.home;
 }
 
+/** Normalize identity-equivalent homes before enforcing overwrite protection. */
+export function normalizeHome(home) {
+  if (!home || typeof home !== "object" || home.kind !== "server" || typeof home.url !== "string") {
+    return home;
+  }
+  const url = new URL(home.url);
+  const path = url.pathname === "/" ? "" : url.pathname.replace(/\/+$/, "");
+  return { ...home, url: `${url.origin}${path}` };
+}
+
 export function assertHomeOverwriteAllowed(sourceHome, existingFixture, force = false) {
   const targetHome = fixtureHome(existingFixture);
-  if (!force && sourceHome && targetHome && !isDeepStrictEqual(sourceHome, targetHome)) {
+  if (
+    !force &&
+    sourceHome &&
+    targetHome &&
+    !isDeepStrictEqual(normalizeHome(sourceHome), normalizeHome(targetHome))
+  ) {
     throw new Error("refusing to overwrite a design copy with a different canonical home; pass --force to replace it");
   }
 }

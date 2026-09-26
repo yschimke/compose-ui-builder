@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.protocol.CommittedOperationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignEnvironmentV1
+import ee.schimke.composeai.uibuilder.protocol.DesignHomeV1
 import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.LayoutDirectionV1
 import ee.schimke.composeai.uibuilder.protocol.NullValueV1
@@ -35,6 +36,18 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class UiBuilderProtocolBridgeTest {
+  @Test
+  fun `canonical protocol hash excludes home identity metadata`() {
+    val document = protocolDocument(revision = 7, text = "Same content")
+
+    assertEquals(
+      document.canonicalDocumentHash(),
+      document
+        .copy(home = DesignHomeV1.Server("https://preview.coo.ee", "shared-design"))
+        .canonicalDocumentHash(),
+    )
+  }
+
   @Test
   fun `snapshot document becomes the renderer document without losing ordered content`() {
     val protocol =
