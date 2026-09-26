@@ -30,7 +30,6 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNativeOnly
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
-import ee.schimke.composeai.uibuilder.capability.CodeCapability
 import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
 import ee.schimke.composeai.uibuilder.editor.CatalogThumbnail
 import ee.schimke.composeai.uibuilder.editor.CatalogThumbnailOutcome
@@ -119,7 +118,7 @@ class CatalogThumbnailRenderTest {
           (listOf(null) + item.variants).map { variant ->
             reducer.previewDocument(item.componentId, variant)?.let {
               exportedCall(it, catalog, item.componentId)
-            } ?: catalogCall(catalog.componentsById[item.componentId]?.code, variant)
+            }
           }
         (listOf(null) + item.variants).mapIndexed { index, variant ->
           Tile(item.componentId, item.displayName, variant, item.kind, calls[index], calls[0])
@@ -223,7 +222,7 @@ class CatalogThumbnailRenderTest {
     val displayName: String,
     val variant: EditorCatalogVariant?,
     val kind: EditorComponentKind,
-    /** The composable the export writes for this component, or the catalog says it is. */
+    /** The composable the Compose export writes for this component, when it writes its own. */
     val call: String?,
     /** The same, for the component with no variant chosen. */
     val baseCall: String?,
@@ -235,8 +234,8 @@ class CatalogThumbnailRenderTest {
     /**
      * What the contact sheet prints under a picture: the call the export writes for exactly this
      * variant — `Text()`, `FloatingActionButton()`, `OutlinedTextField()` — and, where a variant is
-     * an argument to the same call, which one: `Card() · Outlined`. Where neither the export nor
-     * the catalog names a composable of the component's own, the catalog's display name.
+     * an argument to the same call, which one: `Card() · Outlined`. Where the export writes no
+     * composable of the component's own, the catalog's display name.
      */
     val label: String
       get() {
@@ -282,33 +281,6 @@ class CatalogThumbnailRenderTest {
     return symbol.takeUnless { it.startsWith("Builder") || someoneElses }
   }
 
-  /**
-   * The composable the catalog's own `code` names, for a component this Compose export does not
-   * write — every Wear and Remote one, which have exporters of their own that tag no call with its
-   * component.
-   *
-   * A variant that selects a different composable is found among the imports, where the catalog
-   * lists the others as `m3/card` does: `outlined` on a `TitleCard` is the `OutlinedCard` import,
-   * the variant's word on the front of the base call's own ending, and a variant that names none of
-   * them is the bare composable the others decorate, `plain` the `Card` import. Anything else is
-   * the base call.
-   */
-  private fun catalogCall(code: CodeCapability?, variant: EditorCatalogVariant?): String? {
-    val symbol =
-      code?.symbol?.takeIf { COMPOSABLE_SYMBOL.matches(it) && !it.endsWith("Registry") }
-        ?: return null
-    val word =
-      variant?.value?.split('-', ' ')?.joinToString("") { it.replaceFirstChar(Char::uppercaseChar) }
-        ?: return symbol
-    val names = code.imports.map { it.substringAfterLast('.') } - symbol
-    return names.firstOrNull { it.startsWith(word) && symbol.endsWith(it.removePrefix(word)) }
-      // The variant the base call already names: `title` on a `TitleCard`.
-      ?: symbol.takeIf { it.startsWith(word) }
-      // A variant naming none of the others is the undecorated one: `plain` is Wear's `Card`.
-      ?: names.firstOrNull { symbol.endsWith(it) }
-      ?: symbol
-  }
-
   private fun samePixels(a: java.awt.image.BufferedImage, b: java.awt.image.BufferedImage) =
     a.width == b.width &&
       a.height == b.height &&
@@ -316,9 +288,6 @@ class CatalogThumbnailRenderTest {
         .contentEquals(b.getRGB(0, 0, b.width, b.height, null, 0, b.width))
 
   private companion object {
-    /** `Text`, `LazyColumn`, `SearchBarDefaults.InputField`: a call, not a modifier or a blank. */
-    val COMPOSABLE_SYMBOL = Regex("[A-Z][A-Za-z0-9]*(\\.[A-Z][A-Za-z0-9]*)?")
-
     /** `Text(`, `LazyColumn {`, `SearchBarDefaults.InputField(`: a call, not a loop or a value. */
     val COMPOSABLE_CALL = Regex("^([A-Z][A-Za-z0-9]*(?:\\.[A-Z][A-Za-z0-9]*)?)\\s*[({]")
 

@@ -3,7 +3,6 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
-import ee.schimke.composeai.uibuilder.protocol.CodeCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.SlotCapabilityV1
@@ -477,7 +476,6 @@ private fun wearOnlyComponents(
     extra: String = "",
     drawnBy: String? = null,
     modifierCapabilities: List<String> = emptyList(),
-    variantComposables: List<String> = emptyList(),
   ) =
     ComponentCapabilityV1.Builder(
         componentId,
@@ -501,7 +499,7 @@ private fun wearOnlyComponents(
         // a `ButtonGroup` is sized by its `weight`, which is how Jetcaster makes play the wider of
         // two, and `WearScreenCodeExporter` writes a node's authored chain.
         it.modifierCapabilities = modifierCapabilities
-        it.code = wearCode(composable, variantComposables)
+        it.code = null
         it.svg =
           noStructuredSvg
             ?.newBuilder()
@@ -619,13 +617,6 @@ private fun wearOnlyComponents(
       componentId = "wear-m3/icon-button",
       displayName = "Icon button",
       composable = "IconButton",
-      variantComposables =
-        listOf(
-          "FilledIconButton",
-          "FilledTonalIconButton",
-          "FilledVariantIconButton",
-          "OutlinedIconButton",
-        ),
       role = "Container",
       traits = listOf("Action", "ListItem"),
       slots = listOf(singleSlot("content", listOf("Adornment"), min = 1)),
@@ -651,13 +642,6 @@ private fun wearOnlyComponents(
       componentId = "wear-m3/text-button",
       displayName = "Text button",
       composable = "TextButton",
-      variantComposables =
-        listOf(
-          "FilledTextButton",
-          "FilledTonalTextButton",
-          "FilledVariantTextButton",
-          "OutlinedTextButton",
-        ),
       role = "Container",
       traits = listOf("Action", "ListItem"),
       slots = listOf(singleSlot("content", listOf("AnyContent"), min = 1)),
@@ -765,12 +749,6 @@ private fun wearOnlyComponents(
       componentId = "wear-m3/progress-indicator",
       displayName = "Progress indicator",
       composable = "CircularProgressIndicator",
-      variantComposables =
-        listOf(
-          "SegmentedCircularProgressIndicator",
-          "LinearProgressIndicator",
-          "ArcProgressIndicator",
-        ),
       role = "Leaf",
       traits = listItem + "ScreenContent",
       properties =
@@ -851,7 +829,6 @@ private fun wearOnlyComponents(
       componentId = "wear-m3/confirmation-dialog",
       displayName = "Confirmation dialog",
       composable = "ConfirmationDialog",
-      variantComposables = listOf("SuccessConfirmationDialog", "FailureConfirmationDialog"),
       role = "Leaf",
       traits = listOf("Overlay"),
       properties =
@@ -1070,7 +1047,7 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
                   "`ScrollMode.LONG` capture of the same list matches this to within a dp."
             }
             .build()
-        it.code = wearCode("ScreenScaffold")
+        it.code = null
         it.svg =
           noStructuredSvg
             ?.newBuilder()
@@ -1109,7 +1086,7 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         it.traits = listOf("TextContent", "RemoteAuthorable", "ListItem")
         it.properties = wearLabelProperties()
         it.modifierCapabilities = emptyList()
-        it.code = wearCode("ListHeader")
+        it.code = null
         it.svg = recordedTextSvg
       }
       .build()
@@ -1167,7 +1144,7 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
                   "reproduces it exactly."
             }
             .build()
-        it.code = wearCode("TransformingLazyColumn", pkg = "androidx.wear.compose.foundation.lazy")
+        it.code = null
         it.svg =
           noStructuredSvg
             ?.newBuilder()
@@ -1211,7 +1188,6 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
     slots: List<SlotCapabilityV1> = emptyList(),
     modifierCapabilities: List<String> = emptyList(),
     svg: SvgCapabilityV1? = null,
-    variantComposables: List<String> = emptyList(),
   ) =
     ComponentCapabilityV1.Builder(
         componentId,
@@ -1232,7 +1208,7 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         it.slots = slots
         it.properties = properties
         it.modifierCapabilities = modifierCapabilities
-        it.code = wearCode(composable, variantComposables)
+        it.code = null
         it.svg = svg
       }
       .build()
@@ -1304,7 +1280,6 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       displayName = "Card",
       role = "Container",
       composable = "TitleCard",
-      variantComposables = listOf("AppCard", "OutlinedCard", "Card"),
       traits = listOf("GridItem", "CarouselItem", "ListItem", "OverlayContent"),
       modifierCapabilities = WEAR_SURFACE_MODIFIERS,
       slots =
@@ -1336,7 +1311,6 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       displayName = "Button",
       role = "Container",
       composable = "Button",
-      variantComposables = listOf("FilledTonalButton", "OutlinedButton", "ChildButton"),
       traits = listOf("Action", "ToolbarItem"),
       modifierCapabilities = WEAR_MODIFIERS,
       slots =
@@ -1537,18 +1511,3 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
     }
     .build()
 }
-
-/**
- * The call a Wear component is written as, and — where its `variant` picks between composables
- * rather than styling one — the others it can be, the way `m3/card`'s `code` lists all three cards
- * while naming one. The symbol is the simple name, as the packaged Material 3 catalog writes it: a
- * qualified one is what a component pack's record is recognised by.
- */
-private fun wearCode(
-  symbol: String,
-  variantComposables: List<String> = emptyList(),
-  pkg: String = "androidx.wear.compose.material3",
-): CodeCapabilityV1 =
-  CodeCapabilityV1.Builder(symbol)
-    .also { it.imports = (listOf(symbol) + variantComposables).map { name -> "$pkg.$name" } }
-    .build()
