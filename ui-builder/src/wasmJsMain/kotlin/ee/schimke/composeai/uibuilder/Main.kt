@@ -119,6 +119,7 @@ import org.jetbrains.skia.Image
 private external fun suppressBrowserContextMenu()
 
 fun main() {
+  stripPageToken()
   val rendererRuntimeId = sandboxRendererRuntimeId()
   if (rendererRuntimeId.isNotEmpty()) {
     // The sandboxed renderer draws into the page through its own runtime, not Compose, and says
@@ -1724,6 +1725,16 @@ internal suspend fun awaitHashChange(): String = suspendCancellableCoroutine { c
   }"""
 )
 internal external fun dropDesignUrlQuery(name: String)
+
+/**
+ * Takes a `?token=` back out of the address bar as the page starts.
+ *
+ * A token-gated host already answers a browser's first `?token=` page load with an HttpOnly cookie
+ * and a redirect to the same URL without it, so this normally finds nothing. It is here for a page
+ * that arrived some other way: nothing on this page reads the token from the URL, so keeping it
+ * there would only put it into the history, a bookmark or a copied link.
+ */
+internal fun stripPageToken() = dropDesignUrlQuery("token")
 
 /** The same, for `#thread=`. Setting an empty hash drops the `#` with it. */
 @JsFun(

@@ -51,7 +51,7 @@ class BrowserUiBuilderTransportTest {
   }
 
   @Test
-  fun `page token is encoded on the same-origin WebSocket without entering diagnostics`() {
+  fun `page token is not copied onto the same-origin WebSocket or into diagnostics`() {
     val original = browserLocation()
     try {
       replaceBrowserLocation("?token=operator%20token%26scope%3Dwrite")
@@ -63,8 +63,10 @@ class BrowserUiBuilderTransportTest {
           hasAfterSequence = true,
         )
 
-      assertTrue(url.contains("token=operator+token%26scope%3Dwrite"))
-      assertFalse(url.contains("operator token"))
+      // The host's browse cookie authenticates a same-origin upgrade; the URL carries no token.
+      assertFalse(url.contains("token="), url)
+      assertFalse(url.contains("operator"), url)
+      assertTrue(url.contains("afterSequence=7"), url)
       assertFalse(browserUiBuilderTransportFailureMessage().contains("operator"))
       assertFalse(browserUiBuilderTransportFailureMessage().contains("scope"))
     } finally {
