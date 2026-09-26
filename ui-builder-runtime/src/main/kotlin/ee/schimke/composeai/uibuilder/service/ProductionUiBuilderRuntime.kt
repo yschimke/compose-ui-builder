@@ -147,11 +147,13 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
      * catalog of the same id, and an id with no synthesiser is served from here alone — which is
      * what lets a catalog this binary has never heard of appear in the chooser.
      *
-     * Per catalog and reversible on purpose: a catalog that publishes nothing, or whose published
-     * file will not compose, keeps the synthesised one and a startup line says which source each
-     * came from. Composing the file is `:server`'s job (it needs the component record reader, which
-     * `checkUiBuilderRuntimeBoundary` keeps off this module's classpath), so this takes the
-     * finished catalogs rather than the files.
+     * `wear-m3` and `remote-m3` are served from here and nowhere else: their synthesised
+     * definitions are gone (#819 step 3), so a deployment that enables one without publishing it is
+     * refused at startup by name. `m3-catalog` and `a2ui-catalog` still fall back to the catalogs
+     * this build writes, and a startup line says which source each came from. Composing the file is
+     * `:server`'s job (it needs the component record reader, which `checkUiBuilderRuntimeBoundary`
+     * keeps off this module's classpath), so this takes the finished catalogs rather than the
+     * files.
      */
     published: Map<String, CatalogCapabilityV1> = emptyMap(),
   ) : this(
@@ -209,8 +211,6 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val synthesisedCatalogs =
     mapOf(
       DEFAULT_CATALOG_SYSTEM_ID to baseCatalog,
-      REMOTE_M3_CATALOG_SYSTEM_ID to remoteM3Catalog(baseCatalog),
-      WEAR_M3_CATALOG_SYSTEM_ID to wearM3Catalog(baseCatalog),
       A2UI_CATALOG_SYSTEM_ID to a2uiCatalog(baseCatalog),
     )
 
@@ -228,12 +228,10 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
    * Keyed by PLATFORM, which is the axis the curation was always along -- the synthesised catalogs
    * used to be the donors and this hop tried their ids first.
    *
-   * [platformFor] keeps that id hop for the one case where dropping it would change an answer: a
-   * published catalog that declares NO platform. Such a catalog is mobile everywhere else in the
-   * system, because that is what [platform] defaults to, but the old chain handed a published
-   * `wear-m3` the Wear vocabulary off its id alone, and `WearM3ScreenCatalogTest` pins that. The
-   * hop goes when `synthesisedCatalogs` does (#819 step 3), and that is a change to review on its
-   * own rather than a side effect of this one.
+   * [platformFor] keeps an id hop for a published catalog that declares NO platform and shares an
+   * id with a catalog this build still writes (`m3-catalog`, `a2ui-catalog`). It no longer reaches
+   * `wear-m3` or `remote-m3`, whose synthesised definitions are gone (#819 step 3); both published
+   * policies declare their platform, which is the answer this hop used to stand in for.
    *
    * What is NOT kept is the id winning over a platform the catalog DID declare. A catalog saying
    * `platform: mobile` under any id now gets the mobile vocabulary, which is the one its exporter
@@ -498,12 +496,16 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
    * `resolve` returned null, `unusableReason` turned that into `CATALOG_UNAVAILABLE`, and the
    * runtime offered no upgrade path (#796).
    *
-   * Both sources' references are accepted for the same `systemId`. No history is kept and nothing
-   * is persisted: the catalog the OTHER source would serve is already in this process --
-   * `synthesisedCatalogs` still holds its entry while the published one is being served -- so its
-   * reference is simply computed. Neither `withPacks` nor `withBuilderVocabulary` touches
-   * `benchmark`, so the value computed here is the one that catalog would carry if it were the one
-   * being served.
+   * Both sources' references are accepted for the same `systemId` while both exist. No history is
+   * kept and nothing is persisted: the catalog the OTHER source would serve is already in this
+   * process -- `synthesisedCatalogs` still holds its entry while the published one is being served
+   * -- so its reference is simply computed. `wear-m3` and `remote-m3` have no synthesised entry any
+   * more (#819 step 3): a design still pinned to the reference they used to produce is re-pinned
+   * and written through at startup by `PersistentUiBuilderService` -- added ahead of this step for
+   * exactly that reason -- so a store that has booted once on a build carrying the write-through
+   * has already moved. One that never has would find those designs `CATALOG_UNAVAILABLE`. Neither
+   * `withPacks` nor `withBuilderVocabulary` touches `benchmark`, so the value computed here is the
+   * one that catalog would carry if it were the one being served.
    *
    * ONE DIRECTION ONLY, and the asymmetry is in what the process holds rather than in this map. The
    * synthesised catalog is generated here and always resident, so a server on the published source
@@ -1128,15 +1130,14 @@ internal val REMOTE_COMPOSE_BORROWED_AS_THEMSELVES =
  * libraries are not used together — but Box, Column, Row and Image are the same declarations on
  * both platforms, so there is nothing to stand in for and nothing to translate.
  *
- * Shared between `wearM3Catalog` and [composeFoundationCatalog] rather than written out twice. The
- * two have to agree exactly — `ComposeFoundationFaithfulnessTest` compares the components they
- * donate field for field — and one constant cannot drift the way a copied string can.
+ * Carried by the four foundation components [composeFoundationCatalog] hands a published Wear
+ * catalog.
  *
  * It lives in THIS file rather than beside the foundation because it names a catalog, and
  * `.github/scripts/ui-builder-catalog-literals.sh` holds that name to the files that already
- * carried one; a new file may not add one. When `wearM3Catalog` goes (#819 step 3) this constant
- * goes with it, and the note then has to say the same thing without naming a catalog — or move into
- * the published catalog's own data, which is where the contract puts it.
+ * carried one; a new file may not add one. The synthesised `wear-m3` it was shared with is gone
+ * (#819 step 3); the note should eventually say the same thing without naming a catalog, or move
+ * into the published catalog's own data, which is where the contract puts it.
  */
 internal const val WEAR_FOUNDATION_NOTE: String =
   "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` " +

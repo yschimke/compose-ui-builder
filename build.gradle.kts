@@ -62,10 +62,9 @@ val generateMaterialIconCatalogFixture =
     )
   }
 
-// `wear-m3-capabilities-v1.json` is deliberately absent here. It is a **golden**, owned by
-// `SynthesisedCatalogGoldenTest`: `wearM3Catalog` is synthesised in Kotlin from the packaged
-// Material 3 catalog, so the golden already carries the full icon list and regenerating it is what
-// records an icon-catalog change. Patching the same file here as well gave it two writers that
+// `wear-m3-capabilities-v1.json` is deliberately absent here. It was a golden of the synthesised
+// `wear-m3` catalog, and since that was deleted (#819 step 3) it is a frozen fixture describing the
+// catalog wear-m3-catalog publishes, which carries its own icon list. Patching the same file here as well gave it two writers that
 // produce the same icons in different bytes — the allowlist spliced onto one line here, expanded
 // one entry per line by the golden's `Json { prettyPrint = true }` — and `VerifyMatchingFile`
 // compares bytes, so no content of the file could satisfy both. Every push since the icon catalog

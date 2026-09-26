@@ -203,22 +203,17 @@ class WearM3ScreenCatalogTest {
   }
 
   @Test
-  fun `a published catalog wins over the synthesised one of the same id, and says so`() {
+  fun `wear-m3 and remote-m3 are served from what is published, and nothing else`() {
     val executor =
       CurrentM3UiBuilderCatalogExecutor(
-        catalogSystemIds = setOf("wear-m3", "remote-m3"),
-        published = mapOf("wear-m3" to testCatalog(id = "wear-m3")),
+        catalogSystemIds = setOf("wear-m3"),
+        published = mapOf("wear-m3" to testCatalog(id = "wear-m3", platform = "wear")),
       )
 
-    // Per catalog and reversible: `wear-m3` reads its published file, `remote-m3` keeps the Kotlin,
-    // and the source of each is answerable rather than inferred from the shelf's contents.
-    assertEquals(
-      mapOf("wear-m3" to "published", "remote-m3" to "synthesised"),
-      executor.catalogSources,
-    )
-    val wear = executor.listCatalogs().first { it.benchmark.catalogSystemId == "wear-m3" }
-    // The catalog's own component is the published one, and only that one: nothing of the
-    // synthesised Wear shelf survives, which is what "wins over" means.
+    assertEquals(mapOf("wear-m3" to "published"), executor.catalogSources)
+    val wear = executor.listCatalogs().single()
+    // The catalog's own component is the published one, and only that one: this build writes no
+    // Wear shelf of its own any more (#819 step 3).
     assertEquals(
       listOf("test-catalog/only"),
       wear.components.map { it.componentId }.filterNot { it in builderVocabulary },
@@ -230,11 +225,24 @@ class WearM3ScreenCatalogTest {
       builderVocabulary,
       wear.components.map { it.componentId }.filter { it in builderVocabulary }.toSortedSet(),
     )
+
+    // Enabling either without publishing it is refused by name at startup, rather than served
+    // from a definition this build no longer carries.
+    for (id in listOf("wear-m3", "remote-m3")) {
+      val failure =
+        assertFailsWith<IllegalArgumentException> {
+          CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = setOf(id))
+        }
+      assertTrue(id in failure.message.orEmpty(), failure.message.orEmpty())
+      assertTrue(
+        "neither published nor synthesised" in failure.message.orEmpty(),
+        failure.message.orEmpty(),
+      )
+    }
   }
 
   /**
-   * The ids a published `wear-m3` is handed — the SYNTHESISED Wear catalog's builder vocabulary,
-   * not the mobile one.
+   * The ids a published Wear catalog is handed — the Wear builder vocabulary, not the mobile one.
    *
    * Computed from the Wear catalog rather than written down, because the point is that the two
    * differ: Wear borrows `layout/box`, `layout/column`, `layout/row` and `asset/image` and none of
@@ -252,8 +260,8 @@ class WearM3ScreenCatalogTest {
       .filter { id -> listOf("layout/", "shape/", "asset/", "remote-compose/").any(id::startsWith) }
       .toSortedSet()
 
-  /** The smallest thing that is a catalog: one component and an id. */
-  private fun testCatalog(id: String = "test-catalog") =
+  /** The smallest thing that is a catalog: one component, an id, and optionally a platform. */
+  private fun testCatalog(id: String = "test-catalog", platform: String? = null) =
     CatalogCapabilityV1.Builder(
         "compose-catalog-capabilities/v1",
         CatalogBenchmarkV1.Builder(id, "ui-builder.json", id, "sha256:test", "candidate").build(),
@@ -272,6 +280,12 @@ class WearM3ScreenCatalogTest {
         ),
       )
       .also {
+        platform?.let { declared ->
+          it.statusSemantics =
+            kotlinx.serialization.json.JsonObject(
+              mapOf(CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY to JsonPrimitive(declared))
+            )
+        }
         it.exportCapabilities =
           ExportCapabilitiesV1.Builder()
             .also {

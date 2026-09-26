@@ -14,47 +14,38 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * `compose-foundation` donates exactly what the synthesised catalogs donate — component for
- * component, note for note, shelf for shelf.
+ * `compose-foundation` donates exactly what the `wear-m3` and `remote-m3` catalogs donated —
+ * component for component, note for note, shelf for shelf.
  *
- * ## Why this test can only be written now
+ * ## What it is measured against
  *
- * [#819](https://github.com/yschimke/compose-preview-server/issues/819) deletes `remoteM3Catalog`
- * and `wearM3Catalog`, whose only remaining job is to be the donor
- * [`withBuilderVocabulary`][CurrentM3UiBuilderCatalogExecutor] hands a published catalog its
- * `layout/`, `shape/`, `asset/` and `remote-compose/` from. All three catalogs serve from their
- * published files as of 3.27.0, so nothing else reads them.
- *
- * "Redundant" is a claim, and this is the check. It compares the new source against the old one
- * **while both still exist**, which is a window that closes the moment the generators go: after
- * that there is no left-hand side to compare to, only a golden of the thing being changed. So the
- * order is deliberate — introduce, prove equal, then delete — and a reviewer of the deletion can
- * read this test rather than re-derive three component lists by hand.
+ * The synthesised `remoteM3Catalog` and `wearM3Catalog` were the donor
+ * [`withBuilderVocabulary`][CurrentM3UiBuilderCatalogExecutor] handed a published catalog its
+ * `layout/`, `shape/`, `asset/` and `remote-compose/` from. This test proved the foundation equal
+ * to them while both existed, and they were then deleted
+ * ([#819](https://github.com/yschimke/compose-preview-server/issues/819) step 3). Their committed
+ * fixtures — `docs/design/fixtures/ui-builder/<id>-capabilities-v1.json`, written from them while
+ * they existed and frozen since — are the left-hand side now, read through
+ * [PublishedCatalogFixtures].
  *
  * ## What a failure means
  *
- * Before the deletion: the extraction dropped or changed something, and the diff says what. The
- * per-platform sets are NOT interchangeable — a watch palette handed the mobile seventeen offers
- * `layout/lazy-grid` and `layout/scaffold`, which `WearScreenCodeExporter` refuses by name, so the
- * design fails at export rather than at insert.
- *
- * After the deletion this test goes with the generators, and `SynthesisedCatalogGoldenTest`'s
- * frozen fixtures are what the foundation is measured against instead.
+ * The foundation dropped or changed something, and the diff says what. The per-platform sets are
+ * NOT interchangeable — a watch palette handed the mobile seventeen offers `layout/lazy-grid` and
+ * `layout/scaffold`, which `WearScreenCodeExporter` refuses by name, so the design fails at export
+ * rather than at insert.
  */
 class ComposeFoundationFaithfulnessTest {
 
   private val executor =
     CurrentM3UiBuilderCatalogExecutor(
-      catalogSystemIds =
-        linkedSetOf(
-          CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
-          CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
-          CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
-        )
+      catalogSystemIds = linkedSetOf(CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID)
     )
 
+  /** The packaged catalog as served, or a deleted generator's frozen output. */
   private fun synthesised(systemId: String): CatalogCapabilityV1 =
-    executor.listCatalogs().single { it.benchmark.catalogSystemId == systemId }
+    if (systemId in PublishedCatalogFixtures.servedIds) PublishedCatalogFixtures.catalog(systemId)
+    else executor.listCatalogs().single { it.benchmark.catalogSystemId == systemId }
 
   /** What a donor is read for: its builder-namespace components, in its own order. */
   private fun CatalogCapabilityV1.donated() = components.filter { component ->
@@ -221,24 +212,24 @@ class ComposeFoundationFaithfulnessTest {
   }
 
   /**
-   * The one answer this change deliberately moves, pinned so it is a decision rather than a drift.
+   * The donor is chosen by the platform a catalog declares, never by its id.
    *
    * The old chain picked a donor by catalog ID first, so a published catalog was handed the Wear
    * vocabulary whenever its id was `wear-m3` -- even while declaring itself mobile, and even though
    * `UiBuilderPreviewSurfaces` and `ComponentMenu` both read the declared platform and would have
-   * treated the same catalog as mobile. Now the declared platform wins, so the palette agrees with
-   * the exporter that has to write it.
-   *
-   * The id is still consulted when a catalog declares NO platform, which is what
-   * `WearM3ScreenCatalogTest."a published catalog wins over the synthesised one of the same id"`
-   * exercises; that hop goes with `synthesisedCatalogs` at #819 step 3.
+   * treated the same catalog as mobile. Then the declared platform won, and the id was consulted
+   * only when a catalog declared none. That last hop went with the synthesised `wear-m3` (#819 step
+   * 3): a `wear-m3` that declares nothing is mobile, as every other catalog that declares nothing
+   * is. The one wear-m3-catalog publishes declares `wear`.
    */
   @Test
-  fun `a declared platform beats the id, and no declaration still falls back to it`() {
+  fun `the declared platform picks the donor, and no declaration is mobile whatever the id`() {
     val wearVocabulary =
       synthesised(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID).donated().map {
         it.componentId
       }
+    val mobileVocabulary =
+      foundationFor(synthesised(DEFAULT_CATALOG_SYSTEM_ID)).components.map { it.componentId }
 
     fun vocabularyOf(catalog: CatalogCapabilityV1) =
       CurrentM3UiBuilderCatalogExecutor(
@@ -253,16 +244,18 @@ class ComposeFoundationFaithfulnessTest {
 
     assertEquals(
       wearVocabulary.toSortedSet(),
-      vocabularyOf(stub()).toSortedSet(),
-      "a published catalog that declares no platform stopped falling back to its id",
+      vocabularyOf(stub(platform = "wear")).toSortedSet(),
+      "a catalog declaring wear was not handed the Wear vocabulary",
     )
     assertEquals(
-      foundationFor(synthesised(DEFAULT_CATALOG_SYSTEM_ID))
-        .components
-        .map { it.componentId }
-        .toSortedSet(),
+      mobileVocabulary.toSortedSet(),
       vocabularyOf(stub(platform = "mobile")).toSortedSet(),
       "the catalog's own declaration lost to its id",
+    )
+    assertEquals(
+      mobileVocabulary.toSortedSet(),
+      vocabularyOf(stub()).toSortedSet(),
+      "a catalog declaring no platform was handed a vocabulary off its id",
     )
   }
 

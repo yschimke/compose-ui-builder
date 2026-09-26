@@ -27,8 +27,8 @@ import kotlinx.serialization.json.JsonPrimitive
  * packaged Material 3 catalog because that is where the components are currently declared. The
  * intent of [#819](https://github.com/yschimke/compose-preview-server/issues/819) is that this
  * becomes a catalog published like any other, at which point this file loads a file instead of
- * building a list — and the two synthesised per-platform generators, whose only remaining job is to
- * be this donor, can go.
+ * building a list. The synthesised `wear-m3` and `remote-m3` generators it replaced as donor are
+ * gone (#819 step 3).
  *
  * ## Why the set is per platform rather than one list
  *
@@ -73,9 +73,8 @@ private const val MOBILE_PLATFORM = CurrentM3UiBuilderCatalogExecutor.DEFAULT_PL
 /**
  * One platform's share of the foundation: which components, in what shape, on which shelves.
  *
- * `ComposeFoundationFaithfulnessTest` asserts each of these against what the synthesised catalog of
- * that platform donates today, which is what makes the generators deletable rather than merely
- * redundant.
+ * `ComposeFoundationFaithfulnessTest` pins each of these against the committed catalog of that
+ * platform, which is what the deleted generators used to donate.
  */
 private class FoundationCuration(
   /**
@@ -153,7 +152,7 @@ private val FOUNDATION_CURATIONS =
             "shape/linear-gradient",
             "asset/image",
           ),
-        // The same narrowing `remoteM3Catalog` applies, from the one place it is written.
+        // The narrowing every Remote Compose body takes, from the one place it is written.
         curate = { component -> component.narrowedForRemoteAuthoring().withWidgetProfileNote() },
         menu = { base -> remoteM3ComponentMenu(base.statusSemantics) },
       ),

@@ -12,36 +12,28 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 /**
- * `wear-m3` and `remote-m3`, as JSON, checked in.
+ * `a2ui-catalog`, as JSON, checked in — and, before them, `wear-m3` and `remote-m3`.
  *
  * ## Why a golden of something we generate
  *
- * These two catalogs are written in Kotlin **here** — synthesised from the packaged Material 3 one
- * at startup, some 1,300 lines of authored capabilities, shelves, variant properties and slot
- * policy for components this repository has never compiled. The plan
+ * A catalog written in Kotlin here is a description nobody outside this repository can read or
+ * diff. The plan
  * ([`UI_BUILDER_CATALOG_CONTRACT.md`](../../../../../../../../docs/design/UI_BUILDER_CATALOG_CONTRACT.md))
- * moves that knowledge into the repositories that own it, where it is published as data and read
- * here rather than constructed here.
+ * moves that knowledge into the repositories that own it, and its first step was writing down what
+ * the generators produced, so a catalog repository had something to reproduce and the equivalence
+ * gate had a left-hand side.
  *
- * The first step of that is neither writing a loader nor deleting a generator. It is **writing down
- * what the generators currently produce**, because:
- *
- * - wear-m3-catalog cannot reduce a policy file from a description that exists only as Kotlin in
- *   another repository. This is the description, in a form somebody can read and diff.
- * - the equivalence gate needs a left-hand side. "Is wear-m3-catalog ready?" becomes "does the file
- *   it publishes still describe this catalog?", which is a check rather than a judgement.
- * - it costs nothing and rolls back to nothing. **The runtime still constructs these catalogs**;
- *   this test only records what it constructed. Every reader is untouched, so a change of mind at
- *   any later phase discards two JSON files and this test.
+ * `wear-m3` and `remote-m3` went all the way: wear-m3-catalog publishes both, every deployment
+ * serves them from that, and their generators are deleted (#819 step 3). Their two files stay as
+ * frozen fixtures of what is published — tests read them through [PublishedCatalogFixtures] and the
+ * gate still compares them — but nothing here writes them. `a2ui-catalog` is still generated here,
+ * so its golden is still asserted.
  *
  * ## What a failure means
  *
- * Somebody changed `wearM3Catalog` or `remoteM3Catalog` — or changed the packaged Material 3
- * catalog they are both derived from, which is the case people are surprised by. Run
- * **`scripts/regenerate-goldens.sh`**, which rewrites every committed golden this repository
- * generates and is where AGENTS.md and the `/regenerate-goldens` workflow both send people; then
- * **read the diff**: it is the diff a catalog repository will have to reproduce, and after the
- * cutover it is the diff a catalog repository will have to have caused.
+ * Somebody changed `a2uiCatalog` — or the packaged Material 3 catalog it is derived from, which is
+ * the case people are surprised by. Run **`scripts/regenerate-goldens.sh`**, which rewrites every
+ * committed golden this repository generates, and **read the diff**.
  *
  * That script passes `-PuiBuilderGoldens=write`, which is what this class reads. A Gradle property
  * rather than a bare `-D`, because `-D` on the command line reaches the Gradle JVM and not the
@@ -54,21 +46,13 @@ class SynthesisedCatalogGoldenTest {
       catalogSystemIds =
         setOf(
           CurrentM3UiBuilderCatalogExecutor.DEFAULT_CATALOG_SYSTEM_ID,
-          CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID,
-          CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID,
           CurrentM3UiBuilderCatalogExecutor.A2UI_CATALOG_SYSTEM_ID,
         )
     )
 
-  @Test
-  fun `the wear-m3 catalog matches its checked-in golden`() {
-    assertGolden(CurrentM3UiBuilderCatalogExecutor.WEAR_M3_CATALOG_SYSTEM_ID)
-  }
-
-  @Test
-  fun `the remote-m3 catalog matches its checked-in golden`() {
-    assertGolden(CurrentM3UiBuilderCatalogExecutor.REMOTE_M3_CATALOG_SYSTEM_ID)
-  }
+  // `wear-m3` and `remote-m3` have no golden test any more: the generators they were goldens of are
+  // deleted (#819 step 3), and the two files are frozen fixtures of the catalogs wear-m3-catalog
+  // publishes, which `ui-builder-equivalence.sh --strict` holds to the published policy in CI.
 
   @Test
   fun `the a2ui catalog matches its checked-in golden`() {
@@ -76,7 +60,7 @@ class SynthesisedCatalogGoldenTest {
   }
 
   @Test
-  fun `both goldens declare their own catalog id and platform`() {
+  fun `every catalog fixture declares its own catalog id and platform`() {
     // Cheap, and it is the pair of fields the whole contract turns on: a catalog is identified by
     // its id and grouped by its platform WORD, and a golden that agreed with the other one about
     // either would be a golden of the wrong catalog.
@@ -139,7 +123,9 @@ class SynthesisedCatalogGoldenTest {
    * rendering of the in-memory object would compare a shape nothing publishes.
    */
   private fun catalog(systemId: String): JsonObject {
-    val catalog = executor.listCatalogs().single { it.benchmark.catalogSystemId == systemId }
+    val catalog =
+      if (systemId in PublishedCatalogFixtures.servedIds) PublishedCatalogFixtures.catalog(systemId)
+      else executor.listCatalogs().single { it.benchmark.catalogSystemId == systemId }
     val encoded = pretty.encodeToString(catalog)
     return sortKeys(pretty.parseToJsonElement(encoded) as JsonObject) as JsonObject
   }
