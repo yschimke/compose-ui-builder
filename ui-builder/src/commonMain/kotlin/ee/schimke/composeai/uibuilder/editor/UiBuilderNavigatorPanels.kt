@@ -39,6 +39,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragIndicator
@@ -65,6 +66,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.onFocusChanged
@@ -1048,12 +1050,8 @@ internal fun CatalogThumbnail(
   // [PREVIEW_ROOMY_FRAME]. Saveable so the lazy grid keeps the answer for a tile scrolled out and
   // back: without it every return would draw the squeezed picture for a frame, then jump.
   var roomy by rememberSaveable(componentId, label) { mutableStateOf(false) }
-  val roomyFrame =
-    if (LocalUiBuilderCatalogPlatform.current == UiBuilderCatalogPlatform.WEAR.wireValue) {
-      PREVIEW_ROOMY_WEAR_FRAME
-    } else {
-      PREVIEW_ROOMY_FRAME
-    }
+  val wear = LocalUiBuilderCatalogPlatform.current == UiBuilderCatalogPlatform.WEAR.wireValue
+  val roomyFrame = if (wear) PREVIEW_ROOMY_WEAR_FRAME else PREVIEW_ROOMY_FRAME
   val frame = if (roomy) roomyFrame else PreviewFrameSize.Default
   val themed =
     remember(document, panelDark, frame) {
@@ -1080,24 +1078,45 @@ internal fun CatalogThumbnail(
   // picture was a blank tile indistinguishable from one that failed to draw.
   var drewNothing by remember(document.id) { mutableStateOf(false) }
   val tileSize = with(density) { Size(tile.width.toPx(), tile.height.toPx()) }
+  // A Wear miniature is the whole watch: what fills a Wear frame is a screen — a picker, a dialog,
+  // a ring — designed against a round black face. On the panel's grey it read as broken: a picker
+  // fades its unfocused rows to the face's black, which on grey is a black box over the numbers,
+  // and the column it centres looked pushed off the edge of nothing. So the frame is drawn whole,
+  // on black, cut to the circle, rather than cropped to the component.
+  val watchFace = roomy && wear
   val transform =
-    thumbnailContentTransform(
-      contentBounds = contentBounds,
-      tileSize = tileSize,
-      fallbackScale = fallbackScale,
-      margin = with(density) { THUMBNAIL_MARGIN.toPx() },
-      maxScale = 1f,
-    )
+    if (watchFace) {
+      ThumbnailContentTransform(
+        fallbackScale,
+        Offset(
+          (tileSize.width - fullFrame.width) / 2f,
+          (tileSize.height - fullFrame.height) / 2f,
+        ),
+      )
+    } else {
+      thumbnailContentTransform(
+        contentBounds = contentBounds,
+        tileSize = tileSize,
+        fallbackScale = fallbackScale,
+        margin = with(density) { THUMBNAIL_MARGIN.toPx() },
+        maxScale = 1f,
+      )
+    }
   // The component's own box in the tile, plus room for a shadow: what is kept of the frame.
   val shadowRoom = with(density) { THUMBNAIL_SHADOW_ROOM.toPx() }
-  val visible = contentBounds?.let { bounds ->
-    Rect(
-      left = bounds.x * transform.scale + transform.translation.x - shadowRoom,
-      top = bounds.y * transform.scale + transform.translation.y - shadowRoom,
-      right = bounds.right * transform.scale + transform.translation.x + shadowRoom,
-      bottom = bounds.bottom * transform.scale + transform.translation.y + shadowRoom,
-    )
-  }
+  val visible =
+    if (watchFace && contentBounds != null) {
+      Rect(transform.translation, fullFrame)
+    } else {
+      contentBounds?.let { bounds ->
+        Rect(
+          left = bounds.x * transform.scale + transform.translation.x - shadowRoom,
+          top = bounds.y * transform.scale + transform.translation.y - shadowRoom,
+          right = bounds.right * transform.scale + transform.translation.x + shadowRoom,
+          bottom = bounds.bottom * transform.scale + transform.translation.y + shadowRoom,
+        )
+      }
+    }
   Box(Modifier.size(tile), contentAlignment = Alignment.TopStart) {
     Box(
       Modifier.matchParentSize().drawWithContent {
@@ -1126,6 +1145,7 @@ internal fun CatalogThumbnail(
             translationX = transform.translation.x
             translationY = transform.translation.y
           }
+          .then(if (watchFace) Modifier.clip(CircleShape).background(Color.Black) else Modifier)
           // A picture of a Switch is not a Switch. Without this the row would publish every
           // semantics node inside the thumbnail — so a screen reader would read a palette row as a
           // switch it could toggle, and `getByRole("button", …)` would match forty pictures of
@@ -1418,10 +1438,16 @@ internal fun thumbnailContentBounds(
       .filter { it.width > 0f && it.height > 0f }
       .toList()
   if (componentBounds.isEmpty()) return null
-  val left = componentBounds.minOf { (it.x - frame.x) / scale }
-  val top = componentBounds.minOf { (it.y - frame.y) / scale }
-  val right = componentBounds.maxOf { (it.right - frame.x) / scale }
-  val bottom = componentBounds.maxOf { (it.bottom - frame.y) / scale }
+  // Kept to the frame. A lazy row lays out the item it is scrolling towards past the frame's edge,
+  // and counting that item scaled the whole row down to a strip of unreadable cards; cut at the
+  // edge, the row keeps its size and the item peeks in, which is what says it scrolls.
+  val frameWidth = frame.width / scale
+  val frameHeight = frame.height / scale
+  val left = componentBounds.minOf { (it.x - frame.x) / scale }.coerceIn(0f, frameWidth)
+  val top = componentBounds.minOf { (it.y - frame.y) / scale }.coerceIn(0f, frameHeight)
+  val right = componentBounds.maxOf { (it.right - frame.x) / scale }.coerceIn(0f, frameWidth)
+  val bottom = componentBounds.maxOf { (it.bottom - frame.y) / scale }.coerceIn(0f, frameHeight)
+  if (right <= left || bottom <= top) return null
   return UiBuilderPixelBounds(left, top, right - left, bottom - top)
 }
 

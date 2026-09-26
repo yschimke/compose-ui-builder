@@ -151,6 +151,13 @@ internal object StarterContent {
       // Ticked and on. Material draws an unchecked box as an empty square and an off switch as a
       // grey pill, and a palette drop that looks like neither a checkbox nor a switch is the case
       // starter content exists for. Turning one off is a click.
+      // The lists arrive holding cards, and cards with no gap between them meet edge to edge: three
+      // cards in a row read as one strip of text, "Item oneItem twoItem three". Material's own list
+      // samples space their items; so do these.
+      "layout/lazy-row" to mapOf("horizontalSpacingDp" to starterNumber(8)),
+      "layout/lazy-column" to mapOf("verticalSpacingDp" to starterNumber(8)),
+      "layout/lazy-grid" to
+        mapOf("horizontalSpacingDp" to starterNumber(8), "verticalSpacingDp" to starterNumber(8)),
       "m3/checkbox" to mapOf("checked" to starterBool(true)),
       // One of a group is chosen, or the group is a row of empty circles.
       "m3/radio-button" to mapOf("selected" to starterBool(true)),
@@ -228,6 +235,18 @@ internal object StarterContent {
       // fill went looking for `m3/text` in a catalog that has only `wear-m3/text` and refused the
       // insert — so a Wear Button or Card could not be added from the palette at all.
       WearScreenCodeExporter.BUTTON to mapOf("content" to listOf(wearText("Button"))),
+      // A list of three rows, the way a Wear list is used: an empty one fills the screen with
+      // nothing, which on the canvas is an empty watch and on the palette an empty black circle.
+      WearScreenCodeExporter.TRANSFORMING_LAZY_COLUMN to
+        mapOf(
+          "items" to
+            listOf("Row one", "Row two", "Row three").map { label ->
+              StarterNode(
+                WearScreenCodeExporter.BUTTON,
+                slots = mapOf("content" to listOf(wearText(label))),
+              )
+            }
+        ),
       WearScreenCodeExporter.CARD to mapOf("content" to listOf(wearText("Card"))),
       // Buttons, because `ButtonGroup` lays out buttons — anything else has no scope to be laid
       // out in, and the export refuses it.

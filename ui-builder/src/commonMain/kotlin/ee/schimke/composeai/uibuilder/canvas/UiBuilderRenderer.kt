@@ -1434,6 +1434,9 @@ private fun RenderNode(
           title = { slot("title").forEach { child(it, Modifier) } },
         )
       "m3/search-bar" -> {
+        // The corner the screen exporter writes as `shape`: drawn here too, or an edit to it would
+        // change the export and nothing on the canvas.
+        val searchShape = node.dimension("shapeDp")?.let(::RoundedCornerShape)
         val inputField: @Composable () -> Unit = {
           slot("inputField").forEach { child(it, Modifier.fillMaxSize()) }
         }
@@ -1443,7 +1446,7 @@ private fun RenderNode(
         ) {
           Surface(
             measured.height(56.dp),
-            shape = CircleShape,
+            shape = searchShape ?: CircleShape,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = node.float("tonalElevationDp").dp,
           ) {
@@ -1455,6 +1458,7 @@ private fun RenderNode(
             expanded = node.bool("expanded"),
             onExpandedChange = {},
             modifier = measured,
+            shape = searchShape ?: SearchBarDefaults.inputFieldShape,
             tonalElevation = node.float("tonalElevationDp").dp,
           ) {
             slot("expandedContent").forEach { child(it, Modifier) }

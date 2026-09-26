@@ -49,17 +49,15 @@ class EditorLayoutPropertyTest {
   }
 
   @Test
-  fun `a dimension no emitter reads is not offered at all`() {
-    // `m3/search-bar.shapeDp` is declared by the catalog and read by nothing: the renderer pins a
-    // search bar to `CircleShape` and the exporter's emitter takes no shape. A number field for it
-    // is worse than none — every value it accepts is discarded, and the design then looks authored
-    // and draws as if it were not.
+  fun `a search bar's corner is offered now that everything reads it`() {
+    // `m3/search-bar.shapeDp` used to be read by nothing but the screen projection: the renderer
+    // pinned a search bar to `CircleShape` and the Compose emitter took no shape, so it was —
+    // rightly
+    // — not offered, since every value would have been discarded. The renderer and the emitter both
+    // draw it now, and it is offered like any other dimension.
     val shape = assertNotNull(field("search-bar", "shapeDp"))
-    assertEquals(EditorPropertyControl.Unsupported, shape.control)
-    assertNull(shape.numberBounds)
+    assertEquals(EditorPropertyControl.Number, shape.control)
 
-    // Its sibling on the same component is emitted, so the rule is about coverage rather than a
-    // component-wide opt-out.
     val tonal = assertNotNull(field("search-bar", "tonalElevationDp"))
     assertEquals(EditorPropertyControl.Number, tonal.control)
   }
