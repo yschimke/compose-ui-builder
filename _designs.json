@@ -1,0 +1,11 @@
+{
+  "schema": "compose-ui-builder-design-renders/v1",
+  "designs": [
+    {
+      "id": "ui-builder-native-both",
+      "file": "ui-builder-native-both.png",
+      "sha256": "538782abd194a0e7577e7b55217747825b9b1409bb22108cbf1266f574fd565d",
+      "bytes": 196709
+    }
+  ]
+}
