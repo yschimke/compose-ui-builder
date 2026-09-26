@@ -978,7 +978,21 @@ class UiBuilderEditorReducer(
     val target = dropTarget(ghostState, componentId) ?: return null
     val inserted =
       reduce(ghostState, UiBuilderEditorEvent.InsertComponent(componentId, target, variant))
-    return inserted.takeIf { it.lastOutcome is CommandOutcome.Accepted }?.document
+    val document = inserted.takeIf { it.lastOutcome is CommandOutcome.Accepted }?.document
+    return if (frameComponentId == FRAME_BOX) document else document?.withoutFrameCell()
+  }
+
+  /**
+   * The ghost re-rooted at the component it carries, the frame cell dropped.
+   *
+   * A `layout/box` cell draws nothing of its own, so it stays. A catalog's own list container does
+   * not: the canvas draws `a2ui/Column` as a named placeholder like every A2UI node, and the ghost
+   * would carry a dashed "Column" around the component that the drop never places. The cell only
+   * had to exist for the insert to validate; once it has, it goes.
+   */
+  private fun UiBuilderDocument.withoutFrameCell(): UiBuilderDocument {
+    val childId = nodes[DRAG_GHOST_CELL_ID]?.slots?.get(FRAME_SLOT)?.singleOrNull() ?: return this
+    return copy(roots = listOf(childId), nodes = nodes - DRAG_GHOST_CELL_ID)
   }
 
   /**

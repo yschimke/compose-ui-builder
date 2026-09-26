@@ -66,6 +66,27 @@ class DragGhostDocumentTest {
     assertEquals(emptyList(), ghostless.sorted(), "components whose ghost could not be built")
   }
 
+  /**
+   * A catalog framed by its own container (A2UI's `a2ui/Column`) must not carry that container in
+   * the air: the canvas draws it as a dashed placeholder, and the drop never places it.
+   */
+  @Test
+  fun `an A2UI ghost is rooted at the component, not the column it was validated in`() {
+    val a2ui = CapabilityCatalogParser.parse(resource("/a2ui-catalog-capabilities-v1.json"))
+    val a2uiReducer = UiBuilderEditorReducer(a2ui)
+    val a2uiState = a2uiReducer.initial(document, selectedNodeId = null)
+    a2ui.components.forEach { component ->
+      val ghost =
+        assertNotNull(
+          a2uiReducer.dragGhostDocument(a2uiState, component.componentId),
+          component.componentId,
+        )
+      val root = ghost.nodes.getValue(ghost.roots.single())
+      assertEquals(component.componentId, root.componentId)
+      assertNull(ghost.nodes[DRAG_GHOST_CELL_ID], "${component.componentId} kept its frame cell")
+    }
+  }
+
   @Test
   fun `a move ghost is the subtree being carried, rooted at the node`() {
     val ghost = assertNotNull(reducer.nodeGhostDocument(state, "main-episode-copy"))
