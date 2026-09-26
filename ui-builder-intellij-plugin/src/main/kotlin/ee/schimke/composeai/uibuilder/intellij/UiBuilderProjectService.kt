@@ -16,6 +16,7 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.util.Alarm
 import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
+import ee.schimke.composeai.uibuilder.host.DesignFiles
 import ee.schimke.composeai.uibuilder.host.OfflineCatalog
 import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSession
 import ee.schimke.composeai.uibuilder.host.RemoteUiBuilderConnection
@@ -352,12 +353,11 @@ private val supportedProjectDesignExtensions = setOf("json", UI_BUILDER_DESIGN_E
 
 private fun readProjectDesign(file: VirtualFile): DesignDocumentV1? = runCatching {
   val text = file.inputStream.reader().use { it.readText() }
-  projectDesignJson.decodeFromString(
-    DesignDocumentV1.serializer(),
-    text,
-  )
+  decodeProjectDesign(text)
 }
   .getOrNull()
+
+internal fun decodeProjectDesign(text: String): DesignDocumentV1 = DesignFiles.decode(text)
 
 /**
  * Writes a project design back to its file, coalescing a burst of edits into one write.

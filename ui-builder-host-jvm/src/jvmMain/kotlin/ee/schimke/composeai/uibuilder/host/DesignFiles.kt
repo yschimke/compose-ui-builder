@@ -27,23 +27,28 @@ object DesignFiles {
 
   val extensions: Set<String> = setOf("uid", "json")
 
-  /** Decodes [path], refusing a document this editor cannot write back or has no catalog for. */
-  fun read(path: Path): UiBuilderDocument {
-    val encoded = json.parseToJsonElement(Files.readString(path))
+  /** Decodes the shared on-disk protocol, ignoring only a future polymorphic home variant. */
+  fun decode(text: String): DesignDocumentV1 {
+    val encoded = json.parseToJsonElement(text)
     val objectValue = encoded as? JsonObject
     val home = objectValue?.get("home") as? JsonObject
     val homeKind = (home?.get("kind") as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
-    // DesignDocumentV1 is the first decoder on this path, before the builder's tolerant home
-    // serializer gets a chance to run. Strip only a future home variant here; the rest of the
-    // protocol document remains typed and validated exactly as before.
+    // The protocol's sealed serializer rejects a future home discriminator before the builder's
+    // tolerant home serializer gets a chance to run. Strip only that variant here; known or
+    // malformed homes and the rest of the protocol document remain typed and validated.
     val compatible =
       if (objectValue != null && homeKind != null && homeKind !in KNOWN_HOME_KINDS) {
         JsonObject(objectValue - "home")
       } else {
         encoded
       }
+    return json.decodeFromJsonElement(DesignDocumentV1.serializer(), compatible)
+  }
+
+  /** Decodes [path], refusing a document this editor cannot write back or has no catalog for. */
+  fun read(path: Path): UiBuilderDocument {
     val document =
-      json.decodeFromJsonElement(DesignDocumentV1.serializer(), compatible).also {
+      decode(Files.readString(path)).also {
         require(it.schema in supportedSchemas) {
           "${path.fileName} declares schema '${it.schema}', which this editor cannot write back"
         }
