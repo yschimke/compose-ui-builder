@@ -745,7 +745,11 @@ object CollaborationReducer {
     } else if (environmentOnly) {
       var environment = prepared.document.environment
       undo.target.environmentChanges.forEach { change ->
-        environment = JsonObject(environment + (change.field to change.after))
+        val after = change.after
+        environment =
+          JsonObject(
+            if (after == null) environment - change.field else environment + (change.field to after)
+          )
       }
       changed = changed.copy(document = prepared.document.copy(environment = environment))
     } else if (structuralOnly) {

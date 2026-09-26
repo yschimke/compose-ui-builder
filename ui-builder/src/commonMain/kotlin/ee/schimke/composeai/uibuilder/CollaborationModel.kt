@@ -238,7 +238,8 @@ data class PropertyChange(
 data class EnvironmentChange(
   val field: String,
   val before: JsonElement?,
-  val after: JsonElement,
+  /** Null when the command cleared [field]: absent, as [before] is for a field never set. */
+  val after: JsonElement?,
   /** The revision that owned [field] before this command wrote it — see [PropertyChange]. */
   val beforeVersion: Int? = null,
 )

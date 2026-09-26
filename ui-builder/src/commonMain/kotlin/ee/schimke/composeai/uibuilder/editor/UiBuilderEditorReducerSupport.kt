@@ -1282,7 +1282,7 @@ internal fun AcceptedCommand.describeChanges(): List<EditorOperationChange> =
       EditorOperationChange(
         label = it.field,
         before = it.before?.displayValue(),
-        after = it.after.displayValue(),
+        after = it.after?.displayValue(),
       )
     } +
     structuralChanges.map {

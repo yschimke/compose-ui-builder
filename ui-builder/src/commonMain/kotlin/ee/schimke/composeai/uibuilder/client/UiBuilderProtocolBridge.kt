@@ -24,6 +24,7 @@ import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveNodePropertyMutationV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.ResetTypefaceEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.RestoreNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceDeltaV1
 import ee.schimke.composeai.uibuilder.protocol.SetDensityEnvironmentChangeV1
@@ -37,6 +38,7 @@ import ee.schimke.composeai.uibuilder.protocol.SetModifiersMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetPropertyMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetThemeEnvironmentChangeV1
+import ee.schimke.composeai.uibuilder.protocol.SetTypefaceEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetWidthDpEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.StateVariableV1
 import ee.schimke.composeai.uibuilder.protocol.ThemeV1
@@ -48,6 +50,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
@@ -285,6 +288,9 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
                   if (devices.isEmpty()) ResetExportDevicesEnvironmentChangeV1
                   else SetExportDevicesEnvironmentChangeV1(devices)
                 }
+            "typeface" ->
+              if (value is JsonNull) ResetTypefaceEnvironmentChangeV1
+              else SetTypefaceEnvironmentChangeV1(value.jsonPrimitive.content)
             else -> error("unsupported editor environment field: $field")
           }
         )
