@@ -30,15 +30,19 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderNativeOnly
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
 import ee.schimke.composeai.uibuilder.editor.CatalogThumbnail
 import ee.schimke.composeai.uibuilder.editor.CatalogThumbnailOutcome
 import ee.schimke.composeai.uibuilder.editor.EditorCatalogVariant
 import ee.schimke.composeai.uibuilder.editor.EditorComponentKind
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import java.io.File
 import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Every palette thumbnail of every catalog this build ships, drawn the way the component browser
@@ -110,8 +114,14 @@ class CatalogThumbnailRenderTest {
     val reducer = UiBuilderEditorReducer(catalog)
     val tiles =
       reducer.catalogItems("").flatMap { item ->
-        (listOf(null) + item.variants).map { variant ->
-          Tile(item.componentId, item.displayName, variant, item.kind)
+        val calls =
+          (listOf(null) + item.variants).map { variant ->
+            reducer.previewDocument(item.componentId, variant)?.let {
+              exportedCall(it, catalog, item.componentId)
+            }
+          }
+        (listOf(null) + item.variants).mapIndexed { index, variant ->
+          Tile(item.componentId, item.displayName, variant, item.kind, calls[index], calls[0])
         }
       }
     val outcomes = mutableMapOf<Tile, CatalogThumbnailOutcome>()
@@ -199,7 +209,7 @@ class CatalogThumbnailRenderTest {
                   onOutcome = { onOutcome(tile, it) },
                 )
               }
-              Text(tile.name, color = Color.White, fontSize = 9.sp)
+              Text(tile.label, color = Color.White, fontSize = 9.sp)
             }
           }
         }
@@ -212,9 +222,63 @@ class CatalogThumbnailRenderTest {
     val displayName: String,
     val variant: EditorCatalogVariant?,
     val kind: EditorComponentKind,
+    /** The composable the Compose export writes for this component, when it writes its own. */
+    val call: String?,
+    /** The same, for the component with no variant chosen. */
+    val baseCall: String?,
   ) {
+    /** The id, for assertion messages: what a reader searches the catalog and the code for. */
     val name: String
       get() = componentId + (variant?.let { " · ${it.value}" } ?: "")
+
+    /**
+     * What the contact sheet prints under a picture: the call the export writes for exactly this
+     * variant — `Text()`, `FloatingActionButton()`, `OutlinedTextField()` — and, where a variant is
+     * an argument to the same call, which one: `Card() · Outlined`. Where the export writes no
+     * composable of the component's own, the catalog's display name.
+     */
+    val label: String
+      get() {
+        val variant = variant
+        return when {
+          call == null -> displayName + (variant?.let { " · ${it.label}" } ?: "")
+          variant != null && call == baseCall -> "$call() · ${variant.label}"
+          else -> "$call()"
+        }
+      }
+  }
+
+  /**
+   * The call the Compose export writes for [componentId] in its thumbnail document, read from the
+   * exported source rather than predicted: the emitter comments each node with its component, and
+   * the line after the comments is the node's own call. The sheet then prints the export's own
+   * variant-to-callable choice rather than a guess at it.
+   */
+  private fun exportedCall(
+    document: UiBuilderDocument,
+    catalog: CapabilityCatalog,
+    componentId: String,
+  ): String? {
+    // A thumbnail document is sized in dp and never says so; the export needs the density stated.
+    val environment =
+      if ("density" in document.environment) document.environment
+      else JsonObject(document.environment + ("density" to JsonPrimitive(1.0)))
+    val source =
+      CapabilityComposeCodeExporter.export(document.copy(environment = environment), catalog).source
+        ?: return null
+    val lines = source.lines().map(String::trim)
+    val node = lines.indexOfFirst {
+      it.startsWith("// node:") && " component:$componentId " in "$it "
+    }
+    if (node < 0) return null
+    val call = lines.drop(node).firstOrNull { !it.startsWith("//") } ?: return null
+    val symbol = COMPOSABLE_CALL.find(call)?.groupValues?.get(1) ?: return null
+    // A builder helper is the export's own, not a composable anybody calls; and a loop or a shape
+    // layer written as a `Column` or `Box` is that other component's call, not this one's.
+    val someoneElses =
+      catalog.componentsById[componentId]?.code?.symbol != symbol &&
+        catalog.components.any { it.code?.symbol == symbol }
+    return symbol.takeUnless { it.startsWith("Builder") || someoneElses }
   }
 
   private fun samePixels(a: java.awt.image.BufferedImage, b: java.awt.image.BufferedImage) =
@@ -224,6 +288,9 @@ class CatalogThumbnailRenderTest {
         .contentEquals(b.getRGB(0, 0, b.width, b.height, null, 0, b.width))
 
   private companion object {
+    /** `Text(`, `LazyColumn {`, `SearchBarDefaults.InputField(`: a call, not a loop or a value. */
+    val COMPOSABLE_CALL = Regex("^([A-Z][A-Za-z0-9]*(?:\\.[A-Z][A-Za-z0-9]*)?)\\s*[({]")
+
     const val SHEET_WIDTH = 1216
   }
 }
