@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.63.0](https://github.com/yschimke/compose-ui-builder/compare/v3.62.0...v3.63.0) (2026-09-26)
+
+
+### Features
+
+* export generated Kotlin through the host bridge ([#314](https://github.com/yschimke/compose-ui-builder/issues/314)) ([d7d4829](https://github.com/yschimke/compose-ui-builder/commit/d7d4829fc3be37c8d7fc17198c5f73095aecd053))
+* **ui-builder:** a quick editor on request, text typed in place, and editable Wear numbers ([#312](https://github.com/yschimke/compose-ui-builder/issues/312)) ([c46d1c4](https://github.com/yschimke/compose-ui-builder/commit/c46d1c48f87c4f7a3e4c50b68f06e13aba412e48))
+* **ui-builder:** show the poster's account next to their comment name ([#311](https://github.com/yschimke/compose-ui-builder/issues/311)) ([75f26d3](https://github.com/yschimke/compose-ui-builder/commit/75f26d36edfe0645af8d8400ef5ec058a2ba9c90))
+
+
+### Bug Fixes
+
+* **ui-builder:** draw the Wear screen's clock, theme and face with the real library ([#315](https://github.com/yschimke/compose-ui-builder/issues/315)) ([c05a86b](https://github.com/yschimke/compose-ui-builder/commit/c05a86b70fc553537f27709b65076ea046aad93e))
+* **web:** rely on the host's browse cookie instead of copying ?token= onto requests ([#310](https://github.com/yschimke/compose-ui-builder/issues/310)) ([ead899e](https://github.com/yschimke/compose-ui-builder/commit/ead899e0cdc8f45705932a03e6a78051a878607d))
+
 ## [3.62.0](https://github.com/yschimke/compose-ui-builder/compare/v3.61.0...v3.62.0) (2026-09-26)
 
 
