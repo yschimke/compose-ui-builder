@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.66.0](https://github.com/yschimke/compose-ui-builder/compare/v3.65.0...v3.66.0) (2026-09-27)
+
+
+### Bug Fixes
+
+* **ui-builder:** open navigation-suite designs on the canvas ([#336](https://github.com/yschimke/compose-ui-builder/issues/336)) ([5185462](https://github.com/yschimke/compose-ui-builder/commit/5185462c09cfe1af845315d756f37728e15afd3c))
+
 ## [3.65.0](https://github.com/yschimke/compose-ui-builder/compare/v3.64.0...v3.65.0) (2026-09-27)
 
 
