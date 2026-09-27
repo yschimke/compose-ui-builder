@@ -1305,9 +1305,10 @@ public class PersistentUiBuilderService(
   /**
    * Commit a complete document rather than pretending its changes are a v1 operation batch.
    *
-   * The operation outcome is durable and idempotent. A content replacement cuts the conflict, delta
-   * and undo windows at this sequence because none can describe an arbitrary replacement; a
-   * provenance-only home move preserves them. Subscribers receive the whole snapshot either way.
+   * The operation outcome is durable and idempotent. Both changes cut the v1 delta window because
+   * it cannot describe either whole-document replacement or provenance. A content replacement also
+   * cuts conflict and undo state; a provenance-only home move preserves those. Subscribers receive
+   * the whole snapshot either way.
    */
   private fun replaceWholeDocument(
     actor: AuthenticatedUiBuilderActor,
