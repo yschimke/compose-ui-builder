@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.65.0](https://github.com/yschimke/compose-ui-builder/compare/v3.64.0...v3.65.0) (2026-09-27)
+
+
+### Features
+
+* **document:** record canonical design homes ([#334](https://github.com/yschimke/compose-ui-builder/issues/334)) ([570caa5](https://github.com/yschimke/compose-ui-builder/commit/570caa5b4f2b55fb44a8856f61bc25b882b872b3))
+
 ## [3.64.0](https://github.com/yschimke/compose-ui-builder/compare/v3.63.0...v3.64.0) (2026-09-26)
 
 
