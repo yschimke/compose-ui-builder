@@ -12,6 +12,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.canonicalJson
 import ee.schimke.composeai.uibuilder.export.cardContentFill
+import ee.schimke.composeai.uibuilder.export.description
 import ee.schimke.composeai.uibuilder.export.exportedStateIdentifier
 import ee.schimke.composeai.uibuilder.export.optionalString
 import ee.schimke.composeai.uibuilder.renderer.sdk.GoogleMaterialIcon
@@ -147,6 +148,9 @@ internal class ComposeEmitter(
     appendLine(
       "// Generated from design ${document.id.escapeComment()} revision ${document.revision}."
     )
+    document.home?.let { home ->
+      appendLine("// Canonical home: ${home.description().escapeComment()}.")
+    }
     appendLine(
       "// Catalog ${document.catalogString("systemId").escapeComment()}@${document.catalogString("catalogRevision").escapeComment()}; capability ${document.catalogString("capabilityDigest").escapeComment()}."
     )
@@ -1902,6 +1906,7 @@ internal fun UiBuilderDocument.exportProvenance(
   DocumentExportProvenance(
     designId = id,
     designRevision = revision,
+    home = home?.description(),
     documentSchema = schema,
     catalogSystemId = catalogString("systemId"),
     catalogRevision = catalogString("catalogRevision"),

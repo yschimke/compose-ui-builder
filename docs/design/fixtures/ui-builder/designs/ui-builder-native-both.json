@@ -7,6 +7,10 @@
       "operationId": "create",
       "type": "createDesign",
       "title": "UI builder — Wasm and native renders side by side",
+      "home": {
+        "kind": "repo",
+        "path": "docs/design/fixtures/ui-builder/designs/ui-builder-native-both.json"
+      },
       "catalogPin": {
         "systemId": "m3-catalog",
         "catalogRevision": "candidate",

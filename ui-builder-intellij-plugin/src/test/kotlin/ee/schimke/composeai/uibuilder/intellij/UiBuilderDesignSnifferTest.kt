@@ -32,6 +32,19 @@ class UiBuilderDesignSnifferTest {
   }
 
   @Test
+  fun aFutureHomeKindDoesNotPreventThePluginFromOpeningTheDesign() {
+    val text =
+      File("src/integrationTest/resources/smoke-project/smoke.uid")
+        .readText()
+        .replaceFirst("{", """{"home":{"kind":"workspace","id":"future"},""")
+
+    val document = decodeProjectDesign(text)
+
+    assertEquals("installed-plugin-smoke", document.id)
+    assertNull(document.home)
+  }
+
+  @Test
   fun findsASchemaDeclaredPastTheHeadWindow() {
     // Key order means nothing in JSON: a valid design may carry its `schema` after 4 KiB of nodes.
     val late =

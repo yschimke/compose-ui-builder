@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.codegen.ComposeAssetRenderer
 import ee.schimke.composeai.uibuilder.codegen.ComposeCodeExporter
 import ee.schimke.composeai.uibuilder.codegen.ComposeExportSeverity
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocumentHome
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.svg.DocumentSvgExecutionBridge
@@ -42,6 +43,23 @@ class CapabilityComposeCodeExporterTest {
             ComposeAssetBinding(listOf("FFEA4335", "FFFBBC04", "FF174EA6")),
         ),
     )
+
+  @Test
+  fun `Compose export names a document's canonical home and revision`() {
+    val result =
+      CapabilityComposeCodeExporter.export(
+        document.copy(home = UiBuilderDocumentHome.Repo("ui-builder/designs/jetcaster.uid")),
+        catalog,
+        artworkAdapter,
+      )
+    val source = assertNotNull(result.source)
+
+    assertTrue(
+      source.contains("// Generated from design ${document.id} revision ${document.revision}.")
+    )
+    assertTrue(source.contains("// Canonical home: repository ui-builder/designs/jetcaster.uid."))
+    assertEquals("repository ui-builder/designs/jetcaster.uid", result.provenance.home)
+  }
 
   @Test
   fun `full frozen Jetcaster document exports deterministically with every node located`() {

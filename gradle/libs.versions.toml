@@ -202,6 +202,7 @@ okhttp = "5.5.0"
 okio = "3.18.2"
 classgraph = "4.8.195"
 jmdns = "3.6.3"
+json-schema-validator = "3.0.7"
 # The UI builder's Kotlin syntax highlighter, behind the Code pane. Pure Kotlin with a published
 # wasmJs variant, which is the whole reason it is this library: the pane is a Compose `Text` on a
 # canvas, so a JS/DOM highlighter (the playground's vendored CodeMirror) cannot reach it.
@@ -309,6 +310,7 @@ okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", versio
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
 snipme-highlights = { module = "dev.snipme:highlights", version.ref = "snipme-highlights" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
+json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "json-schema-validator" }
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
 compose-material3-adaptive-layout = { module = "org.jetbrains.compose.material3.adaptive:adaptive-layout", version.ref = "compose-material3-adaptive" }

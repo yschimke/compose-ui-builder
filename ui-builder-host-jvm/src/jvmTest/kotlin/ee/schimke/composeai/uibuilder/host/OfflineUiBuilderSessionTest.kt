@@ -4,6 +4,7 @@ import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocumentHome
 import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import java.nio.file.Files
 import kotlin.test.Test
@@ -19,6 +20,42 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 
 class OfflineUiBuilderSessionTest {
+  @Test
+  fun `a project session retains home when IntelliJ persists an edit`() = runBlocking {
+    val seed =
+      OfflineUiBuilderSession(Files.createTempDirectory("ui-builder-home-seed")).use { session ->
+        withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+          .snapshot
+          .state
+          .document
+          .toUiBuilderDocument()
+          .copy(home = UiBuilderDocumentHome.Repo("ui-builder/designs/login-v2.uid"))
+      }
+    val committed = CompletableDeferred<ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1>()
+    OfflineUiBuilderSession.projectDocument(seed) { committed.complete(it) }
+      .use { session ->
+        val opened = withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+        val document = opened.snapshot.state.document.toUiBuilderDocument()
+        val reducer = UiBuilderEditorReducer(session.catalog, "home-test", "home-test")
+        val initial = reducer.initial(document)
+        val settings = document.screenEnvironmentSettings()
+        val edited =
+          reducer.reduce(
+            initial,
+            UiBuilderEditorEvent.UpdateEnvironment(settings.copy(heightDp = settings.heightDp + 1)),
+          )
+
+        session.submit(
+          assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited))
+        )
+
+        assertEquals(
+          seed.home,
+          withTimeout(10.seconds) { committed.await() }.toUiBuilderDocument().home,
+        )
+      }
+  }
+
   @Test
   fun `a project document writes its authoritative revision back through the host`() = runBlocking {
     val seed =

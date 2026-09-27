@@ -24,10 +24,14 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 public data class UiBuilderCatalogIssue(
   val code: String,
@@ -432,6 +436,12 @@ public class PersistentUiBuilderService(
     val mailboxes: List<SubscriberMailbox> = emptyList(),
   )
 
+  private sealed interface WholeDocumentCandidate {
+    data class Ready(val document: DesignDocumentV1) : WholeDocumentCandidate
+
+    data class Refused(val message: String) : WholeDocumentCandidate
+  }
+
   private val lock = ReentrantLock()
   private val store: UiBuilderDesignStore = designStore.store
   private val loadedPersistence = store.load()
@@ -762,6 +772,8 @@ public class PersistentUiBuilderService(
       is UiBuilderServiceRequest.DeleteDesign -> designId
       is UiBuilderServiceRequest.ListRevisions -> designId
       is UiBuilderServiceRequest.RestoreRevision -> designId
+      is UiBuilderServiceRequest.MoveDesignHome -> designId
+      is UiBuilderServiceRequest.ReplaceDesignDocument -> designId
       UiBuilderServiceRequest.ListCatalogs,
       is UiBuilderServiceRequest.ExportDocument,
       is UiBuilderServiceRequest.CreateDesign,
@@ -800,7 +812,9 @@ public class PersistentUiBuilderService(
         val deleting = call.request is UiBuilderServiceRequest.DeleteDesign
         val renaming =
           call.request is UiBuilderServiceRequest.RenameDesign && !unusable.storeQuarantine
-        if (!previewing && !recovering && !deleting && !renaming) {
+        val replacing =
+          call.request is UiBuilderServiceRequest.ReplaceDesignDocument && !unusable.storeQuarantine
+        if (!previewing && !recovering && !deleting && !renaming && !replacing) {
           return UiBuilderServiceResponse.Error(
             UiBuilderServiceError(unusable.code, unusable.reason)
           )
@@ -927,7 +941,7 @@ public class PersistentUiBuilderService(
       )
     }
     val canonical = documentCanonicalBytes(document)
-    val retained = limits.retainedRevisionsFor(canonical.size)
+    val retained = limits.retainedRevisionsFor(documentRetentionBytes(document))
     val outcome =
       AcceptedOutcomeV1(
         operationId,
@@ -1091,6 +1105,8 @@ public class PersistentUiBuilderService(
       is UiBuilderServiceRequest.DeleteDesign -> delete(call.actor, request.designId)
       is UiBuilderServiceRequest.ListRevisions -> revisions(call.actor, request.designId)
       is UiBuilderServiceRequest.RestoreRevision -> restore(call.actor, request)
+      is UiBuilderServiceRequest.MoveDesignHome -> moveHome(call.actor, request)
+      is UiBuilderServiceRequest.ReplaceDesignDocument -> replaceDocument(call.actor, request)
     }
 
   /** See [UiBuilderServiceRequest.ListRevisions]. */
@@ -1199,6 +1215,364 @@ public class PersistentUiBuilderService(
       ),
     )
   }
+
+  /** See [UiBuilderServiceRequest.MoveDesignHome]. */
+  private fun moveHome(
+    actor: AuthenticatedUiBuilderActor,
+    request: UiBuilderServiceRequest.MoveDesignHome,
+  ): LockedExecution {
+    val fingerprint =
+      wholeDocumentFingerprint(
+        kind = "moveHome",
+        actor = actor,
+        designId = request.designId,
+        baseRevision = request.baseRevision,
+        payload =
+          buildJsonObject {
+            put(
+              "sourceHome",
+              request.sourceHome?.let { json.encodeToJsonElement(DesignHomeV1.serializer(), it) }
+                ?: JsonNull,
+            )
+            put(
+              "targetHome",
+              json.encodeToJsonElement(DesignHomeV1.serializer(), request.targetHome),
+            )
+          },
+      )
+    return replaceWholeDocument(
+      actor = actor,
+      designId = request.designId,
+      operationId = request.operationId,
+      baseRevision = request.baseRevision,
+      fingerprint = fingerprint,
+      replacesContent = false,
+    ) { current ->
+      when {
+        current.home != request.sourceHome ->
+          WholeDocumentCandidate.Refused("design home no longer matches the stated source home")
+        request.targetHome is DesignHomeV1.Server && request.targetHome.designId != current.id ->
+          WholeDocumentCandidate.Refused(
+            "target server home design id does not match the stored design"
+          )
+        request.targetHome is DesignHomeV1.Server && request.targetHome.url.isBlank() ->
+          WholeDocumentCandidate.Refused("target server home URL is blank")
+        request.targetHome is DesignHomeV1.Repo && request.targetHome.path.isBlank() ->
+          WholeDocumentCandidate.Refused("target repo home path is blank")
+        current.home == request.targetHome ->
+          WholeDocumentCandidate.Refused("design is already at the requested home")
+        else -> WholeDocumentCandidate.Ready(current.copy(home = request.targetHome))
+      }
+    }
+  }
+
+  /** See [UiBuilderServiceRequest.ReplaceDesignDocument]. */
+  private fun replaceDocument(
+    actor: AuthenticatedUiBuilderActor,
+    request: UiBuilderServiceRequest.ReplaceDesignDocument,
+  ): LockedExecution {
+    val fingerprint =
+      wholeDocumentFingerprint(
+        kind = "replaceDocument",
+        actor = actor,
+        designId = request.designId,
+        baseRevision = request.baseRevision,
+        payload = json.encodeToJsonElement(DesignDocumentV1.serializer(), request.document),
+      )
+    return replaceWholeDocument(
+      actor = actor,
+      designId = request.designId,
+      operationId = request.operationId,
+      baseRevision = request.baseRevision,
+      fingerprint = fingerprint,
+      replacesContent = true,
+      repairsUnusableDesign = true,
+    ) { current ->
+      when {
+        request.document.id != request.designId ->
+          WholeDocumentCandidate.Refused(
+            "replacement document id does not match the requested design"
+          )
+        request.document.home != current.home ->
+          WholeDocumentCandidate.Refused(
+            "replacement document home does not match the stored design"
+          )
+        else -> WholeDocumentCandidate.Ready(request.document)
+      }
+    }
+  }
+
+  /**
+   * Commit a complete document rather than pretending its changes are a v1 operation batch.
+   *
+   * The operation outcome is durable and idempotent. Both changes cut the v1 delta window because
+   * it cannot describe either whole-document replacement or provenance. A content replacement also
+   * cuts conflict and undo state; a provenance-only home move preserves those. Subscribers receive
+   * the whole snapshot either way.
+   */
+  private fun replaceWholeDocument(
+    actor: AuthenticatedUiBuilderActor,
+    designId: String,
+    operationId: String,
+    baseRevision: Long,
+    fingerprint: String,
+    replacesContent: Boolean,
+    repairsUnusableDesign: Boolean = false,
+    candidateFor: (DesignDocumentV1) -> WholeDocumentCandidate,
+  ): LockedExecution {
+    val design = persisted.designs[designId] ?: return serviceError(notFound(designId))
+    if (!design.allows(actor, DesignAccessActionV1.WRITE)) {
+      return serviceError(forbidden("write", designId))
+    }
+    if (operationId.isBlank()) {
+      return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "operation id is blank")
+    }
+    design.operationOutcomes[operationId]?.let { prior ->
+      if (prior.fingerprint != fingerprint) {
+        return LockedExecution(
+          UiBuilderServiceResponse.OperationOutcome(
+            rejected(
+              operationId,
+              design.document.revision,
+              RejectionCodeV1.OPERATION_ID_REUSED,
+              "operation id was already used by a different submission",
+            )
+          )
+        )
+      }
+      val replay =
+        when (val original = prior.outcome) {
+          is AcceptedOutcomeV1 -> original.copy(idempotentReplay = true)
+          is RejectedOutcomeV1 -> original
+        }
+      return LockedExecution(UiBuilderServiceResponse.OperationOutcome(replay))
+    }
+    if (baseRevision != design.document.revision) {
+      return recordWholeDocumentRejection(
+        designId,
+        design,
+        operationId,
+        fingerprint,
+        RejectionCodeV1.REVISION_MISMATCH,
+        "base revision $baseRevision does not match current revision ${design.document.revision}",
+      )
+    }
+    if (!admitMutation(actor.actorId, designId, 1)) {
+      rejectedMutationRate.incrementAndGet()
+      return LockedExecution(
+        UiBuilderServiceResponse.OperationOutcome(
+          rejected(
+            operationId,
+            design.document.revision,
+            RejectionCodeV1.INVALID_COMMAND,
+            "mutation rate limit exceeded",
+          )
+        )
+      )
+    }
+    val supplied =
+      when (val candidate = candidateFor(design.document)) {
+        is WholeDocumentCandidate.Ready -> candidate.document
+        is WholeDocumentCandidate.Refused ->
+          return recordWholeDocumentRejection(
+            designId,
+            design,
+            operationId,
+            fingerprint,
+            RejectionCodeV1.INVALID_COMMAND,
+            candidate.message,
+          )
+      }
+    val revision = design.document.revision + 1
+    val sequence = design.lastSequence + 1
+    val now = clock.millis()
+    var document =
+      supplied.copy(
+        id = designId,
+        revision = revision,
+        createdAtEpochMillis = design.document.createdAtEpochMillis,
+        updatedAtEpochMillis = now,
+      )
+    val validationIssue =
+      when {
+        document.nodes.size > limits.maximumNodesPerDesign -> "design node limit exceeded"
+        document.assets.size > limits.maximumAssetsPerDesign -> "design asset limit exceeded"
+        else ->
+          validateEnvironment(document.environment)?.message
+            ?: documentQuotaIssue(document, countRejection = true)
+            ?: validateTopology(document)?.message
+      }
+    if (validationIssue != null) {
+      return recordWholeDocumentRejection(
+        designId,
+        design,
+        operationId,
+        fingerprint,
+        RejectionCodeV1.INVALID_COMMAND,
+        validationIssue,
+      )
+    }
+    val catalog =
+      catalogs.resolve(document.catalogPin)
+        ?: return recordWholeDocumentRejection(
+          designId,
+          design,
+          operationId,
+          fingerprint,
+          RejectionCodeV1.INVALID_COMMAND,
+          "catalog pin is unavailable",
+        )
+    // A home move does not author content. Validate it with the same exact-value tolerance used by
+    // ordinary edits so a catalog that stopped declaring one stored property cannot prevent a
+    // provenance-only move. Replacement content is new input and remains strict.
+    val validationProbe =
+      if (replacesContent) document
+      else document.withoutProperties(undeclaredProperties(design.document, catalog))
+    catalogs.validate(validationProbe, catalog)?.let { issue ->
+      return recordWholeDocumentRejection(
+        designId,
+        design,
+        operationId,
+        fingerprint,
+        RejectionCodeV1.INVALID_COMMAND,
+        issue.message,
+      )
+    }
+    document = withIconOutlines(document)
+    documentQuotaIssue(document, countRejection = true)?.let { issue ->
+      return recordWholeDocumentRejection(
+        designId,
+        design,
+        operationId,
+        fingerprint,
+        RejectionCodeV1.INVALID_COMMAND,
+        issue,
+      )
+    }
+    val canonical = documentCanonicalBytes(document)
+    val outcome =
+      AcceptedOutcomeV1(
+        operationId,
+        revision,
+        sequence,
+        sha256(canonical),
+        idempotentReplay = false,
+        documentUpdatedAtEpochMillis = now,
+      )
+    val outcomes = retainedOutcomeRecords(design, operationId, fingerprint, outcome)
+    val retained = limits.retainedRevisionsFor(documentRetentionBytes(document))
+    // A home move changes provenance only. Re-deriving positions would replace the allocated
+    // structural keys retained by accepted insert/move operations with fresh `initial:*` keys,
+    // making their later compensation look unsafe even though the tree did not change.
+    val positions = if (replacesContent) derivePositions(document) else design.positions
+    val updated =
+      design.copy(
+        document = document,
+        lastSequence = sequence,
+        // Neither v1 delta vocabulary nor CommittedOperationV1 can express a whole-document/home
+        // change. Cut only the catch-up log so a disconnected client before this sequence receives
+        // a snapshot; undo records, conflict touches and tombstones are separate and survive moves.
+        history = emptyList(),
+        revisionSnapshots =
+          (design.revisionSnapshots + RevisionStateV1(document, sequence)).takeLast(retained),
+        positions = positions,
+        positionSnapshots =
+          if (replacesContent) listOf(PositionStateV1(revision, positions))
+          else (design.positionSnapshots + PositionStateV1(revision, positions)).takeLast(retained),
+        updatedAtEpochMillis = now,
+        audit =
+          (design.audit +
+              AuditRecordV1(
+                AuditKindV1.COMMIT,
+                actor.actorId,
+                designId,
+                revision,
+                sequence,
+                operationId,
+                null,
+                now,
+              ))
+            .takeLast(limits.retainedAuditRecords),
+        operationOutcomes = outcomes,
+        acceptedOperations =
+          if (replacesContent) emptyMap()
+          else
+            design.acceptedOperations
+              .filterKeys { it in outcomes.keys }
+              .retainNewestWithinBytes(
+                limits.retainedUndoBytes,
+                limits.minimumRetainedUndoOperations,
+                AcceptedOperationRecordV1::targetOperationId,
+              ),
+        conflictTouches = if (replacesContent) emptyList() else design.conflictTouches,
+        tombstones = if (replacesContent) emptyMap() else design.tombstones,
+      )
+    if (repairsUnusableDesign) {
+      unusableReason(designId, updated)?.let { issue ->
+        return recordWholeDocumentRejection(
+          designId,
+          design,
+          operationId,
+          fingerprint,
+          RejectionCodeV1.INVALID_COMMAND,
+          issue.reason,
+        )
+      }
+    }
+    commitDesign(designId, updated)
+    if (repairsUnusableDesign) unusableDesigns.remove(designId)
+    val broadcast = snapshot(updated, actor, catalog, activePresence(designId)).copy(access = null)
+    val mailboxes = enqueue(designId, UiBuilderServiceUpdate.Snapshot(broadcast), updated)
+    return LockedExecution(UiBuilderServiceResponse.OperationOutcome(outcome), mailboxes)
+  }
+
+  private fun recordWholeDocumentRejection(
+    designId: String,
+    design: PersistedDesignV1,
+    operationId: String,
+    fingerprint: String,
+    code: RejectionCodeV1,
+    message: String,
+  ): LockedExecution {
+    val outcome = rejected(operationId, design.document.revision, code, message)
+    commitDesign(
+      designId,
+      design.copy(
+        operationOutcomes = retainedOutcomeRecords(design, operationId, fingerprint, outcome)
+      ),
+    )
+    return LockedExecution(UiBuilderServiceResponse.OperationOutcome(outcome))
+  }
+
+  private fun retainedOutcomeRecords(
+    design: PersistedDesignV1,
+    operationId: String,
+    fingerprint: String,
+    outcome: CommandOutcomeV1,
+  ): Map<String, OperationOutcomeRecordV1> =
+    (design.operationOutcomes + (operationId to OperationOutcomeRecordV1(fingerprint, outcome)))
+      .entries
+      .toList()
+      .takeLast(limits.retainedOperationOutcomes)
+      .associate { it.toPair() }
+
+  private fun wholeDocumentFingerprint(
+    kind: String,
+    actor: AuthenticatedUiBuilderActor,
+    designId: String,
+    baseRevision: Long,
+    payload: kotlinx.serialization.json.JsonElement,
+  ): String =
+    canonicalJson(
+      buildJsonObject {
+        put("kind", kind)
+        put("actorId", actor.actorId)
+        put("onBehalfOfActorId", actor.onBehalfOfActorId?.let(::JsonPrimitive) ?: JsonNull)
+        put("designId", designId)
+        put("baseRevision", baseRevision)
+        put("payload", payload)
+      }
+    )
 
   /**
    * See [UiBuilderServiceRequest.RenameDesign] for why this is not a mutation. The current
@@ -2711,7 +3085,7 @@ public class PersistentUiBuilderService(
     val document =
       withIconOutlines(working.document).copy(revision = revision, updatedAtEpochMillis = now)
     val canonical = documentCanonicalBytes(document)
-    val retained = limits.retainedRevisionsFor(canonical.size)
+    val retained = limits.retainedRevisionsFor(documentRetentionBytes(document))
     val outcome =
       AcceptedOutcomeV1(
         submission.operationId(),

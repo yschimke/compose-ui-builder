@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { test } from "node:test";
-import { documentToOperations, operationsToDocument, publishDirectory, validatedServerOrigin } from "./design-sync.mjs";
+import {
+  assertHomeOverwriteAllowed,
+  documentToOperations,
+  homeForFixtureOverwrite,
+  normalizeHome,
+  operationsToDocument,
+  publishDirectory,
+  validatedServerOrigin,
+} from "./design-sync.mjs";
 
 const designs = new URL("../../docs/design/fixtures/ui-builder/designs/", import.meta.url);
 const files = readdirSync(designs).filter((name) => name.endsWith(".json")).sort();
@@ -21,6 +29,79 @@ test("every committed design round-trips through a document and back to its own 
 test("a tampered hash is refused before anything reaches a server", () => {
   const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
   assert.throws(() => operationsToDocument({ ...fixture, expectedDocumentHash: "0".repeat(64) }), /expectedDocumentHash/);
+});
+
+test("canonical home survives the fixture and document round trip", () => {
+  const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
+  const document = operationsToDocument(fixture);
+  document.home = { kind: "repo", path: "ui-builder/designs/login-v2.uid" };
+
+  const replayed = operationsToDocument(documentToOperations(document));
+
+  assert.deepEqual(replayed.home, document.home);
+});
+
+test("canonical home does not change the document content hash", () => {
+  const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
+  const document = operationsToDocument(fixture);
+
+  const homed = documentToOperations({
+    ...document,
+    home: { kind: "repo", path: "ui-builder/designs/login-v2.uid" },
+  });
+
+  assert.equal(homed.expectedDocumentHash, fixture.expectedDocumentHash);
+});
+
+test("a copy cannot replace a different canonical home without force", () => {
+  const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
+  fixture.operations[0].home = { kind: "repo", path: "ui-builder/designs/original.uid" };
+  const copyHome = { kind: "repo", path: "ui-builder/designs/copy.uid" };
+
+  assert.throws(() => assertHomeOverwriteAllowed(copyHome, fixture), /--force/);
+  assert.doesNotThrow(() => assertHomeOverwriteAllowed(copyHome, fixture, true));
+});
+
+test("equivalent canonical homes do not depend on JSON key order", () => {
+  const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
+  fixture.operations[0].home = {
+    kind: "server",
+    url: "https://preview.example",
+    designId: "original",
+  };
+  const reordered = {
+    designId: "original",
+    url: "https://preview.example",
+    kind: "server",
+  };
+
+  assert.doesNotThrow(() => assertHomeOverwriteAllowed(reordered, fixture));
+});
+
+test("server homes normalize scheme, host, default port and trailing slash", () => {
+  const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
+  fixture.operations[0].home = {
+    kind: "server",
+    url: "https://preview.coo.ee",
+    designId: "original",
+  };
+  const equivalent = {
+    kind: "server",
+    url: "HTTPS://Preview.Coo.Ee:443/",
+    designId: "original",
+  };
+
+  assert.deepEqual(normalizeHome(equivalent), fixture.operations[0].home);
+  assert.doesNotThrow(() => assertHomeOverwriteAllowed(equivalent, fixture));
+});
+
+test("an unhomed source preserves the existing fixture home unless forced", () => {
+  const fixture = JSON.parse(readFileSync(new URL(files[0], designs), "utf8"));
+  const targetHome = { kind: "repo", path: "ui-builder/designs/original.uid" };
+  fixture.operations[0].home = targetHome;
+
+  assert.deepEqual(homeForFixtureOverwrite(undefined, fixture), targetHome);
+  assert.equal(homeForFixtureOverwrite(undefined, fixture, true), undefined);
 });
 
 test("the published directory is the shape the server's design library reads", () => {
