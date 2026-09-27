@@ -1459,7 +1459,10 @@ public class PersistentUiBuilderService(
       )
     val outcomes = retainedOutcomeRecords(design, operationId, fingerprint, outcome)
     val retained = limits.retainedRevisionsFor(documentRetentionBytes(document))
-    val positions = derivePositions(document)
+    // A home move changes provenance only. Re-deriving positions would replace the allocated
+    // structural keys retained by accepted insert/move operations with fresh `initial:*` keys,
+    // making their later compensation look unsafe even though the tree did not change.
+    val positions = if (replacesContent) derivePositions(document) else design.positions
     val updated =
       design.copy(
         document = document,

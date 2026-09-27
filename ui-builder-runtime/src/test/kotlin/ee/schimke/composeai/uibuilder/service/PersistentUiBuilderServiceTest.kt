@@ -609,6 +609,25 @@ class PersistentUiBuilderServiceTest {
       )
     )
     assertTrue("temporary" in currentDocument(service).nodes)
+
+    // Moving home is provenance-only, so it must also retain the allocated structural position
+    // keys used to prove that an earlier insert can still be compensated safely.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo(
+            "design",
+            "undo-insert-after-home-move",
+            "browser",
+            4,
+            "insert-before-move",
+          )
+        ),
+      )
+    )
+    assertFalse("temporary" in currentDocument(service).nodes)
     subscription.close()
 
     val restarted = service(storage = storage, clock = clock)
@@ -621,8 +640,8 @@ class PersistentUiBuilderServiceTest {
         UiBuilderServiceRequest.ApplyOperation(
           batch(
             "edit-after-move",
-            4,
-            SetPropertyMutationV1("temporary", "text", StringValueV1("after")),
+            5,
+            InsertNodeMutationV1(textNode("after-restart"), NodeLocationV1()),
           )
         ),
       )
