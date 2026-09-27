@@ -1419,7 +1419,13 @@ public class PersistentUiBuilderService(
           RejectionCodeV1.INVALID_COMMAND,
           "catalog pin is unavailable",
         )
-    catalogs.validate(document, catalog)?.let { issue ->
+    // A home move does not author content. Validate it with the same exact-value tolerance used by
+    // ordinary edits so a catalog that stopped declaring one stored property cannot prevent a
+    // provenance-only move. Replacement content is new input and remains strict.
+    val validationProbe =
+      if (replacesContent) document
+      else document.withoutProperties(undeclaredProperties(design.document, catalog))
+    catalogs.validate(validationProbe, catalog)?.let { issue ->
       return recordWholeDocumentRejection(
         designId,
         design,
@@ -1457,7 +1463,10 @@ public class PersistentUiBuilderService(
       design.copy(
         document = document,
         lastSequence = sequence,
-        history = if (replacesContent) emptyList() else design.history,
+        // Neither v1 delta vocabulary nor CommittedOperationV1 can express a whole-document/home
+        // change. Cut only the catch-up log so a disconnected client before this sequence receives
+        // a snapshot; undo records, conflict touches and tombstones are separate and survive moves.
+        history = emptyList(),
         revisionSnapshots =
           (design.revisionSnapshots + RevisionStateV1(document, sequence)).takeLast(retained),
         positions = positions,

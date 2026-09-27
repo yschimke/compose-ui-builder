@@ -510,6 +510,17 @@ class PersistentUiBuilderServiceTest {
     assertEquals(repoHome, pushed.state.document.home)
     assertNull(pushed.access, "one broadcast must not leak the owner's access list to viewers")
 
+    // A home change has no v1 CommittedOperation representation. A client disconnected just
+    // before it must receive the authoritative snapshot instead of an empty delta that leaves its
+    // cursor and home stranded at sequence 2.
+    val caughtUp = mutableListOf<UiBuilderServiceUpdate>()
+    val catchUpSubscription =
+      service.subscribe(UiBuilderSubscriptionCall(owner, "design", 2), caughtUp::add)
+    val catchUp = assertIs<UiBuilderServiceUpdate.Snapshot>(caughtUp.single()).snapshot
+    assertEquals(3, catchUp.state.lastSequence)
+    assertEquals(repoHome, catchUp.state.document.home)
+    catchUpSubscription.close()
+
     val replay = accepted(execute(service, owner, request))
     assertTrue(replay.idempotentReplay)
     assertEquals(3, replay.committedRevision)
