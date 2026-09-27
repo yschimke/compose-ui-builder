@@ -1359,13 +1359,15 @@ public class PersistentUiBuilderService(
     }
     if (!admitMutation(actor.actorId, designId, 1)) {
       rejectedMutationRate.incrementAndGet()
-      return recordWholeDocumentRejection(
-        designId,
-        design,
-        operationId,
-        fingerprint,
-        RejectionCodeV1.INVALID_COMMAND,
-        "mutation rate limit exceeded",
+      return LockedExecution(
+        UiBuilderServiceResponse.OperationOutcome(
+          rejected(
+            operationId,
+            design.document.revision,
+            RejectionCodeV1.INVALID_COMMAND,
+            "mutation rate limit exceeded",
+          )
+        )
       )
     }
     val supplied =
@@ -1492,7 +1494,16 @@ public class PersistentUiBuilderService(
               ))
             .takeLast(limits.retainedAuditRecords),
         operationOutcomes = outcomes,
-        acceptedOperations = if (replacesContent) emptyMap() else design.acceptedOperations,
+        acceptedOperations =
+          if (replacesContent) emptyMap()
+          else
+            design.acceptedOperations
+              .filterKeys { it in outcomes.keys }
+              .retainNewestWithinBytes(
+                limits.retainedUndoBytes,
+                limits.minimumRetainedUndoOperations,
+                AcceptedOperationRecordV1::targetOperationId,
+              ),
         conflictTouches = if (replacesContent) emptyList() else design.conflictTouches,
         tombstones = if (replacesContent) emptyMap() else design.tombstones,
       )

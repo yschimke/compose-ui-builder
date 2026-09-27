@@ -649,6 +649,140 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `a rate limited home move can retry the same operation id after refill`() {
+    val clock = MutableClock(1_000)
+    val service =
+      service(
+        clock = clock,
+        limits =
+          UiBuilderServiceLimits(
+            mutationBurstCapacity = 1,
+            mutationRefillAmount = 1,
+            mutationRefillIntervalMillis = 1_000,
+          ),
+      )
+    val serverHome = DesignHomeV1.Server("https://preview.coo.ee", "design")
+    val repoHome = DesignHomeV1.Repo("designs/design.uid")
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.CreateDesign(document().copy(home = serverHome)),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.MoveDesignHome(
+          "design",
+          serverHome,
+          repoHome,
+          baseRevision = 0,
+          operationId = "consume-burst",
+        ),
+      )
+    )
+    val retry =
+      UiBuilderServiceRequest.MoveDesignHome(
+        "design",
+        repoHome,
+        serverHome,
+        baseRevision = 1,
+        operationId = "retry-after-refill",
+      )
+    assertContains(rejected(execute(service, owner, retry)).message, "rate limit")
+
+    clock.nowMillis += 1_000
+    assertEquals(2, accepted(execute(service, owner, retry)).committedRevision)
+    assertEquals(serverHome, currentDocument(service).home)
+  }
+
+  @Test
+  fun `home moves prune undo records whose outcomes aged out`() {
+    val service = service(limits = UiBuilderServiceLimits(retainedOperationOutcomes = 2))
+    val serverHome = DesignHomeV1.Server("https://preview.coo.ee", "design")
+    val repoHome = DesignHomeV1.Repo("designs/design.uid")
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.CreateDesign(document().copy(home = serverHome)),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("aged-out-insert", 0, InsertNodeMutationV1(textNode("temporary"), NodeLocationV1()))
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "newer-edit",
+            1,
+            SetPropertyMutationV1("temporary", "text", StringValueV1("newer")),
+          )
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.MoveDesignHome(
+          "design",
+          serverHome,
+          repoHome,
+          baseRevision = 2,
+          operationId = "move-home",
+        ),
+      )
+    )
+    // The insert outcome is outside the two-entry window, so its id is reusable. Reusing it for a
+    // provenance operation must not leave the old insert's undo record addressable under that id.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.MoveDesignHome(
+          "design",
+          repoHome,
+          serverHome,
+          baseRevision = 3,
+          operationId = "aged-out-insert",
+        ),
+      )
+    )
+    assertEquals(
+      RejectionCodeV1.UNKNOWN_OPERATION,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.ApplyOperation(
+              UiBuilderSubmission.Undo(
+                "design",
+                "undo-aged-out",
+                "browser",
+                4,
+                "aged-out-insert",
+              )
+            ),
+          )
+        )
+        .code,
+    )
+    assertTrue("temporary" in currentDocument(service).nodes)
+  }
+
+  @Test
   fun `whole document replacement preserves authority validates and survives restart`() {
     val storage = MemoryStorage()
     val clock = MutableClock(1_000)
