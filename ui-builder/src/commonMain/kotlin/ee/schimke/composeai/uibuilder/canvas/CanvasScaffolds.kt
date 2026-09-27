@@ -72,6 +72,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -193,6 +194,7 @@ internal val LocalFrameNavigationSuiteType = compositionLocalOf {
 @Composable
 internal fun AdaptiveNavigationSuiteScaffold(
   modifier: Modifier,
+  screenHeight: Dp,
   items: @Composable () -> Unit,
   primaryAction: @Composable () -> Unit,
   content: @Composable () -> Unit,
@@ -203,6 +205,23 @@ internal fun AdaptiveNavigationSuiteScaffold(
       Row(modifier) {
         NavigationSuite(
           navigationSuiteType = type,
+          // The rail lays itself out at exactly its `maxHeight`, and the extent layout's first pass
+          // measures against an unbounded one to find how tall the design is: the rail asked for a
+          // 96 x Int.MAX_VALUE layout and the whole design failed to open. In that pass it is one
+          // screen tall, which the canvas frame never goes below anyway, so the content still
+          // decides the extent; the pass that follows is bounded to it, and the rail fills it.
+          modifier =
+            Modifier.layout { measurable, constraints ->
+              val placeable =
+                measurable.measure(
+                  if (constraints.hasBoundedHeight) constraints
+                  else
+                    constraints.copy(
+                      maxHeight = maxOf(constraints.minHeight, screenHeight.roundToPx())
+                    )
+                )
+              layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
+            },
           primaryActionContent = primaryAction,
           content = items,
         )

@@ -1638,6 +1638,9 @@ private fun RenderNode(
         val primaryAction = slot("primaryAction")
         AdaptiveNavigationSuiteScaffold(
           measured,
+          screenHeight =
+            document.environment["heightDp"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull()?.dp
+              ?: 0.dp,
           items = { slot("navigationItems").forEach { child(it, Modifier) } },
           primaryAction = { primaryAction.forEach { child(it, Modifier) } },
           content = { slot("content").forEach { child(it, Modifier) } },
