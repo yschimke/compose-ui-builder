@@ -5,7 +5,6 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
-import ee.schimke.composeai.uibuilder.export.canonicalJson
 import java.io.File
 import java.security.MessageDigest
 import kotlin.math.roundToInt
@@ -14,7 +13,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.float
@@ -87,10 +85,9 @@ class DesignFixturesTest {
     fixtures.forEach { file ->
       val fixture = file.fixture()
       val document = UiBuilderReducer.replay(fixture).document
-      val canonical = canonicalJson(json.parseToJsonElement(json.encodeToString(document)))
       assertEquals(
         fixture.string("expectedDocumentHash"),
-        canonical.sha256(),
+        canonicalDocument(document).sha256(),
         "${file.name}: the replayed document does not match expectedDocumentHash — " +
           "regenerate it with scripts/ui-builder/design-sync.mjs, or replay-candidate.mjs",
       )

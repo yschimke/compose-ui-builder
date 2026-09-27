@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.capability.PropertyCapability
 import ee.schimke.composeai.uibuilder.capability.WasmAdapterStatus
 import ee.schimke.composeai.uibuilder.capability.WasmCapability
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocumentHome
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,6 +26,18 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 class CollaborationReducerTest {
+  @Test
+  fun `canonical content excludes home identity metadata`() {
+    val document = document()
+
+    assertEquals(
+      canonicalDocument(document),
+      canonicalDocument(
+        document.copy(home = UiBuilderDocumentHome.Server("https://preview.coo.ee", document.id))
+      ),
+    )
+  }
+
   @Test
   fun `a command can edit a document with a detached component body`() {
     val base = document()

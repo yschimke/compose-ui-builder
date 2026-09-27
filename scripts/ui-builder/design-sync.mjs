@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import { candidateDocumentHash, replayCandidateOperations } from "./replay-candidate.mjs";
 
 /**
  * Move a design between a committed operations fixture and a live `compose-preview serve` host,
  * over the server's own `/mcp` endpoint (`ui_builder_get_design` / `ui_builder_create_design`).
  *
- *   design-sync.mjs export <designId> --server <url> --out <fixture.json>
+ *   design-sync.mjs export <designId> --server <url> --out <fixture.json> [--force]
  *   design-sync.mjs import <fixture.json> --server <url> [--design-id <id>] [--title <title>]
  *
  * The bearer is read from `COMPOSE_PREVIEW_TOKEN` (or the older `COMPOSE_PREVIEW_UI_BUILDER_TOKEN`
@@ -39,6 +40,7 @@ export function documentToOperations(document, { designId = document.id, title =
   if (document.assets && Object.keys(document.assets).length > 0) {
     operations[0].assets = clone(document.assets);
   }
+  if (document.home) operations[0].home = clone(document.home);
   // The replay inserts an anchorless node at the front of its slot, so every sibling after the
   // first names the one before it; without that a slot replays in reverse.
   const visit = (nodeId, parent, afterNodeId) => {
@@ -138,6 +140,43 @@ function flag(argv, name) {
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
+export function fixtureHome(fixture) {
+  return fixture?.operations?.find((operation) => operation.type === "createDesign")?.home;
+}
+
+/** Normalize identity-equivalent homes before enforcing overwrite protection. */
+export function normalizeHome(home) {
+  if (!home || typeof home !== "object" || home.kind !== "server" || typeof home.url !== "string") {
+    return home;
+  }
+  const url = new URL(home.url);
+  const path = url.pathname === "/" ? "" : url.pathname.replace(/\/+$/, "");
+  return { ...home, url: `${url.origin}${path}` };
+}
+
+export function assertHomeOverwriteAllowed(sourceHome, existingFixture, force = false) {
+  const targetHome = fixtureHome(existingFixture);
+  if (
+    !force &&
+    sourceHome &&
+    targetHome &&
+    !isDeepStrictEqual(normalizeHome(sourceHome), normalizeHome(targetHome))
+  ) {
+    throw new Error("refusing to overwrite a design copy with a different canonical home; pass --force to replace it");
+  }
+}
+
+/** The home an exported fixture keeps when replacing an existing fixture. */
+export function homeForFixtureOverwrite(sourceHome, existingFixture, force = false) {
+  assertHomeOverwriteAllowed(sourceHome, existingFixture, force);
+  const targetHome = fixtureHome(existingFixture);
+  // A legacy server document has no home to contribute. Silently dropping the repository's
+  // existing canonical home would turn the original into an untracked copy, so preserve it unless
+  // the caller explicitly asks for replacement semantics with --force.
+  if (!force && !sourceHome && targetHome) return clone(targetHome);
+  return sourceHome;
+}
+
 /**
  * Write the convention directory a catalog project publishes designs from:
  * `<out>/index.json` plus one `DesignDocumentV1` per fixture. The server reads exactly this
@@ -170,7 +209,7 @@ async function main(argv) {
   const token = process.env.COMPOSE_PREVIEW_TOKEN || process.env.COMPOSE_PREVIEW_UI_BUILDER_TOKEN;
   if (verb === "publish" ? !target : !verb || !target || !server) {
     console.error(
-      "usage: design-sync.mjs export <designId> --server <url> --out <fixture.json>\n" +
+      "usage: design-sync.mjs export <designId> --server <url> --out <fixture.json> [--force]\n" +
         "       design-sync.mjs import <fixture.json> --server <url> [--design-id <id>] [--title <title>]\n" +
         "       design-sync.mjs publish <fixtures dir> --out <dir>",
     );
@@ -182,7 +221,13 @@ async function main(argv) {
     const reply = await mcpCall(server, "ui_builder_get_design", { designId: target }, token);
     const document = reply.snapshot?.state?.document ?? reply.document;
     if (!document) throw new Error(`no document in the reply for ${target}`);
-    const fixture = documentToOperations(document, { designId: flag(argv, "--design-id") ?? target });
+    let exportDocument = document;
+    if (existsSync(out)) {
+      const existingFixture = JSON.parse(readFileSync(out, "utf8"));
+      const home = homeForFixtureOverwrite(document.home, existingFixture, argv.includes("--force"));
+      exportDocument = { ...document, home };
+    }
+    const fixture = documentToOperations(exportDocument, { designId: flag(argv, "--design-id") ?? target });
     writeFileSync(out, `${JSON.stringify(fixture, null, 2)}\n`);
     console.log(`${out}: ${target} at revision ${document.revision}, ${Object.keys(document.nodes).length} nodes, ${fixture.expectedDocumentHash.slice(0, 12)}`);
     return 0;

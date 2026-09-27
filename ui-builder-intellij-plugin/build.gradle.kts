@@ -147,6 +147,13 @@ intellijPlatformTesting.testIdeUi.register("installedPluginSmoke") {
 
 tasks.named<Test>("test") { useJUnitPlatform() }
 
+// The editor and IntelliJ must validate the same document contract.  The schema belongs beside
+// UiBuilderDocument in the shared export module; copy it into this plugin's resource output rather
+// than maintaining a second checked-in copy that can silently drift.
+tasks.named<ProcessResources>("processResources") {
+  from(project(":ui-builder-export").layout.projectDirectory.dir("src/commonMain/resources"))
+}
+
 // `check` must validate the installed archive's descriptor, not only compile against bundled IDE
 // modules. That catches a misspelled or unavailable runtime module before a release ZIP is
 // uploaded.

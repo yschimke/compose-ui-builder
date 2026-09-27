@@ -177,7 +177,10 @@ internal fun DesignDocumentV1.preparePropertyDelta(
 }
 
 internal fun DesignDocumentV1.canonicalDocumentHash(): String {
-  val element = documentHashJson.encodeToJsonElement(DesignDocumentV1.serializer(), this)
+  // Canonical home is identity metadata rather than content. A server may stamp or move it without
+  // changing the revision whose authored tree this digest verifies.
+  val element =
+    documentHashJson.encodeToJsonElement(DesignDocumentV1.serializer(), copy(home = null))
   return sha256Hex(canonicalProtocolJson(element))
 }
 

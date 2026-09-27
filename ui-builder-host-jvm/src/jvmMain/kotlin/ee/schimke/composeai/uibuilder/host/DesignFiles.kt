@@ -7,6 +7,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.decodeFromJsonElement
 
 /**
  * Reads and writes checked-in design documents — the `.uid` files an agent edits and IntelliJ
@@ -23,10 +27,28 @@ object DesignFiles {
 
   val extensions: Set<String> = setOf("uid", "json")
 
+  /** Decodes the shared on-disk protocol, ignoring only a future polymorphic home variant. */
+  fun decode(text: String): DesignDocumentV1 {
+    val encoded = json.parseToJsonElement(text)
+    val objectValue = encoded as? JsonObject
+    val home = objectValue?.get("home") as? JsonObject
+    val homeKind = (home?.get("kind") as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+    // The protocol's sealed serializer rejects a future home discriminator before the builder's
+    // tolerant home serializer gets a chance to run. Strip only that variant here; known or
+    // malformed homes and the rest of the protocol document remain typed and validated.
+    val compatible =
+      if (objectValue != null && homeKind != null && homeKind !in KNOWN_HOME_KINDS) {
+        JsonObject(objectValue - "home")
+      } else {
+        encoded
+      }
+    return json.decodeFromJsonElement(DesignDocumentV1.serializer(), compatible)
+  }
+
   /** Decodes [path], refusing a document this editor cannot write back or has no catalog for. */
   fun read(path: Path): UiBuilderDocument {
     val document =
-      json.decodeFromString(DesignDocumentV1.serializer(), Files.readString(path)).also {
+      decode(Files.readString(path)).also {
         require(it.schema in supportedSchemas) {
           "${path.fileName} declares schema '${it.schema}', which this editor cannot write back"
         }
@@ -71,6 +93,8 @@ object DesignFiles {
     prettyPrint = true
     prettyPrintIndent = "  "
   }
+
+  private val KNOWN_HOME_KINDS = setOf("server", "repo")
 }
 
 /**

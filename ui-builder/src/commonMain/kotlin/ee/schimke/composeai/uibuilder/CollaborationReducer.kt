@@ -924,7 +924,10 @@ object CollaborationReducer {
 
 fun canonicalDocument(document: UiBuilderDocument): String {
   // Keep this independent of platform crypto. A persistence/API layer may hash these canonical
-  // bytes; reducer tests can compare the bytes directly on JVM and Wasm.
+  // bytes; reducer tests can compare the bytes directly on JVM and Wasm. Home is identity metadata,
+  // not authored content: stamping or moving it must not create a different content revision.
   val json = kotlinx.serialization.json.Json { encodeDefaults = true }
-  return canonicalJson(json.encodeToJsonElement(UiBuilderDocument.serializer(), document))
+  return canonicalJson(
+    json.encodeToJsonElement(UiBuilderDocument.serializer(), document.copy(home = null))
+  )
 }

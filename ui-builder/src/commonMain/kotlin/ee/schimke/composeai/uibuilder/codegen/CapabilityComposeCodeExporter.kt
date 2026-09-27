@@ -41,6 +41,8 @@ data class DocumentExportProvenance(
   val declaredFallbacks: List<String>,
   val exporterVersion: String,
   val assetAdapterId: String? = null,
+  /** The document's canonical location, when the document records one. */
+  val home: String? = null,
 )
 
 /** Explicit, caller-owned mapping from catalog asset keys to editable Compose artwork. */

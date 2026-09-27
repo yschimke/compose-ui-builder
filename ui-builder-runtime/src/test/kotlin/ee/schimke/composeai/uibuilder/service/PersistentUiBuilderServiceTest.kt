@@ -44,6 +44,42 @@ class PersistentUiBuilderServiceTest {
   private val outsider = AuthenticatedUiBuilderActor("outsider")
 
   @Test
+  fun `document identity excludes its storage home`() {
+    val document = document()
+
+    assertEquals(
+      documentHash(document),
+      documentHash(
+        document.copy(home = DesignHomeV1.Server("https://preview.coo.ee", document.id))
+      ),
+    )
+  }
+
+  @Test
+  fun `revision retention charges the storage home that every snapshot keeps`() {
+    val limits =
+      UiBuilderServiceLimits(
+        retainedRevisionSnapshots = 64,
+        retainedRevisionBytes = 8_000,
+        minimumRetainedRevisionSnapshots = 2,
+      )
+    val unhomed = document()
+    val homed = unhomed.copy(home = DesignHomeV1.Repo("designs/${"nested/".repeat(2_000)}a.uid"))
+
+    assertEquals(documentHash(unhomed), documentHash(homed), "home is not content identity")
+    assertTrue(documentRetentionBytes(homed) > documentRetentionBytes(unhomed))
+    assertTrue(
+      limits.retainedRevisionsFor(documentRetentionBytes(unhomed)) >
+        limits.minimumRetainedRevisionSnapshots
+    )
+    assertEquals(
+      limits.minimumRetainedRevisionSnapshots,
+      limits.retainedRevisionsFor(documentRetentionBytes(homed)),
+      "a large home must reduce retention to the configured floor",
+    )
+  }
+
+  @Test
   fun `disabled supplied document requests never reach an exporter`() {
     if (UiBuilderBuildFeatures.remoteCompose) return
     val requests = mutableListOf<RevisionPinnedUiBuilderExport>()
@@ -313,7 +349,6 @@ class PersistentUiBuilderServiceTest {
         )
         .code,
     )
-
     val restored =
       accepted(
         execute(
@@ -412,6 +447,612 @@ class PersistentUiBuilderServiceTest {
         ),
       )
     )
+  }
+
+  @Test
+  fun `moving a design home is revision pinned idempotent retained and broadcast`() {
+    val storage = MemoryStorage()
+    val clock = MutableClock(1_000)
+    val service = service(storage = storage, clock = clock)
+    val serverHome = DesignHomeV1.Server("https://preview.coo.ee", "design")
+    val repoHome = DesignHomeV1.Repo("designs/design.uid")
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.CreateDesign(document().copy(home = serverHome)),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "insert-before-move",
+            0,
+            InsertNodeMutationV1(textNode("temporary"), NodeLocationV1()),
+          )
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("delete-before-move", 1, DeleteNodeMutationV1("temporary"))
+        ),
+      )
+    )
+    val updates = mutableListOf<UiBuilderServiceUpdate>()
+    val subscription =
+      service.subscribe(UiBuilderSubscriptionCall(owner, "design", 0), updates::add)
+    clock.nowMillis = 2_000
+
+    val request =
+      UiBuilderServiceRequest.MoveDesignHome(
+        designId = "design",
+        sourceHome = serverHome,
+        targetHome = repoHome,
+        baseRevision = 2,
+        operationId = "move-home",
+      )
+    val moved = accepted(execute(service, owner, request))
+    assertEquals(3, moved.committedRevision)
+    assertEquals(3, moved.sequence)
+    assertFalse(moved.idempotentReplay)
+    val current = currentDocument(service)
+    assertEquals(repoHome, current.home)
+    assertEquals(1_000, current.createdAtEpochMillis)
+    assertEquals(2_000, current.updatedAtEpochMillis)
+    val pushed = assertIs<UiBuilderServiceUpdate.Snapshot>(updates.last()).snapshot
+    assertEquals(repoHome, pushed.state.document.home)
+    assertNull(pushed.access, "one broadcast must not leak the owner's access list to viewers")
+
+    // A home change has no v1 CommittedOperation representation. A client disconnected just
+    // before it must receive the authoritative snapshot instead of an empty delta that leaves its
+    // cursor and home stranded at sequence 2.
+    val caughtUp = mutableListOf<UiBuilderServiceUpdate>()
+    val catchUpSubscription =
+      service.subscribe(UiBuilderSubscriptionCall(owner, "design", 2), caughtUp::add)
+    val catchUp = assertIs<UiBuilderServiceUpdate.Snapshot>(caughtUp.single()).snapshot
+    assertEquals(3, catchUp.state.lastSequence)
+    assertEquals(repoHome, catchUp.state.document.home)
+    catchUpSubscription.close()
+
+    val replay = accepted(execute(service, owner, request))
+    assertTrue(replay.idempotentReplay)
+    assertEquals(3, replay.committedRevision)
+    assertEquals(
+      RejectionCodeV1.OPERATION_ID_REUSED,
+      rejected(
+          execute(
+            service,
+            owner,
+            request.copy(targetHome = DesignHomeV1.Repo("designs/other.uid")),
+          )
+        )
+        .code,
+    )
+    assertEquals(
+      RejectionCodeV1.REVISION_MISMATCH,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.MoveDesignHome(
+              "design",
+              repoHome,
+              serverHome,
+              baseRevision = 2,
+              operationId = "stale-move",
+            ),
+          )
+        )
+        .code,
+    )
+    assertContains(
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.MoveDesignHome(
+              "design",
+              serverHome,
+              DesignHomeV1.Server("https://other.example", "other-design"),
+              baseRevision = 3,
+              operationId = "wrong-source-home",
+            ),
+          )
+        )
+        .message,
+      "source home",
+    )
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(
+          execute(
+            service,
+            outsider,
+            UiBuilderServiceRequest.MoveDesignHome(
+              "design",
+              repoHome,
+              serverHome,
+              baseRevision = 3,
+              operationId = "outsider-move",
+            ),
+          )
+        )
+        .code,
+    )
+    assertEquals(
+      serverHome,
+      snapshot(execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 0)))
+        .state
+        .document
+        .home,
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo(
+            "design",
+            "undo-delete-after-move",
+            "browser",
+            3,
+            "delete-before-move",
+          )
+        ),
+      )
+    )
+    assertTrue("temporary" in currentDocument(service).nodes)
+
+    // Moving home is provenance-only, so it must also retain the allocated structural position
+    // keys used to prove that an earlier insert can still be compensated safely.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo(
+            "design",
+            "undo-insert-after-home-move",
+            "browser",
+            4,
+            "insert-before-move",
+          )
+        ),
+      )
+    )
+    assertFalse("temporary" in currentDocument(service).nodes)
+    subscription.close()
+
+    val restarted = service(storage = storage, clock = clock)
+    assertEquals(repoHome, currentDocument(restarted).home)
+    assertTrue(accepted(execute(restarted, owner, request)).idempotentReplay)
+    accepted(
+      execute(
+        restarted,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "edit-after-move",
+            5,
+            InsertNodeMutationV1(textNode("after-restart"), NodeLocationV1()),
+          )
+        ),
+      )
+    )
+  }
+
+  @Test
+  fun `a rate limited home move can retry the same operation id after refill`() {
+    val clock = MutableClock(1_000)
+    val service =
+      service(
+        clock = clock,
+        limits =
+          UiBuilderServiceLimits(
+            mutationBurstCapacity = 1,
+            mutationRefillAmount = 1,
+            mutationRefillIntervalMillis = 1_000,
+          ),
+      )
+    val serverHome = DesignHomeV1.Server("https://preview.coo.ee", "design")
+    val repoHome = DesignHomeV1.Repo("designs/design.uid")
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.CreateDesign(document().copy(home = serverHome)),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.MoveDesignHome(
+          "design",
+          serverHome,
+          repoHome,
+          baseRevision = 0,
+          operationId = "consume-burst",
+        ),
+      )
+    )
+    val retry =
+      UiBuilderServiceRequest.MoveDesignHome(
+        "design",
+        repoHome,
+        serverHome,
+        baseRevision = 1,
+        operationId = "retry-after-refill",
+      )
+    assertContains(rejected(execute(service, owner, retry)).message, "rate limit")
+
+    clock.nowMillis += 1_000
+    assertEquals(2, accepted(execute(service, owner, retry)).committedRevision)
+    assertEquals(serverHome, currentDocument(service).home)
+  }
+
+  @Test
+  fun `home moves prune undo records whose outcomes aged out`() {
+    val service = service(limits = UiBuilderServiceLimits(retainedOperationOutcomes = 2))
+    val serverHome = DesignHomeV1.Server("https://preview.coo.ee", "design")
+    val repoHome = DesignHomeV1.Repo("designs/design.uid")
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.CreateDesign(document().copy(home = serverHome)),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("aged-out-insert", 0, InsertNodeMutationV1(textNode("temporary"), NodeLocationV1()))
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "newer-edit",
+            1,
+            SetPropertyMutationV1("temporary", "text", StringValueV1("newer")),
+          )
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.MoveDesignHome(
+          "design",
+          serverHome,
+          repoHome,
+          baseRevision = 2,
+          operationId = "move-home",
+        ),
+      )
+    )
+    // The insert outcome is outside the two-entry window, so its id is reusable. Reusing it for a
+    // provenance operation must not leave the old insert's undo record addressable under that id.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.MoveDesignHome(
+          "design",
+          repoHome,
+          serverHome,
+          baseRevision = 3,
+          operationId = "aged-out-insert",
+        ),
+      )
+    )
+    assertEquals(
+      RejectionCodeV1.UNKNOWN_OPERATION,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.ApplyOperation(
+              UiBuilderSubmission.Undo(
+                "design",
+                "undo-aged-out",
+                "browser",
+                4,
+                "aged-out-insert",
+              )
+            ),
+          )
+        )
+        .code,
+    )
+    assertTrue("temporary" in currentDocument(service).nodes)
+  }
+
+  @Test
+  fun `whole document replacement preserves authority validates and survives restart`() {
+    val storage = MemoryStorage()
+    val clock = MutableClock(1_000)
+    val service = service(storage = storage, clock = clock)
+    val home = DesignHomeV1.Server("https://preview.coo.ee", "design")
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, owner, UiBuilderServiceRequest.CreateDesign(document().copy(home = home)))
+    )
+    grant(
+      service,
+      owner,
+      viewer,
+      baseRevision = 0,
+      actions = listOf(DesignAccessActionV1.READ),
+    )
+    val updates = mutableListOf<UiBuilderServiceUpdate>()
+    val subscription =
+      service.subscribe(UiBuilderSubscriptionCall(owner, "design", 0), updates::add)
+    clock.nowMillis = 2_000
+    val localCopy =
+      document()
+        .copy(
+          title = "Saved temporary copy",
+          revision = 41,
+          roots = listOf("saved"),
+          nodes = mapOf("saved" to textNode("saved")),
+          createdAtEpochMillis = 17,
+          updatedAtEpochMillis = 18,
+          home = home,
+        )
+    val request =
+      UiBuilderServiceRequest.ReplaceDesignDocument(
+        designId = "design",
+        document = localCopy,
+        baseRevision = 0,
+        operationId = "replace-document",
+      )
+
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      error(execute(service, viewer, request)).code,
+      "read access must not authorize a replacement",
+    )
+    val replaced = accepted(execute(service, owner, request))
+    assertEquals(1, replaced.committedRevision)
+    val current = currentDocument(service)
+    assertEquals("design", current.id)
+    assertEquals(home, current.home)
+    assertEquals("Saved temporary copy", current.title)
+    assertEquals(listOf("saved"), current.roots)
+    assertEquals(1, current.revision)
+    assertEquals(1_000, current.createdAtEpochMillis)
+    assertEquals(2_000, current.updatedAtEpochMillis)
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, viewer, UiBuilderServiceRequest.OpenDesign("design")),
+      "the service-owned access record survives replacement",
+    )
+    assertEquals(
+      "Discover",
+      snapshot(execute(service, owner, UiBuilderServiceRequest.GetSnapshot("design", 0)))
+        .state
+        .document
+        .title,
+    )
+    assertEquals(
+      RejectionCodeV1.REVISION_NOT_RETAINED,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.ApplyOperation(
+              batch(
+                "stale-after-replacement",
+                0,
+                InsertNodeMutationV1(textNode("stale"), NodeLocationV1()),
+              )
+            ),
+          )
+        )
+        .code,
+      "a historical document remains readable, but cannot be a mutation base after replacement",
+    )
+    val pushed = assertIs<UiBuilderServiceUpdate.Snapshot>(updates.last()).snapshot
+    assertEquals("Saved temporary copy", pushed.state.document.title)
+    assertNull(pushed.access)
+
+    assertTrue(accepted(execute(service, owner, request)).idempotentReplay)
+    assertEquals(
+      RejectionCodeV1.OPERATION_ID_REUSED,
+      rejected(
+          execute(
+            service,
+            owner,
+            request.copy(document = localCopy.copy(title = "Different retry")),
+          )
+        )
+        .code,
+    )
+    assertEquals(
+      RejectionCodeV1.REVISION_MISMATCH,
+      rejected(
+          execute(
+            service,
+            owner,
+            request.copy(operationId = "stale-replace", baseRevision = 0),
+          )
+        )
+        .code,
+    )
+    assertContains(
+      rejected(
+          execute(
+            service,
+            owner,
+            request.copy(
+              operationId = "wrong-home",
+              baseRevision = 1,
+              document = localCopy.copy(home = DesignHomeV1.Repo("designs/design.uid")),
+            ),
+          )
+        )
+        .message,
+      "home",
+    )
+    assertContains(
+      rejected(
+          execute(
+            service,
+            owner,
+            request.copy(
+              operationId = "wrong-id",
+              baseRevision = 1,
+              document = localCopy.copy(id = "other-design"),
+            ),
+          )
+        )
+        .message,
+      "id",
+    )
+    assertContains(
+      rejected(
+          execute(
+            service,
+            owner,
+            request.copy(
+              operationId = "invalid-topology",
+              baseRevision = 1,
+              document = localCopy.copy(roots = listOf("missing"), nodes = emptyMap()),
+            ),
+          )
+        )
+        .message,
+      "missing",
+    )
+    subscription.close()
+
+    val restarted = service(storage = storage, clock = clock)
+    assertEquals("Saved temporary copy", currentDocument(restarted).title)
+    assertTrue(accepted(execute(restarted, owner, request)).idempotentReplay)
+    accepted(
+      execute(
+        restarted,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "edit-after-replace",
+            1,
+            SetPropertyMutationV1("saved", "text", StringValueV1("still editable")),
+          )
+        ),
+      )
+    )
+  }
+
+  @Test
+  fun `whole document replacement repairs a stored key id mismatch without creating an alias`() {
+    val storage = MemoryStorage()
+    create(service(storage = storage))
+    val loaded = LegacyUiBuilderState.decode(assertNotNull(storage.bytes)).value
+    val stored = loaded.designs.getValue("design")
+    storage.bytes =
+      LegacyUiBuilderState.encode(
+        loaded.copy(
+          designs = mapOf("design" to stored.copy(document = stored.document.copy(id = "wrong-id")))
+        ),
+        LegacyUiBuilderState.Format.V2,
+      )
+    val reopened = service(storage = storage)
+    assertEquals(setOf("design"), reopened.adminUnusableDesigns().keys)
+
+    val refused =
+      rejected(
+        execute(
+          reopened,
+          owner,
+          UiBuilderServiceRequest.ReplaceDesignDocument(
+            designId = "design",
+            document = stored.document.copy(id = "wrong-id"),
+            baseRevision = 0,
+            operationId = "refused-repair",
+          ),
+        )
+      )
+    assertContains(refused.message, "requested design")
+    assertEquals(
+      setOf("design"),
+      LegacyUiBuilderState.decode(assertNotNull(storage.bytes)).value.designs.keys,
+      "a rejection must be recorded under the requested map key, not the corrupt document id",
+    )
+    assertEquals(setOf("design"), reopened.adminUnusableDesigns().keys)
+
+    accepted(
+      execute(
+        reopened,
+        owner,
+        UiBuilderServiceRequest.ReplaceDesignDocument(
+          designId = "design",
+          document = stored.document.copy(id = "design", title = "Repaired"),
+          baseRevision = 0,
+          operationId = "repair-key",
+        ),
+      )
+    )
+    assertEquals(emptyMap(), reopened.adminUnusableDesigns())
+    assertEquals("design", currentDocument(reopened).id)
+    assertEquals("Repaired", currentDocument(reopened).title)
+    assertEquals(
+      setOf("design"),
+      LegacyUiBuilderState.decode(assertNotNull(storage.bytes)).value.designs.keys,
+    )
+  }
+
+  @Test
+  fun `whole document replacement enforces serialized document quota`() {
+    val service = service(limits = UiBuilderServiceLimits(maximumSerializedDocumentBytes = 2_000))
+    create(service)
+    val oversized = document().copy(title = "x".repeat(4_000))
+    assertContains(
+      error(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.ReplaceDesignDocument(
+              "design",
+              document(),
+              baseRevision = 0,
+              operationId = "",
+            ),
+          )
+        )
+        .message,
+      "operation id",
+    )
+
+    val rejection =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ReplaceDesignDocument(
+            "design",
+            oversized,
+            baseRevision = 0,
+            operationId = "oversized-replacement",
+          ),
+        )
+      )
+
+    assertContains(rejection.message, "serialized document byte limit")
+    assertEquals(0, currentDocument(service).revision)
   }
 
   @Test

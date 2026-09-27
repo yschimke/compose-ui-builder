@@ -142,7 +142,9 @@ public object UiBuilderProtocolMapper {
       is UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade,
       is UiBuilderServiceRequest.DeleteDesign,
       is UiBuilderServiceRequest.ListRevisions,
-      is UiBuilderServiceRequest.RestoreRevision ->
+      is UiBuilderServiceRequest.RestoreRevision,
+      is UiBuilderServiceRequest.MoveDesignHome,
+      is UiBuilderServiceRequest.ReplaceDesignDocument ->
         throw IllegalArgumentException(
           "${request::class.simpleName} has no ui-builder-protocol v1 request shape"
         )

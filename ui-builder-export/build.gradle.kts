@@ -81,6 +81,7 @@ kotlin {
       implementation(libs.kotlinx.serialization.json)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
+    jvmTest.dependencies { implementation(libs.json.schema.validator) }
   }
 }
 

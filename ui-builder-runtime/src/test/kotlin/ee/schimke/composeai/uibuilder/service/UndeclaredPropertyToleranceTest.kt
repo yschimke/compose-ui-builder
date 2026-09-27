@@ -156,6 +156,35 @@ class UndeclaredPropertyToleranceTest {
   }
 
   @Test
+  fun `a design the catalog outgrew can move home without dropping the property`() {
+    val root = createTempDirectory("undeclared")
+    create(service(root, declares = listOf("text", "tint")), "widget", withTint = true)
+
+    val narrowed = service(root, declares = listOf("text"))
+    val target = DesignHomeV1.Repo("designs/widget.uid")
+    val moved =
+      assertIs<UiBuilderServiceResponse.OperationOutcome>(
+          execute(
+            narrowed,
+            owner,
+            UiBuilderServiceRequest.MoveDesignHome(
+              designId = "widget",
+              sourceHome = null,
+              targetHome = target,
+              baseRevision = 0,
+              operationId = "move-home",
+            ),
+          )
+        )
+        .outcome
+    assertIs<AcceptedOutcomeV1>(moved)
+
+    val document = openedDocument(narrowed, "widget")
+    assertEquals(target, document.home)
+    assertTrue("tint" in document.nodes.getValue("label").properties)
+  }
+
+  @Test
   fun `REWRITING a tolerated property is refused`() {
     val root = createTempDirectory("undeclared")
     create(service(root, declares = listOf("text", "tint")), "widget", withTint = true)

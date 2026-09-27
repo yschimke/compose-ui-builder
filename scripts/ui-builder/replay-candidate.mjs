@@ -34,6 +34,7 @@ export function replayCandidateOperations(input) {
         // without the key here would hash differently in the two languages, which is the one thing
         // the cross-language hash exists to catch.
         assets: clone(command.assets ?? {}),
+        ...(command.home ? { home: clone(command.home) } : {}),
       };
       outcomes.set(command.operationId, { revision: 0 });
       continue;
@@ -65,7 +66,10 @@ export function replayCandidateOperations(input) {
 }
 
 export function candidateDocumentHash(document) {
-  const canonical = JSON.stringify(canonicalize(document));
+  // A home says where this content is authoritative; moving or stamping that identity must not
+  // turn otherwise identical content into a new revision.
+  const { home: _home, ...content } = document;
+  const canonical = JSON.stringify(canonicalize(content));
   return createHash("sha256").update(canonical).digest("hex");
 }
 
