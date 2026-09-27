@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.protocol.DesignAccessActionV1
 import ee.schimke.composeai.uibuilder.protocol.DesignAccessControlV1
 import ee.schimke.composeai.uibuilder.protocol.DesignAccessMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.DesignHomeV1
 import ee.schimke.composeai.uibuilder.protocol.DesignListItemV1
 import ee.schimke.composeai.uibuilder.protocol.DesignMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ExportArtifactV1
@@ -199,6 +200,36 @@ public sealed interface UiBuilderServiceRequest {
   public data class RestoreRevision(
     val designId: String,
     val revision: Long,
+    val baseRevision: Long,
+    val operationId: String,
+  ) : UiBuilderServiceRequest
+
+  /**
+   * Move the canonical home of a design without inferring authority from the copy being edited.
+   *
+   * [sourceHome] and [baseRevision] must still describe the stored design. A successful move is a
+   * new revision: the service retains the old snapshot, keeps its own stored copy as a pointer to
+   * [targetHome], and pushes a whole snapshot because no v1 delta can express home metadata.
+   */
+  public data class MoveDesignHome(
+    val designId: String,
+    val sourceHome: DesignHomeV1?,
+    val targetHome: DesignHomeV1,
+    val baseRevision: Long,
+    val operationId: String,
+  ) : UiBuilderServiceRequest
+
+  /**
+   * Authoritatively replace one stored design from a complete document copy.
+   *
+   * The supplied document must name the stored design and its current home. The service owns the
+   * committed id, home, revision and timestamps; validates the complete candidate; and retains the
+   * previous revision before broadcasting the replacement as a whole snapshot. This is the seam a
+   * host uses to save a temporary copy back or re-import an existing canonical document.
+   */
+  public data class ReplaceDesignDocument(
+    val designId: String,
+    val document: DesignDocumentV1,
     val baseRevision: Long,
     val operationId: String,
   ) : UiBuilderServiceRequest
