@@ -375,7 +375,7 @@ internal fun NewDesignDialog(
 @Composable
 fun UiBuilderUnavailableScreen(
   designId: String,
-  catalogSystemId: String,
+  catalogSystemId: String?,
   reason: String,
   code: ServiceErrorCodeV1?,
   recovery: UiBuilderCatalogRecoveryUi? = null,
@@ -434,9 +434,10 @@ fun UiBuilderUnavailableScreen(
         }
         Spacer(Modifier.height(20.dp))
         // Both ids, because the first question anyone asks about a page that will not open is
-        // which design and which catalog, and the URL is not always what was typed.
+        // which design and which catalog, and the URL is not always what was typed. The catalog
+        // only when it is known: a design that was never opened has told nobody its catalog.
         Text(
-          text = "$catalogSystemId · $designId",
+          text = catalogSystemId?.let { "$it · $designId" } ?: designId,
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           textAlign = TextAlign.Center,

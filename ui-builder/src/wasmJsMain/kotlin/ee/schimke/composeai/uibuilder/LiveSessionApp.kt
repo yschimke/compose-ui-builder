@@ -1354,7 +1354,9 @@ private fun LiveSessionApp(
     if (failure != null) {
       UiBuilderUnavailableScreen(
         designId = config.designId,
-        catalogSystemId = activeCatalogSystemId,
+        // Only a catalog the open actually installed. Before that, this is the page's default,
+        // `m3-catalog`, and a Wear design that failed to open was captioned as an M3 one.
+        catalogSystemId = activeCatalogSystemId.takeIf { catalog != null },
         reason = failure.message,
         code = failure.code,
         recovery =
