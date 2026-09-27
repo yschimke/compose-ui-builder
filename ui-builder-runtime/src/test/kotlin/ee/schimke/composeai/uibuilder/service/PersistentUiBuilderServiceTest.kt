@@ -463,6 +463,28 @@ class PersistentUiBuilderServiceTest {
         UiBuilderServiceRequest.CreateDesign(document().copy(home = serverHome)),
       )
     )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "insert-before-move",
+            0,
+            InsertNodeMutationV1(textNode("temporary"), NodeLocationV1()),
+          )
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("delete-before-move", 1, DeleteNodeMutationV1("temporary"))
+        ),
+      )
+    )
     val updates = mutableListOf<UiBuilderServiceUpdate>()
     val subscription =
       service.subscribe(UiBuilderSubscriptionCall(owner, "design", 0), updates::add)
@@ -473,12 +495,12 @@ class PersistentUiBuilderServiceTest {
         designId = "design",
         sourceHome = serverHome,
         targetHome = repoHome,
-        baseRevision = 0,
+        baseRevision = 2,
         operationId = "move-home",
       )
     val moved = accepted(execute(service, owner, request))
-    assertEquals(1, moved.committedRevision)
-    assertEquals(1, moved.sequence)
+    assertEquals(3, moved.committedRevision)
+    assertEquals(3, moved.sequence)
     assertFalse(moved.idempotentReplay)
     val current = currentDocument(service)
     assertEquals(repoHome, current.home)
@@ -490,7 +512,7 @@ class PersistentUiBuilderServiceTest {
 
     val replay = accepted(execute(service, owner, request))
     assertTrue(replay.idempotentReplay)
-    assertEquals(1, replay.committedRevision)
+    assertEquals(3, replay.committedRevision)
     assertEquals(
       RejectionCodeV1.OPERATION_ID_REUSED,
       rejected(
@@ -512,7 +534,7 @@ class PersistentUiBuilderServiceTest {
               "design",
               repoHome,
               serverHome,
-              baseRevision = 0,
+              baseRevision = 2,
               operationId = "stale-move",
             ),
           )
@@ -528,7 +550,7 @@ class PersistentUiBuilderServiceTest {
               "design",
               serverHome,
               DesignHomeV1.Server("https://other.example", "other-design"),
-              baseRevision = 1,
+              baseRevision = 3,
               operationId = "wrong-source-home",
             ),
           )
@@ -546,7 +568,7 @@ class PersistentUiBuilderServiceTest {
               "design",
               repoHome,
               serverHome,
-              baseRevision = 1,
+              baseRevision = 3,
               operationId = "outsider-move",
             ),
           )
@@ -560,6 +582,22 @@ class PersistentUiBuilderServiceTest {
         .document
         .home,
     )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo(
+            "design",
+            "undo-delete-after-move",
+            "browser",
+            3,
+            "delete-before-move",
+          )
+        ),
+      )
+    )
+    assertTrue("temporary" in currentDocument(service).nodes)
     subscription.close()
 
     val restarted = service(storage = storage, clock = clock)
@@ -570,7 +608,11 @@ class PersistentUiBuilderServiceTest {
         restarted,
         owner,
         UiBuilderServiceRequest.ApplyOperation(
-          batch("edit-after-move", 1, InsertNodeMutationV1(textNode("after"), NodeLocationV1()))
+          batch(
+            "edit-after-move",
+            4,
+            SetPropertyMutationV1("temporary", "text", StringValueV1("after")),
+          )
         ),
       )
     )
@@ -640,6 +682,24 @@ class PersistentUiBuilderServiceTest {
         .state
         .document
         .title,
+    )
+    assertEquals(
+      RejectionCodeV1.REVISION_NOT_RETAINED,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.ApplyOperation(
+              batch(
+                "stale-after-replacement",
+                0,
+                InsertNodeMutationV1(textNode("stale"), NodeLocationV1()),
+              )
+            ),
+          )
+        )
+        .code,
+      "a historical document remains readable, but cannot be a mutation base after replacement",
     )
     val pushed = assertIs<UiBuilderServiceUpdate.Snapshot>(updates.last()).snapshot
     assertEquals("Saved temporary copy", pushed.state.document.title)
@@ -730,6 +790,64 @@ class PersistentUiBuilderServiceTest {
           )
         ),
       )
+    )
+  }
+
+  @Test
+  fun `whole document replacement repairs a stored key id mismatch without creating an alias`() {
+    val storage = MemoryStorage()
+    create(service(storage = storage))
+    val loaded = LegacyUiBuilderState.decode(assertNotNull(storage.bytes)).value
+    val stored = loaded.designs.getValue("design")
+    storage.bytes =
+      LegacyUiBuilderState.encode(
+        loaded.copy(
+          designs = mapOf("design" to stored.copy(document = stored.document.copy(id = "wrong-id")))
+        ),
+        LegacyUiBuilderState.Format.V2,
+      )
+    val reopened = service(storage = storage)
+    assertEquals(setOf("design"), reopened.adminUnusableDesigns().keys)
+
+    val refused =
+      rejected(
+        execute(
+          reopened,
+          owner,
+          UiBuilderServiceRequest.ReplaceDesignDocument(
+            designId = "design",
+            document = stored.document.copy(id = "wrong-id"),
+            baseRevision = 0,
+            operationId = "refused-repair",
+          ),
+        )
+      )
+    assertContains(refused.message, "requested design")
+    assertEquals(
+      setOf("design"),
+      LegacyUiBuilderState.decode(assertNotNull(storage.bytes)).value.designs.keys,
+      "a rejection must be recorded under the requested map key, not the corrupt document id",
+    )
+    assertEquals(setOf("design"), reopened.adminUnusableDesigns().keys)
+
+    accepted(
+      execute(
+        reopened,
+        owner,
+        UiBuilderServiceRequest.ReplaceDesignDocument(
+          designId = "design",
+          document = stored.document.copy(id = "design", title = "Repaired"),
+          baseRevision = 0,
+          operationId = "repair-key",
+        ),
+      )
+    )
+    assertEquals(emptyMap(), reopened.adminUnusableDesigns())
+    assertEquals("design", currentDocument(reopened).id)
+    assertEquals("Repaired", currentDocument(reopened).title)
+    assertEquals(
+      setOf("design"),
+      LegacyUiBuilderState.decode(assertNotNull(storage.bytes)).value.designs.keys,
     )
   }
 

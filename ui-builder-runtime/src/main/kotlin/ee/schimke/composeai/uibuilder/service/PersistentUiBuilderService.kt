@@ -1246,6 +1246,7 @@ public class PersistentUiBuilderService(
       operationId = request.operationId,
       baseRevision = request.baseRevision,
       fingerprint = fingerprint,
+      replacesContent = false,
     ) { current ->
       when {
         current.home != request.sourceHome ->
@@ -1284,11 +1285,14 @@ public class PersistentUiBuilderService(
       operationId = request.operationId,
       baseRevision = request.baseRevision,
       fingerprint = fingerprint,
+      replacesContent = true,
       repairsUnusableDesign = true,
     ) { current ->
       when {
-        request.document.id != current.id ->
-          WholeDocumentCandidate.Refused("replacement document id does not match the stored design")
+        request.document.id != request.designId ->
+          WholeDocumentCandidate.Refused(
+            "replacement document id does not match the requested design"
+          )
         request.document.home != current.home ->
           WholeDocumentCandidate.Refused(
             "replacement document home does not match the stored design"
@@ -1301,9 +1305,9 @@ public class PersistentUiBuilderService(
   /**
    * Commit a complete document rather than pretending its changes are a v1 operation batch.
    *
-   * The operation outcome is still durable and idempotent, but the delta history and undo records
-   * are cut at this sequence: neither can replay an arbitrary replacement. Subscribers receive the
-   * whole snapshot that can.
+   * The operation outcome is durable and idempotent. A content replacement cuts the conflict, delta
+   * and undo windows at this sequence because none can describe an arbitrary replacement; a
+   * provenance-only home move preserves them. Subscribers receive the whole snapshot either way.
    */
   private fun replaceWholeDocument(
     actor: AuthenticatedUiBuilderActor,
@@ -1311,6 +1315,7 @@ public class PersistentUiBuilderService(
     operationId: String,
     baseRevision: Long,
     fingerprint: String,
+    replacesContent: Boolean,
     repairsUnusableDesign: Boolean = false,
     candidateFor: (DesignDocumentV1) -> WholeDocumentCandidate,
   ): LockedExecution {
@@ -1343,6 +1348,7 @@ public class PersistentUiBuilderService(
     }
     if (baseRevision != design.document.revision) {
       return recordWholeDocumentRejection(
+        designId,
         design,
         operationId,
         fingerprint,
@@ -1353,6 +1359,7 @@ public class PersistentUiBuilderService(
     if (!admitMutation(actor.actorId, designId, 1)) {
       rejectedMutationRate.incrementAndGet()
       return recordWholeDocumentRejection(
+        designId,
         design,
         operationId,
         fingerprint,
@@ -1365,6 +1372,7 @@ public class PersistentUiBuilderService(
         is WholeDocumentCandidate.Ready -> candidate.document
         is WholeDocumentCandidate.Refused ->
           return recordWholeDocumentRejection(
+            designId,
             design,
             operationId,
             fingerprint,
@@ -1377,7 +1385,7 @@ public class PersistentUiBuilderService(
     val now = clock.millis()
     var document =
       supplied.copy(
-        id = design.document.id,
+        id = designId,
         revision = revision,
         createdAtEpochMillis = design.document.createdAtEpochMillis,
         updatedAtEpochMillis = now,
@@ -1393,6 +1401,7 @@ public class PersistentUiBuilderService(
       }
     if (validationIssue != null) {
       return recordWholeDocumentRejection(
+        designId,
         design,
         operationId,
         fingerprint,
@@ -1403,6 +1412,7 @@ public class PersistentUiBuilderService(
     val catalog =
       catalogs.resolve(document.catalogPin)
         ?: return recordWholeDocumentRejection(
+          designId,
           design,
           operationId,
           fingerprint,
@@ -1411,6 +1421,7 @@ public class PersistentUiBuilderService(
         )
     catalogs.validate(document, catalog)?.let { issue ->
       return recordWholeDocumentRejection(
+        designId,
         design,
         operationId,
         fingerprint,
@@ -1421,6 +1432,7 @@ public class PersistentUiBuilderService(
     document = withIconOutlines(document)
     documentQuotaIssue(document, countRejection = true)?.let { issue ->
       return recordWholeDocumentRejection(
+        designId,
         design,
         operationId,
         fingerprint,
@@ -1445,12 +1457,13 @@ public class PersistentUiBuilderService(
       design.copy(
         document = document,
         lastSequence = sequence,
-        history = emptyList(),
+        history = if (replacesContent) emptyList() else design.history,
         revisionSnapshots =
           (design.revisionSnapshots + RevisionStateV1(document, sequence)).takeLast(retained),
         positions = positions,
         positionSnapshots =
-          (design.positionSnapshots + PositionStateV1(revision, positions)).takeLast(retained),
+          if (replacesContent) listOf(PositionStateV1(revision, positions))
+          else (design.positionSnapshots + PositionStateV1(revision, positions)).takeLast(retained),
         updatedAtEpochMillis = now,
         audit =
           (design.audit +
@@ -1466,9 +1479,22 @@ public class PersistentUiBuilderService(
               ))
             .takeLast(limits.retainedAuditRecords),
         operationOutcomes = outcomes,
-        acceptedOperations = emptyMap(),
-        tombstones = emptyMap(),
+        acceptedOperations = if (replacesContent) emptyMap() else design.acceptedOperations,
+        conflictTouches = if (replacesContent) emptyList() else design.conflictTouches,
+        tombstones = if (replacesContent) emptyMap() else design.tombstones,
       )
+    if (repairsUnusableDesign) {
+      unusableReason(designId, updated)?.let { issue ->
+        return recordWholeDocumentRejection(
+          designId,
+          design,
+          operationId,
+          fingerprint,
+          RejectionCodeV1.INVALID_COMMAND,
+          issue.reason,
+        )
+      }
+    }
     commitDesign(designId, updated)
     if (repairsUnusableDesign) unusableDesigns.remove(designId)
     val broadcast = snapshot(updated, actor, catalog, activePresence(designId)).copy(access = null)
@@ -1477,6 +1503,7 @@ public class PersistentUiBuilderService(
   }
 
   private fun recordWholeDocumentRejection(
+    designId: String,
     design: PersistedDesignV1,
     operationId: String,
     fingerprint: String,
@@ -1485,7 +1512,7 @@ public class PersistentUiBuilderService(
   ): LockedExecution {
     val outcome = rejected(operationId, design.document.revision, code, message)
     commitDesign(
-      design.document.id,
+      designId,
       design.copy(
         operationOutcomes = retainedOutcomeRecords(design, operationId, fingerprint, outcome)
       ),
