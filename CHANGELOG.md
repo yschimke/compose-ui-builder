@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.67.0](https://github.com/yschimke/compose-ui-builder/compare/v3.66.0...v3.67.0) (2026-09-28)
+
+
+### Bug Fixes
+
+* **ui-builder:** draw new designs through catalog runtimes that predate document homes ([#338](https://github.com/yschimke/compose-ui-builder/issues/338)) ([d716b9a](https://github.com/yschimke/compose-ui-builder/commit/d716b9a4f6168fd5cd9b1cc8a39268b4a6931df3))
+
 ## [3.66.0](https://github.com/yschimke/compose-ui-builder/compare/v3.65.0...v3.66.0) (2026-09-27)
 
 
