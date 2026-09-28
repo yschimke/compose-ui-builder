@@ -44,7 +44,7 @@ class ProductionRemoteTextTest {
       onNodeWithText("Unsupported component", substring = true).assertDoesNotExist()
     }
 
-  private companion object {
+  internal companion object {
     val WIDGET_DOCUMENT =
       """
       {"schema":"compose-ui-builder-document/v1-candidate","id":"golden-tiles-alarm",
