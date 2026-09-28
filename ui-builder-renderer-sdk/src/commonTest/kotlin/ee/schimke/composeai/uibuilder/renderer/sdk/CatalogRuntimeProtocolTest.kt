@@ -12,6 +12,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
@@ -40,6 +41,33 @@ class CatalogRuntimeProtocolTest {
       )
 
     assertEquals("hello-widget", command.document.template)
+  }
+
+  @Test
+  fun `render accepts a document field this runtime was built before`() {
+    val endpoint = initializedEndpoint()
+    val newer = buildJsonObject {
+      put(
+        "document",
+        JsonObject(documentElement(document()).jsonObject + ("addedLater" to JsonPrimitive(true))),
+      )
+      put(
+        "surface",
+        RUNTIME_PROTOCOL_JSON.encodeToJsonElement(
+          UiBuilderRendererSurfaceV2.serializer(),
+          surface(),
+        ),
+      )
+    }
+
+    val command =
+      endpoint.receive(
+        ORIGIN,
+        true,
+        CatalogRuntimeHostSession(RUNTIME).request("newer-render", "renderDocument", newer),
+      )
+
+    assertEquals("design", assertIs<CatalogRuntimeCommand.Render>(command).document.id)
   }
 
   @Test
