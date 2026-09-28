@@ -1873,7 +1873,13 @@ fun UiBuilderEditor(
   val inspector: @Composable (Modifier, Boolean) -> Unit = { modifier, variantsDrawn ->
     PropertyInspector(
       state = state,
-      onClose = { inspectorOpen = false },
+      // Both layouts' flags. The compact one draws this sheet from [mobilePanel], not from
+      // [inspectorOpen], so clearing only the wide layout's flag left the close button doing
+      // nothing under 840dp — which an editor beside its preview pane easily is.
+      onClose = {
+        inspectorOpen = false
+        if (mobilePanel == MobileEditorPanel.Properties) mobilePanel = MobileEditorPanel.None
+      },
       fields = propertyFields,
       modifierFields = reducer.modifierFields(state),
       modifierToggles = reducer.modifierToggles(state),
