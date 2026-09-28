@@ -8,9 +8,11 @@ package ee.schimke.composeai.uibuilder
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.LocalAbsoluteTonalElevation
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -20,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -33,6 +36,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
 import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
@@ -248,7 +252,12 @@ internal fun CatalogRuntimeCanvas(
   val surfaceId = remember { nextCatalogRuntimeSurfaceId() }
   // The runtime is sent the document and nothing else, and cannot fetch the design's uploaded
   // pictures from its sandbox, so the ones the editor has fetched travel inside it.
-  val runtimeDocument = document.withInlinedUploadedAssets(LocalUiBuilderAssetBytes.current)
+  //
+  // And without its `home`. That is provenance for exports, not something a runtime draws, and a
+  // runtime built before homes existed decodes the document strictly: every design the server
+  // stamped a home on was refused with `INVALID_DOCUMENT`, and all three panes stayed blank.
+  val runtimeDocument =
+    document.withInlinedUploadedAssets(LocalUiBuilderAssetBytes.current).copy(home = null)
   val documentJson =
     remember(runtimeDocument) {
       inspectionJson.encodeToString(UiBuilderDocument.serializer(), runtimeDocument)
@@ -276,6 +285,9 @@ internal fun CatalogRuntimeCanvas(
   // What the runtime announced in `initialized`: the editor sends a `revealNode` or a sideways
   // unroll only to a runtime that listed it.
   var capabilities by remember(surfaceId) { mutableStateOf(emptySet<String>()) }
+  // Why the runtime drew nothing, or empty while it has not refused. Said in the pane: a refusal
+  // used to live only on the host element, and a blank pane was all anybody saw.
+  var runtimeError by remember(surfaceId) { mutableStateOf("") }
   LaunchedEffect(surfaceId, runtimeId, document.revision) {
     lastInspection = ""
     // For as long as this revision is on screen, not only until its first answer: a reveal or a
@@ -284,6 +296,7 @@ internal fun CatalogRuntimeCanvas(
     while (true) {
       capabilities =
         readCatalogRuntimeCapabilities(surfaceId).split(',').filter { it.isNotBlank() }.toSet()
+      runtimeError = readCatalogRuntimeError(surfaceId)
       val encoded = readCatalogRuntimeInspection(surfaceId)
       if (encoded.isNotEmpty() && encoded != lastInspection) {
         lastInspection = encoded
@@ -345,7 +358,7 @@ internal fun CatalogRuntimeCanvas(
       // Catalog pixels live in the DOM layer immediately below Compose. Punch out only their exact
       // rectangle; editor-owned Compose overlays are later siblings and remain above the runtime.
       .drawWithContent {
-        drawRect(Color.Transparent, blendMode = BlendMode.Clear)
+        if (runtimeError.isEmpty()) drawRect(Color.Transparent, blendMode = BlendMode.Clear)
         drawContent()
       }
       .onGloballyPositioned { nextCoordinates ->
@@ -363,8 +376,18 @@ internal fun CatalogRuntimeCanvas(
           pixelsPerCssPixel,
           surface.positionVersion,
         )
-      }
-  )
+      },
+    contentAlignment = Alignment.Center,
+  ) {
+    if (runtimeError.isNotEmpty()) {
+      Text(
+        "The catalog runtime could not draw this design: $runtimeError",
+        modifier = Modifier.padding(16.dp),
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodySmall,
+      )
+    }
+  }
 }
 
 /**
@@ -749,6 +772,7 @@ private fun updateCatalogRuntimeSurface(
           if (message.requestId !== latestRenderRequestId) return;
           host.__uiBuilderInspection = message.payload.inspection;
           host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
+          delete host.__uiBuilderRuntimeError;
           renderedRef = { documentId: expected.documentId, documentRevision: expected.documentRevision };
           controller.drawOverlay();
           controller.sendActions();
@@ -759,7 +783,9 @@ private fun updateCatalogRuntimeSurface(
           host.__uiBuilderInspection = message.payload.inspection;
           host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
           controller.drawOverlay();
-        } else if (message.type === 'error') {
+        } else if (message.type === 'error' && expected.type !== 'dispatchAction') {
+          // Only a refused initialize or render leaves the pane blank; a refused reveal or wheel
+          // leaves the last drawing standing, and must not paint over it.
           host.__uiBuilderRuntimeError = message.payload;
         }
       };
@@ -799,6 +825,16 @@ private fun updateCatalogRuntimeSurface(
 
 private fun readCatalogRuntimeInspection(surfaceId: String): String =
   js("document.getElementById(surfaceId)?.__uiBuilderInspectionJson || ''")
+
+private fun readCatalogRuntimeError(surfaceId: String): String =
+  js(
+    """(function () {
+      const error = document.getElementById(surfaceId)?.__uiBuilderRuntimeError;
+      if (!error) return '';
+      if (typeof error === 'string') return error;
+      return (error.code ? error.code + ': ' : '') + (error.message || '');
+    })()"""
+  )
 
 private fun readCatalogRuntimeCapabilities(surfaceId: String): String =
   js("document.getElementById(surfaceId)?.__uiBuilderCapabilities || ''")

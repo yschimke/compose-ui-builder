@@ -198,7 +198,7 @@ class CatalogRuntimeProtocolEndpoint(
           }
         val document =
           try {
-            RUNTIME_PROTOCOL_JSON.decodeFromJsonElement(
+            RUNTIME_DOCUMENT_JSON.decodeFromJsonElement(
               UiBuilderDocument.serializer(),
               renderPayload.first,
             )
@@ -373,7 +373,7 @@ class CatalogRuntimeHostSession(
         "initialize" -> Pending.Initialize
         "renderDocument" -> {
           val document =
-            RUNTIME_PROTOCOL_JSON.decodeFromJsonElement(
+            RUNTIME_DOCUMENT_JSON.decodeFromJsonElement(
               UiBuilderDocument.serializer(),
               payload.getValue("document"),
             )
@@ -555,6 +555,17 @@ internal val RUNTIME_PROTOCOL_JSON = Json {
   ignoreUnknownKeys = false
   explicitNulls = false
 }
+
+/**
+ * The document inside a `renderDocument`, read leniently where the envelope is not.
+ *
+ * A runtime is built once and pinned by designs for as long as they exist, while the editor and the
+ * server that hand it documents keep moving. A top-level field added after the runtime was built —
+ * `home`, which the server stamps on every design it creates — made a strict decode refuse every
+ * new design with `INVALID_DOCUMENT`, and the editor drew nothing. What the runtime draws is the
+ * nodes it knows; a field it has never heard of is not one of them.
+ */
+internal val RUNTIME_DOCUMENT_JSON = Json(RUNTIME_PROTOCOL_JSON) { ignoreUnknownKeys = true }
 
 /** How many request ids a runtime remembers to refuse a replay. */
 internal const val ACCEPTED_REQUEST_ID_HISTORY = 1024
