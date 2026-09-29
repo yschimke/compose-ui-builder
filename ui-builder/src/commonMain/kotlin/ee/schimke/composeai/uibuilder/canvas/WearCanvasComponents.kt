@@ -8,9 +8,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -118,7 +124,12 @@ internal fun WearCanvasListHeader(
   // takes a content lambda, so the string is this `Text` and the truncation is its argument. Both
   // were declared on the component and read by nobody, which meant a header a design had clipped to
   // one line drew as many as it wrapped to.
-  ListHeader(modifier = modifier) { Text(text, maxLines = maxLines, overflow = overflow) }
+  val transformation = wearRowTransformation()
+  OutsideWearRow {
+    ListHeader(modifier = modifier, transformation = transformation) {
+      Text(text, maxLines = maxLines, overflow = overflow)
+    }
+  }
 }
 
 /** Wear's own sub-header, replacing a `Text` that was styled to look like one. */
@@ -129,7 +140,12 @@ internal fun WearCanvasListSubHeader(
   maxLines: Int = Int.MAX_VALUE,
   overflow: TextOverflow = TextOverflow.Clip,
 ) {
-  ListSubHeader(modifier = modifier) { Text(text, maxLines = maxLines, overflow = overflow) }
+  val transformation = wearRowTransformation()
+  OutsideWearRow {
+    ListSubHeader(modifier = modifier, transformation = transformation) {
+      Text(text, maxLines = maxLines, overflow = overflow)
+    }
+  }
 }
 
 /**
@@ -148,14 +164,18 @@ internal fun WearCanvasSwitchButton(
   label: @Composable RowScope.() -> Unit,
   secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
 ) {
-  SwitchButton(
-    checked = checked,
-    onCheckedChange = {},
-    modifier = modifier.fillMaxWidth(),
-    enabled = enabled,
-    label = label,
-    secondaryLabel = secondaryLabel,
-  )
+  val transformation = wearRowTransformation()
+  OutsideWearRow {
+    SwitchButton(
+      checked = checked,
+      onCheckedChange = {},
+      modifier = modifier.fillMaxWidth(),
+      enabled = enabled,
+      label = label,
+      secondaryLabel = secondaryLabel,
+      transformation = transformation,
+    )
+  }
 }
 
 /**
@@ -260,14 +280,21 @@ internal fun WearCanvasTransformingLazyColumn(
         // while the generated screen beside it scaled and faded. The library's own components take
         // the second as a parameter, so it travels to them by a local rather than by rewriting
         // every call.
-        CompositionLocalProvider(
-          LocalWearSurfaceTransformation provides SurfaceTransformation(spec)
-        ) {
+        //
+        // A row whose component takes no transformation — a `Text`, an `IconButton`, a slider —
+        // still gets the layout half, so the list transforms it here as a whole, the way
+        // `ButtonGroup` transforms itself. Left out, such a row got shorter near the bezel while
+        // drawing at full size, spilling over its neighbours.
+        val row = remember(this, spec) { WearRowTransformation(SurfaceTransformation(spec)) }
+        CompositionLocalProvider(LocalWearRowTransformation provides row) {
           item(
             index,
             Modifier.fillMaxWidth()
               .minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding)
-              .transformedHeight(this, spec),
+              .transformedHeight(this, spec)
+              .graphicsLayer {
+                if (row.appliedBy == 0) with(row.surface) { applyContainerTransformation() }
+              },
           )
         }
       }
@@ -292,14 +319,55 @@ internal val LocalWearScreenListState =
 internal val LocalWearScreenContentPadding = staticCompositionLocalOf { PaddingValues() }
 
 /**
- * The row transformation the enclosing Wear list is applying, or null outside one.
+ * The row transformation the enclosing Wear list is applying, and whether anything in the row has
+ * applied it.
  *
  * The canvas dispatches a component by id, so a component cannot be handed the transformation its
  * parent would pass it in generated code. This is that argument, carried the way a
- * `CompositionLocal` carries anything else the tree knows and the call site does not.
+ * `CompositionLocal` carries anything else the tree knows and the call site does not — see
+ * [wearRowTransformation] for taking it.
  */
-internal val LocalWearSurfaceTransformation =
-  staticCompositionLocalOf<SurfaceTransformation?> { null }
+internal class WearRowTransformation(val surface: SurfaceTransformation) {
+  /** How many components in the row are applying [surface] themselves; the list does, at none. */
+  var appliedBy by mutableIntStateOf(0)
+    private set
+
+  internal fun claim() {
+    appliedBy++
+  }
+
+  internal fun release() {
+    appliedBy--
+  }
+}
+
+/** The row transformation of the enclosing Wear list, or null outside one. */
+internal val LocalWearRowTransformation = staticCompositionLocalOf<WearRowTransformation?> { null }
+
+/**
+ * The row's transformation, for a component that takes one as its `transformation` argument, or
+ * null outside a transforming list.
+ *
+ * Taking it tells the list the row draws its own, so the list does not transform it a second time.
+ * The component must then draw inside [OutsideWearRow]: the library transforms a surface together
+ * with everything on it, and a button inside a card, or in a `ButtonGroup`, that took the same
+ * transformation again would be scaled twice, each about its own centre.
+ */
+@Composable
+internal fun wearRowTransformation(): SurfaceTransformation? {
+  val row = LocalWearRowTransformation.current ?: return null
+  DisposableEffect(row) {
+    row.claim()
+    onDispose { row.release() }
+  }
+  return row.surface
+}
+
+/** Draws [content] as no part of a list row: nothing in it takes the row's transformation. */
+@Composable
+internal fun OutsideWearRow(content: @Composable () -> Unit) {
+  CompositionLocalProvider(LocalWearRowTransformation provides null, content = content)
+}
 
 // ── The rest of the catalog
 // ───────────────────────────────────────────────────────────────────────
@@ -322,14 +390,18 @@ internal fun WearCanvasCheckboxButton(
   label: @Composable RowScope.() -> Unit,
   secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
 ) {
-  CheckboxButton(
-    checked = checked,
-    onCheckedChange = {},
-    modifier = modifier.fillMaxWidth(),
-    enabled = enabled,
-    label = label,
-    secondaryLabel = secondaryLabel,
-  )
+  val transformation = wearRowTransformation()
+  OutsideWearRow {
+    CheckboxButton(
+      checked = checked,
+      onCheckedChange = {},
+      modifier = modifier.fillMaxWidth(),
+      enabled = enabled,
+      label = label,
+      secondaryLabel = secondaryLabel,
+      transformation = transformation,
+    )
+  }
 }
 
 /** Wear's `RadioButton`, the selection twin of the checkbox row above. */
@@ -341,14 +413,18 @@ internal fun WearCanvasRadioButton(
   label: @Composable RowScope.() -> Unit,
   secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
 ) {
-  RadioButton(
-    selected = selected,
-    onSelect = {},
-    modifier = modifier.fillMaxWidth(),
-    enabled = enabled,
-    label = label,
-    secondaryLabel = secondaryLabel,
-  )
+  val transformation = wearRowTransformation()
+  OutsideWearRow {
+    RadioButton(
+      selected = selected,
+      onSelect = {},
+      modifier = modifier.fillMaxWidth(),
+      enabled = enabled,
+      label = label,
+      secondaryLabel = secondaryLabel,
+      transformation = transformation,
+    )
+  }
 }
 
 /**
@@ -489,13 +565,19 @@ internal fun WearCanvasButtonGroup(
     Box(modifier.fillMaxWidth())
     return
   }
-  ButtonGroup(modifier = modifier.fillMaxWidth()) {
-    // Each child's `weight` is `ButtonGroupScope.weight`, which only this scope can write, so the
-    // group applies it rather than the child's own chain — the way `Row` and `Column` read
-    // `layoutWeight` for theirs. Without it Jetcaster's 0.7 / 0.3 play and queue buttons drew
-    // as equals on the canvas while the generated screen weighted them.
-    weights.forEachIndexed { index, weight ->
-      child(index, if (weight != null) Modifier.weight(weight) else Modifier)
+  // The group takes the row's transformation as a whole, and its buttons none: upstream's own
+  // warning is that a transformation on both is applied twice, and each button scaled about its own
+  // centre is what made a list's last row — a group of buttons — draw wrong on the canvas.
+  val transformation = wearRowTransformation()
+  OutsideWearRow {
+    ButtonGroup(modifier = modifier.fillMaxWidth(), transformation = transformation) {
+      // Each child's `weight` is `ButtonGroupScope.weight`, which only this scope can write, so the
+      // group applies it rather than the child's own chain — the way `Row` and `Column` read
+      // `layoutWeight` for theirs. Without it Jetcaster's 0.7 / 0.3 play and queue buttons drew
+      // as equals on the canvas while the generated screen weighted them.
+      weights.forEachIndexed { index, weight ->
+        child(index, if (weight != null) Modifier.weight(weight) else Modifier)
+      }
     }
   }
 }
@@ -781,18 +863,20 @@ internal fun WearCanvasCard(
   // not to pass the argument. Inside one, the list provides the real thing and it is passed here,
   // which is what makes a card scale and fade as it approaches the bezel instead of only getting
   // shorter.
-  val transformation = LocalWearSurfaceTransformation.current
+  val transformation = wearRowTransformation()
+  // What is on the card is not the row: the card's transformation already carries it.
+  val body: @Composable () -> Unit = { OutsideWearRow(content) }
   when (variant) {
     // The authored content is the card's TITLE, and the body slot is left empty. A `TitleCard` has
     // both and the catalog declares one, so this puts it in the slot that is the card's primary
     // line rather than under an empty heading.
     "title" ->
       if (transformation == null) {
-        TitleCard(onClick = {}, title = { content() }, modifier = modifier) {}
+        TitleCard(onClick = {}, title = { body() }, modifier = modifier) {}
       } else {
         TitleCard(
           onClick = {},
-          title = { content() },
+          title = { body() },
           modifier = modifier,
           transformation = transformation,
         ) {}
@@ -801,29 +885,27 @@ internal fun WearCanvasCard(
     // one, so it is left empty rather than invented.
     "app" ->
       if (transformation == null) {
-        AppCard(onClick = {}, appName = {}, title = { content() }, modifier = modifier) {}
+        AppCard(onClick = {}, appName = {}, title = { body() }, modifier = modifier) {}
       } else {
         AppCard(
           onClick = {},
           appName = {},
-          title = { content() },
+          title = { body() },
           modifier = modifier,
           transformation = transformation,
         ) {}
       }
     "outlined" ->
       if (transformation == null) {
-        OutlinedCard(onClick = {}, modifier = modifier) { content() }
+        OutlinedCard(onClick = {}, modifier = modifier) { body() }
       } else {
-        OutlinedCard(onClick = {}, modifier = modifier, transformation = transformation) {
-          content()
-        }
+        OutlinedCard(onClick = {}, modifier = modifier, transformation = transformation) { body() }
       }
     else ->
       if (transformation == null) {
-        Card(onClick = {}, modifier = modifier) { content() }
+        Card(onClick = {}, modifier = modifier) { body() }
       } else {
-        Card(onClick = {}, modifier = modifier, transformation = transformation) { content() }
+        Card(onClick = {}, modifier = modifier, transformation = transformation) { body() }
       }
   }
 }
@@ -847,8 +929,8 @@ internal fun WearCanvasButton(
       "child" -> ButtonDefaults.childButtonColors(contentColor = contentColor)
       else -> ButtonDefaults.buttonColors(containerColor, contentColor)
     }
-  val slot: @Composable RowScope.() -> Unit = { label() }
-  val transformation = LocalWearSurfaceTransformation.current
+  val slot: @Composable RowScope.() -> Unit = { OutsideWearRow(label) }
+  val transformation = wearRowTransformation()
   when (variant) {
     "filled-tonal" ->
       if (transformation == null) {

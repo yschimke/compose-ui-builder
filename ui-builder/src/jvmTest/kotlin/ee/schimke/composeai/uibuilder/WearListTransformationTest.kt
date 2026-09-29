@@ -1,12 +1,14 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
@@ -14,10 +16,13 @@ import androidx.compose.ui.unit.Density
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
-import ee.schimke.composeai.uibuilder.canvas.LocalWearSurfaceTransformation
+import ee.schimke.composeai.uibuilder.canvas.LocalWearRowTransformation
 import ee.schimke.composeai.uibuilder.canvas.WearCanvasButton
+import ee.schimke.composeai.uibuilder.canvas.WearCanvasButtonGroup
 import ee.schimke.composeai.uibuilder.canvas.WearCanvasCard
+import ee.schimke.composeai.uibuilder.canvas.WearCanvasListHeader
 import ee.schimke.composeai.uibuilder.canvas.WearCanvasTransformingLazyColumn
+import ee.schimke.composeai.uibuilder.canvas.WearRowTransformation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -66,6 +71,12 @@ class WearListTransformationTest {
     override fun GraphicsLayerScope.applyContentTransformation() = Unit
   }
 
+  /** Reports how many components apply [row] at draw time, which is when the list reads it. */
+  @androidx.compose.runtime.Composable
+  private fun AppliedWhileDrawn(row: WearRowTransformation, onDraw: (Int) -> Unit) {
+    Spacer(Modifier.fillMaxSize().drawBehind { onDraw(row.appliedBy) })
+  }
+
   /** Renders [content] in a settled scene, so anything the draw path applies has been applied. */
   private fun render(content: @androidx.compose.runtime.Composable () -> Unit) {
     val scene =
@@ -87,7 +98,9 @@ class WearListTransformationTest {
   fun `a card applies the transformation it is given`() {
     val recorded = RecordingTransformation()
     render {
-      CompositionLocalProvider(LocalWearSurfaceTransformation provides recorded) {
+      CompositionLocalProvider(
+        LocalWearRowTransformation provides WearRowTransformation(recorded)
+      ) {
         WearCanvasCard(variant = "title", modifier = Modifier.fillMaxSize()) { Text("Row") }
       }
     }
@@ -103,7 +116,9 @@ class WearListTransformationTest {
   fun `a button applies the transformation it is given`() {
     val recorded = RecordingTransformation()
     render {
-      CompositionLocalProvider(LocalWearSurfaceTransformation provides recorded) {
+      CompositionLocalProvider(
+        LocalWearRowTransformation provides WearRowTransformation(recorded)
+      ) {
         WearCanvasButton(
           variant = "filled",
           enabled = true,
@@ -115,6 +130,66 @@ class WearListTransformationTest {
     }
 
     assertTrue(recorded.containerApplications > 0, "the button ignored the transformation")
+  }
+
+  /**
+   * A list's last row is often a `ButtonGroup`, and upstream is explicit that the group takes the
+   * transformation and its buttons do not: applied to both, each button is scaled about its own
+   * centre inside a group that is not, which is how that row drew wrong on the canvas.
+   */
+  @Test
+  fun `a button group takes the transformation and hides it from its buttons`() {
+    val recorded = RecordingTransformation()
+    val row = WearRowTransformation(recorded)
+    var seenByButton: WearRowTransformation? = row
+    var applied = -1
+    render {
+      AppliedWhileDrawn(row) { applied = it }
+      CompositionLocalProvider(LocalWearRowTransformation provides row) {
+        WearCanvasButtonGroup(weights = listOf(null), modifier = Modifier.fillMaxSize()) { _, next
+          ->
+          seenByButton = LocalWearRowTransformation.current
+          WearCanvasButton(variant = "filled", enabled = true, modifier = next) { Text("Go") }
+        }
+      }
+    }
+
+    assertTrue(recorded.containerApplications > 0, "the group ignored the transformation")
+    assertEquals(null, seenByButton, "the group's buttons were handed the row's transformation too")
+    assertEquals(1, applied, "only the group applies it")
+  }
+
+  /** A list header takes it too, rather than getting shorter at the top while drawing full size. */
+  @Test
+  fun `a list header applies the transformation it is given`() {
+    val recorded = RecordingTransformation()
+    val row = WearRowTransformation(recorded)
+    var applied = -1
+    render {
+      AppliedWhileDrawn(row) { applied = it }
+      CompositionLocalProvider(LocalWearRowTransformation provides row) {
+        WearCanvasListHeader(text = "Header", modifier = Modifier.fillMaxSize())
+      }
+    }
+
+    assertTrue(recorded.containerApplications > 0, "the header ignored the transformation")
+    assertEquals(1, applied)
+  }
+
+  /**
+   * A row whose component takes no transformation is left to the list, which transforms it whole:
+   * nothing claims it, so the list's own layer does.
+   */
+  @Test
+  fun `a plain text row leaves the transformation to the list`() {
+    val row = WearRowTransformation(RecordingTransformation())
+    var applied = -1
+    render {
+      AppliedWhileDrawn(row) { applied = it }
+      CompositionLocalProvider(LocalWearRowTransformation provides row) { Text("Row") }
+    }
+
+    assertEquals(0, applied)
   }
 
   /**
@@ -130,7 +205,7 @@ class WearListTransformationTest {
         verticalSpacingDp = 4f,
         modifier = Modifier.fillMaxSize(),
       ) { _, _ ->
-        handed = LocalWearSurfaceTransformation.current
+        handed = LocalWearRowTransformation.current?.surface
         Text("Row")
       }
     }
@@ -150,7 +225,7 @@ class WearListTransformationTest {
   fun `a card outside a list is handed no transformation`() {
     var handed: SurfaceTransformation? = null
     render {
-      handed = LocalWearSurfaceTransformation.current
+      handed = LocalWearRowTransformation.current?.surface
       WearCanvasCard(variant = "title", modifier = Modifier.fillMaxSize()) { Text("Row") }
     }
 
