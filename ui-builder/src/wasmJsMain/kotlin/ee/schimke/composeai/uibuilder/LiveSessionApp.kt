@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +47,7 @@ import ee.schimke.composeai.uibuilder.client.toRendererDocument
 import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
+import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCatalogRecoveryUi
@@ -79,6 +81,7 @@ import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewStatusV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewV1
+import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.GetSnapshotRequestV1
@@ -117,10 +120,22 @@ import org.jetbrains.skia.Image
 internal fun LiveSessionApp() {
   var config by remember { mutableStateOf<LiveSessionConfig?>(null) }
   var failure by remember { mutableStateOf<String?>(null) }
+  // A server that lets nobody look without signing in, and says where to: the page offers that
+  // rather than an editor that cannot load anything.
+  var signInRequired by remember { mutableStateOf<String?>(null) }
   LaunchedEffect(Unit) {
     bootPhase("Checking who you are")
     try {
-      config = liveSessionConfig(resolveServerActorId())
+      val identity = resolveServerIdentity()
+      if (
+        identity.authenticationRequired &&
+          identity.signInUrl != null &&
+          !localDesignStorageRequested()
+      ) {
+        signInRequired = identity.signInUrl
+        return@LaunchedEffect
+      }
+      config = liveSessionConfig(identity)
     } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
       throw cancelled
     } catch (thrown: Throwable) {
@@ -129,6 +144,22 @@ internal fun LiveSessionApp() {
       // should be a sentence on the page rather than an empty tab.
       failure = thrown.message ?: thrown.toString()
     }
+  }
+  signInRequired?.let { signInUrl ->
+    LaunchedEffect(Unit) { dismissBootScreen() }
+    Column(
+      Modifier.fillMaxSize().padding(24.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+      horizontalAlignment = Alignment.Start,
+    ) {
+      Text("Sign in to open this design", style = MaterialTheme.typography.titleMedium)
+      Text(
+        "This server shows designs to people who have signed in with GitHub.",
+        style = MaterialTheme.typography.bodyMedium,
+      )
+      Button(onClick = { navigateTo(signInUrl) }) { Text("Sign in with GitHub") }
+    }
+    return
   }
   failure?.let { message ->
     LaunchedEffect(Unit) { dismissBootScreen() }
@@ -397,6 +428,26 @@ private fun LiveSessionApp(
           displaySnapshot(held)
         }
       }
+    }
+  }
+
+  // The edit that made this copy, applied once the copy has opened — so the change that triggered
+  // the fork is not lost to it. Once per session: `carriedCommand` lives in memory, not the URL.
+  var carriedApplied by remember(config.designId) { mutableStateOf(false) }
+  LaunchedEffect(config.designId, authoritativeDocument != null) {
+    val carried = config.carriedCommand ?: return@LaunchedEffect
+    val base = sync.baseRevision ?: return@LaunchedEffect
+    if (carriedApplied || localSession == null) return@LaunchedEffect
+    carriedApplied = true
+    val request =
+      ApplyOperationRequestV1(
+        carried.copy(designId = config.designId, baseRevision = base.toLong())
+      )
+    when (val result = http.execute(request)) {
+      is UiBuilderHttpResult.Response -> syncSnapshot("Editing a copy in this browser")
+      is UiBuilderHttpResult.ServiceError ->
+        syncSnapshot("Copied, but the first edit was refused · ${result.error.message}")
+      is UiBuilderHttpResult.SnapshotRequired -> syncSnapshot("Editing a copy in this browser")
     }
   }
 
@@ -897,13 +948,15 @@ private fun LiveSessionApp(
    */
   val createDesign: (String, String, String, List<NewDesignState>) -> Unit =
     { catalogSystemId, designId, templateId, state ->
-      if (localSession == null) {
+      if (localSession == null && config.canWrite) {
         navigateToNewDesign(catalogSystemId, designId, templateId, encodeNewDesignStates(state))
       } else {
+        // In this browser: a local session, or a server that would refuse this caller's create.
+        val intoBrowser = localSession == null
         scope.launch {
           val failure =
             createLocalDesign(
-              session = localSession,
+              session = localSession ?: BrowserLocalSession(config.copy(localStorage = true)),
               catalogs = catalogCapabilities,
               catalogSystemId = catalogSystemId,
               designId = designId,
@@ -913,12 +966,14 @@ private fun LiveSessionApp(
           if (failure != null) {
             sessionStatus = "Local error · $failure"
           } else {
-            canonicalizeUiBuilderUrl(designId, DesignUrlSelectors())
+            if (intoBrowser) enterLocalDesignUrl(designId)
+            else canonicalizeUiBuilderUrl(designId, DesignUrlSelectors())
             onOpenDesign(
               config.copy(
                 catalogSystemId = catalogSystemId,
                 designId = designId,
                 startWithNewDesign = false,
+                localStorage = true,
               )
             )
           }
@@ -936,6 +991,39 @@ private fun LiveSessionApp(
     remember(config.designId, config.localStorage, localSession) {
       localSession?.store?.read(config.designId)
     }
+  // Making a read-only caller's copy. Guarded: edits that arrive while the copy is being written
+  // belong to the copy's session, which is about to replace this one.
+  var forking by remember(config.designId) { mutableStateOf(false) }
+  val forkIntoBrowser: (EditorSubmission?) -> Unit = { submission ->
+    val wire = authoritativeDocument
+    if (wire != null && !forking) {
+      forking = true
+      val copyId = NewDesignNames.random()
+      val outcome = forkDesignIntoBrowser(wire, activeCatalogSystemId, copyId)
+      if (outcome != null) {
+        forking = false
+        sessionStatus = "Local error · $outcome"
+      } else {
+        // Only an edit batch can start a copy: a fresh read-only session has nothing to undo.
+        val carried =
+          (submission as? EditorSubmission.Batch)?.toProtocolSubmission(
+            actorId = config.actorId,
+            clientId = config.clientId,
+            authoritativeRevision = wire.revision.toInt(),
+          ) as? DesignCommandV1
+        enterLocalDesignUrl(copyId)
+        onOpenDesign(
+          config.copy(
+            designId = copyId,
+            localStorage = true,
+            startWithNewDesign = false,
+            carriedCommand = carried,
+            copiedFromDesignId = config.designId,
+          )
+        )
+      }
+    }
+  }
   val takeOffline: (() -> Unit)? =
     if (localSession != null) null
     else
@@ -987,8 +1075,10 @@ private fun LiveSessionApp(
       // copy: the home screen then shows the create panel alone, which is what it always was.
       designs = if (localSession == null) homeDesigns else emptyList(),
       onOpenDesign = if (localSession == null) ::navigateToDesign else null,
+      // Hidden for a caller the server would refuse: copying a design from this list into the
+      // browser needs its snapshot first (#342). Opening it and editing makes that copy today.
       onCopyDesign =
-        if (localSession == null) {
+        if (localSession == null && config.canWrite) {
           { source -> navigateToCopyDesign(source, NewDesignNames.random()) }
         } else null,
       onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
@@ -1096,12 +1186,18 @@ private fun LiveSessionApp(
           }
         },
       onSubmission = { submission ->
-        // Queued rather than sent: the revision this command claims, and the order it reaches the
-        // server in, are the drain loop's to decide.
-        sync.enqueueSubmission()
-        if (submissions.trySend(submission).isFailure) {
-          sync.completeSubmission()
-          sessionStatus = "Live error · the edit queue is closed"
+        // A server design this caller may read but not write: the edit is the moment it becomes
+        // theirs, as a copy in this browser. Nothing is sent to a server that would refuse it.
+        if (localSession == null && !config.canWrite && revisionPin?.pinned != true) {
+          forkIntoBrowser(submission)
+        } else {
+          // Queued rather than sent: the revision this command claims, and the order it reaches
+          // the server in, are the drain loop's to decide.
+          sync.enqueueSubmission()
+          if (submissions.trySend(submission).isFailure) {
+            sync.completeSubmission()
+            sessionStatus = "Live error · the edit queue is closed"
+          }
         }
       },
       authoritativeGeneration = authoritativeGeneration,
@@ -1137,6 +1233,13 @@ private fun LiveSessionApp(
       onGoToLatest = revisionPin?.takeIf { it.pinned }?.let { { goToLatestRevision() } },
       openingNotice =
         listOfNotNull(
+            // A server design this caller may look at but not change. Said once, up front, rather
+            // than discovered as a refused save.
+            readOnlyNotice(config).takeIf { localSession == null },
+            config.copiedFromDesignId?.let {
+              "Editing a copy in this browser. The original ($it) is unchanged, and this copy is " +
+                "kept only in this browser."
+            },
             config.selectors.nodeId
               ?.takeIf { !loadedDocument.nodes.containsKey(it) }
               ?.let { "This link names a layer this design does not have: $it" },
@@ -1144,6 +1247,15 @@ private fun LiveSessionApp(
           )
           .takeIf { it.isNotEmpty() }
           ?.joinToString(" "),
+      openingNoticeAction =
+        config.copiedFromDesignId?.let { source ->
+          EditorNoticeAction("Open original") {
+            navigateTo("/ui-builder/${encodeUriComponent(source)}")
+          }
+        }
+          ?: config.signInUrl
+            ?.takeIf { localSession == null && !config.canWrite }
+            ?.let { url -> EditorNoticeAction("Sign in") { navigateTo(url) } },
       // Withheld for a design the path form cannot name. The service stores any id that is not
       // blank, while this editor refuses to start on a design named in the path unless the id is
       // path-safe, so such a design is reachable only through the legacy query form — and a link
@@ -1163,9 +1275,16 @@ private fun LiveSessionApp(
       // A fork of the design as it is now, owned by whoever presses it: the copy route reads the
       // source as the caller, so this lends nothing a reader could not already open.
       onForkDesign =
-        if (localSession == null) {
-          { navigateToCopyDesign(config.designId, NewDesignNames.random()) }
-        } else null,
+        when {
+          localSession != null -> null
+          config.canWrite -> {
+            { navigateToCopyDesign(config.designId, NewDesignNames.random()) }
+          }
+          // The server would refuse the copy route: the copy is made in this browser instead.
+          else -> {
+            { forkIntoBrowser(null) }
+          }
+        },
       onHelp = ::openUiBuilderGuide,
       onCopyAiPrompt =
         if (localSession != null || !isDesignUrlPathSafe(config.designId)) null
@@ -1430,3 +1549,16 @@ private fun LiveSessionApp(
 
 @Serializable
 internal data class BrowserCatalogRecoveryPayload(val preview: CatalogUpgradePreviewV1)
+
+/**
+ * What a caller who may read but not write is told when a server design opens: the server's own
+ * reason when it gave one. Null when this caller may write, which is every older server.
+ */
+internal fun readOnlyNotice(config: LiveSessionConfig): String? =
+  if (config.canWrite) null
+  else
+    listOfNotNull(
+        "You can view this design, but changes will not be saved to this server.",
+        config.writeDeniedReason,
+      )
+      .joinToString(" ")

@@ -59,6 +59,42 @@ fun localCheckoutRecord(
         )
     )
 
+/**
+ * A server design copied into this browser under [newDesignId], for a caller who may read it but
+ * not write it.
+ *
+ * A new id, not the source's: the copy is a different design from the moment it is made, and
+ * keeping the id would make it look like a checkout that could sync back. For the same reason it
+ * records [LocalDesignRecordV1.copiedFrom] and leaves [LocalDesignRecordV1.origin] null, and drops
+ * the source's `home` — this copy's home is this browser.
+ */
+fun localCopyRecord(
+  document: UiBuilderDocument,
+  documentDigest: String,
+  catalogSystemId: String,
+  newDesignId: String,
+  server: String,
+  nowEpochMillis: Long,
+): LocalDesignRecordV1 {
+  require(newDesignId != document.id) { "a browser copy needs an id of its own" }
+  return localDesignRecord(
+      document = document.copy(id = newDesignId, home = null),
+      catalogSystemId = catalogSystemId,
+      sequence = 0,
+      nowEpochMillis = nowEpochMillis,
+    )
+    .copy(
+      copiedFrom =
+        LocalDesignCopyV1(
+          server = server,
+          designId = document.id,
+          revision = document.revision,
+          documentDigest = documentDigest,
+          copiedAtEpochMillis = nowEpochMillis,
+        )
+    )
+}
+
 /** One offline command that landed on the server, and what the server said about it. */
 data class LocalSyncLanded(
   val operationId: String,

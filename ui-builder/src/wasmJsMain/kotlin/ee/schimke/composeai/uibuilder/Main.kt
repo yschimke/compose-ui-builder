@@ -76,9 +76,11 @@ import ee.schimke.composeai.uibuilder.local.LocalDesignStore
 import ee.schimke.composeai.uibuilder.local.LocalSyncResult
 import ee.schimke.composeai.uibuilder.local.LocalUiBuilderService
 import ee.schimke.composeai.uibuilder.local.localCheckoutRecord
+import ee.schimke.composeai.uibuilder.local.localCopyRecord
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogsResponseV1
+import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.ErrorResponseV1
 import ee.schimke.composeai.uibuilder.protocol.ListCatalogsRequestV1
@@ -1101,6 +1103,23 @@ internal data class LiveSessionConfig(
    * either way, and the page decides what to do with it.
    */
   val localStorage: Boolean,
+  /**
+   * Whether the server will take this caller's edits, as `/identity` reported it. An older server
+   * does not say, which reads as yes — exactly the behaviour before the field existed. A hint for
+   * what to offer, never a gate: the server authorizes every write where it lands.
+   */
+  val canWrite: Boolean = true,
+  /** Why [canWrite] is false, in the server's words. */
+  val writeDeniedReason: String? = null,
+  /** Where to sign in and come back here, when the server offers GitHub sign-in to this caller. */
+  val signInUrl: String? = null,
+  /**
+   * The edit that made a read-only caller's copy, to apply to that copy once it has opened. Carried
+   * in memory only: a reload must not apply it a second time.
+   */
+  val carriedCommand: DesignCommandV1? = null,
+  /** The server design this browser copy was just made from, for the notice that says so. */
+  val copiedFromDesignId: String? = null,
 )
 
 internal suspend fun fetchCatalogRecovery(designId: String): CatalogUpgradePreviewV1 =
@@ -1340,6 +1359,14 @@ internal class BrowserLocalSession(config: LiveSessionConfig) {
     get() = catalogs.servedFromStorage
 }
 
+internal fun liveSessionConfig(identity: ServerIdentity): LiveSessionConfig =
+  liveSessionConfig(identity.actorId)
+    .copy(
+      canWrite = identity.canWrite,
+      writeDeniedReason = identity.writeDeniedReason,
+      signInUrl = identity.signInUrl,
+    )
+
 internal fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
   val catalogSystemId = liveConfigValue("catalog", uiBuilderCatalogFromPath())
   val defaultDesignId =
@@ -1418,6 +1445,90 @@ internal suspend fun loadDevicePresets(cache: CachedLocalText?): List<UiBuilderD
   }
 
 /**
+ * Who the server says this page is, what it may do, and — when it is nobody yet — where to sign in.
+ *
+ * [actorId] null means the server would not say; the caller keeps the historical default so an
+ * unauthenticated page still renders. [authenticationRequired] is a 401: this server lets nobody
+ * look without signing in, and [signInUrl] is the way in when the server offers one.
+ */
+internal data class ServerIdentity(
+  val actorId: String?,
+  val canWrite: Boolean = true,
+  val writeDeniedReason: String? = null,
+  val signInUrl: String? = null,
+  val authenticationRequired: Boolean = false,
+)
+
+/**
+ * Asks `/identity`. Never fatal: any failure is an identity that says nothing, which is exactly
+ * what the page had before the endpoint existed.
+ */
+internal suspend fun resolveServerIdentity(): ServerIdentity =
+  try {
+    val (status, body) = fetchIdentity(sameOriginRequestUrl(IDENTITY_PATH))
+    when {
+      status in 200..299 -> {
+        val payload = identityJson.decodeFromString(IdentityPayload.serializer(), body)
+        ServerIdentity(
+          actorId = payload.actorId.takeIf { it.isNotBlank() },
+          // Absent from an older server: it would take the edit, as it always has.
+          canWrite = payload.canWrite ?: true,
+          writeDeniedReason = payload.writeDeniedReason,
+          signInUrl = payload.signInUrl,
+        )
+      }
+      status == 401 ->
+        ServerIdentity(
+          actorId = null,
+          canWrite = false,
+          // An older server answers plain text; only a JSON refusal carries the way in.
+          signInUrl =
+            runCatching { identityJson.decodeFromString(IdentityPayload.serializer(), body) }
+              .getOrNull()
+              ?.signInUrl,
+          authenticationRequired = true,
+        )
+      else -> ServerIdentity(actorId = null)
+    }
+  } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+    throw cancelled
+  } catch (failure: Throwable) {
+    println("compose-ui-builder: could not resolve the server identity: $failure")
+    ServerIdentity(actorId = null)
+  }
+
+/** `/identity` with its status, because a 401's body is the part that says where to sign in. */
+private suspend fun fetchIdentity(url: String): Pair<Int, String> =
+  suspendCancellableCoroutine { continuation ->
+    fetchWithStatusPromise(url)
+      .then { value ->
+        val text = value.toString()
+        if (continuation.isActive) {
+          continuation.resume(
+            text.substringBefore('\n').toIntOrNull()?.let { it to text.substringAfter('\n', "") }
+              ?: (0 to "")
+          )
+        }
+        null
+      }
+      .catch { error ->
+        if (continuation.isActive) {
+          continuation.resumeWithException(IllegalStateException(error.toString()))
+        }
+        null
+      }
+  }
+
+@JsFun(
+  """(url) => fetch(url, { credentials: 'same-origin' })
+    .then((response) => response.text().then((text) => response.status + '\n' + text))"""
+)
+private external fun fetchWithStatusPromise(url: String): Promise<JsString>
+
+/** Leaves the editor for [url] — the server's sign-in, which returns here afterwards. */
+@JsFun("(url) => globalThis.location.assign(url)") internal external fun navigateTo(url: String)
+
+/**
  * The actor id the server authenticated this page as, or `null` when it will not say.
  *
  * Not fatal on its own: the caller keeps the historical default so an unauthenticated page still
@@ -1457,7 +1568,13 @@ private const val IDENTITY_PATH = "/api/ui-builder/v1/identity"
 /** Tolerant for the same reason as the presets: a new identity field must not blank the actor. */
 private val identityJson = Json { ignoreUnknownKeys = true }
 
-@kotlinx.serialization.Serializable private data class IdentityPayload(val actorId: String = "")
+@kotlinx.serialization.Serializable
+private data class IdentityPayload(
+  val actorId: String = "",
+  val canWrite: Boolean? = null,
+  val writeDeniedReason: String? = null,
+  val signInUrl: String? = null,
+)
 
 /**
  * Encoded, because a design id is not guaranteed to be URL-safe.
@@ -2661,6 +2778,36 @@ internal suspend fun createLocalDesign(
  * Refuses a design id this browser already holds, for the reason create refuses to replace: two
  * histories under one name is the one thing a later sync could not sort out.
  */
+/**
+ * Copies a server design this caller may read but not write into this browser, as [newDesignId].
+ * Null on success, else why the browser would not keep it.
+ */
+internal fun forkDesignIntoBrowser(
+  wire: DesignDocumentV1,
+  catalogSystemId: String,
+  newDesignId: String,
+): String? {
+  val store = LocalDesignStore(BrowserLocalDesignStorage())
+  if (store.read(newDesignId) != null) {
+    return "this browser already holds a design called $newDesignId"
+  }
+  return try {
+    store.write(
+      localCopyRecord(
+        document = wire.toRendererDocument(),
+        documentDigest = wire.canonicalDocumentHash(),
+        catalogSystemId = catalogSystemId,
+        newDesignId = newDesignId,
+        server = pageOrigin(),
+        nowEpochMillis = browserNowMillis(),
+      )
+    )
+    null
+  } catch (failure: LocalDesignStorageException) {
+    failure.message ?: "this browser refused to store the copy"
+  }
+}
+
 internal fun takeDesignOffline(
   wire: DesignDocumentV1,
   catalogSystemId: String,
