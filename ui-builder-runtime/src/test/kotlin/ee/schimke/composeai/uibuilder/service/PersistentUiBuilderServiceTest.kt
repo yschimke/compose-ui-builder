@@ -1056,6 +1056,197 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `whole document replacement answers to the catalog's write rules for every property`() {
+    val checked = mutableListOf<Pair<String, String>>()
+    val catalogs =
+      object : UiBuilderCatalogExecutor by TestCatalogs {
+        override fun validateWrite(
+          catalog: CatalogCapabilityV1,
+          document: DesignDocumentV1,
+          node: DesignNodeV1,
+          property: String,
+        ): UiBuilderCatalogIssue? {
+          checked += node.id to property
+          val value = node.properties[property]
+          return if (value is StringValueV1 && value.value == "refused")
+            UiBuilderCatalogIssue("INVALID_PROPERTY", "text is refused", node.id, property)
+          else null
+        }
+      }
+    val service = service(catalogs = catalogs)
+    create(service)
+    // Shape-valid, so `validate` passes it: only the write rule can refuse this value.
+    val replacement =
+      document()
+        .copy(
+          roots = listOf("t"),
+          nodes =
+            mapOf(
+              "t" to textNode("t").copy(properties = mapOf("text" to StringValueV1("refused")))
+            ),
+        )
+
+    val rejection =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ReplaceDesignDocument(
+            "design",
+            replacement,
+            baseRevision = 0,
+            operationId = "replace-refused",
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_PROPERTY, rejection.code, rejection.message)
+    assertEquals("t", rejection.nodeId)
+    assertEquals("text", rejection.field)
+    assertEquals("text is refused", rejection.message)
+    assertEquals(0, currentDocument(service).revision)
+    assertTrue(currentDocument(service).nodes.isEmpty())
+
+    checked.clear()
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ReplaceDesignDocument(
+          "design",
+          replacement.copy(
+            roots = listOf("fine"),
+            nodes =
+              mapOf(
+                "fine" to textNode("fine").copy(properties = mapOf("text" to StringValueV1("fine")))
+              ),
+          ),
+          baseRevision = 0,
+          operationId = "replace-fine",
+        ),
+      )
+    )
+    assertEquals(listOf("fine" to "text"), checked)
+  }
+
+  @Test
+  fun `a whole document rejection prunes undo records whose outcomes aged out`() {
+    val service = service(limits = UiBuilderServiceLimits(retainedOperationOutcomes = 2))
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("aged-out-insert", 0, InsertNodeMutationV1(textNode("temporary"), NodeLocationV1()))
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "newer-edit",
+            1,
+            SetPropertyMutationV1("temporary", "text", StringValueV1("newer")),
+          )
+        ),
+      )
+    )
+    // A recorded whole-document rejection pushes the insert's outcome out of the two-entry window;
+    // its undo record must leave with it, as it would for an ordinary operation outcome.
+    assertEquals(
+      RejectionCodeV1.REVISION_MISMATCH,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.ReplaceDesignDocument(
+              "design",
+              document(),
+              baseRevision = 0,
+              operationId = "stale-replace",
+            ),
+          )
+        )
+        .code,
+    )
+    assertEquals(
+      RejectionCodeV1.UNKNOWN_OPERATION,
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.ApplyOperation(
+              UiBuilderSubmission.Undo("design", "undo-aged-out", "browser", 2, "aged-out-insert")
+            ),
+          )
+        )
+        .code,
+    )
+    assertTrue("temporary" in currentDocument(service).nodes)
+  }
+
+  @Test
+  fun `a stale whole document request spends the mutation budget and a rate limit is not recorded`() {
+    val clock = MutableClock(1_000)
+    val service =
+      service(
+        clock = clock,
+        limits =
+          UiBuilderServiceLimits(
+            mutationBurstCapacity = 1,
+            mutationRefillAmount = 1,
+            mutationRefillIntervalMillis = 1_000,
+          ),
+      )
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("consume-burst", 0, InsertNodeMutationV1(textNode("t"), NodeLocationV1()))
+        ),
+      )
+    )
+    val stale =
+      UiBuilderServiceRequest.ReplaceDesignDocument(
+        "design",
+        document(),
+        baseRevision = 0,
+        operationId = "stale-replace",
+      )
+    // Out of budget: refused by the rate limit before the base revision is even compared, and not
+    // recorded, so the same operation id is answered afresh once the bucket refills.
+    assertContains(rejected(execute(service, owner, stale)).message, "rate limit")
+
+    clock.nowMillis += 1_000
+    assertEquals(
+      RejectionCodeV1.REVISION_MISMATCH,
+      rejected(execute(service, owner, stale)).code,
+    )
+    // That stale rejection spent the refilled token.
+    assertContains(
+      rejected(
+          execute(
+            service,
+            owner,
+            UiBuilderServiceRequest.ReplaceDesignDocument(
+              "design",
+              currentDocument(service),
+              baseRevision = 1,
+              operationId = "current-replace",
+            ),
+          )
+        )
+        .message,
+      "rate limit",
+    )
+  }
+
+  @Test
   fun `an agent acting for a person reaches the designs that person owns`() {
     val service = service()
     create(service)
