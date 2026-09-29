@@ -89,4 +89,25 @@ class UiBuilderLiveSessionSyncTest {
     sync.completeSubmission()
     assertTrue(sync.releaseDeferredSnapshot())
   }
+
+  @Test
+  fun `an edit carried into a browser copy waits for the copy, then claims its revision`() {
+    // The fork re-enters the session with a fresh sync while the server's document is still on
+    // screen: no base yet, and the document shown is not the copy's.
+    val sync = UiBuilderLiveSessionSync()
+    assertNull(sync.carriedEditBase(designId = "copy", openedDesignId = "server-design"))
+
+    // The copy's first snapshot lands: its own revision, under its own id.
+    sync.receiveSnapshot(sequence = 0, revision = 3)
+    assertEquals(3, sync.carriedEditBase(designId = "copy", openedDesignId = "copy"))
+  }
+
+  @Test
+  fun `a base from another design is never claimed for the copy`() {
+    val sync = UiBuilderLiveSessionSync()
+    sync.receiveSnapshot(sequence = 7, revision = 12)
+
+    assertNull(sync.carriedEditBase(designId = "copy", openedDesignId = "server-design"))
+    assertNull(sync.carriedEditBase(designId = "copy", openedDesignId = null))
+  }
 }

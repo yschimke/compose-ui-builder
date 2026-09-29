@@ -92,6 +92,20 @@ class UiBuilderLiveSessionSync {
   }
 
   /**
+   * The revision an edit carried across a fork should claim, or null while [designId] has not
+   * opened yet.
+   *
+   * A browser copy re-enters the same session composable, so the document it still holds is the
+   * *server's* until the copy's first snapshot lands; [openedDesignId] is the id of the document
+   * actually on screen, and the carried edit waits for it to be the copy's. Asking only whether a
+   * document is present answered "yes" at once, found no base yet, and never asked again
+   * (yschimke/compose-ui-builder#343).
+   */
+  fun carriedEditBase(designId: String, openedDesignId: String?): Int? = baseRevision?.takeIf {
+    openedDesignId == designId
+  }
+
+  /**
    * True when a snapshot was held back and should be displayed now.
    *
    * Called once the queue has drained. Answers false when nothing was held, so the caller does not
