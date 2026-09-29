@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.68.0](https://github.com/yschimke/compose-ui-builder/compare/v3.67.0...v3.68.0) (2026-09-29)
+
+
+### Features
+
+* **ui-builder:** browser-only editing for callers without server write access ([#342](https://github.com/yschimke/compose-ui-builder/issues/342)) ([#343](https://github.com/yschimke/compose-ui-builder/issues/343)) ([cbdb9de](https://github.com/yschimke/compose-ui-builder/commit/cbdb9de1b2897fe5f61a3d887d4a47c4284bf17f))
+
+
+### Bug Fixes
+
+* **ui-builder:** close the Properties sheet on the compact layout ([#340](https://github.com/yschimke/compose-ui-builder/issues/340)) ([828442f](https://github.com/yschimke/compose-ui-builder/commit/828442f8ce3476ec7b794894f18fcc3e5b14337b))
+
 ## [3.67.0](https://github.com/yschimke/compose-ui-builder/compare/v3.66.0...v3.67.0) (2026-09-28)
 
 
