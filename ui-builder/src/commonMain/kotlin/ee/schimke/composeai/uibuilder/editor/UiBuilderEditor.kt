@@ -1541,10 +1541,14 @@ fun UiBuilderEditor(
         // is a better answer to "what does someone see on the device?" than a third copy inside
         // the editing surface.
         //
-        // And never for a Wear design, whose device view is the preview pane's to draw: the
-        // editing surface is the extent, and a round watch beside it is the same screen twice.
+        // And never for a Wear or mobile (m3) design, whose device view is the preview pane's to
+        // draw: the editing surface is the extent, and a phone or round watch beside it is an
+        // extra preview that belongs in the preview pane.
         frameCompanion =
           LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.WEAR.wireValue &&
+            LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.MOBILE.wireValue &&
+            catalog.platform != UiBuilderCatalogPlatform.WEAR &&
+            catalog.platform != UiBuilderCatalogPlatform.MOBILE &&
             state.panes.none { it == EditorPane.Preview || it == EditorPane.Native },
         contentAlignment = alignment,
         modifier = modifier,
