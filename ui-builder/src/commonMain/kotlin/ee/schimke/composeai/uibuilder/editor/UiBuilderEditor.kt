@@ -462,6 +462,8 @@ fun UiBuilderEditor(
    * link, and the design behind it still opens.
    */
   openingNotice: String? = null,
+  /** A button beside [openingNotice]: what the host asks the person to do about it. */
+  openingNoticeAction: EditorNoticeAction? = null,
   /**
    * Copies a link to one place in this design and answers with a sentence, or null where the host
    * cannot reach a clipboard.
@@ -2107,6 +2109,7 @@ fun UiBuilderEditor(
               onGoToLatest = onGoToLatest,
               openingNotice = openingNotice,
               transientNotice = transientNotice,
+              noticeAction = openingNoticeAction,
             )
           }
           Box(Modifier.fillMaxSize()) {

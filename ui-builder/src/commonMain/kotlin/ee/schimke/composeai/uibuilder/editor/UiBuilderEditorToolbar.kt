@@ -1097,6 +1097,7 @@ internal fun EditorUrlBanner(
   onGoToLatest: (() -> Unit)?,
   openingNotice: String?,
   transientNotice: String?,
+  noticeAction: EditorNoticeAction? = null,
 ) {
   val pinned = revisionPin?.pinned == true
   val message =
@@ -1138,9 +1139,18 @@ internal fun EditorUrlBanner(
           Text("Go to latest")
         }
       }
+      if (noticeAction != null && openingNotice != null) {
+        TextButton(onClick = noticeAction.onClick) { Text(noticeAction.label) }
+      }
     }
   }
 }
+
+/**
+ * The one thing a host's [openingNotice][EditorUrlBanner] asks the person to do — sign in, most
+ * often — drawn as a button beside the sentence rather than left as advice in it.
+ */
+class EditorNoticeAction(val label: String, val onClick: () -> Unit)
 
 /**
  * What can be done to the selection, beside the selection, only while there is one.

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +44,7 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolUpdateClient
 import ee.schimke.composeai.uibuilder.client.preparePropertyDelta
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
+import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
 import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
@@ -117,10 +119,22 @@ import org.jetbrains.skia.Image
 internal fun LiveSessionApp() {
   var config by remember { mutableStateOf<LiveSessionConfig?>(null) }
   var failure by remember { mutableStateOf<String?>(null) }
+  // A server that lets nobody look without signing in, and says where to: the page offers that
+  // rather than an editor that cannot load anything.
+  var signInRequired by remember { mutableStateOf<String?>(null) }
   LaunchedEffect(Unit) {
     bootPhase("Checking who you are")
     try {
-      config = liveSessionConfig(resolveServerActorId())
+      val identity = resolveServerIdentity()
+      if (
+        identity.authenticationRequired &&
+          identity.signInUrl != null &&
+          !localDesignStorageRequested()
+      ) {
+        signInRequired = identity.signInUrl
+        return@LaunchedEffect
+      }
+      config = liveSessionConfig(identity)
     } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
       throw cancelled
     } catch (thrown: Throwable) {
@@ -129,6 +143,22 @@ internal fun LiveSessionApp() {
       // should be a sentence on the page rather than an empty tab.
       failure = thrown.message ?: thrown.toString()
     }
+  }
+  signInRequired?.let { signInUrl ->
+    LaunchedEffect(Unit) { dismissBootScreen() }
+    Column(
+      Modifier.fillMaxSize().padding(24.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+      horizontalAlignment = Alignment.Start,
+    ) {
+      Text("Sign in to open this design", style = MaterialTheme.typography.titleMedium)
+      Text(
+        "This server shows designs to people who have signed in with GitHub.",
+        style = MaterialTheme.typography.bodyMedium,
+      )
+      Button(onClick = { navigateTo(signInUrl) }) { Text("Sign in with GitHub") }
+    }
+    return
   }
   failure?.let { message ->
     LaunchedEffect(Unit) { dismissBootScreen() }
@@ -1137,6 +1167,9 @@ private fun LiveSessionApp(
       onGoToLatest = revisionPin?.takeIf { it.pinned }?.let { { goToLatestRevision() } },
       openingNotice =
         listOfNotNull(
+            // A server design this caller may look at but not change. Said once, up front, rather
+            // than discovered as a refused save.
+            readOnlyNotice(config).takeIf { localSession == null },
             config.selectors.nodeId
               ?.takeIf { !loadedDocument.nodes.containsKey(it) }
               ?.let { "This link names a layer this design does not have: $it" },
@@ -1144,6 +1177,10 @@ private fun LiveSessionApp(
           )
           .takeIf { it.isNotEmpty() }
           ?.joinToString(" "),
+      openingNoticeAction =
+        config.signInUrl
+          ?.takeIf { localSession == null && !config.canWrite }
+          ?.let { url -> EditorNoticeAction("Sign in") { navigateTo(url) } },
       // Withheld for a design the path form cannot name. The service stores any id that is not
       // blank, while this editor refuses to start on a design named in the path unless the id is
       // path-safe, so such a design is reachable only through the legacy query form — and a link
@@ -1430,3 +1467,16 @@ private fun LiveSessionApp(
 
 @Serializable
 internal data class BrowserCatalogRecoveryPayload(val preview: CatalogUpgradePreviewV1)
+
+/**
+ * What a caller who may read but not write is told when a server design opens: the server's own
+ * reason when it gave one. Null when this caller may write, which is every older server.
+ */
+internal fun readOnlyNotice(config: LiveSessionConfig): String? =
+  if (config.canWrite) null
+  else
+    listOfNotNull(
+        "You can view this design, but changes will not be saved to this server.",
+        config.writeDeniedReason,
+      )
+      .joinToString(" ")
