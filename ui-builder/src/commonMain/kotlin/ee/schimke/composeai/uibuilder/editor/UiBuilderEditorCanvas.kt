@@ -232,9 +232,11 @@ internal fun PinnedDesignCanvas(
    * False while the preview or native pane is open, because both of those draw the design at its
    * frame — see the call site. The companion exists to answer "what does someone see on the
    * device?" for a design being edited at its whole extent, and it is the wrong place to answer it
-   * twice.
+   * twice. And never for a Wear or mobile (m3) design, which leaves previewing to the preview pane.
    */
-  frameCompanion: Boolean = true,
+  frameCompanion: Boolean =
+    LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.WEAR.wireValue &&
+      LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.MOBILE.wireValue,
   /**
    * The extent, or the device frame with its scrolling container popped out — see
    * [EditorCanvasView]. Honoured only where the device view is offered at all: in-process, and not

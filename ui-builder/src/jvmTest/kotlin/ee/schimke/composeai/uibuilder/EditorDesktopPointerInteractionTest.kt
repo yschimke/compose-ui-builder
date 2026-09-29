@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
@@ -362,6 +363,9 @@ class EditorDesktopPointerInteractionTest {
 
       runOnIdle { assertEquals(setOf(EditorPane.Editor), assertNotNull(latest).panes) }
       onNodeWithContentDescription("Workspace panes (Editor)").assertDoesNotExist()
+      // An overflowing mobile (m3) design omits the extra frame companion preview from the visual
+      // editor canvas, leaving device previewing to the preview pane.
+      onAllNodesWithText("Search for a podcast").assertCountEquals(1)
     }
 
   @Test
