@@ -253,8 +253,16 @@ The browser lane is whole: a design can be taken from a server into this browser
    the ordinary protocol client rather than a new endpoint. *Built*
    ([`LocalDesignPortability.kt`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/local/LocalDesignPortability.kt)).
 4. **The checkout bundle as a file** — download and upload of a record with its fork point, for a
-   flight that changes machines. *Not built.*
-5. **The provenance stamp on published documents**, and the `.gitattributes` merge rule. *Not
+   flight that changes machines. *Download built* (the home screen's **In this browser** panel saves
+   the stored record as it is); *upload not built.*
+5. **Browser copies for callers who may read but not write** (#342). The first edit copies the
+   design into this browser under a new id, recording `copiedFrom` (provenance) and never `origin`
+   (a fork point would promise a sync-back the server would refuse). A save refused for the caller
+   (`UNAUTHORIZED`/`FORBIDDEN`) makes the same copy, carrying the refused edit. Once the server would
+   take the caller's create, **Publish to the server** sends the copy through the create-only `PUT`
+   above at revision 0. *Built*
+   ([`LocalDesignBrowserCopies.kt`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/local/LocalDesignBrowserCopies.kt)).
+6. **The provenance stamp on published documents**, and the `.gitattributes` merge rule. *Not
    built*, and independent of everything above.
 
 Steps 2 and 3 landed together deliberately: a checkout that cannot come home is a fork with extra
