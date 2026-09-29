@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.discovery.ComponentRecordFile
+import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -427,6 +428,26 @@ private fun LiveSessionApp(
           displaySnapshot(held)
         }
       }
+    }
+  }
+
+  // The edit that made this copy, applied once the copy has opened — so the change that triggered
+  // the fork is not lost to it. Once per session: `carriedCommand` lives in memory, not the URL.
+  var carriedApplied by remember(config.designId) { mutableStateOf(false) }
+  LaunchedEffect(config.designId, authoritativeDocument != null) {
+    val carried = config.carriedCommand ?: return@LaunchedEffect
+    val base = sync.baseRevision ?: return@LaunchedEffect
+    if (carriedApplied || localSession == null) return@LaunchedEffect
+    carriedApplied = true
+    val request =
+      ApplyOperationRequestV1(
+        carried.copy(designId = config.designId, baseRevision = base.toLong())
+      )
+    when (val result = http.execute(request)) {
+      is UiBuilderHttpResult.Response -> syncSnapshot("Editing a copy in this browser")
+      is UiBuilderHttpResult.ServiceError ->
+        syncSnapshot("Copied, but the first edit was refused · ${result.error.message}")
+      is UiBuilderHttpResult.SnapshotRequired -> syncSnapshot("Editing a copy in this browser")
     }
   }
 
@@ -966,6 +987,39 @@ private fun LiveSessionApp(
     remember(config.designId, config.localStorage, localSession) {
       localSession?.store?.read(config.designId)
     }
+  // Making a read-only caller's copy. Guarded: edits that arrive while the copy is being written
+  // belong to the copy's session, which is about to replace this one.
+  var forking by remember(config.designId) { mutableStateOf(false) }
+  val forkIntoBrowser: (EditorSubmission?) -> Unit = { submission ->
+    val wire = authoritativeDocument
+    if (wire != null && !forking) {
+      forking = true
+      val copyId = NewDesignNames.random()
+      val outcome = forkDesignIntoBrowser(wire, activeCatalogSystemId, copyId)
+      if (outcome != null) {
+        forking = false
+        sessionStatus = "Local error · $outcome"
+      } else {
+        // Only an edit batch can start a copy: a fresh read-only session has nothing to undo.
+        val carried =
+          (submission as? EditorSubmission.Batch)?.toProtocolSubmission(
+            actorId = config.actorId,
+            clientId = config.clientId,
+            authoritativeRevision = wire.revision.toInt(),
+          ) as? DesignCommandV1
+        enterLocalDesignUrl(copyId)
+        onOpenDesign(
+          config.copy(
+            designId = copyId,
+            localStorage = true,
+            startWithNewDesign = false,
+            carriedCommand = carried,
+            copiedFromDesignId = config.designId,
+          )
+        )
+      }
+    }
+  }
   val takeOffline: (() -> Unit)? =
     if (localSession != null) null
     else
@@ -1126,12 +1180,18 @@ private fun LiveSessionApp(
           }
         },
       onSubmission = { submission ->
-        // Queued rather than sent: the revision this command claims, and the order it reaches the
-        // server in, are the drain loop's to decide.
-        sync.enqueueSubmission()
-        if (submissions.trySend(submission).isFailure) {
-          sync.completeSubmission()
-          sessionStatus = "Live error · the edit queue is closed"
+        // A server design this caller may read but not write: the edit is the moment it becomes
+        // theirs, as a copy in this browser. Nothing is sent to a server that would refuse it.
+        if (localSession == null && !config.canWrite && revisionPin?.pinned != true) {
+          forkIntoBrowser(submission)
+        } else {
+          // Queued rather than sent: the revision this command claims, and the order it reaches
+          // the server in, are the drain loop's to decide.
+          sync.enqueueSubmission()
+          if (submissions.trySend(submission).isFailure) {
+            sync.completeSubmission()
+            sessionStatus = "Live error · the edit queue is closed"
+          }
         }
       },
       authoritativeGeneration = authoritativeGeneration,
@@ -1170,6 +1230,10 @@ private fun LiveSessionApp(
             // A server design this caller may look at but not change. Said once, up front, rather
             // than discovered as a refused save.
             readOnlyNotice(config).takeIf { localSession == null },
+            config.copiedFromDesignId?.let {
+              "Editing a copy in this browser. The original ($it) is unchanged, and this copy is " +
+                "kept only in this browser."
+            },
             config.selectors.nodeId
               ?.takeIf { !loadedDocument.nodes.containsKey(it) }
               ?.let { "This link names a layer this design does not have: $it" },
@@ -1178,9 +1242,15 @@ private fun LiveSessionApp(
           .takeIf { it.isNotEmpty() }
           ?.joinToString(" "),
       openingNoticeAction =
-        config.signInUrl
-          ?.takeIf { localSession == null && !config.canWrite }
-          ?.let { url -> EditorNoticeAction("Sign in") { navigateTo(url) } },
+        config.copiedFromDesignId
+          ?.let { source ->
+            EditorNoticeAction("Open original") {
+              navigateTo("/ui-builder/${encodeUriComponent(source)}")
+            }
+          }
+          ?: config.signInUrl
+            ?.takeIf { localSession == null && !config.canWrite }
+            ?.let { url -> EditorNoticeAction("Sign in") { navigateTo(url) } },
       // Withheld for a design the path form cannot name. The service stores any id that is not
       // blank, while this editor refuses to start on a design named in the path unless the id is
       // path-safe, so such a design is reachable only through the legacy query form — and a link

@@ -39,6 +39,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
 import ee.schimke.composeai.discovery.ComponentRecordFile
+import ee.schimke.composeai.uibuilder.local.localCopyRecord
+import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderHttpTransport
 import ee.schimke.composeai.uibuilder.client.MonotonicUiBuilderRequestIds
@@ -1111,6 +1113,13 @@ internal data class LiveSessionConfig(
   val writeDeniedReason: String? = null,
   /** Where to sign in and come back here, when the server offers GitHub sign-in to this caller. */
   val signInUrl: String? = null,
+  /**
+   * The edit that made a read-only caller's copy, to apply to that copy once it has opened. Carried
+   * in memory only: a reload must not apply it a second time.
+   */
+  val carriedCommand: DesignCommandV1? = null,
+  /** The server design this browser copy was just made from, for the notice that says so. */
+  val copiedFromDesignId: String? = null,
 )
 
 internal suspend fun fetchCatalogRecovery(designId: String): CatalogUpgradePreviewV1 =
@@ -2770,6 +2779,36 @@ internal suspend fun createLocalDesign(
  * Refuses a design id this browser already holds, for the reason create refuses to replace: two
  * histories under one name is the one thing a later sync could not sort out.
  */
+/**
+ * Copies a server design this caller may read but not write into this browser, as [newDesignId].
+ * Null on success, else why the browser would not keep it.
+ */
+internal fun forkDesignIntoBrowser(
+  wire: DesignDocumentV1,
+  catalogSystemId: String,
+  newDesignId: String,
+): String? {
+  val store = LocalDesignStore(BrowserLocalDesignStorage())
+  if (store.read(newDesignId) != null) {
+    return "this browser already holds a design called $newDesignId"
+  }
+  return try {
+    store.write(
+      localCopyRecord(
+        document = wire.toRendererDocument(),
+        documentDigest = wire.canonicalDocumentHash(),
+        catalogSystemId = catalogSystemId,
+        newDesignId = newDesignId,
+        server = pageOrigin(),
+        nowEpochMillis = browserNowMillis(),
+      )
+    )
+    null
+  } catch (failure: LocalDesignStorageException) {
+    failure.message ?: "this browser refused to store the copy"
+  }
+}
+
 internal fun takeDesignOffline(
   wire: DesignDocumentV1,
   catalogSystemId: String,

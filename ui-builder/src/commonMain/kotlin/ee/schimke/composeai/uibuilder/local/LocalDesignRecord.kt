@@ -51,6 +51,23 @@ data class LocalDesignRecordV1(
    * ([`UI_BUILDER_DESIGN_PORTABILITY.md`](../../../../../../../../docs/design/UI_BUILDER_DESIGN_PORTABILITY.md)).
    */
   val origin: LocalDesignOriginV1? = null,
+  /**
+   * The server design this one was copied from, when a caller who could read it but not write it
+   * edited it: provenance only. Deliberately not an [origin] — that names a design to sync back
+   * into, which needs the write access this caller did not have. Publishing a copy is a create.
+   */
+  val copiedFrom: LocalDesignCopyV1? = null,
+)
+
+/** Where a browser copy came from: the design, the server, and the revision that was copied. */
+@Serializable
+data class LocalDesignCopyV1(
+  /** The server's origin, as the page saw it: `https://preview.coo.ee`. */
+  val server: String,
+  val designId: String,
+  val revision: Int,
+  val documentDigest: String,
+  val copiedAtEpochMillis: Long,
 )
 
 /**
