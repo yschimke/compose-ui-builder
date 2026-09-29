@@ -27,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.discovery.ComponentRecordFile
-import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -45,10 +44,10 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolUpdateClient
 import ee.schimke.composeai.uibuilder.client.preparePropertyDelta
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
-import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
 import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
+import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCatalogRecoveryUi
@@ -82,6 +81,7 @@ import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewStatusV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewV1
+import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignsResponseV1
 import ee.schimke.composeai.uibuilder.protocol.GetSnapshotRequestV1
@@ -948,13 +948,15 @@ private fun LiveSessionApp(
    */
   val createDesign: (String, String, String, List<NewDesignState>) -> Unit =
     { catalogSystemId, designId, templateId, state ->
-      if (localSession == null) {
+      if (localSession == null && config.canWrite) {
         navigateToNewDesign(catalogSystemId, designId, templateId, encodeNewDesignStates(state))
       } else {
+        // In this browser: a local session, or a server that would refuse this caller's create.
+        val intoBrowser = localSession == null
         scope.launch {
           val failure =
             createLocalDesign(
-              session = localSession,
+              session = localSession ?: BrowserLocalSession(config.copy(localStorage = true)),
               catalogs = catalogCapabilities,
               catalogSystemId = catalogSystemId,
               designId = designId,
@@ -964,12 +966,14 @@ private fun LiveSessionApp(
           if (failure != null) {
             sessionStatus = "Local error · $failure"
           } else {
-            canonicalizeUiBuilderUrl(designId, DesignUrlSelectors())
+            if (intoBrowser) enterLocalDesignUrl(designId)
+            else canonicalizeUiBuilderUrl(designId, DesignUrlSelectors())
             onOpenDesign(
               config.copy(
                 catalogSystemId = catalogSystemId,
                 designId = designId,
                 startWithNewDesign = false,
+                localStorage = true,
               )
             )
           }
@@ -1071,8 +1075,10 @@ private fun LiveSessionApp(
       // copy: the home screen then shows the create panel alone, which is what it always was.
       designs = if (localSession == null) homeDesigns else emptyList(),
       onOpenDesign = if (localSession == null) ::navigateToDesign else null,
+      // Hidden for a caller the server would refuse: copying a design from this list into the
+      // browser needs its snapshot first (#342). Opening it and editing makes that copy today.
       onCopyDesign =
-        if (localSession == null) {
+        if (localSession == null && config.canWrite) {
           { source -> navigateToCopyDesign(source, NewDesignNames.random()) }
         } else null,
       onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
@@ -1242,12 +1248,11 @@ private fun LiveSessionApp(
           .takeIf { it.isNotEmpty() }
           ?.joinToString(" "),
       openingNoticeAction =
-        config.copiedFromDesignId
-          ?.let { source ->
-            EditorNoticeAction("Open original") {
-              navigateTo("/ui-builder/${encodeUriComponent(source)}")
-            }
+        config.copiedFromDesignId?.let { source ->
+          EditorNoticeAction("Open original") {
+            navigateTo("/ui-builder/${encodeUriComponent(source)}")
           }
+        }
           ?: config.signInUrl
             ?.takeIf { localSession == null && !config.canWrite }
             ?.let { url -> EditorNoticeAction("Sign in") { navigateTo(url) } },
@@ -1270,9 +1275,16 @@ private fun LiveSessionApp(
       // A fork of the design as it is now, owned by whoever presses it: the copy route reads the
       // source as the caller, so this lends nothing a reader could not already open.
       onForkDesign =
-        if (localSession == null) {
-          { navigateToCopyDesign(config.designId, NewDesignNames.random()) }
-        } else null,
+        when {
+          localSession != null -> null
+          config.canWrite -> {
+            { navigateToCopyDesign(config.designId, NewDesignNames.random()) }
+          }
+          // The server would refuse the copy route: the copy is made in this browser instead.
+          else -> {
+            { forkIntoBrowser(null) }
+          }
+        },
       onHelp = ::openUiBuilderGuide,
       onCopyAiPrompt =
         if (localSession != null || !isDesignUrlPathSafe(config.designId)) null

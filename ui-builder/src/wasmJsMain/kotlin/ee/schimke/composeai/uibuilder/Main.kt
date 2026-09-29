@@ -39,8 +39,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
 import ee.schimke.composeai.discovery.ComponentRecordFile
-import ee.schimke.composeai.uibuilder.local.localCopyRecord
-import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.client.BrowserUiBuilderHttpTransport
 import ee.schimke.composeai.uibuilder.client.MonotonicUiBuilderRequestIds
@@ -78,9 +76,11 @@ import ee.schimke.composeai.uibuilder.local.LocalDesignStore
 import ee.schimke.composeai.uibuilder.local.LocalSyncResult
 import ee.schimke.composeai.uibuilder.local.LocalUiBuilderService
 import ee.schimke.composeai.uibuilder.local.localCheckoutRecord
+import ee.schimke.composeai.uibuilder.local.localCopyRecord
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogsResponseV1
+import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.ErrorResponseV1
 import ee.schimke.composeai.uibuilder.protocol.ListCatalogsRequestV1
@@ -1526,8 +1526,7 @@ private suspend fun fetchIdentity(url: String): Pair<Int, String> =
 private external fun fetchWithStatusPromise(url: String): Promise<JsString>
 
 /** Leaves the editor for [url] — the server's sign-in, which returns here afterwards. */
-@JsFun("(url) => globalThis.location.assign(url)")
-internal external fun navigateTo(url: String)
+@JsFun("(url) => globalThis.location.assign(url)") internal external fun navigateTo(url: String)
 
 /**
  * The actor id the server authenticated this page as, or `null` when it will not say.
