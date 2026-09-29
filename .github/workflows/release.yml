@@ -163,6 +163,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.release-please.outputs.publish_tag }}
+          # The publish plan diffs each module against the tag IT last published at, so the checkout
+          # needs the tags and the history. Shallow, it finds no tag, takes its fail-safe "publish
+          # everything" path, and the saving silently becomes zero.
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -205,6 +209,34 @@ jobs:
       - name: Build the IntelliJ plugin
         run: ./gradlew :ui-builder-intellij-plugin:buildPlugin
 
+      # Which coordinates this release has to upload (#247). Decided by
+      # `.github/scripts/maven-publish-plan.sh` against the versions Maven Central reports: a module
+      # publishes when it, a project it depends on, or a shared build input changed since the tag it
+      # last published at. It also writes `publishing-manifest.json`, the version every SKIPPED
+      # coordinate stays at, which the POMs and the BOM read so nothing names a version that was
+      # never uploaded. Every uncertainty resolves to "publish".
+      #
+      # A recovery run (`publish_tag`) skips the plan and publishes everything: its baseline is the
+      # very state that went wrong, and Central rejects a coordinate it already has, so republishing
+      # the whole set is the conservative default there.
+      - name: Plan Maven Central publication
+        id: plan
+        env:
+          RECOVERY: ${{ inputs.publish_tag }}
+          TAG: ${{ needs.release-please.outputs.publish_tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "${RECOVERY}" ]; then
+            echo "recovery run: publishing every module" >&2
+            echo "planned=false" >> "$GITHUB_OUTPUT"
+            echo "publish_set=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          publish_set="$(.github/scripts/maven-publish-plan.sh --head "$TAG" --write-manifest publishing-manifest.json | paste -sd, -)"
+          echo "planned=true" >> "$GITHUB_OUTPUT"
+          echo "publish_set=${publish_set}" >> "$GITHUB_OUTPUT"
+          echo "publish set: ${publish_set:-<empty>}"
+
       # These five secret names are the ones compose-preview-server used while it published these
       # same coordinates, so one set of repository secrets serves both. `signingInMemoryKeyId` is
       # the one that looks droppable and is not: without it the signing plugin uses the keyring's
@@ -216,7 +248,32 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        run: ./gradlew publishReleaseArtifacts
+          PLANNED: ${{ steps.plan.outputs.planned }}
+          PUBLISH_SET: ${{ steps.plan.outputs.publish_set }}
+        run: |
+          set -uo pipefail
+          # ABSENT and EMPTY are different properties and must not be collapsed. Absent means "no
+          # plan ran, publish everything" (a recovery run); empty means "the plan ran and found
+          # nothing", which uploads nothing - not even the BOM, which would only be a
+          # byte-identical copy consuming Central quota.
+          PLAN_ARGS=()
+          if [ "${PLANNED}" = "true" ]; then
+            PLAN_ARGS+=("-Pcomposeai.publishSet=${PUBLISH_SET}")
+          fi
+          # Ask Gradle for the task paths rather than deriving them here.
+          TASKS="$(./gradlew -q printPublishTasks "${PLAN_ARGS[@]}" | grep '^:' | cut -f1 | tr '\n' ' ')"
+          echo "publishing: ${TASKS:-<nothing>}"
+          if [ -z "${TASKS}" ]; then
+            if [ "${PLANNED}" = "true" ]; then
+              echo "no Maven artifact changed; nothing to upload to Central"
+              exit 0
+            fi
+            echo "::error::no publish tasks resolved"
+            exit 1
+          fi
+          # Still ordered behind the tripwires: `publishReleaseArtifacts` carries `checkPublishSet`.
+          # shellcheck disable=SC2086
+          ./gradlew publishReleaseArtifacts ${TASKS} "${PLAN_ARGS[@]}"
 
       # The asset name is the coordinate compose-preview-server's ivy repository asks for, so this
       # filename is a contract rather than a label. `:ui-builder-web`'s `archiveBaseName` and

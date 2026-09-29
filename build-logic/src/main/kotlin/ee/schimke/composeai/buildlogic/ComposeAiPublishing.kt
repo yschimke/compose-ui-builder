@@ -24,21 +24,51 @@ internal fun Project.publishedArtifactId(): String =
   "compose-preview-" + path.removePrefix(":").replace(':', '-')
 
 /**
- * The version this build publishes: the release tag when there is one, otherwise the next patch as
- * a snapshot.
+ * The version this build publishes [artifactId] at (or the tag itself, with no id): the release tag when there is one, otherwise
+ * the next patch as a snapshot.
  *
- * `PLUGIN_VERSION` is what the release workflow exports. Without it — every local build and every
- * CI run that is not a release — the version is derived from `.release-please-manifest.json`, so a
+ * `PLUGIN_VERSION` is what the release workflow exports. Without it - every local build and every
+ * CI run that is not a release - the version is derived from `.release-please-manifest.json`, so a
  * developer's `publishToMavenLocal` cannot collide with a released coordinate.
  *
- * The daemon repository resolves a THIRD case here, a partial release where only some modules
- * publish and each carries its own effective version. This repository publishes four coordinates on
- * one line and has no such mode; when it grows one, that resolution belongs here rather than in a
- * second copy of this function.
+ * On a PLANNED release (`-Pcomposeai.publishSet`, written by `maven-publish-plan.sh`) a module the
+ * plan skips carries the version it last published at, read from `publishing-manifest.json`, so a
+ * POM never names a sibling version that was never uploaded. That resolution lives in
+ * [PublishedVersions] and is applied here, for the modules, and by [resolvedPublishedVersion], for
+ * the BOM's constraints, so the two cannot disagree.
  */
-internal fun Project.publishedVersion(): String =
-  providers.environmentVariable("PLUGIN_VERSION").orNull?.takeIf(String::isNotBlank)
-    ?: nextPatchSnapshotVersion()
+internal fun Project.publishedVersion(artifactId: String? = null): String {
+  val tag = providers.environmentVariable("PLUGIN_VERSION").orNull?.takeIf(String::isNotBlank)
+  return when {
+    tag == null -> nextPatchSnapshotVersion()
+    // The BOM passes no id: it publishes at the tag whenever it publishes at all.
+    artifactId == null -> tag
+    else -> resolvedPublishedVersion(artifactId, tag)
+  }
+}
+
+/** [PublishedVersions.resolve] over this build's `composeai.publishSet` and manifest file. */
+fun Project.resolvedPublishedVersion(artifactId: String, tagVersion: String): String {
+  val publishSet =
+    PublishedVersions.parsePublishSet(providers.gradleProperty(PUBLISH_SET_PROPERTY).orNull)
+  // Read only when it can matter: a full release, and every local build, has no manifest to read.
+  val manifest =
+    if (publishSet == null || artifactId in publishSet) ""
+    else
+      rootDir.resolve(PUBLISH_MANIFEST).takeIf(File::isFile)?.readText()
+        ?: error(
+          "'$artifactId' is not in the publish set but $PUBLISH_MANIFEST does not exist in " +
+            "$rootDir. maven-publish-plan.sh --write-manifest writes it; without it there is no " +
+            "version a skipped module can safely carry."
+        )
+  return PublishedVersions.resolve(artifactId, tagVersion, publishSet, manifest)
+}
+
+/** The Gradle property carrying the modules a planned release publishes. */
+const val PUBLISH_SET_PROPERTY = "composeai.publishSet"
+
+/** The file, at the repository root, recording the version each coordinate is published at. */
+const val PUBLISH_MANIFEST = "publishing-manifest.json"
 
 private fun Project.nextPatchSnapshotVersion(): String {
   val manifest =

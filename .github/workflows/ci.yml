@@ -196,6 +196,12 @@ jobs:
       # The readiness gate's own tests. A check nobody invokes is indistinguishable from a check
       # that passes.
       - run: .github/scripts/test-ui-builder-equivalence.sh
+      # The Maven publish plan decides which coordinates a release uploads to Central. A wrongly
+      # skipped module is unrepairable (Central refuses a version twice) and a needlessly full plan
+      # burns quota, and nothing but a real release ever runs it, so both directions and every
+      # fail-open path are pinned against a fixture repository (#247).
+      - name: Run Maven publish plan tests
+        run: .github/scripts/test-maven-publish-plan.sh
       - name: remote-m3 catalog-level equivalence
         run: |
           .github/scripts/ui-builder-equivalence.sh \
