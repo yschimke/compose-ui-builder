@@ -159,6 +159,14 @@ internal val EditorColors =
     outline = Color(0xff454750),
   )
 
+/**
+ * How much of the compact layout's height the Properties and Code sheets take. Half, so the canvas
+ * keeps the other half above them: at the 0.72 the Components and Layers sheets use, an 800×600
+ * window left about 150px of canvas, and the element whose properties were open was behind the
+ * sheet.
+ */
+private const val MOBILE_EDITING_SHEET_FRACTION = 0.5f
+
 internal enum class MobileEditorPanel {
   None,
   Components,
@@ -2351,10 +2359,25 @@ fun UiBuilderEditor(
                 )
               }
             } else {
+              // The sheets that edit the selection leave the canvas above them, refitted to the
+              // space that is left, so the element being edited is still on screen. The Components
+              // and Layers sheets do not: they are for carrying something *to* the canvas, step
+              // aside while it is carried, and a canvas that had shrunk under them would be a
+              // smaller drop target than the one the drag started over.
+              val editingSheet =
+                mobilePanel == MobileEditorPanel.Properties ||
+                  (mobilePanel == MobileEditorPanel.Code && generatedCode != null)
+              val editingSheetHeight =
+                this@BoxWithConstraints.maxHeight * MOBILE_EDITING_SHEET_FRACTION
               canvas(
                 Modifier.fillMaxSize()
                   .background(LocalUiBuilderEditorPalette.current.workspace)
-                  .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 64.dp),
+                  .padding(
+                    start = 8.dp,
+                    top = 8.dp,
+                    end = 8.dp,
+                    bottom = if (editingSheet) editingSheetHeight + 64.dp else 64.dp,
+                  ),
                 Alignment.Center,
               )
               val mobileNavigatorTab =
@@ -2385,7 +2408,7 @@ fun UiBuilderEditor(
                 inspector(
                   Modifier.align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .fillMaxHeight(0.72f)
+                    .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
                     .padding(bottom = 56.dp),
                   // Never, here: the compact layout draws the authoring canvas and has no room for
                   // a preview pane beside it, so nothing on this branch draws a device or an axis.
@@ -2398,7 +2421,7 @@ fun UiBuilderEditor(
                   generatedCodeCaption,
                   Modifier.align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .fillMaxHeight(0.72f)
+                    .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
                     .padding(bottom = 56.dp),
                 )
               }
