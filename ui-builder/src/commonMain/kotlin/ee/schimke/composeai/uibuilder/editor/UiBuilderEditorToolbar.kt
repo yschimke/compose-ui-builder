@@ -285,7 +285,13 @@ internal fun MobileEditorToolbar(
           entries = menuEntries,
         )
       }
-      Text("r${state.document.revision}", style = MaterialTheme.typography.labelMedium)
+      // "r0" alone reads as noise to anybody who has not met revisions, so it says what it is to
+      // assistive technology, and the same words are what a test finds it by.
+      Text(
+        "r${state.document.revision}",
+        Modifier.semantics { contentDescription = "Revision ${state.document.revision}" },
+        style = MaterialTheme.typography.labelMedium,
+      )
     }
   }
 }
