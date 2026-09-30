@@ -780,7 +780,7 @@
     "functionName": "UiBuilderCompactPropertiesPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderCompactPropertiesPreview-ade3cf08.png",
-    "sha256": "77d25abfa8351fa089b17e73c1d2e834291aaefdd278c87bc301066cd7ea29a9",
+    "sha256": "5add6e983250015707b7579d889b0940dc7b42787d9574e70d4fcaf458550161",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorScenarioPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorScenarioPreviewsKt.UiBuilderHostChromePreview": {
