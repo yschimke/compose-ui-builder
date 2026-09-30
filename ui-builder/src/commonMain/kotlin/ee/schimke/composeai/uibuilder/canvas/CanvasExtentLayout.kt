@@ -41,13 +41,23 @@ internal val LocalCanvasExtentInputs =
 @Composable
 internal fun CanvasExtentLayout(
   modifier: Modifier = Modifier,
+  /**
+   * Re-probes when it changes, for content whose height is decided outside this composition.
+   *
+   * A catalog runtime's surface is sized by the editor from what the runtime last measured, not by
+   * anything that reports [CanvasExtentInputs]. Once placed at the frame's height the surface's box
+   * is measured at exactly that height, so it cannot grow this layout by itself: the editor asked
+   * the runtime for the whole column and drew one frame of it, centred. The height the editor asks
+   * for is passed here so the extent follows it.
+   */
+  probeKey: Any? = null,
   content: @Composable BoxScope.() -> Unit,
 ) {
   val inputs = remember { mutableStateOf<CanvasExtentInputs?>(null) }
   val updateInputs = remember { { value: CanvasExtentInputs -> inputs.value = value } }
   // A child constrained to the previous extent cannot resize its parent by itself. Re-probe when
   // the document or interaction state changes, including a branch switch without a saved revision.
-  val policy = remember(inputs.value) { CanvasExtentMeasurePolicy() }
+  val policy = remember(inputs.value, probeKey) { CanvasExtentMeasurePolicy() }
   CompositionLocalProvider(LocalCanvasExtentInputs provides updateInputs) {
     MultiMeasureLayout(
       modifier = modifier,

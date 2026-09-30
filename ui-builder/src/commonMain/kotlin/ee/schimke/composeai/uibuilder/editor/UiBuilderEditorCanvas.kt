@@ -736,7 +736,10 @@ internal fun PinnedDesignCanvas(
                       if (menuNode != selectedNodeId) onNodeSelected(menuNode)
                       menuAt = position
                     }
-                  }
+                  },
+                // A runtime's surface is as tall as the editor asks, from the runtime's last
+                // measurement; the extent follows that rather than the frame it first measured.
+                probeKey = if (canvasRenderer != null) frameHeightDp else null,
               ) {
                 Box {
                   LocalUiBuilderChrome.current.PopupMenu(
