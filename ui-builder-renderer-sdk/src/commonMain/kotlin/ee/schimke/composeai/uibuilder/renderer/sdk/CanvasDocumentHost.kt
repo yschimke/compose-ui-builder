@@ -109,6 +109,14 @@ fun CanvasDocumentHost(
    */
   onOverlayBoundsForgotten: (UiBuilderInstancePath) -> Unit = {},
   rootModifier: BoxScope.(CanvasRenderNode) -> Modifier = { Modifier },
+  /**
+   * In [CanvasMode.AuthoringUnrolled], measure the roots at their own height rather than the
+   * surface's; see [UnrolledExtent]. On for a catalog runtime, which draws into a root the size it
+   * was handed. Off for a host that already measures its unrolled content itself, as the editor's
+   * in-process canvas does through its extent layout: measured twice over, a screen that pins a
+   * slot to its bottom edge was placed below what that layout then captured.
+   */
+  measureUnrolledExtent: Boolean = true,
   content: @Composable CanvasDocumentScope.(CanvasRenderNode, Modifier) -> Unit,
 ) {
   val semanticActions = mutableMapOf<String, UiBuilderSemanticActionEntry>()
@@ -275,7 +283,8 @@ fun CanvasDocumentHost(
         renderTree.root(root)?.let { entry -> scope.content(entry, rootModifier(entry)) }
       }
     }
-    if (mode == CanvasMode.AuthoringUnrolled) UnrolledExtent(roots) else roots()
+    if (mode == CanvasMode.AuthoringUnrolled && measureUnrolledExtent) UnrolledExtent(roots)
+    else roots()
   }
 }
 

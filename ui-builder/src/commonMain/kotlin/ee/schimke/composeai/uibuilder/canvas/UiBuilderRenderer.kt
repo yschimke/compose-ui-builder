@@ -643,6 +643,9 @@ fun UiBuilderSurface(
             density = density,
             modifier = Modifier.fillMaxSize(),
             renderSessionId = renderSessionId,
+            // This canvas measures its own extent (`CanvasExtentLayout`); the host's is for a
+            // runtime drawing into a root the size it was handed.
+            measureUnrolledExtent = false,
             runtimeActionController = runtimeActionController,
             onInspectionSnapshot = onInspectionSnapshot,
             onInspectionInvalidated = onInspectionInvalidated,
