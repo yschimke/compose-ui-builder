@@ -429,7 +429,7 @@ internal object JewelUiBuilderChrome : UiBuilderChrome {
   override fun ToolbarToggle(model: UiBuilderToolbarToggleModel) {
     ToggleableIconActionButton(
       key = model.icon.jewelIcon(),
-      contentDescription = "${model.label} ()",
+      contentDescription = model.label,
       value = model.checked,
       extraHints = emptyArray(),
       onValueChange = { model.onClick() },
@@ -844,7 +844,8 @@ private fun UiBuilderMenuIcon.jewelIcon(): IconKey =
     UiBuilderMenuIcon.Wrap -> AllIconsKeys.Actions.GroupBy
   }
 
-private fun UiBuilderToolbarActionModel.contentDescription(): String = "$label ($shortcut)"
+private fun UiBuilderToolbarActionModel.contentDescription(): String =
+  if (shortcut.isEmpty()) label else "$label ($shortcut)"
 
 private fun UiBuilderChromeIcon.jewelIcon(): IconKey =
   when (this) {

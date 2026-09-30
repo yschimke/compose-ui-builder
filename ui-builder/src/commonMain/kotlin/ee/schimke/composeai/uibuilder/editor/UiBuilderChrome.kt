@@ -814,7 +814,10 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
       IconButton(
         onClick = model.onClick,
         enabled = model.enabled,
-        modifier = Modifier.semantics { contentDescription = "${model.label} (${model.shortcut})" },
+        modifier =
+          Modifier.semantics {
+            contentDescription = toolbarContentDescription(model.label, model.shortcut)
+          },
       ) {
         Icon(model.icon.materialIcon(), contentDescription = null, modifier = Modifier.size(20.dp))
       }
@@ -827,7 +830,7 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
       FilledIconToggleButton(
         checked = model.checked,
         onCheckedChange = { model.onClick() },
-        modifier = Modifier.semantics { contentDescription = "${model.label} ()" },
+        modifier = Modifier.semantics { contentDescription = model.label },
       ) {
         Icon(model.icon.materialIcon(), contentDescription = null, modifier = Modifier.size(20.dp))
       }
@@ -1225,9 +1228,16 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
   }
 }
 
+/**
+ * What assistive technology hears for a toolbar button: its label, and its shortcut in brackets
+ * where it has one. An empty pair of brackets read out as "Export ()" said nothing.
+ */
+internal fun toolbarContentDescription(label: String, shortcut: String): String =
+  if (shortcut.isEmpty()) label else "$label ($shortcut)"
+
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun MaterialChromeTooltip(
+internal fun MaterialChromeTooltip(
   label: String,
   shortcut: String,
   content: @Composable () -> Unit,
