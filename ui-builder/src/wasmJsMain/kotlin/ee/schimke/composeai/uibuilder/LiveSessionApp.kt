@@ -433,10 +433,14 @@ private fun LiveSessionApp(
 
   // The edit that made this copy, applied once the copy has opened — so the change that triggered
   // the fork is not lost to it. Once per session: `carriedCommand` lives in memory, not the URL.
+  // Keyed on the id of the document on screen, not on whether there is one: the fork re-enters
+  // this composable with the server's document still held, and only the copy's own first snapshot
+  // gives the carried edit a base to claim.
   var carriedApplied by remember(config.designId) { mutableStateOf(false) }
-  LaunchedEffect(config.designId, authoritativeDocument != null) {
+  val openedDesignId = authoritativeDocument?.id
+  LaunchedEffect(config.designId, openedDesignId) {
     val carried = config.carriedCommand ?: return@LaunchedEffect
-    val base = sync.baseRevision ?: return@LaunchedEffect
+    val base = sync.carriedEditBase(config.designId, openedDesignId) ?: return@LaunchedEffect
     if (carriedApplied || localSession == null) return@LaunchedEffect
     carriedApplied = true
     val request =

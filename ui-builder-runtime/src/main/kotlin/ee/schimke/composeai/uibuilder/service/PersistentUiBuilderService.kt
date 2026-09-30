@@ -1347,16 +1347,9 @@ public class PersistentUiBuilderService(
         }
       return LockedExecution(UiBuilderServiceResponse.OperationOutcome(replay))
     }
-    if (baseRevision != design.document.revision) {
-      return recordWholeDocumentRejection(
-        designId,
-        design,
-        operationId,
-        fingerprint,
-        RejectionCodeV1.REVISION_MISMATCH,
-        "base revision $baseRevision does not match current revision ${design.document.revision}",
-      )
-    }
+    // Admitted before anything is recorded, as an operation batch is: a stale base revision is a
+    // durable rejection, and persisting one must spend the same budget an accepted change does.
+    // The rate-limit refusal itself stays unrecorded so the same operation id can retry.
     if (!admitMutation(actor.actorId, designId, 1)) {
       rejectedMutationRate.incrementAndGet()
       return LockedExecution(
@@ -1368,6 +1361,16 @@ public class PersistentUiBuilderService(
             "mutation rate limit exceeded",
           )
         )
+      )
+    }
+    if (baseRevision != design.document.revision) {
+      return recordWholeDocumentRejection(
+        designId,
+        design,
+        operationId,
+        fingerprint,
+        RejectionCodeV1.REVISION_MISMATCH,
+        "base revision $baseRevision does not match current revision ${design.document.revision}",
       )
     }
     val supplied =
@@ -1437,6 +1440,27 @@ public class PersistentUiBuilderService(
         RejectionCodeV1.INVALID_COMMAND,
         issue.message,
       )
+    }
+    // Replacement content is a write of every property of every node, so it answers to the same
+    // value rules an insert does (`validateWrite`): without this, a replacement could commit the
+    // unresolvable `asset/image` key or mistyped colour an insert or setProperty is refused.
+    if (replacesContent) {
+      document.nodes.values.forEach { node ->
+        node.properties.keys.forEach { property ->
+          catalogs.validateWrite(catalog, document, node, property)?.let { issue ->
+            return recordWholeDocumentRejection(
+              designId,
+              design,
+              operationId,
+              fingerprint,
+              RejectionCodeV1.INVALID_PROPERTY,
+              issue.message,
+              nodeId = issue.nodeId ?: node.id,
+              field = issue.field ?: property,
+            )
+          }
+        }
+      }
     }
     document = withIconOutlines(document)
     documentQuotaIssue(document, countRejection = true)?.let { issue ->
@@ -1533,12 +1557,26 @@ public class PersistentUiBuilderService(
     fingerprint: String,
     code: RejectionCodeV1,
     message: String,
+    nodeId: String? = null,
+    field: String? = null,
   ): LockedExecution {
-    val outcome = rejected(operationId, design.document.revision, code, message)
+    val outcome =
+      rejected(operationId, design.document.revision, code, message, nodeId = nodeId, field = field)
+    val outcomes = retainedOutcomeRecords(design, operationId, fingerprint, outcome)
     commitDesign(
       designId,
       design.copy(
-        operationOutcomes = retainedOutcomeRecords(design, operationId, fingerprint, outcome)
+        operationOutcomes = outcomes,
+        // The same invariant the operation path keeps: an undo record whose outcome aged out of
+        // the window is dropped with it, so a reused operation id cannot address an old mutation.
+        acceptedOperations =
+          design.acceptedOperations
+            .filterKeys { it in outcomes.keys }
+            .retainNewestWithinBytes(
+              limits.retainedUndoBytes,
+              limits.minimumRetainedUndoOperations,
+              AcceptedOperationRecordV1::targetOperationId,
+            ),
       ),
     )
     return LockedExecution(UiBuilderServiceResponse.OperationOutcome(outcome))
