@@ -138,6 +138,20 @@ class CanvasWearDeviceViewTest {
       popOutNode("Item $ROWS").assertExists()
     }
 
+  /** Selecting the list itself, from the layers panel, brings it out as a row inside it does. */
+  @Test
+  fun `the list itself selected on the watch pops out`() =
+    runDesktopComposeUiTest(width = 900, height = 700) {
+      setContent {
+        WearCatalogAdapters {
+          DeviceViewCanvasHost(screen, view = EditorCanvasView.Device, selectedNodeId = "list")
+        }
+      }
+      waitForIdle()
+
+      (1..ROWS).forEach { popOutNode("Item $it").assertExists() }
+    }
+
   @Test
   fun `the wheel scrolls the watch list`() =
     runDesktopComposeUiTest(width = 900, height = 700) {
