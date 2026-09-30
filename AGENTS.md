@@ -32,6 +32,12 @@ still answer for it.
 - Immediately before every push, fetch `origin main` and confirm the branch or PR has not merged.
 - Open or update a PR automatically after a completed coding change. Never auto-merge.
 
+## Testing the editor
+
+To see the editor work from an agent sandbox, follow [`docs/AGENT_TESTING.md`](docs/AGENT_TESTING.md).
+The desktop JVM app under Xvfb is the option that works; the deployed Wasm editor usually does not
+load from a sandbox, and the Gradle/JDK gotchas that cost hours are written down there.
+
 ## The seams
 
 `compose-preview-server` consumes exactly four modules: `:ui-builder-runtime`,
