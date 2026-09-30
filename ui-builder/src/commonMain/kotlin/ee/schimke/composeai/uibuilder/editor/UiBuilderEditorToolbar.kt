@@ -286,12 +286,14 @@ internal fun MobileEditorToolbar(
         )
       }
       // "r0" alone reads as noise to anybody who has not met revisions, so it says what it is to
-      // assistive technology, and the same words are what a test finds it by.
-      Text(
-        "r${state.document.revision}",
-        Modifier.semantics { contentDescription = "Revision ${state.document.revision}" },
-        style = MaterialTheme.typography.labelMedium,
-      )
+      // assistive technology and on hover, and the same words are what a test finds it by.
+      MaterialChromeTooltip("Revision ${state.document.revision} · saved edits so far", "") {
+        Text(
+          "r${state.document.revision}",
+          Modifier.semantics { contentDescription = "Revision ${state.document.revision}" },
+          style = MaterialTheme.typography.labelMedium,
+        )
+      }
     }
   }
 }

@@ -151,7 +151,8 @@ class CanvasAutoScrollTest {
       waitForIdle()
 
       // The pointer is drawn over the deep end of the column: the inspection answers in the same
-      // space the pointer arrives in, so the seam is where the eye says it is.
+      // space the pointer arrives in, so the seam is where the eye says it is. Above the band left
+      // for the zoom controls, which is empty scroll room below the design's last row.
       val state = reducer.initial(document)
       val bounds =
         snapshot
@@ -166,7 +167,7 @@ class CanvasAutoScrollTest {
           snapshot?.slots.orEmpty(),
           bounds,
           pointX = 30f,
-          pointY = 650f,
+          pointY = 600f,
         )
 
       assertTrue(

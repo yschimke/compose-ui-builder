@@ -370,12 +370,15 @@ internal fun PinnedDesignCanvas(
       sourceWidth +
         (if (overflowsFrame) sourceWidth + CANVAS_PANE_GAP_DP.value else 0f) +
         (if (showPopOut) popOutWidthDp + CANVAS_PANE_GAP_DP.value else 0f)
+    // Fit frames the design above the zoom controls rather than under them: they sit over the
+    // workspace's bottom edge, and a fitted frame reaching it had its corner covered.
+    val fitHeight = (workspaceHeight.value - ZOOM_CONTROLS_ROOM_DP).coerceAtLeast(1f)
     val fitScale =
       minOf(
           workspaceWidth.value / pairWidth,
-          workspaceHeight.value / frameHeightDp,
+          fitHeight / frameHeightDp,
           if (showPopOut) {
-            (workspaceHeight.value - VARIANT_LABEL_ROOM_DP) / (popOutTopDp + popOutHeightDp)
+            (fitHeight - VARIANT_LABEL_ROOM_DP) / (popOutTopDp + popOutHeightDp)
           } else Float.MAX_VALUE,
         )
         .coerceIn(MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM)
@@ -551,7 +554,11 @@ internal fun PinnedDesignCanvas(
       // painting, not the layout — so that zooming past the workspace scrolls rather than clips,
       // and a frame smaller than the workspace still sits where [contentAlignment] says.
       Box(
-        Modifier.widthIn(min = workspaceWidth).heightIn(min = workspaceHeight),
+        // The band the zoom controls sit in is left out of where the frame is placed, and is
+        // scroll room below a zoomed-in design, so its last row can be brought out from under them.
+        Modifier.widthIn(min = workspaceWidth)
+          .heightIn(min = workspaceHeight)
+          .padding(bottom = ZOOM_CONTROLS_ROOM_DP.dp),
         contentAlignment = contentAlignment,
       ) {
         Row(
@@ -1732,6 +1739,9 @@ internal fun VariantPane(
 
 /** Room above a variant pane for its label, in canvas dp. */
 internal const val VARIANT_LABEL_ROOM_DP = 18f
+
+/** The workspace's bottom band the zoom controls are drawn over: their 12dp inset and their row. */
+internal const val ZOOM_CONTROLS_ROOM_DP = 64f
 
 /** How wide the editor that follows the selection is, and how much room it needs under a node. */
 internal val HOVER_EDITOR_WIDTH = 268.dp
