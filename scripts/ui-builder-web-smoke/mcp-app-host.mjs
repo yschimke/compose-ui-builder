@@ -263,10 +263,16 @@ try {
   // Select a layer on the canvas: it becomes model context. The point is the fixture's button at
   // this viewport, as the editor frames `state-actions.uid` (the root column cannot be deleted,
   // which is why the step below needs a child). A different design or viewport needs another one.
+  // Waits for a context sent after the click, not for any context: opening the design can
+  // already have sent one for the root, and a wait that returned on that raced the click.
   const box = await (await page.$('#app')).boundingBox();
+  const openedContexts = state.contexts.length;
   await page.mouse.click(box.x + 180, box.y + 209);
-  await page.waitForFunction(() => globalThis.fakeHost.contexts.length > 0, null, { timeout: 20_000 })
-    .catch(() => {});
+  await page.waitForFunction(
+    (before) => globalThis.fakeHost.contexts.length > before,
+    openedContexts,
+    { timeout: 20_000 },
+  ).catch(() => {});
   state = await host();
   const context = state.contexts.at(-1);
   expect(
@@ -281,8 +287,16 @@ try {
   // Select its parent, the button, through the breadcrumb (the inspector has opened beside the
   // canvas by now), and delete it: an edit, which autosaves with the etag it read. The label
   // itself cannot go: a button's content slot must have one child.
+  // Waits for the selection to move before deleting, rather than for a fixed half second: on a
+  // slow runner the Delete landed while the label was still selected, and a button's only label
+  // cannot be deleted, so nothing was saved.
+  const contextsBefore = state.contexts.length;
   await page.mouse.click(box.x + 160, box.y + 140);
-  await page.waitForTimeout(500);
+  await page.waitForFunction(
+    (before) => globalThis.fakeHost.contexts.length > before,
+    contextsBefore,
+    { timeout: 20_000 },
+  ).catch(() => {});
   await page.keyboard.press('Delete');
   await page.waitForFunction(() => globalThis.fakeHost.writes.length > 0, null, { timeout: 20_000 })
     .catch(() => {});
