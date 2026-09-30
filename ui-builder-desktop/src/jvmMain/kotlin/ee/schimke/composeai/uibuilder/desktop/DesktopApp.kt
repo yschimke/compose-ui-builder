@@ -18,6 +18,8 @@ import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
+import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.host.CatalogOverride
 import ee.schimke.composeai.uibuilder.host.DesignFileGuard
 import ee.schimke.composeai.uibuilder.host.DesignFiles
@@ -158,7 +160,7 @@ private fun FrameWindowScope.DesktopMenuBar(
         OfflineCatalog.entries.forEach { catalog ->
           (catalog.templateIds - catalog.defaultTemplateId).sorted().forEach { template ->
             Item(
-              "${catalog.displayName} · ${templateLabel(template)}",
+              "${catalog.displayName} · ${templateMenuLabel(template)}",
               onClick = { onNew(catalog, template) },
             )
           }
@@ -180,6 +182,23 @@ private fun FrameWindowScope.DesktopMenuBar(
 /** How the menu and title name a template: `weather-widget` is "Weather widget". */
 internal fun templateLabel(template: String): String =
   template.replace('-', ' ').replaceFirstChar { it.uppercaseChar() }
+
+/**
+ * The menu's name for a template, saying which ones are empty scaffolds. "Wear screen" and "Wear
+ * widget adaptive" are a clock over an empty list and three bare slots, and read as showcases that
+ * had forgotten their content until the menu said they were starting points (#359).
+ */
+internal fun templateMenuLabel(template: String): String =
+  if (template in BLANK_STARTER_TEMPLATES) "${templateLabel(template)} (blank starter)"
+  else templateLabel(template)
+
+private val BLANK_STARTER_TEMPLATES =
+  setOf(
+    UiBuilderNewDesignSeed.WEAR_SCREEN_TEMPLATE,
+    "wear-widget-small",
+    "wear-widget-large",
+    AdaptiveWearWidget.TEMPLATE_ID,
+  )
 
 /** How the menu names a catalog. */
 internal val OfflineCatalog.displayName: String

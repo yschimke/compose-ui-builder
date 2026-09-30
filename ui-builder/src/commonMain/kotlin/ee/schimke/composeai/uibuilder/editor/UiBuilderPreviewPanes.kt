@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,13 +29,20 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,10 +56,13 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.canvas.renderDensity
@@ -61,6 +73,8 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderPreviewSurfaces
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * The Kotlin the Compose export would write for the document on the canvas.
@@ -98,11 +112,39 @@ internal fun GeneratedCodePane(
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
       when (code) {
         is EditorGeneratedCode.Source -> {
-          Text(
-            caption,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall,
-          )
+          val clipboard = LocalClipboard.current
+          val scope = rememberCoroutineScope()
+          var copied by remember { mutableStateOf<String?>(null) }
+          LaunchedEffect(copied) {
+            if (copied != null) {
+              delay(EXPORT_STATUS_MILLIS)
+              copied = null
+            }
+          }
+          // Getting the Kotlin out is what this pane is for, and selecting a few hundred lines by
+          // dragging through a scrolling sheet was the only way to do it (#358).
+          Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+              copied ?: caption,
+              Modifier.weight(1f),
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.labelSmall,
+            )
+            TextButton(
+              onClick = {
+                scope.launch {
+                  copied =
+                    runCatching { clipboard.setClipEntry(plainTextClipEntry(code.kotlin)) }
+                      .fold({ "Copied the source" }, { "Could not copy: ${it.message}" })
+                }
+              },
+              modifier = Modifier.semantics { contentDescription = "Copy source" },
+            ) {
+              Icon(Icons.Filled.ContentCopy, contentDescription = null, Modifier.size(16.dp))
+              Spacer(Modifier.width(6.dp))
+              Text("Copy", style = MaterialTheme.typography.labelLarge)
+            }
+          }
           val vertical = rememberScrollState()
           val horizontal = rememberScrollState()
           val syntaxTheme = rememberCodePaneSyntaxTheme()
@@ -110,10 +152,26 @@ internal fun GeneratedCodePane(
           // scroll, a drag over the drop target — recomposes this pane without re-running it.
           val highlighted =
             remember(code.kotlin, syntaxTheme) { highlightKotlin(code.kotlin, syntaxTheme) }
+          // The first view starts at the code rather than at a screenful of imports. Once, when the
+          // pane first lays the source out: after that the reader's scroll is theirs, and an edit
+          // on
+          // the canvas does not throw them back to the top of the composable.
+          var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+          var pastImports by remember { mutableStateOf(false) }
+          LaunchedEffect(layout) {
+            val laidOut = layout ?: return@LaunchedEffect
+            if (pastImports) return@LaunchedEffect
+            pastImports = true
+            val line = firstLineAfterImports(code.kotlin)
+            if (line in 1 until laidOut.lineCount) {
+              vertical.scrollTo(laidOut.getLineTop(line).roundToInt())
+            }
+          }
           SelectionContainer(Modifier.padding(top = 8.dp)) {
             Text(
               highlighted,
               Modifier.fillMaxSize().verticalScroll(vertical).horizontalScroll(horizontal),
+              onTextLayout = { layout = it },
               // The palette's own foreground rather than `onSurface`: whatever the highlighter did
               // not claim is still code, and two sources for the one colour would show up as the
               // unstyled runs sitting a shade off the styled ones.
@@ -149,6 +207,20 @@ internal fun GeneratedCodePane(
       }
     }
   }
+}
+
+/**
+ * The line the generated source's code starts on: the first after its `package` and `import` header
+ * and the blank lines around them. 0 when there is no header to skip.
+ */
+internal fun firstLineAfterImports(kotlin: String): Int {
+  val lines = kotlin.lines()
+  val lastHeader =
+    lines.indexOfLast { it.startsWith("import ") || it.startsWith("package ") }.takeIf { it >= 0 }
+      ?: return 0
+  var line = lastHeader + 1
+  while (line < lines.size && lines[line].isBlank()) line++
+  return if (line < lines.size) line else 0
 }
 
 /**
