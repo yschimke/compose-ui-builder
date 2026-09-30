@@ -625,6 +625,10 @@ internal fun PinnedDesignCanvas(
               // Where a right-click landed on the design, in the frame's own pixels, and null
               // while no menu is open.
               var menuAt by remember(document.id) { mutableStateOf<Offset?>(null) }
+              // Where it last opened. The menu is still drawn while it animates closed, and an
+              // offset read from the cleared `menuAt` sent it to the frame's top-left for that
+              // moment before it vanished.
+              var menuShownAt by remember(document.id) { mutableStateOf(Offset.Zero) }
               CanvasExtentLayout(
                 Modifier.fillMaxSize()
                   .canvasNodeDrag(
@@ -750,6 +754,7 @@ internal fun PinnedDesignCanvas(
                     if (menuNode != null) {
                       if (menuNode != selectedNodeId) onNodeSelected(menuNode)
                       menuAt = position
+                      menuShownAt = position
                     }
                   },
                 // A runtime's surface is as tall as the editor asks, from the runtime's last
@@ -764,8 +769,8 @@ internal fun PinnedDesignCanvas(
                     offset =
                       with(density) {
                         DpOffset(
-                          ((menuAt?.x ?: 0f) * drawScale).toDp(),
-                          ((menuAt?.y ?: 0f) * drawScale).toDp(),
+                          (menuShownAt.x * drawScale).toDp(),
+                          (menuShownAt.y * drawScale).toDp(),
                         )
                       },
                   )

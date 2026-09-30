@@ -35,6 +35,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -182,6 +183,47 @@ class EditorDesktopPointerInteractionTest {
   @Test
   fun `Quick edit on the canvas menu opens the quick editor at the fitted zoom`() =
     quickEditFromCanvasMenu(zoom = null)
+
+  @Test
+  fun `the canvas menu closes where it opened rather than jumping to the frame's corner`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            initialSelectedNodeId = "root-surface",
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+      val cover =
+        onAllNodesWithContentDescription("Android Developers Backstage cover")
+          .fetchSemanticsNodes()
+          .maxBy { it.boundsInRoot.left }
+          .boundsInRoot
+      onRoot().performMouseInput { rightClick(Offset(cover.center.x, cover.center.y)) }
+      waitForIdle()
+      val opened = onNodeWithText("Quick edit").fetchSemanticsNode().boundsInRoot
+
+      // Frame by frame through the close animation: while the menu is still drawn it stays where it
+      // opened, give or take the few pixels its own shrink moves an item (the bug was a jump of
+      // hundreds).
+      mainClock.autoAdvance = false
+      onNodeWithText("Quick edit").performClick()
+      repeat(20) {
+        mainClock.advanceTimeByFrame()
+        onAllNodesWithText("Quick edit").fetchSemanticsNodes().forEach { closing ->
+          val moved = closing.boundsInRoot.topLeft - opened.topLeft
+          assertTrue(
+            abs(moved.x) < 48f && abs(moved.y) < 48f,
+            "the closing menu jumped by $moved from ${opened.topLeft}",
+          )
+        }
+      }
+      mainClock.autoAdvance = true
+    }
 
   private fun quickEditFromCanvasMenu(zoom: Float?) =
     runDesktopComposeUiTest(width = 1400, height = 900) {
