@@ -783,8 +783,8 @@ The other two are not in. Measuring all three against their frozen goldens, rath
 
 | Builder catalog | Served from | Publishes `ui-builder.json`? | Gate |
 | --- | --- | --- | --- |
-| `remote-m3` | `yschimke/wear-m3-catalog` `design-artifacts/remote-m3` | yes, 42 KB, and the cover sheet declares it | 0 differences against the committed snapshot, `--strict` green in CI |
-| `m3-catalog` | `yschimke/m3-catalog` `design-artifacts/m3-catalog` | yes, 188 KB, and the cover sheet declares it | 0 differences against the live document; **2** unusable exemptions |
+| `remote-m3` | `yschimke/wear-m3-catalog-out` `design-artifacts/remote-m3` | yes, 42 KB, and the cover sheet declares it | 0 differences against the committed snapshot, `--strict` green in CI |
+| `m3-catalog` | `yschimke/m3-catalog-out` `design-artifacts/m3-catalog` | yes, 188 KB, and the cover sheet declares it | 0 differences against the live document; **2** unusable exemptions |
 
 **Both rows were rewritten on 2026-09-12; the table had outlived its measurements.** It recorded
 `remote-m3` as declaring no `uiBuilderFile` and `m3-catalog` as publishing a 48 KB file scoring 25
