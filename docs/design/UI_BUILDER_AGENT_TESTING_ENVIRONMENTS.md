@@ -578,10 +578,14 @@ testUIBuilder().catch(console.error);
 
 ### Limits of Cloud-Based Agent Testing
 
-1. **No local Gradle** — Cannot run `./gradlew` commands in the cloud
-   - Workaround: Test against the Wasm server only, or pre-build artifacts
-2. **No local JVM tools** — Desktop app and desktop render lane not available
-   - Workaround: Use the Wasm editor or native preview via preview.coo.ee
+**Note:** Agents in Claude Code can run `./gradlew` commands locally against the repository. The limits below apply to **remote cloud agents** without repository access.
+
+1. **No local Gradle** — Remote cloud agents cannot run `./gradlew` commands
+   - Claude Code agents: Can run Gradle freely
+   - Workaround (remote): Test against the Wasm server only, or pre-build artifacts
+2. **No local JVM tools** — Remote agents cannot build/run the desktop app or desktop render lane
+   - Claude Code agents: Can build and run the desktop app
+   - Workaround (remote): Use the Wasm editor or native preview via preview.coo.ee
 3. **No debugger access** — Cannot attach a debugger to the server
    - Workaround: Test through the public API; rely on error messages and logs
 4. **No file uploads** — Cannot send large artifacts to the agent
