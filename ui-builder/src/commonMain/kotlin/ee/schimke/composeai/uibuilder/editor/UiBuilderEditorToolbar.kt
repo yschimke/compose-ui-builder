@@ -117,6 +117,7 @@ internal fun MobileEditorToolbar(
   onNotice: (String) -> Unit,
   onTakeOffline: (() -> Unit)?,
   onSyncToServer: (() -> Unit)?,
+  onPublishToServer: (() -> Unit)?,
   exportHost: UiBuilderExportHost?,
   onComponentPacks: (() -> Unit)? = null,
   dispatch: (UiBuilderEditorEvent) -> Unit,
@@ -241,6 +242,14 @@ internal fun MobileEditorToolbar(
               }
             )
           }
+          if (onPublishToServer != null) {
+            add(
+              UiBuilderMenuEntry.Action("Publish to the server") {
+                expanded = false
+                onPublishToServer()
+              }
+            )
+          }
           if (onComponentPacks != null) {
             add(
               UiBuilderMenuEntry.Action("Component packs…") {
@@ -360,6 +369,7 @@ internal fun EditorToolbar(
   onNotice: (String) -> Unit,
   onTakeOffline: (() -> Unit)? = null,
   onSyncToServer: (() -> Unit)? = null,
+  onPublishToServer: (() -> Unit)? = null,
   /** Copies, links and downloads the render, or null where the host cannot; hides the menu. */
   exportHost: UiBuilderExportHost?,
   /** Snaps the design's authored dp values onto the 4dp grid, with the outcome as a sentence. */
@@ -503,6 +513,14 @@ internal fun EditorToolbar(
               UiBuilderMenuEntry.Action("Sync to the server") {
                 overflowOpen = false
                 onSyncToServer()
+              }
+            )
+          }
+          if (onPublishToServer != null) {
+            add(
+              UiBuilderMenuEntry.Action("Publish to the server") {
+                overflowOpen = false
+                onPublishToServer()
               }
             )
           }

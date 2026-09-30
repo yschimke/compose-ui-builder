@@ -1120,6 +1120,8 @@ internal data class LiveSessionConfig(
   val carriedCommand: DesignCommandV1? = null,
   /** The server design this browser copy was just made from, for the notice that says so. */
   val copiedFromDesignId: String? = null,
+  /** Why the copy was made, when it was not the caller's own first edit: a refused save. */
+  val copiedBecause: String? = null,
 )
 
 internal suspend fun fetchCatalogRecovery(designId: String): CatalogUpgradePreviewV1 =
@@ -2769,16 +2771,6 @@ internal suspend fun createLocalDesign(
 }
 
 /**
- * Copies the design the server is serving into this browser, with the fork point it forked at.
- *
- * The digest and the document come from the same answer on purpose: it is the server's own
- * `documentHash` for that revision, so the claim "this copy forked from revision N of that design"
- * is checkable when it comes home rather than merely asserted.
- *
- * Refuses a design id this browser already holds, for the reason create refuses to replace: two
- * histories under one name is the one thing a later sync could not sort out.
- */
-/**
  * Copies a server design this caller may read but not write into this browser, as [newDesignId].
  * Null on success, else why the browser would not keep it.
  */
@@ -2808,6 +2800,16 @@ internal fun forkDesignIntoBrowser(
   }
 }
 
+/**
+ * Copies the design the server is serving into this browser, with the fork point it forked at.
+ *
+ * The digest and the document come from the same answer on purpose: it is the server's own
+ * `documentHash` for that revision, so the claim "this copy forked from revision N of that design"
+ * is checkable when it comes home rather than merely asserted.
+ *
+ * Refuses a design id this browser already holds, for the reason create refuses to replace: two
+ * histories under one name is the one thing a later sync could not sort out.
+ */
 internal fun takeDesignOffline(
   wire: DesignDocumentV1,
   catalogSystemId: String,

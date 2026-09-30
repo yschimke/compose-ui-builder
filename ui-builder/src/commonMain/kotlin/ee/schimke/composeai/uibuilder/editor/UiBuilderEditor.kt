@@ -548,6 +548,14 @@ fun UiBuilderEditor(
    */
   onSyncToServer: (() -> Unit)? = null,
   /**
+   * Creates this browser design on the server as a new design, or null where it cannot.
+   *
+   * The counterpart of [onSyncToServer] for a design with no fork point — made here, or copied here
+   * by a caller who could not write the original. Publishing is a create, never a merge, and it
+   * leaves the original untouched. Offered only once the server would take this caller's create.
+   */
+  onPublishToServer: (() -> Unit)? = null,
+  /**
    * Copies, links and downloads the rendered design, or null where the host cannot.
    *
    * Null in every preview and test, where the toolbar then carries no Export menu rather than one
@@ -2062,6 +2070,7 @@ fun UiBuilderEditor(
                 onNotice = ::say,
                 onTakeOffline = onTakeOffline,
                 onSyncToServer = onSyncToServer,
+                onPublishToServer = onPublishToServer,
                 exportHost = exportHost,
                 onComponentPacks = onComponentPacks,
                 dispatch = ::dispatch,
@@ -2084,6 +2093,7 @@ fun UiBuilderEditor(
                 onNotice = ::say,
                 onTakeOffline = onTakeOffline,
                 onSyncToServer = onSyncToServer,
+                onPublishToServer = onPublishToServer,
                 exportHost = exportHost,
                 onTidy = {
                   focusEditor()

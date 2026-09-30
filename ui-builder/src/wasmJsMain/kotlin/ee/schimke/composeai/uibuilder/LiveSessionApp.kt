@@ -63,6 +63,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderPresenceState
 import ee.schimke.composeai.uibuilder.editor.UiBuilderUnavailableScreen
 import ee.schimke.composeai.uibuilder.editor.catalogRecoveryCommand
 import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
+import ee.schimke.composeai.uibuilder.editor.refusing
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
@@ -74,8 +75,14 @@ import ee.schimke.composeai.uibuilder.export.encodeNewDesignStates
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.inspector.UiBuilderPageDestination
+import ee.schimke.composeai.uibuilder.local.EditorEditRoute
+import ee.schimke.composeai.uibuilder.local.LocalDesignStore
 import ee.schimke.composeai.uibuilder.local.LocalDesignSyncBack
 import ee.schimke.composeai.uibuilder.local.LocalUiBuilderHttpTransport
+import ee.schimke.composeai.uibuilder.local.browserHomeDesigns
+import ee.schimke.composeai.uibuilder.local.editorEditRoute
+import ee.schimke.composeai.uibuilder.local.isWriteRefusal
+import ee.schimke.composeai.uibuilder.local.localStorageNotice
 import ee.schimke.composeai.uibuilder.protocol.AcceptedOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -323,6 +330,10 @@ private fun LiveSessionApp(
   // Edits wait here rather than each opening its own request. Unbounded because dropping one would
   // lose an edit the canvas is already showing; a burst is twenty, not twenty thousand.
   val submissions = remember(config.designId) { Channel<EditorSubmission>(Channel.UNLIMITED) }
+  // An edit the server refused for who sent it rather than for what it was: a session that expired
+  // mid-edit, or write access taken away. It is kept, as the first edit of a browser copy — the
+  // fork below picks it up — rather than reconciled away with the server's refusal.
+  var refusedForAccess by remember(config.designId) { mutableStateOf<RefusedEdit?>(null) }
   DisposableEffect(submissions) { onDispose { submissions.close() } }
 
   fun displaySnapshot(response: SnapshotResponseV1) {
@@ -411,10 +422,18 @@ private fun LiveSessionApp(
                 else "Accepted · syncing authoritative revision…"
               syncSnapshot(sessionStatus)
             }
-            is UiBuilderHttpResult.ServiceError -> {
-              sessionStatus = "Rejected · ${result.error.message}"
-              syncSnapshot(sessionStatus)
-            }
+            is UiBuilderHttpResult.ServiceError ->
+              if (localSession == null && isWriteRefusal(result.error.code)) {
+                // The first such refusal wins: every edit queued behind it is refused the same
+                // way, and the copy is made once.
+                if (refusedForAccess == null) {
+                  refusedForAccess = RefusedEdit(submission, result.error.message)
+                }
+                sessionStatus = "Not saved · ${result.error.message}"
+              } else {
+                sessionStatus = "Rejected · ${result.error.message}"
+                syncSnapshot(sessionStatus)
+              }
             is UiBuilderHttpResult.SnapshotRequired ->
               syncSnapshot("Snapshot recovery · ${result.error.message}")
           }
@@ -586,6 +605,12 @@ private fun LiveSessionApp(
   LaunchedEffect(pendingReference) {
     if (config.localStorage) return@LaunchedEffect
     val candidate = pendingReference ?: return@LaunchedEffect
+    // The server stores a design's reference, and would refuse this caller's write. The overlay
+    // still works for this visit; it is said once rather than failing on every slider drag.
+    if (!config.canWrite) {
+      referenceStatus = "Reference changes last only for this visit. ${serverOnlyRefusal(config)}"
+      return@LaunchedEffect
+    }
     delay(REFERENCE_SAVE_DEBOUNCE_MILLIS)
     val imagesChanged =
       storedReference?.image?.id != candidate.image?.id ||
@@ -651,7 +676,7 @@ private fun LiveSessionApp(
       // the export routes render on request: without it the Export menu would answer a question
       // about history with the picture of the head, which is the one thing the banner promises it
       // is not showing.
-      exportHost =
+      val browserExportHost =
         BrowserExportHost(
           designId = config.designId,
           supportsLinks = !config.localStorage,
@@ -687,6 +712,11 @@ private fun LiveSessionApp(
             ),
           revision = revision,
         )
+      // The server draws every export and will not for a caller who may not write. The menu stays,
+      // each row saying why, rather than vanishing or failing on the press.
+      exportHost =
+        if (config.canWrite) browserExportHost
+        else browserExportHost.refusing(serverOnlyRefusal(config))
     }
     // `?revision=` first, because a design pinned to a committed revision is a different opening:
     // one snapshot, no socket, no presence. A revision the service will not answer for — trimmed
@@ -998,7 +1028,7 @@ private fun LiveSessionApp(
   // Making a read-only caller's copy. Guarded: edits that arrive while the copy is being written
   // belong to the copy's session, which is about to replace this one.
   var forking by remember(config.designId) { mutableStateOf(false) }
-  val forkIntoBrowser: (EditorSubmission?) -> Unit = { submission ->
+  val forkIntoBrowser: (EditorSubmission?, String?) -> Unit = { submission, because ->
     val wire = authoritativeDocument
     if (wire != null && !forking) {
       forking = true
@@ -1023,13 +1053,20 @@ private fun LiveSessionApp(
             startWithNewDesign = false,
             carriedCommand = carried,
             copiedFromDesignId = config.designId,
+            copiedBecause = because,
           )
         )
       }
     }
   }
+  LaunchedEffect(refusedForAccess) {
+    val refused = refusedForAccess ?: return@LaunchedEffect
+    forkIntoBrowser(refused.submission, "The server did not save your last edit: ${refused.reason}")
+  }
   val takeOffline: (() -> Unit)? =
-    if (localSession != null) null
+    // Not for a caller who may not write: a checkout keeps this design's id so that it can sync
+    // back, and the server would refuse that sync. Such a caller's edits already make a copy.
+    if (localSession != null || !config.canWrite) null
     else
       authoritativeDocument?.let { wire ->
         {
@@ -1070,6 +1107,34 @@ private fun LiveSessionApp(
         }
       }
     }
+
+  // A design made in this browser, or copied into it, going to the server as a new design: a create
+  // under its own id, never a merge. Only once the server would take this caller's create, and not
+  // for a checkout, whose way home is [syncToServer].
+  val publishToServer: (() -> Unit)? =
+    if (localSession == null || !config.canWrite || storedRecord?.origin != null) null
+    else
+      authoritativeDocument?.let { wire ->
+        {
+          scope.launch {
+            sessionStatus = "Publishing ${wire.id} to the server…"
+            val refusal = publishDesignToServer(wire)
+            if (refusal == null) {
+              // The browser copy stays where it is, in case the person wants it; the home screen
+              // lists it with Delete beside it.
+              navigateToDesign(wire.id)
+            } else {
+              sessionStatus = "Not published · $refusal"
+            }
+          }
+        }
+      }
+
+  // The home screen's "In this browser" list: read straight from storage, which is cheap and
+  // synchronous, and read again after a delete.
+  var browserDesignSummaries by remember {
+    mutableStateOf(LocalDesignStore(BrowserLocalDesignStorage()).list())
+  }
 
   if (config.startWithNewDesign && newDesignCatalogs.isNotEmpty()) {
     UiBuilderNewDesignScreen(
@@ -1123,6 +1188,31 @@ private fun LiveSessionApp(
             Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
           }
         } else null,
+      browserDesigns =
+        browserHomeDesigns(browserDesignSummaries) { at -> formatLocalDateTime(at.toDouble()) },
+      onOpenBrowserDesign = ::navigateToBrowserDesign,
+      onDownloadBrowserDesign = { designId ->
+        downloadBrowserDesign(designId)?.let { sessionStatus = "Local error · $it" }
+      },
+      onDeleteBrowserDesign = { designId ->
+        LocalDesignStore(BrowserLocalDesignStorage()).delete(designId)
+        browserDesignSummaries = LocalDesignStore(BrowserLocalDesignStorage()).list()
+      },
+      browserStorageNotice = localStorageNotice(browserDesignSummaries),
+      // Said before anything is made, not discovered when it is: this account's new designs are
+      // kept in this browser, and here is why and how to change that.
+      accountNotice =
+        if (localSession != null || config.canWrite) null
+        else
+          listOfNotNull(
+              "New designs you make here are kept in this browser.",
+              config.writeDeniedReason,
+            )
+            .joinToString(" "),
+      accountNoticeAction =
+        config.signInUrl
+          ?.takeIf { localSession == null && !config.canWrite }
+          ?.let { url -> EditorNoticeAction("Sign in with GitHub") { navigateTo(url) } },
       onCreate = createDesign,
     )
     LaunchedEffect(newDesignCatalogs) { markReady() }
@@ -1192,8 +1282,14 @@ private fun LiveSessionApp(
       onSubmission = { submission ->
         // A server design this caller may read but not write: the edit is the moment it becomes
         // theirs, as a copy in this browser. Nothing is sent to a server that would refuse it.
-        if (localSession == null && !config.canWrite && revisionPin?.pinned != true) {
-          forkIntoBrowser(submission)
+        val route =
+          editorEditRoute(
+            keptInBrowser = localSession != null,
+            canWrite = config.canWrite,
+            revisionPinned = revisionPin?.pinned == true,
+          )
+        if (route == EditorEditRoute.BrowserCopy) {
+          forkIntoBrowser(submission, null)
         } else {
           // Queued rather than sent: the revision this command claims, and the order it reaches
           // the server in, are the drain loop's to decide.
@@ -1240,6 +1336,7 @@ private fun LiveSessionApp(
             // A server design this caller may look at but not change. Said once, up front, rather
             // than discovered as a refused save.
             readOnlyNotice(config).takeIf { localSession == null },
+            config.copiedBecause,
             config.copiedFromDesignId?.let {
               "Editing a copy in this browser. The original ($it) is unchanged, and this copy is " +
                 "kept only in this browser."
@@ -1286,7 +1383,7 @@ private fun LiveSessionApp(
           }
           // The server would refuse the copy route: the copy is made in this browser instead.
           else -> {
-            { forkIntoBrowser(null) }
+            { forkIntoBrowser(null, null) }
           }
         },
       onHelp = ::openUiBuilderGuide,
@@ -1305,6 +1402,7 @@ private fun LiveSessionApp(
         },
       onTakeOffline = takeOffline,
       onSyncToServer = syncToServer,
+      onPublishToServer = publishToServer,
       exportHost = exportHost,
       onRequestDocumentPreview =
         if (!documentPreviewAvailable) null
@@ -1416,6 +1514,7 @@ private fun LiveSessionApp(
       onOpenNativeStream = { live -> BrowserNativeStream(live) },
       onRequestNativeRender = { hostShape ->
         if (config.localStorage) UiBuilderNativeRender(failure = LOCAL_NATIVE_RENDER_UNAVAILABLE)
+        else if (!config.canWrite) UiBuilderNativeRender(failure = serverOnlyRefusal(config))
         else
           requestNativeRender(
             config.designId,
@@ -1553,6 +1652,20 @@ private fun LiveSessionApp(
 
 @Serializable
 internal data class BrowserCatalogRecoveryPayload(val preview: CatalogUpgradePreviewV1)
+
+/** An edit the server refused for who sent it, and the server's reason. */
+internal class RefusedEdit(val submission: EditorSubmission, val reason: String)
+
+/**
+ * Why a server-drawn or server-stored feature — export, native render, reference pictures — is not
+ * available to a caller who may not write: the server's own reason where it gave one.
+ */
+internal fun serverOnlyRefusal(config: LiveSessionConfig): String =
+  listOfNotNull(
+      "The server does this only for accounts that can save designs here.",
+      config.writeDeniedReason,
+    )
+    .joinToString(" ")
 
 /**
  * What a caller who may read but not write is told when a server design opens: the server's own

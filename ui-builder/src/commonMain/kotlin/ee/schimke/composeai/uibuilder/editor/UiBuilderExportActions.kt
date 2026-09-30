@@ -167,3 +167,29 @@ fun exportFormatsFor(
   // Not behind the Remote Compose flag: an A2UI design's JSON is its A2UI messages.
   if (a2uiJson) add(EditorExportFormat.A2uiJson)
 }
+
+/**
+ * This host, for a caller the server will not export for: the same menu, whose every row answers
+ * with [reason] instead of trying.
+ *
+ * Kept visible rather than dropped, because a person who can see a design and finds no Export menu
+ * is left guessing whether the design, the catalog or the builder is the problem. The server draws
+ * every export, and it refuses callers without write access (a GitHub guest reads, and that is
+ * all), so a row that tried would fail anyway — only later, and less clearly.
+ */
+fun UiBuilderExportHost.refusing(reason: String): UiBuilderExportHost {
+  val delegate = this
+  return object : UiBuilderExportHost {
+    override val formats: List<EditorExportFormat>
+      get() = delegate.formats
+
+    override val supportsLinks: Boolean
+      get() = delegate.supportsLinks
+
+    override suspend fun copyPicture(format: EditorExportFormat): String = reason
+
+    override suspend fun copyLink(format: EditorExportFormat): String = reason
+
+    override suspend fun download(format: EditorExportFormat): String = reason
+  }
+}

@@ -570,6 +570,25 @@ data class UiBuilderHomeDesign(
   val revision: Long? = null,
 )
 
+/**
+ * One design kept in this browser rather than on the server, as the home screen's **In this
+ * browser** panel lists it.
+ */
+data class UiBuilderBrowserDesign(
+  val designId: String,
+  val title: String,
+  val catalogSystemId: String,
+  /** Already-formatted, e.g. `edited 29/09/2026, 08:41`. Empty renders nothing. */
+  val updatedLabel: String = "",
+  /** The server design this is a copy of, when it is one. */
+  val copiedFrom: String? = null,
+  /**
+   * A record this builder cannot read — a newer builder's, or damaged. Listed so it can be
+   * downloaded and deleted, since it holds this browser's storage either way; it cannot be opened.
+   */
+  val unreadable: Boolean = false,
+)
+
 /** One release's notes for the home screen's **What's new** panel, newest first. */
 data class UiBuilderReleaseNote(val version: String, val date: String, val items: List<String>)
 
@@ -607,6 +626,25 @@ fun UiBuilderNewDesignScreen(
   onMoveDesign: ((designId: String, folder: String?) -> Unit)? = null,
   /** A design's picture at a revision, as the designs page shows it; null draws no pictures. */
   loadThumbnail: (suspend (designId: String, revision: Long) -> ImageBitmap?)? = null,
+  /**
+   * The designs this browser keeps, newest first — its own designs and copies of server designs a
+   * caller could read but not write. Empty hides the panel that lists them.
+   */
+  browserDesigns: List<UiBuilderBrowserDesign> = emptyList(),
+  /** Opens one of [browserDesigns] in the editor. */
+  onOpenBrowserDesign: ((designId: String) -> Unit)? = null,
+  /** Saves one of [browserDesigns] as a file: the only copy that outlives this browser's data. */
+  onDownloadBrowserDesign: ((designId: String) -> Unit)? = null,
+  /** Removes one of [browserDesigns] from this browser, after the person has confirmed it. */
+  onDeleteBrowserDesign: ((designId: String) -> Unit)? = null,
+  /** Why this browser may soon refuse to keep more, or null while there is room. */
+  browserStorageNotice: String? = null,
+  /**
+   * Said above the create panel, with an action beside it — "sign in to save designs here" — or
+   * null for nothing. The host's, because only it knows who the server thinks this page is.
+   */
+  accountNotice: String? = null,
+  accountNoticeAction: EditorNoticeAction? = null,
   /** What changed in the builder lately; empty hides the panel. */
   releaseNotes: List<UiBuilderReleaseNote> = EMBEDDED_RELEASE_NOTES,
   /**
@@ -653,6 +691,7 @@ fun UiBuilderNewDesignScreen(
             }
             // The one-press way in, first: most people arriving here want a blank screen or the
             // smallest sample, and the full form below is for choosing a kind and a name.
+            if (accountNotice != null) AccountNotice(accountNotice, accountNoticeAction)
             QuickStartStrip(form, onCreate)
             val newPanel: @Composable (Modifier) -> Unit = { modifier ->
               NewDesignHomePanel(modifier, form, onCreate)
@@ -672,6 +711,17 @@ fun UiBuilderNewDesignScreen(
               if (releaseNotes.isNotEmpty()) WhatsNewPanel(modifier, releaseNotes)
             }
             val showDesigns = designs.isNotEmpty() || onBrowseDesigns != null
+            val showBrowserDesigns = browserDesigns.isNotEmpty()
+            val browserPanel: @Composable (Modifier) -> Unit = { modifier ->
+              BrowserDesignsPanel(
+                modifier = modifier,
+                designs = browserDesigns,
+                onOpen = onOpenBrowserDesign,
+                onDownload = onDownloadBrowserDesign,
+                onDelete = onDeleteBrowserDesign,
+                storageNotice = browserStorageNotice,
+              )
+            }
             if (sideBySide) {
               Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 Column(
@@ -681,11 +731,20 @@ fun UiBuilderNewDesignScreen(
                   newPanel(Modifier.fillMaxWidth())
                   notesPanel(Modifier.fillMaxWidth())
                 }
-                if (showDesigns) designsPanel(Modifier.weight(1.2f))
+                if (showDesigns || showBrowserDesigns) {
+                  Column(
+                    Modifier.weight(1.2f),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                  ) {
+                    if (showDesigns) designsPanel(Modifier.fillMaxWidth())
+                    if (showBrowserDesigns) browserPanel(Modifier.fillMaxWidth())
+                  }
+                }
               }
             } else {
               newPanel(Modifier.fillMaxWidth())
               if (showDesigns) designsPanel(Modifier.fillMaxWidth())
+              if (showBrowserDesigns) browserPanel(Modifier.fillMaxWidth())
               notesPanel(Modifier.fillMaxWidth())
             }
           }
@@ -892,6 +951,151 @@ private fun ExistingDesignsPanel(
         }
       }
     }
+  }
+}
+
+/** A sentence about who this page is signed in as, and the one thing to do about it. */
+@Composable
+private fun AccountNotice(message: String, action: EditorNoticeAction?) {
+  Surface(
+    shape = RoundedCornerShape(16.dp),
+    color = MaterialTheme.colorScheme.secondaryContainer,
+  ) {
+    FlowRow(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+      horizontalArrangement = Arrangement.spacedBy(12.dp),
+      itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+      Text(
+        message,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSecondaryContainer,
+      )
+      if (action != null) {
+        TextButton(onClick = action.onClick) { Text(action.label) }
+      }
+    }
+  }
+}
+
+/**
+ * **In this browser**: the designs kept here rather than on the server.
+ *
+ * Said plainly, because it is the one fact about these designs a person must not learn late: they
+ * go when this browser's site data goes. So **Download** is on every row, one press, and **Delete**
+ * asks first — a browser copy has no server history to restore it from.
+ */
+@Composable
+private fun BrowserDesignsPanel(
+  modifier: Modifier,
+  designs: List<UiBuilderBrowserDesign>,
+  onOpen: ((designId: String) -> Unit)?,
+  onDownload: ((designId: String) -> Unit)?,
+  onDelete: ((designId: String) -> Unit)?,
+  storageNotice: String?,
+) {
+  var confirmingDelete by remember { mutableStateOf<UiBuilderBrowserDesign?>(null) }
+  Surface(
+    modifier = modifier,
+    shape = RoundedCornerShape(16.dp),
+    color = MaterialTheme.colorScheme.surface,
+    tonalElevation = 2.dp,
+  ) {
+    Column(
+      modifier = Modifier.padding(20.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+      Text("In this browser", style = MaterialTheme.typography.titleMedium)
+      Text(
+        "Kept only in this browser. Clearing its site data deletes them, so download any you want " +
+          "to keep.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      if (storageNotice != null) {
+        Text(
+          storageNotice,
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.error,
+        )
+      }
+      designs.forEach { design ->
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+          Text(design.title.ifBlank { design.designId }, style = MaterialTheme.typography.bodyLarge)
+          Text(
+            listOfNotNull(
+                design.designId,
+                design.catalogSystemId.takeIf { it.isNotBlank() },
+                design.copiedFrom?.let { "copy of $it" },
+                design.updatedLabel.takeIf { it.isNotBlank() },
+                "this builder cannot open it".takeIf { design.unreadable },
+              )
+              .joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+          Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (onOpen != null && !design.unreadable) {
+              TextButton(
+                onClick = { onOpen(design.designId) },
+                modifier =
+                  Modifier.semantics {
+                    contentDescription = "Open ${design.designId} from browser"
+                  },
+              ) {
+                Text("Open")
+              }
+            }
+            if (onDownload != null) {
+              TextButton(
+                onClick = { onDownload(design.designId) },
+                modifier =
+                  Modifier.semantics { contentDescription = "Download ${design.designId}" },
+              ) {
+                Text("Download")
+              }
+            }
+            if (onDelete != null) {
+              TextButton(
+                onClick = { confirmingDelete = design },
+                modifier =
+                  Modifier.semantics {
+                    contentDescription = "Delete ${design.designId} from this browser"
+                  },
+              ) {
+                Text("Delete from this browser")
+              }
+            }
+          }
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+      }
+    }
+  }
+  val pending = confirmingDelete
+  if (pending != null && onDelete != null) {
+    AlertDialog(
+      onDismissRequest = { confirmingDelete = null },
+      title = { Text("Delete ${pending.title.ifBlank { pending.designId }}?") },
+      text = {
+        Text(
+          "This design is kept only in this browser, so deleting it cannot be undone. Download it " +
+            "first to keep a copy." +
+            (pending.copiedFrom?.let { " The original ($it) on the server is not affected." } ?: "")
+        )
+      },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirmingDelete = null
+            onDelete(pending.designId)
+          }
+        ) {
+          Text("Delete")
+        }
+      },
+      dismissButton = { TextButton(onClick = { confirmingDelete = null }) { Text("Cancel") } },
+    )
   }
 }
 

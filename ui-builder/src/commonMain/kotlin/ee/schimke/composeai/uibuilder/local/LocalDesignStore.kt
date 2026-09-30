@@ -17,6 +17,8 @@ data class LocalDesignSummary(
    * only thing that can free them is a delete nobody can name.
    */
   val corrupted: Boolean = false,
+  /** The server design this one is a browser copy of, when it is one. */
+  val copiedFrom: LocalDesignCopyV1? = null,
 )
 
 /**
@@ -71,6 +73,7 @@ class LocalDesignStore(
             title = record.seed.title,
             updatedAtEpochMillis = record.updatedAtEpochMillis,
             storedBytes = encoded.length,
+            copiedFrom = record.copiedFrom,
           )
         }
       }
@@ -80,6 +83,16 @@ class LocalDesignStore(
 
   fun read(designId: String): LocalDesignRecordV1? =
     storage.read(designKey(designId))?.let(::decode)?.takeIf { it.designId == designId }
+
+  /**
+   * The record under [designId] exactly as this browser stores it, for a download.
+   *
+   * The stored text rather than a re-encoding: it is the whole design — seed, log, provenance — and
+   * the one copy that survives this browser's site data being cleared. Unreadable records come back
+   * too, for the same reason [list] keeps them: they may be a newer builder's, and a download is
+   * the only way to keep them before deleting.
+   */
+  fun storedText(designId: String): String? = storage.read("$DESIGN_KEY_PREFIX$designId")
 
   /** @throws LocalDesignStorageException when this browser refuses the write. */
   fun write(record: LocalDesignRecordV1) {
