@@ -1745,6 +1745,8 @@ private fun LayerRow(
   var handleOrigin by remember { mutableStateOf(Offset.Zero) }
   // Where the right-click landed inside this row, and null while no menu is open.
   var menuAt by remember(row.nodeId) { mutableStateOf<Offset?>(null) }
+  // Kept through the close animation, so the menu leaves from where it was rather than from x=0.
+  var menuShownAt by remember(row.nodeId) { mutableStateOf(Offset.Zero) }
   val density = LocalDensity.current
   val background =
     when {
@@ -1775,6 +1777,7 @@ private fun LayerRow(
         // one of six selected layers must not collapse the selection it is about to act on.
         if (!selected) onSelect(LayerSelectionGesture.Replace, false)
         menuAt = position
+        menuShownAt = position
       }
       .padding(start = (8 + indent * 12).dp, end = 10.dp),
     verticalAlignment = Alignment.CenterVertically,
@@ -1785,7 +1788,7 @@ private fun LayerRow(
         expanded = menuAt != null,
         onDismissRequest = { menuAt = null },
         entries = selectionMenu { menuAt = null },
-        offset = DpOffset(with(density) { (menuAt?.x ?: 0f).toDp() }, 0.dp),
+        offset = DpOffset(with(density) { menuShownAt.x.toDp() }, 0.dp),
       )
     }
     // A 16dp icon in a 26dp target. The icon is the affordance; the box is what a pointer actually

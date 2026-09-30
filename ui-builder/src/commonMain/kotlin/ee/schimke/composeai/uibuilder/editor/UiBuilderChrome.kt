@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.FolderOpen
@@ -381,6 +382,8 @@ enum class UiBuilderMenuIcon {
   Link,
   Download,
   Properties,
+  /** The quick editor: a pencil, since the Properties panel already has the sliders. */
+  QuickEdit,
   Duplicate,
   Cut,
   Paste,
@@ -1424,6 +1427,7 @@ private fun UiBuilderMenuIcon.materialIcon(): ImageVector =
     UiBuilderMenuIcon.Link -> Icons.Filled.Link
     UiBuilderMenuIcon.Download -> Icons.Filled.Download
     UiBuilderMenuIcon.Properties -> Icons.Filled.Tune
+    UiBuilderMenuIcon.QuickEdit -> Icons.Filled.Edit
     UiBuilderMenuIcon.Duplicate -> Icons.Filled.LibraryAdd
     UiBuilderMenuIcon.Cut -> Icons.Filled.ContentCut
     UiBuilderMenuIcon.Paste -> Icons.Filled.ContentPaste

@@ -4,26 +4,32 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.isRoot
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorChord
+import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.editor.HOVER_EDITOR_WIDTH
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
@@ -31,6 +37,8 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.editorShortcutFor
 import ee.schimke.composeai.uibuilder.editor.hoverEditorPlacement
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
+import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -132,6 +140,105 @@ class QuickEditorTest {
   }
 
   @Test
+  fun `a canvas too narrow to hold it puts it beside the design over the next pane`() {
+    val density = Density(1f)
+    // A 380-wide canvas the design fills, with a Preview pane taking the 600 to its right.
+    val workspace = Rect(100f, 0f, 480f, 800f)
+    val designs = Rect(120f, 40f, 460f, 760f)
+    val selected = UiBuilderPixelBounds(x = 140f, y = 200f, width = 80f, height = 40f)
+
+    val placed =
+      hoverEditorPlacement(
+        workspace,
+        designs,
+        selected,
+        density,
+        380.dp,
+        800.dp,
+        roomLeft = 100.dp,
+        roomRight = 600.dp,
+      )
+    assertTrue(
+      workspace.left + placed.x.value >= designs.right,
+      "placed over the design: $placed",
+    )
+
+    // With the window no wider than the canvas there is nowhere else, and the old fallback holds.
+    val cramped = hoverEditorPlacement(workspace, designs, selected, density, 380.dp, 800.dp)
+    assertTrue(workspace.left + cramped.x.value < designs.right, "fallback moved: $cramped")
+  }
+
+  @Test
+  fun `beside a Preview pane it opens clear of the design and still takes typing`() =
+    runDesktopComposeUiTest(width = 1200, height = 900) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document,
+            catalog,
+            initialPanes = setOf(EditorPane.Editor, EditorPane.Preview),
+            initialSelectedNodeId = "main-episode-title",
+          )
+        }
+      }
+      waitForIdle()
+      // The canvas's copy of the cover, which is the leftmost: the Preview pane is to its right.
+      val cover =
+        onAllNodesWithContentDescription("Android Developers Backstage cover")
+          .fetchSemanticsNodes()
+          .minBy { it.boundsInRoot.left }
+          .boundsInRoot
+      window().performMouseInput { rightClick(cover.center) }
+      waitForIdle()
+      onAllNodesWithText("Quick edit").onFirst().performClick()
+      waitForIdle()
+
+      // Beside the design rather than over it.
+      val card = onNodeWithContentDescription("Selection editor").getBoundsInRoot()
+      assertTrue(card.left.value >= cover.right, "the card $card is over the design around $cover")
+
+      // A popup that cannot take focus would show the field and never let it have the caret.
+      val width = onNodeWithContentDescription("Width value")
+      width.performMouseInput { click() }
+      waitForIdle()
+      width.assertIsFocused()
+      width.performTextInput("5")
+      waitForIdle()
+      val typed = width.fetchSemanticsNode().config[SemanticsProperties.EditableText].text
+      assertTrue(typed.endsWith("5"), "typing in the card did not reach its field: '$typed'")
+    }
+
+  @Test
+  fun `a state-bound property is shown as its binding, not as a field to type over`() =
+    runDesktopComposeUiTest(width = 1600, height = 1050) {
+      val bound =
+        Json.decodeFromString<DesignDocumentV1>(resource("/state-actions.uid"))
+          .toUiBuilderDocument()
+      val stateCatalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            bound,
+            stateCatalog,
+            initialSelectedNodeId = "label",
+            initialLayersOpen = true,
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+      // Opened the way the menu opens it: a right-click on the label's layer, then Quick edit.
+      onNodeWithContentDescription("Select label").performMouseInput { rightClick() }
+      waitForIdle()
+      onAllNodesWithText("Quick edit").onFirst().performClick()
+      waitForIdle()
+
+      onNodeWithContentDescription("Selection editor").assertExists()
+      onNodeWithContentDescription("Text bound to state label").assertExists()
+      onNodeWithContentDescription("Text value").assertDoesNotExist()
+    }
+
+  @Test
   fun `the real editor opens it on E and closes it on a press elsewhere`() =
     runDesktopComposeUiTest(width = 1600, height = 1050) {
       setContent {
@@ -142,15 +249,15 @@ class QuickEditorTest {
 
       // A press on the design first: it selects what is under it and gives the editor the keys,
       // which is how anyone gets here.
-      onRoot().performMouseInput { click(DESIGN) }
+      window().performMouseInput { click(DESIGN) }
       waitForIdle()
       onNodeWithContentDescription("Selection editor").assertDoesNotExist()
-      onRoot().performKeyInput { pressKey(Key.E) }
+      window().performKeyInput { pressKey(Key.E) }
       waitForIdle()
       val card = onNodeWithContentDescription("Selection editor").getBoundsInRoot()
 
       // The gap between the design and the card is still the canvas.
-      onRoot().performMouseInput {
+      window().performMouseInput {
         click(Offset((card.left - 8.dp).toPx(), (card.top + 8.dp).toPx()))
       }
       waitForIdle()
@@ -178,7 +285,7 @@ class QuickEditorTest {
       // Not selected yet: the first click of the two selects it and opens Properties, which
       // re-fits the canvas under the pointer before the second click lands.
       val label = onAllNodesWithText("Podcast details").onFirst().getBoundsInRoot()
-      onRoot().performMouseInput {
+      window().performMouseInput {
         doubleClick(
           Offset(((label.left + label.right) / 2).toPx(), ((label.top + label.bottom) / 2).toPx())
         )
@@ -204,7 +311,7 @@ class QuickEditorTest {
       }
       waitForIdle()
       val label = onAllNodesWithText("Podcast details").onFirst().getBoundsInRoot()
-      onRoot().performMouseInput {
+      window().performMouseInput {
         doubleClick(
           Offset(((label.left + label.right) / 2).toPx(), ((label.top + label.bottom) / 2).toPx())
         )
@@ -224,6 +331,9 @@ class QuickEditorTest {
     /** A point on the Jetcaster design as a 1600 × 1050 window draws it. */
     val DESIGN = Offset(420f, 600f)
   }
+
+  /** The editor's own root: the quick editor is a popup, which is a second one. */
+  private fun ComposeUiTest.window() = onAllNodes(isRoot()).onFirst()
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 }

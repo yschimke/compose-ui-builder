@@ -81,6 +81,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
@@ -89,8 +90,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import ee.schimke.composeai.uibuilder.LocalUiBuilderAssetBitmaps
 import ee.schimke.composeai.uibuilder.LocalUiBuilderAssetBytes
 import ee.schimke.composeai.uibuilder.canvas.CanvasExtentLayout
@@ -625,6 +629,10 @@ internal fun PinnedDesignCanvas(
               // Where a right-click landed on the design, in the frame's own pixels, and null
               // while no menu is open.
               var menuAt by remember(document.id) { mutableStateOf<Offset?>(null) }
+              // Where it last opened. The menu is still drawn while it animates closed, and an
+              // offset read from the cleared `menuAt` sent it to the frame's top-left for that
+              // moment before it vanished.
+              var menuShownAt by remember(document.id) { mutableStateOf(Offset.Zero) }
               CanvasExtentLayout(
                 Modifier.fillMaxSize()
                   .canvasNodeDrag(
@@ -750,6 +758,7 @@ internal fun PinnedDesignCanvas(
                     if (menuNode != null) {
                       if (menuNode != selectedNodeId) onNodeSelected(menuNode)
                       menuAt = position
+                      menuShownAt = position
                     }
                   },
                 // A runtime's surface is as tall as the editor asks, from the runtime's last
@@ -764,8 +773,8 @@ internal fun PinnedDesignCanvas(
                     offset =
                       with(density) {
                         DpOffset(
-                          ((menuAt?.x ?: 0f) * drawScale).toDp(),
-                          ((menuAt?.y ?: 0f) * drawScale).toDp(),
+                          (menuShownAt.x * drawScale).toDp(),
+                          (menuShownAt.y * drawScale).toDp(),
                         )
                       },
                   )
@@ -1000,6 +1009,12 @@ internal fun PinnedDesignCanvas(
         dragPosition == null &&
         !resizing
     ) {
+      // The window either side of this pane, which the card may use when the pane cannot hold it
+      // beside the design.
+      val windowWidthPx = LocalWindowInfo.current.containerSize.width.toFloat()
+      val roomLeft = with(density) { workspaceBounds.left.coerceAtLeast(0f).toDp() }
+      val roomRight =
+        with(density) { (windowWidthPx - workspaceBounds.right).coerceAtLeast(0f).toDp() }
       val placed =
         hoverEditorPlacement(
           workspace = workspaceBounds,
@@ -1008,32 +1023,41 @@ internal fun PinnedDesignCanvas(
           density = density,
           workspaceWidth = workspaceWidth,
           workspaceHeight = workspaceHeight,
+          roomLeft = roomLeft,
+          roomRight = roomRight,
         )
-      val maxX = (workspaceWidth - HOVER_EDITOR_WIDTH).coerceAtLeast(0.dp)
+      val minX = -roomLeft
+      val maxX = (workspaceWidth + roomRight - HOVER_EDITOR_WIDTH).coerceAtLeast(minX)
       val maxY = (workspaceHeight - HOVER_EDITOR_GRIP).coerceAtLeast(0.dp)
       val position =
         (hoverEditorMoved ?: placed).let {
-          DpOffset(it.x.coerceIn(0.dp, maxX), it.y.coerceIn(0.dp, maxY))
+          DpOffset(it.x.coerceIn(minX, maxX), it.y.coerceIn(0.dp, maxY))
         }
       val currentPosition = rememberUpdatedState(position)
-      Box(
-        Modifier.align(Alignment.TopStart)
-          .offset(x = position.x, y = position.y)
-          .width(HOVER_EDITOR_WIDTH)
-      ) {
-        hoverEditor(
-          Modifier.pointerHoverIcon(PointerIcon.Hand).pointerInput(Unit) {
-            detectDragGestures { change, drag ->
-              change.consume()
-              val from = currentPosition.value
-              hoverEditorMoved =
-                DpOffset(
-                  (from.x + drag.x.toDp()).coerceIn(0.dp, maxX),
-                  (from.y + drag.y.toDp()).coerceIn(0.dp, maxY),
-                )
-            }
+      // A popup, so the pane's clip does not cut the card off where it is placed over the pane
+      // beside this one. Not focusable: the editor's keys stay the editor's, and a field in the
+      // card still takes the caret when it is clicked.
+      Box(Modifier.align(Alignment.TopStart)) {
+        Popup(
+          offset = with(density) { IntOffset(position.x.roundToPx(), position.y.roundToPx()) },
+          properties = PopupProperties(focusable = false, clippingEnabled = false),
+        ) {
+          Box(Modifier.width(HOVER_EDITOR_WIDTH)) {
+            hoverEditor(
+              Modifier.pointerHoverIcon(PointerIcon.Hand).pointerInput(Unit) {
+                detectDragGestures { change, drag ->
+                  change.consume()
+                  val from = currentPosition.value
+                  hoverEditorMoved =
+                    DpOffset(
+                      (from.x + drag.x.toDp()).coerceIn(minX, maxX),
+                      (from.y + drag.y.toDp()).coerceIn(0.dp, maxY),
+                    )
+                }
+              }
+            )
           }
-        )
+        }
       }
     }
     // Over the node it edits, at least wide enough to type in: a one-letter label is a narrow box.
@@ -1770,9 +1794,10 @@ private val INLINE_TEXT_MIN_WIDTH = 160.dp
  * there is room.
  *
  * To the right of what is drawn first, then to its left, level with the selected node so the eye
- * does not have to travel far. Only a workspace with no room either side — a design zoomed to fill
- * it — falls back to beside the node itself, below it or above it, which is where the card always
- * used to go; there it can be dragged aside.
+ * does not have to travel far; failing both inside the canvas, the same two places out over the
+ * panes beside it. Only a window with no room either side — a design zoomed to fill it — falls back
+ * to beside the node itself, below it or above it, which is where the card always used to go; there
+ * it can be dragged aside.
  */
 internal fun hoverEditorPlacement(
   workspace: Rect,
@@ -1781,6 +1806,13 @@ internal fun hoverEditorPlacement(
   density: Density,
   workspaceWidth: Dp,
   workspaceHeight: Dp,
+  /**
+   * How far the window reaches past the workspace's left and right edges. The card is drawn in a
+   * popup, so a canvas pane too narrow to hold it beside the design — one beside a Preview pane —
+   * can still have it beside the design, over the neighbouring pane rather than over the design.
+   */
+  roomLeft: Dp = 0.dp,
+  roomRight: Dp = 0.dp,
 ): DpOffset =
   with(density) {
     val top =
@@ -1789,9 +1821,12 @@ internal fun hoverEditorPlacement(
         .coerceIn(0.dp, (workspaceHeight - HOVER_EDITOR_ROOM).coerceAtLeast(0.dp))
     if (designs != Rect.Zero) {
       val right = (designs.right - workspace.left).toDp() + HOVER_EDITOR_GAP
-      if (right + HOVER_EDITOR_WIDTH <= workspaceWidth) return DpOffset(right, top)
       val left = (designs.left - workspace.left).toDp() - HOVER_EDITOR_GAP - HOVER_EDITOR_WIDTH
+      // Inside the canvas first, either side; only then out over whatever is beside it.
+      if (right + HOVER_EDITOR_WIDTH <= workspaceWidth) return DpOffset(right, top)
       if (left >= 0.dp) return DpOffset(left, top)
+      if (right + HOVER_EDITOR_WIDTH <= workspaceWidth + roomRight) return DpOffset(right, top)
+      if (left >= -roomLeft) return DpOffset(left, top)
     }
     val x = (selected.x - workspace.left).coerceAtLeast(0f).toDp()
     val below = selected.y + selected.height - workspace.top + 8f
