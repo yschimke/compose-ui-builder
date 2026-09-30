@@ -45,12 +45,22 @@ val serverApiVersion = 1
 // Bump it only for a change to the messages an existing host cannot handle.
 val hostBridgeVersion = 1
 
+// The MCP App shell (`src/mcp-app/ui-builder-mcp-app.html`, `McpAppHostApp.kt`) a server serves as
+// a `text/html;profile=mcp-app` resource for its `.uid` file entrypoint (#364). The number is the
+// contract between that shell and the server: the one placeholder it fills in
+// (`__COMPOSE_UI_BUILDER_ASSET_BASE__`) and where the shell sits in the archive
+// (`mcp-app/ui-builder-mcp-app.html`). Bump it only for a change a server that fills in version 1
+// would get wrong.
+val mcpAppVersion = 1
+
 abstract class WriteUiBuilderWebManifest : DefaultTask() {
   @get:Input abstract val editorVersion: Property<String>
 
   @get:Input abstract val serverApi: Property<Int>
 
   @get:Input abstract val hostBridge: Property<Int>
+
+  @get:Input abstract val mcpApp: Property<Int>
 
   @get:OutputFile abstract val manifestFile: RegularFileProperty
 
@@ -61,7 +71,8 @@ abstract class WriteUiBuilderWebManifest : DefaultTask() {
       .asFile
       .writeText(
         """{"schema":"compose-ui-builder-web/v1","version":"${editorVersion.get()}",""" +
-          """"serverApi":${serverApi.get()},"hostBridge":${hostBridge.get()}}""" +
+          """"serverApi":${serverApi.get()},"hostBridge":${hostBridge.get()},""" +
+          """"mcpApp":${mcpApp.get()}}""" +
           "\n"
       )
   }
@@ -73,7 +84,20 @@ val webManifest =
     editorVersion.set(project.version.toString())
     serverApi.set(serverApiVersion)
     hostBridge.set(hostBridgeVersion)
+    mcpApp.set(mcpAppVersion)
     manifestFile.set(layout.buildDirectory.file("web-manifest/ui-builder-web.json"))
+  }
+
+// The shell with this build's version written in; the asset base stays a placeholder, because only
+// the server serving the archive knows the URL it serves it at.
+val mcpAppShell =
+  tasks.register<Copy>("mcpAppShell") {
+    description = "Stage the MCP App shell that loads this archive's editor from a server origin."
+    val editorVersion = project.version.toString()
+    inputs.property("editorVersion", editorVersion)
+    from(layout.projectDirectory.file("src/mcp-app/ui-builder-mcp-app.html"))
+    filter { line -> line.replace("@UI_BUILDER_VERSION@", editorVersion) }
+    into(layout.buildDirectory.dir("mcp-app"))
   }
 
 val webArchive =
@@ -83,6 +107,7 @@ val webArchive =
     dependsOn(project(":ui-builder").tasks.named("wasmFrontendDist"))
     from(project(":ui-builder").layout.buildDirectory.dir("wasmDist"))
     from(webManifest)
+    from(mcpAppShell) { into("mcp-app") }
     archiveBaseName.set("compose-preview-" + project.name)
     archiveVersion.set(project.version.toString())
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
@@ -114,6 +139,8 @@ configurations.named("runtimeElements") {
 }
 
 abstract class VerifyUiBuilderWebArchive : DefaultTask() {
+  @get:Internal val mcpAppShellPath: String = "mcp-app/ui-builder-mcp-app.html"
+
   @get:InputFile
   @get:PathSensitive(PathSensitivity.NONE)
   abstract val archiveFile: RegularFileProperty
@@ -136,6 +163,7 @@ abstract class VerifyUiBuilderWebArchive : DefaultTask() {
           "remote-m3-capabilities-v1.json",
           "fonts/fonts.json",
           "ui-builder-web.json",
+          mcpAppShellPath,
         )
       val missing = required - names.toSet()
       check(missing.isEmpty()) { "UI-builder web archive is missing: ${missing.sorted()}" }
@@ -145,6 +173,12 @@ abstract class VerifyUiBuilderWebArchive : DefaultTask() {
           name.startsWith("/") || name.contains('\\') || name.split('/').any { it == ".." }
         }
       check(unsafe.isEmpty()) { "UI-builder web archive contains unsafe paths: $unsafe" }
+      // The server fills in exactly one placeholder, and the build must have filled in its own.
+      val shell = zip.getInputStream(zip.getEntry(mcpAppShellPath)).bufferedReader().readText()
+      check("__COMPOSE_UI_BUILDER_ASSET_BASE__" in shell) {
+        "$mcpAppShellPath has lost its asset-base placeholder"
+      }
+      check("@UI_BUILDER_VERSION@" !in shell) { "$mcpAppShellPath was packaged without its version" }
     }
   }
 }

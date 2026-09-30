@@ -23,9 +23,6 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderHostAction
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHostChrome
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
-import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
-import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
-import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -259,31 +256,10 @@ internal fun openHostDesign(messageJson: String, generation: Int): HostOpenedDes
   )
 }
 
-internal fun decodeHostDesign(documentJson: String): UiBuilderDocument {
-  val wire = hostDesignJson.decodeFromString(DesignDocumentV1.serializer(), documentJson)
-  require(wire.schema in HOST_DESIGN_SCHEMAS) {
-    "unsupported design schema '${wire.schema}'; this editor reads " +
-      HOST_DESIGN_SCHEMAS.joinToString()
-  }
-  return wire.toUiBuilderDocument()
-}
+internal fun decodeHostDesign(documentJson: String): UiBuilderDocument =
+  UidDesignFiles.decode(documentJson)
 
-internal fun encodeHostDesign(document: UiBuilderDocument): String =
-  hostDesignJson.encodeToString(DesignDocumentV1.serializer(), document.toDesignDocumentV1()) + "\n"
-
-/** The declarations a checked-in design may carry, as the IntelliJ plugin accepts them. */
-private val HOST_DESIGN_SCHEMAS =
-  setOf("compose-ui-builder-document/v1", "compose-ui-builder-document/v1-candidate")
-
-/** `UiBuilderProjectService.projectDesignJson`, so both IDEs write a design identically. */
-private val hostDesignJson = Json {
-  classDiscriminator = "type"
-  encodeDefaults = true
-  explicitNulls = true
-  ignoreUnknownKeys = true
-  prettyPrint = true
-  prettyPrintIndent = "  "
-}
+internal fun encodeHostDesign(document: UiBuilderDocument): String = UidDesignFiles.encode(document)
 
 /** The envelope only; a newer host may send fields this editor has no use for. */
 private val hostMessageJson = Json { ignoreUnknownKeys = true }
