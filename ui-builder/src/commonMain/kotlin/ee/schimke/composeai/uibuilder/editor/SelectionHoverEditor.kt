@@ -140,6 +140,14 @@ internal fun SelectionHoverEditor(
             }
         }
         fields.forEach { field ->
+          // A property bound to a state variable has no value of its own to type over: a field
+          // here showed it empty, and typing into it replaced the binding with a literal. The
+          // binding is the panel's to change, so the card only says what it reads.
+          val bound = field.boundVariable
+          if (bound != null) {
+            HoverBoundRow(field.label, bound)
+            return@forEach
+          }
           HoverEditorRow(
             label = field.label,
             value = field.value,
@@ -248,6 +256,39 @@ private fun HoverSizingChip(
       maxLines = 1,
       softWrap = false,
     )
+  }
+}
+
+/** A property that reads a state variable: named, not editable, the way the panel shows it. */
+@Composable
+private fun HoverBoundRow(label: String, variable: String) {
+  Row(
+    Modifier.fillMaxWidth().padding(vertical = 3.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+    Text(
+      label,
+      Modifier.width(86.dp),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
+    Surface(
+      shape = RoundedCornerShape(6.dp),
+      color = MaterialTheme.colorScheme.secondaryContainer,
+      modifier = Modifier.semantics { contentDescription = "$label bound to state $variable" },
+    ) {
+      Text(
+        "state · $variable",
+        Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        color = MaterialTheme.colorScheme.onSecondaryContainer,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
   }
 }
 

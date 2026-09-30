@@ -176,6 +176,49 @@ class EditorDesktopPointerInteractionTest {
     }
 
   @Test
+  fun `Quick edit on the canvas menu opens the quick editor for the node under the pointer`() =
+    quickEditFromCanvasMenu(zoom = 1f)
+
+  @Test
+  fun `Quick edit on the canvas menu opens the quick editor at the fitted zoom`() =
+    quickEditFromCanvasMenu(zoom = null)
+
+  private fun quickEditFromCanvasMenu(zoom: Float?) =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            initialSelectedNodeId = "root-surface",
+            initialCanvasZoom = zoom,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+      onNodeWithContentDescription("Selection editor").assertDoesNotExist()
+
+      val cover =
+        onAllNodesWithContentDescription("Android Developers Backstage cover")
+          .fetchSemanticsNodes()
+          .maxBy { it.boundsInRoot.left }
+          .boundsInRoot
+      onRoot().performMouseInput { rightClick(Offset(cover.center.x, cover.center.y)) }
+      waitForIdle()
+      val target = assertNotNull(latest).selectedNodeId
+      assertTrue(target != "root-surface", "the right-click did not select the node under it")
+
+      onNodeWithText("Quick edit").performClick()
+      waitForIdle()
+
+      onNodeWithContentDescription("Selection editor").assertExists()
+      onNodeWithText("Quick edit").assertDoesNotExist()
+      assertEquals(target, assertNotNull(latest).selectedNodeId, "Quick edit moved the selection")
+    }
+
+  @Test
   fun `an M3 text property applies through the desktop inspector`() =
     runDesktopComposeUiTest(width = 1400, height = 900) {
       setContent {

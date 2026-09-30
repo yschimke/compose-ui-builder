@@ -19,6 +19,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -31,6 +32,8 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.editorShortcutFor
 import ee.schimke.composeai.uibuilder.editor.hoverEditorPlacement
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
+import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -130,6 +133,36 @@ class QuickEditorTest {
       "placed over the design: $left",
     )
   }
+
+  @Test
+  fun `a state-bound property is shown as its binding, not as a field to type over`() =
+    runDesktopComposeUiTest(width = 1600, height = 1050) {
+      val bound =
+        Json.decodeFromString<DesignDocumentV1>(resource("/state-actions.uid"))
+          .toUiBuilderDocument()
+      val stateCatalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            bound,
+            stateCatalog,
+            initialSelectedNodeId = "label",
+            initialLayersOpen = true,
+            initialCanvasZoom = 1f,
+          )
+        }
+      }
+      waitForIdle()
+      // Opened the way the menu opens it: a right-click on the label's layer, then Quick edit.
+      onNodeWithContentDescription("Select label").performMouseInput { rightClick() }
+      waitForIdle()
+      onAllNodesWithText("Quick edit").onFirst().performClick()
+      waitForIdle()
+
+      onNodeWithContentDescription("Selection editor").assertExists()
+      onNodeWithContentDescription("Text bound to state label").assertExists()
+      onNodeWithContentDescription("Text value").assertDoesNotExist()
+    }
 
   @Test
   fun `the real editor opens it on E and closes it on a press elsewhere`() =
