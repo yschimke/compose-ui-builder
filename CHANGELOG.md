@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.69.0](https://github.com/yschimke/compose-ui-builder/compare/v3.68.0...v3.69.0) (2026-09-30)
+
+
+### Features
+
+* **ui-builder:** browser copies you can list, download, delete and publish ([#342](https://github.com/yschimke/compose-ui-builder/issues/342)) ([#347](https://github.com/yschimke/compose-ui-builder/issues/347)) ([cdc2dbc](https://github.com/yschimke/compose-ui-builder/commit/cdc2dbcbc42430fb0c3afbcf699ebfbc5ea320c7))
+
+
+### Bug Fixes
+
+* **ui-builder:** carry the forking edit to the browser copy; tighten whole-document replacement ([#348](https://github.com/yschimke/compose-ui-builder/issues/348)) ([3033114](https://github.com/yschimke/compose-ui-builder/commit/303311490fa2421d65722d9a43dc1e7901dbb28b)), closes [#343](https://github.com/yschimke/compose-ui-builder/issues/343)
+* **ui-builder:** keep the canvas above the compact Properties and Code sheets ([#361](https://github.com/yschimke/compose-ui-builder/issues/361)) ([c8d6de8](https://github.com/yschimke/compose-ui-builder/commit/c8d6de8b2b4a42587310aac25fedbdbe62a0db2a)), closes [#352](https://github.com/yschimke/compose-ui-builder/issues/352) [#357](https://github.com/yschimke/compose-ui-builder/issues/357)
+* **ui-builder:** suppress extra frame companion preview in visual editor for mobile designs ([#344](https://github.com/yschimke/compose-ui-builder/issues/344)) ([aa6d7db](https://github.com/yschimke/compose-ui-builder/commit/aa6d7db06d3d97dd3bb1ba0789808ef5d5a91e1a))
+* **ui-builder:** transform every Wear list row once, and the button group as a whole ([#346](https://github.com/yschimke/compose-ui-builder/issues/346)) ([546e4e2](https://github.com/yschimke/compose-ui-builder/commit/546e4e2d10169b7be5eb7effab1c24f53ee4d901))
+* **ui-builder:** unroll and pop out a runtime-drawn scroller, with desktop tests ([#360](https://github.com/yschimke/compose-ui-builder/issues/360)) ([7002095](https://github.com/yschimke/compose-ui-builder/commit/7002095dafccb81b13fe1a5c664e9aab76ee893c))
+
 ## [3.68.0](https://github.com/yschimke/compose-ui-builder/compare/v3.67.0...v3.68.0) (2026-09-29)
 
 
