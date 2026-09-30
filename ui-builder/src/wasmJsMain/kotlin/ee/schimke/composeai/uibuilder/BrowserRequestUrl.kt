@@ -18,9 +18,30 @@ package ee.schimke.composeai.uibuilder
  * not copied onto the URL: a token-gated `compose-preview serve` trades the `?token=` a browser
  * opened it with for an HttpOnly cookie, and a same-origin request sends that on its own. A caller
  * that has built a `?token=` of its own keeps it.
+ *
+ * ## The MCP App exception
+ *
+ * An MCP App (`McpAppHostApp.kt`) runs in a frame whose origin is the host's sandbox, which serves
+ * none of this archive: its shell points `<base href>` at the origin that does, and declares that
+ * origin in the resource's CSP. There the rule is the same with the base in place of the page:
+ * resolve against it, and refuse anything outside `composeUiBuilderMcpApp.assetBase` (or the
+ * optional `catalogBase`, see `McpAppCatalogs`). No credential is involved — `fetch` sends cookies
+ * only same-origin, and this origin is not the page's.
  */
 @JsFun(
   """(url) => {
+    const app = globalThis.composeUiBuilderMcpApp;
+    if (app && app.assetBase) {
+      const inside = new URL(url, document.baseURI);
+      const allowed = [app.assetBase, app.catalogBase].filter(Boolean).some((base) => {
+        const root = new URL(base, document.baseURI);
+        return inside.origin === root.origin && inside.pathname.startsWith(root.pathname);
+      });
+      if (!allowed) {
+        throw new Error('UI-builder MCP App requests must stay under the editor assets: ' + url);
+      }
+      return inside.toString();
+    }
     const resolved = new URL(url, window.location.href);
     if (resolved.origin !== window.location.origin) {
       throw new Error('UI-builder requests must be same-origin: ' + url);

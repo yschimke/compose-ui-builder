@@ -174,6 +174,7 @@ fun main() {
     ComposeViewport(viewportContainerId = "composeApp") {
       ProvideUiBuilderFonts(fonts) {
         when {
+          mcpAppEnabled() -> McpAppHostApp()
           hostBridgeEnabled() -> HostBridgeApp()
           liveSessionEnabled() -> LiveSessionApp()
           else -> VisualFixtureApp(captureMode())

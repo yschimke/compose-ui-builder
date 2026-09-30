@@ -122,6 +122,9 @@ jobs:
         working-directory: scripts/ui-builder-web-smoke
       - run: node smoke.mjs ../../ui-builder/build/wasmDist ../../build/web-smoke
         working-directory: scripts/ui-builder-web-smoke
+      # The same editor as an MCP App in a fake host: open, no-op, select, save, external edit.
+      - run: node mcp-app-host.mjs ../../ui-builder/build/wasmDist ../../docs/design/fixtures/ui-builder/state-actions.uid ../../build/web-smoke
+        working-directory: scripts/ui-builder-web-smoke
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
