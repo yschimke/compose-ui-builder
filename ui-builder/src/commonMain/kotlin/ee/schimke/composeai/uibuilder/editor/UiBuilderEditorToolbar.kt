@@ -1004,7 +1004,7 @@ internal fun editorSelectionMenuEntries(
     add(
       UiBuilderMenuEntry.Action(
         "Quick edit",
-        icon = UiBuilderMenuIcon.Properties,
+        icon = UiBuilderMenuIcon.QuickEdit,
         contentDescription = "Quick edit beside the design",
         shortcut = "E",
       ) {

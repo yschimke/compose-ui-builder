@@ -837,6 +837,7 @@ private fun UiBuilderMenuIcon.jewelIcon(): IconKey =
     UiBuilderMenuIcon.Link -> AllIconsKeys.Actions.MenuOpen
     UiBuilderMenuIcon.Download -> AllIconsKeys.Actions.Download
     UiBuilderMenuIcon.Properties -> AllIconsKeys.Actions.Properties
+    UiBuilderMenuIcon.QuickEdit -> AllIconsKeys.Actions.Edit
     UiBuilderMenuIcon.Duplicate -> AllIconsKeys.Actions.Copy
     UiBuilderMenuIcon.Cut -> AllIconsKeys.Actions.MenuCut
     UiBuilderMenuIcon.Paste -> AllIconsKeys.Actions.MenuPaste
