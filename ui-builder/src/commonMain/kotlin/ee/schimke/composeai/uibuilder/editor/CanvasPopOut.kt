@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,6 +56,7 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.UI_BUILDER_UNROLLED_AXIS_KEY
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.right
+import kotlin.math.abs
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -240,6 +242,9 @@ internal fun RuntimeContainerPopOut(
       mutableStateOf<UiBuilderInspectionSnapshot?>(null)
     }
   var origin by remember { mutableStateOf(Offset.Zero) }
+  // The length this container was last trimmed to, so a draw that exactly fills it is read as
+  // settled rather than as cut off; see the measurement below.
+  var trimmedTo by remember(container.nodeId, document.revision) { mutableFloatStateOf(-1f) }
   Column(Modifier.padding(top = topOffset)) {
     Text(
       label,
@@ -311,9 +316,19 @@ internal fun RuntimeContainerPopOut(
                 .maxOrNull() ?: return@canvasRenderer
             val drawnDp = edge / designDensity
             val handedDp = if (container.horizontal) widthDp else heightDp
+            // Content that reaches the edge may be cut off by it, so the budget doubles — unless
+            // this is the length the content was already trimmed to. Content trimmed to exactly
+            // its own length reaches that edge by definition, and doubling it again undid the trim
+            // on every draw: the surface flipped between one length and twice it forever, a new
+            // runtime frame each time, and the pop-out never settled into a column of rows.
+            val reachesEdge = drawnDp >= handedDp - 1f
             onExtentMeasured(
-              if (drawnDp >= handedDp - 1f) (handedDp * 2f).coerceAtMost(MAX_POP_OUT_DP)
-              else drawnDp
+              if (reachesEdge && abs(handedDp - trimmedTo) > 1f) {
+                (handedDp * 2f).coerceAtMost(MAX_POP_OUT_DP)
+              } else {
+                trimmedTo = drawnDp
+                drawnDp
+              }
             )
           }
         }

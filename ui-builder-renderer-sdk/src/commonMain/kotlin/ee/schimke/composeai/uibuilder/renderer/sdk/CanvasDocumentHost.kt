@@ -18,13 +18,20 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasurePolicy
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.MultiMeasureLayout
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
@@ -263,8 +270,52 @@ fun CanvasDocumentHost(
     }
   ) {
     FlushForgottenBounds(forgetRequests, flushForgets)
-    document.roots.forEach { root ->
-      renderTree.root(root)?.let { entry -> scope.content(entry, rootModifier(entry)) }
+    val roots: @Composable BoxScope.() -> Unit = {
+      document.roots.forEach { root ->
+        renderTree.root(root)?.let { entry -> scope.content(entry, rootModifier(entry)) }
+      }
+    }
+    if (mode == CanvasMode.AuthoringUnrolled) UnrolledExtent(roots) else roots()
+  }
+}
+
+/**
+ * The unrolled surface's content at its own height, never less than the surface's.
+ *
+ * A runtime is handed the frame's size and draws into a root that size, and the editor grows the
+ * surface only when the content it measured reaches past it. Measured inside that root, content
+ * that fills its parent — a screen, a `fillMaxSize` column — was one frame tall however many rows
+ * it held: the rows past the fold were squeezed to nothing, nothing ever reached past the frame,
+ * and the unrolled view drew the same frame as the device view.
+ *
+ * So it is measured the way the editor measures its own extent (`CanvasExtentLayout`): once against
+ * an unbounded height for the content's natural size, then placed at that or the surface's height,
+ * whichever is taller, so `fillMaxHeight` still fills a design that fits. Only the second
+ * measurement is placed, so the probe records no bounds. The content may overhang this box, which
+ * reports the surface's own size; the rows' bounds past it are what tell the editor to grow.
+ */
+@Suppress("DEPRECATION")
+@Composable
+private fun UnrolledExtent(content: @Composable BoxScope.() -> Unit) {
+  MultiMeasureLayout(
+    modifier = Modifier.fillMaxSize(),
+    content = { Box(content = content) },
+    measurePolicy = UnrolledExtentMeasurePolicy,
+  )
+}
+
+private object UnrolledExtentMeasurePolicy : MeasurePolicy {
+  override fun MeasureScope.measure(
+    measurables: List<Measurable>,
+    constraints: Constraints,
+  ): MeasureResult {
+    val child = measurables.single()
+    val natural = child.measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+    val surface = if (constraints.hasBoundedHeight) constraints.maxHeight else constraints.minHeight
+    val extent = maxOf(surface, natural.height)
+    val placed = child.measure(constraints.copy(minHeight = extent, maxHeight = extent))
+    return layout(placed.width, constraints.constrainHeight(placed.height)) {
+      placed.placeRelative(0, 0)
     }
   }
 }
