@@ -47,40 +47,9 @@ A publicly accessible instance of `compose-preview-server` running at `https://p
 - **No debugger access** — cannot inspect the server's internal state or logs
 - **Rate limited** — the server enforces request rates to protect infrastructure
 
-### Agent Workflow
+### Using the MCP Tools
 
-```bash
-# 1. Agent requests a grant from the server
-curl -X POST https://preview.coo.ee/agent-access/request \
-  -d '{"capabilities": ["ui-builder-read", "ui-builder-write", "ui-builder-export"]}'
-# Returns: { approvalUrl, userCode, pollUrl, pollInterval }
-
-# 2. Operator approves the request through the approval URL in their browser
-
-# 3. Agent polls the pollUrl at the advertised interval
-
-# 4. Once approved, agent holds a bearer token for MCP calls
-# The token is stored in the MCP host's secrets or environment
-
-# 5. Agent can now call MCP tools against /mcp with that token
-export COMPOSE_PREVIEW_BEARER_TOKEN=<token>
-
-# List designs
-curl -H "Authorization: Bearer $COMPOSE_PREVIEW_BEARER_TOKEN" \
-  https://preview.coo.ee/mcp --data '{"method": "ui_builder_list_designs", ...}'
-
-# Create a design
-curl -H "Authorization: Bearer $COMPOSE_PREVIEW_BEARER_TOKEN" \
-  https://preview.coo.ee/mpc --data '{"method": "ui_builder_create_design", ...}'
-
-# Apply mutations
-curl -H "Authorization: Bearer $COMPOSE_PREVIEW_BEARER_TOKEN" \
-  https://preview.coo.ee/mcp --data '{"method": "ui_builder_apply", ...}'
-
-# Export
-curl -H "Authorization: Bearer $COMPOSE_PREVIEW_BEARER_TOKEN" \
-  https://preview.coo.ee/mcp --data '{"method": "ui_builder_export", ...}'
-```
+Agents can call the MCP tools directly through Claude Code's MCP support. The tools are available on the server's `/mcp` endpoint. See the tool list below for the full set of capabilities.
 
 ### When to Use
 
@@ -482,140 +451,30 @@ COMPOSE_PREVIEW_UI_BUILDER_TOKEN=... node scripts/ui-builder/design-sync.mjs imp
 
 ---
 
-## Cloud Agent Testing: Infrastructure and Access
+## Testing Strategy for Agents
 
-### What Agents Need in Claude's Cloud Environment
+### Recommended Approach: Multi-Environment Testing
 
-For agents running in Claude's cloud infrastructure (e.g., via `/mcp` or a scheduled workflow), here's what's required:
+**Use all four environments together:**
 
-#### Network Access
+1. **Gradle tests** for regression and fixture validation
+   - Fast, reproducible, catches regressions early
+   - Run `./gradlew check` before commits
 
-1. **preview.coo.ee** (HTTPS only) — The public instance
-   - Endpoint: `https://preview.coo.ee`
-   - Required for: MCP tools, design state, export, native preview
-   - Authentication: Time-limited bearer token from `/agent-access/request`
+2. **Local Wasm server** for browser testing
+   - Test the UI in a real browser
+   - Use Playwright for automated browser testing
+   - Catch WebGL/Skiko issues early
 
-2. **compose-preview-server** (if self-hosted) — A custom deployment
-   - Endpoint: `https://<your-domain>`
-   - Required for: Same as above, but on your infrastructure
-   - Authentication: Custom token or OAuth (as configured)
+3. **Local Desktop app** for offline editing workflows
+   - Test file I/O and design portability
+   - Verify native Skiko rendering
+   - Test against checked-in `.uid` fixtures
 
-#### Tools
-
-**Browser automation** — For testing the Wasm editor in a real browser:
-- **Playwright** (recommended) — Already available in Claude Code
-- Can start a browser, navigate, click, screenshot, and inspect DOM
-
-**HTTP client** — For testing the API:
-- `curl` or similar is typically available
-- Can make requests to `/api/ui-builder/v1/` endpoints
-
-**MCP library** — For calling MCP tools:
-- The agent host provides MCP tool support
-- No additional library needed; tools are called directly
-
-#### Environment Variables
-
-Agents should read credentials from environment, never embed them:
-
-```bash
-# Bearer token for preview.coo.ee
-COMPOSE_PREVIEW_BEARER_TOKEN=<token from agent grant flow>
-
-# Or older name (still supported)
-COMPOSE_PREVIEW_UI_BUILDER_TOKEN=<token>
-
-# For server connection in non-MCP contexts
-COMPOSE_PREVIEW_SERVER=https://preview.coo.ee
-```
-
-#### Storage
-
-- **No persistent storage** — agent runs are ephemeral
-- **No file downloads** — agent cannot save files for later retrieval
-- **State must be on the server** — all designs should be persisted to preview.coo.ee
-- **Or use artifacts** — export designs as `.uid` files and upload as artifacts
-
-### Playwright-Based Agent Testing (Recommended)
-
-This is the pattern for comprehensive browser-based testing:
-
-```javascript
-// agents/test-ui-builder.mjs
-import { chromium } from 'playwright';
-
-async function testUIBuilder() {
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-
-  // Navigate to the web editor
-  await page.goto('https://preview.coo.ee/ui-builder/');
-
-  // Create a new design
-  await page.click('button:has-text("Start a new design")');
-  await page.selectOption('select[name="catalog"]', 'm3-catalog');
-  await page.fill('input[name="designId"]', 'test-design-' + Date.now());
-  await page.click('button:has-text("Create")');
-
-  // Wait for the editor to load
-  await page.waitForSelector('[role="main"]');
-
-  // Take a screenshot
-  await page.screenshot({ path: 'editor-loaded.png' });
-
-  // Search for a component
-  await page.fill('input[type="search"]', 'Button');
-  await page.click('text=m3/button');
-
-  // Take another screenshot
-  await page.screenshot({ path: 'component-inserted.png' });
-
-  await browser.close();
-}
-
-testUIBuilder().catch(console.error);
-```
-
-### Limits of Cloud-Based Agent Testing
-
-**Note:** Agents in Claude Code can run `./gradlew` commands locally against the repository. The limits below apply to **remote cloud agents** without repository access.
-
-1. **No local Gradle** — Remote cloud agents cannot run `./gradlew` commands
-   - Claude Code agents: Can run Gradle freely
-   - Workaround (remote): Test against the Wasm server only, or pre-build artifacts
-2. **No local JVM tools** — Remote agents cannot build/run the desktop app or desktop render lane
-   - Claude Code agents: Can build and run the desktop app
-   - Workaround (remote): Use the Wasm editor or native preview via preview.coo.ee
-3. **No debugger access** — Cannot attach a debugger to the server
-   - Workaround: Test through the public API; rely on error messages and logs
-4. **No file uploads** — Cannot send large artifacts to the agent
-   - Workaround: Reference files by URL or use the MCP asset upload tool
-5. **Network latency** — Each API call has round-trip delay
-   - Workaround: Batch mutations, use design await tools to poll instead of polling manually
-6. **Rate limiting** — The server enforces request rates
-   - Workaround: Use exponential backoff, respect the polling interval in the grant flow
-
-### Testing Strategy Recommendations
-
-**For comprehensive agent testing in the cloud:**
-
-1. **Use MCP tools for logic**
-   - Create designs, apply mutations, export — all through the MCP endpoint
-   - This is the fastest and most reliable path
-
-2. **Use Playwright for UI validation**
-   - Test the browser experience, visual rendering, accessibility
-   - Verify the page loads, renders, and responds to input
-
-3. **Combine both approaches**
-   - Apply a mutation via MCP
-   - Verify the UI reflects it via Playwright
-   - Check the exported code via MCP
-
-4. **For regression testing**
-   - Keep design fixtures in the repo as `.json` or `.uid` files
-   - Test them locally via Gradle
-   - Keep them on the server via MCP for collaborative testing
+4. **preview.coo.ee** for integration and collaboration
+   - Test against the production system
+   - Use MCP tools for design manipulation
+   - Test collaboration features with multiple actors
 
 ---
 
@@ -636,33 +495,6 @@ testUIBuilder().catch(console.error);
 
 ---
 
-## Agent Authorization and Workflow
-
-### Grant Flow (Interactive)
-
-```
-Agent: POST /agent-access/request → { approvalUrl, userCode, pollUrl, pollInterval }
-  ↓
-Operator: Opens approvalUrl, enters userCode, approves capabilities
-  ↓
-Agent: Polls pollUrl every pollInterval until approved
-  ↓
-Agent: Receives bearer token in poll response
-  ↓
-Agent: Stores token in environment / MCP secrets
-  ↓
-Agent: Calls MCP tools with Authorization: Bearer <token>
-```
-
-### Non-Interactive Flow (CI/Scheduled Jobs)
-
-For scheduled jobs or CI that runs without user approval:
-1. Pre-create a long-lived agent token (server admin only)
-2. Store it in the environment or secrets
-3. Use it directly in MCP calls
-4. Refresh when needed (tokens expire after a period)
-
----
 
 ## Debugging and Troubleshooting
 
