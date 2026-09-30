@@ -123,6 +123,13 @@ class DesktopLaunchOptionsTest {
   }
 
   @Test
+  fun `the menu says which templates are blank starting points`() {
+    assertEquals("Wear screen (blank starter)", templateMenuLabel("wear-screen"))
+    assertEquals("Wear widget adaptive (blank starter)", templateMenuLabel("wear-widget-adaptive"))
+    assertEquals("Weather widget", templateMenuLabel("weather-widget"))
+  }
+
+  @Test
   fun `a catalog file picks its own catalog and must agree with --catalog`() {
     val file = java.nio.file.Files.createTempFile("wear", ".json")
     java.nio.file.Files.writeString(

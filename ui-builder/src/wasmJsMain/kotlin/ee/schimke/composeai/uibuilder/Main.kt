@@ -1767,8 +1767,8 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
               id = AdaptiveWearWidget.TEMPLATE_ID,
               label = "Adaptive widget (experimental)",
               supportingText =
-                "Headline, supporting and action slots, laid out for both sizes: Small drops " +
-                  "the supporting line.",
+                "A starting point: headline, supporting and action slots, laid out for both " +
+                  "sizes. Small drops the supporting line.",
             ),
           ) +
             // The two worked samples, after the empty scaffolds rather than before them: a blank
@@ -1791,9 +1791,10 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
           listOf(
             UiBuilderNewDesignTemplate(
               id = UiBuilderNewDesignSeed.WEAR_SCREEN_TEMPLATE,
-              label = "Wear screen",
+              label = "Blank Wear screen",
               supportingText =
-                "A ScreenScaffold with its clock and scroll indicator, over an empty list.",
+                "A starting point: a ScreenScaffold with its clock and scroll indicator, over an " +
+                  "empty list.",
             ),
             // After the empty one, for the reason the widget samples come after the empty hosts: a
             // blank scaffold is what somebody starting their own screen wants, and the worked list

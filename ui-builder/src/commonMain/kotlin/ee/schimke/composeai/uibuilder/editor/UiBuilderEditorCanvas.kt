@@ -373,13 +373,21 @@ internal fun PinnedDesignCanvas(
     // Fit frames the design above the zoom controls rather than under them: they sit over the
     // workspace's bottom edge, and a fitted frame reaching it had its corner covered.
     val fitHeight = (workspaceHeight.value - ZOOM_CONTROLS_ROOM_DP).coerceAtLeast(1f)
+    // The width always fits; the height fits only down to a readable floor. Fitting a portrait
+    // phone into a landscape window by its height drew it as a 6px-text strip (#355), where a
+    // canvas that scrolls vertically keeps it legible.
     val fitScale =
       minOf(
           workspaceWidth.value / pairWidth,
-          fitHeight / frameHeightDp,
-          if (showPopOut) {
-            (fitHeight - VARIANT_LABEL_ROOM_DP) / (popOutTopDp + popOutHeightDp)
-          } else Float.MAX_VALUE,
+          maxOf(
+            minOf(
+              fitHeight / frameHeightDp,
+              if (showPopOut) {
+                (fitHeight - VARIANT_LABEL_ROOM_DP) / (popOutTopDp + popOutHeightDp)
+              } else Float.MAX_VALUE,
+            ),
+            FIT_HEIGHT_FLOOR,
+          ),
         )
         .coerceIn(MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM)
     val scale = zoom ?: fitScale
@@ -1809,6 +1817,13 @@ internal val MODIFIER_FOCUS_FIELDS = mapOf("padding" to "startDp", "weight" to "
 private val CANVAS_ZOOM_STOPS = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f, 3f, 4f)
 
 internal const val MIN_CANVAS_ZOOM = 0.1f
+
+/**
+ * The least Fit shrinks a design to make its height fit: below it the frame overflows the workspace
+ * and scrolls vertically. The width is still always fitted, so a frame wider than the workspace
+ * goes under this rather than scrolling sideways.
+ */
+internal const val FIT_HEIGHT_FLOOR = 0.75f
 
 internal const val MAX_CANVAS_ZOOM = 4f
 

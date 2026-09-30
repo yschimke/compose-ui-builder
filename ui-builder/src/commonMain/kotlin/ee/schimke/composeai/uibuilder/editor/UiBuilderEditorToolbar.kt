@@ -78,6 +78,7 @@ import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.CommandOutcome
 import ee.schimke.composeai.uibuilder.DesignRevisionPin
 import ee.schimke.composeai.uibuilder.DesignUrlSelectors
+import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.UiBuilderComponentPacks
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -129,7 +130,14 @@ internal fun MobileEditorToolbar(
       Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 8.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      Text("UI Builder", Modifier.weight(1f), fontWeight = FontWeight.Bold)
+      Row(
+        Modifier.weight(1f),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+      ) {
+        Text("UI Builder", fontWeight = FontWeight.Bold, maxLines = 1)
+        catalogFormFactorLabel(state.document)?.let { FormFactorChip(it) }
+      }
       EditorAction("Undo", "Ctrl/⌘+Z", canUndo) { dispatch(UiBuilderEditorEvent.Undo) }
       EditorAction("Redo", "Ctrl/⌘+Shift+Z", canRedo) { dispatch(UiBuilderEditorEvent.Redo) }
       if (exportHost != null) ExportMenu(exportHost, showStatus = false)
@@ -699,9 +707,41 @@ private fun DocumentIdentity(state: UiBuilderEditorState, modifier: Modifier = M
     title = state.document.title,
     supporting =
       if (catalogSystemId.isEmpty()) "Compose UI Builder"
-      else "Compose UI Builder · $catalogSystemId",
+      else "Compose UI Builder · ${catalogFormFactorLabel(state.document) ?: catalogSystemId}",
     modifier = modifier,
   )
+}
+
+/**
+ * What kind of thing the design is, named the way the New design form names it: "Wear app" rather
+ * than `wear-m3`. Without it nothing on screen said which form factor a design was (#356). Null for
+ * a catalog this build has no name for, where the caller falls back to the id.
+ */
+internal fun catalogFormFactorLabel(document: UiBuilderDocument): String? =
+  when (document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull) {
+    "m3-catalog" -> "Android app"
+    "wear-m3" -> "Wear app"
+    "remote-m3" -> "Wear widget"
+    A2uiDocumentExporter.CATALOG_SYSTEM_ID -> "A2UI surface"
+    else -> null
+  }
+
+/** The design's form factor, read-only, beside the compact app bar's title. */
+@Composable
+private fun FormFactorChip(label: String) {
+  Surface(
+    shape = RoundedCornerShape(8.dp),
+    color = MaterialTheme.colorScheme.secondaryContainer,
+    modifier = Modifier.semantics { contentDescription = "Form factor: $label" },
+  ) {
+    Text(
+      label,
+      Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+      style = MaterialTheme.typography.labelMedium,
+      color = MaterialTheme.colorScheme.onSecondaryContainer,
+      maxLines = 1,
+    )
+  }
 }
 
 /**

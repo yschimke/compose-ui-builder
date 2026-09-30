@@ -301,10 +301,20 @@ jobs:
           # The create branch covers a tag that reached here without one - a manual re-run, or a
           # release whose draft was deleted - because `gh release upload` cannot create a Release
           # and would otherwise fail AFTER the Central publish had gone out.
+          # The document and mutation JSON Schemas, at a URL fixed per version
+          # (`releases/download/<tag>/<file>`) that a `.uid` or a mutation can cite (#320).
+          schemas_dir="ui-builder-export/src/commonMain/resources/schemas"
+          schemas=("$schemas_dir/compose-ui-builder-document-v1.schema.json" "$schemas_dir/compose-ui-builder-mutation-v1.schema.json")
+          for schema in "${schemas[@]}"; do
+            if [ ! -f "$schema" ]; then
+              echo "::error::missing JSON Schema $schema"
+              exit 1
+            fi
+          done
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$archive" "$archive.sha256" "$desktop_package" "$intellij_plugin" --clobber
+            gh release upload "$tag" "$archive" "$archive.sha256" "$desktop_package" "$intellij_plugin" "${schemas[@]}" --clobber
           else
-            gh release create "$tag" "$archive" "$archive.sha256" "$desktop_package" "$intellij_plugin" --title "$tag" --generate-notes --draft
+            gh release create "$tag" "$archive" "$archive.sha256" "$desktop_package" "$intellij_plugin" "${schemas[@]}" --title "$tag" --generate-notes --draft
           fi
 
   # The macOS and Windows installers, attached to the same draft release. Needed by
