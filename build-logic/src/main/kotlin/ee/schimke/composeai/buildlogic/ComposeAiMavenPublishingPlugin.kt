@@ -46,7 +46,7 @@ class ComposeAiMavenPublishingPlugin : Plugin<Project> {
       )
 
     project.group = "ee.schimke.composeai"
-    project.version = project.publishedVersion()
+    project.version = project.publishedVersion(project.publishedArtifactId())
 
     project.afterEvaluate {
       project.configureComposeAiPublication(

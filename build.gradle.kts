@@ -262,6 +262,7 @@ val checkPublishSet =
     // rename the plugin id, move publishing into a convention plugin, and the set silently empties
     // while the release job stays green and publishes nothing.
     val paths = publishedProjectPaths
+    val planned = providers.gradleProperty("composeai.publishSet").orNull?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet()
     doFirst {
       val derived = paths.get()
       // The modules this release uploads to Central. NOT the same set as the four seams
@@ -313,12 +314,47 @@ val checkPublishSet =
           .split(",")
           .filter(String::isNotBlank)
           .toSet()
+      // A planned subset is a subset of the derived set, never a way around it: a plan naming an
+      // artifact id nothing publishes would silently upload less than the release promised.
+      val derivedIds =
+        (derived - ":bom").map { "compose-preview-" + it.removePrefix(":").replace(':', '-') }.toSet()
+      val unknown = planned.orEmpty() - derivedIds
+      check(unknown.isEmpty()) {
+        "The publish plan names ${unknown.sorted()}, which no module publishes. " +
+          "The derived set is ${derivedIds.sorted()}."
+      }
       check(scanned == derived - ":bom") {
         "The release set and the BOM's set disagree. Applying the plugin says " +
           "${(derived - ":bom").sorted()}; reading the build scripts in settings.gradle.kts says " +
           "${scanned.sorted()}. One of them cannot see something the other can."
       }
     }
+  }
+
+// The modules a planned release uploads, from `-Pcomposeai.publishSet` (written by
+// `.github/scripts/maven-publish-plan.sh`, as artifact ids). ABSENT means no plan ran and everything
+// publishes - the default, and the `workflow_dispatch` recovery path. EMPTY means the plan ran and
+// found nothing, which publishes nothing at all, the BOM included. The two must not be collapsed.
+// Deliberately restates `PublishedVersions.parsePublishSet`, which the modules and `:bom` use: the
+// root build script cannot see build-logic's classes.
+val publishSet: Set<String>? =
+  providers
+    .gradleProperty("composeai.publishSet")
+    .orNull
+    ?.split(",")
+    ?.map(String::trim)
+    ?.filter(String::isNotEmpty)
+    ?.toSet()
+
+fun publishedArtifactIdOf(modulePath: String) =
+  "compose-preview-" + modulePath.removePrefix(":").replace(':', '-')
+
+/** Is [modulePath] uploaded by this release? The BOM follows the plan rather than being in it. */
+fun publishesInThisRelease(modulePath: String): Boolean =
+  when {
+    publishSet == null -> true
+    modulePath == ":bom" -> publishSet.isNotEmpty()
+    else -> publishedArtifactIdOf(modulePath) in publishSet
   }
 
 val publishReleaseArtifacts =
@@ -336,6 +372,22 @@ tasks.register("printPublishedProjectPaths") {
   description = "Prints the project path of every module this release publishes, one per line."
   val paths = publishedProjectPaths
   doLast { paths.get().sorted().forEach { println(it) } }
+}
+
+// The Gradle tasks this release runs, one per line, honouring `-Pcomposeai.publishSet`. Empty output
+// on a planned release means "publish nothing", which the release job treats as success.
+tasks.register("printPublishTasks") {
+  group = "publishing"
+  description = "Prints the publish task of each module this release uploads, one per line."
+  notCompatibleWithConfigurationCache("Reads the publish plan through script-level helpers")
+  val paths = publishedProjectPaths
+  doLast {
+    paths
+      .get()
+      .filter { publishesInThisRelease(it) }
+      .sorted()
+      .forEach { println("$it:publishAndReleaseToMavenCentral") }
+  }
 }
 
 // Every published POM must name coordinates a consumer can resolve — checked for EVERY published
@@ -409,7 +461,9 @@ subprojects {
   val modulePath = path
   plugins.withId("com.vanniktech.maven.publish") {
     publishedProjectPaths.add(modulePath)
-    publishReleaseArtifacts.configure { dependsOn("$modulePath:publishAndReleaseToMavenCentral") }
+    if (publishesInThisRelease(modulePath)) {
+      publishReleaseArtifacts.configure { dependsOn("$modulePath:publishAndReleaseToMavenCentral") }
+    }
 
     // `dependsOn` alone does NOT order these against `checkPublishSet` - Gradle is free to run them
     // in any order, or at once. That is not a theoretical gap: the 3.26.0 release uploaded to

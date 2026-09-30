@@ -1,3 +1,5 @@
+import ee.schimke.composeai.buildlogic.resolvedPublishedVersion
+
 plugins { id("composeai.maven-publishing-platform") }
 
 // The BOM for everything this repository publishes.
@@ -32,7 +34,14 @@ dependencies {
     publishedProjectPaths
       .map { path -> "compose-preview-" + path.removePrefix(":").replace(':', '-') }
       .sorted()
-      .forEach { artifactId -> api("ee.schimke.composeai:$artifactId:${project.version}") }
+      .forEach { artifactId ->
+        // On a planned release a coordinate the plan skipped stays at the version it last
+        // published at; naming the tag here would promise an artifact nobody uploaded.
+        api(
+          "ee.schimke.composeai:$artifactId:" +
+            resolvedPublishedVersion(artifactId, project.version.toString())
+        )
+      }
   }
 }
 
