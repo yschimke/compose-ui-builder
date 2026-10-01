@@ -181,7 +181,9 @@ internal fun parameterNameFor(property: String, content: String?, taken: Set<Str
   val fromContent =
     content
       ?.trim()
-      ?.takeIf { word -> word.isNotEmpty() && word.first().isLetter() && word.all(Char::isLetterOrDigit) }
+      ?.takeIf { word ->
+        word.isNotEmpty() && word.first().isLetter() && word.all(Char::isLetterOrDigit)
+      }
       ?.lowercase()
       ?.takeIf { it.length <= 24 && it !in KOTLIN_HARD_KEYWORDS && it !in RESERVED_PARAMETERS }
   val base = fromContent ?: property

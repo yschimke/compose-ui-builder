@@ -62,7 +62,8 @@ class LocalComponentsEditorTest {
           state =
             reducer.reduce(state, UiBuilderEditorEvent.InsertLocalComponent("inbox-email", target))
           val placed = state.selection.single()
-          state = reducer.reduce(state, UiBuilderEditorEvent.CommitProperty(placed, "sender", sender))
+          state =
+            reducer.reduce(state, UiBuilderEditorEvent.CommitProperty(placed, "sender", sender))
           val renamed = state.selection.single()
           state =
             reducer.reduce(state, UiBuilderEditorEvent.CommitProperty(renamed, "subject", subject))
@@ -76,12 +77,14 @@ class LocalComponentsEditorTest {
             catalog,
             initialSelectedNodeId = first,
             initialInspectorOpen = true,
+            // The palette, where the component waits to be placed again.
+            initialComponentsOpen = true,
           )
         }
       }
+      capture("after")
       onAllNodesWithText("This design").onFirst().assertExists()
       onAllNodesWithText("InboxEmail", substring = true).onFirst().assertExists()
-      capture("after")
     }
 
   @Test
@@ -94,6 +97,7 @@ class LocalComponentsEditorTest {
             catalog,
             initialSelectedNodeId = "email-1",
             initialInspectorOpen = true,
+            initialComponentsOpen = true,
           )
         }
       }
@@ -129,9 +133,40 @@ class LocalComponentsEditorTest {
         componentId = "layout/row",
         properties =
           JsonObject(
-            mapOf("horizontalSpacingDp" to JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(12))))
+            mapOf(
+              "horizontalSpacingDp" to
+                JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(12)))
+            )
           ),
-        slots = mapOf("children" to listOf("$id-sender", "$id-subject")),
+        slots = mapOf("children" to listOf("$id-avatar", "$id-sender", "$id-subject")),
+      )
+    // A coloured square, so the rows are visible in a capture whose canvas draws no glyphs.
+    fun avatar(id: String) =
+      UiBuilderNode(
+        id = id,
+        componentId = "m3/surface",
+        properties =
+          JsonObject(
+            mapOf(
+              "containerColor" to
+                JsonObject(
+                  mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FF6750A4"))
+                )
+            )
+          ),
+        modifiers =
+          kotlinx.serialization.json.JsonArray(
+            listOf(
+              JsonObject(
+                mapOf(
+                  "type" to JsonPrimitive("size"),
+                  "widthDp" to JsonPrimitive(40),
+                  "heightDp" to JsonPrimitive(40),
+                )
+              )
+            )
+          ),
+        slots = mapOf("content" to emptyList()),
       )
     val nodes =
       listOf(
@@ -141,6 +176,7 @@ class LocalComponentsEditorTest {
             slots = mapOf("children" to listOf("email-1")),
           ),
           row("email-1"),
+          avatar("email-1-avatar"),
           text("email-1-sender", "Sender"),
           text("email-1-subject", "Subject"),
         )

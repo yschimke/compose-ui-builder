@@ -584,12 +584,33 @@ object ScreenDocumentProjection {
         bindingScope ?: return refuse("$where reads `${value.value}` outside a component or loop")
       val field =
         scope.fields.getOrPut(value.value) {
-          BoundField("argument${scope.fields.size}", type, convert)
+          BoundField(parameterName(scope, value.value), type, convert)
         }
       if (field.type != type)
         return refuse("$where: binding `${value.value}` is used as both ${field.type} and $type")
       return if (scope.row) scopedRead("RowRead", "field", value.value, type)
       else scopedRead("ParameterRead", "parameter", field.name, type)
+    }
+
+    /**
+     * What a component's parameter is called: the key its body reads, when that is a plain Kotlin
+     * name nothing else in the function claims — so `InboxEmail(sender = …, subject = …)` reads as
+     * somebody would have written it. Anything else (a keyword, `modifier`, a name the generated
+     * `argumentN`/`captureN` series could also produce, one already taken) keeps the opaque
+     * positional name, which cannot collide. A loop's row fields are read by key and never named
+     * here.
+     */
+    private fun parameterName(scope: BindingScope, key: String): String {
+      val positional = "argument${scope.fields.size}"
+      if (scope.row) return positional
+      val plain =
+        key.isNotEmpty() &&
+          key.first().isLowerCase() &&
+          key.all { it.isLetterOrDigit() } &&
+          key !in KOTLIN_HARD_KEYWORDS &&
+          key != "modifier" &&
+          !Regex("(argument|capture)\\d+").matches(key)
+      return if (plain && scope.fields.values.none { it.name == key }) key else positional
     }
 
     private fun supplied(value: UiValueV1, field: BoundField, where: String): ScreenValue? =

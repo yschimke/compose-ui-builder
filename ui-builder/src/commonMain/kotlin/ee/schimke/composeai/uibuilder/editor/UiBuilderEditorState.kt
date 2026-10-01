@@ -2238,7 +2238,11 @@ class UiBuilderEditorReducer(
     while (current != null && visited.add(current)) {
       val node = document.nodes[current] ?: break
       val capability = catalog.componentsById[node.componentId]
-      val componentLabel = capability?.displayName ?: node.componentId
+      // A placement is called what it places, here as in the layers panel.
+      val componentLabel =
+        node.placementKey()?.let { componentDeclarationName(document.components[it]) ?: it }
+          ?: capability?.displayName
+          ?: node.componentId
       val location = document.location(current)
       val parentCapability =
         location?.let { document.nodes[it.nodeId] }?.let { catalog.componentsById[it.componentId] }
