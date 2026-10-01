@@ -451,7 +451,7 @@ COMPOSE_PREVIEW_UI_BUILDER_TOKEN=... node scripts/ui-builder/design-sync.mjs imp
 
 ---
 
-## Testing Strategy for Agents
+## Testing Strategy for Claude Code Agents
 
 ### Recommended Approach: Multi-Environment Testing
 
@@ -475,6 +475,84 @@ COMPOSE_PREVIEW_UI_BUILDER_TOKEN=... node scripts/ui-builder/design-sync.mjs imp
    - Test against the production system
    - Use MCP tools for design manipulation
    - Test collaboration features with multiple actors
+
+---
+
+## Testing from Cloud Sessions
+
+Cloud sessions without repository access can still test the UI Builder against **preview.coo.ee** using the MCP tools and Playwright.
+
+### Prerequisites
+
+- Network access to `https://preview.coo.ee`
+- MCP tools configured in the cloud environment
+- Bearer token from the agent grant flow (see `/ui-builder/` → **Connect an MCP agent** for details)
+
+### Using MCP Tools from the Cloud
+
+All MCP tools listed in the preview.coo.ee section are available:
+
+```bash
+# List available catalogs
+ui_builder_list_catalogs
+
+# Create a design
+ui_builder_create_design --catalog m3-catalog --id my-design
+
+# Apply mutations
+ui_builder_apply --design-id my-design --mutations '[...]'
+
+# Export Kotlin
+ui_builder_export --design-id my-design
+
+# Render via native preview
+ui_builder_render_native --design-id my-design
+```
+
+### Browser Testing from the Cloud
+
+Use Playwright to test the web UI:
+
+```javascript
+import { chromium } from 'playwright';
+
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto('https://preview.coo.ee/ui-builder/');
+
+// Interact with the editor
+await page.click('button:has-text("Start a new design")');
+await page.screenshot({ path: 'editor.png' });
+
+await browser.close();
+```
+
+### What Cloud Sessions Can Test
+
+- ✅ Design creation and mutation via MCP
+- ✅ Export (Kotlin, SVG, PNG) via MPC
+- ✅ Native preview compilation via MCP
+- ✅ Web UI interaction and rendering via Playwright
+- ✅ Collaboration features (comments, sharing) via MCP
+- ✅ Design portability (export/import)
+
+### What Cloud Sessions Cannot Test
+
+- ❌ Gradle tests and fixtures (no repository)
+- ❌ Local Wasm server builds (no `./gradlew`)
+- ❌ Local Desktop app (no local JVM)
+- ❌ Canvas performance benchmarks
+- ❌ Offline editing workflows
+
+### Recommended Cloud Testing Pattern
+
+**MCP tools for design logic + Playwright for UI:**
+
+1. Create a design via `ui_builder_create_design` (MCP)
+2. Apply mutations via `ui_builder_apply` (MCP)
+3. Verify UI reflects changes via Playwright
+4. Export and validate output via `ui_builder_export` (MCP)
+5. Test collaboration via comments and sharing (MCP)
 
 ---
 
