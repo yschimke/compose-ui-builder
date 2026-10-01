@@ -71,8 +71,20 @@ the page says so in plain text rather than staying blank (`Main.kt`, `webGlAvail
 **stuck "Loading the editor" boot screen is not a WebGL problem**: it means the Wasm or `.mjs`
 downloads did not finish. From an agent sandbox that has been the proxy dropping large or parallel
 requests (`net::ERR_TOO_MANY_RETRIES`), and the page has no error or retry state for it. Playwright
-needs `proxy: { server: process.env.HTTPS_PROXY }` and still failed for the 29 MB `uiBuilder.wasm`.
-Do not spend long on this from a sandbox: use option 1.
+needs `proxy: { server: process.env.HTTPS_PROXY }` and once still failed for the 29 MB
+`uiBuilder.wasm`.
+
+On 2026-10-01 it loaded to `data-ui-builder-ready` from a sandbox after two fixes, both needed:
+
+- **`net::ERR_CERT_AUTHORITY_INVALID`.** Chromium ignores the proxy CA that `curl`, Node and the JVM
+  are given and trusts only `~/.pki/nssdb`. coo-ee-env imports the CA there
+  (yschimke/coo-ee-env#86). Never work around it with `ignoreHTTPSErrors`.
+- **"The editor could not start — Incorrect locale information provided".** Under `LANG=C.UTF-8`
+  Chromium reports `navigator.languages` as `["en-US@posix"]`, which `Intl.Locale` rejects. Builds
+  with `normalizeBrowserLanguages` in `Main.kt` repair the tag. Against an older deployment, pass
+  `locale: 'en-US'` to `newPage`.
+
+If it still sticks at the boot screen, do not spend long on it: use option 1.
 
 ## Sandbox gotchas
 

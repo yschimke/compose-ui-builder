@@ -17,8 +17,15 @@ import { chromium } from 'playwright';
 const root = resolve(process.argv[2] ?? 'ui-builder/build/wasmDist');
 const shots = process.argv[3] ? resolve(process.argv[3]) : null;
 
-// The modes that render from files in the distribution alone.
-const MODES = ['mode=reference', 'mode=interactive-editor'];
+// The modes that render from files in the distribution alone, under a well-formed locale.
+const RUNS = [
+  { mode: 'mode=reference', languages: null },
+  { mode: 'mode=interactive-editor', languages: null },
+  // What Chromium reports when it starts under `LANG=C.UTF-8`, as in an agent sandbox: a tag that is
+  // not BCP 47, which Compose's `Intl.Locale` call used to reject before the first frame. Forced
+  // through an init script so the run does not depend on the runner's own locale.
+  { mode: 'mode=interactive-editor', languages: ['en-US@posix'] },
+];
 
 // Console output that is not a failure: a deprecation notice the Kotlin/Wasm runtime prints.
 const IGNORED_CONSOLE = [/Accessing `memory` via `wasmExports` is deprecated/];
@@ -62,9 +69,16 @@ const browser = await chromium.launch({
 if (shots) await mkdir(shots, { recursive: true });
 
 let failures = 0;
-for (const mode of MODES) {
-  // An explicit locale: without one the page's `Intl` calls throw on a runner with none set.
+for (const { mode, languages } of RUNS) {
+  const label = languages ? `${mode} languages=${languages.join(',')}` : mode;
+  // An explicit locale, so every run but the forced one is independent of the runner's.
   const page = await browser.newPage({ viewport: { width: 1400, height: 900 }, locale: 'en-US' });
+  if (languages) {
+    await page.addInitScript((tags) => {
+      Object.defineProperty(navigator, 'languages', { configurable: true, get: () => tags });
+      Object.defineProperty(navigator, 'language', { configurable: true, get: () => tags[0] });
+    }, languages);
+  }
   const errors = [];
   page.on('pageerror', (error) => errors.push(String(error)));
   page.on('console', (message) => {
@@ -90,9 +104,9 @@ for (const mode of MODES) {
   } catch (error) {
     errors.push(`not ready: ${error.message.split('\n')[0]}`);
   }
-  if (shots) await page.screenshot({ path: join(shots, `${mode.replace(/\W+/g, '-')}.png`) });
+  if (shots) await page.screenshot({ path: join(shots, `${label.replace(/\W+/g, '-')}.png`) });
   const ok = ready && errors.length === 0;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${mode}${errors.length ? `\n  ${errors.join('\n  ')}` : ''}`);
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${label}${errors.length ? `\n  ${errors.join('\n  ')}` : ''}`);
   if (!ok) failures++;
   await page.close();
 }
