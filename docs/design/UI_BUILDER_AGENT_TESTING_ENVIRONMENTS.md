@@ -309,17 +309,14 @@ Unit and integration tests compiled into the Gradle build. Test source lives und
 # All tests
 ./gradlew check
 
-# Single module
-./gradlew :ui-builder:test
-./gradlew :ui-builder-export:test
-./gradlew :ui-builder-runtime:test
-
-# JVM tests only (faster)
+# Single module. The multiplatform modules (:ui-builder, :ui-builder-export,
+# :ui-builder-desktop) have no `test` task: use jvmTest, or allTests for every target
 ./gradlew :ui-builder:jvmTest
 ./gradlew :ui-builder-export:jvmTest
+./gradlew :ui-builder-runtime:test
 
-# Watch mode (if supported by your Gradle wrapper)
-./gradlew :ui-builder:test --watch
+# Re-run on every source change
+./gradlew --continuous :ui-builder:jvmTest
 ```
 
 ### Test Modules
@@ -400,7 +397,7 @@ Tests the design service that compose-preview-server depends on:
 **Design fixtures:**
 ```bash
 # Replay a checked-in design and verify exports
-./gradlew :ui-builder:test -k DesignFixturesTest
+./gradlew :ui-builder:jvmTest --tests '*DesignFixturesTest*'
 ```
 
 **Equivalence gates:**
@@ -497,72 +494,27 @@ COMPOSE_PREVIEW_UI_BUILDER_TOKEN=... node scripts/ui-builder/design-sync.mjs imp
 
 ## Testing from Claude Code Cloud Sessions
 
-Cloud sessions can run all four testing environments **if the repository is available**. Repositories can be provided via:
+The step-by-step recipes, and the sandbox gotchas behind them, are in
+[`docs/AGENT_TESTING.md`](../AGENT_TESTING.md). This section only says what each environment above
+needs in a cloud session (Linux, 4 vCPU, no GPU, no display, outbound HTTPS through a
+TLS-terminating proxy). Each row was checked in one (#372).
 
-- **GitHub clone** — Automatic if GitHub App is installed on the repo
-- **Local upload** — Upload your repository when GitHub isn't available (up to 100 MB, excludes `.env`, `*.pem`, `id_rsa`)
+| Environment | Works? | What it takes |
+| --- | --- | --- |
+| Gradle tests | Yes | `./gradlew :ui-builder:jvmTest` (`:ui-builder` is multiplatform, so it has no `test` task). Expect HTTP 429 from Maven Central on a cold cache; retry with `--max-workers=1`, since each attempt keeps what it downloaded. |
+| Local Wasm server | Yes, slowly | A cold `:ui-builder:wasmFrontendDist` takes about 12 minutes, longer than a 10-minute foreground command limit, so run it in the background. Then `python3 -m http.server 8080 -d ui-builder/build/wasmDist`, or `node scripts/ui-builder-web-smoke/smoke.mjs ui-builder/build/wasmDist` to prove it boots. |
+| Local Desktop app | Under Xvfb only | There is no display, so a plain `./gradlew :ui-builder-desktop:run` fails with `java.awt.HeadlessException`. Use `xvfb-run`, set `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64` and `./gradlew --stop` first, then screenshot with `scripts/ui-builder-desktop-drive/drive.sh shot`. The full recipe is [`AGENT_TESTING.md` §1](../AGENT_TESTING.md#1-desktop-jvm-app-under-xvfb). A Skiko "Cannot create Linux GL context" line is expected: it falls back to software rendering. |
+| preview.coo.ee in a browser | With setup | Chromium trusts only `~/.pki/nssdb`, not the proxy CA the other tools read, so it fails with `net::ERR_CERT_AUTHORITY_INVALID` until the CA is imported there (`coo-ee-env` does this; see yschimke/coo-ee-env#86). Launch Playwright with `proxy: { server: process.env.HTTPS_PROXY }` and never with `ignoreHTTPSErrors`. |
+| preview.coo.ee over MCP | With a human | No MCP server for it is configured in a session. `POST /mcp` answers, but until a grant is approved it offers only `request_access`, which returns an approve URL a person has to open (see [section 1](#1-previewcooee-public-cloud-host)). |
 
-### Cloud Session Capabilities
+Do not assume these are there:
 
-Pre-installed tools and services:
-- **Java 21** with Maven and Gradle ✅
-- **Node.js** (versions 20, 21, 22) ✅
-- **Docker** (full engine with compose) ✅
-- **Python 3.x** with pip/poetry ✅
-- All package managers (npm, yarn, cargo, etc.) ✅
-
-**Network access:** Default "Trusted" level includes package registries, cloud platforms, container registries, GitHub, and dev tools. Customize with additional domains if needed.
-
-**Resource limits:** 4 vCPU, 16 GB RAM, 30 GB disk, up to 30-minute command timeout.
-
-### What Cloud Sessions Can Test
-
-**With repository access, cloud sessions can run all four testing methods:**
-
-1. **Gradle tests** ✅
-   ```bash
-   ./gradlew check
-   ./gradlew :ui-builder:test
-   ```
-
-2. **Local Wasm server** ✅
-   ```bash
-   ./gradlew :ui-builder:wasmFrontendDist
-   python3 -m http.server 8080 -d ui-builder/build/wasmDist
-   ```
-
-3. **Local Desktop app** ✅
-   ```bash
-   ./gradlew :ui-builder-desktop:run
-   ```
-
-4. **preview.coo.ee via MCP and Playwright** ✅
-   - Use MCP tools for design manipulation
-   - Use Playwright for UI testing
-
-### What Cloud Sessions Cannot Do
-
-- ❌ Access files on your local machine (only the repository)
-- ❌ Use interactive authentication (browser-based SSO login)
-- ❌ Access localhost services on your machine
-- ❌ Access local network resources directly
-
-### Recommended Cloud Testing Pattern
-
-**Multi-environment approach (same as local):**
-
-1. Run Gradle tests for regression detection
-2. Build and test the Wasm server with Playwright
-3. Build and run the Desktop app for offline workflows
-4. Use preview.coo.ee for integration testing with MCP tools
-
-**For CI/Scheduled Agents:**
-
-Cloud sessions are ideal for:
-- Running `./gradlew check` on every PR or schedule
-- Building and testing Wasm editor in headless mode
-- Running design fixture validation
-- Exercising MCP tools against preview.coo.ee
+- **JDK 21 on `PATH`.** `java` and `JAVA_HOME` are a JDK 17. JDK 21 is at
+  `/usr/lib/jvm/java-21-openjdk-amd64`, and Gradle toolchains find it on their own.
+- **A Docker daemon.** The `docker` CLI is installed, but nothing listens on
+  `/var/run/docker.sock`.
+- **Your machine.** A session sees the repositories cloned into it, and nothing on your
+  machine, its localhost or its network.
 
 ---
 
@@ -579,6 +531,12 @@ Cloud sessions are ideal for:
 - Browser console errors? Check WebGL support: `https://webglreport.com/`
 - Serve with `http.server` on localhost? HTTPS is required for production URLs
 - Test with Playwright: See if the page renders in headless mode
+- Stuck on "The editor could not start — Incorrect locale information provided"? The browser
+  reported a language tag that is not BCP 47 (`en-US@posix` under `LANG=C.UTF-8`). The editor
+  now repairs such tags before Compose starts; on an older build, launch with
+  `locale: 'en-US'`
+- `net::ERR_CERT_AUTHORITY_INVALID` from a sandbox? See
+  [Testing from Claude Code Cloud Sessions](#testing-from-claude-code-cloud-sessions)
 
 ### Gradle Tests Fail
 

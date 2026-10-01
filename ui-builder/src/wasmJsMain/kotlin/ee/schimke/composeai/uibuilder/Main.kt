@@ -163,6 +163,8 @@ fun main() {
     showWebGlRequiredMessage()
     return
   }
+  // Before the first frame: Compose reads the browser's languages lazily, during composition.
+  normalizeBrowserLanguages()
   // One registry for the page: the canvas asks it for the family a design names, the typeface
   // picker for the ones it lists, and a family either loads is then there for both.
   val fonts = browserFontRegistry()
@@ -183,6 +185,41 @@ fun main() {
     }
   }
 }
+
+/**
+ * Makes `navigator.languages` something `Intl.Locale` accepts, before Compose reads it.
+ *
+ * Compose's `Locale.current` is `new Intl.Locale(navigator.languages[0])`, and that throws a
+ * `RangeError` on a tag that is not BCP 47. A Chromium started under a POSIX locale reports exactly
+ * such a tag — `LANG=C.UTF-8` gives `en-US@posix` — and the editor then stopped at the boot screen
+ * with "Incorrect locale information provided", for a reason that had nothing to do with the
+ * design. Each tag keeps what is valid in it (`en-US@posix` becomes `en-US`, `en_GB.UTF-8` becomes
+ * `en-GB`), one that cannot be rescued is dropped, and an empty list becomes `en-US`. A browser
+ * whose tags are all valid is left exactly as it was.
+ */
+@JsFun(
+  """() => {
+  const valid = (tag) => {
+    try {
+      return new Intl.Locale(tag).toString();
+    } catch (e) {
+      return null;
+    }
+  };
+  const reported = Array.from(navigator.languages || [navigator.language]).filter(Boolean);
+  if (reported.length > 0 && reported.every((tag) => valid(tag) !== null)) return;
+  const usable = [];
+  for (const tag of reported) {
+    const repaired = valid(String(tag).split('@')[0].split('.')[0].replace(/_/g, '-'));
+    if (repaired && !usable.includes(repaired)) usable.push(repaired);
+  }
+  if (usable.length === 0) usable.push('en-US');
+  console.warn('ui-builder: browser languages ' + JSON.stringify(reported) + ' are not BCP 47; using ' + JSON.stringify(usable));
+  Object.defineProperty(navigator, 'languages', { configurable: true, get: () => Object.freeze([...usable]) });
+  Object.defineProperty(navigator, 'language', { configurable: true, get: () => usable[0] });
+}"""
+)
+private external fun normalizeBrowserLanguages()
 
 /**
  * Whether this browser will give Skiko a WebGL context, asked before Compose starts.
