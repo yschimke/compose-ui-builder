@@ -73,13 +73,14 @@ internal fun UiBuilderDocument.owningComponent(nodeId: String): String? =
 
 /** Every argument key a body reads, mapped to the first `node.property` that reads it. */
 internal fun UiBuilderDocument.bodyBindings(key: String): Map<String, Pair<String, String>> {
-  val reads = sortedMapOf<String, Pair<String, String>>()
+  val reads = mutableMapOf<String, Pair<String, String>>()
   componentBody(key).sorted().forEach { nodeId ->
     nodes[nodeId]?.properties?.forEach { (property, value) ->
-      value.bindingKey()?.let { reads.putIfAbsent(it, nodeId to property) }
+      value.bindingKey()?.let { if (it !in reads) reads[it] = nodeId to property }
     }
   }
-  return reads
+  // Sorted by key, which is the generated function's parameter order.
+  return reads.entries.sortedBy { it.key }.associate { it.key to it.value }
 }
 
 internal fun JsonElement.bindingKey(): String? =
