@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.70.0](https://github.com/yschimke/compose-ui-builder/compare/v3.69.0...v3.70.0) (2026-10-01)
+
+
+### Features
+
+* **web:** edit .uid designs as an MCP App (OpenAI file entrypoint) ([#366](https://github.com/yschimke/compose-ui-builder/issues/366)) ([d8ab6ab](https://github.com/yschimke/compose-ui-builder/commit/d8ab6ab365b1cee4030a2c2edf2bc935cc89626a))
+
+
+### Bug Fixes
+
+* **ui-builder:** keep the zoom controls off the fitted design, explain the revision chip ([#363](https://github.com/yschimke/compose-ui-builder/issues/363)) ([b4f8fa0](https://github.com/yschimke/compose-ui-builder/commit/b4f8fa09de6f70a66fb2455db4e0589bd89efa03))
+* **ui-builder:** quick edit from the context menu — bound properties, its own icon, no closing jump ([#369](https://github.com/yschimke/compose-ui-builder/issues/369)) ([fa8b59a](https://github.com/yschimke/compose-ui-builder/commit/fa8b59a66cc6a6b0f8677c4bb504d7bab4c56692))
+* **ui-builder:** readable fit floor, form factor chip, code copy, starter templates, release schemas ([#367](https://github.com/yschimke/compose-ui-builder/issues/367)) ([d5b3c9e](https://github.com/yschimke/compose-ui-builder/commit/d5b3c9ea8bae35483d1c40910c7fbf12439deea0))
+
 ## [3.69.0](https://github.com/yschimke/compose-ui-builder/compare/v3.68.0...v3.69.0) (2026-09-30)
 
 
