@@ -36,7 +36,6 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.right
 import kotlin.math.roundToInt
 
-/** Which edges one handle moves. */
 /**
  * Which edges one handle moves.
  *
@@ -148,6 +147,11 @@ internal fun resizeToggle(
  * edge to the parent's edge and it snaps to **Fill**. Double-click (or double-tap) a handle to flip
  * that axis between Fill and Hug. Nothing is written while the drag is in the air — one release is
  * one edit, one undo step and one round to every collaborator.
+ *
+ * **A handle answers the primary button only.** Its target is a finger's width, which on a short
+ * node — a line of text, a chip — covers the node's middle as well as its edge. A secondary press
+ * anywhere on a handle goes to [onSecondaryClick] with its root-space position, so a right-click on
+ * the node opens the node's menu wherever it lands; a primary drag on the same spot still resizes.
  */
 @Composable
 internal fun ResizeHandles(
@@ -164,6 +168,8 @@ internal fun ResizeHandles(
   nodeScale: Pair<Float, Float> = 1f to 1f,
   onResizing: (Boolean) -> Unit,
   onResize: (EditorSizing?, EditorSizing?) -> Unit,
+  /** A secondary press on a handle, at its position in root pixels — the canvas's menu. */
+  onSecondaryClick: (Offset) -> Unit = {},
   modifier: Modifier = Modifier,
 ) {
   val density = LocalDensity.current
@@ -175,6 +181,7 @@ internal fun ResizeHandles(
   val currentNodeScale = rememberUpdatedState(nodeScale)
   val currentOnResize = rememberUpdatedState(onResize)
   val currentOnResizing = rememberUpdatedState(onResizing)
+  val currentOnSecondaryClick = rememberUpdatedState(onSecondaryClick)
   val color = MaterialTheme.colorScheme.primary
   val left = bounds.x - origin.x
   val top = bounds.y - origin.y
@@ -237,14 +244,21 @@ internal fun ResizeHandles(
           x = left + if (handle.width) bounds.width else bounds.width / 2f,
           y = top + if (handle.height) bounds.height else bounds.height / 2f,
         )
+      val targetTopLeft =
+        IntOffset((centre.x - targetPx / 2f).roundToInt(), (centre.y - targetPx / 2f).roundToInt())
       Box(
-        Modifier.offset {
-            IntOffset(
-              (centre.x - targetPx / 2f).roundToInt(),
-              (centre.y - targetPx / 2f).roundToInt(),
+        Modifier.offset { targetTopLeft }
+          .size(HANDLE_TARGET)
+          // First, and in the initial pass: the press is consumed before the tap and drag
+          // detectors below see it, so a right-drag never resizes and a right-click never toggles.
+          // Keyed on where the handle is, because the press is in the handle's own pixels and the
+          // block keeps what it captured: a selection that opens a pane moves the canvas, and a
+          // stale origin hit-tested the wrong node.
+          .onSecondaryClick(Triple(handle, targetTopLeft, origin)) { position ->
+            currentOnSecondaryClick.value(
+              origin + Offset(targetTopLeft.x + position.x, targetTopLeft.y + position.y)
             )
           }
-          .size(HANDLE_TARGET)
           .semantics {
             contentDescription = "Resize ${handle.label}"
             onClick(label = "Toggle fill ${handle.label}") {

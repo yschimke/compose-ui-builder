@@ -3,6 +3,9 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.MouseButton
 import androidx.compose.ui.test.onAllNodesWithText
@@ -15,6 +18,7 @@ import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
@@ -116,6 +120,90 @@ class DirectManipulationTest {
       val width = assertNotNull(state).document.nodes.getValue("dm-b").modifiers.single().jsonObject
       assertEquals("width", width.optionalStringValue("type"))
       assertTrue(width.getValue("widthDp").toString().toInt() > 0, "a positive whole dp: $width")
+    }
+
+  /**
+   * A short node's handle targets are a finger wide, so on "A" they cover its middle as well as its
+   * edges — the case where a right-click used to land on a handle and open nothing (#378).
+   */
+  private fun ComposeUiTest.selectSmallNodeUnderItsHandle(): Offset {
+    onNodeWithText("A").performClick()
+    waitForIdle()
+    // Selected, "A" is also the breadcrumb's chip and the inspector's text field; the canvas's own
+    // is the one that is neither clickable nor editable.
+    val centre =
+      onAllNodesWithText("A")
+        .fetchSemanticsNodes()
+        .single { node ->
+          SemanticsActions.OnClick !in node.config &&
+            SemanticsProperties.EditableText !in node.config
+        }
+        .boundsInRoot
+        .center
+    val handle = onNodeWithContentDescription("Resize width").fetchSemanticsNode().boundsInRoot
+    assertTrue(handle.contains(centre), "the width handle $handle covers the node's centre $centre")
+    return centre
+  }
+
+  @Test
+  fun `a right-click in the middle of a small selected node opens its menu, not the handle`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var state: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document,
+            catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialCanvasZoom = 1f,
+            onStateChanged = { state = it },
+          )
+        }
+      }
+      waitForIdle()
+      val centre = selectSmallNodeUnderItsHandle()
+      assertEquals("dm-a", state?.selectedNodeId)
+
+      onRoot().performMouseInput { rightClick(centre) }
+      waitForIdle()
+
+      onNodeWithText("Duplicate").assertExists()
+      onNodeWithText("Ctrl/Cmd+D").assertExists()
+      assertEquals("dm-a", state?.selectedNodeId, "the menu is the node's")
+      assertEquals(emptyList(), state.modifiersOf("dm-a"), "a right-click resized nothing")
+    }
+
+  @Test
+  fun `a primary drag from the same spot still resizes`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var state: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document,
+            catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialCanvasZoom = 1f,
+            onStateChanged = { state = it },
+          )
+        }
+      }
+      waitForIdle()
+      val centre = selectSmallNodeUnderItsHandle()
+
+      onRoot().performMouseInput {
+        moveTo(centre)
+        press(MouseButton.Primary)
+        moveTo(centre + Offset(20f, 0f))
+        moveTo(centre + Offset(40f, 0f))
+        release(MouseButton.Primary)
+      }
+      waitForIdle()
+
+      onNodeWithText("Duplicate").assertDoesNotExist()
+      val width = assertNotNull(state).document.nodes.getValue("dm-a").modifiers.single().jsonObject
+      assertEquals("width", width.optionalStringValue("type"))
+      assertTrue(width.getValue("widthDp").toString().toInt() > 20, "wider than \"A\": $width")
     }
 
   @Test

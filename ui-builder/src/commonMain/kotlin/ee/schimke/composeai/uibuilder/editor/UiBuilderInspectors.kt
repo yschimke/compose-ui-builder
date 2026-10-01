@@ -947,7 +947,7 @@ private fun DraftPropertyControl(
         draft?.status == InspectorPropertyDraftStatus.PENDING -> "Applying edit…"
         draft?.status == InspectorPropertyDraftStatus.REJECTED ->
           "Edit was not applied · value retained"
-        multiline -> "Uncommitted edit retained · Ctrl/⌘+Enter applies"
+        multiline -> "Uncommitted edit retained · $COMMAND_MODIFIER+Enter applies"
         else -> "Uncommitted edit retained · Enter applies"
       }
     Text(
