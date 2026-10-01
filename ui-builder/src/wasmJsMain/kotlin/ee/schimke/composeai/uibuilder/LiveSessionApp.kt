@@ -46,6 +46,7 @@ import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
 import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.editor.DesignReview
+import ee.schimke.composeai.uibuilder.editor.DesignSuggestions
 import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
@@ -597,6 +598,44 @@ private fun LiveSessionApp(
     reviewHost.load()?.let {
       review = it
       reviewAvailable = true
+    }
+  }
+
+  // Suggestion mode's browser half: edits an agent proposed for this design, each a short-lived
+  // branch the person accepts (merge) or rejects (archive) — `UI_BUILDER_BRANCHES.md` →
+  // Suggestions.
+  // Polled, because a suggestion arriving does not move the design and so sends nothing down the
+  // socket; reloaded at once when the revision moves or a decision lands. A host without the
+  // suggestion routes answers the first list with something that is not one, and the loop stops
+  // there with the section hidden — the MCP App and local hosts never reach this at all.
+  val suggestionHost =
+    remember(config.designId, http) { BrowserSuggestionHost(config.designId, http) }
+  var suggestions by remember(config.designId) { mutableStateOf(DesignSuggestions()) }
+  var suggestionsAvailable by remember(config.designId) { mutableStateOf(false) }
+  var suggestionStatus by remember(config.designId) { mutableStateOf<String?>(null) }
+  var suggestionsGeneration by remember(config.designId) { mutableStateOf(0) }
+  LaunchedEffect(config.designId, config.localStorage, reviewedRevision, suggestionsGeneration) {
+    if (config.localStorage) return@LaunchedEffect
+    while (true) {
+      val listed = suggestionHost.list()
+      if (listed == null) {
+        if (!suggestionsAvailable) return@LaunchedEffect
+      } else {
+        suggestionsAvailable = true
+        // A proposal's document is fetched once per version of it: the same operations are the
+        // same document, and a suggestion its author has added to since is drawn again.
+        val known = suggestions.open.associateBy { it.suggestionId }
+        val drawn = listed.map { suggestion ->
+          val previous = known[suggestion.suggestionId]
+          if (previous?.document != null && previous.operationIds == suggestion.operationIds) {
+            suggestion.copy(document = previous.document)
+          } else {
+            suggestion.copy(document = suggestionHost.document(suggestion.suggestionId))
+          }
+        }
+        suggestions = suggestions.copy(open = drawn)
+      }
+      delay(SUGGESTION_POLL_INTERVAL_MILLIS)
     }
   }
 
@@ -1467,6 +1506,46 @@ private fun LiveSessionApp(
       },
       review = review,
       reviewStatus = reviewStatus,
+      suggestions = suggestions,
+      suggestionStatus = suggestionStatus,
+      onAcceptSuggestion =
+        if (!suggestionsAvailable) null
+        else
+          { id ->
+            suggestions.open
+              .firstOrNull { it.suggestionId == id }
+              ?.let { suggestion ->
+                scope.launch {
+                  when (val result = suggestionHost.accept(suggestion)) {
+                    is BrowserSuggestionHost.Result.Decided -> {
+                      suggestions = suggestions.copy(lastOutcome = result.outcome)
+                      suggestionStatus = null
+                      suggestionsGeneration += 1
+                    }
+                    is BrowserSuggestionHost.Result.Failed -> suggestionStatus = result.reason
+                  }
+                }
+              }
+          },
+      onRejectSuggestion =
+        if (!suggestionsAvailable) null
+        else
+          { id ->
+            suggestions.open
+              .firstOrNull { it.suggestionId == id }
+              ?.let { suggestion ->
+                scope.launch {
+                  when (val result = suggestionHost.reject(suggestion)) {
+                    is BrowserSuggestionHost.Result.Decided -> {
+                      suggestions = suggestions.copy(lastOutcome = result.outcome)
+                      suggestionStatus = null
+                      suggestionsGeneration += 1
+                    }
+                    is BrowserSuggestionHost.Result.Failed -> suggestionStatus = result.reason
+                  }
+                }
+              }
+          },
       onDecide =
         if (!reviewAvailable) null
         else
@@ -1720,3 +1799,10 @@ internal fun readOnlyNotice(config: LiveSessionConfig): String? =
         config.writeDeniedReason,
       )
       .joinToString(" ")
+
+/**
+ * How often an open editor asks whether anything new has been suggested. A suggestion arriving does
+ * not move the design, so nothing comes down the socket for it; a quarter of a minute is soon
+ * enough for "the agent says it has proposed something" and rare enough to cost nothing.
+ */
+private const val SUGGESTION_POLL_INTERVAL_MILLIS = 15_000L
