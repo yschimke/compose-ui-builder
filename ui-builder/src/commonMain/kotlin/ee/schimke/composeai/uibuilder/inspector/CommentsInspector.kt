@@ -518,7 +518,7 @@ internal fun CommentPinOverlay(
 private val PIN_RADIUS = 11.dp
 
 @Composable
-private fun CommentField(
+internal fun CommentField(
   value: String,
   placeholder: String,
   label: String,

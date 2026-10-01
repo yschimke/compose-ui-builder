@@ -427,6 +427,18 @@ fun UiBuilderEditor(
   /** A sentence from the host — a refused comment, a feed that dropped. */
   commentStatus: String? = null,
   /**
+   * Who approved or rejected which revision, as the host last reported it. Shown at the top of the
+   * comments tab, with Approve and Request changes for the revision on screen.
+   */
+  review: DesignReview = DesignReview(),
+  /**
+   * Records a verdict on the revision on screen, or null where the host keeps no reviews — the
+   * section then only reports what others decided, and in every preview and test says nothing.
+   */
+  onDecide: ((DesignReviewVerdict, note: String?) -> Unit)? = null,
+  /** A sentence from the host — a refused or failed verdict. */
+  reviewStatus: String? = null,
+  /**
    * The thread the address bar names — now, not only when the editor mounted.
    *
    * Separate from the selection the panel keeps for itself: a link says where to start reading, and
@@ -2009,6 +2021,9 @@ fun UiBuilderEditor(
       referenceStatus = captureFailure ?: referenceStatus,
       comments = comments,
       commentStatus = commentStatus,
+      review = review,
+      onDecide = onDecide,
+      reviewStatus = reviewStatus,
       selectedThreadId = selectedThreadId,
       onSelectThread = ::selectThread,
       // Read once. The panel scrolls to the thread the URL named as it opens, and never again —
