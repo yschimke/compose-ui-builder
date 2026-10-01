@@ -468,7 +468,7 @@
     "functionName": "UiBuilderCommentPinsOverMarkupPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderCommentPinsOverMarkupPreview-0019b7e0.png",
-    "sha256": "5d07ab92dced30106b01ee1ba1e0bce028dc9072902be6bc9b17f8acc3972477",
+    "sha256": "2dc2a491f335f3a7ba8b1700d4a14a106a39714842965c5159c1213803fe626d",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderCommentsPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderCommentsPreviewKt.UiBuilderCommentsPanelPreview": {
