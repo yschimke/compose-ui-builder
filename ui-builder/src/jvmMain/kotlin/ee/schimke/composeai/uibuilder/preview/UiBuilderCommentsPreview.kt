@@ -7,6 +7,9 @@ import ee.schimke.composeai.uibuilder.editor.DesignCommentAnchor
 import ee.schimke.composeai.uibuilder.editor.DesignCommentAuthorKind
 import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.editor.DesignCommentThread
+import ee.schimke.composeai.uibuilder.editor.DesignReview
+import ee.schimke.composeai.uibuilder.editor.DesignReviewDecision
+import ee.schimke.composeai.uibuilder.editor.DesignReviewVerdict
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 
@@ -35,8 +38,31 @@ fun UiBuilderCommentsPanelPreview() {
     comments = commentsPreviewBoard,
     onPostComment = {},
     onResolveCommentThread = { _, _ -> },
+    // An agent's verdict on an earlier revision and none on this one: the section says both, and
+    // offers Approve and Request changes for the revision on screen.
+    review = reviewPreview,
+    onDecide = { _, _ -> },
   )
 }
+
+/**
+ * A verdict from an agent on the revision before this one, with its note, so the review section's
+ * "nothing on this revision yet, but…" line is drawn rather than assumed.
+ */
+private val reviewPreview =
+  DesignReview(
+    decisions =
+      listOf(
+        DesignReviewDecision(
+          revision = referencePreviewDocument.revision.toLong() - 1,
+          verdict = DesignReviewVerdict.Reject,
+          decidedBy = "agent:design-reviewer",
+          displayName = "Design reviewer",
+          kind = DesignCommentAuthorKind.Agent,
+          note = "The play icon reads as a cross at 24dp",
+        )
+      )
+  )
 
 /**
  * The same discussion with the markup panel open instead.

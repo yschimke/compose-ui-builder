@@ -92,6 +92,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.inspector.CommentsInspector
 import ee.schimke.composeai.uibuilder.inspector.EventActionsInspector
+import ee.schimke.composeai.uibuilder.inspector.ReviewDecisionSection
 import ee.schimke.composeai.uibuilder.inspector.StateSelectionInspector
 import ee.schimke.composeai.uibuilder.inspector.StateVariablesInspector
 import ee.schimke.composeai.uibuilder.reference.ReferenceImportOutcome
@@ -152,6 +153,9 @@ internal fun PropertyInspector(
   referenceStatus: String?,
   comments: DesignCommentBoard,
   commentStatus: String?,
+  review: DesignReview,
+  onDecide: ((DesignReviewVerdict, String?) -> Unit)?,
+  reviewStatus: String?,
   selectedThreadId: String?,
   onSelectThread: (String?) -> Unit,
   revealThreadId: String?,
@@ -237,6 +241,9 @@ internal fun PropertyInspector(
           referenceStatus = referenceStatus,
           comments = comments,
           commentStatus = commentStatus,
+          review = review,
+          onDecide = onDecide,
+          reviewStatus = reviewStatus,
           selectedThreadId = selectedThreadId,
           onSelectThread = onSelectThread,
           revealThreadId = revealThreadId,
@@ -281,6 +288,9 @@ private fun InspectorBody(
   referenceStatus: String?,
   comments: DesignCommentBoard,
   commentStatus: String?,
+  review: DesignReview,
+  onDecide: ((DesignReviewVerdict, String?) -> Unit)?,
+  reviewStatus: String?,
   selectedThreadId: String?,
   onSelectThread: (String?) -> Unit,
   revealThreadId: String?,
@@ -311,6 +321,17 @@ private fun InspectorBody(
       // out of a dozen into view.
       val commentScroll = rememberScrollState()
       Column(Modifier.verticalScroll(commentScroll)) {
+        // Only where there is something to say: a host that keeps no reviews and a design nobody
+        // has decided on would otherwise get a heading over nothing.
+        if (onDecide != null || review.decisions.isNotEmpty()) {
+          ReviewDecisionSection(
+            review = review,
+            revision = state.document.revision.toLong(),
+            onDecide = onDecide,
+            hostStatus = reviewStatus,
+            onTextInputFocusChanged = onTextInputFocusChanged,
+          )
+        }
         CommentsInspector(
           board = comments,
           reference = state.reference,

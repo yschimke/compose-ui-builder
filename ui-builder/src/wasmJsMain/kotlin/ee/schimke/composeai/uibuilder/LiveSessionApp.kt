@@ -45,6 +45,7 @@ import ee.schimke.composeai.uibuilder.client.preparePropertyDelta
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
 import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
+import ee.schimke.composeai.uibuilder.editor.DesignReview
 import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
@@ -579,6 +580,23 @@ private fun LiveSessionApp(
       // the sequence is what settles it, rather than whichever answer happened to arrive last.
       if (board.sequence > commentBoard.sequence) commentBoard = board
       commentBoardLoaded = true
+    }
+  }
+
+  // The review section's browser half: who approved which revision, and this person's verdict
+  // (compose-preview-server#1255). Reloaded when the revision on screen moves, because the section
+  // is about that revision; a host without the review routes answers nothing and the section stays
+  // hidden rather than offering buttons that would be refused.
+  val reviewHost = remember(config.designId) { BrowserReviewHost(config.designId) }
+  var review by remember(config.designId) { mutableStateOf(DesignReview()) }
+  var reviewAvailable by remember(config.designId) { mutableStateOf(false) }
+  var reviewStatus by remember(config.designId) { mutableStateOf<String?>(null) }
+  val reviewedRevision = latestEditorDocument?.revision ?: document?.revision
+  LaunchedEffect(config.designId, config.localStorage, reviewedRevision) {
+    if (config.localStorage) return@LaunchedEffect
+    reviewHost.load()?.let {
+      review = it
+      reviewAvailable = true
     }
   }
 
@@ -1446,6 +1464,28 @@ private fun LiveSessionApp(
       onResolveCommentThread = { threadId, resolved ->
         scope.launch { commentStatus = commentHost.resolve(threadId, resolved) }
       },
+      review = review,
+      reviewStatus = reviewStatus,
+      onDecide =
+        if (!reviewAvailable) null
+        else
+          { verdict, note ->
+            val revision = (latestEditorDocument ?: document)?.revision
+            if (revision != null) {
+              scope.launch {
+                when (
+                  val result =
+                    reviewHost.decide(revision.toLong(), verdict, note, config.displayName)
+                ) {
+                  is BrowserReviewHost.Result.Recorded -> {
+                    review = result.review
+                    reviewStatus = null
+                  }
+                  is BrowserReviewHost.Result.Refused -> reviewStatus = result.reason
+                }
+              }
+            }
+          },
       onStateChanged = {
         latestEditorDocument = it.document
         // The address bar stops naming a node the moment the selection moves off it, so a URL

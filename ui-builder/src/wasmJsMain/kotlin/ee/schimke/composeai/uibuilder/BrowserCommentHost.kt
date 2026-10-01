@@ -242,7 +242,7 @@ private data class CommentPostWire(
 
 @kotlinx.serialization.Serializable private data class CommentResolutionWire(val resolved: Boolean)
 
-private suspend fun awaitCommentString(promise: Promise<JsString>): String =
+internal suspend fun awaitCommentString(promise: Promise<JsString>): String =
   suspendCancellableCoroutine { continuation ->
     promise
       .then { value ->
@@ -279,7 +279,7 @@ private suspend fun awaitCommentString(promise: Promise<JsString>): String =
     })));
   }"""
 )
-private external fun commentFetch(
+internal external fun commentFetch(
   method: String,
   url: String,
   body: String,
