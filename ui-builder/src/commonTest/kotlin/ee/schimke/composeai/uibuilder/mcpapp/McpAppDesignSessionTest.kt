@@ -300,6 +300,117 @@ class McpAppDesignSessionTest {
     runImmediate { session.select(null) }
     assertEquals(McpAppModelContext.Empty, host.contexts.last())
   }
+
+  @Test
+  fun `a comment sends one model context with the picture and detail, then one message`() {
+    val host = FakeMcpAppHost(file.resourceUri, UidDesignFiles.encode(withTitle()))
+    val session = session(host)
+    session.edited(session.state.document!!)
+
+    val sent = runImmediate {
+      session.comment("title", "  Make this bigger  ", McpAppImage("iVBORw0KGgo=", "image/png"))
+    }
+
+    assertTrue(sent)
+    // Context first: a message sent at once starts the turn that reads it.
+    assertEquals(listOf("ui/update-model-context", "ui/message"), host.conversation)
+
+    val message = host.messages.single().toParams()
+    assertEquals("user", message["role"]!!.jsonPrimitive.content)
+    assertEquals(
+      JsonObject(
+        mapOf(
+          "openai/message" to
+            JsonObject(mapOf("target" to JsonPrimitive("active"), "send" to JsonPrimitive(true)))
+        )
+      ),
+      message["_meta"],
+    )
+    val blocks = message["content"]!!.jsonArray.map { it.jsonObject }
+    assertEquals(2, blocks.size)
+    // The words, trimmed and untitled, so they are the message text.
+    assertEquals("text", blocks[0]["type"]!!.jsonPrimitive.content)
+    assertEquals("Make this bigger", blocks[0]["text"]!!.jsonPrimitive.content)
+    assertNull(blocks[0]["_meta"])
+    // Then the node, as one titled item: path, component and properties.
+    val node = blocks[1]
+    assertEquals("Text · title", node["_meta"]!!.jsonObject["openai/title"]!!.jsonPrimitive.content)
+    val nodeText = node["text"]!!.jsonPrimitive.content
+    assertTrue("Comment on home.uid: Text `title` (m3/text)" in nodeText, nodeText)
+    assertTrue("Path: Column `root` › children[0] Text `title`" in nodeText, nodeText)
+    assertTrue("\"value\":\"Hi\"" in nodeText, nodeText)
+
+    val context = host.contexts.single().toParams()
+    val parts = context["content"]!!.jsonArray.map { it.jsonObject }
+    assertEquals(listOf("image", "text"), parts.map { it["type"]!!.jsonPrimitive.content })
+    assertEquals("iVBORw0KGgo=", parts[0]["data"]!!.jsonPrimitive.content)
+    assertEquals("image/png", parts[0]["mimeType"]!!.jsonPrimitive.content)
+    assertEquals(
+      "Text · title",
+      parts[0]["_meta"]!!.jsonObject["openai/title"]!!.jsonPrimitive.content,
+    )
+    assertEquals(
+      "assistant",
+      parts[1]["annotations"]!!.jsonObject["audience"]!!.jsonArray.single().jsonPrimitive.content,
+    )
+    val hidden = parts[1]["text"]!!.jsonPrimitive.content
+    assertTrue("\"Make this bigger\"" in hidden, hidden)
+    assertTrue("render_preview" in hidden, hidden)
+    val structured = context["structuredContent"]!!.jsonObject
+    assertEquals("title", structured["comment"]!!.jsonObject["nodeId"]!!.jsonPrimitive.content)
+    assertEquals("title", structured["selection"]!!.jsonObject["nodeId"]!!.jsonPrimitive.content)
+    // A comment writes nothing to the file.
+    assertEquals(0, host.writes.size)
+  }
+
+  @Test
+  fun `a comment without a picture sends only the assistant detail as context`() {
+    val host = FakeMcpAppHost(file.resourceUri, UidDesignFiles.encode(withTitle()))
+    val session = session(host)
+    session.edited(session.state.document!!)
+
+    runImmediate { session.comment("title", "Why is this grey?") }
+
+    val parts = host.contexts.single().content.map { it.jsonObject }
+    assertEquals(listOf("text"), parts.map { it["type"]!!.jsonPrimitive.content })
+    assertEquals(1, host.messages.size)
+  }
+
+  @Test
+  fun `an empty comment, or one on a node that is gone, sends nothing`() {
+    val host = FakeMcpAppHost(file.resourceUri, UidDesignFiles.encode(withTitle()))
+    val session = session(host)
+    session.edited(session.state.document!!)
+
+    assertFalse(runImmediate { session.comment("title", "") })
+    assertFalse(runImmediate { session.comment("title", "   \n ") })
+    assertFalse(runImmediate { session.comment("no-such-node", "Hello") })
+
+    assertTrue(host.conversation.isEmpty(), host.conversation.toString())
+  }
+
+  /** The seed with a `Text` "Hi" as the root column's only child. */
+  private fun withTitle(): UiBuilderDocument {
+    val title =
+      UiBuilderNode(
+        id = "title",
+        componentId = "m3/text",
+        properties =
+          JsonObject(
+            mapOf(
+              "text" to
+                JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Hi")))
+            )
+          ),
+      )
+    val root = seed.nodes.getValue("root")
+    return seed.copy(
+      nodes =
+        seed.nodes +
+          ("title" to title) +
+          ("root" to root.copy(slots = mapOf("children" to listOf("title"))))
+    )
+  }
 }
 
 /** An in-memory host file with etags, a write limit and a switch for `writable`. */
@@ -319,6 +430,10 @@ internal class FakeMcpAppHost(
   val calls = mutableListOf<String>()
   val writes = mutableListOf<Write>()
   val contexts = mutableListOf<McpAppModelContext>()
+  val messages = mutableListOf<McpAppMessage>()
+
+  /** Every `ui/update-model-context` and `ui/message`, in the order the app sent them. */
+  val conversation = mutableListOf<String>()
 
   private val etag: String
     get() = "v$version"
@@ -358,6 +473,12 @@ internal class FakeMcpAppHost(
 
   override suspend fun updateModelContext(context: McpAppModelContext) {
     contexts += context
+    conversation += "ui/update-model-context"
+  }
+
+  override suspend fun sendMessage(message: McpAppMessage) {
+    messages += message
+    conversation += "ui/message"
   }
 }
 

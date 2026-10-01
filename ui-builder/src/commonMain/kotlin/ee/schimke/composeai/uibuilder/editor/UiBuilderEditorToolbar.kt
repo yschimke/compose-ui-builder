@@ -983,6 +983,8 @@ internal fun editorSelectionMenuEntries(
   onOpenProperties: (() -> Unit)?,
   /** Opens the quick editor beside the design, or null where the selection has none. */
   onQuickEdit: (() -> Unit)? = null,
+  /** Opens a comment field beside the node, for the conversation the editor sits in, or null. */
+  onComment: (() -> Unit)? = null,
   /** Copies a link that opens this design on this layer, or null where nothing is selected. */
   onCopyLink: (() -> Unit)? = null,
   onDismiss: () -> Unit,
@@ -1013,6 +1015,18 @@ internal fun editorSelectionMenuEntries(
       }
     )
   }
+  if (onComment != null) {
+    add(
+      UiBuilderMenuEntry.Action(
+        "Comment",
+        icon = UiBuilderMenuIcon.Comment,
+        contentDescription = "Comment on this node in the chat",
+      ) {
+        onDismiss()
+        onComment()
+      }
+    )
+  }
   // Beside Properties rather than among the clipboard verbs, because both of these are ways of
   // *pointing at* the selected layer while Copy and Cut are ways of moving it. The Export menu's
   // Copy link is the design's address; this one is a layer's, which is the thing somebody pastes
@@ -1030,7 +1044,7 @@ internal fun editorSelectionMenuEntries(
       )
     )
   }
-  if (onOpenProperties != null || onQuickEdit != null || onCopyLink != null) {
+  if (onOpenProperties != null || onQuickEdit != null || onComment != null || onCopyLink != null) {
     add(UiBuilderMenuEntry.Divider)
   }
   add(

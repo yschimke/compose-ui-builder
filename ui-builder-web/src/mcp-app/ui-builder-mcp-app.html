@@ -5,10 +5,12 @@
 
   One small HTML document, not a self-contained one: the editor is ~75 MB of Wasm, which no host
   will take inline in a resource. Everything else loads from the origin that serves this archive,
-  named by `<base href>`. A server fills in the one placeholder below, __COMPOSE_UI_BUILDER_ASSET_BASE__
-  (an absolute URL ending in `/`, the unpacked archive's root), and declares that origin in the
-  resource's `_meta.ui.csp.resourceDomains` and `connectDomains`. Nothing else is substituted at
-  serve time; the version was written in by the build.
+  named by `<base href>`. A server fills in __COMPOSE_UI_BUILDER_ASSET_BASE__ (an absolute URL ending
+  in `/`, the unpacked archive's root), and declares that origin in the resource's
+  `_meta.ui.csp.resourceDomains` and `connectDomains`. It may also fill in
+  __COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__ with `focused` or `full`, the editor the panel opens in;
+  left as it is, or any other value, it opens `focused`. Nothing else is substituted at serve time;
+  the version was written in by the build.
 -->
 <html lang="en">
   <head>
@@ -20,8 +22,11 @@
       // Selects McpAppHostApp (see Main.kt). `assetBase` is the only origin besides the page's the
       // editor may fetch from; `catalogBase` is left unset, so a design pinned to a catalog this
       // archive does not package is refused by name rather than fetched (McpAppCatalogs.kt).
+      // `layout` is the editor the panel opens in, `focused` (the canvas alone) or `full`; the
+      // person can switch from the file bar either way (McpAppLayout.kt).
       globalThis.composeUiBuilderMcpApp = {
         assetBase: "__COMPOSE_UI_BUILDER_ASSET_BASE__",
+        layout: "__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__",
         version: "@UI_BUILDER_VERSION@",
       };
     </script>

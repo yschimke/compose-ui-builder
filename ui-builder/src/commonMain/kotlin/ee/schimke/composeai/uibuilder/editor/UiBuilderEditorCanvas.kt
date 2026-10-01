@@ -213,6 +213,13 @@ internal fun PinnedDesignCanvas(
   hoverEditor: (@Composable (dragHandle: Modifier) -> Unit)?,
   /** A press anywhere else on the canvas closes the quick editor. */
   onHoverEditorDismiss: () -> Unit = {},
+  /**
+   * Whether [hoverEditor] takes the keyboard while it is open. False for the quick editor, whose
+   * fields take the caret when clicked while the editor's keys stay the editor's; true for a card
+   * that is only for typing — the node's Comment field — so every key goes to it, and a press
+   * outside it closes it.
+   */
+  hoverEditorFocusable: Boolean = false,
   /** A double-click on the design, with the node under it — the deepest one, as a click picks. */
   onNodeDoubleClicked: (String) -> Unit = {},
   /** The text being typed over in place, drawn over its node; null when none is. */
@@ -1040,7 +1047,8 @@ internal fun PinnedDesignCanvas(
       Box(Modifier.align(Alignment.TopStart)) {
         Popup(
           offset = with(density) { IntOffset(position.x.roundToPx(), position.y.roundToPx()) },
-          properties = PopupProperties(focusable = false, clippingEnabled = false),
+          onDismissRequest = if (hoverEditorFocusable) dismissHoverEditor.value else null,
+          properties = PopupProperties(focusable = hoverEditorFocusable, clippingEnabled = false),
         ) {
           Box(Modifier.width(HOVER_EDITOR_WIDTH)) {
             hoverEditor(
