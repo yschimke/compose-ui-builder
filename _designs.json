@@ -1,0 +1,17 @@
+{
+  "schema": "compose-ui-builder-design-renders/v1",
+  "designs": [
+    {
+      "id": "ui-builder-menus",
+      "file": "ui-builder-menus.png",
+      "sha256": "68226b57498e8d5f8c345d57e65fe19ac2bd6458f2dc7df5418e41e1ee465f7e",
+      "bytes": 218694
+    },
+    {
+      "id": "ui-builder-shortcuts-dialog",
+      "file": "ui-builder-shortcuts-dialog.png",
+      "sha256": "3ae1b68c60360fdb300740f2bd13d2f1d7a0d8df06052538b4d0cd1e16c12355",
+      "bytes": 158003
+    }
+  ]
+}
