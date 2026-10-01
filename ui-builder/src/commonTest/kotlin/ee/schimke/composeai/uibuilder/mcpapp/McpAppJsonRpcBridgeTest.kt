@@ -153,6 +153,39 @@ class McpAppJsonRpcBridgeTest {
   }
 
   @Test
+  fun `a message is ui-message to the active thread, sent at once, and the host says if it takes one`() {
+    val transport = RecordingTransport { method, _ ->
+      if (method == "ui/initialize") {
+        """{"protocolVersion":"2026-01-26","hostInfo":{"name":"codex"},
+           "hostCapabilities":{"experimental":{"openai/resource":{},"openai/message":{}},
+                               "message":{"text":{}},"updateModelContext":{"text":{},"image":{}}}}"""
+      } else "{}"
+    }
+    val bridge = McpAppJsonRpcBridge(transport)
+
+    val host = runImmediate { bridge.initialize("dev") }
+    assertTrue(host.messages)
+    runImmediate {
+      bridge.sendMessage(
+        McpAppMessage(
+          kotlinx.serialization.json.buildJsonArray {
+            add(json("""{"type":"text","text":"Make it blue"}"""))
+          }
+        )
+      )
+    }
+
+    assertEquals(
+      "ui/message" to
+        json(
+          """{"role":"user","content":[{"type":"text","text":"Make it blue"}],
+              "_meta":{"openai/message":{"target":"active","send":true}}}"""
+        ),
+      transport.requests.last(),
+    )
+  }
+
+  @Test
   fun `subscribe and model context use the standard methods`() {
     val transport = RecordingTransport { _, _ -> "{}" }
     val bridge = McpAppJsonRpcBridge(transport)
