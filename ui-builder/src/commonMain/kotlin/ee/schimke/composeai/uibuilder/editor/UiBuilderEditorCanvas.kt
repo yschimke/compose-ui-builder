@@ -438,6 +438,46 @@ internal fun PinnedDesignCanvas(
     // The workspace's own rectangle, so a node's root-space box can be turned into an offset in
     // this box — which is where the hover editor is placed.
     var workspaceBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
+    // Where a right-click landed on the design, in the frame's own pixels, and null while no menu
+    // is
+    // open. Out here rather than in the frame because the frame is not the only thing a secondary
+    // click lands on: the selection's resize handles sit over it, and on a small node a handle's
+    // finger-sized target covers the node's middle.
+    var menuAt by remember(document.id) { mutableStateOf<Offset?>(null) }
+    // Where it last opened. The menu is still drawn while it animates closed, and an offset read
+    // from the cleared `menuAt` sent it to the frame's top-left for that moment before it vanished.
+    var menuShownAt by remember(document.id) { mutableStateOf(Offset.Zero) }
+    // A secondary click at [rootPoint]: select the node under it and open its menu there.
+    fun openNodeMenu(rootPoint: Offset) {
+      if (!showSelectionOverlay) return
+      // The design already reports every node's box, in root pixels, which is what the presence
+      // overlay and the catalog drop both hit-test against. Smallest box wins: the deepest node
+      // containing the point is the one under the pointer.
+      val hit =
+        inspection
+          ?.nodes
+          .orEmpty()
+          .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
+          .filter { (_, bounds) ->
+            rootPoint.x >= bounds.x &&
+              rootPoint.x <= bounds.x + bounds.width &&
+              rootPoint.y >= bounds.y &&
+              rootPoint.y <= bounds.y + bounds.height
+          }
+          .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
+          ?.first
+      // The inspection callback follows the first rendered frame. A right-click can arrive before
+      // it, especially immediately after opening a design; in that interval retain the current
+      // selection as the menu subject rather than making the secondary button appear dead. Once
+      // bounds are available, the node under the pointer remains authoritative.
+      val menuNode = hit ?: selectedNodeId ?: return
+      if (menuNode != selectedNodeId) onNodeSelected(menuNode)
+      // Back into the frame's own pixels, where the menu is anchored.
+      val local =
+        if (drawScale > 0f) (rootPoint - frameOrigin) / drawScale else rootPoint - frameOrigin
+      menuAt = local
+      menuShownAt = local
+    }
     // What is drawn of the design — the frame and its extent companion — so the quick editor can
     // open in the empty workspace beside it rather than over it.
     var designsBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
@@ -645,13 +685,6 @@ internal fun PinnedDesignCanvas(
                 else Color.Transparent,
               shadowElevation = 0.dp,
             ) {
-              // Where a right-click landed on the design, in the frame's own pixels, and null
-              // while no menu is open.
-              var menuAt by remember(document.id) { mutableStateOf<Offset?>(null) }
-              // Where it last opened. The menu is still drawn while it animates closed, and an
-              // offset read from the cleared `menuAt` sent it to the frame's top-left for that
-              // moment before it vanished.
-              var menuShownAt by remember(document.id) { mutableStateOf(Offset.Zero) }
               CanvasExtentLayout(
                 Modifier.fillMaxSize()
                   .canvasNodeDrag(
@@ -742,43 +775,15 @@ internal fun PinnedDesignCanvas(
                     } else Modifier
                   )
                   .onSecondaryClick(document.id) { position ->
-                    if (!showSelectionOverlay) return@onSecondaryClick
-                    // The inspection reports each box in root pixels, which is the space this press
-                    // has to be asked in: the frame's own pixels reach the screen through
-                    // [drawScale], and its origin is the *unclipped* one — a scrolled frame's
-                    // visible top is the viewport's, not the frame's.
-                    val point =
+                    // The press arrives in the frame's own pixels, which reach the screen through
+                    // [drawScale] from its *unclipped* origin — a scrolled frame's visible top is
+                    // the viewport's, not the frame's.
+                    openNodeMenu(
                       Offset(
                         frameOrigin.x + position.x * drawScale,
                         frameOrigin.y + position.y * drawScale,
                       )
-                    // The design already reports every node's box, which is what the presence
-                    // overlay and the catalog drop both hit-test against. Smallest box wins: the
-                    // deepest node containing the point is the one under the pointer.
-                    val hit =
-                      inspection
-                        ?.nodes
-                        .orEmpty()
-                        .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
-                        .filter { (_, bounds) ->
-                          point.x >= bounds.x &&
-                            point.x <= bounds.x + bounds.width &&
-                            point.y >= bounds.y &&
-                            point.y <= bounds.y + bounds.height
-                        }
-                        .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
-                        ?.first
-                    // The inspection callback follows the first rendered frame. A right-click can
-                    // arrive before it, especially immediately after opening a design; in that
-                    // interval retain the current selection as the menu subject rather than making
-                    // the secondary button appear dead. Once bounds are available, the node under
-                    // the pointer remains authoritative.
-                    val menuNode = hit ?: selectedNodeId
-                    if (menuNode != null) {
-                      if (menuNode != selectedNodeId) onNodeSelected(menuNode)
-                      menuAt = position
-                      menuShownAt = position
-                    }
+                    )
                   },
                 // A runtime's surface is as tall as the editor asks, from the runtime's last
                 // measurement; the extent follows that rather than the frame it first measured.
@@ -1156,6 +1161,9 @@ internal fun PinnedDesignCanvas(
           },
         onResizing = { resizing = it },
         onResize = { width, height -> onResize(sizing.nodeId, width, height) },
+        // A handle's target is wider than the dot, and on a short node it covers the middle: a
+        // right-click there is still a right-click on the node, not on the handle.
+        onSecondaryClick = ::openNodeMenu,
         modifier = Modifier.matchParentSize().clipToBounds(),
       )
     }

@@ -138,8 +138,10 @@ internal fun MobileEditorToolbar(
         Text("UI Builder", fontWeight = FontWeight.Bold, maxLines = 1)
         catalogFormFactorLabel(state.document)?.let { FormFactorChip(it) }
       }
-      EditorAction("Undo", "Ctrl/⌘+Z", canUndo) { dispatch(UiBuilderEditorEvent.Undo) }
-      EditorAction("Redo", "Ctrl/⌘+Shift+Z", canRedo) { dispatch(UiBuilderEditorEvent.Redo) }
+      EditorAction("Undo", "$COMMAND_MODIFIER+Z", canUndo) { dispatch(UiBuilderEditorEvent.Undo) }
+      EditorAction("Redo", "$COMMAND_MODIFIER+Shift+Z", canRedo) {
+        dispatch(UiBuilderEditorEvent.Redo)
+      }
       if (exportHost != null) ExportMenu(exportHost, showStatus = false)
       Box {
         TextButton(
@@ -416,10 +418,10 @@ internal fun EditorToolbar(
     ) {
       DocumentIdentity(state)
       Spacer(Modifier.width(10.dp))
-      ToolbarIconAction("Undo", "Ctrl/⌘+Z", UiBuilderChromeIcon.Undo, canUndo) {
+      ToolbarIconAction("Undo", "$COMMAND_MODIFIER+Z", UiBuilderChromeIcon.Undo, canUndo) {
         dispatch(UiBuilderEditorEvent.Undo)
       }
-      ToolbarIconAction("Redo", "Ctrl/⌘+Shift+Z", UiBuilderChromeIcon.Redo, canRedo) {
+      ToolbarIconAction("Redo", "$COMMAND_MODIFIER+Shift+Z", UiBuilderChromeIcon.Redo, canRedo) {
         dispatch(UiBuilderEditorEvent.Redo)
       }
       Spacer(Modifier.weight(1f))
@@ -1061,7 +1063,7 @@ internal fun editorSelectionMenuEntries(
       "Duplicate",
       icon = UiBuilderMenuIcon.Duplicate,
       enabled = canDuplicate,
-      shortcut = "Ctrl/⌘+D",
+      shortcut = "$COMMAND_MODIFIER+D",
     ) {
       act(UiBuilderEditorEvent.DuplicateSelected)
     }
@@ -1071,7 +1073,7 @@ internal fun editorSelectionMenuEntries(
       "Copy",
       icon = UiBuilderMenuIcon.Copy,
       enabled = canCopy,
-      shortcut = "Ctrl/⌘+C",
+      shortcut = "$COMMAND_MODIFIER+C",
     ) {
       act(UiBuilderEditorEvent.CopySelected)
     }
@@ -1081,7 +1083,7 @@ internal fun editorSelectionMenuEntries(
       "Cut",
       icon = UiBuilderMenuIcon.Cut,
       enabled = canCut,
-      shortcut = "Ctrl/⌘+X",
+      shortcut = "$COMMAND_MODIFIER+X",
     ) {
       act(UiBuilderEditorEvent.CutSelected)
     }
@@ -1091,7 +1093,7 @@ internal fun editorSelectionMenuEntries(
       "Paste",
       icon = UiBuilderMenuIcon.Paste,
       enabled = canPaste,
-      shortcut = "Ctrl/⌘+V",
+      shortcut = "$COMMAND_MODIFIER+V",
     ) {
       act(UiBuilderEditorEvent.Paste)
     }
@@ -1740,6 +1742,20 @@ private fun EditorShortcutRow(chord: String, description: String) {
   }
 }
 
+/**
+ * The command modifier in every shortcut hint the editor draws — menu rows, tooltips, the shortcuts
+ * panel, a host's toolbar — spelled in letters.
+ *
+ * Not `⌘`. No font the Wasm build carries has that glyph, so Compose fetches Noto Sans Symbols 2
+ * from `fonts.gstatic.com` the first time a hint needs it; inside an MCP App the host's CSP refuses
+ * that fetch, and the glyph draws as a box. Bundling a symbols font would add bytes to every load
+ * for one character and still lean on Compose's internal fallback lookup finding it; letters are in
+ * every font, need no network, read the same on every host (IntelliJ, desktop, a browser, a
+ * sandboxed panel) and are what a screen reader says anyway. The editor answers Ctrl and Cmd alike,
+ * so the hint names both.
+ */
+internal const val COMMAND_MODIFIER = "Ctrl/Cmd"
+
 /** How a click on a layer row changes the selection. */
 internal enum class LayerSelectionGesture {
   Replace,
@@ -1819,7 +1835,7 @@ internal data class EditorShortcut(
 internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
   listOf(
     EditorShortcut(
-      chord = "Ctrl/\u2318+Shift+Z",
+      chord = "$COMMAND_MODIFIER+Shift+Z",
       description = "Redo",
       event = UiBuilderEditorEvent.Redo,
       keys = setOf(Key.Z),
@@ -1827,14 +1843,14 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
       shift = true,
     ),
     EditorShortcut(
-      chord = "Ctrl/\u2318+Y",
+      chord = "$COMMAND_MODIFIER+Y",
       description = "Redo",
       event = UiBuilderEditorEvent.Redo,
       keys = setOf(Key.Y),
       command = true,
     ),
     EditorShortcut(
-      chord = "Ctrl/\u2318+Z",
+      chord = "$COMMAND_MODIFIER+Z",
       description = "Undo",
       event = UiBuilderEditorEvent.Undo,
       keys = setOf(Key.Z),
@@ -1843,7 +1859,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     // The shifted spelling first, so the plain one below does not eat it — the same rule redo and
     // undo follow two entries up.
     EditorShortcut(
-      chord = "Ctrl/\u2318+Shift+Enter",
+      chord = "$COMMAND_MODIFIER+Shift+Enter",
       description = "Show or hide the visual editor",
       event = UiBuilderEditorEvent.TogglePane(EditorPane.Editor),
       keys = setOf(Key.Enter, Key.NumPadEnter),
@@ -1856,7 +1872,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     // production. Ctrl/\u2318+Enter is unclaimed, and "run it" is already what it means everywhere
     // else.
     EditorShortcut(
-      chord = "Ctrl/\u2318+Enter",
+      chord = "$COMMAND_MODIFIER+Enter",
       description = "Show or hide the preview beside the design",
       event = UiBuilderEditorEvent.TogglePane(EditorPane.Preview),
       keys = setOf(Key.Enter, Key.NumPadEnter),
@@ -1882,7 +1898,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
       command = false,
     ),
     EditorShortcut(
-      chord = "Ctrl/\u2318+D",
+      chord = "$COMMAND_MODIFIER+D",
       description = "Duplicate the selection in place",
       event = UiBuilderEditorEvent.DuplicateSelected,
       keys = setOf(Key.D),
@@ -1890,14 +1906,14 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     ),
     // Reorder before plain navigation, so the modified arrows are not eaten by selection.
     EditorShortcut(
-      chord = "Ctrl/\u2318+\u2191",
+      chord = "$COMMAND_MODIFIER+\u2191",
       description = "Move the selection earlier in its slot",
       event = UiBuilderEditorEvent.MoveSelected(EditorMoveDirection.Before),
       keys = setOf(Key.DirectionUp),
       command = true,
     ),
     EditorShortcut(
-      chord = "Ctrl/\u2318+\u2193",
+      chord = "$COMMAND_MODIFIER+\u2193",
       description = "Move the selection later in its slot",
       event = UiBuilderEditorEvent.MoveSelected(EditorMoveDirection.After),
       keys = setOf(Key.DirectionDown),
@@ -1932,21 +1948,21 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
       command = false,
     ),
     EditorShortcut(
-      chord = "Ctrl/\u2318+C",
+      chord = "$COMMAND_MODIFIER+C",
       description = "Copy the selection",
       event = UiBuilderEditorEvent.CopySelected,
       keys = setOf(Key.C),
       command = true,
     ),
     EditorShortcut(
-      chord = "Ctrl/\u2318+X",
+      chord = "$COMMAND_MODIFIER+X",
       description = "Cut the selection",
       event = UiBuilderEditorEvent.CutSelected,
       keys = setOf(Key.X),
       command = true,
     ),
     EditorShortcut(
-      chord = "Ctrl/\u2318+V",
+      chord = "$COMMAND_MODIFIER+V",
       description = "Paste into the selected container",
       event = UiBuilderEditorEvent.Paste,
       keys = setOf(Key.V),
@@ -1969,7 +1985,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
  */
 internal val EDITOR_GESTURES: List<Pair<String, String>> =
   listOf(
-    "Ctrl/\u2318 + click a layer" to "Add one layer to the selection, or take it out",
+    "$COMMAND_MODIFIER + click a layer" to "Add one layer to the selection, or take it out",
     "Shift + click a layer" to "Extend the selection to that layer",
     "Drag a layer row" to "Drop it on the layer or the slot it should join",
     "Drag a catalog component" to "Insert it where it is dropped",
@@ -2003,7 +2019,14 @@ internal fun HostChromeToolbar(
   val entries = buildList {
     add(
       entry(
-        UiBuilderHostAction("undo", "Undo", "toolbar", "Undo", canUndo, shortcut = "Ctrl/⌘+Z")
+        UiBuilderHostAction(
+          "undo",
+          "Undo",
+          "toolbar",
+          "Undo",
+          canUndo,
+          shortcut = "$COMMAND_MODIFIER+Z",
+        )
       ) {
         dispatch(UiBuilderEditorEvent.Undo)
       }
@@ -2016,7 +2039,7 @@ internal fun HostChromeToolbar(
           "toolbar",
           "Redo",
           canRedo,
-          shortcut = "Ctrl/⌘+Shift+Z",
+          shortcut = "$COMMAND_MODIFIER+Shift+Z",
         )
       ) {
         dispatch(UiBuilderEditorEvent.Redo)

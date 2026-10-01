@@ -39,10 +39,6 @@ const fileName = designPath.split('/').pop();
 
 const IGNORED_CONSOLE = [
   /Accessing `memory` via `wasmExports` is deprecated/,
-  // Compose's own fallback for a glyph no bundled font has (the node menu's "⌘"): it fetches
-  // Noto Sans Symbols 2 from fonts.gstatic.com, which a host CSP refuses, as a real host's would.
-  // The glyph draws as a box; nothing else is affected.
-  /fonts\.gstatic\.com/,
 ];
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -379,14 +375,17 @@ try {
 
 // The focused canvas, in a panel the size of a chat host's: the placeholder left unfilled, as a
 // server that predates `uiBuilderMcpAppLayout` leaves it. Points are in the frame, for
-// `state-actions.uid` framed in a 680 × 900 panel: the button, left of its label (whose centre a
-// selected label's resize handle covers), the rows of the menu a right-click there opens, and the
-// button's quick editor's Fill for width.
+// `state-actions.uid` framed in a 680 × 900 panel: the centre of the button's label — a short text
+// node, whose resize handles, once it is selected, cover its centre — the rows of the menu a
+// right-click there opens, and the label's quick editor's Fill for width.
+//
+// The first right-click selects the label; every one after it lands on the selected label's
+// handles. Those used to swallow the secondary press, so no menu opened (compose-ui-builder#378).
 const FOCUSED = {
-  button: [158, 90],
-  quickEdit: [237, 121],
-  comment: [237, 169],
-  fillWidth: [322, 176],
+  label: [192, 90],
+  quickEdit: [271, 121],
+  comment: [271, 169],
+  fillWidth: [345, 163],
   fullEditor: [533, 28],
   focusedCanvas: [513, 28],
 };
@@ -417,8 +416,9 @@ try {
   if (shots) await panel.screenshot({ path: join(shots, 'mcp-app-focused.png') });
 
   // An empty comment sends nothing: Enter in the empty field, then Escape.
-  await click(FOCUSED.button, { button: 'right' });
+  await click(FOCUSED.label, { button: 'right' });
   await settle();
+  if (shots) await panel.screenshot({ path: join(shots, 'mcp-app-focused-menu.png') });
   await click(FOCUSED.comment);
   await settle();
   state = await panelHost();
@@ -436,9 +436,11 @@ try {
 
   // A comment: typed into the field beside the node, sent with Enter. Exactly one model-context
   // update — the node's picture and the assistant-only detail — and then exactly one message.
-  const comment = 'Make this button say Start';
-  await click(FOCUSED.button, { button: 'right' });
+  const comment = 'Make this label say Start';
+  await click(FOCUSED.label, { button: 'right' });
   await settle();
+  // The label is selected now, so this right-click landed on its resize handles.
+  if (shots) await panel.screenshot({ path: join(shots, 'mcp-app-focused-node-menu.png') });
   await click(FOCUSED.comment);
   await settle();
   await panel.keyboard.type(comment);
@@ -466,7 +468,7 @@ try {
   );
   expect(message?.content?.[0]?.text === comment, 'the message did not lead with the comment');
   expect(
-    message?.content?.[1]?._meta?.['openai/title'] === 'Button · button',
+    message?.content?.[1]?._meta?.['openai/title'] === 'Text · label',
     `the node block was titled ${message?.content?.[1]?._meta?.['openai/title']}`,
   );
   const commentContext = state.contexts.at(-1)?.content ?? [];
@@ -482,7 +484,7 @@ try {
   if (shots) await panel.screenshot({ path: join(shots, 'mcp-app-focused-comment-sent.png') });
 
   // Quick edit still edits in the focused canvas, and autosave writes it through the host.
-  await click(FOCUSED.button, { button: 'right' });
+  await click(FOCUSED.label, { button: 'right' });
   await settle();
   await click(FOCUSED.quickEdit);
   await settle();
