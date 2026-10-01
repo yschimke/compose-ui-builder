@@ -323,11 +323,21 @@ renaming one rewrites the key the body reads and the argument every placement pa
 command. A name the export could not write — `modifier`, a keyword, a capitalised word, one the
 `argumentN`/`captureN` series could produce, one already taken — is refused.
 
+**Any bindable property as a parameter, and back — built.** Selecting a layer of a component's
+body offers, in its context menu, each property the export can pass (`BINDABLE_PROPERTIES`: a
+surface's or card's `containerColor`, a text's `text` and `color`) that holds a value of its own:
+"Make Container color a parameter of InboxEmail" binds it and has every placement pass the value it
+showed, so nothing on screen changes. A bound one offers "Stop … being a parameter", which gives the
+body the first placement's value back and stops placements passing it.
+
+**Detaching an instance — built.** A placement's context menu offers "Detach instance": a copy of the
+component's body in its place, every parameter it read replaced by what the placement passed, the
+placement's own modifiers on the copy's root. The component stays, with its other placements.
+
 **Not built**, in the order they are likely to be wanted: a contracts mutation that edits a
-placement's arguments in place (so an argument edit keeps the placement's id), an import panel that
-lists another design's components without copying a placement first, exposing a non-text property
-(a colour) as a parameter from the inspector, and detaching a placement back into an ordinary
-subtree.
+placement's arguments in place (so an argument edit keeps the placement's id), and an import panel
+that lists another design's components without copying a placement first — which needs the host to
+open a second design, the way the design browser does.
 
 It composes with 1b rather than duplicating it: a loop's template is an instance with one argument
 per row field. Which is why this is worth building **before** data-driven loops, not after.

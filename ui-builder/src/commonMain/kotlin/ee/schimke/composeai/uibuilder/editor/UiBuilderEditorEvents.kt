@@ -259,6 +259,17 @@ sealed interface UiBuilderEditorEvent {
   data class RenameComponentParameter(val componentKey: String, val from: String, val to: String) :
     UiBuilderEditorEvent
 
+  /** Turn a placement back into ordinary layers holding the values it passed. */
+  data class DetachPlacement(val nodeId: String) : UiBuilderEditorEvent
+
+  /** Make one property of a component's body a parameter every placement passes. */
+  data class ExposeComponentParameter(val nodeId: String, val property: String) :
+    UiBuilderEditorEvent
+
+  /** Stop [parameter] being one: the body keeps the first placement's value as its own. */
+  data class InlineComponentParameter(val componentKey: String, val parameter: String) :
+    UiBuilderEditorEvent
+
   /** Rename a component — the composable the export writes. */
   data class RenameLocalComponent(val componentKey: String, val name: String) : UiBuilderEditorEvent
 

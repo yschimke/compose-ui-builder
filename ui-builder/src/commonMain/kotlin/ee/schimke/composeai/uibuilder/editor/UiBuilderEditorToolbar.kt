@@ -988,6 +988,8 @@ internal fun editorSelectionMenuEntries(
   makeComponentRefusal: String? = null,
   /** Whether to offer "Make component" at all: one node is selected. */
   canOfferMakeComponent: Boolean = false,
+  /** Detach a placement, or make a body property a parameter or stop it being one. */
+  componentActions: List<EditorComponentAction> = emptyList(),
   /** Opens the quick editor beside the design, or null where the selection has none. */
   onQuickEdit: (() -> Unit)? = null,
   /** Opens a comment field beside the node, for the conversation the editor sits in, or null. */
@@ -1126,8 +1128,18 @@ internal fun editorSelectionMenuEntries(
       )
     }
   }
-  if (wrapCandidates.isNotEmpty() || canUnwrap || canOfferMakeComponent)
+  if (
+    wrapCandidates.isNotEmpty() ||
+      canUnwrap ||
+      canOfferMakeComponent ||
+      componentActions.isNotEmpty()
+  )
     add(UiBuilderMenuEntry.Divider)
+  componentActions.forEach { action ->
+    add(
+      UiBuilderMenuEntry.Action(action.label, icon = UiBuilderMenuIcon.Wrap) { act(action.event) }
+    )
+  }
   // Beside the container verbs, because it is one: it turns the subtree into the body of a
   // component and leaves a placement where it was.
   if (canOfferMakeComponent) {

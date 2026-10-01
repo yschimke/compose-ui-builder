@@ -1963,6 +1963,10 @@ private val BINDABLE_PROPERTIES: Map<String, Map<String, BindingKind>> =
 internal fun bindableTextProperties(componentId: String): Set<String> =
   BINDABLE_PROPERTIES[componentId].orEmpty().filterValues { it == BindingKind.STRING }.keys
 
+/** Every property of [componentId] a component body may read from an argument, of any kind. */
+internal fun bindableProperties(componentId: String): Set<String> =
+  BINDABLE_PROPERTIES[componentId].orEmpty().keys
+
 /** What a bound key is, in Kotlin, and how a placement's value is written at the call site. */
 internal enum class BindingKind(val kotlinType: String) {
   COLOR("Color") {
