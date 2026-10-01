@@ -683,19 +683,16 @@ private fun DesignActionV1.stateWrite(): String? =
  */
 internal fun staleStateWrites(
   original: PersistedDesignV1,
-  command: DesignCommandV1,
+  staleness: StalenessWindow,
   name: String,
 ): List<CommandConflictV1> =
-  if (
-    command.baseRevision < original.document.revision &&
-      original.touchedSince(command.baseRevision, touchKey("v", name))
-  )
+  if (staleness.stale(original, touchKey("v", name)))
     listOf(
       CommandConflictV1(
         ConflictCodeV1.STALE_PROPERTY_WRITE,
         null,
         name,
-        original.document.revision,
+        staleness.through,
       )
     )
   else emptyList()
@@ -703,19 +700,16 @@ internal fun staleStateWrites(
 /** The component analogue of [staleStateWrites] — the same question, keyed on the component. */
 internal fun staleComponentWrites(
   original: PersistedDesignV1,
-  command: DesignCommandV1,
+  staleness: StalenessWindow,
   componentKey: String,
 ): List<CommandConflictV1> =
-  if (
-    command.baseRevision < original.document.revision &&
-      original.touchedSince(command.baseRevision, touchKey("c", componentKey))
-  )
+  if (staleness.stale(original, touchKey("c", componentKey)))
     listOf(
       CommandConflictV1(
         ConflictCodeV1.STALE_PROPERTY_WRITE,
         null,
         componentKey,
-        original.document.revision,
+        staleness.through,
       )
     )
   else emptyList()
@@ -1157,11 +1151,28 @@ internal fun ChangeRecordV1.touchKeys(): List<String> =
 internal fun touchKey(kind: String, vararg parts: String): String =
   parts.joinToString("\u0000", prefix = "${kind}\u0000")
 
-/** Whether anyone wrote [key] after [baseRevision] — the question every staleness check asks. */
-internal fun PersistedDesignV1.touchedSince(baseRevision: Long, key: String): Boolean =
-  conflictTouches.any {
-    it.committedRevision > baseRevision && key in it.keys
-  }
+/**
+ * Which earlier commits a command's staleness checks treat as concurrent — edits its author never
+ * saw — and so which of them a write reports overwriting (`STALE_*`).
+ *
+ * A write of key `k` is stale when the newest commit that wrote `k` after [since] is at or before
+ * [through]. For a live edit the window is `(baseRevision, head]`, which is the long-standing rule.
+ * A branch merge replays its log with the base chain (`base(cₖ)` is where `cₖ₋₁` landed), which is
+ * right for positions but would hide the parent's concurrent edits from every command after the
+ * first; so the merge passes `(forkRevision, parentHeadBeforeMerge]` for every command instead. A
+ * key an earlier replayed command already wrote has its newest write past [through] — a write the
+ * author saw, because it is the branch's own — so it is not reported again.
+ *
+ * The touch log this reads is pruned against the oldest retained position snapshot, and an open
+ * branch pins its fork revision, so `(forkRevision, …]` is always within the window the log keeps.
+ */
+internal data class StalenessWindow(val since: Long, val through: Long) {
+  /** The newest concurrent revision that wrote [key], or null if the author saw the last write. */
+  fun overwritten(design: PersistedDesignV1, key: String): Long? =
+    design.lastTouchSince(since, key)?.takeIf { it <= through }
+
+  fun stale(design: PersistedDesignV1, key: String): Boolean = overwritten(design, key) != null
+}
 
 /** The newest revision that wrote [key] after [baseRevision], or null if none did. */
 internal fun PersistedDesignV1.lastTouchSince(baseRevision: Long, key: String): Long? =
