@@ -236,6 +236,36 @@ sealed interface UiBuilderEditorEvent {
   data class UnbindProperty(val nodeId: String, val property: String) : UiBuilderEditorEvent
 
   /**
+   * Turn the selected subtree into a reusable component of this design, named [name].
+   *
+   * One command: the subtree leaves the screen and becomes the component's body, a placement takes
+   * its place, and every text the body shows becomes a parameter the placement passes — so the
+   * screen draws exactly what it drew before, and the next placement can say something else. Null
+   * [name] takes [UiBuilderEditorReducer.suggestedComponentName].
+   */
+  data class MakeComponent(val name: String? = null) : UiBuilderEditorEvent
+
+  /** Place one of this design's own components, as the palette's "This design" shelf does. */
+  data class InsertLocalComponent(
+    val componentKey: String,
+    val target: ParentSlot,
+    val afterNodeId: String? = null,
+  ) : UiBuilderEditorEvent
+
+  /** Rename a component — the composable the export writes. */
+  data class RenameLocalComponent(val componentKey: String, val name: String) : UiBuilderEditorEvent
+
+  /**
+   * Replace every placement of a design-only component with [catalogComponentId] — the component
+   * the app's catalog now ships — and drop the local definition.
+   *
+   * Each placement's arguments become the catalog component's properties of the same name, and its
+   * layout modifiers carry across, so the swap is the call the graduated code makes.
+   */
+  data class ReplaceLocalComponent(val componentKey: String, val catalogComponentId: String) :
+    UiBuilderEditorEvent
+
+  /**
    * Put one layout modifier on a node, or take it back off.
    *
    * The whole chain is rewritten either way, because [DesignOperation.SetModifiers] is whole-list:

@@ -6,9 +6,11 @@ import ee.schimke.composeai.uibuilder.ParentSlot
 import ee.schimke.composeai.uibuilder.RedoCommand
 import ee.schimke.composeai.uibuilder.UndoCommand
 import ee.schimke.composeai.uibuilder.export.toUiBuilderNode
+import ee.schimke.composeai.uibuilder.protocol.DeclareComponentMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DeleteNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignActionV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
+import ee.schimke.composeai.uibuilder.protocol.DesignComponentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignModifierV1
 import ee.schimke.composeai.uibuilder.protocol.DesignMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignSubmissionV1
@@ -18,6 +20,7 @@ import ee.schimke.composeai.uibuilder.protocol.MoveNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.NodeLocationV1
 import ee.schimke.composeai.uibuilder.protocol.ParentSlotV1
 import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
+import ee.schimke.composeai.uibuilder.protocol.RemoveComponentMutationV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveNodePropertyMutationV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChangeV1
@@ -184,6 +187,19 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
       )
     is RemoveStateVariableMutationV1 ->
       MutationMapping.Mapped(listOf(DesignOperation.RemoveStateVariable(name)))
+    is DeclareComponentMutationV1 ->
+      MutationMapping.Mapped(
+        listOf(
+          DesignOperation.DeclareComponent(
+            componentKey,
+            localBridgeJson
+              .encodeToJsonElement(DesignComponentV1.serializer(), declaration)
+              .jsonObject,
+          )
+        )
+      )
+    is RemoveComponentMutationV1 ->
+      MutationMapping.Mapped(listOf(DesignOperation.RemoveComponent(componentKey)))
     is SetEventBindingMutationV1 ->
       MutationMapping.Mapped(
         listOf(

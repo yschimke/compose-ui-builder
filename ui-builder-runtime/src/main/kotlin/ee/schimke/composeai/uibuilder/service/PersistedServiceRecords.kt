@@ -3,6 +3,7 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.protocol.*
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -32,6 +33,45 @@ internal data class PersistedDesignV1(
   val createdAtEpochMillis: Long,
   val updatedAtEpochMillis: Long,
   val audit: List<AuditRecordV1> = emptyList(),
+  /**
+   * Present when this design is a branch of another — see `UI_BUILDER_BRANCHES.md`. Never written
+   * for an ordinary design, so the bytes stored for one are what they were before branches existed.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val branch: DesignBranchRecordV1? = null,
+  /**
+   * A branch's accepted commands since its fork, in order and as submitted to the branch: what a
+   * merge replays onto the parent. Unbounded by the history window on purpose — a merge needs all
+   * of it — and bounded instead by `MAXIMUM_BRANCH_COMMANDS`.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val branchLog: List<DesignSubmissionV1> = emptyList(),
+)
+
+@Serializable
+internal enum class DesignBranchStatusV1 {
+  OPEN,
+  MERGED,
+  ARCHIVED,
+}
+
+/** What makes a design a branch: where it forked from, and what has become of it. */
+@Serializable
+internal data class DesignBranchRecordV1(
+  val parentDesignId: String,
+  val name: String,
+  val ownerActorId: String,
+  val status: DesignBranchStatusV1,
+  val forkRevision: Long,
+  val forkDocumentHash: String,
+  /**
+   * The parent's own creation time, which tells this parent from a design later created under the
+   * same id after it was deleted — a fork point in another design's history is not a fork point.
+   */
+  val parentCreatedAtEpochMillis: Long,
+  val createdAtEpochMillis: Long,
+  val closedAtEpochMillis: Long? = null,
+  val closedByActorId: String? = null,
+  val mergedAtParentRevision: Long? = null,
+  val supersededByBranchId: String? = null,
 )
 
 @Serializable

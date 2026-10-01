@@ -45,6 +45,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -61,7 +62,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -147,6 +150,8 @@ internal fun PropertyInspector(
   onSnapshotDesign: (suspend () -> ReferenceImportOutcome)?,
   onFlatten: () -> Unit,
   catalogItems: List<EditorCatalogItem>,
+  /** This design's own components, for a selected placement's header. */
+  localComponents: List<EditorLocalComponent> = emptyList(),
   onPlaceComponent: (String) -> Unit,
   onPromotePiece: (ReferencePiece) -> Unit,
   canPromotePiece: (ReferencePiece) -> Boolean,
@@ -235,6 +240,7 @@ internal fun PropertyInspector(
           onSnapshotDesign = onSnapshotDesign,
           onFlatten = onFlatten,
           catalogItems = catalogItems,
+          localComponents = localComponents,
           onPlaceComponent = onPlaceComponent,
           onPromotePiece = onPromotePiece,
           canPromotePiece = canPromotePiece,
@@ -282,6 +288,8 @@ private fun InspectorBody(
   onSnapshotDesign: (suspend () -> ReferenceImportOutcome)?,
   onFlatten: () -> Unit,
   catalogItems: List<EditorCatalogItem>,
+  /** This design's own components, for a selected placement's header. */
+  localComponents: List<EditorLocalComponent> = emptyList(),
   onPlaceComponent: (String) -> Unit,
   onPromotePiece: (ReferencePiece) -> Unit,
   canPromotePiece: (ReferencePiece) -> Boolean,
@@ -399,7 +407,12 @@ private fun InspectorBody(
       )
       return@Column
     }
-    LocalUiBuilderChrome.current.InspectorNodeIdentity(node.componentId, node.id)
+    val placed = node.placementKey()?.let { key -> localComponents.firstOrNull { it.key == key } }
+    if (placed != null) {
+      LocalComponentHeader(placed, node.id, onTextInputFocusChanged, dispatch)
+    } else {
+      LocalUiBuilderChrome.current.InspectorNodeIdentity(node.componentId, node.id)
+    }
     // Which properties this node has been given since it was selected. Local and per node: adding
     // one here means "show me the control", not "write a value" — nothing reaches the document
     // until the control is used, so a property revealed and left alone changes neither the design
@@ -2259,3 +2272,65 @@ private fun ThemeField(
  */
 internal fun UiBuilderNode.propertyText(name: String): String =
   (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.contentOrNull.orEmpty()
+
+/**
+ * What a selected placement is: the component it places, renamable in place, and — once the app's
+ * catalog ships a component of the same name — the swap to it.
+ */
+@Composable
+private fun LocalComponentHeader(
+  component: EditorLocalComponent,
+  nodeId: String,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  var draft by remember(component.key, component.name) { mutableStateOf(component.name) }
+  Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+    Text("Component", style = MaterialTheme.typography.labelMedium)
+    OutlinedTextField(
+      value = draft,
+      onValueChange = { draft = it },
+      singleLine = true,
+      label = { Text("Name") },
+      supportingText = {
+        Text(
+          "${component.placements} placed · exported as @Composable fun ${component.name}",
+          style = MaterialTheme.typography.bodySmall,
+        )
+      },
+      modifier =
+        Modifier.fillMaxWidth()
+          .onFocusChanged { focus ->
+            onTextInputFocusChanged(focus.isFocused)
+            if (!focus.isFocused && draft != component.name)
+              dispatch(UiBuilderEditorEvent.RenameLocalComponent(component.key, draft))
+          }
+          .onPreviewKeyEvent { event ->
+            if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) {
+              dispatch(UiBuilderEditorEvent.RenameLocalComponent(component.key, draft))
+              true
+            } else false
+          },
+    )
+    component.publishedAs?.let { published ->
+      Text(
+        "${published.displayName} is in the catalog now. Replacing swaps every placement of " +
+          "${component.name} for it and drops this design's copy.",
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.padding(top = 8.dp),
+      )
+      TextButton(
+        onClick = {
+          dispatch(UiBuilderEditorEvent.ReplaceLocalComponent(component.key, published.componentId))
+        }
+      ) {
+        Text("Replace with ${published.displayName}")
+      }
+    }
+    Text(
+      nodeId,
+      style = MaterialTheme.typography.labelSmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+  }
+}

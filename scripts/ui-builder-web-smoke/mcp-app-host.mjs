@@ -6,6 +6,11 @@
 // `host-resource://` URI with etags, and `ui/update-model-context`. It is the browser half of what
 // `McpAppDesignSessionTest` checks against a fake bridge on the JVM.
 //
+// Two passes (compose-ui-builder#374): the full editor, with the shell's layout placeholder filled
+// in as `full` the way compose-preview-server fills it from `uiBuilderMcpAppLayout`, for the file
+// round trip; then the focused canvas, with the placeholder left unfilled, for the default layout,
+// the switch to the full editor and back, and a comment sent from a node's menu (`ui/message`).
+//
 // Three origins, as a real host has them: the host page, the sandbox frame the MCP App shell runs
 // in, and the server origin serving the editor archive (named in the shell's `<base href>`, and
 // the resource's CSP `resourceDomains` / `connectDomains`). The archive origin answers with CORS
@@ -32,7 +37,13 @@ const shellTemplate = await readFile(
 const design = await readFile(designPath, 'utf8');
 const fileName = designPath.split('/').pop();
 
-const IGNORED_CONSOLE = [/Accessing `memory` via `wasmExports` is deprecated/];
+const IGNORED_CONSOLE = [
+  /Accessing `memory` via `wasmExports` is deprecated/,
+  // Compose's own fallback for a glyph no bundled font has (the node menu's "⌘"): it fetches
+  // Noto Sans Symbols 2 from fonts.gstatic.com, which a host CSP refuses, as a real host's would.
+  // The glyph draws as a box; nothing else is affected.
+  /fonts\.gstatic\.com/,
+];
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript',
@@ -81,16 +92,21 @@ const csp = [
   `font-src 'self' data: ${assetBase}`,
   `connect-src 'self' ${assetBase}`,
 ].join('; ');
+// `?serverLayout=` stands in for the server's `uiBuilderMcpAppLayout` setting: given, it fills in
+// the layout placeholder; absent, the placeholder is left as a server that predates it leaves it.
 const sandbox = await listen((request, response) => {
+  const serverLayout = new URL(request.url, 'http://x').searchParams.get('serverLayout');
+  let shell = shellTemplate.replaceAll('__COMPOSE_UI_BUILDER_ASSET_BASE__', assetBase);
+  if (serverLayout) shell = shell.replaceAll('__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__', serverLayout);
   response
     .writeHead(200, { 'content-type': TYPES['.html'], 'content-security-policy': csp })
-    .end(shellTemplate.replaceAll('__COMPOSE_UI_BUILDER_ASSET_BASE__', assetBase));
+    .end(shell);
 });
 
 // The host page: the chat client's side of the bridge, with the file in memory.
 const hostPage = `<!doctype html><html><head><meta charset="utf-8"><title>Fake MCP App host</title>
 <style>
-  body { margin: 0; display: grid; grid-template-columns: 420px 1fr; height: 100vh;
+  body { margin: 0; display: grid; grid-template-columns: var(--aside, 420px) 1fr; height: 100vh;
          font: 12px/1.4 system-ui, sans-serif; background: #f3f0f7; }
   aside { overflow: auto; padding: 10px; border-right: 1px solid #ccc; }
   h2 { font-size: 13px; margin: 10px 0 4px; }
@@ -103,19 +119,32 @@ const hostPage = `<!doctype html><html><head><meta charset="utf-8"><title>Fake M
   <div><b>Fake MCP App host</b> &middot; file entrypoint <code>.uid</code> &middot;
     <code>host-resource://design</code></div>
   <h2>Host log</h2><pre id="log"></pre>
+  <h2>Chat (ui/message)</h2><pre id="chat">(no messages)</pre>
   <h2>Model context (ui/update-model-context)</h2><pre id="context">(none)</pre>
+  <img id="context-image" alt="" style="max-width: 200px; display: none; margin-top: 4px;
+       border: 1px solid #ccc; background: #fff">
   <h2>Saved diff (openai/resources/write)</h2><pre id="diff">(no writes)</pre>
 </aside>
-<iframe id="app" sandbox="allow-scripts allow-same-origin" src="http://127.0.0.1:${sandbox.port}/"></iframe>
+<iframe id="app" sandbox="allow-scripts allow-same-origin"></iframe>
 <script>
   const uri = 'host-resource://design';
   const fileName = ${JSON.stringify(fileName)};
   const original = ${JSON.stringify(design)};
-  const writable = new URLSearchParams(location.search).get('writable') !== 'false';
+  const query = new URLSearchParams(location.search);
+  const writable = query.get('writable') !== 'false';
   const host = globalThis.fakeHost = {
-    text: original, version: 1, calls: [], writes: [], contexts: [], errors: [],
+    text: original, version: 1, calls: [], writes: [], contexts: [], messages: [], errors: [],
+    // Every model-context update and message, in the order the app sent them.
+    conversation: [],
   };
   const frame = document.getElementById('app');
+  const serverLayout = query.get('serverLayout');
+  frame.src = 'http://127.0.0.1:${sandbox.port}/' +
+    (serverLayout ? '?serverLayout=' + encodeURIComponent(serverLayout) : '');
+  if (query.get('aside')) document.body.style.setProperty('--aside', query.get('aside') + 'px');
+  const describe = (b) => (b.annotations?.audience ? '[assistant only] ' : '') +
+    (b._meta?.['openai/title'] ? '[' + b._meta['openai/title'] + '] ' : '') +
+    (b.type === 'image' ? '(image ' + b.mimeType + ', ' + b.data.length + ' base64 chars)' : b.text);
   const log = (line) => {
     host.calls.push(line);
     document.getElementById('log').textContent = host.calls.slice(-14).join('\\n');
@@ -154,8 +183,9 @@ const hostPage = `<!doctype html><html><head><meta charset="utf-8"><title>Fake M
       protocolVersion: '2026-01-26',
       hostInfo: { name: 'fake-mcp-app-host', version: '1' },
       hostCapabilities: {
-        experimental: { 'openai/resource': {}, 'openai/modelContext': {} },
-        updateModelContext: { text: {}, structuredContent: {} },
+        experimental: { 'openai/resource': {}, 'openai/modelContext': {}, 'openai/message': {} },
+        updateModelContext: { text: {}, image: {}, structuredContent: {} },
+        message: { text: {} },
         openLinks: {},
       },
       hostContext: { theme: 'light', displayMode: 'fullscreen' },
@@ -184,12 +214,25 @@ const hostPage = `<!doctype html><html><head><meta charset="utf-8"><title>Fake M
     },
     'ui/update-model-context': (params) => {
       host.contexts.push(params);
+      host.conversation.push('ui/update-model-context');
       const blocks = params.content ?? [];
       document.getElementById('context').textContent = blocks.length === 0 ? '(cleared)' :
-        blocks.map((b) => (b.annotations?.audience ? '[assistant only] ' : '') +
-          (b._meta?.['openai/title'] ? '[' + b._meta['openai/title'] + '] ' : '') + b.text)
-          .join('\\n\\n');
+        blocks.map(describe).join('\\n\\n');
+      const image = blocks.find((b) => b.type === 'image');
+      const img = document.getElementById('context-image');
+      img.style.display = image ? 'block' : 'none';
+      if (image) img.src = 'data:' + image.mimeType + ';base64,' + image.data;
       log('ui/update-model-context (' + blocks.length + ' blocks)');
+      return {};
+    },
+    'ui/message': (params) => {
+      host.messages.push(params);
+      host.conversation.push('ui/message');
+      const options = params._meta?.['openai/message'] ?? {};
+      document.getElementById('chat').textContent = host.messages.map((m) =>
+        'user -> ' + (m._meta?.['openai/message']?.target ?? 'active') + ':\\n' +
+          (m.content ?? []).map(describe).join('\\n')).join('\\n\\n');
+      log('ui/message target=' + options.target + ' send=' + options.send);
       return {};
     },
     'ui/open-link': () => ({}),
@@ -238,15 +281,22 @@ page.on('console', (message) => {
   }
 });
 const host = () => page.evaluate(() => JSON.parse(JSON.stringify(globalThis.fakeHost)));
+const layoutOf = (frame) =>
+  frame.evaluate(() => document.documentElement.getAttribute('data-ui-builder-layout'));
 const timeout = Number(process.env.SMOKE_READY_TIMEOUT_MS ?? 180_000);
 
 try {
-  await page.goto(hostUrl);
+  // The server's layout setting says `full`: the editor this round trip's coordinates are for.
+  await page.goto(`${hostUrl}?serverLayout=full`);
   const frame = await (await page.waitForSelector('#app')).contentFrame();
   await frame.waitForFunction(
     () => document.documentElement.getAttribute('data-ui-builder-ready') === 'true',
     null,
     { timeout },
+  );
+  expect(
+    (await layoutOf(frame)) === 'full',
+    `the server's layout "full" opened ${await layoutOf(frame)}`,
   );
   let state = await host();
   expect(
@@ -326,8 +376,147 @@ try {
 } catch (error) {
   failures.push(`not ready: ${error.message.split('\n')[0]}`);
 }
+
+// The focused canvas, in a panel the size of a chat host's: the placeholder left unfilled, as a
+// server that predates `uiBuilderMcpAppLayout` leaves it. Points are in the frame, for
+// `state-actions.uid` framed in a 680 × 900 panel: the button, left of its label (whose centre a
+// selected label's resize handle covers), the rows of the menu a right-click there opens, and the
+// button's quick editor's Fill for width.
+const FOCUSED = {
+  button: [158, 90],
+  quickEdit: [237, 121],
+  comment: [237, 169],
+  fillWidth: [322, 176],
+  fullEditor: [533, 28],
+  focusedCanvas: [513, 28],
+};
+const panel = await browser.newPage({ viewport: { width: 1100, height: 900 }, locale: 'en-US' });
+panel.on('pageerror', (error) => pageErrors.push(String(error)));
+panel.on('console', (message) => {
+  if (message.type() === 'error' && !IGNORED_CONSOLE.some((it) => it.test(message.text()))) {
+    pageErrors.push(message.text());
+  }
+});
+const panelHost = () => panel.evaluate(() => JSON.parse(JSON.stringify(globalThis.fakeHost)));
+try {
+  await panel.goto(hostUrl);
+  const frame = await (await panel.waitForSelector('#app')).contentFrame();
+  await frame.waitForFunction(
+    () => document.documentElement.getAttribute('data-ui-builder-ready') === 'true',
+    null,
+    { timeout },
+  );
+  expect((await layoutOf(frame)) === 'focused', `the default layout is ${await layoutOf(frame)}`);
+  const box = await (await panel.$('#app')).boundingBox();
+  const at = ([x, y]) => [box.x + x, box.y + y];
+  const click = (point, options) => panel.mouse.click(...at(point), options);
+  const settle = () => panel.waitForTimeout(800);
+  await panel.waitForTimeout(3_000);
+  let state = await panelHost();
+  expect(state.writes.length === 0, `the focused canvas wrote on open (${state.writes.length})`);
+  if (shots) await panel.screenshot({ path: join(shots, 'mcp-app-focused.png') });
+
+  // An empty comment sends nothing: Enter in the empty field, then Escape.
+  await click(FOCUSED.button, { button: 'right' });
+  await settle();
+  await click(FOCUSED.comment);
+  await settle();
+  state = await panelHost();
+  const quiet = state.conversation.length;
+  await panel.keyboard.press('Enter');
+  await panel.waitForTimeout(1_500);
+  state = await panelHost();
+  expect(state.messages.length === 0, `an empty comment sent ${state.messages.length} messages`);
+  expect(
+    state.conversation.length === quiet,
+    `an empty comment sent ${state.conversation.slice(quiet).join(', ')}`,
+  );
+  await panel.keyboard.press('Escape');
+  await settle();
+
+  // A comment: typed into the field beside the node, sent with Enter. Exactly one model-context
+  // update — the node's picture and the assistant-only detail — and then exactly one message.
+  const comment = 'Make this button say Start';
+  await click(FOCUSED.button, { button: 'right' });
+  await settle();
+  await click(FOCUSED.comment);
+  await settle();
+  await panel.keyboard.type(comment);
+  await settle();
+  if (shots) await panel.screenshot({ path: join(shots, 'mcp-app-focused-comment.png') });
+  state = await panelHost();
+  const before = state.conversation.length;
+  await panel.keyboard.press('Enter');
+  await panel
+    .waitForFunction(() => globalThis.fakeHost.messages.length > 0, null, { timeout: 20_000 })
+    .catch(() => {});
+  await panel.waitForTimeout(1_500);
+  state = await panelHost();
+  expect(
+    JSON.stringify(state.conversation.slice(before)) ===
+      JSON.stringify(['ui/update-model-context', 'ui/message']),
+    `a comment sent ${state.conversation.slice(before).join(', ') || 'nothing'}`,
+  );
+  const message = state.messages[0];
+  expect(message?.role === 'user', `the comment's role was ${message?.role}`);
+  expect(
+    message?._meta?.['openai/message']?.target === 'active' &&
+      message?._meta?.['openai/message']?.send === true,
+    `the comment's openai/message was ${JSON.stringify(message?._meta)}`,
+  );
+  expect(message?.content?.[0]?.text === comment, 'the message did not lead with the comment');
+  expect(
+    message?.content?.[1]?._meta?.['openai/title'] === 'Button · button',
+    `the node block was titled ${message?.content?.[1]?._meta?.['openai/title']}`,
+  );
+  const commentContext = state.contexts.at(-1)?.content ?? [];
+  expect(
+    commentContext[0]?.type === 'image' && commentContext[0]?.mimeType === 'image/png',
+    'the comment context had no PNG of the node',
+  );
+  expect(
+    commentContext.at(-1)?.annotations?.audience?.[0] === 'assistant',
+    'the comment context had no assistant-only detail',
+  );
+  expect(state.writes.length === 0, 'a comment wrote the file');
+  if (shots) await panel.screenshot({ path: join(shots, 'mcp-app-focused-comment-sent.png') });
+
+  // Quick edit still edits in the focused canvas, and autosave writes it through the host.
+  await click(FOCUSED.button, { button: 'right' });
+  await settle();
+  await click(FOCUSED.quickEdit);
+  await settle();
+  if (shots) await panel.screenshot({ path: join(shots, 'mcp-app-focused-quick-edit.png') });
+  await click(FOCUSED.fillWidth);
+  await panel
+    .waitForFunction(() => globalThis.fakeHost.writes.length > 0, null, { timeout: 20_000 })
+    .catch(() => {});
+  state = await panelHost();
+  expect(
+    state.writes.length === 1 && state.writes[0].ifMatch === 'v1',
+    `quick edit in the focused canvas saved ${state.writes.length} times`,
+  );
+
+  // Full editor, and back: a live switch that writes nothing.
+  await click(FOCUSED.fullEditor);
+  await settle();
+  expect((await layoutOf(frame)) === 'full', `Full editor switched to ${await layoutOf(frame)}`);
+  if (shots) await panel.screenshot({ path: join(shots, 'mcp-app-focused-to-full.png') });
+  await click(FOCUSED.focusedCanvas);
+  await settle();
+  expect(
+    (await layoutOf(frame)) === 'focused',
+    `Focused canvas switched to ${await layoutOf(frame)}`,
+  );
+  await panel.waitForTimeout(2_000);
+  state = await panelHost();
+  expect(state.writes.length === 1, `switching layouts wrote the file (${state.writes.length})`);
+  expect(state.errors.length === 0, `host errors: ${state.errors.join('; ')}`);
+} catch (error) {
+  failures.push(`focused canvas: ${error.message.split('\n')[0]}`);
+}
 failures.push(...pageErrors.map((it) => `page error: ${it}`));
-console.log(failures.length === 0 ? 'ok   mcp-app host round trip' : `FAIL mcp-app host\n  ${failures.join('\n  ')}`);
+console.log(failures.length === 0 ? 'ok   mcp-app host round trip, focused canvas and comment' : `FAIL mcp-app host\n  ${failures.join('\n  ')}`);
 await browser.close();
 for (const it of [assets, sandbox, hostServer]) it.server.close();
 process.exit(failures.length === 0 ? 0 : 1);

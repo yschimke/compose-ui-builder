@@ -210,6 +210,53 @@ internal fun CollaborationState.applyOperation(
       trace.compensationChanges += CompensationChange.Modifiers(change)
       changed
     }
+    is DesignOperation.DeclareComponent -> {
+      componentRootOf(operation.declaration)?.let { root ->
+        if (root !in document.nodes)
+          fail(
+            RejectionCode.INVALID_DOCUMENT,
+            "component ${operation.componentKey} names a body root `$root` this design does not hold",
+            field = root,
+          )
+      }
+        ?: fail(
+          RejectionCode.INVALID_DOCUMENT,
+          "component ${operation.componentKey} names no body root",
+          field = operation.componentKey,
+        )
+      writeBehavior(
+        PropertyAddress("", operation.componentKey, PropertyTarget.Component),
+        operation.declaration,
+        baseRevision,
+        trace,
+      )
+    }
+    is DesignOperation.RemoveComponent -> {
+      if (operation.componentKey !in document.components)
+        fail(
+          RejectionCode.INVALID_COMMAND,
+          "this design declares no component ${operation.componentKey}",
+          field = operation.componentKey,
+        )
+      // The wire's own obligation: a placement whose component is gone draws nothing while
+      // reporting success.
+      document.nodes.values
+        .firstOrNull { it.placedComponentKey() == operation.componentKey }
+        ?.let { placement ->
+          fail(
+            RejectionCode.INVALID_DOCUMENT,
+            "node ${placement.id} still places component ${operation.componentKey}",
+            placement.id,
+            operation.componentKey,
+          )
+        }
+      writeBehavior(
+        PropertyAddress("", operation.componentKey, PropertyTarget.Component),
+        null,
+        baseRevision,
+        trace,
+      )
+    }
     is DesignOperation.SetEnvironment -> {
       val before = document.environment[operation.field]
       val changed =
@@ -484,7 +531,9 @@ internal fun DesignOperation.isPropertyWrite(): Boolean =
     this is DesignOperation.RemoveNodeProperty ||
     this is DesignOperation.SetStateVariable ||
     this is DesignOperation.RemoveStateVariable ||
-    this is DesignOperation.SetEventBinding
+    this is DesignOperation.SetEventBinding ||
+    this is DesignOperation.DeclareComponent ||
+    this is DesignOperation.RemoveComponent
 
 private fun CollaborationState.removeProperty(
   operation: DesignOperation.RemoveNodeProperty,
@@ -693,6 +742,14 @@ internal fun propertyWrapperIssue(type: String, encodedValue: JsonObject): Strin
       )
         null
       else "stateEquals wrapper must contain exactly type, variable, and value"
+    // A component body reading one of its placement's arguments. Which key, and whether a
+    // placement passes it, is the argument-binding inspection's question over the whole document.
+    "binding" ->
+      if (
+        encodedValue.keys == setOf("type", "value") && encodedValue.nonEmptyString("value") != null
+      )
+        null
+      else "binding wrapper must contain exactly type and a non-empty value"
     "padding" -> {
       val fields = setOf("type", "startDp", "topDp", "endDp", "bottomDp")
       if (encodedValue.keys == fields && fields.minus("type").all(encodedValue::hasNumber)) null
@@ -706,7 +763,7 @@ internal fun propertyWrapperIssue(type: String, encodedValue: JsonObject): Strin
         null
       else "adaptiveGrid wrapper must contain exactly type and numeric minimumCellWidthDp"
     // Every name here is in `PropertyValueKinds.WRAPPER_TYPES`; that set is wider, because `list`
-    // and `binding` arrive on inserts this function never sees and are checked by
+    // arrives on inserts this function never sees and is checked by
     // `inspectUiBuilderArgumentBindings` instead. `WrapperVocabularyTest` holds the union against
     // the corpus, which is what an invented wrapper slipped through before (#901).
     else -> "uses unsupported wrapper type $type"
@@ -747,7 +804,7 @@ internal fun CollaborationState.withStablePositions(): CollaborationState {
         )
     }
   }
-  record(null, document.roots)
+  record(null, document.roots + document.detachedComponentRoots().sorted())
   document.nodes.values.forEach { parent ->
     parent.slots.forEach { (slot, children) -> record(ParentSlot(parent.id, slot), children) }
   }
@@ -823,9 +880,14 @@ private fun CollaborationState.allocatePosition(
 }
 
 private fun CollaborationState.rebuildLocation(parent: ParentSlot?): CollaborationState {
+  // A detached component body keeps the parentless position it was declared from, but it is not a
+  // root: rebuilding the root list for some other node must not hand it back to the screen.
+  val detached = if (parent == null) document.detachedComponentRoots() else emptySet()
   val children =
     positions.entries
-      .filter { (nodeId, position) -> position.parent == parent && nodeId in document.nodes }
+      .filter { (nodeId, position) ->
+        position.parent == parent && nodeId in document.nodes && nodeId !in detached
+      }
       .sortedWith(compareBy({ it.value.key }, { it.key }))
       .map { it.key }
   if (parent == null) return copy(document = document.copy(roots = children))
@@ -885,6 +947,7 @@ private const val POSITION_STEP = 1024
 internal fun UiBuilderDocument.requireValidTopology() {
   requireSingleRoot()
   requireValidPlacement()
+  requireKnownComponents()
 }
 
 /**
@@ -904,6 +967,19 @@ internal fun UiBuilderDocument.requireValidTopology() {
 internal fun UiBuilderDocument.requireSingleRoot() {
   if (roots.size > 1) {
     fail(RejectionCode.INVALID_DOCUMENT, "a design has at most one root; found ${roots.size}")
+  }
+}
+
+/**
+ * Every placement names a component the document declares — asked once per command, beside
+ * [requireSingleRoot], for the same reason: making a component inserts the placement, then moves
+ * the body out and declares it, and the states in between are nobody's document.
+ */
+internal fun UiBuilderDocument.requireKnownComponents() {
+  nodes.values.forEach { node ->
+    val key = node.component?.let { (it["componentKey"] as? JsonPrimitive)?.contentOrNull }
+    if (node.component != null && key !in components)
+      fail(RejectionCode.INVALID_DOCUMENT, "unknown component $key", node.id)
   }
 }
 
@@ -952,12 +1028,12 @@ internal fun UiBuilderDocument.requireValidPlacement() {
     visiting += nodeId
     val node = nodes.getValue(nodeId)
     node.slots.values.flatten().forEach(::visit)
+    // A placement naming a component nothing declares yet is [requireKnownComponents]'s question,
+    // asked once the command is done: making a component inserts its first placement before the
+    // declaration exists.
     node.component?.let { placement ->
       val key = (placement["componentKey"] as? JsonPrimitive)?.contentOrNull
-      val root =
-        componentRoots[key]
-          ?: fail(RejectionCode.INVALID_DOCUMENT, "unknown component $key", nodeId)
-      visit(root)
+      componentRoots[key]?.let(::visit)
     }
     visiting -= nodeId
   }
@@ -965,6 +1041,9 @@ internal fun UiBuilderDocument.requireValidPlacement() {
   componentRoots.values.forEach(::visit)
   if (visited.size != nodes.size) fail(RejectionCode.CYCLE, "unreachable cycle in design")
 }
+
+internal fun UiBuilderNode.placedComponentKey(): String? =
+  (component?.get("componentKey") as? JsonPrimitive)?.contentOrNull
 
 private fun UiBuilderDocument.descendants(rootId: String): Set<String> {
   val found = linkedSetOf<String>()

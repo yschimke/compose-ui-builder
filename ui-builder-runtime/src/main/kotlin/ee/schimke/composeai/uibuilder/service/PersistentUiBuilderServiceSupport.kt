@@ -210,8 +210,22 @@ internal fun PersistedDesignV1.retainedFromSequence(): Long =
  * operations makes the difference real, and a client told a floor 900 sequences below what is
  * actually retained would ask again for a revision that is still missing and loop.
  */
-internal fun PersistedDesignV1.retainedSnapshotFromSequence(): Long =
-  revisionSnapshots.firstOrNull()?.sequence ?: lastSequence
+internal fun PersistedDesignV1.retainedSnapshotFromSequence(): Long {
+  // The floor is the start of the unbroken run of revisions ending at the head, not the first
+  // entry:
+  // an open branch's pinned fork point can sit below a gap (`UI_BUILDER_BRANCHES.md`), and quoting
+  // its sequence would tell a client that everything above it is still retained.
+  var index = revisionSnapshots.lastIndex
+  if (index < 0) return lastSequence
+  while (
+    index > 0 &&
+      revisionSnapshots[index - 1].document.revision ==
+        revisionSnapshots[index].document.revision - 1
+  ) {
+    index--
+  }
+  return revisionSnapshots[index].sequence
+}
 
 internal fun PersistedDesignV1.deltaAfter(afterSequence: Long, limit: Int): ServiceDeltaV1 {
   val available = history.filter { it.outcome.sequence > afterSequence }
@@ -384,7 +398,7 @@ internal fun derivePositions(document: DesignDocumentV1): Map<String, StableNode
         )
     }
   }
-  add(document.roots, null)
+  add(document.roots + document.detachedComponentRoots().sorted(), null)
   document.nodes.values
     .sortedBy { it.id }
     .forEach { parent ->
@@ -467,9 +481,12 @@ internal fun DesignDocumentV1.rebuildLocation(
   positions: Map<String, StableNodePositionV1>,
   parent: ParentSlotV1?,
 ): DesignDocumentV1 {
+  // A detached component body keeps the parentless position it was declared from, but it is not a
+  // root: rebuilding the root list for some other node must not hand it back to the screen.
+  val detached = if (parent == null) detachedComponentRoots() else emptySet()
   val children =
     positions
-      .filter { (id, position) -> id in nodes && position.parent == parent }
+      .filter { (id, position) -> id in nodes && position.parent == parent && id !in detached }
       .toList()
       .sortedWith(compareBy<Pair<String, StableNodePositionV1>>({ it.second.key }, { it.first }))
       .map { it.first }
@@ -482,6 +499,48 @@ internal fun DesignDocumentV1.rebuildLocation(
       nodes +
         (parentNode.id to parentNode.copy(slots = parentNode.slots + (parent.slot to children)))
   )
+}
+
+/**
+ * Write one component declaration, keeping the root list honest about which subtree is the screen.
+ *
+ * A body declared while it is an *extra* root leaves the root list: it is a definition now, drawn
+ * only where a placement names it, and the design keeps the one screen root it had. That is how a
+ * subtree becomes a component in one command — move it out to the root list, declare it — without a
+ * mutation the wire does not have. A body that loses its declaration and is placed nowhere else
+ * returns to the root list, so the command removing a component must also delete or re-place it, or
+ * the root count refuses the result. Both directions read the document alone, so a compensation
+ * writing the old declaration back gets the answer the forward write did. The editor's reducer
+ * applies the same rule (`UiBuilderDocument.withComponent`).
+ */
+internal fun DesignDocumentV1.withComponent(
+  key: String,
+  declaration: DesignComponentV1?,
+): DesignDocumentV1 {
+  val before = components[key]?.root
+  val after = declaration?.root
+  val declared =
+    copy(
+      components = if (declaration == null) components - key else components + (key to declaration)
+    )
+  var roots = declared.roots
+  if (after != null && after in roots && roots.size > 1) roots = roots - after
+  if (
+    before != null &&
+      before != after &&
+      before in nodes &&
+      before !in roots &&
+      declared.components.values.none { it.root == before } &&
+      nodes.values.none { node -> node.slots.values.any { before in it } }
+  )
+    roots = roots + before
+  return declared.copy(roots = roots)
+}
+
+/** The bodies no root list or slot holds: the subtrees only a placement draws. */
+internal fun DesignDocumentV1.detachedComponentRoots(): Set<String> {
+  val placed = roots.toSet() + nodes.values.flatMap { node -> node.slots.values.flatten() }
+  return components.values.map { it.root }.filterTo(mutableSetOf()) { it !in placed }
 }
 
 /** What a conflict and a compensation failure call the chain, since the wire has no name for it. */
