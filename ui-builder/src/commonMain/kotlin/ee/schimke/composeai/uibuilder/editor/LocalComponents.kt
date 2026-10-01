@@ -44,6 +44,42 @@ data class EditorLocalComponent(
   val publishedAs: ComponentCapability? = null,
 )
 
+/**
+ * One component a project publishes to its shared library, as the palette lists it — the server's
+ * `GET /api/ui-builder/v1/component-library` row. Its body is fetched only when it is placed.
+ */
+data class EditorLibraryComponent(
+  val system: String,
+  val componentId: String,
+  /** `project/<id>`: what the drift report calls it, so its rows select this entry. */
+  val paletteId: String,
+  val title: String,
+  val description: String? = null,
+)
+
+/**
+ * One published component, fetched to be placed: its declaration and the nodes its body is made of,
+ * and the digest a design records beside it so a later read can tell it has drifted.
+ */
+data class EditorLibrarySymbol(
+  val component: EditorLibraryComponent,
+  val digest: String,
+  /** `{name, root, description?}`, the declaration as published. */
+  val declaration: JsonObject,
+  val nodes: Map<String, UiBuilderNode>,
+)
+
+/** Where [declaration] says it was imported from: system, component id and digest, or null. */
+internal fun componentSource(declaration: JsonElement?): Triple<String, String, String>? {
+  val source = (declaration as? JsonObject)?.get("source") as? JsonObject ?: return null
+  fun field(name: String) = (source[name] as? JsonPrimitive)?.contentOrNull
+  return Triple(
+    field("system") ?: return null,
+    field("componentId") ?: return null,
+    field("digest") ?: return null,
+  )
+}
+
 /** One component verb the context menu offers for the selection. */
 data class EditorComponentAction(val label: String, val event: UiBuilderEditorEvent)
 

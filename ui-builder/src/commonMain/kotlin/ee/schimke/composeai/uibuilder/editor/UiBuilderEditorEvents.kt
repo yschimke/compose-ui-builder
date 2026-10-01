@@ -270,6 +270,16 @@ sealed interface UiBuilderEditorEvent {
   data class InlineComponentParameter(val componentKey: String, val parameter: String) :
     UiBuilderEditorEvent
 
+  /**
+   * Place a component from the project's shared library: imported — body and `source` record —
+   * unless this design already imported it, in which case the version it holds is placed again.
+   */
+  data class InsertLibraryComponent(
+    val symbol: EditorLibrarySymbol,
+    val target: ParentSlot,
+    val afterNodeId: String? = null,
+  ) : UiBuilderEditorEvent
+
   /** Rename a component — the composable the export writes. */
   data class RenameLocalComponent(val componentKey: String, val name: String) : UiBuilderEditorEvent
 

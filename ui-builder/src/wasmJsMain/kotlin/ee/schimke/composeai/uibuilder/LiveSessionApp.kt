@@ -48,6 +48,7 @@ import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.editor.DesignReview
 import ee.schimke.composeai.uibuilder.editor.EditorExportFormat
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
+import ee.schimke.composeai.uibuilder.editor.EditorLibraryComponent
 import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS
@@ -492,6 +493,12 @@ private fun LiveSessionApp(
   val pinnedRevision = revisionPin?.takeIf { it.pinned }?.requested
   LaunchedEffect(config.designId, pinnedRevision) {
     componentDrift = loadComponentDrift(config.designId, pinnedRevision)
+  }
+  // What the project shares, read once per design: the shelf only has to be as fresh as the
+  // library, and an import fetches the symbol it places at the moment it is pressed.
+  var componentLibrary by remember { mutableStateOf(emptyList<EditorLibraryComponent>()) }
+  LaunchedEffect(config.designId, localSession) {
+    componentLibrary = if (localSession == null) loadComponentLibrary() else emptyList()
   }
 
   // The reference overlay's browser half: the file picker, the paste listener, the snapshot and
@@ -1387,6 +1394,8 @@ private fun LiveSessionApp(
       initialPinnedComponents = pinnedComponents,
       collaborators = collaborators,
       componentDrift = componentDrift,
+      componentLibrary = componentLibrary,
+      loadLibrarySymbol = if (localSession == null) ::loadLibrarySymbol else null,
       devicePresets = devicePresets,
       newDesignCatalogs = newDesignCatalogs,
       onCreateDesign = createDesign,

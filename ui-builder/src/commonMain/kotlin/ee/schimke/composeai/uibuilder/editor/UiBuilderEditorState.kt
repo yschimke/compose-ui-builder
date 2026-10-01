@@ -380,6 +380,8 @@ class UiBuilderEditorReducer(
         exposeComponentParameter(state, event.nodeId, event.property)
       is UiBuilderEditorEvent.InlineComponentParameter ->
         inlineComponentParameter(state, event.componentKey, event.parameter)
+      is UiBuilderEditorEvent.InsertLibraryComponent ->
+        insertLibraryComponent(state, event.symbol, event.target, event.afterNodeId)
       is UiBuilderEditorEvent.RenameLocalComponent ->
         renameLocalComponent(state, event.componentKey, event.name)
       is UiBuilderEditorEvent.ReplaceLocalComponent ->
@@ -4534,6 +4536,143 @@ class UiBuilderEditorReducer(
       return state.rejected(sequence, RejectionCode.INVALID_LOCATION, it, state.selectedNodeId)
     }
     return state.apply(sequence, plan.operations, selectionAfter = plan.placementId)
+  }
+
+  /**
+   * Where a fetched library component would land, or null: the slot its body root can sit in. Asked
+   * after the fetch, because a tile in the palette does not know what its body is made of.
+   */
+  fun libraryComponentTarget(
+    state: UiBuilderEditorState,
+    symbol: EditorLibrarySymbol,
+  ): ParentSlot? {
+    val root = componentRootOf(symbol.declaration)?.let(symbol.nodes::get) ?: return null
+    val capability = catalog.componentsById[root.componentId] ?: return null
+    return findDestination(state.document, state.selectedNodeId, capability)
+  }
+
+  private fun insertLibraryComponent(
+    state: UiBuilderEditorState,
+    symbol: EditorLibrarySymbol,
+    target: ParentSlot,
+    afterNodeId: String?,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val document = state.document
+    val wanted = symbol.component
+    val bodyRoot =
+      componentRootOf(symbol.declaration)?.takeIf { it in symbol.nodes }
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_DOCUMENT,
+          "${wanted.title} was published without the body it names",
+        )
+    symbol.nodes.values
+      .firstOrNull {
+        it.componentId != COMPONENT_INSTANCE_ID && it.componentId !in catalog.componentsById
+      }
+      ?.let {
+        return state.rejected(
+          sequence,
+          RejectionCode.INVALID_DOCUMENT,
+          "${wanted.title} uses ${it.componentId}, which this design's catalog does not have",
+        )
+      }
+    val capability =
+      catalog.componentsById[symbol.nodes.getValue(bodyRoot).componentId]
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_DOCUMENT,
+          "${wanted.title} draws nothing here",
+        )
+    if (!acceptsComponent(document, target, capability))
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_LOCATION,
+        "${wanted.title} cannot be inserted into ${target.nodeId}.${target.slot}",
+      )
+    val operations = mutableListOf<DesignOperation>()
+    // Imported once: a design that already holds this symbol places the version it holds — a newer
+    // one in the library is drift for the Issues panel to report, never a silent redraw.
+    val existing =
+      document.components.entries
+        .firstOrNull { (_, declaration) ->
+          componentSource(declaration)?.let { (system, id, _) ->
+            system == wanted.system && id == wanted.componentId
+          } == true
+        }
+        ?.key
+    val key =
+      existing
+        ?: run {
+          var fresh = wanted.componentId
+          var suffix = 2
+          while (fresh in document.components) fresh = "${wanted.componentId}-${suffix++}"
+          val taken = document.takenIdentities()
+          val copyRoot =
+            freshCopyId(
+              document.freshNodeId("$bodyRoot-import", operationIdPrefix, sequence),
+              taken,
+            )
+          symbol.nodes.appendDuplicateSubtree(
+            sourceNodeId = bodyRoot,
+            copyNodeId = copyRoot,
+            parent = null,
+            afterNodeId = null,
+            operations = operations,
+            taken = taken,
+          )
+          operations +=
+            DesignOperation.DeclareComponent(
+              fresh,
+              JsonObject(
+                symbol.declaration +
+                  ("root" to JsonPrimitive(copyRoot)) +
+                  ("source" to
+                    JsonObject(
+                      mapOf(
+                        "system" to JsonPrimitive(wanted.system),
+                        "componentId" to JsonPrimitive(wanted.componentId),
+                        "digest" to JsonPrimitive(symbol.digest),
+                      )
+                    ))
+              ),
+            )
+          fresh
+        }
+    // What the first placement passes: what the last one did, or each text parameter's own name.
+    val arguments =
+      if (existing != null) starterArguments(document, existing)
+      else {
+        val reads = linkedMapOf<String, JsonElement>()
+        symbol.nodes.values
+          .sortedBy { it.id }
+          .forEach { node ->
+            node.properties.forEach { (property, value) ->
+              val parameter = value.bindingKey() ?: return@forEach
+              val declared =
+                catalog.componentsById[node.componentId]?.propertiesByName?.get(property)
+              if (parameter !in reads && declared?.typeNames()?.authoredTypes() == setOf("string"))
+                reads[parameter] = literal("string", JsonPrimitive(parameter.humanLabel()))
+            }
+          }
+        JsonObject(reads)
+      }
+    val slotChildren = document.children(target)
+    val after = afterNodeId?.takeIf { it in slotChildren } ?: slotChildren.lastOrNull()
+    val nodeId = document.freshNodeId("editor-$key", operationIdPrefix, sequence)
+    operations +=
+      DesignOperation.InsertNode(
+        UiBuilderNode(
+          id = nodeId,
+          componentId = COMPONENT_INSTANCE_ID,
+          component =
+            JsonObject(mapOf("componentKey" to JsonPrimitive(key), "arguments" to arguments)),
+        ),
+        target,
+        after,
+      )
+    return state.apply(sequence, operations, selectionAfter = nodeId)
   }
 
   private fun insertLocalComponent(
