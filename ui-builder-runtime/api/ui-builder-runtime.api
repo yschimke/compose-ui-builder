@@ -141,7 +141,7 @@ public final class ee/schimke/composeai/uibuilder/service/PackagedUiBuilderRende
 	public final fun requiredJavaFeatureVersion ()I
 }
 
-public final class ee/schimke/composeai/uibuilder/service/PersistentUiBuilderService : ee/schimke/composeai/uibuilder/service/UiBuilderAdminPort, ee/schimke/composeai/uibuilder/service/UiBuilderAssetPort, ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnosticsSource, ee/schimke/composeai/uibuilder/service/UiBuilderServicePort {
+public final class ee/schimke/composeai/uibuilder/service/PersistentUiBuilderService : ee/schimke/composeai/uibuilder/service/UiBuilderAdminPort, ee/schimke/composeai/uibuilder/service/UiBuilderAssetPort, ee/schimke/composeai/uibuilder/service/UiBuilderBranchPort, ee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnosticsSource, ee/schimke/composeai/uibuilder/service/UiBuilderServicePort {
 	public static final field Companion Lee/schimke/composeai/uibuilder/service/PersistentUiBuilderService$Companion;
 	public fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderDesignStateStore;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;Lee/schimke/composeai/uibuilder/service/UiBuilderAssetStore;)V
 	public synthetic fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderDesignStateStore;Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderExportExecutor;Lee/schimke/composeai/uibuilder/service/UiBuilderSubscriberFailureHandler;Ljava/time/Clock;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceLimits;Lee/schimke/composeai/uibuilder/service/UiBuilderAssetStore;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -158,6 +158,7 @@ public final class ee/schimke/composeai/uibuilder/service/PersistentUiBuilderSer
 	public fun adminUnusableDesigns ()Ljava/util/Map;
 	public fun diagnostics ()Lee/schimke/composeai/uibuilder/service/UiBuilderServiceDiagnostics;
 	public fun execute (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceCall;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun executeBranch (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchCall;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun migratePersistenceToLatest ()Lee/schimke/composeai/uibuilder/service/UiBuilderPersistenceMigrationResult;
 	public fun putAsset (Lee/schimke/composeai/uibuilder/service/UiBuilderAssetWrite;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun readAsset (Lee/schimke/composeai/uibuilder/service/UiBuilderAssetRead;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -388,6 +389,262 @@ public final class ee/schimke/composeai/uibuilder/service/UiBuilderAssetWrite {
 	public final fun getAssetKey ()Ljava/lang/String;
 	public final fun getBytes ()[B
 	public final fun getDesignId ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranch {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus;JLjava/lang/String;JIJLjava/lang/Long;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus;JLjava/lang/String;JIJLjava/lang/Long;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()J
+	public final fun component11 ()Ljava/lang/Long;
+	public final fun component12 ()Ljava/lang/String;
+	public final fun component13 ()Ljava/lang/Long;
+	public final fun component14 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Lee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus;
+	public final fun component6 ()J
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()J
+	public final fun component9 ()I
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus;JLjava/lang/String;JIJLjava/lang/Long;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranch;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranch;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus;JLjava/lang/String;JIJLjava/lang/Long;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBranchId ()Ljava/lang/String;
+	public final fun getClosedAtEpochMillis ()Ljava/lang/Long;
+	public final fun getClosedByActorId ()Ljava/lang/String;
+	public final fun getCommandCount ()I
+	public final fun getCreatedAtEpochMillis ()J
+	public final fun getForkDocumentHash ()Ljava/lang/String;
+	public final fun getForkRevision ()J
+	public final fun getHeadRevision ()J
+	public final fun getMergedAtParentRevision ()Ljava/lang/Long;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getOwnerActorId ()Ljava/lang/String;
+	public final fun getParentDesignId ()Ljava/lang/String;
+	public final fun getStatus ()Lee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus;
+	public final fun getSupersededByBranchId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchCall {
+	public fun <init> (Lee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilderActor;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest;)V
+	public final fun component1 ()Lee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilderActor;
+	public final fun component2 ()Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest;
+	public final fun copy (Lee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilderActor;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchCall;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchCall;Lee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilderActor;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchCall;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActor ()Lee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilderActor;
+	public final fun getRequest ()Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommand {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommandStatus;JLjava/lang/Long;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommandStatus;JLjava/lang/Long;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommandStatus;
+	public final fun component4 ()J
+	public final fun component5 ()Ljava/lang/Long;
+	public final fun component6 ()Ljava/util/List;
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommandStatus;JLjava/lang/Long;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommand;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommand;Ljava/lang/String;Ljava/lang/String;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommandStatus;JLjava/lang/Long;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommand;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActorId ()Ljava/lang/String;
+	public final fun getBaseRevision ()J
+	public final fun getCode ()Ljava/lang/String;
+	public final fun getCommittedRevision ()Ljava/lang/Long;
+	public final fun getConflicts ()Ljava/util/List;
+	public final fun getField ()Ljava/lang/String;
+	public final fun getMessage ()Ljava/lang/String;
+	public final fun getNodeId ()Ljava/lang/String;
+	public final fun getOperationId ()Ljava/lang/String;
+	public final fun getStatus ()Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommandStatus;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommandStatus : java/lang/Enum {
+	public static final field APPLIED Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommandStatus;
+	public static final field REFUSED Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommandStatus;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommandStatus;
+	public static fun values ()[Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeCommandStatus;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeReport {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;ZZJJJLjava/util/List;ILjava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ZZJJJLjava/util/List;ILjava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()Ljava/util/List;
+	public final fun component11 ()Ljava/util/List;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Z
+	public final fun component4 ()Z
+	public final fun component5 ()J
+	public final fun component6 ()J
+	public final fun component7 ()J
+	public final fun component8 ()Ljava/util/List;
+	public final fun component9 ()I
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;ZZJJJLjava/util/List;ILjava/util/List;Ljava/util/List;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeReport;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeReport;Ljava/lang/String;Ljava/lang/String;ZZJJJLjava/util/List;ILjava/util/List;Ljava/util/List;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeReport;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArchivedSiblingIds ()Ljava/util/List;
+	public final fun getBranchId ()Ljava/lang/String;
+	public final fun getCommands ()Ljava/util/List;
+	public final fun getDryRun ()Z
+	public final fun getForkRevision ()J
+	public final fun getMerged ()Z
+	public final fun getParentDesignId ()Ljava/lang/String;
+	public final fun getParentRevisionAfter ()J
+	public final fun getParentRevisionBefore ()J
+	public final fun getRemaining ()I
+	public final fun getSkippedOperationIds ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderBranchPort {
+	public abstract fun executeBranch (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchCall;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest {
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$ArchiveBranch : ee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$ArchiveBranch;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$ArchiveBranch;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$ArchiveBranch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBranchId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$CreateBranch : ee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/Long;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$CreateBranch;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$CreateBranch;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$CreateBranch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBranchId ()Ljava/lang/String;
+	public final fun getDesignId ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getRevision ()Ljava/lang/Long;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$GetBranch : ee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$GetBranch;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$GetBranch;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$GetBranch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBranchId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$ListBranches : ee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest {
+	public fun <init> (Ljava/lang/String;Z)V
+	public synthetic fun <init> (Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Z
+	public final fun copy (Ljava/lang/String;Z)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$ListBranches;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$ListBranches;Ljava/lang/String;ZILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$ListBranches;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDesignId ()Ljava/lang/String;
+	public final fun getIncludeClosed ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$MergeBranch : ee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest {
+	public fun <init> (Ljava/lang/String;ZLjava/util/Set;)V
+	public synthetic fun <init> (Ljava/lang/String;ZLjava/util/Set;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Z
+	public final fun component3 ()Ljava/util/Set;
+	public final fun copy (Ljava/lang/String;ZLjava/util/Set;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$MergeBranch;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$MergeBranch;Ljava/lang/String;ZLjava/util/Set;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchRequest$MergeBranch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBranchId ()Ljava/lang/String;
+	public final fun getDryRun ()Z
+	public final fun getSkipOperationIds ()Ljava/util/Set;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse {
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Branch : ee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse {
+	public fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderBranch;)V
+	public final fun component1 ()Lee/schimke/composeai/uibuilder/service/UiBuilderBranch;
+	public final fun copy (Lee/schimke/composeai/uibuilder/service/UiBuilderBranch;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Branch;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Branch;Lee/schimke/composeai/uibuilder/service/UiBuilderBranch;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Branch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBranch ()Lee/schimke/composeai/uibuilder/service/UiBuilderBranch;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Branches : ee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Branches;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Branches;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Branches;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBranches ()Ljava/util/List;
+	public final fun getDesignId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Error : ee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse {
+	public fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceError;)V
+	public final fun component1 ()Lee/schimke/composeai/uibuilder/service/UiBuilderServiceError;
+	public final fun copy (Lee/schimke/composeai/uibuilder/service/UiBuilderServiceError;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Error;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Error;Lee/schimke/composeai/uibuilder/service/UiBuilderServiceError;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Error;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Lee/schimke/composeai/uibuilder/service/UiBuilderServiceError;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Merge : ee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse {
+	public fun <init> (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeReport;)V
+	public final fun component1 ()Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeReport;
+	public final fun copy (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeReport;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Merge;
+	public static synthetic fun copy$default (Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Merge;Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeReport;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchResponse$Merge;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReport ()Lee/schimke/composeai/uibuilder/service/UiBuilderBranchMergeReport;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus : java/lang/Enum {
+	public static final field ARCHIVED Lee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus;
+	public static final field MERGED Lee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus;
+	public static final field OPEN Lee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus;
+	public static fun values ()[Lee/schimke/composeai/uibuilder/service/UiBuilderBranchStatus;
 }
 
 public abstract interface class ee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor {

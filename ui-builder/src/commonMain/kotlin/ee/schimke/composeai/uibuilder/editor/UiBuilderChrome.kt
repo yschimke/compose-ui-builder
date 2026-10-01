@@ -111,6 +111,13 @@ import androidx.compose.ui.unit.dp
  * dependency in common code.
  */
 interface UiBuilderChrome {
+  /**
+   * How much editor the host shows around the canvas. [UiBuilderWorkspace.Full] — every host but a
+   * chat panel — and see [FocusedCanvasUiBuilderChrome] for the other.
+   */
+  val workspace: UiBuilderWorkspace
+    get() = UiBuilderWorkspace.Full
+
   @Composable fun NavigatorSurface(modifier: Modifier, content: @Composable () -> Unit)
 
   @Composable fun DockHeading(title: String, supporting: String?, onClose: (() -> Unit)?)
@@ -384,6 +391,8 @@ enum class UiBuilderMenuIcon {
   Properties,
   /** The quick editor: a pencil, since the Properties panel already has the sliders. */
   QuickEdit,
+  /** A comment about the node, sent to the conversation the editor sits in. */
+  Comment,
   Duplicate,
   Cut,
   Paste,
@@ -1428,6 +1437,7 @@ private fun UiBuilderMenuIcon.materialIcon(): ImageVector =
     UiBuilderMenuIcon.Download -> Icons.Filled.Download
     UiBuilderMenuIcon.Properties -> Icons.Filled.Tune
     UiBuilderMenuIcon.QuickEdit -> Icons.Filled.Edit
+    UiBuilderMenuIcon.Comment -> Icons.Filled.ChatBubbleOutline
     UiBuilderMenuIcon.Duplicate -> Icons.Filled.LibraryAdd
     UiBuilderMenuIcon.Cut -> Icons.Filled.ContentCut
     UiBuilderMenuIcon.Paste -> Icons.Filled.ContentPaste

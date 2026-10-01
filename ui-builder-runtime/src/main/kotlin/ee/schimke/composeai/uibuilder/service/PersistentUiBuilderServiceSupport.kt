@@ -210,8 +210,22 @@ internal fun PersistedDesignV1.retainedFromSequence(): Long =
  * operations makes the difference real, and a client told a floor 900 sequences below what is
  * actually retained would ask again for a revision that is still missing and loop.
  */
-internal fun PersistedDesignV1.retainedSnapshotFromSequence(): Long =
-  revisionSnapshots.firstOrNull()?.sequence ?: lastSequence
+internal fun PersistedDesignV1.retainedSnapshotFromSequence(): Long {
+  // The floor is the start of the unbroken run of revisions ending at the head, not the first
+  // entry:
+  // an open branch's pinned fork point can sit below a gap (`UI_BUILDER_BRANCHES.md`), and quoting
+  // its sequence would tell a client that everything above it is still retained.
+  var index = revisionSnapshots.lastIndex
+  if (index < 0) return lastSequence
+  while (
+    index > 0 &&
+      revisionSnapshots[index - 1].document.revision ==
+        revisionSnapshots[index].document.revision - 1
+  ) {
+    index--
+  }
+  return revisionSnapshots[index].sequence
+}
 
 internal fun PersistedDesignV1.deltaAfter(afterSequence: Long, limit: Int): ServiceDeltaV1 {
   val available = history.filter { it.outcome.sequence > afterSequence }

@@ -48,6 +48,8 @@ data class McpAppHost(
   val fileResources: Boolean,
   /** `hostCapabilities.updateModelContext`: whether a selection can become model context. */
   val modelContext: Boolean,
+  /** `hostCapabilities.message`: whether the app may post a message to the conversation. */
+  val messages: Boolean = false,
 )
 
 /**
@@ -68,6 +70,9 @@ interface McpAppBridge {
 
   /** `ui/update-model-context`: replaces whatever this app supplied before. */
   suspend fun updateModelContext(context: McpAppModelContext)
+
+  /** `ui/message`: posts a user message to the conversation. */
+  suspend fun sendMessage(message: McpAppMessage)
 }
 
 /**
@@ -129,6 +134,7 @@ class McpAppJsonRpcBridge(private val transport: McpAppTransport) : McpAppBridge
       name = (result["hostInfo"] as? JsonObject)?.string("name").orEmpty(),
       fileResources = experimental[OPENAI_RESOURCE] != null,
       modelContext = capabilities["updateModelContext"] != null,
+      messages = capabilities["message"] != null,
     )
   }
 
@@ -215,6 +221,10 @@ class McpAppJsonRpcBridge(private val transport: McpAppTransport) : McpAppBridge
 
   override suspend fun updateModelContext(context: McpAppModelContext) {
     transport.request("ui/update-model-context", context.toParams())
+  }
+
+  override suspend fun sendMessage(message: McpAppMessage) {
+    transport.request("ui/message", message.toParams())
   }
 
   /** `ui/open-link`: the frame cannot navigate, so the host opens the editor's help for it. */

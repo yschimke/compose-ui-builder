@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.mcpapp
 
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -47,16 +48,53 @@ object McpAppSelectionContext {
 
   fun of(file: McpAppFile, document: UiBuilderDocument, nodeId: String?): McpAppModelContext {
     val node = nodeId?.let(document.nodes::get) ?: return McpAppModelContext.Empty
-    val path = nodePath(document, node.id)
-    val component = componentName(node.componentId)
-    val detail = buildJsonObject {
+    val detail = detail(file, document, node)
+    val visible = "Selected in " + summary(file, document, node)
+    val hidden =
+      "The person is pointing at node `${node.id}` of the UI Builder design in ${file.name}. " +
+        "To change it, edit that node in the design file (a DesignDocumentV1 `.uid`); address it " +
+        "by node id, which is stable, rather than by path. Selection detail: " +
+        compact.encodeToString(JsonObject.serializer(), detail)
+    return McpAppModelContext(
+      content =
+        buildJsonArray {
+          add(titledText(visible, title(node)))
+          add(assistantText(hidden))
+        },
+      structuredContent = buildJsonObject { put("selection", detail) },
+    )
+  }
+
+  /** `Button · save` — what a person calls the node, and which one it is. */
+  fun title(node: UiBuilderNode): String = "${componentName(node.componentId)} · ${node.id}"
+
+  /**
+   * `home.uid: Button `save` (m3/button)`, then the path from the root and the node's properties,
+   * one line each: short enough for a person to read in a composer.
+   */
+  fun summary(file: McpAppFile, document: UiBuilderDocument, node: UiBuilderNode): String =
+    buildString {
+      val path = nodePath(document, node.id)
+      append(
+        "${file.name}: ${componentName(node.componentId)} `${node.id}` (${node.componentId})\n"
+      )
+      append("Path: ").append(path.joinToString(" › ") { it.label() }).append('\n')
+      if (node.properties.isEmpty()) append("Properties: none")
+      else
+        append("Properties: ")
+          .append(compact.encodeToString(JsonObject.serializer(), node.properties))
+    }
+
+  /** The node's facts as JSON, for the model and for `structuredContent`. */
+  fun detail(file: McpAppFile, document: UiBuilderDocument, node: UiBuilderNode): JsonObject =
+    buildJsonObject {
       put("file", file.name)
       put("designId", document.id)
       put("catalogSystemId", (document.catalogPin["systemId"] as? JsonPrimitive)?.content)
       put("nodeId", node.id)
       put("componentId", node.componentId)
       putJsonArray("path") {
-        path.forEach { step ->
+        nodePath(document, node.id).forEach { step ->
           add(
             buildJsonObject {
               put("nodeId", step.nodeId)
@@ -75,40 +113,23 @@ object McpAppSelectionContext {
         }
       }
     }
-    val visible = buildString {
-      append("Selected in ${file.name}: $component `${node.id}` (${node.componentId})\n")
-      append("Path: ").append(path.joinToString(" › ") { it.label() }).append('\n')
-      if (node.properties.isEmpty()) append("Properties: none")
-      else
-        append("Properties: ")
-          .append(compact.encodeToString(JsonObject.serializer(), node.properties))
-    }
-    val hidden =
-      "The person is pointing at node `${node.id}` of the UI Builder design in ${file.name}. " +
-        "To change it, edit that node in the design file (a DesignDocumentV1 `.uid`); address it " +
-        "by node id, which is stable, rather than by path. Selection detail: " +
-        compact.encodeToString(JsonObject.serializer(), detail)
-    return McpAppModelContext(
-      content =
-        buildJsonArray {
-          add(
-            buildJsonObject {
-              put("type", "text")
-              put("text", visible)
-              putJsonObject("_meta") { put("openai/title", "$component · ${node.id}") }
-            }
-          )
-          add(
-            buildJsonObject {
-              put("type", "text")
-              put("text", hidden)
-              putJsonObject("annotations") { putJsonArray("audience") { add("assistant") } }
-            }
-          )
-        },
-      structuredContent = buildJsonObject { put("selection", detail) },
-    )
+
+  /** A text block the host shows as one labelled, removable item. */
+  fun titledText(text: String, title: String): JsonObject = buildJsonObject {
+    put("type", "text")
+    put("text", text)
+    putJsonObject("_meta") { put("openai/title", title) }
   }
+
+  /** A text block for the model only: `annotations.audience: ["assistant"]`. */
+  fun assistantText(text: String): JsonObject = buildJsonObject {
+    put("type", "text")
+    put("text", text)
+    putJsonObject("annotations") { putJsonArray("audience") { add("assistant") } }
+  }
+
+  internal fun encode(json: JsonObject): String =
+    compact.encodeToString(JsonObject.serializer(), json)
 
   /** One step from a root to the selected node: which slot of the parent, and where in it. */
   data class PathStep(

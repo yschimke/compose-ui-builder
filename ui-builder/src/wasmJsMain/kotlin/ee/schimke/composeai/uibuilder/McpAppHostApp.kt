@@ -2,42 +2,32 @@
 
 package ee.schimke.composeai.uibuilder
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
-import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.mcpapp.McpAppCatalogs
 import ee.schimke.composeai.uibuilder.mcpapp.McpAppDesignSession
 import ee.schimke.composeai.uibuilder.mcpapp.McpAppDesignState
+import ee.schimke.composeai.uibuilder.mcpapp.McpAppEditorScreen
 import ee.schimke.composeai.uibuilder.mcpapp.McpAppFile
 import ee.schimke.composeai.uibuilder.mcpapp.McpAppJsonRpcBridge
-import ee.schimke.composeai.uibuilder.mcpapp.McpAppNotice
+import ee.schimke.composeai.uibuilder.mcpapp.McpAppLayout
 import ee.schimke.composeai.uibuilder.mcpapp.McpAppTransport
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -86,6 +76,11 @@ internal fun McpAppHostApp() {
   // Bumped on every edit the editor reports, so autosave and model context debounce on it.
   var editTick by remember { mutableIntStateOf(0) }
   var selectedNodeId by remember { mutableStateOf<String?>(null) }
+  // The host's choice to start with (see McpAppLayout), then the person's, from the file bar.
+  var layout by remember { mutableStateOf(McpAppLayout.parse(mcpAppLayout())) }
+  LaunchedEffect(layout) { publishMcpAppLayout(layout.wireValue) }
+  // Whether the host takes `ui/message`: the node menu offers Comment only where it can be sent.
+  var hostTakesMessages by remember { mutableStateOf(false) }
   val catalogs = remember {
     McpAppCatalogs(
       fetchAsset = ::fetchMcpAppAsset,
@@ -113,6 +108,7 @@ internal fun McpAppHostApp() {
         failure = "This page is the UI Builder's MCP App and needs an MCP App host: ${it.message}"
         return@LaunchedEffect
       }
+    hostTakesMessages = host.messages
     if (!host.fileResources) {
       failure =
         "${host.name.ifBlank { "This host" }} does not offer file resources " +
@@ -165,141 +161,22 @@ internal fun McpAppHostApp() {
     return
   }
   val current = session ?: return
-  Column(Modifier.fillMaxSize()) {
-    McpAppFileBar(
-      state = state,
-      onSave = { scope.launch { current.save() } },
-      onReload = { scope.launch { current.reload() } },
-      onOverwrite = { scope.launch { current.overwrite() } },
-      onKeepMine = current::keepLocalChanges,
-      onDismiss = current::dismissNotice,
-    )
-    Box(Modifier.weight(1f).fillMaxWidth()) {
-      // A reload is a new design to the editor, as an `open` is to the host bridge: its undo
-      // history was made against the version that was replaced. A save is not a reload, so the
-      // history outlives every save.
-      key(state.generation) {
-        UiBuilderEditor(
-          document = document,
-          catalog = loadedCatalog,
-          sessionLabel = current.file.name,
-          onStateChanged = { editor ->
-            publishEditorState(editor)
-            if (current.edited(editor.document)) editTick++
-            selectedNodeId = editor.selectedNodeId
-          },
-          onHelp = { scope.launch { runCatching { bridge?.openLink(MCP_APP_GUIDE_URL) } } },
-        )
-        LaunchedEffect(Unit) { markReady() }
-      }
-    }
-  }
-}
-
-/** The file's name, whether it is saved, and the decisions a notice asks for. */
-@Composable
-private fun McpAppFileBar(
-  state: McpAppDesignState,
-  onSave: () -> Unit,
-  onReload: () -> Unit,
-  onOverwrite: () -> Unit,
-  onKeepMine: () -> Unit,
-  onDismiss: () -> Unit,
-) {
-  Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
-    Column {
-      Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-      ) {
-        Text(
-          state.file.name,
-          style = MaterialTheme.typography.titleSmall,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-          saveStatus(state),
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          modifier = Modifier.weight(1f),
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
-        if (state.writable) {
-          Button(onClick = onSave, enabled = state.dirty && !state.saving) { Text("Save") }
-        }
-      }
-      val notice = state.notice
-      if (notice != null) {
-        Row(
-          modifier =
-            Modifier.fillMaxWidth()
-              .background(noticeColor(notice))
-              .padding(horizontal = 12.dp, vertical = 2.dp),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-          Text(
-            noticeText(notice, state),
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF1D1B20),
-            modifier = Modifier.weight(1f),
-          )
-          when (notice) {
-            is McpAppNotice.Conflict -> {
-              TextButton(onClick = onReload) { Text("Reload theirs") }
-              TextButton(onClick = onOverwrite) { Text("Overwrite with mine") }
-            }
-            is McpAppNotice.ExternalChange -> {
-              TextButton(onClick = onReload) { Text("Reload") }
-              TextButton(onClick = onKeepMine) { Text("Keep mine") }
-            }
-            is McpAppNotice.TooLarge,
-            is McpAppNotice.Error -> TextButton(onClick = onDismiss) { Text("Dismiss") }
-            McpAppNotice.ReadOnly -> Unit
-          }
-        }
-      }
-    }
-  }
-}
-
-private fun saveStatus(state: McpAppDesignState): String = buildList {
-  add(
-    when {
-      !state.writable -> "Read-only"
-      state.saving -> "Saving…"
-      state.dirty -> "Unsaved changes"
-      else -> "Saved"
-    }
+  McpAppEditorScreen(
+    state = state,
+    session = current,
+    catalog = loadedCatalog,
+    layout = layout,
+    onLayoutChange = { layout = it },
+    commentsEnabled = hostTakesMessages,
+    onEditorState = { editor ->
+      publishEditorState(editor)
+      if (current.edited(editor.document)) editTick++
+      selectedNodeId = editor.selectedNodeId
+    },
+    onHelp = { scope.launch { runCatching { bridge?.openLink(MCP_APP_GUIDE_URL) } } },
+    onEditorShown = { markReady() },
   )
-  if (!state.live) add("not following external edits")
 }
-  .joinToString(" · ")
-
-private fun noticeText(notice: McpAppNotice, state: McpAppDesignState): String =
-  when (notice) {
-    McpAppNotice.ReadOnly ->
-      "Read-only: the host did not allow writing ${state.file.name}. Edits stay in this view and " +
-        "are not saved."
-    is McpAppNotice.Conflict ->
-      "${state.file.name} changed outside the editor since it was opened. Your edits are not saved."
-    is McpAppNotice.ExternalChange ->
-      "${state.file.name} changed outside the editor, and you have unsaved edits."
-    is McpAppNotice.TooLarge ->
-      "Not saved: the design is ${notice.bytes} bytes and the host accepts at most " +
-        "${notice.maxBytes}."
-    is McpAppNotice.Error -> notice.message
-  }
-
-private fun noticeColor(notice: McpAppNotice): Color =
-  when (notice) {
-    McpAppNotice.ReadOnly -> Color(0xFFE8DEF8)
-    is McpAppNotice.ExternalChange -> Color(0xFFFFF4D6)
-    else -> Color(0xFFFFDAD6)
-  }
 
 @Composable
 private fun McpAppMessage(message: String) {
@@ -427,6 +304,23 @@ internal external fun mcpAppEnabled(): Boolean
 
 @JsFun("() => String(globalThis.composeUiBuilderMcpApp?.version ?? 'dev')")
 private external fun mcpAppVersion(): String
+
+/**
+ * The shell's `layout`: `focused` or `full`, as compose-preview-server fills in
+ * `__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__` from its `uiBuilderMcpAppLayout` setting. A page URL's
+ * `?layout=` wins, for a person or a harness opening the shell by hand.
+ */
+@JsFun(
+  """() => {
+  const fromUrl = new URLSearchParams(globalThis.location?.search ?? '').get('layout');
+  return String(fromUrl ?? globalThis.composeUiBuilderMcpApp?.layout ?? '');
+}"""
+)
+private external fun mcpAppLayout(): String
+
+/** The layout on show, as `data-ui-builder-layout` on the page, for a harness to read. */
+@JsFun("(layout) => document.documentElement.setAttribute('data-ui-builder-layout', layout)")
+private external fun publishMcpAppLayout(layout: String)
 
 @JsFun("() => String(globalThis.composeUiBuilderMcpApp?.catalogBase ?? '')")
 private external fun mcpAppCatalogBase(): String

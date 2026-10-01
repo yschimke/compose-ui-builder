@@ -5,6 +5,8 @@ package ee.schimke.composeai.uibuilder.service
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.protocol.*
+import ee.schimke.composeai.uibuilder.replay.ReplayAnswer
+import ee.schimke.composeai.uibuilder.replay.replayCommandLog
 import java.io.Closeable
 import java.io.IOException
 import java.time.Clock
@@ -301,7 +303,11 @@ public class PersistentUiBuilderService(
    */
   private val iconOutlines: IconOutlineResolver?,
 ) :
-  UiBuilderServicePort, UiBuilderServiceDiagnosticsSource, UiBuilderAdminPort, UiBuilderAssetPort {
+  UiBuilderServicePort,
+  UiBuilderServiceDiagnosticsSource,
+  UiBuilderAdminPort,
+  UiBuilderAssetPort,
+  UiBuilderBranchPort {
 
   /**
    * The constructor this class published before it learned about icon outlines, defaults and all.
@@ -863,6 +869,11 @@ public class PersistentUiBuilderService(
     if (!design.allows(write.actor, DesignAccessActionV1.WRITE)) {
       return serviceError(forbidden("write", write.designId))
     }
+    if (design.branch != null) {
+      // An upload is a commit without an operation, so a branch log could not carry it and a merge
+      // would silently drop it. Refused rather than lost; see `UI_BUILDER_BRANCHES.md`.
+      return serviceError(ServiceErrorCodeV1.BAD_REQUEST, BRANCH_WHOLE_DOCUMENT_REFUSAL)
+    }
     if (!UiBuilderAssetKeys.isValid(write.assetKey)) {
       return serviceError(
         ServiceErrorCodeV1.BAD_REQUEST,
@@ -957,11 +968,13 @@ public class PersistentUiBuilderService(
         lastSequence = sequence,
         history = emptyList(),
         revisionSnapshots =
-          (design.revisionSnapshots + RevisionStateV1(document, sequence)).takeLast(retained),
-        positionSnapshots =
-          (design.positionSnapshots + PositionStateV1(revision, design.positions)).takeLast(
-            retained
+          (design.revisionSnapshots + RevisionStateV1(document, sequence)).retainedRevisions(
+            retained,
+            pinnedRevisions(write.designId),
           ),
+        positionSnapshots =
+          (design.positionSnapshots + PositionStateV1(revision, design.positions))
+            .retainedPositions(retained, pinnedRevisions(write.designId)),
         updatedAtEpochMillis = now,
         audit =
           (design.audit +
@@ -1324,6 +1337,9 @@ public class PersistentUiBuilderService(
     if (!design.allows(actor, DesignAccessActionV1.WRITE)) {
       return serviceError(forbidden("write", designId))
     }
+    if (design.branch != null) {
+      return serviceError(ServiceErrorCodeV1.BAD_REQUEST, BRANCH_WHOLE_DOCUMENT_REFUSAL)
+    }
     if (operationId.isBlank()) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "operation id is blank")
     }
@@ -1497,12 +1513,24 @@ public class PersistentUiBuilderService(
         // change. Cut only the catch-up log so a disconnected client before this sequence receives
         // a snapshot; undo records, conflict touches and tombstones are separate and survive moves.
         history = emptyList(),
+        // An open branch's fork revision keeps its document through a replacement, so the
+        // branch can still be compared with where it started; its POSITION state does not survive
+        // a content replacement, which cuts every older base exactly as it does for a live editor:
+        // a merge across one is refused with `REVISION_NOT_RETAINED` rather than replayed onto a
+        // document nobody's edits were authored against.
         revisionSnapshots =
-          (design.revisionSnapshots + RevisionStateV1(document, sequence)).takeLast(retained),
+          (design.revisionSnapshots + RevisionStateV1(document, sequence)).retainedRevisions(
+            retained,
+            pinnedRevisions(designId),
+          ),
         positions = positions,
         positionSnapshots =
           if (replacesContent) listOf(PositionStateV1(revision, positions))
-          else (design.positionSnapshots + PositionStateV1(revision, positions)).takeLast(retained),
+          else
+            (design.positionSnapshots + PositionStateV1(revision, positions)).retainedPositions(
+              retained,
+              pinnedRevisions(designId),
+            ),
         updatedAtEpochMillis = now,
         audit =
           (design.audit +
@@ -1815,6 +1843,9 @@ public class PersistentUiBuilderService(
         // Personally: a design that is readable only because it is public is not one of this
         // actor's designs, and listing it would list every public design to everyone.
         .filter { it.access.allowsPersonally(actor, DesignAccessActionV1.READ) }
+        // A branch is listed under its parent (`UiBuilderBranchRequest.ListBranches`), not beside
+        // it: five alternatives of one screen are one design being explored, not six designs.
+        .filter { it.branch == null }
         .forEach { add(it.document.id to { it.listItem(actor) }) }
       // A design the store could not read is listed too, when its quarantine knows who owns it:
       // a design the owner cannot see is one they cannot delete, and the file manager is where
@@ -2161,12 +2192,21 @@ public class PersistentUiBuilderService(
     access = access.copy(accessRevision = access.accessRevision + 1)
     val updated = design.copy(access = access, updatedAtEpochMillis = now)
     commitDesign(request.designId, updated)
+    // A branch's access IS its parent's: whoever may read or write the design may read or write
+    // the alternatives being explored for it, and somebody removed from it loses them too.
+    val branches =
+      persisted.designs.filterValues { it.branch?.parentDesignId == request.designId }.keys
+    branches.forEach { branchId ->
+      commitDesign(branchId, persisted.designs.getValue(branchId).copy(access = access))
+    }
 
     val closed = mutableListOf<SubscriberMailbox>()
-    runtime.getValue(request.designId).subscribers.entries.removeIf { (_, subscriber) ->
-      val revoke = !updated.allows(subscriber.actor, DesignAccessActionV1.READ)
-      if (revoke) closed += subscriber.mailbox
-      revoke
+    (listOf(request.designId) + branches).forEach { designId ->
+      runtime[designId]?.subscribers?.entries?.removeIf { (_, subscriber) ->
+        val revoke = !updated.allows(subscriber.actor, DesignAccessActionV1.READ)
+        if (revoke) closed += subscriber.mailbox
+        revoke
+      }
     }
     closed.forEach(SubscriberMailbox::close)
     return LockedExecution(UiBuilderServiceResponse.DesignAccess(request.designId, access))
@@ -2227,6 +2267,20 @@ public class PersistentUiBuilderService(
     }
     val wire = submission.toProtocol(actor)
     val fingerprint = canonicalJson(json.encodeToJsonElement<DesignSubmissionV1>(wire))
+    if (design.branch != null && submission.operationId !in design.operationOutcomes) {
+      design.branchWriteRefusal(design.branch, submission)?.let { message ->
+        return LockedExecution(
+          UiBuilderServiceResponse.OperationOutcome(
+            rejected(
+              submission.operationId,
+              design.document.revision,
+              RejectionCodeV1.INVALID_COMMAND,
+              message,
+            )
+          )
+        )
+      }
+    }
     design.operationOutcomes[submission.operationId]?.let { prior ->
       if (prior.fingerprint != fingerprint) {
         return LockedExecution(
@@ -2263,48 +2317,16 @@ public class PersistentUiBuilderService(
         )
       )
     }
-    val reduction = reduce(design, actor, wire)
-    if (reduction.outcome is AcceptedOutcomeV1) {
-      documentQuotaIssue(reduction.design.document, countRejection = true)?.let {
-        return LockedExecution(
-          UiBuilderServiceResponse.OperationOutcome(
-            rejected(
-              submission.operationId,
-              design.document.revision,
-              RejectionCodeV1.INVALID_COMMAND,
-              it,
-            )
-          )
-        )
+    val reduction =
+      when (val reduced = reduceAndRecord(design, actor, wire, fingerprint)) {
+        is Reduced.Unrecorded ->
+          return LockedExecution(UiBuilderServiceResponse.OperationOutcome(reduced.outcome))
+        is Reduced.Recorded -> reduced
       }
-    }
-    val outcomes =
-      (reduction.design.operationOutcomes +
-          (submission.operationId to OperationOutcomeRecordV1(fingerprint, reduction.outcome)))
-        .entries
-        .toList()
-        .takeLast(limits.retainedOperationOutcomes)
-        .associate { it.toPair() }
     val recorded =
-      reduction.design.copy(
-        operationOutcomes = outcomes,
-        // Two bounds, and the byte one is the load-bearing half: keeping `acceptedOperations` a
-        // subset of the retained outcomes preserves the invariant those two have always had, and
-        // the budget is what stops one design's undo records from being most of the store.
-        acceptedOperations =
-          reduction.design.acceptedOperations
-            .filterKeys { it in outcomes.keys }
-            .retainNewestWithinBytes(
-              limits.retainedUndoBytes,
-              limits.minimumRetainedUndoOperations,
-              AcceptedOperationRecordV1::targetOperationId,
-            ),
-        tombstones =
-          reduction.design.tombstones.retainNewestWithinBytes(
-            limits.retainedUndoBytes,
-            limits.minimumRetainedUndoOperations,
-          ),
-      )
+      if (design.branch != null && reduction.outcome is AcceptedOutcomeV1)
+        reduction.design.copy(branchLog = reduction.design.branchLog + wire)
+      else reduction.design
     commitDesign(submission.designId, recorded)
     if (reduction.outcome !is AcceptedOutcomeV1) {
       return LockedExecution(UiBuilderServiceResponse.OperationOutcome(reduction.outcome))
@@ -2330,6 +2352,516 @@ public class PersistentUiBuilderService(
       UiBuilderServiceResponse.OperationOutcome(reduction.outcome),
       mailboxes,
     )
+  }
+
+  /** What [reduceAndRecord] produced: a design to commit, or an answer that records nothing. */
+  private sealed interface Reduced {
+    data class Recorded(val design: PersistedDesignV1, val outcome: CommandOutcomeV1) : Reduced
+
+    data class Unrecorded(val outcome: RejectedOutcomeV1) : Reduced
+  }
+
+  /**
+   * One submission through the reducer, with its outcome recorded against [fingerprint] and the
+   * undo and tombstone budgets applied — everything [apply] does short of committing and
+   * broadcasting. Shared with the branch merge, which runs it over a working copy of the parent and
+   * commits only when the whole replay landed.
+   */
+  private fun reduceAndRecord(
+    design: PersistedDesignV1,
+    actor: AuthenticatedUiBuilderActor,
+    wire: DesignSubmissionV1,
+    fingerprint: String,
+  ): Reduced {
+    val operationId = wire.operationId()
+    val reduction = reduce(design, actor, wire)
+    if (reduction.outcome is AcceptedOutcomeV1) {
+      documentQuotaIssue(reduction.design.document, countRejection = true)?.let {
+        return Reduced.Unrecorded(
+          rejected(operationId, design.document.revision, RejectionCodeV1.INVALID_COMMAND, it)
+        )
+      }
+    }
+    val outcomes =
+      (reduction.design.operationOutcomes +
+          (operationId to OperationOutcomeRecordV1(fingerprint, reduction.outcome)))
+        .entries
+        .toList()
+        .takeLast(limits.retainedOperationOutcomes)
+        .associate { it.toPair() }
+    val recorded =
+      reduction.design.copy(
+        operationOutcomes = outcomes,
+        // Two bounds, and the byte one is the load-bearing half: keeping `acceptedOperations` a
+        // subset of the retained outcomes preserves the invariant those two have always had, and
+        // the budget is what stops one design's undo records from being most of the store.
+        acceptedOperations =
+          reduction.design.acceptedOperations
+            .filterKeys { it in outcomes.keys }
+            .retainNewestWithinBytes(
+              limits.retainedUndoBytes,
+              limits.minimumRetainedUndoOperations,
+              AcceptedOperationRecordV1::targetOperationId,
+            ),
+        tombstones =
+          reduction.design.tombstones.retainNewestWithinBytes(
+            limits.retainedUndoBytes,
+            limits.minimumRetainedUndoOperations,
+          ),
+      )
+    return Reduced.Recorded(recorded, reduction.outcome)
+  }
+
+  // ------------------------------------------------------------------------------------ branches
+
+  private data class BranchExecution(
+    val response: UiBuilderBranchResponse,
+    val mailboxes: List<SubscriberMailbox> = emptyList(),
+  )
+
+  private fun branchError(error: UiBuilderServiceError): BranchExecution =
+    BranchExecution(UiBuilderBranchResponse.Error(error))
+
+  private fun branchError(code: ServiceErrorCodeV1, message: String): BranchExecution =
+    branchError(UiBuilderServiceError(code, message))
+
+  /**
+   * The revisions of [designId] an open branch forked at. Retention keeps them however far the
+   * design moves on; archiving or merging the branch releases the pin at the next commit.
+   *
+   * Derived from the branch records rather than stored on the parent, so the two can never
+   * disagree: a crash between writing a branch and writing its parent is not a state that exists.
+   */
+  private fun pinnedRevisions(designId: String): Set<Long> =
+    persisted.designs.values.mapNotNullTo(mutableSetOf()) { design ->
+      design.branch
+        ?.takeIf { it.parentDesignId == designId && it.status == DesignBranchStatusV1.OPEN }
+        ?.forkRevision
+    }
+
+  override suspend fun executeBranch(call: UiBuilderBranchCall): UiBuilderBranchResponse {
+    val named =
+      when (val request = call.request) {
+        is UiBuilderBranchRequest.CreateBranch -> request.designId
+        is UiBuilderBranchRequest.ListBranches -> request.designId
+        is UiBuilderBranchRequest.GetBranch -> request.branchId
+        is UiBuilderBranchRequest.ArchiveBranch -> request.branchId
+        is UiBuilderBranchRequest.MergeBranch -> request.branchId
+      }
+    unusableDesigns[named]?.let {
+      return UiBuilderBranchResponse.Error(UiBuilderServiceError(it.code, it.reason))
+    }
+    val execution = lock.withLock {
+      when (val request = call.request) {
+        is UiBuilderBranchRequest.CreateBranch -> createBranch(call.actor, request)
+        is UiBuilderBranchRequest.ListBranches -> listBranches(call.actor, request)
+        is UiBuilderBranchRequest.GetBranch -> getBranch(call.actor, request.branchId)
+        is UiBuilderBranchRequest.ArchiveBranch -> archiveBranch(call.actor, request.branchId)
+        is UiBuilderBranchRequest.MergeBranch -> mergeBranch(call.actor, request)
+      }
+    }
+    drain(execution.mailboxes)
+    return execution.response
+  }
+
+  /** See [UiBuilderBranchRequest.CreateBranch]. */
+  private fun createBranch(
+    actor: AuthenticatedUiBuilderActor,
+    request: UiBuilderBranchRequest.CreateBranch,
+  ): BranchExecution {
+    val parent =
+      persisted.designs[request.designId] ?: return branchError(notFound(request.designId))
+    if (!parent.allows(actor, DesignAccessActionV1.READ)) {
+      return branchError(notFound(request.designId))
+    }
+    if (!parent.allows(actor, DesignAccessActionV1.WRITE)) {
+      return branchError(forbidden("branch", request.designId))
+    }
+    if (parent.branch != null) {
+      return branchError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "design ${request.designId} is itself a branch; branch ${parent.branch.parentDesignId} " +
+          "instead",
+      )
+    }
+    val name = request.name.trim()
+    if (name.isEmpty() || name.length > MAXIMUM_BRANCH_NAME_LENGTH) {
+      return branchError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "a branch name is 1 to $MAXIMUM_BRANCH_NAME_LENGTH characters",
+      )
+    }
+    val revision = request.revision ?: parent.document.revision
+    val forkDocument =
+      if (revision == parent.document.revision) parent.document
+      else parent.revisionSnapshots.firstOrNull { it.document.revision == revision }?.document
+    // The parent's position state at the fork is what the merge's first command is reduced
+    // against, so a revision without it cannot be branched from — however much of its document
+    // survives.
+    val forkPositions = parent.positionSnapshots.firstOrNull { it.revision == revision }?.positions
+    if (forkDocument == null || forkPositions == null) {
+      return branchError(
+        UiBuilderServiceError(
+          code = ServiceErrorCodeV1.SNAPSHOT_REQUIRED,
+          message = "revision $revision of ${request.designId} is not retained to branch from",
+          currentRevision = parent.document.revision,
+          retainedFromSequence = parent.retainedSnapshotFromSequence(),
+        )
+      )
+    }
+    val branchId = request.branchId?.trim() ?: mintBranchId(request.designId)
+    if (branchId.isEmpty()) {
+      return branchError(ServiceErrorCodeV1.BAD_REQUEST, "branch id is blank")
+    }
+    persisted.designs[branchId]?.let { existing ->
+      val existingBranch = existing.branch
+      // A retried create: the same branch, asked for again by somebody who may see it.
+      if (
+        existingBranch != null &&
+          existingBranch.parentDesignId == request.designId &&
+          existingBranch.forkRevision == revision &&
+          existingBranch.name == name &&
+          existing.allows(actor, DesignAccessActionV1.READ)
+      ) {
+        return BranchExecution(UiBuilderBranchResponse.Branch(existing.branchView()))
+      }
+      return branchError(ServiceErrorCodeV1.BAD_REQUEST, "design id $branchId already exists")
+    }
+    if (persisted.designs.size >= limits.maximumDesigns) {
+      return branchError(ServiceErrorCodeV1.BAD_REQUEST, "design limit reached")
+    }
+    if (store.quarantineHolding(branchId) != null || branchId in unusableDesigns) {
+      return branchError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "design $branchId is quarantined and must be retired before the id is reused",
+      )
+    }
+    val now = clock.millis()
+    // The fork's document under the branch's own id, at the fork's own revision: the branch's
+    // revisions continue the parent's numbering from the fork, so "revision 7 of the branch" is
+    // read as "the fork at 5, and two edits". No home: a branch lives only on this service, and its
+    // way back to the parent's home is the merge.
+    val document =
+      forkDocument.copy(
+        id = branchId,
+        home = null,
+        createdAtEpochMillis = now,
+        updatedAtEpochMillis = now,
+      )
+    val design =
+      PersistedDesignV1(
+        document = document,
+        lastSequence = 0,
+        // Inherited, and kept in step by `updateAccess`: see `UI_BUILDER_BRANCHES.md`.
+        access = parent.access,
+        revisionSnapshots = listOf(RevisionStateV1(document, 0)),
+        positions = forkPositions,
+        positionSnapshots = listOf(PositionStateV1(revision, forkPositions)),
+        createdAtEpochMillis = now,
+        updatedAtEpochMillis = now,
+        branch =
+          DesignBranchRecordV1(
+            parentDesignId = request.designId,
+            name = name,
+            ownerActorId = canonicalActorId(actor.onBehalfOfActorId ?: actor.actorId),
+            status = DesignBranchStatusV1.OPEN,
+            forkRevision = revision,
+            forkDocumentHash = documentHash(forkDocument),
+            parentCreatedAtEpochMillis = parent.createdAtEpochMillis,
+            createdAtEpochMillis = now,
+          ),
+      )
+    commitDesign(branchId, design)
+    runtime[branchId] = RuntimeDesign()
+    return BranchExecution(UiBuilderBranchResponse.Branch(design.branchView()))
+  }
+
+  private fun mintBranchId(parentDesignId: String): String {
+    while (true) {
+      val candidate =
+        "$parentDesignId-branch-" + java.util.UUID.randomUUID().toString().replace("-", "").take(12)
+      if (candidate !in persisted.designs && store.quarantineHolding(candidate) == null) {
+        return candidate
+      }
+    }
+  }
+
+  /** See [UiBuilderBranchRequest.ListBranches]. */
+  private fun listBranches(
+    actor: AuthenticatedUiBuilderActor,
+    request: UiBuilderBranchRequest.ListBranches,
+  ): BranchExecution {
+    val parent =
+      persisted.designs[request.designId] ?: return branchError(notFound(request.designId))
+    if (!parent.allows(actor, DesignAccessActionV1.READ)) {
+      return branchError(notFound(request.designId))
+    }
+    val branches =
+      persisted.designs.values
+        .filter { it.branch?.parentDesignId == request.designId }
+        .filter { request.includeClosed || it.branch?.status == DesignBranchStatusV1.OPEN }
+        .sortedWith(
+          compareByDescending<PersistedDesignV1> { it.branch?.createdAtEpochMillis }
+            .thenBy { it.document.id }
+        )
+        .map { it.branchView() }
+    return BranchExecution(UiBuilderBranchResponse.Branches(request.designId, branches))
+  }
+
+  /** See [UiBuilderBranchRequest.GetBranch]. */
+  private fun getBranch(actor: AuthenticatedUiBuilderActor, branchId: String): BranchExecution {
+    val design = persisted.designs[branchId]
+    if (design?.branch == null || !design.allows(actor, DesignAccessActionV1.READ)) {
+      return branchError(ServiceErrorCodeV1.NOT_FOUND, "branch $branchId was not found")
+    }
+    return BranchExecution(UiBuilderBranchResponse.Branch(design.branchView()))
+  }
+
+  /** See [UiBuilderBranchRequest.ArchiveBranch]. */
+  private fun archiveBranch(actor: AuthenticatedUiBuilderActor, branchId: String): BranchExecution {
+    val design = persisted.designs[branchId]
+    val record = design?.branch
+    if (design == null || record == null || !design.allows(actor, DesignAccessActionV1.READ)) {
+      return branchError(ServiceErrorCodeV1.NOT_FOUND, "branch $branchId was not found")
+    }
+    val ownsBranch = actor.accessIdentities.any { sameActor(it, record.ownerActorId) }
+    if (!ownsBranch && !design.allows(actor, DesignAccessActionV1.WRITE)) {
+      return branchError(forbidden("archive", branchId))
+    }
+    when (record.status) {
+      DesignBranchStatusV1.ARCHIVED ->
+        return BranchExecution(UiBuilderBranchResponse.Branch(design.branchView()))
+      DesignBranchStatusV1.MERGED ->
+        return branchError(ServiceErrorCodeV1.BAD_REQUEST, "branch $branchId is already merged")
+      DesignBranchStatusV1.OPEN -> Unit
+    }
+    val now = clock.millis()
+    val archived =
+      design.copy(
+        branch =
+          record.copy(
+            status = DesignBranchStatusV1.ARCHIVED,
+            closedAtEpochMillis = now,
+            closedByActorId = actor.actorId,
+          )
+      )
+    commitDesign(branchId, archived)
+    return BranchExecution(UiBuilderBranchResponse.Branch(archived.branchView()))
+  }
+
+  /**
+   * See [UiBuilderBranchRequest.MergeBranch].
+   *
+   * The replay is [replayCommandLog], the same loop the browser's Sync runs, driven here through
+   * [reduceAndRecord] over a working copy of the parent. Nothing is committed until the whole log
+   * has landed, so a refusal leaves the parent, the branch and every sibling exactly as they were —
+   * which is also all a dry run is.
+   */
+  private fun mergeBranch(
+    actor: AuthenticatedUiBuilderActor,
+    request: UiBuilderBranchRequest.MergeBranch,
+  ): BranchExecution {
+    val branchDesign = persisted.designs[request.branchId]
+    val record = branchDesign?.branch
+    if (
+      branchDesign == null ||
+        record == null ||
+        !branchDesign.allows(actor, DesignAccessActionV1.READ)
+    ) {
+      return branchError(ServiceErrorCodeV1.NOT_FOUND, "branch ${request.branchId} was not found")
+    }
+    val parentId = record.parentDesignId
+    unusableDesigns[parentId]?.let {
+      return branchError(UiBuilderServiceError(it.code, it.reason))
+    }
+    val parent = persisted.designs[parentId]
+    if (parent == null || parent.createdAtEpochMillis != record.parentCreatedAtEpochMillis) {
+      return branchError(
+        ServiceErrorCodeV1.NOT_FOUND,
+        "design $parentId, which branch ${request.branchId} forked from, no longer exists",
+      )
+    }
+    if (!parent.allows(actor, DesignAccessActionV1.WRITE)) {
+      return branchError(forbidden("merge into", parentId))
+    }
+    if (record.status != DesignBranchStatusV1.OPEN) {
+      return branchError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "branch ${request.branchId} is ${record.status.name.lowercase()}",
+      )
+    }
+    if (!request.dryRun && !admitMutation(actor.actorId, parentId, 1)) {
+      rejectedMutationRate.incrementAndGet()
+      return branchError(
+        UiBuilderServiceError(
+          ServiceErrorCodeV1.BAD_REQUEST,
+          "mutation rate limit exceeded",
+          retryable = true,
+        )
+      )
+    }
+
+    val loggedIds = branchDesign.branchLog.map { it.operationId() }
+    (request.skipOperationIds - loggedIds.toSet()).firstOrNull()?.let { unknown ->
+      return branchError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "operation $unknown is not in branch ${request.branchId}'s log",
+      )
+    }
+    val log = branchDesign.branchLog.filter { it.operationId() !in request.skipOperationIds }
+
+    var working: PersistedDesignV1 = parent
+    val committed = mutableListOf<CommittedOperationV1>()
+    val authors = branchDesign.branchLog.associate { it.operationId() to it.actorId() }
+    val replay =
+      replayCommandLog(record.forkRevision, log) { command, base ->
+        val rebased = command.rebasedOnto(parentId, base)
+        val operationId = rebased.operationId()
+        if (operationId in working.operationOutcomes) {
+          return@replayCommandLog ReplayAnswer.Refused(
+            operationId,
+            RejectionCodeV1.OPERATION_ID_REUSED.name,
+            "operation id $operationId is already in $parentId's history",
+          )
+        }
+        val fingerprint = canonicalJson(json.encodeToJsonElement<DesignSubmissionV1>(rebased))
+        // Attributed to whoever authored it on the branch, not to the merging actor: undo is
+        // per-author (`ACTOR_MISMATCH`), so this is what lets that author undo their own work after
+        // it lands, and what makes a conflict notice name the right person. The merging actor is
+        // recorded on the branch record. These ids come from the branch's own log, which only
+        // this service wrote — never from a request.
+        val author = AuthenticatedUiBuilderActor(rebased.actorId())
+        when (val reduced = reduceAndRecord(working, author, rebased, fingerprint)) {
+          is Reduced.Unrecorded -> ReplayAnswer.of(reduced.outcome)
+          is Reduced.Recorded -> {
+            val outcome = reduced.outcome
+            if (outcome is AcceptedOutcomeV1) {
+              working = reduced.design
+              committed += CommittedOperationV1(rebased, outcome)
+            }
+            ReplayAnswer.of(outcome)
+          }
+        }
+      }
+
+    val merged = replay.complete
+    val siblings =
+      if (!merged) emptyList()
+      else
+        persisted.designs.values
+          .filter { design ->
+            val sibling = design.branch
+            design.document.id != request.branchId &&
+              sibling != null &&
+              sibling.parentDesignId == parentId &&
+              sibling.forkRevision == record.forkRevision &&
+              sibling.status == DesignBranchStatusV1.OPEN
+          }
+          .map { it.document.id }
+          .sorted()
+    val commands =
+      replay.landed.map { landed ->
+        UiBuilderBranchMergeCommand(
+          operationId = landed.operationId,
+          actorId = authors[landed.operationId].orEmpty(),
+          status = UiBuilderBranchMergeCommandStatus.APPLIED,
+          baseRevision = landed.baseRevision,
+          committedRevision = landed.committedRevision,
+          conflicts = landed.conflicts,
+        )
+      } +
+        listOfNotNull(
+          replay.stop?.let { stop ->
+            UiBuilderBranchMergeCommand(
+              operationId = stop.operationId,
+              actorId = authors[stop.operationId].orEmpty(),
+              status = UiBuilderBranchMergeCommandStatus.REFUSED,
+              baseRevision = stop.baseRevision,
+              code = stop.code,
+              message = stop.message,
+              nodeId = stop.nodeId,
+              field = stop.field,
+            )
+          }
+        )
+    val report =
+      UiBuilderBranchMergeReport(
+        branchId = request.branchId,
+        parentDesignId = parentId,
+        dryRun = request.dryRun,
+        merged = merged,
+        forkRevision = record.forkRevision,
+        parentRevisionBefore = parent.document.revision,
+        parentRevisionAfter = if (merged) working.document.revision else parent.document.revision,
+        commands = commands,
+        remaining = replay.stop?.remaining ?: 0,
+        archivedSiblingIds = siblings,
+        skippedOperationIds = loggedIds.filter { it in request.skipOperationIds },
+      )
+    if (!merged || request.dryRun) {
+      return BranchExecution(UiBuilderBranchResponse.Merge(report))
+    }
+
+    val now = clock.millis()
+    commitDesign(parentId, working)
+    commitDesign(
+      request.branchId,
+      branchDesign.copy(
+        branch =
+          record.copy(
+            status = DesignBranchStatusV1.MERGED,
+            closedAtEpochMillis = now,
+            closedByActorId = actor.actorId,
+            mergedAtParentRevision = working.document.revision,
+          )
+      ),
+    )
+    siblings.forEach { siblingId ->
+      val sibling = persisted.designs.getValue(siblingId)
+      commitDesign(
+        siblingId,
+        sibling.copy(
+          branch =
+            requireNotNull(sibling.branch)
+              .copy(
+                status = DesignBranchStatusV1.ARCHIVED,
+                closedAtEpochMillis = now,
+                closedByActorId = actor.actorId,
+                supersededByBranchId = request.branchId,
+              )
+        ),
+      )
+    }
+    val mailboxes =
+      when {
+        committed.isEmpty() -> emptyList()
+        committed.size <= limits.retainedCommittedOperations ->
+          enqueue(
+            parentId,
+            UiBuilderServiceUpdate.Delta(
+              ServiceDeltaV1(
+                designId = parentId,
+                afterSequence = parent.lastSequence,
+                throughSequence = working.lastSequence,
+                currentRevision = working.document.revision,
+                retainedFromSequence = working.retainedFromSequence(),
+                operations = committed,
+              )
+            ),
+            working,
+          )
+        else ->
+          catalogs.resolve(working.document.catalogPin)?.let { catalog ->
+            enqueue(
+              parentId,
+              UiBuilderServiceUpdate.Snapshot(
+                snapshot(working, actor, catalog, activePresence(parentId)).copy(access = null)
+              ),
+              working,
+            )
+          } ?: emptyList()
+      }
+    return BranchExecution(UiBuilderBranchResponse.Merge(report), mailboxes)
   }
 
   private fun admitMutation(actorId: String, designId: String, cost: Int): Boolean {
@@ -3178,8 +3710,14 @@ public class PersistentUiBuilderService(
     }
     val committed = CommittedOperationV1(submission, outcome)
     val history = (design.history + committed).takeLast(limits.retainedCommittedOperations)
+    // An open branch's fork point is pinned: it stays retained however far the design moves on, so
+    // the merge that replays from it is never refused for the age of its base alone.
+    val pinned = pinnedRevisions(design.document.id)
     val snapshots =
-      (design.revisionSnapshots + RevisionStateV1(document, sequence)).takeLast(retained)
+      (design.revisionSnapshots + RevisionStateV1(document, sequence)).retainedRevisions(
+        retained,
+        pinned,
+      )
     val audit =
       (design.audit +
           AuditRecordV1(
@@ -3194,7 +3732,10 @@ public class PersistentUiBuilderService(
           ))
         .takeLast(limits.retainedAuditRecords)
     val positionSnapshots =
-      (design.positionSnapshots + PositionStateV1(revision, working.positions)).takeLast(retained)
+      (design.positionSnapshots + PositionStateV1(revision, working.positions)).retainedPositions(
+        retained,
+        pinned,
+      )
     val updated =
       design.copy(
         document = document,

@@ -89,6 +89,8 @@ import ee.schimke.composeai.uibuilder.inspector.UiBuilderPageDestination
 import ee.schimke.composeai.uibuilder.nativeOnlyComponentIds
 import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
+import ee.schimke.composeai.uibuilder.reference.NodeCapture
+import ee.schimke.composeai.uibuilder.reference.NodeCaptureRequest
 import ee.schimke.composeai.uibuilder.reference.ReferenceCaptureRequest
 import ee.schimke.composeai.uibuilder.reference.ReferenceComponentCapture
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
@@ -635,6 +637,17 @@ fun UiBuilderEditor(
    * isolated renderer; all editor overlays remain siblings in [PinnedDesignCanvas].
    */
   canvasRenderer: UiBuilderCanvasRenderer? = null,
+  /**
+   * Takes a comment about one node to the conversation this editor sits in, or null where there is
+   * none.
+   *
+   * A chat host (the MCP App in ChatGPT or Codex desktop) supplies it, and the node's menu then
+   * offers **Comment**: a small field beside the node, whose text arrives here with the node's id
+   * and, where it could be drawn, a picture of the node. Never called with blank text. Null
+   * everywhere else, where the menu has no such row — the design's own discussion is the Comments
+   * dock's, through [onPostComment].
+   */
+  onCommentOnNode: ((UiBuilderNodeComment) -> Unit)? = null,
 ) {
   require(availablePanes.isNotEmpty()) { "a UI Builder workspace must expose at least one pane" }
   val reducer =
@@ -760,6 +773,17 @@ fun UiBuilderEditor(
   // The node whose text is being typed over on the canvas, and what it said when that started.
   var inlineTextEdit by remember(document.id) { mutableStateOf<CanvasInlineTextEdit?>(null) }
   var textInputFocused by remember { mutableStateOf(false) }
+  // The canvas and nothing else around it: see [UiBuilderWorkspace.FocusedCanvas].
+  val focusedCanvas = chrome.workspace == UiBuilderWorkspace.FocusedCanvas
+  // The node the Comment field is open beside, and the comment on its way to the host while the
+  // node is photographed for it.
+  var commentNodeId by remember(document.id) { mutableStateOf<String?>(null) }
+  var pendingComment by
+    remember(document.id) { mutableStateOf<Pair<NodeCaptureRequest, String>?>(null) }
+  var commentSequence by remember(document.id) { mutableStateOf(0) }
+  LaunchedEffect(state.selectedNodeId) {
+    if (commentNodeId != state.selectedNodeId) commentNodeId = null
+  }
   // Opened where the URL asked for a panel, on a narrow viewport as much as a wide one. The
   // compact layout draws its docks from this rather than from [inspectorOpen], so initialising only
   // that flag left `?node=` and `#thread=` selecting silently on a phone: the state was right and
@@ -1095,18 +1119,31 @@ fun UiBuilderEditor(
       canOfferMakeComponent = state.selection.size == 1,
       makeComponentRefusal =
         if (state.selection.size == 1) reducer.makeComponentRefusal(state) else null,
-      onOpenProperties = {
-        focusEditor()
-        if (state.codePaneVisible) dispatch(UiBuilderEditorEvent.ToggleCodePane)
-        dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Properties))
-        inspectorOpen = true
-        mobilePanel = MobileEditorPanel.Properties
-      },
+      // The focused canvas has no inspector to open; its quick editor is the way to a property.
+      onOpenProperties =
+        if (focusedCanvas) null
+        else {
+          {
+            focusEditor()
+            if (state.codePaneVisible) dispatch(UiBuilderEditorEvent.ToggleCodePane)
+            dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Properties))
+            inspectorOpen = true
+            mobilePanel = MobileEditorPanel.Properties
+          }
+        },
       onQuickEdit =
         if (state.selection.size == 1) {
           {
             focusEditor()
+            commentNodeId = null
             dispatch(UiBuilderEditorEvent.ShowQuickEditor)
+          }
+        } else null,
+      onComment =
+        if (onCommentOnNode != null && state.selection.size == 1) {
+          {
+            dispatch(UiBuilderEditorEvent.HideQuickEditor)
+            commentNodeId = state.selectedNodeId
           }
         } else null,
       // The link names the *anchor* rather than the whole selection: a URL selects one node, and
@@ -1464,7 +1501,12 @@ fun UiBuilderEditor(
         onInspectionInvalidated = onInspectionInvalidated,
         canvasRenderer = canvasRenderer,
         selectionMenu = selectionMenu,
-        onHoverEditorDismiss = { dispatch(UiBuilderEditorEvent.HideQuickEditor) },
+        onHoverEditorDismiss = {
+          commentNodeId = null
+          dispatch(UiBuilderEditorEvent.HideQuickEditor)
+        },
+        // The Comment field is only for typing, so it takes the keys; the quick editor does not.
+        hoverEditorFocusable = commentNodeId != null && commentNodeId == state.selectedNodeId,
         // Double-click a label to type over it where it is. Anything without free text of its own
         // keeps what the click already did: select it.
         onNodeDoubleClicked = { nodeId ->
@@ -1486,7 +1528,34 @@ fun UiBuilderEditor(
         },
         onTextInputFocusChanged = { textInputFocused = it },
         hoverEditor =
-          if (state.selection.size != 1 || !state.quickEditorOpen) null
+          if (
+            state.selection.size == 1 &&
+              commentNodeId != null &&
+              commentNodeId == state.selectedNodeId &&
+              onCommentOnNode != null
+          ) {
+            { dragHandle ->
+              NodeCommentCard(
+                label = selectionLabel,
+                dragHandle = dragHandle,
+                onSend = { text ->
+                  val nodeId = commentNodeId
+                  commentNodeId = null
+                  textInputFocused = false
+                  if (nodeId != null) {
+                    pendingComment = NodeCaptureRequest(nodeId, ++commentSequence) to text
+                  }
+                  focusEditor()
+                },
+                onDismiss = {
+                  commentNodeId = null
+                  textInputFocused = false
+                  focusEditor()
+                },
+                onTextInputFocusChanged = { textInputFocused = it },
+              )
+            }
+          } else if (state.selection.size != 1 || !state.quickEditorOpen) null
           else {
             { dragHandle ->
               SelectionHoverEditor(
@@ -2019,12 +2088,26 @@ fun UiBuilderEditor(
       },
     )
 
+    // The node a sent comment is about, photographed for the host and then handed over with the
+    // comment. A failed photograph still sends the comment: the words are the message.
+    NodeCapture(
+      request = pendingComment?.first,
+      document = state.document,
+      onCaptured = { request, image ->
+        val comment = pendingComment
+        if (comment != null && comment.first == request) {
+          pendingComment = null
+          onCommentOnNode?.invoke(UiBuilderNodeComment(request.nodeId, comment.second, image))
+        }
+      },
+    )
+
     EditorTheme(theme) {
       BoxWithConstraints(Modifier.fillMaxSize()) {
         // A host drawing the toolbar and rails has taken the width they cost, and its panes are
         // resized by the person rather than by a phone, so it keeps the desktop layout.
-        val compact = maxWidth < 840.dp && hostChrome == null
-        SideEffect { canvasIsOnlySurface = compact }
+        val compact = !focusedCanvas && maxWidth < 840.dp && hostChrome == null
+        SideEffect { canvasIsOnlySurface = compact || focusedCanvas }
         // A host may put rendered output in its own view (for example IntelliJ's Preview tool
         // window). That surface owns no editor chrome: toolbars, navigator, inspector and status
         // stay with the visual editor instead of being duplicated around a read-only render.
@@ -2043,7 +2126,9 @@ fun UiBuilderEditor(
               )
             }
         ) {
-          if (!dedicatedOutput && hostChrome != null) {
+          if (focusedCanvas) {
+            // No toolbar: the host's own bar above the editor is the focused layout's chrome.
+          } else if (!dedicatedOutput && hostChrome != null) {
             HostChromeToolbar(
               chrome = hostChrome,
               state = state,
@@ -2154,6 +2239,15 @@ fun UiBuilderEditor(
                   nativePane(Modifier.weight(1f).fillMaxHeight())
                 }
               }
+            } else if (focusedCanvas) {
+              // The canvas with the whole panel: no rails, docks, panes or status bar. Selection,
+              // the node menu, the quick editor and inline text are all drawn by the canvas itself.
+              canvas(
+                Modifier.fillMaxSize()
+                  .background(LocalUiBuilderEditorPalette.current.workspace)
+                  .padding(12.dp),
+                Alignment.Center,
+              )
             } else if (!compact) {
               // Which dock is showing, derived rather than stored: the code pane and the inspector
               // are one slot, and two flags that could both say yes is a layout bug waiting.

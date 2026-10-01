@@ -22,5 +22,6 @@ compilations. Release provenance must therefore record the published archive's c
 The archive also carries `mcp-app/ui-builder-mcp-app.html`, the shell a server serves as a
 `text/html;profile=mcp-app` resource so ChatGPT/Codex desktop can open `.uid` files in this editor
 (an OpenAI file-extension entrypoint). It loads everything else from the unpacked archive at an
-origin the server names; `ui-builder-web.json`'s `mcpApp` is that contract's version. See
+origin the server names, and opens on the focused canvas or the full editor as the server's layout
+value says; `ui-builder-web.json`'s `mcpApp` is that contract's version. See
 [`UI_BUILDER_MCP_APP_HOST.md`](../docs/design/UI_BUILDER_MCP_APP_HOST.md).

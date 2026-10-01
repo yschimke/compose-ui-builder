@@ -1334,6 +1334,20 @@ credential arrived on. The host repository's
 carries the whole surface and explains why this is one endpoint rather than the sidecar the product
 spec planned.
 
+### In ChatGPT or Codex desktop
+
+Opening a `.uid` file in ChatGPT or Codex desktop shows the editor as an MCP App in the panel
+beside the chat. It opens on the **focused canvas**: the design alone, with the file's name and
+saved state above it and **Full editor** to switch to the whole editor (and back) without losing
+anything. Right-click a node for **Quick edit**, one property beside the node, or **Comment**,
+which posts what you write to the conversation together with which node you meant. Bigger changes
+are better asked of the agent.
+
+**For the agent:** after you change a design, render its device previews in the chat with
+`render_preview` or `render_matrix` rather than in the editor panel. The panel is for pointing at
+the design; the chat is where the result should be seen. How the host side works is
+[`design/UI_BUILDER_MCP_APP_HOST.md`](design/UI_BUILDER_MCP_APP_HOST.md).
+
 ### OpenCode
 
 The **Copy OpenCode AI prompt** button in a live design copies the current design URL, this host's

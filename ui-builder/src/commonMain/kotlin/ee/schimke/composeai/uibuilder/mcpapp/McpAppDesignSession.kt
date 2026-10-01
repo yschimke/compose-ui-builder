@@ -182,6 +182,29 @@ class McpAppDesignSession(
     runCatching { bridge.updateModelContext(context) }
   }
 
+  /**
+   * A comment on [nodeId], from the node's menu: the model context first — the node's picture and
+   * detail — then one `ui/message` with the words and the node's titled block. In that order
+   * because a message sent at once starts a turn, and the turn reads the context attached when it
+   * starts; the other order would hand the picture to the turn after.
+   *
+   * Blank text, or a node the design no longer has, sends nothing and returns false.
+   */
+  suspend fun comment(nodeId: String, text: String, image: McpAppImage? = null): Boolean {
+    val document = current ?: return false
+    val message = McpAppNodeComment.message(file, document, nodeId, text) ?: return false
+    val context = McpAppNodeComment.context(file, document, nodeId, text, image) ?: return false
+    // The comment's context replaces the selection's. Remembered as the last one sent, so the next
+    // selection the editor reports replaces it in turn rather than being mistaken for a repeat.
+    lastContext = context
+    runCatching { bridge.updateModelContext(context) }
+    return runCatching { bridge.sendMessage(message) }
+      .onFailure {
+        state = state.copy(notice = McpAppNotice.Error("Comment not sent: ${it.message}"))
+      }
+      .isSuccess
+  }
+
   /** Stops following the file, as the host tears the app down. */
   suspend fun close() {
     if (state.live) runCatching { bridge.unsubscribe(file.resourceUri) }
