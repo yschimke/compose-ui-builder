@@ -1774,20 +1774,36 @@ internal class RemoteContentEmitter(
   private fun boxArguments(node: UiBuilderNode, pad: String): List<String> {
     val arguments = mutableListOf<String>()
     node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
-    // `layout/box` aligns each child by that child's own `alignment`, while `RemoteBox` aligns all
-    // of them together. One child is the case both samples write and the case the two models agree
-    // on; more than one, each wanting a different corner, is a design this cannot write.
+    // `layout/box` aligns each child by that child's own `alignment` and, failing that, by the
+    // box's
+    // own `contentAlignment`, exactly as Compose's `Box` does; `RemoteBox` aligns all of them
+    // together. So what each child ends up at is what has to agree: one child is the case both
+    // samples write, and any number of children landing on the same corner is a design both
+    // models can draw. Children wanting different corners is a design this cannot write.
+    //
+    // Reading only the children's alignment is what dropped a box's own `contentAlignment = center`
+    // from the generated `RemoteBox` and left its arrow drawn top-left (wear-m3-catalog#594).
+    val boxAlignment = node.properties["contentAlignment"]?.stringOrNull().orEmpty()
     val children = node.slots["children"].orEmpty().mapNotNull(document.nodes::get)
-    val alignments = children.map { it.declaredAlignment("align") }.distinct()
+    // Each child's resolved alignment, as declared ("" when neither child nor box says, which both
+    // models draw at the top start).
+    val resolved =
+      children
+        .map { it.declaredAlignment("align").ifEmpty { boxAlignment } }
+        .ifEmpty { listOf(boxAlignment) }
+    // Compared with the unstated default spelled out, so an explicit `topStart` beside an unaligned
+    // child is one corner, not two.
+    val corners = resolved.map { it.ifEmpty { DEFAULT_BOX_ALIGNMENT } }.distinct()
+    val declared = resolved.firstOrNull { it.isNotEmpty() }
     when {
-      alignments.size > 1 ->
+      corners.size > 1 ->
         refusals +=
           "the box `${node.id}` aligns its children differently from one another, which " +
             "RemoteBox aligns as a group"
-      alignments.singleOrNull().isNullOrEmpty() -> Unit
+      declared == null -> Unit
       else -> {
         usesAlignment = true
-        arguments += "contentAlignment = RemoteAlignment.${alignments.single().remoteAlignment()}"
+        arguments += "contentAlignment = RemoteAlignment.${declared.remoteAlignment()}"
       }
     }
     return arguments
@@ -2967,6 +2983,11 @@ private fun String.pictureExtension(): String =
     "image/webp" -> "webp"
     else -> "bin"
   }
+
+/**
+ * Where a box puts a child that neither it nor the child aligns: Compose's `Alignment.TopStart`.
+ */
+private const val DEFAULT_BOX_ALIGNMENT = "topStart"
 
 private fun String.remoteAlignment(): String =
   when (this) {
