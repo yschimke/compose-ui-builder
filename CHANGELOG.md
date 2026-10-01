@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.71.0](https://github.com/yschimke/compose-ui-builder/compare/v3.70.0...v3.71.0) (2026-10-01)
+
+
+### Features
+
+* **editor:** approve or request changes on the revision in the Talk panel ([#381](https://github.com/yschimke/compose-ui-builder/issues/381)) ([ee712b0](https://github.com/yschimke/compose-ui-builder/commit/ee712b08d64085ecf3aa68c2ab06aecb74103450))
+* **release:** treat sibling coordinates as floors and move release wiring out of the shared set ([#380](https://github.com/yschimke/compose-ui-builder/issues/380)) ([edac4b7](https://github.com/yschimke/compose-ui-builder/commit/edac4b7a671ae48d25c243d2236542e25bb3f4ce))
+* **runtime:** design branches with replay-merge ([#377](https://github.com/yschimke/compose-ui-builder/issues/377)) ([7de9943](https://github.com/yschimke/compose-ui-builder/commit/7de994358afa234c2ba207a2f2e6af3a31aa0998))
+* **ui-builder:** make, place and swap reusable local components in the editor ([#379](https://github.com/yschimke/compose-ui-builder/issues/379)) ([3b70b15](https://github.com/yschimke/compose-ui-builder/commit/3b70b15ddc8f887d94f2302edfdd5baf34c2c588))
+* **web:** focused canvas mode for the MCP App editor ([#378](https://github.com/yschimke/compose-ui-builder/issues/378)) ([0b3bb36](https://github.com/yschimke/compose-ui-builder/commit/0b3bb36c8c688c55e68e6426187c68cbaae74d5d)), closes [#374](https://github.com/yschimke/compose-ui-builder/issues/374)
+
+
+### Bug Fixes
+
+* boot the editor under a non-BCP-47 browser locale, and correct the cloud-session testing docs ([#373](https://github.com/yschimke/compose-ui-builder/issues/373)) ([6b77ab9](https://github.com/yschimke/compose-ui-builder/commit/6b77ab9dada09f9f3146415d991c0d0bacd315dd)), closes [#372](https://github.com/yschimke/compose-ui-builder/issues/372)
+
 ## [3.70.0](https://github.com/yschimke/compose-ui-builder/compare/v3.69.0...v3.70.0) (2026-10-01)
 
 
