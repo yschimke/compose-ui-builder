@@ -94,6 +94,7 @@ import ee.schimke.composeai.uibuilder.reference.DesignCapture
 import ee.schimke.composeai.uibuilder.reference.DesignCaptureRequest
 import ee.schimke.composeai.uibuilder.reference.NodeCapture
 import ee.schimke.composeai.uibuilder.reference.NodeCaptureRequest
+import ee.schimke.composeai.uibuilder.reference.ReferenceBox
 import ee.schimke.composeai.uibuilder.reference.ReferenceCaptureRequest
 import ee.schimke.composeai.uibuilder.reference.ReferenceComponentCapture
 import ee.schimke.composeai.uibuilder.reference.ReferenceFindings
@@ -1555,7 +1556,7 @@ fun UiBuilderEditor(
     return canvasInspection?.nodes.orEmpty().mapNotNull { node ->
       val bounds = node.bounds ?: return@mapNotNull null
       val box =
-        Rect(
+        ReferenceBox(
           (bounds.x - root.left) / perDp,
           (bounds.y - root.top) / perDp,
           (bounds.x + bounds.width - root.left) / perDp,

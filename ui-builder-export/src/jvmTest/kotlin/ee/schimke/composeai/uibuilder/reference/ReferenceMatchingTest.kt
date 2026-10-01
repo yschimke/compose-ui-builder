@@ -1,17 +1,5 @@
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.reference
 
-import androidx.compose.ui.geometry.Rect
-import ee.schimke.composeai.uibuilder.reference.RasterRect
-import ee.schimke.composeai.uibuilder.reference.ReferenceLayer
-import ee.schimke.composeai.uibuilder.reference.ReferenceMatchSource
-import ee.schimke.composeai.uibuilder.reference.ReferenceMeasureFrame
-import ee.schimke.composeai.uibuilder.reference.ReferenceRaster
-import ee.schimke.composeai.uibuilder.reference.alignmentFor
-import ee.schimke.composeai.uibuilder.reference.diffRasters
-import ee.schimke.composeai.uibuilder.reference.inkBox
-import ee.schimke.composeai.uibuilder.reference.matchLayer
-import ee.schimke.composeai.uibuilder.reference.matchPatch
-import ee.schimke.composeai.uibuilder.reference.resampleOnto
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -131,7 +119,7 @@ class ReferenceMatchingTest {
       assertNotNull(
         matchLayer(
           frame,
-          ReferenceLayer("title", Rect(16f, 26f, 120f, 50f), text = true),
+          ReferenceLayer("title", ReferenceBox(16f, 26f, 120f, 50f), text = true),
           boxMarks = emptyList(),
           layoutBoxes = emptyList(),
         )
@@ -153,9 +141,9 @@ class ReferenceMatchingTest {
       assertNotNull(
         matchLayer(
           frame,
-          ReferenceLayer("title", Rect(16f, 26f, 100f, 46f), text = true),
+          ReferenceLayer("title", ReferenceBox(16f, 26f, 100f, 46f), text = true),
           // A generous box round the label in the reference, overlapping the layer.
-          boxMarks = listOf(Rect(26f, 40f, 110f, 70f)),
+          boxMarks = listOf(ReferenceBox(26f, 40f, 110f, 70f)),
           layoutBoxes = emptyList(),
         )
       )
@@ -173,9 +161,9 @@ class ReferenceMatchingTest {
       assertNotNull(
         matchLayer(
           frame,
-          ReferenceLayer("card", Rect(10f, 10f, 110f, 60f), text = false),
+          ReferenceLayer("card", ReferenceBox(10f, 10f, 110f, 60f), text = false),
           boxMarks = emptyList(),
-          layoutBoxes = listOf(Rect(14f, 10f, 124f, 62f)),
+          layoutBoxes = listOf(ReferenceBox(14f, 10f, 124f, 62f)),
         )
       )
     assertEquals(ReferenceMatchSource.LayoutBox, match.source)
@@ -193,7 +181,7 @@ class ReferenceMatchingTest {
     assertNull(
       matchLayer(
         frame,
-        ReferenceLayer("title", Rect(36f, 36f, 120f, 60f), text = true),
+        ReferenceLayer("title", ReferenceBox(36f, 36f, 120f, 60f), text = true),
         boxMarks = emptyList(),
         layoutBoxes = emptyList(),
         pixelSearch = false,

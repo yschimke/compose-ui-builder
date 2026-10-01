@@ -268,14 +268,7 @@ private fun Modifier.referenceToolInput(
 internal fun ReferencePiece.frameRect(frame: Size): Rect =
   Rect(left * frame.width, top * frame.height, right * frame.width, bottom * frame.height)
 
-/**
- * Where the base reference lands inside the frame: contained, centred, then scaled and nudged.
- *
- * Contain rather than stretch, because a mock exported at a different aspect ratio than the screen
- * is nearly always the *screen* being wrong — stretching it to fit would hide exactly the mismatch
- * the overlay exists to show. The nudge is applied after the scale so that a dp of nudge is a dp on
- * screen at any scale, which is how it behaves under the operator's hand.
- */
+/** Where the base reference lands inside the frame, in its pixels: [referencePlacement]. */
 internal fun referenceTargetRect(
   frame: Size,
   imageWidthPx: Float,
@@ -285,38 +278,19 @@ internal fun referenceTargetRect(
   offsetYPx: Float,
   fit: ReferenceFit = ReferenceFit.Contain,
   facts: ReferenceFacts? = null,
-): Rect {
-  if (imageWidthPx <= 0f || imageHeightPx <= 0f || frame.width <= 0f || frame.height <= 0f) {
-    return Rect(Offset.Zero, frame)
-  }
-  when (fit) {
-    ReferenceFit.Contain -> Unit
-    // Across the width and pinned to the top: a tall capture's extra height is below the frame,
-    // which is where a status bar's absence or a scrolled list puts it.
-    ReferenceFit.Width -> {
-      val width = frame.width * scale
-      val height = width * imageHeightPx / imageWidthPx
-      val left = (frame.width - width) / 2f + offsetXPx
-      return Rect(left, offsetYPx, left + width, offsetYPx + height)
-    }
-    // Its own size in dp, from the top-left. Needs the frame's dp to know what a dp is here; a
-    // caller without one gets the contain fit rather than a guess.
-    ReferenceFit.Actual -> {
-      if (facts != null && facts.known && facts.frameWidthDp > 0f) {
-        val pxPerDp = frame.width / facts.frameWidthDp
-        val width = facts.widthDp * pxPerDp * scale
-        val height = facts.heightDp * pxPerDp * scale
-        return Rect(offsetXPx, offsetYPx, offsetXPx + width, offsetYPx + height)
-      }
-    }
-  }
-  val contain = minOf(frame.width / imageWidthPx, frame.height / imageHeightPx)
-  val width = imageWidthPx * contain * scale
-  val height = imageHeightPx * contain * scale
-  val left = (frame.width - width) / 2f + offsetXPx
-  val top = (frame.height - height) / 2f + offsetYPx
-  return Rect(left, top, left + width, top + height)
-}
+): Rect =
+  referencePlacement(
+      frameWidth = frame.width,
+      frameHeight = frame.height,
+      imageWidthPx = imageWidthPx,
+      imageHeightPx = imageHeightPx,
+      scale = scale,
+      offsetX = offsetXPx,
+      offsetY = offsetYPx,
+      fit = fit,
+      facts = facts,
+    )
+    .let { Rect(it.left, it.top, it.right, it.bottom) }
 
 private fun DrawScope.drawReference(
   bitmap: ImageBitmap,

@@ -91,7 +91,7 @@ reason — a hole in nearly the right colour is worse than no hole.
 ## What the picture is, and when comparing it means anything
 
 A picture arrives as pixels with no unit, and every comparison after that is only as good as the
-answer to "how big is this in dp?". [`ReferenceFacts`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceFacts.kt)
+answer to "how big is this in dp?". [`ReferenceFacts`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceFacts.kt)
 answers it once, for the panel, the fitting and the matcher alike:
 
 - **Density** is *declared* where the picture says so — an `@2x` suffix, which every design tool and
@@ -119,7 +119,7 @@ Both measurements photograph the design off screen through the canvas's own rend
 ([`DesignCapture`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceMeasure.kt)),
 resample it and the reference — placed exactly as the overlay places it — onto one grid of one or
 two samples per dp, and work on plain ARGB rasters
-([`ReferenceRaster`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceRaster.kt)),
+([`ReferenceRaster`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceRaster.kt)),
 so they run identically in a browser, on the desktop and in a JVM test.
 
 - **Differences** reports the share of compared pixels that differ and up to eight regions,
@@ -127,7 +127,7 @@ so they run identically in a browser, on the desktop and in a JVM test.
   pixels. Each region names the smallest layer containing its centre, and clicking it selects
   that layer.
 - **Match a layer** lines the selected layer up with the reference from the best evidence there
-  is ([`matchLayer`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceAlignment.kt)):
+  is ([`matchLayer`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceAlignment.kt)):
   a **box the operator drew** over it (their word; for text narrowed to the ink inside it), then
   an **SVG layout box** that is plainly the same thing, then a **pixel search** for the layer's
   own rendering near where it sits — at a range of scales for text, which is how a font size is
@@ -143,9 +143,19 @@ step and is refused whole when any part of it cannot be written. This is the one
 reference changes the document, and it does so only through an ordinary, catalog-validated
 operation the operator pressed a button for.
 
+### One engine, for the editor and for agents
+
+Everything that measures — placement ([`referencePlacement`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceGeometry.kt)),
+the facts, the rasters, the diff, the layer match, the padding/offset chain and the entry points
+[`compareDifferences` and `compareLayer`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceComparison.kt)
+— lives in `:ui-builder-export`, with no Compose type in it. The editor feeds it a photograph of its
+canvas; the serve host feeds it the design's render to answer an agent's MCP call. One result for
+both, so an agent told "move right 12 dp" and a person shown it on the canvas are reading the same
+arithmetic.
+
 ## Links: Figma frames and image URLs
 
-[`parseReferenceUrl`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceUrl.kt)
+[`parseReferenceUrl`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceUrl.kt)
 recognises Figma file, design, prototype and branch links (with their `node-id`) and plain https
 image links; fetching is the host's decision.
 
@@ -239,7 +249,7 @@ Two questions, one parse, separate answers.
 - [`ReferenceOverlayStateTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceOverlayStateTest.kt) — the reducer, and **every case asserts the document did not move**. That is the invariant this feature lives or dies by.
 - [`ServeUiBuilderReferenceStoreTest`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderReferenceStoreTest.kt) — storage, refusals, clamping, and that a design id never becomes a path.
 - [`ReferenceFactsTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceFactsTest.kt) — density, kind and when pixels may be compared.
-- [`ReferenceMatchingTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceMatchingTest.kt) — the diff, ink boxes, and finding a moved or resized label, on pictures built from rectangles.
+- [`ReferenceMatchingTest`](../../ui-builder-export/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceMatchingTest.kt) — the diff, ink boxes, and finding a moved or resized label, on pictures built from rectangles.
 - [`ReferenceAlignToReferenceTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceAlignToReferenceTest.kt) — applying a match is one undoable batch, refused whole, and never touches the reference.
-- [`ReferenceUrlTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceUrlTest.kt) and [`JvmReferenceHostTest`](../../ui-builder-host-jvm/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/host/JvmReferenceHostTest.kt) — links, sniffing, and the desktop store.
+- [`ReferenceUrlTest`](../../ui-builder-export/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceUrlTest.kt) and [`JvmReferenceHostTest`](../../ui-builder-host-jvm/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/host/JvmReferenceHostTest.kt) — links, sniffing, and the desktop store.
 - [`ReferencePiecePromotionTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferencePiecePromotionTest.kt) — the crossing back: a captured piece builds the node a catalog insertion would, a piece with no provenance is refused rather than guessed at, and the deepest accepting slot under the point wins.
