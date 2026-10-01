@@ -476,7 +476,7 @@
     "functionName": "UiBuilderCommentsPanelPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderCommentsPanelPreview-557e08f3.png",
-    "sha256": "a99142f94391c8bf02a58e0b5c9ec4847bdfe33c58191f6133feeacdc4307263",
+    "sha256": "ca25d7b812a096bf98dca2f44a5c2774f5e17a9273dbf51e40d59de1a7af5a1a",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderCommentsPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderDeviceViewPreviewKt.UiBuilderDeviceViewPopOutPreview": {
