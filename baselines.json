@@ -116,7 +116,7 @@
     "functionName": "DesignMenusPreview",
     "module": "ui-builder",
     "renderBasename": "DesignMenusPreview_width_1600dp_height_900dp_dpi_160-733ba7c5.png",
-    "sha256": "78c3790135fd3ed76c77b0d653bfd114f3ea337df4280db59d70aa258deffa0f",
+    "sha256": "266c389023c1790f34cbb307b1ba420069b8a9489939ff3e42b3e0b1108c388f",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/DesignFixturePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.DesignFixturePreviewsKt.DesignMobilePreview_width=412dp,height=915dp,dpi=160": {
@@ -188,7 +188,7 @@
     "functionName": "DesignShortcutsDialogPreview",
     "module": "ui-builder",
     "renderBasename": "DesignShortcutsDialogPreview_width_1280dp_height_900dp_dpi_160-1755f566.png",
-    "sha256": "d993b5e3d0e9aa983525cc1b6f0bcda1c7d091e83707c313c86b0a702acc7eb1",
+    "sha256": "e89787d1ca46fcf6d34ced68c291962396a68e7f70114a2c8b78714bc1a498c3",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/DesignFixturePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.DesignFixturePreviewsKt.DesignTalkDockPreview_width=1600dp,height=900dp,dpi=160": {
@@ -748,7 +748,7 @@
     "functionName": "UiBuilderUnexportablePalettePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderUnexportablePalettePreview-2c6c35dc.png",
-    "sha256": "1eb8737f0ceda95187c302b2696101acba94bda14800023be7678c9ae05dbb7a",
+    "sha256": "d9b9ea132ae74a80f78512db302776540c3d143a7e323680bca5903372cba872",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderVariantStripPreview": {
@@ -876,7 +876,7 @@
     "functionName": "UiBuilderShortcutsPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderShortcutsPreview-707f5f98.png",
-    "sha256": "802a00f73cf191979cfd9006582ad16b9d514d7eff2044c4dbc901b803ed1adb",
+    "sha256": "70385cfc897f151def17343fb818501dc7f27de5e3006b6bc76c3c953de6467b",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderShortcutsPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderSuggestionsPreviewKt.UiBuilderSuggestionOnCanvasPreview": {
