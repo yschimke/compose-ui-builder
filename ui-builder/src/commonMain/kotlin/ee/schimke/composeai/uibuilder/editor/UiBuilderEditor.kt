@@ -380,6 +380,13 @@ fun UiBuilderEditor(
    */
   componentDrift: List<ComponentDriftFinding> = emptyList(),
   /**
+   * What the project's shared component library publishes, for the palette's "Project library"
+   * shelf — read by the host, which holds the credentials, like [componentDrift].
+   */
+  componentLibrary: List<EditorLibraryComponent> = emptyList(),
+  /** Fetches one published component's body and digest, or null; null where there is no library. */
+  loadLibrarySymbol: (suspend (EditorLibraryComponent) -> EditorLibrarySymbol?)? = null,
+  /**
    * Device frames the Screen inspector offers, supplied by the host because `wasmJs` cannot resolve
    * the JVM-only render catalog they come from. Empty (the default) simply hides the menu and
    * leaves the raw fields, so a host that has no catalog to hand still gets a working inspector.
@@ -1282,6 +1289,23 @@ fun UiBuilderEditor(
             components = reducer.localComponents(state),
             preview = { reducer.localComponentPreview(state, it) },
             target = { reducer.localComponentTarget(state, it) },
+            library = componentLibrary,
+            onAddLibrary =
+              loadLibrarySymbol?.let { load ->
+                { component ->
+                  focusEditor()
+                  editorScope.launch {
+                    val symbol = runCatching { load(component) }.getOrNull()
+                    if (symbol == null) {
+                      say("Could not fetch ${component.title} from the project library")
+                      return@launch
+                    }
+                    val target = reducer.libraryComponentTarget(state, symbol)
+                    if (target == null) say("Select a layer that can hold ${component.title}")
+                    else dispatch(UiBuilderEditorEvent.InsertLibraryComponent(symbol, target))
+                  }
+                }
+              },
           ),
         layerRows = layerRows,
         collaborators = collaborators,

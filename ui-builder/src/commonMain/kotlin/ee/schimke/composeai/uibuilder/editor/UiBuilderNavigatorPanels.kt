@@ -415,6 +415,24 @@ private fun InsertPanel(
           )
         }
       }
+      // Then what the project shares: imported on a press, with the source a later read checks
+      // for drift.
+      val shared =
+        localPalette.library.filter {
+          state.catalogQuery.isBlank() || it.title.contains(state.catalogQuery, ignoreCase = true)
+        }
+      val addShared = localPalette.onAddLibrary
+      if (shared.isNotEmpty() && addShared != null) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+          PanelHeading(
+            "Project library",
+            "${shared.size} shared ${if (shared.size == 1) "component" else "components"}",
+          )
+        }
+        gridItems(shared, key = { "library:${it.system}/${it.componentId}" }) { component ->
+          LibraryComponentTile(component) { addShared(component) }
+        }
+      }
       gridItems(
         catalogRows,
         key = EditorCatalogRow::catalogRowKey,
@@ -937,9 +955,43 @@ data class EditorLocalComponentPalette(
   val preview: (String) -> UiBuilderDocument?,
   /** Where an Add of a component would land, or null where nothing selected can hold it. */
   val target: (String) -> ParentSlot?,
+  /** What the project's shared library publishes, for the shelf after the design's own. */
+  val library: List<EditorLibraryComponent> = emptyList(),
+  /** Fetches and places one library component; null where this host serves no library. */
+  val onAddLibrary: ((EditorLibraryComponent) -> Unit)? = null,
 ) {
   companion object {
     val NONE = EditorLocalComponentPalette(emptyList(), { null }, { null })
+  }
+}
+
+/** One component the project publishes, added — imported, with its source — on a press. */
+@Composable
+private fun LibraryComponentTile(component: EditorLibraryComponent, onAdd: () -> Unit) {
+  LocalUiBuilderChrome.current.ComponentBrowserTile(
+    model =
+      UiBuilderCatalogTileModel(
+        title = component.title,
+        supporting = component.description ?: component.paletteId,
+        supportingIsError = false,
+        unexportable = false,
+        pinned = false,
+        variantCount = 0,
+        variantsExpanded = false,
+        canAdd = true,
+        addContentDescription = "Add ${component.title} from the project library",
+        onAdd = onAdd,
+        onTogglePinned = {},
+        onToggleVariants = {},
+      )
+  ) {
+    CatalogThumbnail(
+      document = null,
+      componentId = COMPONENT_INSTANCE_ID,
+      label = component.title,
+      size = DpSize(104.dp, 72.dp),
+      container = true,
+    )
   }
 }
 

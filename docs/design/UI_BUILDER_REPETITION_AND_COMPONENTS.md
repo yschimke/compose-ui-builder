@@ -334,10 +334,19 @@ body the first placement's value back and stops placements passing it.
 component's body in its place, every parameter it read replaced by what the placement passed, the
 placement's own modifiers on the copy's root. The component stays, with its other placements.
 
-**Not built**, in the order they are likely to be wanted: a contracts mutation that edits a
-placement's arguments in place (so an argument edit keeps the placement's id), and an import panel
-that lists another design's components without copying a placement first — which needs the host to
-open a second design, the way the design browser does.
+**The project library, from the palette — built.** A host that serves the shared component
+library (`GET /api/ui-builder/v1/component-library`, §3) hands the editor its listing, and the
+palette shows it as a "Project library" shelf after the design's own components. Pressing one fetches
+the symbol (`…/{system}/{componentId}`) and places it: the first time, its body is imported and its
+declaration records `source = {system, componentId, digest}`, which is what the drift report reads;
+after that, the version the design already holds is placed again — a newer digest in the library
+is drift for the Issues panel, never a second copy or a silent redraw. The web host reads both routes
+with the builder's own credentials (`ComponentLibraryHost.kt`); a local session has no library.
+
+**Not built**: a contracts mutation that edits a placement's arguments in place (so an argument
+edit keeps the placement's id); publishing a design's own component to the library from the editor
+(the library is written by committing `ui-builder/components/`, and the server has no write route);
+and taking a newer library version into a design that drifted.
 
 It composes with 1b rather than duplicating it: a loop's template is an instance with one argument
 per row field. Which is why this is worth building **before** data-driven loops, not after.
@@ -360,11 +369,14 @@ A local directory (uncached, because it is the half that changes under you) and 
 palette as `project/<id>`.
 
 **Built so far**, in `ServeUiBuilderComponentLibrary`: both sources, the index and symbol reads,
-both honesty rules below, and two admin routes — a listing and one symbol with its digest and body.
+both honesty rules below, admin routes and the builder's own read routes — a listing and one symbol
+with its digest and body — and the editor's "Project library" shelf, which imports a symbol with its
+source recorded (§2a).
 A published symbol file is an ordinary `DesignDocumentV1` declaring exactly one component plus the
 nodes its body is made of, so there is no second wire type, no second validator, and no contracts
-release in the path. **Not built**: the editor side — a `project/<id>` on the palette, the import
-that records id and digest into a design, and the drift report when a later read disagrees. What separates this from a component pack is the thing that makes it
+release in the path. The drift report — a later read disagreeing with the digest a design
+recorded — is built on both sides too (`component-drift`, `UiBuilderComponentDrift.kt`). What
+separates this from a component pack is the thing that makes it
 worth having at all: these are catalog nodes all the way down, so the Wasm canvas draws them
 properly rather than as a named placeholder — a pack cannot, and says so.
 
