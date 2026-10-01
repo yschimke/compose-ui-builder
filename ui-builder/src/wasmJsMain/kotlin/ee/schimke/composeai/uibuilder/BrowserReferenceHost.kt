@@ -8,7 +8,9 @@ import ee.schimke.composeai.uibuilder.protocol.ExportDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.ExportEncodingV1
 import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
 import ee.schimke.composeai.uibuilder.protocol.ExportResponseV1
+import ee.schimke.composeai.uibuilder.reference.FIGMA_PASTE_ADVICE
 import ee.schimke.composeai.uibuilder.reference.ReferenceDiffMode
+import ee.schimke.composeai.uibuilder.reference.ReferenceFit
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
 import ee.schimke.composeai.uibuilder.reference.ReferenceImportOutcome
 import ee.schimke.composeai.uibuilder.reference.ReferenceMark
@@ -16,7 +18,9 @@ import ee.schimke.composeai.uibuilder.reference.ReferenceMarkupKind
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlaySettings
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import ee.schimke.composeai.uibuilder.reference.ReferencePiece
+import ee.schimke.composeai.uibuilder.reference.ReferenceUrl
 import ee.schimke.composeai.uibuilder.reference.RestoredReference
+import ee.schimke.composeai.uibuilder.reference.parseReferenceUrl
 import ee.schimke.composeai.uibuilder.reference.referenceImportRefusal
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -68,6 +72,7 @@ internal class BrowserReferenceHost(
           scalePercent = stored.settings.scalePercent,
           splitPercent = stored.settings.splitPercent,
           alwaysShowBoxes = stored.settings.alwaysShowBoxes,
+          fit = ReferenceFit.ofWire(stored.settings.fit),
         ),
       pieces =
         stored.pieces.map {
@@ -154,6 +159,26 @@ internal class BrowserReferenceHost(
     awaitImport(::awaitReferencePastePromise, "import-paste")
 
   /**
+   * A picture fetched from a link the operator pasted.
+   *
+   * A plain image URL is fetched by the browser itself, so it works exactly when the site serving
+   * it allows a cross-origin read — which most image CDNs do and most app pages do not, and the
+   * refusal says so. A Figma link is refused with the paste route instead: rendering a frame needs
+   * a Figma token, and this host neither holds one nor asks the operator to type one into a page.
+   */
+  suspend fun fetchUrl(text: String): ReferenceImportOutcome =
+    when (val parsed = parseReferenceUrl(text)) {
+      is ReferenceUrl.Unsupported -> ReferenceImportOutcome.Refused(parsed.reason)
+      is ReferenceUrl.Figma ->
+        ReferenceImportOutcome.Refused(
+          "The web editor does not hold a Figma token, so it cannot render that frame. " +
+            FIGMA_PASTE_ADVICE
+        )
+      is ReferenceUrl.Image ->
+        awaitImport({ fetchReferenceUrlPromise(parsed.url) }, "import-url", sourceUrl = parsed.url)
+    }
+
+  /**
    * The design as it stands, rendered by the host, as a picture to build against.
    *
    * Uses the design's own PNG export rather than a screen grab of the editor: the export is the
@@ -193,6 +218,7 @@ internal class BrowserReferenceHost(
   private suspend fun awaitImport(
     source: () -> Promise<JsString>,
     idPrefix: String,
+    sourceUrl: String? = null,
   ): ReferenceImportOutcome {
     val encoded =
       try {
@@ -224,6 +250,7 @@ internal class BrowserReferenceHost(
         base64 = picked.base64,
         widthPx = picked.widthPx,
         heightPx = picked.heightPx,
+        sourceUrl = sourceUrl,
       )
     )
   }
@@ -283,6 +310,7 @@ private fun ReferenceOverlaySettings.toWire() =
     scalePercent = scalePercent,
     splitPercent = splitPercent,
     alwaysShowBoxes = alwaysShowBoxes,
+    fit = fit.wireValue,
   )
 
 private fun ReferencePiece.toWire() =
@@ -366,6 +394,11 @@ private data class ReferenceSettingsPayload(
   val scalePercent: Int = 100,
   val splitPercent: Int = 50,
   val alwaysShowBoxes: Boolean = false,
+  /**
+   * Sent, and read back where the host keeps it. A host whose stored shape predates the field drops
+   * it (it decodes leniently) and the editor reads [ReferenceFit.Contain] back.
+   */
+  val fit: String = "contain",
 )
 
 @kotlinx.serialization.Serializable
@@ -447,6 +480,28 @@ private external fun referenceFetch(
   body: String,
   hasBody: Boolean,
 ): Promise<JsString>
+
+/**
+ * A cross-origin image fetch, handed to the same reader a picked file goes through so a link is
+ * sniffed, measured and refused by exactly the rules a file is.
+ */
+@JsFun(
+  """(url) => fetch(url, { mode: 'cors', credentials: 'omit' })
+    .then((response) => {
+      if (!response.ok) {
+        return JSON.stringify({ error: 'the link answered ' + response.status });
+      }
+      return response.blob().then((blob) => {
+        const name = decodeURIComponent(new URL(url).pathname.split('/').pop() || 'Linked picture');
+        return globalThis.__composeReferenceRead(new File([blob], name, { type: blob.type }));
+      });
+    })
+    .catch(() => JSON.stringify({
+      error: 'the browser would not fetch that picture: the site allows no cross-origin reads, ' +
+        'or this page may not reach it. Download it and import the file instead',
+    }))"""
+)
+private external fun fetchReferenceUrlPromise(url: String): Promise<JsString>
 
 /**
  * A file dialog, resolved with the chosen picture or with an empty string when it is dismissed.

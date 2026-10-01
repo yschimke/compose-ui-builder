@@ -38,6 +38,10 @@ internal fun flattenReference(
   /** The editor's own measurer, so a flattened label is set in the font it was drawn in. */
   textMeasurer: TextMeasurer?,
   name: String = "Flattened reference",
+  /**
+   * The base picture measured against the frame, so a width or actual-size fit flattens as drawn.
+   */
+  facts: ReferenceFacts? = null,
 ): ReferenceImage? {
   if (!reference.hasContent) return null
   val width = widthPx.coerceIn(1, MAX_FLATTEN_PX)
@@ -62,6 +66,7 @@ internal fun flattenReference(
       selectionHandles = false,
       textMeasurer = textMeasurer,
       baseAlphaOverride = 1f,
+      facts = facts,
     )
   }
   val png = encodeReferencePng(bitmap) ?: return null

@@ -513,6 +513,26 @@ sealed interface UiBuilderEditorEvent {
    * PNG encoder, none of which belong in a pure reducer.
    */
   data class FlattenReference(val image: ReferenceImage) : UiBuilderEditorEvent
+
+  /**
+   * Make a layer agree with the reference: move it, resize it, and set its type size, as one edit.
+   *
+   * What the reference panel's *Apply* sends after matching a layer — see `alignmentFor`. One event
+   * rather than a move, a resize and a property commit in turn, so the correction is one undo step:
+   * a match that is wrong is undone in one press, not three, and never left two-thirds applied.
+   *
+   * The move is written as padding (start/top grow, end/bottom give back what they can, so the box
+   * keeps its size) and falls back to an `offset` only for the part padding cannot express — a move
+   * left of where the node's padding already starts.
+   */
+  data class AlignNodeToReference(
+    val nodeId: String,
+    val moveXDp: Int = 0,
+    val moveYDp: Int = 0,
+    val fontSizeSp: Float? = null,
+    val widthDp: Int? = null,
+    val heightDp: Int? = null,
+  ) : UiBuilderEditorEvent
 }
 
 /**

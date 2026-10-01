@@ -90,22 +90,37 @@ import ee.schimke.composeai.uibuilder.inspector.UiBuilderPageDestination
 import ee.schimke.composeai.uibuilder.nativeOnlyComponentIds
 import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ExportFormatV1
+import ee.schimke.composeai.uibuilder.reference.DesignCapture
+import ee.schimke.composeai.uibuilder.reference.DesignCaptureRequest
 import ee.schimke.composeai.uibuilder.reference.NodeCapture
 import ee.schimke.composeai.uibuilder.reference.NodeCaptureRequest
 import ee.schimke.composeai.uibuilder.reference.ReferenceCaptureRequest
 import ee.schimke.composeai.uibuilder.reference.ReferenceComponentCapture
+import ee.schimke.composeai.uibuilder.reference.ReferenceFindings
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
 import ee.schimke.composeai.uibuilder.reference.ReferenceImportOutcome
+import ee.schimke.composeai.uibuilder.reference.ReferenceLayer
+import ee.schimke.composeai.uibuilder.reference.ReferenceMeasureInput
+import ee.schimke.composeai.uibuilder.reference.ReferenceMeasureKind
 import ee.schimke.composeai.uibuilder.reference.ReferencePiece
+import ee.schimke.composeai.uibuilder.reference.ReferenceWorkbench
 import ee.schimke.composeai.uibuilder.reference.RestoredReference
+import ee.schimke.composeai.uibuilder.reference.contentBounds
+import ee.schimke.composeai.uibuilder.reference.decodeReferenceImage
+import ee.schimke.composeai.uibuilder.reference.encodeReferencePng
+import ee.schimke.composeai.uibuilder.reference.facts
 import ee.schimke.composeai.uibuilder.reference.flattenReference
+import ee.schimke.composeai.uibuilder.reference.measureAgainstReference
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.uploadedAssets
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -396,6 +411,14 @@ fun UiBuilderEditor(
    * around it.
    */
   onSnapshotDesign: (suspend () -> ReferenceImportOutcome)? = null,
+  /**
+   * Fetches a reference from a link — a Figma frame, or a plain image URL — or null where the host
+   * cannot reach the network on the operator's behalf.
+   *
+   * The host decides what it will fetch and with what credential (see [parseReferenceUrl] for the
+   * shapes the panel recognises); the editor only hands it the text and shows what came back.
+   */
+  onImportReferenceUrl: (suspend (String) -> ReferenceImportOutcome)? = null,
   /**
    * A picture the host caught on the clipboard, or null when none has arrived.
    *
@@ -852,6 +875,18 @@ fun UiBuilderEditor(
   var captureRequest by remember(document.id) { mutableStateOf<ReferenceCaptureRequest?>(null) }
   var captureSequence by remember(document.id) { mutableStateOf(0) }
   var captureFailure by remember(document.id) { mutableStateOf<String?>(null) }
+  // The reference measurements: the frame's box in the root (to turn the inspection into frame dp),
+  // the photograph of the design they compare against, and what the last one found.
+  var frameRootBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
+  var designCapture by remember(document.id) { mutableStateOf<DesignCaptureRequest?>(null) }
+  var designCaptureSequence by remember(document.id) { mutableStateOf(0) }
+  var pendingMeasure by remember(document.id) { mutableStateOf<ReferenceMeasureKind?>(null) }
+  // A snapshot asked of the editor itself, for a host with no export lane: the capture's answer
+  // completes it.
+  var pendingSnapshot by
+    remember(document.id) { mutableStateOf<CompletableDeferred<ImageBitmap?>?>(null) }
+  var referenceFindings by remember(document.id) { mutableStateOf<ReferenceFindings?>(null) }
+  var referenceMeasuring by remember(document.id) { mutableStateOf(false) }
   // Which conversation is open, in the panel and under the pin. Editor state rather than document
   // state, and per design: which thread somebody has expanded is a fact about a moment.
   var selectedThreadId by remember(document.id) { mutableStateOf(linkedThreadId) }
@@ -1071,6 +1106,11 @@ fun UiBuilderEditor(
         heightPx = environment.heightDp * FLATTEN_SCALE,
         id = "flattened-${document.id}-${state.reference.mintedIds}-${state.document.revision}",
         textMeasurer = flattenTextMeasurer,
+        facts =
+          state.reference.image?.let { image ->
+            val (widthDp, heightDp) = state.document.canvasFrameDp(WearWidgetHostShape.Default)
+            image.facts(widthDp, heightDp, environment.density.toFloat())
+          },
       )
     if (flattened != null) dispatch(UiBuilderEditorEvent.FlattenReference(flattened))
   }
@@ -1478,6 +1518,127 @@ fun UiBuilderEditor(
   var canvasIsOnlySurface by remember { mutableStateOf(false) }
   val canvasHostShape =
     if (canvasIsOnlySurface) state.wearWidgetHostShape else WearWidgetHostShape.Default
+  // Decoded once per picture, for its size and for measuring; the overlay keeps its own decode.
+  val referenceBitmap =
+    remember(state.reference.image?.id) { state.reference.image?.let(::decodeReferenceImage) }
+  val referenceFrameDp = state.document.canvasFrameDp(canvasHostShape)
+  val referenceFacts =
+    state.reference.image?.facts(
+      frameWidthDp = referenceFrameDp.first,
+      frameHeightDp = referenceFrameDp.second,
+      designDensity = state.document.screenEnvironmentSettings().density.toFloat(),
+      decodedWidthPx = referenceBitmap?.width ?: 0,
+      decodedHeightPx = referenceBitmap?.height ?: 0,
+    )
+  // The frame as the canvas actually lays it out: the width is the design's, the height grows
+  // with the content in the authoring view, and the overlay's fractions are of that height.
+  fun measuredFrameHeightDp(): Float =
+    if (frameRootBounds.width > 0f) {
+      frameRootBounds.height / frameRootBounds.width * referenceFrameDp.first
+    } else referenceFrameDp.second
+  fun requestDesignCapture(heightDp: Float = measuredFrameHeightDp()) {
+    designCaptureSequence += 1
+    designCapture = DesignCaptureRequest(designCaptureSequence, referenceFrameDp.first, heightDp)
+  }
+  /** Measure the reference against the design: across the frame, or for one layer. */
+  fun measureReference(kind: ReferenceMeasureKind) {
+    if (state.reference.image == null || referenceMeasuring) return
+    referenceMeasuring = true
+    pendingMeasure = kind
+    requestDesignCapture()
+  }
+  /** The canvas's layout as layers in frame dp, from the inspection the canvas last reported. */
+  fun referenceLayers(): List<ReferenceLayer> {
+    val root = frameRootBounds
+    if (root.width <= 0f) return emptyList()
+    val perDp = root.width / referenceFrameDp.first
+    return canvasInspection?.nodes.orEmpty().mapNotNull { node ->
+      val bounds = node.bounds ?: return@mapNotNull null
+      val box =
+        Rect(
+          (bounds.x - root.left) / perDp,
+          (bounds.y - root.top) / perDp,
+          (bounds.x + bounds.width - root.left) / perDp,
+          (bounds.y + bounds.height - root.top) / perDp,
+        )
+      ReferenceLayer(
+        nodeId = node.nodeId,
+        bounds = box,
+        text = node.text != null,
+        content = state.document.nodes[node.nodeId]?.contentBounds(box) ?: box,
+      )
+    }
+  }
+  fun onDesignCaptured(request: DesignCaptureRequest, bitmap: ImageBitmap?) {
+    if (designCapture != request) return
+    designCapture = null
+    pendingSnapshot?.let {
+      pendingSnapshot = null
+      it.complete(bitmap)
+    }
+    val kind = pendingMeasure ?: return
+    pendingMeasure = null
+    val baseBitmap = referenceBitmap
+    if (bitmap == null || baseBitmap == null) {
+      referenceMeasuring = false
+      referenceFindings =
+        ReferenceFindings(
+          documentRevision = state.document.revision,
+          referenceId = state.reference.image?.id,
+          frameWidthDp = referenceFrameDp.first,
+          message =
+            if (bitmap == null) "The design could not be photographed on this platform."
+            else "The reference picture could not be decoded.",
+        )
+      return
+    }
+    val input =
+      ReferenceMeasureInput(
+        kind = kind,
+        design = bitmap,
+        referenceBitmap = baseBitmap,
+        reference = state.reference,
+        facts = referenceFacts,
+        frameWidthDp = referenceFrameDp.first,
+        frameHeightDp = measuredFrameHeightDp(),
+        layers = referenceLayers(),
+        nodes = state.document.nodes,
+        documentRevision = state.document.revision,
+      )
+    editorScope.launch {
+      try {
+        referenceFindings = withContext(Dispatchers.Default) { measureAgainstReference(input) }
+      } finally {
+        referenceMeasuring = false
+      }
+    }
+  }
+  // A host with no export lane still gets a Snapshot: the editor photographs its own design, with
+  // the renderer the canvas uses, which for an offline host is the design's export renderer too.
+  val snapshotDesign: (suspend () -> ReferenceImportOutcome) =
+    onSnapshotDesign
+      ?: {
+        val deferred = CompletableDeferred<ImageBitmap?>()
+        pendingSnapshot = deferred
+        // The device's frame rather than the authoring view's grown one: a snapshot is a picture
+        // of the screen, and it is compared against the screen.
+        requestDesignCapture(referenceFrameDp.second)
+        val bitmap = deferred.await()
+        val png = bitmap?.let(::encodeReferencePng)
+        if (bitmap == null || png == null)
+          ReferenceImportOutcome.Refused("The design could not be photographed here.")
+        else
+          ReferenceImportOutcome.Imported(
+            ReferenceImage(
+              id = "snapshot-${document.id}-${state.document.revision}-$designCaptureSequence",
+              name = "Snapshot of this design",
+              mediaType = "image/png",
+              base64 = kotlin.io.encoding.Base64.Default.encode(png),
+              widthPx = bitmap.width,
+              heightPx = bitmap.height,
+            )
+          )
+      }
   val canvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
     CompositionLocalProvider(LocalWearWidgetHostShape provides canvasHostShape) {
       PinnedDesignCanvas(
@@ -1530,6 +1691,15 @@ fun UiBuilderEditor(
         onPieceMoved = { pieceId, dx, dy ->
           dispatch(UiBuilderEditorEvent.MoveReferencePiece(pieceId, dx, dy))
         },
+        referenceFacts = referenceFacts,
+        // Only while it still describes what is on screen: an edit or a new picture since makes
+        // the outlines a picture of a different design.
+        referenceFindings =
+          referenceFindings?.takeIf {
+            it.documentRevision == state.document.revision &&
+              it.referenceId == state.reference.image?.id
+          },
+        onFrameRootBounds = { frameRootBounds = it },
         collaborators = collaborators,
         commentThreads = comments.pinned(state.reference.marks),
         selectedThreadId = selectedThreadId,
@@ -2035,7 +2205,7 @@ fun UiBuilderEditor(
       devicePresets = devicePresets,
       variantsDrawn = variantsDrawn,
       onPickReference = onPickReference,
-      onSnapshotDesign = onSnapshotDesign,
+      onSnapshotDesign = snapshotDesign,
       onFlatten = ::flattenCurrentReference,
       catalogItems = reducer.catalogItems(""),
       localComponents = reducer.localComponents(state),
@@ -2050,6 +2220,35 @@ fun UiBuilderEditor(
       },
       canPromotePiece = { piece -> promotionTargetFor(piece) != null },
       referenceStatus = captureFailure ?: referenceStatus,
+      referenceWorkbench =
+        ReferenceWorkbench(
+          facts = referenceFacts,
+          findings = referenceFindings,
+          findingsCurrent =
+            referenceFindings?.let {
+              it.documentRevision == state.document.revision &&
+                it.referenceId == state.reference.image?.id
+            } ?: false,
+          measuring = referenceMeasuring,
+          selectedNodeId = state.selection.singleOrNull(),
+          nodeLabel = { id -> reducer.nodeLabel(state, id) },
+          onMeasureDifferences = { measureReference(ReferenceMeasureKind.Differences) },
+          onMatchLayer = { measureReference(ReferenceMeasureKind.Layer(it)) },
+          onApplyAlignment = { alignment ->
+            dispatch(
+              UiBuilderEditorEvent.AlignNodeToReference(
+                nodeId = alignment.nodeId,
+                moveXDp = alignment.moveXDp,
+                moveYDp = alignment.moveYDp,
+                fontSizeSp = alignment.fontSizeSp,
+                widthDp = alignment.widthDp,
+                heightDp = alignment.heightDp,
+              )
+            )
+          },
+          onSelectNode = { selectNodeForEditing(it) },
+          onImportUrl = onImportReferenceUrl,
+        ),
       comments = comments,
       commentStatus = commentStatus,
       review = review,
@@ -2132,6 +2331,14 @@ fun UiBuilderEditor(
           )
         }
       },
+    )
+
+    // The whole design, photographed for a reference measurement or a host-less snapshot. Mounted
+    // here for the reason the two captures beside it are: the same catalog locals the canvas has.
+    DesignCapture(
+      request = designCapture,
+      document = state.document.withWearWidgetHostShape(canvasHostShape),
+      onCaptured = ::onDesignCaptured,
     )
 
     // The node a sent comment is about, photographed for the host and then handed over with the

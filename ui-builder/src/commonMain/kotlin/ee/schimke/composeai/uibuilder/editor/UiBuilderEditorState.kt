@@ -52,6 +52,7 @@ import ee.schimke.composeai.uibuilder.exportRecord
 import ee.schimke.composeai.uibuilder.packComponentRecords
 import ee.schimke.composeai.uibuilder.packComponentsById
 import ee.schimke.composeai.uibuilder.reference.PLACED_PIECE_WIDTH_FRACTION
+import ee.schimke.composeai.uibuilder.reference.ReferenceFit
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
 import ee.schimke.composeai.uibuilder.reference.ReferenceMark
 import ee.schimke.composeai.uibuilder.reference.ReferenceMarkupKind
@@ -408,6 +409,7 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.ToggleModifier -> toggleModifier(state, event.nodeId, event.type)
       is UiBuilderEditorEvent.ResizeNode ->
         resizeNode(state, event.nodeId, event.width, event.height)
+      is UiBuilderEditorEvent.AlignNodeToReference -> alignNodeToReference(state, event)
       is UiBuilderEditorEvent.SetModifierValue ->
         setModifierValue(
           state,
@@ -647,7 +649,7 @@ class UiBuilderEditorReducer(
    * under the summary is where the old value is already said. A node deleted by the change it is
    * describing has no name left to read and falls back to its id.
    */
-  private fun nodeLabel(state: UiBuilderEditorState, nodeId: String): String {
+  internal fun nodeLabel(state: UiBuilderEditorState, nodeId: String): String {
     val node = state.document.nodes[nodeId] ?: return nodeId
     node.placementKey()?.let {
       return componentDeclarationName(state.document.components[it]) ?: it
@@ -1605,6 +1607,94 @@ class UiBuilderEditorReducer(
       listOf(DesignOperation.SetModifiers(nodeId, JsonArray(chain))),
       selectionAfter = nodeId,
     )
+  }
+
+  /**
+   * Apply a reference match as one batch: the chain that moves and sizes the node, and the type
+   * size, together. See [UiBuilderEditorEvent.AlignNodeToReference].
+   *
+   * Refused whole, with the reason, when any part cannot be written — a component that declares
+   * neither `padding` nor `offset` cannot be moved, one that does not declare `fontSizeSp` cannot
+   * have its type sized — because applying the half that fits would leave the layer neither where
+   * it was nor where the reference has it.
+   */
+  private fun alignNodeToReference(
+    state: UiBuilderEditorState,
+    event: UiBuilderEditorEvent.AlignNodeToReference,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val nodeId = event.nodeId
+    val node = state.document.nodes[nodeId] ?: return state
+    val declared = catalog.componentsById[node.componentId]?.modifierCapabilities.orEmpty().toSet()
+    fun refuse(message: String, property: String = "modifiers") =
+      state.rejected(sequence, RejectionCode.INVALID_PROPERTY, message, nodeId, property)
+
+    var chain: List<JsonElement> = node.modifiers.toList()
+    if (event.moveXDp != 0 || event.moveYDp != 0) {
+      chain =
+        movedModifierChain(chain, event.moveXDp, event.moveYDp, declared)
+          ?: return refuse(
+            "${node.componentId} declares neither padding nor offset, so it cannot be moved"
+          )
+    }
+    val scope = state.document.scopeOf(nodeId)
+    event.widthDp?.let { width ->
+      chain =
+        resizedModifierChain(
+          chain,
+          EditorAxis.Width,
+          EditorSizing.Fixed(width.toFloat()),
+          declared,
+          scope,
+        ) ?: return refuse("${node.componentId} cannot be given a fixed width")
+    }
+    event.heightDp?.let { height ->
+      chain =
+        resizedModifierChain(
+          chain,
+          EditorAxis.Height,
+          EditorSizing.Fixed(height.toFloat()),
+          declared,
+          scope,
+        ) ?: return refuse("${node.componentId} cannot be given a fixed height")
+    }
+    val operations = mutableListOf<DesignOperation>()
+    if (chain != node.modifiers.toList()) {
+      operations += DesignOperation.SetModifiers(nodeId, JsonArray(chain))
+    }
+    event.fontSizeSp?.let { size ->
+      val property =
+        catalog.componentsById[node.componentId]?.propertiesByName?.get(FONT_SIZE_PROPERTY)
+          ?: return refuse("${node.componentId} has no $FONT_SIZE_PROPERTY", FONT_SIZE_PROPERTY)
+      if (node.properties[FONT_SIZE_PROPERTY]?.bindingKey() != null) {
+        return refuse(
+          "The type size is a component parameter; set it on each placement",
+          FONT_SIZE_PROPERTY,
+        )
+      }
+      val field =
+        propertyFields(state.copy(selection = listOf(nodeId))).firstOrNull {
+          it.name == FONT_SIZE_PROPERTY
+        } ?: return refuse("${node.componentId} has no $FONT_SIZE_PROPERTY", FONT_SIZE_PROPERTY)
+      val draft = if (size == floor(size)) size.toInt().toString() else size.toString()
+      val parsed = field.parseDraft(draft)
+      if (parsed is PropertyDraft.Invalid) return refuse(parsed.message, FONT_SIZE_PROPERTY)
+      val existingType =
+        property.canonicalWrapper(
+          (node.properties[FONT_SIZE_PROPERTY] as? JsonObject)
+            ?.get("type")
+            ?.primitiveOrNull()
+            ?.contentOrNull
+        )
+      val encoded =
+        literal(existingType ?: field.defaultEncodedType(), (parsed as PropertyDraft.Valid).value)
+      validator.validate(state.document, nodeId, FONT_SIZE_PROPERTY, encoded)?.let {
+        return refuse(it.message, FONT_SIZE_PROPERTY)
+      }
+      operations += DesignOperation.SetProperty(nodeId, FONT_SIZE_PROPERTY, encoded)
+    }
+    if (operations.isEmpty()) return state
+    return state.apply(sequence, operations, selectionAfter = nodeId)
   }
 
   /**
@@ -2894,6 +2984,10 @@ class UiBuilderEditorReducer(
           mode = state.reference.settings.mode,
           visible = true,
           alwaysShowBoxes = state.reference.settings.alwaysShowBoxes,
+          // The fit is a fact about the picture rather than the operator's habit, so it is the one
+          // setting a new picture chooses for itself: a cropped button lands at its actual size,
+          // a tall capture across the width, and a screen contained as it always was.
+          fit = state.referenceFacts(image)?.recommendedFit ?: ReferenceFit.Contain,
         ),
       layoutBoxes = image.svgTextOrNull()?.let(::extractSvgLayoutBoxes).orEmpty(),
     )

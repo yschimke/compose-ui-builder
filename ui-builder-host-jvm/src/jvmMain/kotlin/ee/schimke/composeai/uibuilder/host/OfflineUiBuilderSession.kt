@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.host
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,7 @@ import ee.schimke.composeai.uibuilder.protocol.ErrorResponseV1
 import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
+import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
@@ -45,6 +47,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,6 +55,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -374,6 +378,11 @@ fun OfflineUiBuilderSessionView(
   exportHost: ((document: () -> UiBuilderDocument?) -> UiBuilderExportHost)? = { document ->
     DesktopExportHost(session.catalog, document)
   },
+  /**
+   * The file this design's reference overlay is kept in, or null to keep it for the session only.
+   * Import, links and the editor's own snapshot work either way; see [JvmReferenceHost].
+   */
+  referenceStore: Path? = null,
 ) {
   val snapshot by session.snapshot.collectAsState()
   val failure by session.failure.collectAsState()
@@ -386,6 +395,18 @@ fun OfflineUiBuilderSessionView(
       }
     val latestDocument by rememberUpdatedState(previewDocument)
     val export = remember(session, exportHost) { exportHost?.invoke { latestDocument } }
+    val references = remember(session, referenceStore) { JvmReferenceHost(referenceStore) }
+    val restoredReference = remember(references) { references.load() }
+    var referenceStatus by remember(references) { mutableStateOf<String?>(null) }
+    var latestReference by remember(references) { mutableStateOf<ReferenceOverlayState?>(null) }
+    var referenceRestored by remember(references) { mutableStateOf(false) }
+    // Kept a moment after the last change rather than on every one: a nudge is pressed several
+    // times in a row, and a drawn mark arrives as one event, so half a second loses nothing.
+    LaunchedEffect(references, latestReference) {
+      val reference = latestReference ?: return@LaunchedEffect
+      delay(500)
+      referenceStatus = withContext(Dispatchers.IO) { references.save(reference) }
+    }
     UiBuilderEditor(
       document = current.snapshot.state.document.toUiBuilderDocument(),
       exportHost = export,
@@ -405,7 +426,18 @@ fun OfflineUiBuilderSessionView(
         if (session.nativeRenderAvailable) {
           { shape -> session.renderNative(previewDocument, shape) ?: UiBuilderNativeRender() }
         } else null,
-      onStateChanged = { state -> previewDocument = state.collaboration.document },
+      onStateChanged = { state ->
+        previewDocument = state.collaboration.document
+        // Only once the restored stack is in, or the empty state before it would erase the file.
+        if (restoredReference == null || state.reference.hasContent || referenceRestored) {
+          referenceRestored = true
+          latestReference = state.reference
+        }
+      },
+      restoredReference = restoredReference,
+      onPickReference = { references.pickFile() },
+      onImportReferenceUrl = { url -> references.fetchUrl(url) },
+      referenceStatus = referenceStatus,
       onSubmission = session::submit,
       comments = comments,
       onPostComment = if (session.commentsAvailable) session::postComment else null,

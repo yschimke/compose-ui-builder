@@ -88,6 +88,78 @@ left behind is exactly the space a real component can be built into and compared
 surroundings. The palette carries the design's own `background` and `surface` colours for that
 reason — a hole in nearly the right colour is worse than no hole.
 
+## What the picture is, and when comparing it means anything
+
+A picture arrives as pixels with no unit, and every comparison after that is only as good as the
+answer to "how big is this in dp?". [`ReferenceFacts`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceFacts.kt)
+answers it once, for the panel, the fitting and the matcher alike:
+
+- **Density** is *declared* where the picture says so — an `@2x` suffix, which every design tool and
+  asset catalog writes, and the Figma fetch names its file that way on purpose — otherwise
+  *inferred* from the frame width for anything screen-shaped (snapped to a real bucket: 2.6247 is a
+  Pixel's 2.625), otherwise *assumed* to be the design's own environment density.
+- **Kind** follows from that: a **Screen** (the frame's shape), a **Tall screen** (as wide, taller —
+  system bars or a scrolled capture), a **Region** (smaller than the frame: a component crop), or a
+  **Different shape**.
+- **Fit** — `Contain` (the historic behaviour), `Width` (pinned to the top) or `Actual` (its own
+  dp size from the top-left) — is chosen from the kind when a picture is attached and can be
+  changed in the panel. It is persisted beside the other settings; a host whose stored shape
+  predates the field drops it and reads back `Contain`, which is what every older record was drawn
+  with.
+
+**When pixels may be compared** is then one rule, `pixelComparable(fit)`: only when one dp of the
+picture lands on one dp of the frame. Overlay and Split are judged by eye and are always offered;
+Difference, *Measure differences* and a pixel search for a layer are offered only when the rule
+holds, and the panel says why when it does not ("a 328 × 56 dp piece, not a screen: stretched over
+the frame every pixel differs").
+
+## Measuring, and building from the measurement
+
+Both measurements photograph the design off screen through the canvas's own renderer
+([`DesignCapture`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceMeasure.kt)),
+resample it and the reference — placed exactly as the overlay places it — onto one grid of one or
+two samples per dp, and work on plain ARGB rasters
+([`ReferenceRaster`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceRaster.kt)),
+so they run identically in a browser, on the desktop and in a JVM test.
+
+- **Differences** reports the share of compared pixels that differ and up to eight regions,
+  found on an 8 dp cell grid so a glyph half a pixel over is one region rather than a hundred
+  pixels. Each region names the smallest layer containing its centre, and clicking it selects
+  that layer.
+- **Match a layer** lines the selected layer up with the reference from the best evidence there
+  is ([`matchLayer`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceAlignment.kt)):
+  a **box the operator drew** over it (their word; for text narrowed to the ink inside it), then
+  an **SVG layout box** that is plainly the same thing, then a **pixel search** for the layer's
+  own rendering near where it sits — at a range of scales for text, which is how a font size is
+  read off a mock. Text is compared by its *ink* on both sides, because a node's box carries line
+  height a mock's glyphs do not.
+
+The match becomes an edit with **Apply**:
+[`AlignNodeToReference`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/UiBuilderEditorEvents.kt)
+moves the layer with padding (the leading edge grows, the trailing edge gives back what it has, so
+the box keeps its size), spills only the part padding cannot express onto an `offset`, sets a fixed
+size where the evidence stated one, and writes `fontSizeSp` — all in one batch, so it is one undo
+step and is refused whole when any part of it cannot be written. This is the one place the
+reference changes the document, and it does so only through an ordinary, catalog-validated
+operation the operator pressed a button for.
+
+## Links: Figma frames and image URLs
+
+[`parseReferenceUrl`](../../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/reference/ReferenceUrl.kt)
+recognises Figma file, design, prototype and branch links (with their `node-id`) and plain https
+image links; fetching is the host's decision.
+
+- The **desktop and IntelliJ hosts** run as the operator, so they may use *the operator's* Figma
+  token: with `FIGMA_TOKEN` set they render the frame through Figma's images API at 2× and attach it
+  as `Figma 12-34@2x.png`, link kept as provenance. Without one, the refusal names the variable and
+  the paste route. Image links are fetched directly, capped at the reference size limit.
+- The **web editor** fetches image links from the browser, which works where the site allows a
+  cross-origin read. It does not fetch Figma frames: the serve host holds no design-tool
+  credential and the page does not ask for one, so a Figma link is answered with the paste route.
+
+The desktop host keeps each design's reference in `<storage>/references/<digest>.json`, named by a
+digest of the design's file path or workspace, never beside a design file somebody may share.
+
 ## What is stored, and where
 
 One file per design under `<ui-builder-state>/references/`, named by the digest of the design id (a
@@ -166,4 +238,8 @@ Two questions, one parse, separate answers.
 - [`ReferenceImportTest`](../../ui-builder/src/commonTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceImportTest.kt) — what may be attached.
 - [`ReferenceOverlayStateTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceOverlayStateTest.kt) — the reducer, and **every case asserts the document did not move**. That is the invariant this feature lives or dies by.
 - [`ServeUiBuilderReferenceStoreTest`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/server/src/test/kotlin/ee/schimke/composeai/cli/serve/ServeUiBuilderReferenceStoreTest.kt) — storage, refusals, clamping, and that a design id never becomes a path.
+- [`ReferenceFactsTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceFactsTest.kt) — density, kind and when pixels may be compared.
+- [`ReferenceMatchingTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceMatchingTest.kt) — the diff, ink boxes, and finding a moved or resized label, on pictures built from rectangles.
+- [`ReferenceAlignToReferenceTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceAlignToReferenceTest.kt) — applying a match is one undoable batch, refused whole, and never touches the reference.
+- [`ReferenceUrlTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferenceUrlTest.kt) and [`JvmReferenceHostTest`](../../ui-builder-host-jvm/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/host/JvmReferenceHostTest.kt) — links, sniffing, and the desktop store.
 - [`ReferencePiecePromotionTest`](../../ui-builder/src/jvmTest/kotlin/ee/schimke/composeai/uibuilder/ReferencePiecePromotionTest.kt) — the crossing back: a captured piece builds the node a catalog insertion would, a piece with no provenance is refused rather than guessed at, and the deepest accepting slot under the point wins.
