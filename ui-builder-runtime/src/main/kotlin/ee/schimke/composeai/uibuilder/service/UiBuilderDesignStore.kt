@@ -1,9 +1,12 @@
+@file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 import ee.schimke.composeai.uibuilder.protocol.CommittedOperationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignAccessControlV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.DesignSubmissionV1
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
@@ -13,6 +16,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util.Comparator
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -184,6 +188,14 @@ internal data class StoredDesignHeaderV3(
    * keep replaying.
    */
   val journalCompactedBytes: Long = 0,
+  /**
+   * The branch record when this design is a branch of another; see `UI_BUILDER_BRANCHES.md`.
+   *
+   * In the header rather than the journal because it is small, replaced whole when a branch is
+   * merged or archived, and what a listing of a parent's branches reads. Never written for an
+   * ordinary design, so every header this build writes for one is byte-identical to before.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val branch: DesignBranchRecordV1? = null,
 )
 
 /** One retained revision: the document at it, the positions at it, or both. */
@@ -231,6 +243,12 @@ internal data class JournalEntryV3(
   val conflictTouchesAppend: List<ConflictTouchRecordV1>? = null,
   val conflictTouchesKeep: Int? = null,
   val conflictTouchesSet: List<ConflictTouchRecordV1>? = null,
+  /**
+   * A branch's command log — only ever appended to, or written whole by a compaction. Absent for
+   * every design that is not a branch.
+   */
+  val branchLogAppend: List<DesignSubmissionV1>? = null,
+  val branchLogSet: List<DesignSubmissionV1>? = null,
 )
 
 /**
@@ -508,6 +526,7 @@ internal class FileUiBuilderDesignStore(
             journalFile = written.file,
             journalBytes = written.bytes,
             journalCompactedBytes = written.compactedBytes,
+            branch = next.branch,
           )
         var header = headerFor(journal)
         // The budget is checked before the header lands, because the header is what makes the new
@@ -785,6 +804,8 @@ internal class FileUiBuilderDesignStore(
       createdAtEpochMillis = header.createdAtEpochMillis,
       updatedAtEpochMillis = header.updatedAtEpochMillis,
       audit = journal.audit,
+      branch = header.branch,
+      branchLog = journal.branchLog,
     )
   }
 
@@ -795,6 +816,7 @@ internal class FileUiBuilderDesignStore(
     val outcomes: Map<String, OperationOutcomeRecordV1> = emptyMap(),
     val accepted: Map<String, AcceptedOperationRecordV1> = emptyMap(),
     val tombstones: Map<String, NodeTreeSnapshotV1> = emptyMap(),
+    val branchLog: List<DesignSubmissionV1> = emptyList(),
   )
 
   private fun replayJournal(
@@ -829,6 +851,7 @@ internal class FileUiBuilderDesignStore(
     var outcomes = emptyMap<String, OperationOutcomeRecordV1>()
     var accepted = emptyMap<String, AcceptedOperationRecordV1>()
     var tombstones = emptyMap<String, NodeTreeSnapshotV1>()
+    var branchLog = emptyList<DesignSubmissionV1>()
     committed
       .lineSequence()
       .filter { it.isNotBlank() }
@@ -875,6 +898,8 @@ internal class FileUiBuilderDesignStore(
           conflictTouches =
             (conflictTouches + appended).let { it.takeLast(entry.conflictTouchesKeep ?: it.size) }
         }
+        entry.branchLogSet?.let { branchLog = it }
+        entry.branchLogAppend?.let { branchLog = branchLog + it }
       }
     return JournalState(
       history = history,
@@ -883,6 +908,7 @@ internal class FileUiBuilderDesignStore(
       outcomes = outcomes,
       accepted = accepted,
       tombstones = tombstones,
+      branchLog = branchLog,
     )
   }
 
@@ -1004,10 +1030,18 @@ internal class FileUiBuilderDesignStore(
     val historyChanged = previous == null || previous.history != next.history
     val auditChanged = previous == null || previous.audit != next.audit
     val touchesChanged = previous == null || previous.conflictTouches != next.conflictTouches
+    // A branch log only grows, so a prefix match is the whole test; anything else is written whole.
+    val branchLogChanged = (previous?.branchLog ?: emptyList()) != next.branchLog
+    val branchLogAppended =
+      previous != null &&
+        branchLogChanged &&
+        next.branchLog.size > previous.branchLog.size &&
+        next.branchLog.subList(0, previous.branchLog.size) == previous.branchLog
     if (
       !historyChanged &&
         !auditChanged &&
         !touchesChanged &&
+        !branchLogChanged &&
         outcomes == null &&
         accepted == null &&
         tombstones == null
@@ -1032,6 +1066,9 @@ internal class FileUiBuilderDesignStore(
         if (touchesChanged && touchesTail != null) next.conflictTouches.size else null,
       conflictTouchesSet =
         if (touchesChanged && touchesTail == null) next.conflictTouches else null,
+      branchLogAppend =
+        if (branchLogAppended) next.branchLog.drop(previous!!.branchLog.size) else null,
+      branchLogSet = if (branchLogChanged && !branchLogAppended) next.branchLog else null,
     )
   }
 
@@ -1073,6 +1110,7 @@ internal class FileUiBuilderDesignStore(
         acceptedPut = next.acceptedOperations.takeIf { it.isNotEmpty() },
         tombstonesPut = next.tombstones.takeIf { it.isNotEmpty() },
         conflictTouchesSet = next.conflictTouches,
+        branchLogSet = next.branchLog.takeIf { it.isNotEmpty() },
       )
     val line = journalLine(entry)
     val name = "$JOURNAL_PREFIX$generation$JOURNAL_SUFFIX"
@@ -1401,6 +1439,7 @@ internal class FileUiBuilderDesignStore(
         journalFile = journal.file,
         journalBytes = journal.bytes,
         journalCompactedBytes = journal.compactedBytes,
+        branch = next.branch,
       )
     // The migration must not write a file its own reader will refuse. Every read here is bounded by
     // the per-design budget, so a legacy design with one file over that budget — a document, or the

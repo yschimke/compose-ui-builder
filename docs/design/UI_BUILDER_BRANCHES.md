@@ -1,0 +1,208 @@
+# Design branches: fork from a revision, explore, replay-merge back
+
+Phase 2 (runtime half) of [compose-ui-builder#375](https://github.com/yschimke/compose-ui-builder/issues/375),
+part of [compose-preview-server#1235](https://github.com/yschimke/compose-preview-server/issues/1235).
+Phase 1, the MCP history tools, is
+[compose-preview-server#1256](https://github.com/yschimke/compose-preview-server/issues/1256).
+
+A branch exists so an agent (or a person) can **explore an alternative**, or change a design
+**without trampling somebody editing it live**, and then bring the chosen result back. It adds no
+new merge algorithm. There is one merge in this system — the reducer in
+[`PersistentUiBuilderService`](../../ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/PersistentUiBuilderService.kt)
+— and a branch comes home the way a browser checkout does: as the commands authored on it, replayed
+through that reducer ([`UI_BUILDER_DESIGN_PORTABILITY.md`](UI_BUILDER_DESIGN_PORTABILITY.md)).
+
+## The model
+
+**A branch is a design.** It has its own design id, and every ordinary request works on it: open,
+subscribe, `ApplyOperation` (which is how a branch is edited), export, thumbnail. That is what makes
+the phase-3 picker cheap — rendering five alternatives is rendering five designs. What makes it a
+branch is a record stored with it (`DesignBranchRecordV1`):
+
+| Field | |
+| --- | --- |
+| `parentDesignId` | the design it forked from |
+| `forkRevision`, `forkDocumentHash` | the fork point, and the parent's document hash there |
+| `parentCreatedAtEpochMillis` | tells the parent from a design later re-created under the same id |
+| `name`, `ownerActorId` | the owner is the principal when the creator acts for one |
+| `status` | `OPEN`, `MERGED` or `ARCHIVED` |
+| `closedAt`, `closedBy`, `mergedAtParentRevision`, `supersededByBranchId` | what became of it |
+
+and **its command log**: every command accepted on the branch since the fork, in order, exactly as
+submitted. The log is not the history window (`retainedCommittedOperations`), which is pruned and
+which an asset upload cuts; a merge needs all of it, so it is kept whole and bounded instead by
+`MAXIMUM_BRANCH_COMMANDS` (1,024).
+
+The branch's document starts as the parent's document at the fork revision, under the branch's id,
+**at the fork's revision number** — revision 7 of a branch forked at 5 is "the fork and two edits".
+It has no `home`: a branch lives only on this service, and its way back to the parent's home is the
+merge. Its undo stack starts at the fork.
+
+### What a branch refuses
+
+- **Edits once closed.** A merged or archived branch's log is the record of what was merged or
+  abandoned; growing it afterwards would make that record untrue.
+- **Whole-document changes**: an asset upload, a restore, a catalog upgrade, a document replacement,
+  a home move. None of them is an operation a log can carry — an upload is a commit without one, and
+  a restore is bound by hash to the branch's own document — so a merge would drop or refuse them.
+  Refused at the door instead of lost at the merge.
+- **Being branched.** Branches of branches are not in this phase; branch the parent.
+
+### The port
+
+[`UiBuilderBranchPort`](../../ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/UiBuilderBranchPort.kt):
+`CreateBranch {designId, name, revision?, branchId?}`, `ListBranches {designId, includeClosed}`,
+`GetBranch`, `ArchiveBranch`, `MergeBranch {branchId, dryRun, skipOperationIds}`.
+
+It is a **separate port**, not new variants of `UiBuilderServiceRequest`. That hierarchy is sealed
+and the host matches it exhaustively (its grant scoping, its route table), so a new variant would be
+a compile break in every host the day it was released. A separate port is additive:
+compose-preview-server keeps compiling against this release and wires branches when it adds the MCP
+tools. The port speaks runtime types rather than `ui-builder-protocol` wire shapes, like
+`RenameDesign` and `ListRevisions` before it; the MCP tools define their own `outputSchema` (R2).
+
+## Merge
+
+`MergeBranch` replays the branch's log onto the parent's **current** revision with the replay the
+browser's Sync runs —
+[`replayCommandLog`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/replay/CommandLogReplay.kt),
+in `:ui-builder-export` because that is the module both the browser and the service compile — so
+the two cannot drift:
+
+- **The base chain.** `base(c₁)` is the fork revision; `base(cₖ)` is the revision `cₖ₋₁` landed at.
+- **Every command replays as itself**, undos and redos included.
+- **The first refusal stops the run**, and the report says where and why and how much is left.
+- **A per-command report**: for each command, its author, its base, where it landed, and what it
+  overwrote (`STALE_PROPERTY_WRITE`, `STALE_MOVE`, …), or the rejection code that stopped it.
+
+### All or nothing, where Sync is prefix-commit
+
+Sync commits each command as it lands, because each is its own HTTP request and the run is
+resumable through idempotent replay: the landed prefix answers as already-there on a re-run. A
+branch merge runs inside the service lock, so it can do better and does: it replays onto a
+**working copy** of the parent and commits only when **every** command landed. A refusal leaves the
+parent, the branch and its siblings exactly as they were, and spends none of the log's operation
+ids, so the same merge can run again. The report has the same shape either way.
+
+A **dry run** is exactly that replay with the commit left out. It reports what would land, what it
+would overwrite, where it would stop and which siblings it would archive, and writes nothing to
+either design.
+
+### Resolving a refusal
+
+The log is history and is never rewritten. A refused merge is resolved by a decision made at merge
+time: `skipOperationIds` leaves named commands out of the replay (the report lists them), for a
+command that should not land any more — an edit of a node the parent has since deleted, a delete of
+something somebody has edited since. Skipping a command an undo in the log targets makes that undo
+refuse (`UNKNOWN_OPERATION`), so skip both. Anything else — a different intent — is a new branch
+from the parent's head. `cherry_pick {branchId, operationIds}` from #375 is the complement of a skip
+and is a follow-up.
+
+### After a merge
+
+The parent gains one revision per replayed command (the price Sync already pays: revisions are
+cheap, a merge nobody can explain is not), and its subscribers receive them as one delta — or a
+snapshot if the run is longer than the delta window. The branch becomes `MERGED` with
+`mergedAtParentRevision`; its **siblings** — open branches of the same parent forked at the same
+revision, which are the alternatives it was chosen from — become `ARCHIVED` with
+`supersededByBranchId` pointing at it. They are kept, readable and listable, not deleted. Branches
+forked elsewhere are not siblings and stay open.
+
+## Attribution (open question 1)
+
+**Each replayed command keeps its original author; the merge is recorded separately.** Every
+revision the merge adds to the parent is attributed — in the operation log, the audit and
+`ListRevisions` — to the actor that authored that command on the branch. The merging actor is
+recorded on the branch record (`closedByActorId`).
+
+Not a "merge actor" on each command, because undo is per author (`ACTOR_MISMATCH`): attributing the
+run to the merger would leave the author unable to undo their own work after it lands, and make every
+conflict notice name the wrong person. This is the same choice Sync made for its single offline
+author, generalised to a branch two people (or a person and an agent) edited. The author ids come
+from the branch's own log, which only the service wrote — never from a request — so this is not a
+request asserting an identity. The merging actor needs write on the parent; the authors' access to
+the parent is not re-checked, because the person merging is the one vouching for the change.
+
+## Access and comments (open question 2)
+
+**Inherited.** A branch's access list *is* its parent's: copied at the fork and rewritten on every
+branch whenever the parent's access changes, with the branch's subscribers revoked as the parent's
+are. Whoever may read the design may read the alternatives being explored for it, and somebody
+removed from it loses them too. A branch has no access list of its own to manage, and owner-only
+actions (deleting it) stay with the parent's owner. The branch's own `ownerActorId` is attribution
+and the right to archive it, not an access grant. Archiving needs that ownership or write on the
+parent; creating and merging need write on the parent.
+
+Comments are a sidecar keyed by design id, so a branch's comments are its own and are not carried
+across a merge. The review flow #375 describes — the agent comments on the parent linking the
+branch — is a comment on the parent, which is where it belongs. Carrying branch comments across is a
+follow-up if it is ever wanted.
+
+## Retention pinning
+
+An open branch's fork revision is **pinned** in the parent: its document snapshot and its position
+snapshot are kept however far the parent moves on, so retention (`retainedRevisionSnapshots`,
+`retainedRevisionBytes`) can never refuse a merge for the age of its base alone. The conflict-touch
+window follows, because it is pruned against the oldest retained position snapshot — an open branch
+keeps the evidence its merge's staleness checks read.
+
+- Pins are **derived** from the branch records, not stored on the parent, so a crash between writing
+  a branch and its parent cannot leave them disagreeing.
+- Archiving or merging releases the pin at the parent's next commit.
+- The snapshot floor a client is told (`retainedFromSequence` on `SNAPSHOT_REQUIRED`) is the
+  unbroken run of revisions ending at the head, not the pinned one below a gap.
+- A **content replacement** on the parent (`ReplaceDesignDocument`) still cuts every older base, as
+  it does for a live editor: the fork's document is kept (for comparison), its position state is
+  not, and the merge's first command is refused `REVISION_NOT_RETAINED` rather than replayed onto a
+  document nobody's edits were authored against. A restore or catalog upgrade on the parent is an
+  ordinary commit, and the merge treats it as any concurrent edit.
+
+A pin costs one retained revision per open fork point plus the touch window back to it. An
+abandoned branch holds that until it is archived; listing open branches is how an operator finds
+them.
+
+## How it relates to browser checkout and Sync
+
+The same thing in two places. A browser checkout is a branch whose log lives in IndexedDB and
+whose merge goes over HTTP; a server branch is a checkout whose log lives in the service and whose
+merge runs under the service lock. They share the replay (`replayCommandLog`) and its report shape;
+they differ only in transport, and so in atomicity. Sync was refactored onto the shared loop in this
+change, and `LocalDesignSyncBackTest` still holds it to the same answers.
+
+## Suggestions (open question 3)
+
+**Yes — suggestions should be short-lived branches under the hood**, and this model is built so
+they can be. A suggestion is a branch of one or a few commands, named for its intent, created by the
+agent and merged or archived by a person; "accept" is `MergeBranch`, "reject" is `ArchiveBranch`,
+"accept part" is a merge with `skipOperationIds`. What phase 4 adds is presentation (pending
+operations drawn over the parent in the editor) and per-operation accept, not a second mechanism.
+
+## Known limits and follow-ups
+
+- **Only the first replayed command sees the parent's concurrent edits as concurrent.** The base
+  chain gives `c₂…cₙ` bases at or after the parent's head, so their staleness checks cannot see edits
+  the parent made between the fork and the merge; a later command that overwrites one is applied
+  with no `STALE_*` notice. Sync has exactly the same property today. Fixing it means a reducer that
+  reads staleness from the fork while reading positions from the predecessor — a reducer change,
+  tracked separately rather than smuggled into this one. The dry-run report and a document diff
+  (below) are the review surface until then.
+- **Document diff for the server.** `revisionDiff`/`documentDiff` (`editor/RevisionTimeline.kt`)
+  works on the editor's `UiBuilderDocument` and `CapabilityCatalog`, so moving it into a module the
+  server consumes is not a small change; compose-preview-server#1256's `diff_designs` needs it, and
+  it should move to `:ui-builder-export` (or the runtime) rather than be forked.
+- **Assets on a branch** are refused (above). Content-addressed assets would let a branch upload and
+  a merge carry the binding.
+- **Deleting the parent** leaves its branches readable; a merge answers `NOT_FOUND`.
+- **Concurrent editors on one branch** are replayed as a sequence in log order, as Sync replays one
+  author's offline run.
+
+## What the server wires next
+
+In compose-preview-server, after the release carrying this:
+
+- MCP tools `branch_design {designId, name, revision?}`, `list_branches {designId}` and
+  `merge_branch {branchId, dryRun?, skipOperationIds?}` (plus `archive_branch`), each with an
+  `outputSchema` and listed in `docs/design/CATALOG_MCP.md`, through `UiBuilderBranchPort`.
+- **Grant scoping**: an agent grant scoped to a design must reach its branches. A branch's design id
+  is not its parent's, so the scope check maps a branch id to its `parentDesignId` (via `GetBranch`).
+- Edits keep going through the existing apply tool against the branch id.

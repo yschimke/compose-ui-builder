@@ -5,15 +5,16 @@ import ee.schimke.composeai.uibuilder.client.canonicalDocumentHash
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
-import ee.schimke.composeai.uibuilder.protocol.AcceptedOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.ApplyOperationRequestV1
 import ee.schimke.composeai.uibuilder.protocol.CommandConflictV1
+import ee.schimke.composeai.uibuilder.protocol.CommandOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.GetSnapshotRequestV1
 import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
-import ee.schimke.composeai.uibuilder.protocol.RejectedOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRequestV1
+import ee.schimke.composeai.uibuilder.replay.ReplayAnswer
+import ee.schimke.composeai.uibuilder.replay.replayCommandLog
 
 /**
  * Taking a server design into this browser, and bringing it home again.
@@ -190,125 +191,73 @@ class LocalDesignSyncBack(
       return it
     }
 
-    // base(c₁) is the fork point, and base(cₖ) is the revision this run's predecessor landed at.
-    //
-    // Not the server's current revision, which would make every offline edit newer than the
-    // concurrent edits it is racing — so it would win silently, and the conflict notice that makes
-    // the merge legible would be thrown away. And not the fork point throughout, which would make
-    // the run concurrent with itself: a move of a node an earlier command inserted resolves its
-    // anchor against the position snapshot retained at the fork, where that node does not exist.
-    //
-    // Because each base comes from what the server already answered rather than from what is
-    // current, re-running an interrupted sync from the top reproduces identical commands — so the
-    // landed prefix answers as an idempotent replay and the run continues from where it stopped.
-    var base = origin.revision
-    val landed = mutableListOf<LocalSyncLanded>()
-    record.log.forEachIndexed { index, submission ->
-      val remaining = record.log.size - index - 1
-      val wire = submission.toEditorSubmission().toProtocolSubmission(actorId, clientId, base)
-      val answer =
-        try {
-          execute(ApplyOperationRequestV1(wire))
-        } catch (failure: Exception) {
-          return LocalSyncResult.Replayed(
-            report(
-              record,
-              origin,
-              landed,
-              LocalSyncRefusal(
-                wire.submissionOperationId(),
-                "UNREACHABLE",
-                failure.message ?: "the server could not be reached",
-                remaining,
-              ),
+    // The base chain, the stop-at-first-refusal rule and the per-command report are the shared
+    // replay's (`replayCommandLog`), the same one a server-side branch merge runs, so the two
+    // cannot disagree about what bringing a log home means. What is particular to this lane is the
+    // transport: each command is its own request and commits as it lands. Because each base comes
+    // from what the server already answered rather than from what is current, re-running an
+    // interrupted sync from the top reproduces identical commands — so the landed prefix answers as
+    // an idempotent replay and the run continues from where it stopped.
+    val replay =
+      replayCommandLog(
+        forkRevision = origin.revision.toLong(),
+        log = record.log,
+        maximumRevision = Int.MAX_VALUE.toLong(),
+      ) { submission, base ->
+        val wire =
+          submission.toEditorSubmission().toProtocolSubmission(actorId, clientId, base.toInt())
+        val answer =
+          try {
+            execute(ApplyOperationRequestV1(wire))
+          } catch (failure: Exception) {
+            return@replayCommandLog ReplayAnswer.Refused(
+              wire.submissionOperationId(),
+              "UNREACHABLE",
+              failure.message ?: "the server could not be reached",
             )
-          )
-        }
-      when (answer) {
-        is UiBuilderHttpResult.Response -> {
-          val outcome = (answer.response as? OperationOutcomeResponseV1)?.outcome
-          when (outcome) {
-            is AcceptedOutcomeV1 -> {
-              landed +=
-                LocalSyncLanded(
-                  operationId = outcome.operationId,
-                  revision = outcome.committedRevision,
-                  idempotentReplay = outcome.idempotentReplay,
-                  conflicts = outcome.conflicts,
-                )
-              val committed = outcome.committedRevision
-              if (committed !in 0..Int.MAX_VALUE.toLong()) {
-                return LocalSyncResult.Replayed(
-                  report(
-                    record,
-                    origin,
-                    landed,
-                    LocalSyncRefusal(
-                      outcome.operationId,
-                      "REVISION_OVERFLOW",
-                      "the server committed revision $committed, which this page cannot count",
-                      remaining,
-                    ),
-                  )
-                )
-              }
-              base = committed.toInt()
-            }
-            is RejectedOutcomeV1 ->
-              return LocalSyncResult.Replayed(
-                report(
-                  record,
-                  origin,
-                  landed,
-                  LocalSyncRefusal(
-                    outcome.operationId,
-                    outcome.code.name,
-                    outcome.message,
-                    remaining,
-                  ),
-                )
-              )
-            else ->
-              return LocalSyncResult.Replayed(
-                report(
-                  record,
-                  origin,
-                  landed,
-                  LocalSyncRefusal(
-                    wire.submissionOperationId(),
-                    "UNEXPECTED_RESPONSE",
-                    "the server answered an edit with ${answer.response::class.simpleName}",
-                    remaining,
-                  ),
-                )
-              )
           }
-        }
-        is UiBuilderHttpResult.SnapshotRequired,
-        is UiBuilderHttpResult.ServiceError -> {
-          val error =
-            when (answer) {
-              is UiBuilderHttpResult.SnapshotRequired -> answer.error
-              is UiBuilderHttpResult.ServiceError -> answer.error
-              else -> error("unreachable")
+        when (answer) {
+          is UiBuilderHttpResult.Response ->
+            when (val outcome = (answer.response as? OperationOutcomeResponseV1)?.outcome) {
+              is CommandOutcomeV1 -> ReplayAnswer.of(outcome)
+              else ->
+                ReplayAnswer.Refused(
+                  wire.submissionOperationId(),
+                  "UNEXPECTED_RESPONSE",
+                  "the server answered an edit with ${answer.response::class.simpleName}",
+                )
             }
-          return LocalSyncResult.Replayed(
-            report(
-              record,
-              origin,
-              landed,
-              LocalSyncRefusal(
-                wire.submissionOperationId(),
-                error.code.name,
-                error.message,
-                remaining,
-              ),
+          is UiBuilderHttpResult.SnapshotRequired ->
+            ReplayAnswer.Refused(
+              wire.submissionOperationId(),
+              answer.error.code.name,
+              answer.error.message,
             )
-          )
+          is UiBuilderHttpResult.ServiceError ->
+            ReplayAnswer.Refused(
+              wire.submissionOperationId(),
+              answer.error.code.name,
+              answer.error.message,
+            )
         }
       }
-    }
-    return LocalSyncResult.Replayed(report(record, origin, landed, refusal = null))
+    return LocalSyncResult.Replayed(
+      LocalSyncReport(
+        designId = record.designId,
+        forkRevision = origin.revision,
+        landed =
+          replay.landed.map {
+            LocalSyncLanded(
+              operationId = it.operationId,
+              revision = it.committedRevision,
+              idempotentReplay = it.idempotentReplay,
+              conflicts = it.conflicts,
+            )
+          },
+        refusal =
+          replay.stop?.let { LocalSyncRefusal(it.operationId, it.code, it.message, it.remaining) },
+      )
+    )
   }
 
   /**
@@ -349,13 +298,6 @@ class LocalDesignSyncBack(
       }
     }
   }
-
-  private fun report(
-    record: LocalDesignRecordV1,
-    origin: LocalDesignOriginV1,
-    landed: List<LocalSyncLanded>,
-    refusal: LocalSyncRefusal?,
-  ) = LocalSyncReport(record.designId, origin.revision, landed.toList(), refusal)
 }
 
 /**
