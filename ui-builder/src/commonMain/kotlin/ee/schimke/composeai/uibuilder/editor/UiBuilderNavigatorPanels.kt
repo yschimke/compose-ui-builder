@@ -176,6 +176,8 @@ internal fun EditorNavigator(
   /** Opens the pack settings, or null where there is nothing to switch. */
   onManagePacks: (() -> Unit)? = null,
   thumbnailOf: (String, EditorCatalogVariant?) -> UiBuilderDocument?,
+  /** This design's own components, for the palette's first shelf. */
+  localPalette: EditorLocalComponentPalette = EditorLocalComponentPalette.NONE,
   layerRows: List<EditorLayerRow>,
   collaborators: List<UiBuilderCollaborator>,
   onOpenProperties: () -> Unit,
@@ -230,6 +232,7 @@ internal fun EditorNavigator(
             packs = packs,
             onManagePacks = onManagePacks,
             thumbnailOf = thumbnailOf,
+            localPalette = localPalette,
             dropTarget = dropTarget,
             dropTargetLabel = dropTargetLabel,
             onCatalogDrag = onCatalogDrag,
@@ -289,6 +292,7 @@ private fun InsertPanel(
   onManagePacks: (() -> Unit)? = null,
   /** The document a row's picture draws, from the reducer that would perform the insert. */
   thumbnailOf: (String, EditorCatalogVariant?) -> UiBuilderDocument?,
+  localPalette: EditorLocalComponentPalette = EditorLocalComponentPalette.NONE,
   dropTarget: ParentSlot?,
   /** What [dropTarget] is called out loud — a layer's name and its slot, not an id. */
   dropTargetLabel: String? = null,
@@ -385,6 +389,30 @@ private fun InsertPanel(
         LocalUiBuilderChrome.current.ComponentBrowserAllRow(totalCatalogComponents) {
           if (state.catalogQuery.isNotBlank()) dispatch(UiBuilderEditorEvent.SearchCatalog(""))
           dispatch(UiBuilderEditorEvent.ExpandAllCatalogGroups)
+        }
+      }
+      // The design's own components first: they are what this screen is made of, and the reason
+      // to make one was to place it again.
+      val local =
+        localPalette.components.filter {
+          state.catalogQuery.isBlank() || it.name.contains(state.catalogQuery, ignoreCase = true)
+        }
+      if (local.isNotEmpty()) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+          PanelHeading(
+            "This design",
+            "${local.size} ${if (local.size == 1) "component" else "components"}",
+          )
+        }
+        gridItems(local, key = { "local:${it.key}" }) { component ->
+          LocalComponentTile(
+            component = component,
+            thumbnail = localPalette.preview(component.key),
+            target = localPalette.target(component.key),
+            onAdd = { target ->
+              dispatch(UiBuilderEditorEvent.InsertLocalComponent(component.key, target))
+            },
+          )
         }
       }
       gridItems(
@@ -899,6 +927,61 @@ private fun CatalogComponentTile(
         container = item.kind == EditorComponentKind.Container,
       )
     }
+  }
+}
+
+/** What the palette needs to offer a design's own components, from the reducer. */
+data class EditorLocalComponentPalette(
+  val components: List<EditorLocalComponent>,
+  /** The document a component's tile draws: one placement of it, passing what the last one did. */
+  val preview: (String) -> UiBuilderDocument?,
+  /** Where an Add of a component would land, or null where nothing selected can hold it. */
+  val target: (String) -> ParentSlot?,
+) {
+  companion object {
+    val NONE = EditorLocalComponentPalette(emptyList(), { null }, { null })
+  }
+}
+
+/** One of the design's own components on the palette, added where the selection can hold it. */
+@Composable
+private fun LocalComponentTile(
+  component: EditorLocalComponent,
+  thumbnail: UiBuilderDocument?,
+  target: ParentSlot?,
+  onAdd: (ParentSlot) -> Unit,
+) {
+  val refusal = if (target == null) "Select a layer that can hold it" else null
+  LocalUiBuilderChrome.current.ComponentBrowserTile(
+    model =
+      UiBuilderCatalogTileModel(
+        title = component.name,
+        // Placements and parameters are what tell two of a design's components apart at a glance;
+        // a refusal takes the line when there is one.
+        supporting =
+          refusal
+            ?: component.publishedAs?.let { "Published as ${it.displayName}" }
+            ?: "${component.placements} placed · ${component.parameters.size} parameters",
+        supportingIsError = refusal != null,
+        unexportable = false,
+        pinned = false,
+        variantCount = 0,
+        variantsExpanded = false,
+        canAdd = target != null,
+        addContentDescription =
+          if (refusal == null) "Add ${component.name}" else "Add ${component.name} — $refusal",
+        onAdd = { target?.let(onAdd) },
+        onTogglePinned = {},
+        onToggleVariants = {},
+      )
+  ) {
+    CatalogThumbnail(
+      document = thumbnail,
+      componentId = component.rootComponentId ?: COMPONENT_INSTANCE_ID,
+      label = component.name,
+      size = DpSize(104.dp, 72.dp),
+      container = true,
+    )
   }
 }
 

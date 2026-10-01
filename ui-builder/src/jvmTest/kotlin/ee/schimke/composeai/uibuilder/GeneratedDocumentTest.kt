@@ -296,7 +296,7 @@ class GeneratedDocumentTest {
       .isSuccess
     // A second gate, one level below the generator vocabulary: a build without
     // `UiBuilderBuildFeatures.remoteCompose` refuses ANY document carrying a repetition
-    // ("stateful authoring and reusable source export are disabled in this build"), however well
+    // ("stateful authoring is disabled in this build"), however well
     // the shared generator can express one. So in a shipping build `layout/for-each` is expected
     // to refuse and must NOT be exempted the way the vocabulary gate exempts it — otherwise this
     // helper demands source from a document the product has already declined to generate.

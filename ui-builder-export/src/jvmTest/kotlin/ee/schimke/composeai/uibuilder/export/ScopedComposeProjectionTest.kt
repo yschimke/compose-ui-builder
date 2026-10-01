@@ -106,10 +106,11 @@ class ScopedComposeProjectionTest {
     val source = source(fixture()) ?: return
     assertContains(source, ".forEach")
     assertContains(source, "private fun Pair(")
-    assertContains(source, "argument0: kotlin.Float")
+    // A parameter is named after the key its body reads.
+    assertContains(source, "spacing: kotlin.Float")
     assertContains(source, "capture0: () -> kotlin.Unit")
     assertContains(source, "capture1: () -> kotlin.Unit")
-    assertContains(source, "Arrangement.spacedBy(argument0.dp)")
+    assertContains(source, "Arrangement.spacedBy(spacing.dp)")
     assertContains(source, "page.value = 10")
     assertContains(source, "page.value = 20")
     assertEquals(1, Regex("private fun Pair").findAll(source).count())
@@ -267,7 +268,7 @@ class ScopedComposeProjectionTest {
     val source = source(nested) ?: return
     assertEquals(2, Regex("\\.forEach").findAll(source).count())
     assertContains(source, "ScreenRow_1(screenRow.field0)")
-    assertContains(source, "argument0 = screenRow_1.field0")
+    assertContains(source, "spacing = screenRow_1.field0")
   }
 
   @Test
@@ -277,7 +278,7 @@ class ScopedComposeProjectionTest {
         it.copy(properties = it.properties + ("horizontalArrangement" to EnumValueV1("center")))
       }
     val source = source(doc) ?: return
-    assertContains(source, "max(0f, argument0).dp")
+    assertContains(source, "max(0f, spacing).dp")
     assertContains(source, "Alignment.CenterHorizontally")
   }
 

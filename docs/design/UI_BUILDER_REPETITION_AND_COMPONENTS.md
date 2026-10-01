@@ -255,6 +255,64 @@ that has never heard of components can see what the node is and draw a placehold
   would sit: it has no capability of its own, so the validator resolves it to its body root's, and
   the slot that would refuse the body refuses the placement.
 
+### 2a. The editor's half — built (2026-10)
+
+Everything above was the format, the canvas and the exporters; until this the editor could draw a
+component a document already held and could not make one. The flow is now the one a designer
+expects from any design tool, in one design (`LocalComponents.kt`, `LocalComponentsTest`):
+
+1. **Make component** (the selection's context menu). Build one inbox row, select it, make it
+   `InboxEmail`. One command: a placement takes the row's place, the row moves out of the screen and
+   becomes the body, and every text the body shows becomes a parameter the placement passes —
+   named after what it says (`Sender` → `sender`), so the screen draws exactly what it drew and the
+   call reads `InboxEmail(sender = "Sender", subject = "Subject")`. Only the texts the export can
+   bind (`bindableTextProperties`, read off `BINDABLE_PROPERTIES`) are promoted, so making a
+   component never makes a parameter the export then refuses. A body that handles an event or reads
+   state, a scaffold, and a root carrying a parent-scoped modifier (`weight`, `align`) are refused
+   up front, by the same rules the export refuses them by.
+2. **The palette's "This design" shelf** lists the design's components first — name, how many are
+   placed, how many parameters — with a tile drawn from one placement of it, and adds a placement
+   where the selection can hold one (beside a selected placement), passing what the last one did.
+3. **The inspector** edits a selected placement's arguments as ordinary fields — each one built
+   from the body property it feeds, so a colour argument gets a colour picker — and renames the
+   component. A body property that reads a parameter says so and refuses a literal, because a
+   literal there would silently drop the parameter from every placement.
+4. **Layers** lists each body after the screen, so its layout can be selected and edited once for
+   every placement.
+5. **The code pane** writes each component as its own `@Composable fun`. Components are no longer
+   behind `uiBuilderRemoteCompose`: a placement exports as a call to a private composable of the
+   same file, ordinary Compose with no runtime of its own.
+
+**How a subtree leaves the screen without a new mutation.** A body is detached — in no root list
+and no slot — and the wire had no way to put a node there. The rule, applied by both reducers
+(`withComponent`): a body declared while it is an *extra* root leaves the root list, and one whose
+declaration goes and that nothing else places returns to it. So making a component is `insertNode`
+(the placement, after the subtree), `moveNode` (the subtree, to the root list), `declareComponent`
+— three mutations the wire already had — and the command ends with the one root it began with.
+Both directions read the document alone, so an undo writing the old declaration back gets the same
+answer the forward write did. The server checks "nothing still places an undeclared component" once
+the whole compensation has run rather than at the declaration, because undoing a make takes the
+declaration out before it deletes the placement.
+
+**What the wire still cannot say: a placement's arguments.** There is no mutation that edits
+`node.component`, so the inspector replaces the placement with one passing the new value, in the
+same place, in one command. Undo is exact; the cost is the placement's id, and with it anything
+anchored to that id (a comment). `SetComponentArgumentsMutationV1` in compose-preview-contracts is
+the fix, and the editor's `setComponentArgument` is the one place that changes when it lands.
+
+**Graduating to the app's own component.** Once the app ships `InboxEmail` — a component pack
+projected from its discovered composables puts it in the catalog — the placement's inspector offers
+**Replace with Inbox email**: every placement becomes a call to the catalog component, arguments
+becoming its properties of the same name and the placement's modifiers carrying across, and the
+design's copy is removed, all in one command. The match is on the composable's name (`code.symbol`)
+or the display name with its spaces taken out, never on a likeness: a swap rewrites every placement.
+
+**Not built**, in the order they are likely to be wanted: importing a component from another
+design (the `ui-builder/components/` library of §3 is the shape), copy and paste of a component
+between tabs or hosts (the clipboard would carry the declaration and the body with the placement),
+renaming a parameter, exposing a non-text property (a colour) as a parameter from the inspector,
+and detaching a placement back into an ordinary subtree.
+
 It composes with 1b rather than duplicating it: a loop's template is an instance with one argument
 per row field. Which is why this is worth building **before** data-driven loops, not after.
 
@@ -306,7 +364,8 @@ only has to carry a symbol during the phase where it is still moving — the fai
 2. **Instance paths** for bounds, selection and comments — the prerequisite (1b) and (2) share.
    The canvas is done; the wire surfaces in the table above move with the first construct that
    draws a second copy.
-3. **Component symbols and instances**, in-document — built, canvas and export.
+3. **Component symbols and instances**, in-document — built: canvas, export, and the editor's
+   make / place / edit / swap (§2a).
 4. **`ui-builder/components/`** — the library and its two rules are built on the server
    (`ServeUiBuilderComponentLibrary`, listed and fetched under
    `/admin/ui-builder/component-library`); the editor does not yet import from it. Graduation still

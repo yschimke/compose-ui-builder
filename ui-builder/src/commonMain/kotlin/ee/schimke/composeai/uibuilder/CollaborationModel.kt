@@ -104,6 +104,27 @@ sealed interface DesignOperation {
   @Serializable
   @SerialName("setModifiers")
   data class SetModifiers(val nodeId: String, val modifiers: JsonArray) : DesignOperation
+
+  /**
+   * Declare, or redeclare, one reusable component: `{"name": …, "root": …}` under [componentKey].
+   *
+   * The wire's `DeclareComponentMutationV1`. A body root that is a *second* root of the design when
+   * it is declared stops being one — it is a definition, drawn only where a placement names it.
+   * That is how a subtree becomes a component in one command: move it out of the screen to the root
+   * list, then declare it, and the command ends with the one root it started with.
+   */
+  @Serializable
+  @SerialName("declareComponent")
+  data class DeclareComponent(val componentKey: String, val declaration: JsonObject) :
+    DesignOperation
+
+  /**
+   * Undeclare one component. Its body, if nothing else places it, is a root again, so the command
+   * that removes a component also deletes or re-places its body.
+   */
+  @Serializable
+  @SerialName("removeComponent")
+  data class RemoveComponent(val componentKey: String) : DesignOperation
 }
 
 @Serializable data class ParentSlot(val nodeId: String, val slot: String)
@@ -142,6 +163,8 @@ enum class PropertyTarget {
   Property,
   StateVariable,
   EventBinding,
+  /** A `components` entry; the address's node id is empty and its property is the key. */
+  Component,
 }
 
 data class PropertyAddress(
@@ -155,6 +178,7 @@ internal fun UiBuilderDocument.valueAt(address: PropertyAddress): JsonElement? =
     PropertyTarget.Property -> nodes[address.nodeId]?.properties?.get(address.property)
     PropertyTarget.EventBinding -> nodes[address.nodeId]?.eventBindings?.get(address.property)
     PropertyTarget.StateVariable -> stateVariables[address.property]
+    PropertyTarget.Component -> components[address.property]
   }
 
 internal fun UiBuilderDocument.withValueAt(
@@ -165,6 +189,7 @@ internal fun UiBuilderDocument.withValueAt(
     JsonObject(if (value == null) this - address.property else this + (address.property to value))
   if (address.target == PropertyTarget.StateVariable)
     return copy(stateVariables = stateVariables.updated())
+  if (address.target == PropertyTarget.Component) return withComponent(address.property, value)
   val node =
     nodes[address.nodeId]
       ?: fail(RejectionCode.UNKNOWN_NODE, "unknown node ${address.nodeId}", address.nodeId)
@@ -172,9 +197,54 @@ internal fun UiBuilderDocument.withValueAt(
     when (address.target) {
       PropertyTarget.Property -> node.copy(properties = node.properties.updated())
       PropertyTarget.EventBinding -> node.copy(eventBindings = node.eventBindings.updated())
-      PropertyTarget.StateVariable -> error("handled above")
+      PropertyTarget.StateVariable,
+      PropertyTarget.Component -> error("handled above")
     }
   return copy(nodes = nodes + (node.id to changed))
+}
+
+/**
+ * Write one component declaration, keeping the root list honest about which subtree is the screen.
+ *
+ * A body declared while it is an *extra* root leaves the root list: it is a definition now, and a
+ * design still has the one screen root it had. A body that loses its declaration and is placed
+ * nowhere else returns to the root list, so it is still somewhere — the command that removed the
+ * component then deletes it, or the end-of-command root check refuses the result. Both directions
+ * are worked out from the document alone, so an undo, which writes the old declaration back, gets
+ * the same answer the forward write did.
+ */
+internal fun UiBuilderDocument.withComponent(key: String, value: JsonElement?): UiBuilderDocument {
+  val before = componentRootOf(components[key])
+  val after = componentRootOf(value)
+  val declared =
+    copy(
+      components = JsonObject(if (value == null) components - key else components + (key to value))
+    )
+  var roots = declared.roots
+  if (after != null && after in roots && roots.size > 1) roots = roots - after
+  if (
+    before != null &&
+      before != after &&
+      before in nodes &&
+      before !in roots &&
+      declared.components.values.none { componentRootOf(it) == before } &&
+      nodes.values.none { node -> node.slots.values.any { before in it } }
+  )
+    roots = roots + before
+  return declared.copy(roots = roots)
+}
+
+internal fun componentRootOf(declaration: JsonElement?): String? =
+  ((declaration as? JsonObject)?.get("root") as? kotlinx.serialization.json.JsonPrimitive)
+    ?.takeIf { it.isString }
+    ?.content
+
+/** The bodies no root list or slot holds: the subtrees only a placement draws. */
+internal fun UiBuilderDocument.detachedComponentRoots(): Set<String> {
+  val placed = roots.toSet() + nodes.values.flatMap { node -> node.slots.values.flatten() }
+  return components.values
+    .mapNotNullTo(mutableSetOf()) { componentRootOf(it) }
+    .filterTo(mutableSetOf()) { it !in placed }
 }
 
 data class StablePositionKey(val path: List<Int>, val tieBreaker: String) :

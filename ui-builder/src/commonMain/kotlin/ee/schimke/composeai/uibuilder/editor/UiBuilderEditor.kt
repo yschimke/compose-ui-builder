@@ -1116,6 +1116,9 @@ fun UiBuilderEditor(
       canDelete = reducer.canDeleteSelected(state),
       wrapCandidates = reducer.wrapCandidates(state),
       canUnwrap = reducer.canUnwrapSelected(state),
+      canOfferMakeComponent = state.selection.size == 1,
+      makeComponentRefusal =
+        if (state.selection.size == 1) reducer.makeComponentRefusal(state) else null,
       // The focused canvas has no inspector to open; its quick editor is the way to a property.
       onOpenProperties =
         if (focusedCanvas) null
@@ -1189,6 +1192,12 @@ fun UiBuilderEditor(
         packs = catalog.componentPacks,
         onManagePacks = onComponentPacks,
         thumbnailOf = reducer::previewDocument,
+        localPalette =
+          EditorLocalComponentPalette(
+            components = reducer.localComponents(state),
+            preview = { reducer.localComponentPreview(state, it) },
+            target = { reducer.localComponentTarget(state, it) },
+          ),
         layerRows = layerRows,
         collaborators = collaborators,
         onOpenProperties = ::openProperties,
@@ -1986,6 +1995,7 @@ fun UiBuilderEditor(
       onSnapshotDesign = onSnapshotDesign,
       onFlatten = ::flattenCurrentReference,
       catalogItems = reducer.catalogItems(""),
+      localComponents = reducer.localComponents(state),
       onPlaceComponent = { componentId ->
         captureSequence += 1
         captureRequest = ReferenceCaptureRequest(componentId, captureSequence)

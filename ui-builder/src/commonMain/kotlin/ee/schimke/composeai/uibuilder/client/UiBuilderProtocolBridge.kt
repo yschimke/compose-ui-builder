@@ -6,9 +6,11 @@ import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.DeclareComponentMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DeleteNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.DesignActionV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
+import ee.schimke.composeai.uibuilder.protocol.DesignComponentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignModifierV1
 import ee.schimke.composeai.uibuilder.protocol.DesignMutationV1
@@ -21,6 +23,7 @@ import ee.schimke.composeai.uibuilder.protocol.NodeLocationV1
 import ee.schimke.composeai.uibuilder.protocol.NullValueV1
 import ee.schimke.composeai.uibuilder.protocol.ParentSlotV1
 import ee.schimke.composeai.uibuilder.protocol.RedoCommandV1
+import ee.schimke.composeai.uibuilder.protocol.RemoveComponentMutationV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveNodePropertyMutationV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChangeV1
@@ -266,6 +269,12 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
         nodeId,
         modifiers.map { bridgeJson.decodeFromString(DesignModifierV1.serializer(), it.toString()) },
       )
+    is DesignOperation.DeclareComponent ->
+      DeclareComponentMutationV1(
+        componentKey,
+        bridgeJson.decodeFromString(DesignComponentV1.serializer(), declaration.toString()),
+      )
+    is DesignOperation.RemoveComponent -> RemoveComponentMutationV1(componentKey)
     is DesignOperation.SetEnvironment ->
       UpdateEnvironmentMutationV1(
         listOf(
