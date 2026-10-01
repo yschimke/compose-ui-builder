@@ -52,6 +52,7 @@ import ee.schimke.composeai.uibuilder.exportRecord
 import ee.schimke.composeai.uibuilder.packComponentRecords
 import ee.schimke.composeai.uibuilder.packComponentsById
 import ee.schimke.composeai.uibuilder.reference.PLACED_PIECE_WIDTH_FRACTION
+import ee.schimke.composeai.uibuilder.reference.REFERENCE_FONT_SIZE_PROPERTY
 import ee.schimke.composeai.uibuilder.reference.ReferenceFit
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
 import ee.schimke.composeai.uibuilder.reference.ReferenceMark
@@ -61,6 +62,7 @@ import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import ee.schimke.composeai.uibuilder.reference.ReferencePiece
 import ee.schimke.composeai.uibuilder.reference.ReferenceTool
 import ee.schimke.composeai.uibuilder.reference.extractSvgLayoutBoxes
+import ee.schimke.composeai.uibuilder.reference.movedModifierChain
 import ee.schimke.composeai.uibuilder.reference.svgTextOrNull
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderSlotInspection
@@ -1664,34 +1666,44 @@ class UiBuilderEditorReducer(
     }
     event.fontSizeSp?.let { size ->
       val property =
-        catalog.componentsById[node.componentId]?.propertiesByName?.get(FONT_SIZE_PROPERTY)
-          ?: return refuse("${node.componentId} has no $FONT_SIZE_PROPERTY", FONT_SIZE_PROPERTY)
-      if (node.properties[FONT_SIZE_PROPERTY]?.bindingKey() != null) {
+        catalog.componentsById[node.componentId]
+          ?.propertiesByName
+          ?.get(REFERENCE_FONT_SIZE_PROPERTY)
+          ?: return refuse(
+            "${node.componentId} has no $REFERENCE_FONT_SIZE_PROPERTY",
+            REFERENCE_FONT_SIZE_PROPERTY,
+          )
+      if (node.properties[REFERENCE_FONT_SIZE_PROPERTY]?.bindingKey() != null) {
         return refuse(
           "The type size is a component parameter; set it on each placement",
-          FONT_SIZE_PROPERTY,
+          REFERENCE_FONT_SIZE_PROPERTY,
         )
       }
       val field =
         propertyFields(state.copy(selection = listOf(nodeId))).firstOrNull {
-          it.name == FONT_SIZE_PROPERTY
-        } ?: return refuse("${node.componentId} has no $FONT_SIZE_PROPERTY", FONT_SIZE_PROPERTY)
+          it.name == REFERENCE_FONT_SIZE_PROPERTY
+        }
+          ?: return refuse(
+            "${node.componentId} has no $REFERENCE_FONT_SIZE_PROPERTY",
+            REFERENCE_FONT_SIZE_PROPERTY,
+          )
       val draft = if (size == floor(size)) size.toInt().toString() else size.toString()
       val parsed = field.parseDraft(draft)
-      if (parsed is PropertyDraft.Invalid) return refuse(parsed.message, FONT_SIZE_PROPERTY)
+      if (parsed is PropertyDraft.Invalid)
+        return refuse(parsed.message, REFERENCE_FONT_SIZE_PROPERTY)
       val existingType =
         property.canonicalWrapper(
-          (node.properties[FONT_SIZE_PROPERTY] as? JsonObject)
+          (node.properties[REFERENCE_FONT_SIZE_PROPERTY] as? JsonObject)
             ?.get("type")
             ?.primitiveOrNull()
             ?.contentOrNull
         )
       val encoded =
         literal(existingType ?: field.defaultEncodedType(), (parsed as PropertyDraft.Valid).value)
-      validator.validate(state.document, nodeId, FONT_SIZE_PROPERTY, encoded)?.let {
-        return refuse(it.message, FONT_SIZE_PROPERTY)
+      validator.validate(state.document, nodeId, REFERENCE_FONT_SIZE_PROPERTY, encoded)?.let {
+        return refuse(it.message, REFERENCE_FONT_SIZE_PROPERTY)
       }
-      operations += DesignOperation.SetProperty(nodeId, FONT_SIZE_PROPERTY, encoded)
+      operations += DesignOperation.SetProperty(nodeId, REFERENCE_FONT_SIZE_PROPERTY, encoded)
     }
     if (operations.isEmpty()) return state
     return state.apply(sequence, operations, selectionAfter = nodeId)

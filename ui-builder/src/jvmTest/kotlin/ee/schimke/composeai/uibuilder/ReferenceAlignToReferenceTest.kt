@@ -4,9 +4,9 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
-import ee.schimke.composeai.uibuilder.editor.movedModifierChain
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
+import ee.schimke.composeai.uibuilder.reference.movedModifierChain
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

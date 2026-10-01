@@ -476,3 +476,23 @@ internal const val MARKUP_CORNER_RADIUS_DP: Float = 12f
 
 /** The type size a [ReferenceMarkupKind.Text] mark is drawn at, in sp-equivalent dp. */
 internal const val MARKUP_TEXT_SIZE_DP: Float = 14f
+
+/** [ReferenceFacts] for this picture against a frame. */
+fun ReferenceImage.facts(
+  frameWidthDp: Float,
+  frameHeightDp: Float,
+  designDensity: Float,
+  /** The decoded size, for an import whose size was not known up front (an SVG, a stored file). */
+  decodedWidthPx: Int = 0,
+  decodedHeightPx: Int = 0,
+): ReferenceFacts =
+  ReferenceFacts(
+    widthPx = widthPx.takeIf { it > 0 } ?: decodedWidthPx,
+    heightPx = heightPx.takeIf { it > 0 } ?: decodedHeightPx,
+    frameWidthDp = frameWidthDp,
+    frameHeightDp = frameHeightDp,
+    // An SVG has no pixels of its own: it is drawn at whatever size it is asked for, so a declared
+    // density would be a statement about a rasterisation this editor chose.
+    declaredDensity = if (isVector) null else declaredDensityFromName(name),
+    designDensity = designDensity,
+  )

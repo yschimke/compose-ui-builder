@@ -1,8 +1,5 @@
-package ee.schimke.composeai.uibuilder
+package ee.schimke.composeai.uibuilder.reference
 
-import ee.schimke.composeai.uibuilder.reference.ReferenceUrl
-import ee.schimke.composeai.uibuilder.reference.declaredDensityFromName
-import ee.schimke.composeai.uibuilder.reference.parseReferenceUrl
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

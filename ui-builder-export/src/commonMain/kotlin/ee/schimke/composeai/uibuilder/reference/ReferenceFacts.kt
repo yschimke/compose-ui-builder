@@ -197,7 +197,7 @@ data class ReferenceFacts(
         4f to "xxxhdpi",
       )
 
-    internal fun snapDensity(measured: Float): Float {
+    fun snapDensity(measured: Float): Float {
       if (!measured.isFinite() || measured <= 0f) return 1f
       val nearest = DENSITY_BUCKETS.minBy { abs(it.first - measured) }.first
       return if (abs(nearest - measured) <= nearest * 0.02f) nearest
@@ -260,23 +260,3 @@ private fun Float.percentDelta(): String {
   val percent = ((this - 1f) * 100f).roundToInt()
   return if (percent >= 0) "+$percent% wider" else "${-percent}% narrower"
 }
-
-/** [ReferenceFacts] for this picture against a frame. */
-fun ReferenceImage.facts(
-  frameWidthDp: Float,
-  frameHeightDp: Float,
-  designDensity: Float,
-  /** The decoded size, for an import whose size was not known up front (an SVG, a stored file). */
-  decodedWidthPx: Int = 0,
-  decodedHeightPx: Int = 0,
-): ReferenceFacts =
-  ReferenceFacts(
-    widthPx = widthPx.takeIf { it > 0 } ?: decodedWidthPx,
-    heightPx = heightPx.takeIf { it > 0 } ?: decodedHeightPx,
-    frameWidthDp = frameWidthDp,
-    frameHeightDp = frameHeightDp,
-    // An SVG has no pixels of its own: it is drawn at whatever size it is asked for, so a declared
-    // density would be a statement about a rasterisation this editor chose.
-    declaredDensity = if (isVector) null else declaredDensityFromName(name),
-    designDensity = designDensity,
-  )

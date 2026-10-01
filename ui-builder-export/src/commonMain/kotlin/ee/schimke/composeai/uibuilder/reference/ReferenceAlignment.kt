@@ -1,10 +1,8 @@
 package ee.schimke.composeai.uibuilder.reference
 
-import androidx.compose.ui.geometry.Rect
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
-import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -30,7 +28,7 @@ class ReferenceMeasureFrame(
     }
   }
 
-  internal fun toGrid(dp: Rect): RasterRect =
+  fun toGrid(dp: ReferenceBox): RasterRect =
     RasterRect(
       floor(dp.left * samplesPerDp).toInt(),
       floor(dp.top * samplesPerDp).toInt(),
@@ -38,8 +36,8 @@ class ReferenceMeasureFrame(
       ceil(dp.bottom * samplesPerDp).toInt(),
     )
 
-  internal fun toDp(grid: RasterRect): Rect =
-    Rect(
+  fun toDp(grid: RasterRect): ReferenceBox =
+    ReferenceBox(
       grid.left / samplesPerDp,
       grid.top / samplesPerDp,
       grid.right / samplesPerDp,
@@ -61,14 +59,14 @@ enum class ReferenceMatchSource(val label: String) {
 data class ReferenceLayer(
   val nodeId: String,
   /** The node's box in frame dp. */
-  val bounds: Rect,
+  val bounds: ReferenceBox,
   /** Whether the node draws text, which is compared by its ink and resized by its font. */
   val text: Boolean,
   /**
    * The box inside the node's own padding, which is what grows with its type. Padding does not
    * scale with a font size, so a move that scaled it would overshoot by the padding's share.
    */
-  val content: Rect = bounds,
+  val content: ReferenceBox = bounds,
 )
 
 /**
@@ -81,10 +79,10 @@ data class ReferenceLayer(
 data class ReferenceLayerMatch(
   val nodeId: String,
   val source: ReferenceMatchSource,
-  val current: Rect,
-  val target: Rect,
+  val current: ReferenceBox,
+  val target: ReferenceBox,
   /** The node's content box — inside its padding — which the move is anchored to. */
-  val bounds: Rect,
+  val bounds: ReferenceBox,
   val scale: Float,
   val confident: Boolean,
   val text: Boolean,
@@ -110,8 +108,8 @@ data class ReferenceLayerMatch(
 fun matchLayer(
   frame: ReferenceMeasureFrame,
   layer: ReferenceLayer,
-  boxMarks: List<Rect>,
-  layoutBoxes: List<Rect>,
+  boxMarks: List<ReferenceBox>,
+  layoutBoxes: List<ReferenceBox>,
   /**
    * Whether the reference's pixels may be searched. False when the picture is not placed dp for dp
    * ([ReferenceFacts.pixelComparable]): a box the operator drew still means what it says, but a
@@ -126,7 +124,7 @@ fun matchLayer(
 
   boxMarks
     .filter { it.overlaps(bounds) }
-    .maxByOrNull { it.intersectionArea(bounds) / it.unionArea(bounds) }
+    .maxByOrNull { it.overlapRatio(bounds) }
     ?.let { mark ->
       val target =
         if (layer.text) inkBox(frame.reference, frame.toGrid(mark))?.let(frame::toDp) ?: mark
@@ -144,7 +142,7 @@ fun matchLayer(
     }
 
   layoutBoxes
-    .map { it to it.intersectionArea(bounds) / it.unionArea(bounds) }
+    .map { it to it.overlapRatio(bounds) }
     .filter { it.second >= LAYOUT_BOX_MIN_OVERLAP }
     .maxByOrNull { it.second }
     ?.let { (box, _) ->
@@ -182,7 +180,7 @@ fun matchLayer(
     source = ReferenceMatchSource.Pixels,
     current = current,
     target =
-      Rect(
+      ReferenceBox(
         current.left + dx,
         current.top + dy,
         current.left + dx + current.width * found.scale,
@@ -267,15 +265,6 @@ private fun Float.wholeDp(): Int = if (abs(this) < 0.75f) 0 else roundToInt()
 
 private fun safeRatio(target: Float, current: Float): Float =
   if (current <= 0f || target <= 0f) 1f else (target / current).coerceIn(0.25f, 4f)
-
-private fun Rect.intersectionArea(other: Rect): Float {
-  val w = min(right, other.right) - max(left, other.left)
-  val h = min(bottom, other.bottom) - max(top, other.top)
-  return if (w <= 0f || h <= 0f) 0f else w * h
-}
-
-private fun Rect.unionArea(other: Rect): Float =
-  (width * height + other.width * other.height - intersectionArea(other)).coerceAtLeast(1e-6f)
 
 private fun Float.spLabel(): String =
   if (this == this.toInt().toFloat()) this.toInt().toString() else toString()

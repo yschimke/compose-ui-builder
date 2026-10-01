@@ -1,9 +1,5 @@
-package ee.schimke.composeai.uibuilder.editor
+package ee.schimke.composeai.uibuilder.reference
 
-import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
-import ee.schimke.composeai.uibuilder.reference.ReferenceFacts
-import ee.schimke.composeai.uibuilder.reference.ReferenceImage
-import ee.schimke.composeai.uibuilder.reference.facts
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.min
@@ -15,7 +11,7 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.put
 
 /** The text property a reference match resizes. Every catalog's text component declares it. */
-internal const val FONT_SIZE_PROPERTY = "fontSizeSp"
+const val REFERENCE_FONT_SIZE_PROPERTY = "fontSizeSp"
 
 /**
  * [chain] with the node moved [dx], [dy] dp, or null when [declared] allows no way to move it.
@@ -31,7 +27,7 @@ internal const val FONT_SIZE_PROPERTY = "fontSizeSp"
  * A new padding goes at the front of the chain, outermost, so it pads the node's box rather than
  * the inside of a fixed size, which would shrink the content instead of moving it.
  */
-internal fun movedModifierChain(
+fun movedModifierChain(
   chain: List<JsonElement>,
   dx: Int,
   dy: Int,
@@ -103,7 +99,7 @@ private fun JsonElement.modifierType(): String? =
 private fun JsonObject.number(name: String): Double =
   (get(name) as? JsonPrimitive)?.doubleOrNull?.takeIf { it.isFinite() } ?: 0.0
 
-/** Whole numbers stay whole, as [UiBuilderEditorReducer]'s modifier field edits keep them. */
+/** Whole numbers stay whole, as the editor's modifier field edits keep them. */
 private fun Double.json(): JsonPrimitive =
   if (this == floor(this) && abs(this) < 1e12) JsonPrimitive(toLong()) else JsonPrimitive(this)
 
@@ -120,14 +116,4 @@ private fun offset(x: Double, y: Double): JsonObject = buildJsonObject {
   put("type", "offset")
   put("xDp", x.json())
   put("yDp", y.json())
-}
-
-/**
- * [image] measured against the frame this design is edited in, as the reducer sees it — the default
- * host shape, since the reducer has no canvas. Null never; kept nullable for callers that have no
- * picture.
- */
-internal fun UiBuilderEditorState.referenceFacts(image: ReferenceImage): ReferenceFacts? {
-  val (widthDp, heightDp) = document.canvasFrameDp(WearWidgetHostShape.Default)
-  return image.facts(widthDp, heightDp, document.screenEnvironmentSettings().density.toFloat())
 }
