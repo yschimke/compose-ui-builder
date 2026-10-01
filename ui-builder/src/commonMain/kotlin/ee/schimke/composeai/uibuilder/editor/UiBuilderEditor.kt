@@ -1201,6 +1201,7 @@ fun UiBuilderEditor(
       wrapCandidates = reducer.wrapCandidates(state),
       canUnwrap = reducer.canUnwrapSelected(state),
       canOfferMakeComponent = state.selection.size == 1,
+      componentActions = reducer.componentActions(state),
       makeComponentRefusal =
         if (state.selection.size == 1) reducer.makeComponentRefusal(state) else null,
       // The focused canvas has no inspector to open; its quick editor is the way to a property.

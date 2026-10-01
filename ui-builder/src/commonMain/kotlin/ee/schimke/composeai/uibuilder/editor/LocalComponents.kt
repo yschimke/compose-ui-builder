@@ -44,6 +44,9 @@ data class EditorLocalComponent(
   val publishedAs: ComponentCapability? = null,
 )
 
+/** One component verb the context menu offers for the selection. */
+data class EditorComponentAction(val label: String, val event: UiBuilderEditorEvent)
+
 /** One argument of the selected placement, as the inspector edits it. */
 data class EditorComponentArgument(
   val key: String,

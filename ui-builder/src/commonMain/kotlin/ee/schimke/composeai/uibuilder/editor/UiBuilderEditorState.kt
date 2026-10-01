@@ -31,6 +31,7 @@ import ee.schimke.composeai.uibuilder.client.toProtocolDocument
 import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_CLICK_COMPONENTS
 import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
 import ee.schimke.composeai.uibuilder.codegen.ComposeExportSeverity
+import ee.schimke.composeai.uibuilder.codegen.bindableProperties
 import ee.schimke.composeai.uibuilder.codegen.bindableTextProperties
 import ee.schimke.composeai.uibuilder.componentRootOf
 import ee.schimke.composeai.uibuilder.detachedComponentRoots
@@ -374,6 +375,11 @@ class UiBuilderEditorReducer(
         insertLocalComponent(state, event.componentKey, event.target, event.afterNodeId)
       is UiBuilderEditorEvent.RenameComponentParameter ->
         renameComponentParameter(state, event.componentKey, event.from, event.to)
+      is UiBuilderEditorEvent.DetachPlacement -> detachPlacement(state, event.nodeId)
+      is UiBuilderEditorEvent.ExposeComponentParameter ->
+        exposeComponentParameter(state, event.nodeId, event.property)
+      is UiBuilderEditorEvent.InlineComponentParameter ->
+        inlineComponentParameter(state, event.componentKey, event.parameter)
       is UiBuilderEditorEvent.RenameLocalComponent ->
         renameLocalComponent(state, event.componentKey, event.name)
       is UiBuilderEditorEvent.ReplaceLocalComponent ->
@@ -4656,38 +4662,10 @@ class UiBuilderEditorReducer(
     }
     val operations = mutableListOf<DesignOperation>()
     // Placements first, so by the time the body reads the new key every placement passes it.
-    var selectionAfter = state.selectedNodeId
-    document.nodes.values
-      .filter { it.placementKey() == componentKey }
-      .forEach { placement ->
-        val arguments = placement.placementArguments()
-        if (from !in arguments) return@forEach
-        val parent = document.location(placement.id) ?: return@forEach
-        val replacementId =
-          document.freshNodeId("editor-$componentKey", operationIdPrefix, sequence).let { id ->
-            var unique = id
-            var suffix = 2
-            while (
-              operations.any { (it as? DesignOperation.InsertNode)?.node?.id == unique }
-            ) unique = "$id-${suffix++}"
-            unique
-          }
-        val renamed =
-          JsonObject(arguments.entries.associate { (k, v) -> (if (k == from) name else k) to v })
-        operations +=
-          DesignOperation.InsertNode(
-            placement.copy(
-              id = replacementId,
-              component =
-                JsonObject(
-                  (placement.component ?: JsonObject(emptyMap())) + ("arguments" to renamed)
-                ),
-            ),
-            parent,
-            afterNodeId = placement.id,
-          )
-        operations += DesignOperation.DeleteNode(placement.id)
-        if (selectionAfter == placement.id) selectionAfter = replacementId
+    val selectionAfter =
+      rewritePlacements(state, componentKey, sequence, operations) { arguments ->
+        if (from !in arguments) null
+        else JsonObject(arguments.entries.associate { (k, v) -> (if (k == from) name else k) to v })
       }
     document.componentBody(componentKey).sorted().forEach { nodeId ->
       document.nodes[nodeId]?.properties?.forEach { (property, value) ->
@@ -4696,6 +4674,232 @@ class UiBuilderEditorReducer(
       }
     }
     return state.apply(sequence, operations, selectionAfter = selectionAfter)
+  }
+
+  /**
+   * Replace every placement of [componentKey] whose arguments [rewrite] changes (null: unchanged)
+   * with one passing the rewritten arguments, in the same place — the wire has no mutation that
+   * edits a placement's arguments. Returns what the selection should be afterwards, following a
+   * replaced placement to its replacement.
+   */
+  private fun rewritePlacements(
+    state: UiBuilderEditorState,
+    componentKey: String,
+    sequence: Int,
+    operations: MutableList<DesignOperation>,
+    rewrite: (JsonObject) -> JsonObject?,
+  ): String? {
+    val document = state.document
+    var selectionAfter = state.selectedNodeId
+    document.nodes.values
+      .filter { it.placementKey() == componentKey }
+      .forEach { placement ->
+        val rewritten = rewrite(placement.placementArguments()) ?: return@forEach
+        val parent = document.location(placement.id) ?: return@forEach
+        val base = document.freshNodeId("editor-$componentKey", operationIdPrefix, sequence)
+        var replacementId = base
+        var suffix = 2
+        while (
+          operations.any { (it as? DesignOperation.InsertNode)?.node?.id == replacementId }
+        ) replacementId = "$base-${suffix++}"
+        operations +=
+          DesignOperation.InsertNode(
+            placement.copy(
+              id = replacementId,
+              component =
+                JsonObject(
+                  (placement.component ?: JsonObject(emptyMap())) + ("arguments" to rewritten)
+                ),
+            ),
+            parent,
+            afterNodeId = placement.id,
+          )
+        operations += DesignOperation.DeleteNode(placement.id)
+        if (selectionAfter == placement.id) selectionAfter = replacementId
+      }
+    return selectionAfter
+  }
+
+  /**
+   * The parameter-related verbs for the selection, as the context menu offers them: detach a
+   * placement, or make a body property a parameter, or stop one being one.
+   */
+  fun componentActions(state: UiBuilderEditorState): List<EditorComponentAction> {
+    val nodeId = state.selection.singleOrNull() ?: return emptyList()
+    val document = state.document
+    val node = document.nodes[nodeId] ?: return emptyList()
+    if (node.placementKey() != null && document.location(nodeId) != null)
+      return listOf(
+        EditorComponentAction(
+          "Detach instance",
+          UiBuilderEditorEvent.DetachPlacement(nodeId),
+        )
+      )
+    val owner = document.owningComponent(nodeId) ?: return emptyList()
+    val ownerName = componentDeclarationName(document.components[owner]) ?: owner
+    val capability = catalog.componentsById[node.componentId]
+    return bindableProperties(node.componentId).sorted().mapNotNull { property ->
+      val value = node.properties[property] ?: return@mapNotNull null
+      val label = capability?.propertiesByName?.get(property)?.name?.humanLabel() ?: property
+      val parameter = value.bindingKey()
+      if (parameter != null)
+        EditorComponentAction(
+          "Stop $label being a parameter",
+          UiBuilderEditorEvent.InlineComponentParameter(owner, parameter),
+        )
+      else
+        EditorComponentAction(
+          "Make $label a parameter of $ownerName",
+          UiBuilderEditorEvent.ExposeComponentParameter(nodeId, property),
+        )
+    }
+  }
+
+  /**
+   * Make one literal property of a component's body a parameter: the body reads it by key and every
+   * placement passes the value it showed until now, so nothing on screen changes.
+   */
+  private fun exposeComponentParameter(
+    state: UiBuilderEditorState,
+    nodeId: String,
+    property: String,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val document = state.document
+    val node = document.nodes[nodeId] ?: return state
+    val owner =
+      document.owningComponent(nodeId)
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          "Only a component's own layers have parameters",
+          nodeId,
+          property,
+        )
+    if (property !in bindableProperties(node.componentId))
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "The export cannot pass $property as a parameter",
+        nodeId,
+        property,
+      )
+    val value =
+      (node.properties[property] as? JsonObject)?.takeIf { it.bindingKey() == null }
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          "$property has no value of its own to make a parameter of",
+          nodeId,
+          property,
+        )
+    val existing = document.bodyBindings(owner).keys
+    val name = parameterNameFor(property, null, existing)
+    val operations = mutableListOf<DesignOperation>()
+    rewritePlacements(state, owner, sequence, operations) { JsonObject(it + (name to value)) }
+    operations += DesignOperation.SetProperty(nodeId, property, binding(name))
+    return state.apply(sequence, operations, selectionAfter = nodeId)
+  }
+
+  /**
+   * Stop [parameter] being one: every body property reading it takes back a value of its own — the
+   * one the first placement passes, which is what the design showed first — and placements stop
+   * passing it.
+   */
+  private fun inlineComponentParameter(
+    state: UiBuilderEditorState,
+    componentKey: String,
+    parameter: String,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val document = state.document
+    val order = document.treeIndex()
+    val value =
+      document.nodes.values
+        .filter { it.placementKey() == componentKey }
+        .sortedBy { order(it.id) }
+        .firstNotNullOfOrNull { it.placementArguments()[parameter] as? JsonObject }
+        ?.takeIf { it.bindingKey() == null }
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          "No placement passes `$parameter` a value to keep",
+        )
+    val operations = mutableListOf<DesignOperation>()
+    // The body stops reading it first, so no placement is left passing a key nothing reads.
+    document.componentBody(componentKey).sorted().forEach { nodeId ->
+      document.nodes[nodeId]?.properties?.forEach { (property, read) ->
+        if (read.bindingKey() == parameter)
+          operations += DesignOperation.SetProperty(nodeId, property, value)
+      }
+    }
+    val selectionAfter =
+      rewritePlacements(state, componentKey, sequence, operations) { arguments ->
+        if (parameter !in arguments) null else JsonObject(arguments - parameter)
+      }
+    return state.apply(sequence, operations, selectionAfter = selectionAfter)
+  }
+
+  /**
+   * Turn a placement back into ordinary layers: a copy of its component's body, in its place,
+   * holding the values the placement passed. The component itself stays, with its other placements.
+   */
+  private fun detachPlacement(state: UiBuilderEditorState, nodeId: String): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val document = state.document
+    val placement = document.nodes[nodeId] ?: return state
+    val key = placement.placementKey() ?: return state
+    val bodyRoot = componentRootOf(document.components[key]) ?: return state
+    val parent =
+      document.location(nodeId)
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_LOCATION,
+          "This placement sits nowhere",
+        )
+    val arguments = placement.placementArguments()
+    val taken = document.takenIdentities()
+    val copyRoot =
+      freshCopyId(document.freshNodeId("$bodyRoot-detached", operationIdPrefix, sequence), taken)
+    val copied = mutableListOf<DesignOperation>()
+    document.nodes.appendDuplicateSubtree(
+      sourceNodeId = bodyRoot,
+      copyNodeId = copyRoot,
+      parent = parent,
+      afterNodeId = nodeId,
+      operations = copied,
+      taken = taken,
+    )
+    fun resolved(values: JsonObject): JsonObject =
+      JsonObject(
+        values
+          .mapNotNull { (name, value) ->
+            val key = value.bindingKey() ?: return@mapNotNull name to value
+            arguments[key]?.let { name to it }
+          }
+          .toMap()
+      )
+    val operations =
+      copied.map { operation ->
+        if (operation !is DesignOperation.InsertNode) return@map operation
+        var node = operation.node.copy(properties = resolved(operation.node.properties))
+        // A nested placement passes on what this one passed it.
+        node.component?.let { component ->
+          node =
+            node.copy(
+              component =
+                JsonObject(component + ("arguments" to resolved(node.placementArguments())))
+            )
+        }
+        // The placement's own layout belongs to the call site, and now to the copy's root.
+        if (node.id == copyRoot)
+          node =
+            node.copy(
+              modifiers = kotlinx.serialization.json.JsonArray(placement.modifiers + node.modifiers)
+            )
+        operation.copy(node = node)
+      } + DesignOperation.DeleteNode(nodeId)
+    return state.apply(sequence, operations, selectionAfter = copyRoot)
   }
 
   /**
