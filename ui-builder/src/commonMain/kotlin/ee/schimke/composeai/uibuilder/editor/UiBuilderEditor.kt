@@ -86,6 +86,7 @@ import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.isWearWidget
 import ee.schimke.composeai.uibuilder.frameGeometry
 import ee.schimke.composeai.uibuilder.inspector.LocalUiBuilderPageDestinations
+import ee.schimke.composeai.uibuilder.inspector.SuggestionRow
 import ee.schimke.composeai.uibuilder.inspector.UiBuilderPageDestination
 import ee.schimke.composeai.uibuilder.nativeOnlyComponentIds
 import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
@@ -470,6 +471,24 @@ fun UiBuilderEditor(
   onDecide: ((DesignReviewVerdict, note: String?) -> Unit)? = null,
   /** A sentence from the host — a refused or failed verdict. */
   reviewStatus: String? = null,
+  /**
+   * Edits proposed for this design that nobody has accepted or rejected yet — an agent's, usually —
+   * as the host last reported them. Listed at the top of the comments tab; each can be shown in
+   * place of the canvas beside the design as it is now, with what it changes.
+   */
+  suggestions: DesignSuggestions = DesignSuggestions(),
+  /**
+   * Accepts a suggestion — the host merges it into the design — or null where the host keeps no
+   * suggestions. With this and [onRejectSuggestion] both null and nothing in [suggestions], the
+   * section is not drawn at all: the MCP App and local hosts, every preview and every test.
+   */
+  onAcceptSuggestion: ((suggestionId: String) -> Unit)? = null,
+  /** Rejects a suggestion — the host archives it, and the design never sees it. */
+  onRejectSuggestion: ((suggestionId: String) -> Unit)? = null,
+  /** A sentence from the host — a list that failed to load, a refused decision. */
+  suggestionStatus: String? = null,
+  /** The suggestion shown in place of the canvas when the editor mounts; for previews. */
+  initialShownSuggestionId: String? = null,
   /**
    * The thread the address bar names — now, not only when the editor mounted.
    *
@@ -1936,6 +1955,54 @@ fun UiBuilderEditor(
       else revisionDiff(state, catalog, peeked, compared)
     }
   val peekedRevision = revisionEntries.firstOrNull { it.revision == state.revisionPeek }
+  // Suggestions: the rows the comments tab lists and the one the canvas may be showing instead of
+  // the design. Kept out of the reducer on purpose — a suggestion is the host's, not an edit, and
+  // looking at one changes nothing about the document.
+  var shownSuggestionId by remember { mutableStateOf(initialShownSuggestionId) }
+  val suggestionRows =
+    remember(suggestions, state.operationSequence, state.document.revision, catalog) {
+      suggestions.open.map { suggestion ->
+        SuggestionRow(
+          suggestion = suggestion,
+          diff = suggestionDiff(state, suggestion, catalog),
+          behind = suggestion.isBehind(state),
+        )
+      }
+    }
+  val shownSuggestionRow = suggestionRows.firstOrNull {
+    it.suggestion.suggestionId == shownSuggestionId && it.suggestion.document != null
+  }
+  val acceptSuggestion: ((String) -> Unit)? = onAcceptSuggestion?.let { accept ->
+    { id: String ->
+      if (shownSuggestionId == id) shownSuggestionId = null
+      accept(id)
+    }
+  }
+  val rejectSuggestion: ((String) -> Unit)? = onRejectSuggestion?.let { reject ->
+    { id: String ->
+      if (shownSuggestionId == id) shownSuggestionId = null
+      reject(id)
+    }
+  }
+  val suggestionPanel =
+    if (
+      onAcceptSuggestion == null &&
+        onRejectSuggestion == null &&
+        suggestions.open.isEmpty() &&
+        suggestions.lastOutcome == null
+    ) {
+      null
+    } else {
+      SuggestionPanel(
+        rows = suggestionRows,
+        shownSuggestionId = shownSuggestionRow?.suggestion?.suggestionId,
+        outcome = suggestions.lastOutcome,
+        status = suggestionStatus,
+        onShow = { shownSuggestionId = it },
+        onAccept = acceptSuggestion,
+        onReject = rejectSuggestion,
+      )
+    }
   val comparedRevision = revisionEntries.firstOrNull { it.revision == state.revisionCompare }
   /**
    * The slot a piece would be built into, hit-tested at its own centre.
@@ -2280,6 +2347,7 @@ fun UiBuilderEditor(
       review = review,
       onDecide = onDecide,
       reviewStatus = reviewStatus,
+      suggestionPanel = suggestionPanel,
       selectedThreadId = selectedThreadId,
       onSelectThread = ::selectThread,
       // Read once. The panel scrolls to the thread the URL named as it opens, and never again —
@@ -2605,6 +2673,23 @@ fun UiBuilderEditor(
                       onBackToNow = {
                         focusEditor()
                         dispatch(UiBuilderEditorEvent.ShowRevision(null))
+                      },
+                      modifier = Modifier.fillMaxWidth().weight(1f),
+                    )
+                  } else if (shownSuggestionRow != null) {
+                    // A proposal replaces the editing surface for the reason an old revision
+                    // does: nobody has accepted it, so there is nothing yet to edit.
+                    val suggestionId = shownSuggestionRow.suggestion.suggestionId
+                    SuggestionReviewPane(
+                      suggestion = shownSuggestionRow.suggestion,
+                      current = state.document,
+                      diff = shownSuggestionRow.diff,
+                      behind = shownSuggestionRow.behind,
+                      onAccept = acceptSuggestion?.let { { it(suggestionId) } },
+                      onReject = rejectSuggestion?.let { { it(suggestionId) } },
+                      onBack = {
+                        focusEditor()
+                        shownSuggestionId = null
                       },
                       modifier = Modifier.fillMaxWidth().weight(1f),
                     )

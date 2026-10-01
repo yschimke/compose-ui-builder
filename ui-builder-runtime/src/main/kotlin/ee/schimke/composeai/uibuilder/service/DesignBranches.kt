@@ -93,6 +93,18 @@ internal fun DesignSubmissionV1.rebasedOnto(
     is RedoCommandV1 -> copy(designId = designId, baseRevision = baseRevision)
   }
 
+internal fun DesignBranchKindV1.toPort(): UiBuilderBranchKind =
+  when (this) {
+    DesignBranchKindV1.BRANCH -> UiBuilderBranchKind.BRANCH
+    DesignBranchKindV1.SUGGESTION -> UiBuilderBranchKind.SUGGESTION
+  }
+
+internal fun UiBuilderBranchKind.toRecord(): DesignBranchKindV1 =
+  when (this) {
+    UiBuilderBranchKind.BRANCH -> DesignBranchKindV1.BRANCH
+    UiBuilderBranchKind.SUGGESTION -> DesignBranchKindV1.SUGGESTION
+  }
+
 internal fun DesignBranchStatusV1.toPort(): UiBuilderBranchStatus =
   when (this) {
     DesignBranchStatusV1.OPEN -> UiBuilderBranchStatus.OPEN
@@ -121,5 +133,7 @@ internal fun PersistedDesignV1.branchView(): UiBuilderBranch {
     closedByActorId = record.closedByActorId,
     mergedAtParentRevision = record.mergedAtParentRevision,
     supersededByBranchId = record.supersededByBranchId,
+    kind = record.kind.toPort(),
+    operationIds = branchLog.map { it.operationId() },
   )
 }

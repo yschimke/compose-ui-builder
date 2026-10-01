@@ -2521,6 +2521,7 @@ public class PersistentUiBuilderService(
           existingBranch.parentDesignId == request.designId &&
           existingBranch.forkRevision == revision &&
           existingBranch.name == name &&
+          existingBranch.kind == request.kind.toRecord() &&
           existing.allows(actor, DesignAccessActionV1.READ)
       ) {
         return BranchExecution(UiBuilderBranchResponse.Branch(existing.branchView()))
@@ -2569,6 +2570,7 @@ public class PersistentUiBuilderService(
             forkDocumentHash = documentHash(forkDocument),
             parentCreatedAtEpochMillis = parent.createdAtEpochMillis,
             createdAtEpochMillis = now,
+            kind = request.kind.toRecord(),
           ),
       )
     commitDesign(branchId, design)
@@ -2600,6 +2602,9 @@ public class PersistentUiBuilderService(
       persisted.designs.values
         .filter { it.branch?.parentDesignId == request.designId }
         .filter { request.includeClosed || it.branch?.status == DesignBranchStatusV1.OPEN }
+        .filter { design ->
+          request.kind.let { it == null || design.branch?.kind == it.toRecord() }
+        }
         .sortedWith(
           compareByDescending<PersistedDesignV1> { it.branch?.createdAtEpochMillis }
             .thenBy { it.document.id }
@@ -2702,13 +2707,28 @@ public class PersistentUiBuilderService(
     }
 
     val loggedIds = branchDesign.branchLog.map { it.operationId() }
-    (request.skipOperationIds - loggedIds.toSet()).firstOrNull()?.let { unknown ->
+    (request.skipOperationIds + request.acceptOperationIds.orEmpty() - loggedIds.toSet())
+      .firstOrNull()
+      ?.let { unknown ->
+        return branchError(
+          ServiceErrorCodeV1.BAD_REQUEST,
+          "operation $unknown is not in branch ${request.branchId}'s log",
+        )
+      }
+    if (request.acceptOperationIds?.isEmpty() == true) {
       return branchError(
         ServiceErrorCodeV1.BAD_REQUEST,
-        "operation $unknown is not in branch ${request.branchId}'s log",
+        "accepting none of branch ${request.branchId}'s commands is a reject: archive it instead",
       )
     }
-    val log = branchDesign.branchLog.filter { it.operationId() !in request.skipOperationIds }
+    // "Accept only these" is a skip of everything else: one decision, said whichever way round is
+    // shorter for the caller, and reported as the skip it is.
+    val skipped =
+      request.skipOperationIds +
+        request.acceptOperationIds
+          ?.let { accepted -> loggedIds.filterNot { it in accepted } }
+          .orEmpty()
+    val log = branchDesign.branchLog.filter { it.operationId() !in skipped }
 
     var working: PersistedDesignV1 = parent
     val committed = mutableListOf<CommittedOperationV1>()
@@ -2745,8 +2765,10 @@ public class PersistentUiBuilderService(
       }
 
     val merged = replay.complete
+    // A suggestion is a proposal, not an alternative: accepting one archives nothing, and merging a
+    // branch never archives a suggestion that happens to share its fork point.
     val siblings =
-      if (!merged) emptyList()
+      if (!merged || record.kind != DesignBranchKindV1.BRANCH) emptyList()
       else
         persisted.designs.values
           .filter { design ->
@@ -2755,6 +2777,7 @@ public class PersistentUiBuilderService(
               sibling != null &&
               sibling.parentDesignId == parentId &&
               sibling.forkRevision == record.forkRevision &&
+              sibling.kind == DesignBranchKindV1.BRANCH &&
               sibling.status == DesignBranchStatusV1.OPEN
           }
           .map { it.document.id }
@@ -2796,7 +2819,7 @@ public class PersistentUiBuilderService(
         commands = commands,
         remaining = replay.stop?.remaining ?: 0,
         archivedSiblingIds = siblings,
-        skippedOperationIds = loggedIds.filter { it in request.skipOperationIds },
+        skippedOperationIds = loggedIds.filter { it in skipped },
       )
     if (!merged || request.dryRun) {
       return BranchExecution(UiBuilderBranchResponse.Merge(report))

@@ -53,6 +53,17 @@ internal enum class DesignBranchStatusV1 {
   ARCHIVED,
 }
 
+/**
+ * What a branch is for. A [SUGGESTION] is a short-lived branch proposed for a person to accept
+ * (merge) or reject (archive); it is not an alternative to its siblings, so merging one never
+ * archives another. See `UI_BUILDER_BRANCHES.md` → Suggestions.
+ */
+@Serializable
+internal enum class DesignBranchKindV1 {
+  BRANCH,
+  SUGGESTION,
+}
+
 /** What makes a design a branch: where it forked from, and what has become of it. */
 @Serializable
 internal data class DesignBranchRecordV1(
@@ -72,6 +83,11 @@ internal data class DesignBranchRecordV1(
   val closedByActorId: String? = null,
   val mergedAtParentRevision: Long? = null,
   val supersededByBranchId: String? = null,
+  /**
+   * Never written for an ordinary branch, so the bytes a branch stored before suggestions existed
+   * are the bytes it stores now.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val kind: DesignBranchKindV1 = DesignBranchKindV1.BRANCH,
 )
 
 @Serializable

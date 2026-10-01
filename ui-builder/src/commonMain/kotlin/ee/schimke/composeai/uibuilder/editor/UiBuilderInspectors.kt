@@ -98,6 +98,8 @@ import ee.schimke.composeai.uibuilder.inspector.EventActionsInspector
 import ee.schimke.composeai.uibuilder.inspector.ReviewDecisionSection
 import ee.schimke.composeai.uibuilder.inspector.StateSelectionInspector
 import ee.schimke.composeai.uibuilder.inspector.StateVariablesInspector
+import ee.schimke.composeai.uibuilder.inspector.SuggestionRow
+import ee.schimke.composeai.uibuilder.inspector.SuggestionsSection
 import ee.schimke.composeai.uibuilder.reference.ReferenceImportOutcome
 import ee.schimke.composeai.uibuilder.reference.ReferenceInspector
 import ee.schimke.composeai.uibuilder.reference.ReferencePiece
@@ -163,6 +165,7 @@ internal fun PropertyInspector(
   review: DesignReview,
   onDecide: ((DesignReviewVerdict, String?) -> Unit)?,
   reviewStatus: String?,
+  suggestionPanel: SuggestionPanel?,
   selectedThreadId: String?,
   onSelectThread: (String?) -> Unit,
   revealThreadId: String?,
@@ -253,6 +256,7 @@ internal fun PropertyInspector(
           review = review,
           onDecide = onDecide,
           reviewStatus = reviewStatus,
+          suggestionPanel = suggestionPanel,
           selectedThreadId = selectedThreadId,
           onSelectThread = onSelectThread,
           revealThreadId = revealThreadId,
@@ -303,6 +307,7 @@ private fun InspectorBody(
   review: DesignReview,
   onDecide: ((DesignReviewVerdict, String?) -> Unit)?,
   reviewStatus: String?,
+  suggestionPanel: SuggestionPanel?,
   selectedThreadId: String?,
   onSelectThread: (String?) -> Unit,
   revealThreadId: String?,
@@ -335,6 +340,19 @@ private fun InspectorBody(
       Column(Modifier.verticalScroll(commentScroll)) {
         // Only where there is something to say: a host that keeps no reviews and a design nobody
         // has decided on would otherwise get a heading over nothing.
+        // Above the verdict: a proposal is decided before the revision it would make is reviewed.
+        // Null on a host that keeps no suggestions, so there is no heading over nothing.
+        suggestionPanel?.let { panel ->
+          SuggestionsSection(
+            rows = panel.rows,
+            shownSuggestionId = panel.shownSuggestionId,
+            outcome = panel.outcome,
+            hostStatus = panel.status,
+            onShow = panel.onShow,
+            onAccept = panel.onAccept,
+            onReject = panel.onReject,
+          )
+        }
         if (onDecide != null || review.decisions.isNotEmpty()) {
           ReviewDecisionSection(
             review = review,
@@ -2384,3 +2402,14 @@ private fun ParameterNameField(
         },
   )
 }
+
+/** The suggestions section's inputs, gathered so the inspector passes one thing down. */
+internal data class SuggestionPanel(
+  val rows: List<SuggestionRow>,
+  val shownSuggestionId: String?,
+  val outcome: DesignSuggestionOutcome?,
+  val status: String?,
+  val onShow: (String?) -> Unit,
+  val onAccept: ((String) -> Unit)?,
+  val onReject: ((String) -> Unit)?,
+)
