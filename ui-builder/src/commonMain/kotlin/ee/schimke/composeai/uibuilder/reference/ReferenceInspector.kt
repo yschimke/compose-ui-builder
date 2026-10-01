@@ -50,6 +50,7 @@ import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorThemeSettings
 import ee.schimke.composeai.uibuilder.editor.TrackEditorOverlay
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 /**
@@ -97,6 +98,8 @@ internal fun ReferenceInspector(
   /** A sentence the host wants shown — a refused paste, a store that would not keep it. */
   hostStatus: String?,
   dispatch: (UiBuilderEditorEvent) -> Unit,
+  /** Measuring and matching; null where the editor offers neither (previews, tests). */
+  workbench: ReferenceWorkbench? = null,
 ) {
   val scope = rememberCoroutineScope()
   var status by remember(reference.image?.id) { mutableStateOf<String?>(null) }
@@ -160,6 +163,13 @@ internal fun ReferenceInspector(
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     style = MaterialTheme.typography.labelSmall,
   )
+  if (workbench != null) {
+    ReferenceUrlImport(busy = busy, onImportUrl = workbench.onImportUrl) { url ->
+      import(workbench.onImportUrl?.let { fetch -> { fetch(url) } }) {
+        dispatch(UiBuilderEditorEvent.AttachReference(it))
+      }
+    }
+  }
 
   if (!reference.hasContent) {
     (status ?: hostStatus)?.let { ReferenceStatusText(it) }
@@ -192,6 +202,16 @@ internal fun ReferenceInspector(
       overflow = TextOverflow.Ellipsis,
     )
   }
+  val facts = workbench?.facts
+  // A picture that cannot be placed dp for dp has no pixel comparison to offer. Overlay and Split
+  // are judged by eye and always hold; Difference and the measurements subtract pixels.
+  val comparable = facts?.pixelComparable(settings.fit) ?: true
+  if (facts != null) {
+    ReferenceFactsBlock(facts, settings) { fit ->
+      // A new fit is a new placement, so the nudge and scale tuned for the old one go with it.
+      update { copy(fit = fit, offsetXDp = 0f, offsetYDp = 0f, scalePercent = 100) }
+    }
+  }
 
   Row(
     Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -214,6 +234,7 @@ internal fun ReferenceInspector(
       reference.availableModes.forEach { mode ->
         FilterChip(
           selected = settings.mode == mode,
+          enabled = mode != ReferenceDiffMode.Difference || comparable || settings.mode == mode,
           onClick = { update { copy(mode = mode, visible = true) } },
           label = { Text(mode.label, style = MaterialTheme.typography.labelSmall) },
           modifier = Modifier.semantics { contentDescription = "${mode.label} reference mode" },
@@ -258,6 +279,7 @@ internal fun ReferenceInspector(
         update { copy(offsetYDp = it) }
       }
     }
+    workbench?.let { ReferenceMeasureControls(it, comparable) }
   }
 
   ReferenceMarkupControls(
@@ -280,7 +302,7 @@ internal fun ReferenceInspector(
     horizontalArrangement = Arrangement.spacedBy(6.dp),
   ) {
     TextButton(
-      onClick = { update { ReferenceOverlaySettings(mode = mode, visible = visible) } },
+      onClick = { update { ReferenceOverlaySettings(mode = mode, visible = visible, fit = fit) } },
       modifier = Modifier.semantics { contentDescription = "Reset reference alignment" },
     ) {
       Text("Reset")
@@ -694,4 +716,276 @@ private fun ReferenceComponentMenu(
       }
     }
   }
+}
+
+/**
+ * The half of the reference panel that measures: what the picture is, whether it can be compared,
+ * where it differs from the design, and the edit that would make one layer agree with it.
+ *
+ * One value rather than a dozen parameters, because it crosses three composables on its way from
+ * the editor — which owns the photograph, the canvas layout and the dispatch — to this panel.
+ */
+internal class ReferenceWorkbench(
+  val facts: ReferenceFacts?,
+  val findings: ReferenceFindings?,
+  /** Whether [findings] still describes the design and picture on screen. */
+  val findingsCurrent: Boolean,
+  val measuring: Boolean,
+  val selectedNodeId: String?,
+  val nodeLabel: (String) -> String,
+  val onMeasureDifferences: () -> Unit,
+  val onMatchLayer: (String) -> Unit,
+  val onApplyAlignment: (ReferenceAlignment) -> Unit,
+  val onSelectNode: (String) -> Unit,
+  /** Fetch a link; null where the host will not reach the network for one. */
+  val onImportUrl: (suspend (String) -> ReferenceImportOutcome)?,
+)
+
+/** A link to import from: a Figma frame or an image URL. */
+@Composable
+private fun ReferenceUrlImport(
+  busy: Boolean,
+  onImportUrl: (suspend (String) -> ReferenceImportOutcome)?,
+  onFetch: (String) -> Unit,
+) {
+  var text by remember { mutableStateOf("") }
+  val parsed = text.takeIf { it.isNotBlank() }?.let(::parseReferenceUrl)
+  Row(
+    Modifier.fillMaxWidth().padding(top = 8.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(6.dp),
+  ) {
+    BasicTextField(
+      value = text,
+      onValueChange = { text = it },
+      modifier =
+        Modifier.weight(1f)
+          .semantics { contentDescription = "Reference link" }
+          .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+          .padding(horizontal = 8.dp, vertical = 7.dp),
+      textStyle =
+        MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
+      singleLine = true,
+      decorationBox = { inner ->
+        Box {
+          if (text.isEmpty()) {
+            Text(
+              "Figma frame or image link",
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
+          inner()
+        }
+      },
+    )
+    OutlinedButton(
+      onClick = { onFetch(text.trim()) },
+      enabled =
+        !busy &&
+          onImportUrl != null &&
+          parsed != null &&
+          parsed !is ReferenceUrl.Unsupported &&
+          !(parsed is ReferenceUrl.Figma && parsed.nodeId == null),
+      modifier = Modifier.semantics { contentDescription = "Fetch reference link" },
+    ) {
+      Text("Fetch", maxLines = 1)
+    }
+  }
+  val hint =
+    when {
+      parsed is ReferenceUrl.Unsupported -> parsed.reason
+      parsed is ReferenceUrl.Figma && parsed.nodeId == null ->
+        "That links the whole file. Right-click a frame in Figma and Copy link to selection."
+      parsed is ReferenceUrl.Figma && onImportUrl == null -> FIGMA_PASTE_ADVICE
+      onImportUrl == null -> "This host does not fetch links. $FIGMA_PASTE_ADVICE"
+      parsed is ReferenceUrl.Figma -> "Figma frame ${parsed.nodeId}, fetched at 2x."
+      else -> null
+    }
+  hint?.let {
+    Text(
+      it,
+      Modifier.padding(top = 4.dp),
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.labelSmall,
+    )
+  }
+}
+
+/** Size, density and shape of the attached picture, and whether and how to compare it. */
+@Composable
+private fun ReferenceFactsBlock(
+  facts: ReferenceFacts,
+  settings: ReferenceOverlaySettings,
+  onFit: (ReferenceFit) -> Unit,
+) {
+  if (facts.known) {
+    Text(
+      listOfNotNull(
+          "${facts.widthPx} × ${facts.heightPx} px",
+          "${facts.density.densityText()}×" +
+            (facts.densityBucket?.let { " $it" } ?: "") +
+            " (${facts.densitySource})",
+          "${facts.widthDp.roundToInt()} × ${facts.heightDp.roundToInt()} dp",
+        )
+        .joinToString(" · "),
+      Modifier.padding(top = 4.dp).semantics { contentDescription = "Reference size and density" },
+      style = MaterialTheme.typography.labelSmall,
+    )
+    Text(
+      "${facts.kind.label} against a ${facts.frameWidthDp.roundToInt()} × " +
+        "${facts.frameHeightDp.roundToInt()} dp frame at " +
+        "${facts.designDensity.densityText()}×" +
+        if (facts.sameDeviceDensity) " — same density" else "",
+      style = MaterialTheme.typography.labelSmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+  }
+  Text(
+    facts.advice(settings.fit),
+    Modifier.padding(top = 4.dp).semantics { contentDescription = "Reference comparison advice" },
+    style = MaterialTheme.typography.bodySmall,
+    color =
+      if (facts.pixelComparable(settings.fit)) MaterialTheme.colorScheme.onSurfaceVariant
+      else MaterialTheme.colorScheme.tertiary,
+  )
+  if (facts.known) {
+    FlowRow(
+      Modifier.fillMaxWidth().padding(top = 4.dp),
+      horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+      ReferenceFit.entries.forEach { fit ->
+        FilterChip(
+          selected = settings.fit == fit,
+          onClick = { onFit(fit) },
+          label = {
+            Text(
+              if (fit == facts.recommendedFit) "${fit.label} ✓" else fit.label,
+              style = MaterialTheme.typography.labelSmall,
+            )
+          },
+          modifier = Modifier.semantics { contentDescription = "${fit.label} reference fit" },
+        )
+      }
+    }
+  }
+}
+
+/** Measure the whole frame, and match one layer — the two questions a reference can answer. */
+@Composable
+private fun ReferenceMeasureControls(workbench: ReferenceWorkbench, comparable: Boolean) {
+  ReferenceSectionHeading("Measure")
+  Text(
+    "Photographs the design and compares it with the reference where it is placed now.",
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.labelSmall,
+  )
+  val selected = workbench.selectedNodeId
+  FlowRow(
+    Modifier.fillMaxWidth().padding(top = 4.dp),
+    horizontalArrangement = Arrangement.spacedBy(6.dp),
+  ) {
+    OutlinedButton(
+      onClick = workbench.onMeasureDifferences,
+      enabled = comparable && !workbench.measuring,
+      modifier = Modifier.semantics { contentDescription = "Measure differences" },
+    ) {
+      Text("Differences", maxLines = 1)
+    }
+    Button(
+      onClick = { selected?.let(workbench.onMatchLayer) },
+      enabled = selected != null && !workbench.measuring,
+      modifier = Modifier.semantics { contentDescription = "Match selected layer" },
+    ) {
+      Text(
+        selected?.let { "Match ${workbench.nodeLabel(it).take(18)}" } ?: "Select a layer to match",
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+  }
+  if (workbench.measuring) {
+    ReferenceNote("Measuring…")
+    return
+  }
+  val findings = workbench.findings ?: return
+  if (!workbench.findingsCurrent) {
+    ReferenceNote("The design or the picture changed since this was measured — measure again.")
+  }
+  findings.diff?.let { diff ->
+    val percent = (diff.mismatch * 1000f).roundToInt() / 10f
+    val covered = (diff.coverage * 100f).roundToInt()
+    Text(
+      "$percent% of the compared pixels differ, over $covered% of the frame." +
+        if (diff.regions.isEmpty()) " Nothing stands out." else "",
+      Modifier.padding(top = 6.dp).semantics { contentDescription = "Reference difference" },
+      style = MaterialTheme.typography.bodySmall,
+    )
+    diff.regions.forEach { region ->
+      val label = region.nodeId?.let(workbench.nodeLabel) ?: "Outside every layer"
+      TextButton(
+        onClick = { region.nodeId?.let(workbench.onSelectNode) },
+        enabled = region.nodeId != null,
+        modifier = Modifier.fillMaxWidth(),
+      ) {
+        Text(
+          "$label · ${(region.mismatch * 100).roundToInt()}% · " +
+            "${region.rect.width.roundToInt()}×${region.rect.height.roundToInt()} dp at " +
+            "${region.rect.left.roundToInt()}, ${region.rect.top.roundToInt()}",
+          Modifier.fillMaxWidth(),
+          style = MaterialTheme.typography.labelSmall,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+      }
+    }
+  }
+  findings.match?.let { match ->
+    Text(
+      "${workbench.nodeLabel(match.nodeId)}, lined up with ${match.source.label}" +
+        if (match.text && match.scale != 1f) " at ${(match.scale * 100).roundToInt()}% type"
+        else "",
+      Modifier.padding(top = 6.dp),
+      style = MaterialTheme.typography.bodySmall,
+    )
+    findings.fontSizeSource?.let { ReferenceNote("From $it.") }
+    val alignment = findings.alignment
+    if (alignment == null || alignment.empty) {
+      ReferenceNote("Already lines up to within a dp.")
+    } else {
+      Text(
+        alignment.describe().joinToString(", ").replaceFirstChar { it.uppercaseChar() },
+        Modifier.padding(top = 2.dp).semantics { contentDescription = "Reference alignment" },
+        style = MaterialTheme.typography.bodySmall,
+        fontWeight = FontWeight.Medium,
+      )
+      Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Button(
+          onClick = { workbench.onApplyAlignment(alignment) },
+          enabled = workbench.findingsCurrent,
+          modifier = Modifier.semantics { contentDescription = "Apply reference alignment" },
+        ) {
+          Text(if (match.confident) "Apply" else "Apply anyway")
+        }
+        TextButton(onClick = { workbench.onMatchLayer(match.nodeId) }) { Text("Match again") }
+      }
+    }
+  }
+  findings.message?.let { ReferenceNote(it) }
+}
+
+@Composable
+private fun ReferenceNote(text: String) {
+  Text(
+    text,
+    Modifier.padding(top = 4.dp),
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.labelSmall,
+  )
+}
+
+private fun Float.densityText(): String {
+  val rounded = (this * 1000f).roundToInt() / 1000f
+  return if (rounded == rounded.toInt().toFloat()) rounded.toInt().toString()
+  else rounded.toString()
 }

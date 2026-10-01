@@ -101,6 +101,7 @@ import ee.schimke.composeai.uibuilder.inspector.StateVariablesInspector
 import ee.schimke.composeai.uibuilder.reference.ReferenceImportOutcome
 import ee.schimke.composeai.uibuilder.reference.ReferenceInspector
 import ee.schimke.composeai.uibuilder.reference.ReferencePiece
+import ee.schimke.composeai.uibuilder.reference.ReferenceWorkbench
 import ee.schimke.composeai.uibuilder.renderer.sdk.SelectableGoogleMaterialIcons
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.googleMaterialIcon
@@ -156,6 +157,7 @@ internal fun PropertyInspector(
   onPromotePiece: (ReferencePiece) -> Unit,
   canPromotePiece: (ReferencePiece) -> Boolean,
   referenceStatus: String?,
+  referenceWorkbench: ReferenceWorkbench? = null,
   comments: DesignCommentBoard,
   commentStatus: String?,
   review: DesignReview,
@@ -245,6 +247,7 @@ internal fun PropertyInspector(
           onPromotePiece = onPromotePiece,
           canPromotePiece = canPromotePiece,
           referenceStatus = referenceStatus,
+          referenceWorkbench = referenceWorkbench,
           comments = comments,
           commentStatus = commentStatus,
           review = review,
@@ -294,6 +297,7 @@ private fun InspectorBody(
   onPromotePiece: (ReferencePiece) -> Unit,
   canPromotePiece: (ReferencePiece) -> Boolean,
   referenceStatus: String?,
+  referenceWorkbench: ReferenceWorkbench? = null,
   comments: DesignCommentBoard,
   commentStatus: String?,
   review: DesignReview,
@@ -396,6 +400,7 @@ private fun InspectorBody(
           canPromotePiece = canPromotePiece,
           hostStatus = referenceStatus,
           dispatch = dispatch,
+          workbench = referenceWorkbench,
         )
       }
       return@Column

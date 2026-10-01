@@ -59,6 +59,10 @@ internal fun ReferenceOverlayCanvas(
   onMarkDrawn: (ReferenceMarkupKind, List<Float>) -> Unit = { _, _ -> },
   onPieceMoved: (String, Float, Float) -> Unit = { _, _, _ -> },
   modifier: Modifier = Modifier,
+  /** The picture measured against this frame; null draws every fit as [ReferenceFit.Contain]. */
+  facts: ReferenceFacts? = null,
+  /** What the last measurement found, outlined over the frame; see [ReferenceFindings]. */
+  findings: ReferenceFindings? = null,
 ) {
   if (!reference.drawing) return
   val settings = reference.settings
@@ -98,7 +102,9 @@ internal fun ReferenceOverlayCanvas(
       pieceBitmaps = pieceBitmaps,
       selectionHandles = reference.tool == ReferenceTool.MovePiece,
       textMeasurer = textMeasurer,
+      facts = facts,
     )
+    findings?.let { drawFindings(it) }
     if (drafting.size >= 4) {
       drawMark(
         ReferenceMark(
@@ -132,6 +138,8 @@ internal fun DrawScope.drawReferenceStack(
   textMeasurer: TextMeasurer?,
   /** Flattening bakes the base in at full strength; see `flattenReference`. */
   baseAlphaOverride: Float? = null,
+  /** The picture measured against the frame, for the fits that need its size in dp. */
+  facts: ReferenceFacts? = null,
 ) {
   val settings = reference.settings
   val target =
@@ -142,6 +150,8 @@ internal fun DrawScope.drawReferenceStack(
       scale = settings.scale,
       offsetXPx = with(density) { settings.offsetXDp.dp.toPx() },
       offsetYPx = with(density) { settings.offsetYDp.dp.toPx() },
+      fit = settings.fit,
+      facts = facts,
     )
   when (settings.mode) {
     ReferenceDiffMode.Overlay ->
@@ -273,9 +283,32 @@ internal fun referenceTargetRect(
   scale: Float,
   offsetXPx: Float,
   offsetYPx: Float,
+  fit: ReferenceFit = ReferenceFit.Contain,
+  facts: ReferenceFacts? = null,
 ): Rect {
   if (imageWidthPx <= 0f || imageHeightPx <= 0f || frame.width <= 0f || frame.height <= 0f) {
     return Rect(Offset.Zero, frame)
+  }
+  when (fit) {
+    ReferenceFit.Contain -> Unit
+    // Across the width and pinned to the top: a tall capture's extra height is below the frame,
+    // which is where a status bar's absence or a scrolled list puts it.
+    ReferenceFit.Width -> {
+      val width = frame.width * scale
+      val height = width * imageHeightPx / imageWidthPx
+      val left = (frame.width - width) / 2f + offsetXPx
+      return Rect(left, offsetYPx, left + width, offsetYPx + height)
+    }
+    // Its own size in dp, from the top-left. Needs the frame's dp to know what a dp is here; a
+    // caller without one gets the contain fit rather than a guess.
+    ReferenceFit.Actual -> {
+      if (facts != null && facts.known && facts.frameWidthDp > 0f) {
+        val pxPerDp = frame.width / facts.frameWidthDp
+        val width = facts.widthDp * pxPerDp * scale
+        val height = facts.heightDp * pxPerDp * scale
+        return Rect(offsetXPx, offsetYPx, offsetXPx + width, offsetYPx + height)
+      }
+    }
   }
   val contain = minOf(frame.width / imageWidthPx, frame.height / imageHeightPx)
   val width = imageWidthPx * contain * scale

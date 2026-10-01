@@ -72,8 +72,8 @@ class ReferenceImage(
   val heightPx: Int = 0,
   /**
    * Where the picture came from, for provenance only — typically the Figma node it was exported
-   * from. Never fetched: the serve host holds no Figma credential and makes no outbound call for
-   * it, so this is a link an operator can follow, not an import mechanism.
+   * from. Never re-fetched: a host that imported from a link fetched it once, at import, and the
+   * serve host holds no Figma credential at all. This is a link an operator can follow back.
    */
   val sourceUrl: String? = null,
 ) {
@@ -136,6 +136,14 @@ data class ReferenceOverlaySettings(
   val splitPercent: Int = 50,
   /** Draw the SVG's boxes on top of the other modes as well. */
   val alwaysShowBoxes: Boolean = false,
+  /**
+   * How the picture is placed before [scalePercent] and the nudge apply. See [ReferenceFit].
+   *
+   * A host that predates the field drops it and reads back [ReferenceFit.Contain], which is what
+   * every reference stored before it was drawn with — so an old record still lines up, and a new
+   * one on an old host degrades to the historic fit rather than to a broken one.
+   */
+  val fit: ReferenceFit = ReferenceFit.Contain,
 ) {
   val opacity: Float
     get() = opacityPercent.coerceIn(0, 100) / 100f

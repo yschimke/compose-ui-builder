@@ -117,6 +117,8 @@ import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.frameGeometry
 import ee.schimke.composeai.uibuilder.inspector.CommentPinOverlay
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
+import ee.schimke.composeai.uibuilder.reference.ReferenceFacts
+import ee.schimke.composeai.uibuilder.reference.ReferenceFindings
 import ee.schimke.composeai.uibuilder.reference.ReferenceMarkupKind
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayCanvas
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
@@ -195,6 +197,15 @@ internal fun PinnedDesignCanvas(
   reference: ReferenceOverlayState,
   onMarkDrawn: (ReferenceMarkupKind, List<Float>) -> Unit,
   onPieceMoved: (String, Float, Float) -> Unit,
+  /** The base picture measured against this frame, for the fits that need its size in dp. */
+  referenceFacts: ReferenceFacts? = null,
+  /** The last measurement against the reference, outlined over the frame. */
+  referenceFindings: ReferenceFindings? = null,
+  /**
+   * The frame's unclipped box in the editor root, on every placement. The inspection answers in
+   * root pixels and a measurement works in frame dp; this is the conversion between them.
+   */
+  onFrameRootBounds: (Rect) -> Unit = {},
   collaborators: List<UiBuilderCollaborator>,
   /** Threads with somewhere to sit on the frame; see [DesignCommentBoard.pinned]. */
   commentThreads: List<DesignCommentThread>,
@@ -621,6 +632,7 @@ internal fun PinnedDesignCanvas(
                   frameBounds = it.boundsInRoot()
                   frameOrigin = it.positionInRoot()
                   frameRootBounds = it.unclippedRootBounds()
+                  onFrameRootBounds(frameRootBounds)
                   onCanvasBounds(frameBounds)
                 }
                 .then(
@@ -919,7 +931,13 @@ internal fun PinnedDesignCanvas(
                 // a
                 // fact
                 // about this session and must not be hidden by a mock.
-                ReferenceOverlayCanvas(reference, onMarkDrawn, onPieceMoved)
+                ReferenceOverlayCanvas(
+                  reference,
+                  onMarkDrawn,
+                  onPieceMoved,
+                  facts = referenceFacts,
+                  findings = referenceFindings,
+                )
                 RemotePresenceOverlay(collaborators, inspection, frameOrigin, drawScale)
                 // Above everything, because a pin is the one thing on this canvas a person clicks
                 // that is
