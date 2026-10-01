@@ -71,9 +71,15 @@ plugins {
   id("composeai.maven-publishing")
   alias(libs.plugins.wire)
 }
-dependencies { implementation(libs.bundles.net) }
+dependencies {
+  implementation(libs.bundles.net)
+  api(libs.composeai.ui.builder.protocol)
+}
 val fixture = rootProject.file("docs/data.json")
+// Mentions project(":internal") in prose only: not an input (compose-preview-daemon#197).
+/* val packed = project(":internal").layout.buildDirectory */
 EOF
+echo 'tasks.register("printPublishTasks")' > root-tasks.gradle.kts
 echo 'plugins { kotlin("jvm") }' > internal/build.gradle.kts
 echo '{}' > docs/data.json
 cat > build-logic/src/main/kotlin/Conventions.kt <<'EOF'
@@ -106,8 +112,10 @@ okhttp = "4.12.0"
 androidx-core = "1.13.0"
 wire = "5.0.0"
 unused = "1.0"
+composeai-contracts = "3.0.0"
 
 [libraries]
+composeai-ui-builder-protocol = { module = "ee.schimke.composeai:ui-builder-protocol", version.ref = "composeai-contracts" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-logging = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
@@ -255,6 +263,14 @@ check root_file_input "compose-preview-gamma"
 # A change nobody's artifact contains publishes nothing.
 change_unrelated_file() { echo hi > README.md; }
 check unrelated_file ""
+
+# v3.65.0 / v3.70.0: a contracts bump. A sibling coordinate is a floor, not an input.
+change_catalog_sibling_only() { sed -i 's/composeai-contracts = "3.0.0"/composeai-contracts = "3.1.0"/' gradle/libs.versions.toml; }
+check catalog_sibling_only ""
+
+# Release wiring lives in root-tasks.gradle.kts, outside the shared set.
+change_root_tasks() { echo 'tasks.register("printPublishedProjectPaths")' >> root-tasks.gradle.kts; }
+check root_tasks ""
 
 if [ "${failures}" -gt 0 ]; then
   echo "${failures} failure(s)" >&2

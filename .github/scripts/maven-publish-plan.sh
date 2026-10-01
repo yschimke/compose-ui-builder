@@ -16,8 +16,22 @@
 #   4. the version catalog changed an entry its own build script uses (see SHARED below: a catalog
 #      entry that a shared build file uses is rule 3 instead, and publishes everything).
 #
-# Rules 3 and 4 skip `build-logic/src/test/**` and whole-line comment/whitespace edits to shared
-# Kotlin files. Tested by `test-maven-publish-plan.sh`.
+# Rules 3 and 4 skip `build-logic/src/test/**`, whole-line comment/whitespace edits to shared
+# Kotlin files, and anything in VERIFICATION_ONLY. Two more rules follow compose-preview-daemon
+# (#193, #194):
+#
+#   - SIBLING COORDINATES ARE FLOORS, NOT INPUTS. A catalog entry naming another
+#     `ee.schimke.composeai` coordinate (the contracts) is ignored. A bump changes no byte built
+#     here, only the minimum version the POMs name: Gradle resolves the highest one in the graph
+#     and consumers align through each repository's BOM. A sibling VERSION a build script reads as
+#     a value stays an input, since it can be baked into an artifact. Contracts bumps (v3.65.0,
+#     v3.70.0, …) used to republish export, runtime and the BOM.
+#   - Release wiring (`printPublishTasks`, the derived publish set, the POM check) lives in
+#     `root-tasks.gradle.kts`, outside the shared set: it decides which tasks run, not what they
+#     build.
+#
+# Dependency and watch scans read code, not comments: a `project(":…")` or `rootProject.file(…)`
+# named in prose is not an input. Tested by `test-maven-publish-plan.sh`.
 #
 # Rule 2 is what keeps the POMs honest, and it is deliberately coarser than it needs to be. A
 # published POM names its project dependencies at *their* `project.version`, so a module may only
@@ -65,6 +79,17 @@ settings = open("settings.gradle.kts", encoding="utf-8").read()
 dirs = dict(re.findall(r'project\("(:[^"]+)"\)\.projectDir = file\("([^"]+)"\)', settings))
 paths = re.findall(r'^include\("(:[^"]+)"\)', settings, re.M)
 
+def code_only(text):
+    """`text` without `//` line comments and `/* */` block comments.
+
+    A dependency or path named in a comment is not one: compose-preview-daemon's displayfilter
+    connector quoted `api(project(":daemon:core"))` in prose, and a scan like the ones below read it
+    as an edge. `//` only counts after whitespace or at the start of a line, so a URL in a string
+    survives.
+    """
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    return re.sub(r"(^|\s)//[^\n]*", r"\1", text)
+
 def artifact_id(path):
     """Mirrors `Project.publishedArtifactId()` in build-logic: `:ui-builder-export` becomes
     `compose-preview-ui-builder-export`."""
@@ -85,7 +110,7 @@ for p in paths:
     modules[aid] = d
     path_to_id[p] = aid
     deps[aid] = [artifact_id(m)
-                 for m in re.findall(r'project\("(:[^"]+)"\)', text)]
+                 for m in re.findall(r'project\("(:[^"]+)"\)', code_only(text))]
 deps = {a: [d for d in ds if d in modules] for a, ds in deps.items()}
 
 # A module's bytes come from more than its own directory. `:ui-builder-render-bundle` packs the
@@ -99,7 +124,7 @@ def script_text(directory):
     texts = []
     for root, dirnames, names in os.walk(directory):
         dirnames[:] = [x for x in dirnames if x not in ("build", ".gradle", "node_modules")]
-        texts += [read(os.path.join(root, n)) for n in names if n.endswith(".gradle.kts")]
+        texts += [code_only(read(os.path.join(root, n))) for n in names if n.endswith(".gradle.kts")]
     return "\n".join(texts)
 
 def read(path):
@@ -185,6 +210,12 @@ if write_manifest_path:
 #      blank lines leaves every artifact byte-identical;
 #   c. a version-catalog change publishes the modules whose build scripts use a changed entry,
 #      rather than all of them — POMs name catalog versions, so those consumers must still publish.
+# Verification-only build logic: files that register checks and change no artifact. None yet; kept
+# so a check added to build-logic can say so here rather than republishing every module.
+VERIFICATION_ONLY = set()
+# The group every sibling repository publishes under. See "SIBLING COORDINATES" in the header.
+SIBLING_GROUP = "ee.schimke.composeai"
+
 SHARED = re.compile(r"^(build-logic/|gradle/|gradlew|settings\.gradle\.kts$|build\.gradle\.kts$)")
 NOT_SHARED = re.compile(r"^build-logic/src/(test|testFixtures|functionalTest|integrationTest)/")
 SHARED_KOTLIN = re.compile(r"^(build-logic/.*\.kts?|settings\.gradle\.kts|build\.gradle\.kts)$")
@@ -256,7 +287,66 @@ def catalog_changes(tag):
     for k in set(o) | set(n):
         if o.get(k) != n.get(k) or set(o.get(k) or ()) & moved_libs or set(n.get(k) or ()) & moved_libs:
             changed.add(f"bundles.{k}")
-    return changed
+    return changed - sibling_entries(old, new)
+
+
+def sibling_entries(old, new):
+    """Catalog entries that only ever name a sibling coordinate. See "SIBLING COORDINATES".
+
+    A library or plugin is a sibling when its coordinate is in SIBLING_GROUP at both revisions; a
+    version is one when every library and plugin that refers to it, at both revisions, is, AND no
+    build script reads it as a value (`libs.versions.foo`, `findVersion("foo")`). A version read as
+    a value can be baked into an artifact -- compose-ai-tools' Gradle plugin embeds the daemon
+    version it launches -- so it stays an input. A version also used by anything else stays an
+    input, and so does a bundle.
+    """
+    def coordinate(section, entry):
+        if isinstance(entry, str):
+            return entry
+        if not isinstance(entry, dict):
+            return ""
+        if section == "plugins":
+            return entry.get("id", "")
+        return entry.get("module") or f"{entry.get('group', '')}:{entry.get('name', '')}"
+
+    def is_sibling(section, entry):
+        c = coordinate(section, entry)
+        return c.startswith(SIBLING_GROUP + ":") or (section == "plugins" and c.startswith(SIBLING_GROUP + "."))
+
+    out = set()
+    refs = collections.defaultdict(list)
+    for cat in (old, new):
+        for section, prefix in (("libraries", ""), ("plugins", "plugins.")):
+            for k, e in cat.get(section, {}).items():
+                sib = is_sibling(section, e)
+                r = version_ref(e)
+                if r:
+                    refs[r].append(sib)
+                if sib:
+                    out.add(prefix + k)
+    for section, prefix in (("libraries", ""), ("plugins", "plugins.")):
+        for k in set(old.get(section, {})) | set(new.get(section, {})):
+            if prefix + k in out and not all(
+                is_sibling(section, cat.get(section, {}).get(k)) for cat in (old, new) if k in cat.get(section, {})
+            ):
+                out.discard(prefix + k)
+    out |= {f"versions.{r}" for r, sibs in refs.items() if sibs and all(sibs) and not read_as_value(r)}
+    return out
+
+
+def read_as_value(version):
+    """Does any build script read catalog version `version` itself, rather than through a library?"""
+    dotted = re.sub(r"[-_.]", ".", version)
+    accessor = re.compile(r"\blibs\.versions\." + re.escape(dotted) + r"(?![A-Za-z0-9_])", re.I)
+    by_name = re.compile(r'findVersion\(\s*"' + r"[-_.]".join(map(re.escape, re.split(r"[-_.]", version))) + '"', re.I)
+    for root, dirnames, names in os.walk("."):
+        dirnames[:] = [d for d in dirnames if d not in ("build", ".gradle", ".git", "node_modules")]
+        for n in names:
+            if n.endswith(".gradle.kts") or (n.endswith(".kt") and "build-logic" in root):
+                text = normalise_script(read(os.path.join(root, n)))
+                if accessor.search(text) or by_name.search(text):
+                    return True
+    return False
 
 def reference_patterns(entries):
     """Regexes that find a use of any of `entries` in a build script.
@@ -332,6 +422,9 @@ def shared_verdict(tag, files):
             continue
         if NOT_SHARED.match(f):
             print(f"  {tag}: {f} is test-only; not a shared input", file=sys.stderr)
+            continue
+        if f in VERIFICATION_ONLY:
+            print(f"  {tag}: {f} is verification-only; not a shared input", file=sys.stderr)
             continue
         if f == CATALOG:
             changes = catalog_changes(tag)
