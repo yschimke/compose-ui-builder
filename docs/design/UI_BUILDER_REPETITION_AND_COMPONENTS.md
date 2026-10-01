@@ -307,11 +307,27 @@ becoming its properties of the same name and the placement's modifiers carrying 
 design's copy is removed, all in one command. The match is on the composable's name (`code.symbol`)
 or the display name with its spaces taken out, never on a likeness: a swap rewrites every placement.
 
-**Not built**, in the order they are likely to be wanted: importing a component from another
-design (the `ui-builder/components/` library of §3 is the shape), copy and paste of a component
-between tabs or hosts (the clipboard would carry the declaration and the body with the placement),
-renaming a parameter, exposing a non-text property (a colour) as a parameter from the inspector,
-and detaching a placement back into an ordinary subtree.
+**Copy, paste and another design's components — built (2026-10).** The clipboard carries the
+declaration and body of every component a copied placement places (transitively). Pasting into a
+design that already has a component of the same name places that one again; anything else is
+imported — its body inserted fresh as a parentless node, which its declaration then detaches — under
+its own key, or a numbered one when that key already names something different, with every pasted
+placement rewritten to match. A copy or cut also goes out as text on the system clipboard
+(`compose-ui-builder-clipboard/v1`, `EditorClipboardText.kt`), and a paste reads it back, so a
+component copied in one tab, window or IDE pastes into a design open in another. The desktop and
+the IDE read the system clipboard on every paste; a browser asks the person before it reads, so a
+tab reads it only when it holds no clipboard of its own.
+
+**Renaming a parameter — built.** The component header in the inspector lists its parameters, and
+renaming one rewrites the key the body reads and the argument every placement passes, in one
+command. A name the export could not write — `modifier`, a keyword, a capitalised word, one the
+`argumentN`/`captureN` series could produce, one already taken — is refused.
+
+**Not built**, in the order they are likely to be wanted: a contracts mutation that edits a
+placement's arguments in place (so an argument edit keeps the placement's id), an import panel that
+lists another design's components without copying a placement first, exposing a non-text property
+(a colour) as a parameter from the inspector, and detaching a placement back into an ordinary
+subtree.
 
 It composes with 1b rather than duplicating it: a loop's template is an instance with one argument
 per row field. Which is why this is worth building **before** data-driven loops, not after.

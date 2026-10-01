@@ -17,6 +17,7 @@ import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 
@@ -498,6 +499,12 @@ data class EditorClipboard(
   val nodes: Map<String, UiBuilderNode>,
   /** Where a *cut* took these from; null for a copy, which was never removed from anywhere. */
   val origin: EditorClipboardOrigin? = null,
+  /**
+   * The declarations of the components a copied placement places, by key, with their bodies in
+   * [nodes] — so a placement pasted into a design that does not define its component brings the
+   * component with it, rather than arriving as a placement of nothing.
+   */
+  val components: Map<String, JsonObject> = emptyMap(),
 ) {
   val rootComponentIds: List<String>
     get() = rootNodeIds.map { nodes.getValue(it).componentId }

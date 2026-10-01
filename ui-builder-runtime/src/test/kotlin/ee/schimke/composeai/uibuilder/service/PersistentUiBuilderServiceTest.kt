@@ -1928,6 +1928,51 @@ class PersistentUiBuilderServiceTest {
     assertEquals(before.components, undone.components)
   }
 
+  /**
+   * A component pasted from another design: its body arrives as a fresh parentless node, the
+   * declaration detaches it, and the placement names it — one batch, still one screen root.
+   */
+  @Test
+  fun `a pasted component's body is inserted parentless and declared in one batch`() {
+    val service = service()
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("screen", 0, InsertNodeMutationV1(textNode("root"), NodeLocationV1()))
+        ),
+      )
+    )
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "paste",
+            1,
+            InsertNodeMutationV1(textNode("body"), NodeLocationV1()),
+            DeclareComponentMutationV1("cell-key", DesignComponentV1("Cell", "body")),
+            InsertNodeMutationV1(
+              DesignNodeV1(
+                id = "placed",
+                componentId = DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+                component = DesignComponentInstanceV1("cell-key"),
+              ),
+              NodeLocationV1(ParentSlotV1("root", "content")),
+            ),
+          )
+        ),
+      )
+    )
+    val pasted = currentDocument(service)
+    assertEquals(listOf("root"), pasted.roots)
+    assertEquals(listOf("placed"), pasted.nodes.getValue("root").slots.getValue("content"))
+    assertEquals("body", pasted.components.getValue("cell-key").root)
+  }
+
   @Test
   fun `a removal that would strand a placement is refused rather than applied`() {
     val service = service()

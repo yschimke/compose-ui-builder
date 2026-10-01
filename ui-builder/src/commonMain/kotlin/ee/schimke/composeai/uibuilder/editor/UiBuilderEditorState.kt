@@ -369,6 +369,8 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.MakeComponent -> makeComponent(state, event.name)
       is UiBuilderEditorEvent.InsertLocalComponent ->
         insertLocalComponent(state, event.componentKey, event.target, event.afterNodeId)
+      is UiBuilderEditorEvent.RenameComponentParameter ->
+        renameComponentParameter(state, event.componentKey, event.from, event.to)
       is UiBuilderEditorEvent.RenameLocalComponent ->
         renameLocalComponent(state, event.componentKey, event.name)
       is UiBuilderEditorEvent.ReplaceLocalComponent ->
@@ -435,6 +437,7 @@ class UiBuilderEditorReducer(
       UiBuilderEditorEvent.Tidy -> tidy(state)
       UiBuilderEditorEvent.CutSelected -> cutSelected(state)
       UiBuilderEditorEvent.Paste -> paste(state)
+      is UiBuilderEditorEvent.ReceiveClipboard -> state.copy(clipboard = event.clipboard)
       UiBuilderEditorEvent.Undo -> undo(state)
       UiBuilderEditorEvent.Redo -> redo(state)
       is UiBuilderEditorEvent.AttachReference -> state.withReference(attached(state, event.image))
@@ -704,8 +707,14 @@ class UiBuilderEditorReducer(
     // Every copied node, not only the roots: the clipboard outlives the design it was copied from,
     // and a Column copied out of an m3 screen is a Column remote-m3 has, holding a Button it does
     // not. The validator refuses that batch — but only after Paste was offered and pressed.
-    if (clipboard.nodes.values.any { it.componentId !in catalog.componentsById }) return null
-    val capabilities = clipboard.rootComponentIds.map { catalog.componentsById[it] ?: return null }
+    if (
+      clipboard.nodes.values.any {
+        it.componentId != COMPONENT_INSTANCE_ID && it.componentId !in catalog.componentsById
+      }
+    )
+      return null
+    val capabilities =
+      clipboard.rootNodeIds.map { clipboard.capabilityOf(it, state.document) ?: return null }
     val destination =
       capabilities.map { findDestination(state.document, state.selectedNodeId, it) }.distinct()
     val single = destination.singleOrNull() ?: return null
@@ -4156,6 +4165,9 @@ class UiBuilderEditorReducer(
         else -> state.document.nodes[destination.nodeId]?.slots?.get(destination.slot)?.lastOrNull()
       }
     val taken = state.document.takenIdentities()
+    // Components first: a pasted placement has to name a component this design defines, and one
+    // copied out of another design brings its definition along.
+    val keys = pasteComponents(state.document, clipboard, sequence, operations, taken)
     clipboard.rootNodeIds.forEachIndexed { index, rootId ->
       // Numbered per root as well as per paste, so two roots in one batch cannot collide with each
       // other the way two pastes of one root would collide without `freshNodeId`.
@@ -4178,7 +4190,8 @@ class UiBuilderEditorReducer(
       after = pasteId
       pastedIds += pasteId
     }
-    return state.apply(sequence, operations, selectionAfter = pastedIds.last()).let { pasted ->
+    val remapped = operations.map { it.withComponentKeys(keys) }
+    return state.apply(sequence, remapped, selectionAfter = pastedIds.last()).let { pasted ->
       // The whole paste is selected, so it can be moved or deleted as the unit it arrived as.
       if (pasted.selection == listOf(pastedIds.last())) pasted.copy(selection = pastedIds)
       else pasted
@@ -4520,6 +4533,65 @@ class UiBuilderEditorReducer(
     )
   }
 
+  private fun renameComponentParameter(
+    state: UiBuilderEditorState,
+    componentKey: String,
+    from: String,
+    to: String,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val document = state.document
+    val name = to.trim()
+    if (name == from) return state
+    val parameters = document.bodyBindings(componentKey)
+    if (from !in parameters) return state
+    componentParameterRefusal(name, parameters.keys)?.let {
+      return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, it)
+    }
+    val operations = mutableListOf<DesignOperation>()
+    // Placements first, so by the time the body reads the new key every placement passes it.
+    var selectionAfter = state.selectedNodeId
+    document.nodes.values
+      .filter { it.placementKey() == componentKey }
+      .forEach { placement ->
+        val arguments = placement.placementArguments()
+        if (from !in arguments) return@forEach
+        val parent = document.location(placement.id) ?: return@forEach
+        val replacementId =
+          document.freshNodeId("editor-$componentKey", operationIdPrefix, sequence).let { id ->
+            var unique = id
+            var suffix = 2
+            while (
+              operations.any { (it as? DesignOperation.InsertNode)?.node?.id == unique }
+            ) unique = "$id-${suffix++}"
+            unique
+          }
+        val renamed =
+          JsonObject(arguments.entries.associate { (k, v) -> (if (k == from) name else k) to v })
+        operations +=
+          DesignOperation.InsertNode(
+            placement.copy(
+              id = replacementId,
+              component =
+                JsonObject(
+                  (placement.component ?: JsonObject(emptyMap())) + ("arguments" to renamed)
+                ),
+            ),
+            parent,
+            afterNodeId = placement.id,
+          )
+        operations += DesignOperation.DeleteNode(placement.id)
+        if (selectionAfter == placement.id) selectionAfter = replacementId
+      }
+    document.componentBody(componentKey).sorted().forEach { nodeId ->
+      document.nodes[nodeId]?.properties?.forEach { (property, value) ->
+        if (value.bindingKey() == from)
+          operations += DesignOperation.SetProperty(nodeId, property, binding(name))
+      }
+    }
+    return state.apply(sequence, operations, selectionAfter = selectionAfter)
+  }
+
   /**
    * The argument fields of a selected placement, built from the fields of the body properties they
    * feed, so a colour argument gets a colour picker and a text argument a text box.
@@ -4753,6 +4825,93 @@ class UiBuilderEditorReducer(
     operations += DesignOperation.RemoveComponent(componentKey)
     operations += DesignOperation.DeleteNode(bodyRoot)
     return state.apply(sequence, operations, selectionAfter = firstReplacement)
+  }
+
+  /**
+   * What a clipboard root draws as a capability: its own, or for a placement, its body root's —
+   * looked up in the clipboard first, since that is the definition the paste brings.
+   */
+  private fun EditorClipboard.capabilityOf(
+    nodeId: String,
+    document: UiBuilderDocument,
+  ): ComponentCapability? {
+    var node = nodes[nodeId] ?: return null
+    repeat(16) {
+      val key = node.placementKey() ?: return catalog.componentsById[node.componentId]
+      val declaration = components[key] ?: document.components[key] ?: return null
+      val root = componentRootOf(declaration) ?: return null
+      node = nodes[root] ?: document.nodes[root] ?: return null
+    }
+    return null
+  }
+
+  /**
+   * Bring the clipboard's components into [document], and say which key each one goes by here.
+   *
+   * A component this design already has under the same name is the same component — copying a
+   * placement within a design, or between two designs that share one, places it again rather than
+   * duplicating its definition. Anything else is imported: its body inserted fresh and detached by
+   * its declaration, under its own key where that is free.
+   */
+  private fun pasteComponents(
+    document: UiBuilderDocument,
+    clipboard: EditorClipboard,
+    sequence: Int,
+    operations: MutableList<DesignOperation>,
+    taken: MutableSet<String>,
+  ): Map<String, String> {
+    val keys = linkedMapOf<String, String>()
+    val declared = document.components.keys.toMutableSet()
+    clipboard.components.forEach { (key, declaration) ->
+      val name = componentDeclarationName(declaration)
+      val existing =
+        key.takeIf { componentDeclarationName(document.components[it]) == name }
+          ?: document.components.entries
+            .firstOrNull { componentDeclarationName(it.value) == name }
+            ?.key
+      if (existing != null) {
+        keys[key] = existing
+        return@forEach
+      }
+      var fresh = key
+      var suffix = 2
+      while (fresh in declared) fresh = "$key-${suffix++}"
+      declared += fresh
+      keys[key] = fresh
+      val bodyRoot = componentRootOf(declaration) ?: return@forEach
+      val copyRoot =
+        freshCopyId(document.freshNodeId("$bodyRoot-paste", operationIdPrefix, sequence), taken)
+      clipboard.nodes.appendDuplicateSubtree(
+        sourceNodeId = bodyRoot,
+        copyNodeId = copyRoot,
+        parent = null,
+        afterNodeId = null,
+        operations = operations,
+        taken = taken,
+      )
+      operations +=
+        DesignOperation.DeclareComponent(
+          fresh,
+          JsonObject(declaration + ("root" to JsonPrimitive(copyRoot))),
+        )
+    }
+    return keys
+  }
+
+  private fun DesignOperation.withComponentKeys(keys: Map<String, String>): DesignOperation {
+    if (this !is DesignOperation.InsertNode) return this
+    val key = node.placementKey() ?: return this
+    val renamed = keys[key]?.takeIf { it != key } ?: return this
+    return copy(
+      node =
+        node.copy(
+          component =
+            JsonObject(
+              (node.component ?: JsonObject(emptyMap())) +
+                ("componentKey" to JsonPrimitive(renamed))
+            )
+        )
+    )
   }
 
   private fun UiBuilderEditorState.apply(

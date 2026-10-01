@@ -2312,6 +2312,16 @@ private fun LocalComponentHeader(
             } else false
           },
     )
+    if (component.parameters.isNotEmpty()) {
+      Text(
+        "Parameters",
+        style = MaterialTheme.typography.labelMedium,
+        modifier = Modifier.padding(top = 8.dp),
+      )
+      component.parameters.forEach { parameter ->
+        ParameterNameField(component.key, parameter, onTextInputFocusChanged, dispatch)
+      }
+    }
     component.publishedAs?.let { published ->
       Text(
         "${published.displayName} is in the catalog now. Replacing swaps every placement of " +
@@ -2333,4 +2343,39 @@ private fun LocalComponentHeader(
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
   }
+}
+
+/** One parameter's name, renamed for the body and every placement when the edit is committed. */
+@Composable
+private fun ParameterNameField(
+  componentKey: String,
+  parameter: String,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  var draft by remember(componentKey, parameter) { mutableStateOf(parameter) }
+  fun commit() {
+    if (draft != parameter)
+      dispatch(UiBuilderEditorEvent.RenameComponentParameter(componentKey, parameter, draft))
+  }
+  OutlinedTextField(
+    value = draft,
+    onValueChange = { draft = it },
+    singleLine = true,
+    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+    modifier =
+      Modifier.fillMaxWidth()
+        .padding(top = 4.dp)
+        .semantics { contentDescription = "Parameter $parameter name" }
+        .onFocusChanged { focus ->
+          onTextInputFocusChanged(focus.isFocused)
+          if (!focus.isFocused) commit()
+        }
+        .onPreviewKeyEvent { event ->
+          if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) {
+            commit()
+            true
+          } else false
+        },
+  )
 }
