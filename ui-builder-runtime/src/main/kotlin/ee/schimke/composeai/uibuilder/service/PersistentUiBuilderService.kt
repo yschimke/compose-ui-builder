@@ -3572,11 +3572,7 @@ public class PersistentUiBuilderService(
             )
           }
           val before = working.document.components[mutation.componentKey]
-          val document =
-            working.document.copy(
-              components =
-                working.document.components + (mutation.componentKey to mutation.declaration)
-            )
+          val document = working.document.withComponent(mutation.componentKey, mutation.declaration)
           MutationResult(
             WorkingDesign(document, working.tombstones, working.positions),
             ComponentChangeV1(mutation.componentKey, before, mutation.declaration),
@@ -3609,8 +3605,7 @@ public class PersistentUiBuilderService(
                 field = mutation.componentKey,
               )
             }
-          val document =
-            working.document.copy(components = working.document.components - mutation.componentKey)
+          val document = working.document.withComponent(mutation.componentKey, null)
           MutationResult(
             WorkingDesign(document, working.tombstones, working.positions),
             ComponentChangeV1(mutation.componentKey, before, null),
@@ -3949,25 +3944,10 @@ public class PersistentUiBuilderService(
               )
             }
             val target = if (undo) change.before else change.after
-            // Taking a declaration back out is only safe if nothing has since come to place it:
-            // undoing a `declareComponent` that somebody has since instantiated would leave a
-            // placement drawing nothing and reporting success, which is the state the removal rule
-            // refuses to commit in the first place. The mirror of the state-variable check above.
-            if (target == null) {
-              working.document.nodes.values
-                .firstOrNull { it.component?.componentKey == change.componentKey }
-                ?.let { placement ->
-                  fail(
-                    RejectionCodeV1.UNSAFE_COMPENSATION,
-                    "node ${placement.id} places component ${change.componentKey}",
-                    nodeId = placement.id,
-                    field = change.componentKey,
-                  )
-                }
-            }
-            val declarations =
-              if (target == null) working.document.components - change.componentKey
-              else working.document.components + (change.componentKey to target)
+            // Taking a declaration back out is only safe if nothing still places it — but that is
+            // asked of the *finished* compensation, below, not here: making a component inserts
+            // its first placement in the same command, and undoing that command takes the
+            // declaration out before it deletes the placement.
             // Putting one back has the same obligation a declaration does: it must still name a
             // body this document holds, or the compensation writes the broken state the forward
             // path refuses.
@@ -3979,7 +3959,8 @@ public class PersistentUiBuilderService(
                 field = target.root,
               )
             }
-            working = working.copy(document = working.document.copy(components = declarations))
+            working =
+              working.copy(document = working.document.withComponent(change.componentKey, target))
           }
           is EnvironmentChangeRecordV1 -> {
             val expected = if (undo) change.after else change.before
@@ -4006,6 +3987,21 @@ public class PersistentUiBuilderService(
             )
         }
       }
+      // Undoing a `declareComponent` that somebody has since instantiated would leave a placement
+      // drawing nothing and reporting success, which is the state the removal rule refuses to
+      // commit in the first place. The mirror of the state-variable check above.
+      working.document.nodes.values
+        .firstOrNull { node ->
+          node.component?.componentKey?.let { it !in working.document.components } == true
+        }
+        ?.let { placement ->
+          fail(
+            RejectionCodeV1.UNSAFE_COMPENSATION,
+            "node ${placement.id} places component ${placement.component?.componentKey}",
+            nodeId = placement.id,
+            field = placement.component?.componentKey,
+          )
+        }
       validateTopology(working.document)?.let { throw ReductionFailure(it) }
       val catalog =
         catalogs.resolve(working.document.catalogPin)

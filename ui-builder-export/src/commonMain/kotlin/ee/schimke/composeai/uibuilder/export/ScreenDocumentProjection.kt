@@ -260,21 +260,20 @@ object ScreenDocumentProjection {
       pass.finish(ScreenDocument(screenName, it, pass.state.values.toList()))
     }
     if (pass.reasons.isNotEmpty()) return Outcome.Refused(pass.reasons.distinct())
+    // Components are not behind this flag: a placement exports as a call to a private composable
+    // of the same file, which is ordinary Compose with no runtime of its own — the reusable part
+    // of a design that local components exist to give somebody.
     if (!UiBuilderBuildFeatures.remoteCompose) {
       document.nodes.values
         .filter {
           SHOW_BY_STATE in it.properties ||
             it.componentId == "layout/for-each" ||
-            it.component != null ||
             it.eventBindings.isNotEmpty() ||
             it.properties.values.any { value ->
               value is StateValueV1 || value is StateEqualsValueV1
             }
         }
-        .forEach {
-          pass.reasons +=
-            "node `${it.id}`: stateful authoring and reusable source export are disabled in this build"
-        }
+        .forEach { pass.reasons += "node `${it.id}`: stateful authoring is disabled in this build" }
     }
     if (pass.reasons.isNotEmpty()) return Outcome.Refused(pass.reasons.distinct())
     return Outcome.Projected(

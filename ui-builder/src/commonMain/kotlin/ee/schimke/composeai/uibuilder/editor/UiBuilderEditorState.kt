@@ -31,6 +31,9 @@ import ee.schimke.composeai.uibuilder.client.toProtocolDocument
 import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_CLICK_COMPONENTS
 import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
 import ee.schimke.composeai.uibuilder.codegen.ComposeExportSeverity
+import ee.schimke.composeai.uibuilder.codegen.bindableTextProperties
+import ee.schimke.composeai.uibuilder.componentRootOf
+import ee.schimke.composeai.uibuilder.detachedComponentRoots
 import ee.schimke.composeai.uibuilder.embeddedComponentRecord
 import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.InlineRemoteContentExporter
@@ -363,6 +366,13 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.BindPropertyToState ->
         bindPropertyToState(state, event.nodeId, event.property, event.variable, event.equalsValue)
       is UiBuilderEditorEvent.UnbindProperty -> unbindProperty(state, event.nodeId, event.property)
+      is UiBuilderEditorEvent.MakeComponent -> makeComponent(state, event.name)
+      is UiBuilderEditorEvent.InsertLocalComponent ->
+        insertLocalComponent(state, event.componentKey, event.target, event.afterNodeId)
+      is UiBuilderEditorEvent.RenameLocalComponent ->
+        renameLocalComponent(state, event.componentKey, event.name)
+      is UiBuilderEditorEvent.ReplaceLocalComponent ->
+        replaceLocalComponent(state, event.componentKey, event.catalogComponentId)
       is UiBuilderEditorEvent.SetStateVariable ->
         state.apply(
           state.operationSequence + 1,
@@ -617,6 +627,9 @@ class UiBuilderEditorReducer(
         is DesignOperation.SetEventBinding ->
           "Changed ${operation.event} actions on ${label(operation.nodeId)}"
         is DesignOperation.SetModifiers -> "Changed the layout of ${label(operation.nodeId)}"
+        is DesignOperation.DeclareComponent ->
+          "Declared component ${componentDeclarationName(operation.declaration) ?: operation.componentKey}"
+        is DesignOperation.RemoveComponent -> "Removed component ${operation.componentKey}"
       }
     }
     return summaries.distinct().singleOrNull() ?: "${operations.size} changes"
@@ -633,6 +646,9 @@ class UiBuilderEditorReducer(
    */
   private fun nodeLabel(state: UiBuilderEditorState, nodeId: String): String {
     val node = state.document.nodes[nodeId] ?: return nodeId
+    node.placementKey()?.let {
+      return componentDeclarationName(state.document.components[it]) ?: it
+    }
     val capability = catalog.componentsById[node.componentId] ?: return nodeId
     return node.contentLabel(capability) ?: capability.displayName
   }
@@ -1222,12 +1238,26 @@ class UiBuilderEditorReducer(
       val node = document.nodes[nodeId] ?: return
       if (!seen.add(nodeId)) return
       val capability = catalog.componentsById[node.componentId]
-      val componentLabel = capability?.displayName ?: node.componentId
+      // A placement is called what it places; a body root says whose body it is, since it sits in
+      // the tree beside the screen rather than in it.
+      val placedName =
+        node.placementKey()?.let { componentDeclarationName(document.components[it]) ?: it }
+      val definedName =
+        document.components.values
+          .firstOrNull { componentRootOf(it) == nodeId }
+          ?.let(::componentDeclarationName)
+      val componentLabel =
+        when {
+          placedName != null -> "Component"
+          definedName != null -> "Component · ${capability?.displayName ?: node.componentId}"
+          else -> capability?.displayName ?: node.componentId
+        }
       rows +=
         EditorTreeRow(
           nodeId = nodeId,
           componentId = node.componentId,
-          label = capability?.let(node::contentLabel) ?: componentLabel,
+          label =
+            placedName ?: definedName ?: capability?.let(node::contentLabel) ?: componentLabel,
           componentLabel = componentLabel,
           depth = depth,
           parent = parent,
@@ -1237,6 +1267,9 @@ class UiBuilderEditorReducer(
       }
     }
     document.roots.forEach { visit(it, 0, null) }
+    // Each component's body after the screen, so its layout can be selected and edited — an edit
+    // there is an edit to every placement.
+    document.detachedComponentRoots().sorted().forEach { visit(it, 0, null) }
     return rows
   }
 
@@ -1387,6 +1420,26 @@ class UiBuilderEditorReducer(
   }
 
   fun propertyFields(state: UiBuilderEditorState): List<EditorPropertyField> {
+    val anchor = state.selectedNodeId?.let(state.document.nodes::get)
+    // A placement has no catalog properties: what it sets is the arguments its body reads.
+    if (anchor?.componentId == COMPONENT_INSTANCE_ID)
+      return if (state.selection.size == 1) placementFields(state, anchor) else emptyList()
+    val owner = anchor?.let { state.document.owningComponent(it.id) }
+    val fields = catalogPropertyFields(state)
+    if (anchor == null || owner == null) return fields
+    // A body property that reads a parameter shows which one, rather than the parameter's name as
+    // though it were the text: each placement sets it.
+    val ownerName = componentDeclarationName(state.document.components[owner]) ?: owner
+    return fields.map { field ->
+      val parameter = anchor.properties[field.name]?.bindingKey() ?: return@map field
+      field.copy(
+        value = "",
+        notes = "Parameter `$parameter` of $ownerName — each placement sets it",
+      )
+    }
+  }
+
+  private fun catalogPropertyFields(state: UiBuilderEditorState): List<EditorPropertyField> {
     val nodes = state.selection.mapNotNull(state.document.nodes::get)
     val node = nodes.lastOrNull() ?: return emptyList()
     val component = catalog.componentsById[node.componentId] ?: return emptyList()
@@ -2705,6 +2758,17 @@ class UiBuilderEditorReducer(
   ): UiBuilderEditorState {
     val sequence = state.operationSequence + 1
     val node = state.document.nodes[nodeId] ?: return state
+    if (node.componentId == COMPONENT_INSTANCE_ID)
+      return setComponentArgument(state, node, propertyName, draft)
+    node.properties[propertyName]?.bindingKey()?.let { parameter ->
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "This is the component's `$parameter` parameter; set it on each placement",
+        nodeId,
+        propertyName,
+      )
+    }
     // `contentPadding.topDp` addresses one edge of an object-valued property; the wire still
     // carries the whole value, so everything below works on the base name.
     val baseName = propertyName.substringBefore('.')
@@ -4163,6 +4227,528 @@ class UiBuilderEditorReducer(
         application.state.document.nodes::containsKey
       ) ?: application.state.document.roots.firstOrNull()
     return state.withApplication(application, sequence, selectedAfter)
+  }
+
+  /**
+   * The components this design defines, for the palette's "This design" shelf and the inspector.
+   */
+  fun localComponents(state: UiBuilderEditorState): List<EditorLocalComponent> =
+    state.document.localComponents(catalog)
+
+  /** What a component's palette tile draws: one placement of it, as a design of its own. */
+  fun localComponentPreview(state: UiBuilderEditorState, componentKey: String): UiBuilderDocument? {
+    val document = state.document
+    if (componentKey !in document.components) return null
+    val placement =
+      UiBuilderNode(
+        id = "palette-preview-$componentKey",
+        componentId = COMPONENT_INSTANCE_ID,
+        component =
+          JsonObject(
+            mapOf(
+              "componentKey" to JsonPrimitive(componentKey),
+              "arguments" to starterArguments(document, componentKey),
+            )
+          ),
+      )
+    return document.copy(
+      roots = listOf(placement.id),
+      nodes = document.nodes + (placement.id to placement),
+    )
+  }
+
+  /** The name [UiBuilderEditorEvent.MakeComponent] uses when it is given none. */
+  fun suggestedComponentName(state: UiBuilderEditorState): String? {
+    val node = state.selectedNodeId?.let(state.document.nodes::get) ?: return null
+    return state.document.suggestedComponentName(node, catalog)
+  }
+
+  /**
+   * Why the selection cannot become a component, or null when it can.
+   *
+   * Asked by the menu before anything is pressed, so the entry says why rather than refusing after.
+   */
+  fun makeComponentRefusal(state: UiBuilderEditorState): String? =
+    planComponent(state, name = null, sequence = state.operationSequence + 1).refusal
+
+  /** Where the palette's "This design" shelf would put a placement of [componentKey]. */
+  fun localComponentTarget(state: UiBuilderEditorState, componentKey: String): ParentSlot? {
+    val capability = state.document.placedCapability(componentKey, catalog) ?: return null
+    val target = findDestination(state.document, state.selectedNodeId, capability) ?: return null
+    // Into its own body is a component containing itself, which draws nothing and exports nothing.
+    return target.takeUnless { it.nodeId in state.document.componentBody(componentKey) }
+  }
+
+  private data class ComponentPlan(
+    val refusal: String? = null,
+    val operations: List<DesignOperation> = emptyList(),
+    val placementId: String? = null,
+  )
+
+  private fun planComponent(
+    state: UiBuilderEditorState,
+    name: String?,
+    sequence: Int,
+  ): ComponentPlan {
+    fun refuse(reason: String) = ComponentPlan(refusal = reason)
+    val document = state.document
+    val nodeId =
+      state.selection.singleOrNull() ?: return refuse("Select one node to make a component of it")
+    val node = document.nodes[nodeId] ?: return refuse("Select one node to make a component of it")
+    if (
+      node.componentId == COMPONENT_INSTANCE_ID ||
+        document.components.values.any { componentRootOf(it) == nodeId }
+    )
+      return refuse("This is already a component")
+    val parent =
+      document.location(nodeId)
+        ?: return refuse("The root is the whole screen; make a component of a part of it")
+    // In tree order, so parameters are numbered the way the body reads top to bottom.
+    val body = mutableListOf<UiBuilderNode>()
+    fun collect(id: String) {
+      val child = document.nodes[id] ?: return
+      body += child
+      child.slots.values.flatten().forEach(::collect)
+    }
+    collect(nodeId)
+    // Each of these is a refusal the export makes of a body by name; refusing here says it at the
+    // moment the author can still choose a different subtree, rather than at the first export.
+    body.forEach { member ->
+      val label = componentLabel(member.componentId)
+      if (member.eventBindings.isNotEmpty())
+        return refuse(
+          "$label handles ${member.eventBindings.keys.first()}; a component draws from its " +
+            "arguments alone, so put the action on each place it is used"
+        )
+      if (
+        member.properties.values.any {
+          (it as? JsonObject)?.get("type")?.primitiveOrNull()?.contentOrNull in STATE_VALUE_TYPES
+        } || SHOW_BY_STATE in member.properties
+      )
+        return refuse(
+          "$label reads screen state, which a component's own function cannot see; unbind it first"
+        )
+      if (member.componentId.endsWith("scaffold"))
+        return refuse("A scaffold is a whole screen, so it cannot be a component's body")
+    }
+    // The body root draws inside the placement's Box, so a modifier that speaks to the parent it
+    // used to sit in — a Row's weight, a Box's alignment — would silently stop meaning anything.
+    node.modifiers
+      .mapNotNull { (it as? JsonObject)?.get("type")?.primitiveOrNull()?.contentOrNull }
+      .firstOrNull { it in PARENT_SCOPED_MODIFIERS }
+      ?.let {
+        return refuse(
+          "Take `$it` off ${componentLabel(node.componentId)} first: it belongs to the slot"
+        )
+      }
+    val functionName =
+      componentFunctionName(name ?: document.suggestedComponentName(node, catalog))
+        ?: return refuse("`$name` is not a name a composable can have")
+    if (document.components.values.any { componentDeclarationName(it) == functionName })
+      return refuse("This design already has a component called $functionName")
+    val key = document.freshComponentKey(functionName)
+    // Every text the body shows becomes a parameter, holding what it shows now, so the screen draws
+    // what it drew and the next placement can say something else.
+    val taken = mutableSetOf<String>()
+    val arguments = linkedMapOf<String, JsonElement>()
+    val bindings = mutableListOf<DesignOperation>()
+    body.forEach { member ->
+      bindableTextProperties(member.componentId).sorted().forEach { property ->
+        val literal =
+          (member.properties[property] as? JsonObject)?.takeIf {
+            it["type"]?.primitiveOrNull()?.contentOrNull == "string"
+          } ?: return@forEach
+        val parameter =
+          parameterNameFor(property, literal["value"]?.primitiveOrNull()?.contentOrNull, taken)
+        taken += parameter
+        arguments[parameter] = literal
+        bindings += DesignOperation.SetProperty(member.id, property, binding(parameter))
+      }
+    }
+    val placementId =
+      document.freshNodeId("editor-${key}", operationIdPrefix, sequence).let { id ->
+        // `freshNodeId` asks the document, and the placement is minted before anything is in it.
+        if (id == nodeId) "$id-placement" else id
+      }
+    val placement =
+      UiBuilderNode(
+        id = placementId,
+        componentId = COMPONENT_INSTANCE_ID,
+        modifiers = JsonArray(emptyList()),
+        component =
+          JsonObject(
+            mapOf(
+              "componentKey" to JsonPrimitive(key),
+              "arguments" to JsonObject(arguments),
+            )
+          ),
+      )
+    val operations =
+      listOf(
+        // The placement takes the subtree's place before the subtree leaves it, so the anchor is
+        // the subtree itself and the screen's order is unchanged.
+        DesignOperation.InsertNode(placement, parent, afterNodeId = nodeId),
+        // Out to the root list, where the declaration finds it a second root and makes it a body.
+        DesignOperation.MoveNode(nodeId, parent = null),
+        DesignOperation.DeclareComponent(
+          key,
+          JsonObject(mapOf("name" to JsonPrimitive(functionName), "root" to JsonPrimitive(nodeId))),
+        ),
+      ) + bindings
+    return ComponentPlan(operations = operations, placementId = placementId)
+  }
+
+  private fun makeComponent(state: UiBuilderEditorState, name: String?): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val plan = planComponent(state, name?.takeIf(String::isNotBlank), sequence)
+    plan.refusal?.let {
+      return state.rejected(sequence, RejectionCode.INVALID_LOCATION, it, state.selectedNodeId)
+    }
+    return state.apply(sequence, plan.operations, selectionAfter = plan.placementId)
+  }
+
+  private fun insertLocalComponent(
+    state: UiBuilderEditorState,
+    componentKey: String,
+    target: ParentSlot,
+    afterNodeId: String?,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val document = state.document
+    val name = componentDeclarationName(document.components[componentKey]) ?: componentKey
+    val capability =
+      document.placedCapability(componentKey, catalog)
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_DOCUMENT,
+          "This design defines no component `$componentKey`",
+        )
+    if (target.nodeId in document.componentBody(componentKey))
+      return state.rejected(
+        sequence,
+        RejectionCode.CYCLE,
+        "$name cannot be placed inside itself",
+        target.nodeId,
+      )
+    if (!acceptsComponent(document, target, capability))
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_LOCATION,
+        "$name cannot be inserted into ${target.nodeId}.${target.slot}",
+      )
+    val slotChildren = document.children(target)
+    val after = afterNodeId?.takeIf { it in slotChildren } ?: slotChildren.lastOrNull()
+    val nodeId = document.freshNodeId("editor-$componentKey", operationIdPrefix, sequence)
+    val placement =
+      UiBuilderNode(
+        id = nodeId,
+        componentId = COMPONENT_INSTANCE_ID,
+        component =
+          JsonObject(
+            mapOf(
+              "componentKey" to JsonPrimitive(componentKey),
+              "arguments" to starterArguments(document, componentKey),
+            )
+          ),
+      )
+    return state.apply(
+      sequence,
+      listOf(DesignOperation.InsertNode(placement, target, after)),
+      selectionAfter = nodeId,
+    )
+  }
+
+  /**
+   * What a new placement passes: the arguments of the placement nearest the end of the design, so
+   * the tenth inbox row added reads like the ninth; with none to copy, each text parameter's own
+   * name, so the placement draws something an author can see and overwrite.
+   */
+  private fun starterArguments(document: UiBuilderDocument, componentKey: String): JsonObject {
+    document.nodes.values
+      .lastOrNull { it.placementKey() == componentKey }
+      ?.let {
+        return it.placementArguments()
+      }
+    return JsonObject(
+      document
+        .bodyBindings(componentKey)
+        .mapNotNull { (key, read) ->
+          val (bodyNodeId, property) = read
+          val componentId = document.nodes[bodyNodeId]?.componentId ?: return@mapNotNull null
+          val declared = catalog.componentsById[componentId]?.propertiesByName?.get(property)
+          if (declared?.typeNames()?.authoredTypes() != setOf("string")) return@mapNotNull null
+          key to literal("string", JsonPrimitive(key.humanLabel()))
+        }
+        .toMap()
+    )
+  }
+
+  private fun renameLocalComponent(
+    state: UiBuilderEditorState,
+    componentKey: String,
+    name: String,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val declaration = state.document.components[componentKey] as? JsonObject ?: return state
+    val functionName =
+      componentFunctionName(name)
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          "`$name` is not a name a composable can have",
+        )
+    if (componentDeclarationName(declaration) == functionName) return state
+    if (state.document.components.values.any { componentDeclarationName(it) == functionName })
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "This design already has a component called $functionName",
+      )
+    return state.apply(
+      sequence,
+      listOf(
+        DesignOperation.DeclareComponent(
+          componentKey,
+          JsonObject(declaration + ("name" to JsonPrimitive(functionName))),
+        )
+      ),
+      selectionAfter = state.selectedNodeId,
+    )
+  }
+
+  /**
+   * The argument fields of a selected placement, built from the fields of the body properties they
+   * feed, so a colour argument gets a colour picker and a text argument a text box.
+   */
+  private fun placementFields(
+    state: UiBuilderEditorState,
+    placement: UiBuilderNode,
+  ): List<EditorPropertyField> {
+    val key = placement.placementKey() ?: return emptyList()
+    val arguments = placement.placementArguments()
+    return state.document.bodyBindings(key).mapNotNull { (argument, read) ->
+      val (bodyNodeId, property) = read
+      bodyFieldFor(state, bodyNodeId, property, arguments[argument])
+        ?.copy(
+          nodeId = placement.id,
+          name = argument,
+          label = argument.humanLabel(),
+          required = true,
+          written = argument in arguments,
+          boundVariable = null,
+          error = state.propertyErrors[EditorPropertyLocation(placement.id, argument)],
+          notes = null,
+        )
+    }
+  }
+
+  /** The inspector field of [property] on [bodyNodeId], as if it held [value]. */
+  private fun bodyFieldFor(
+    state: UiBuilderEditorState,
+    bodyNodeId: String,
+    property: String,
+    value: JsonElement?,
+  ): EditorPropertyField? {
+    val body = state.document.nodes[bodyNodeId] ?: return null
+    val probe =
+      body.copy(
+        properties =
+          JsonObject(
+            if (value == null) body.properties - property else body.properties + (property to value)
+          )
+      )
+    val probed =
+      state.copy(
+        collaboration =
+          state.collaboration.copy(
+            document = state.document.copy(nodes = state.document.nodes + (probe.id to probe))
+          ),
+        selection = listOf(bodyNodeId),
+      )
+    return catalogPropertyFields(probed).firstOrNull { it.name == property }
+  }
+
+  /**
+   * Set one argument of a placement.
+   *
+   * The wire has no mutation that edits a placement's arguments, so the placement is replaced by
+   * one that passes the new value, in the same place, in one command — what draws is identical but
+   * for the argument, and undo puts the old one back.
+   */
+  private fun setComponentArgument(
+    state: UiBuilderEditorState,
+    placement: UiBuilderNode,
+    argument: String,
+    draft: String,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val key = placement.placementKey() ?: return state
+    val (bodyNodeId, property) = state.document.bodyBindings(key)[argument] ?: return state
+    val current = placement.placementArguments()[argument] as? JsonObject
+    val field = bodyFieldFor(state, bodyNodeId, property, current) ?: return state
+    val parsed = field.parseDraft(draft)
+    if (parsed is PropertyDraft.Invalid)
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        parsed.message,
+        placement.id,
+        argument,
+      )
+    val value = (parsed as PropertyDraft.Valid).value
+    val declared =
+      catalog.componentsById[state.document.nodes[bodyNodeId]?.componentId]
+        ?.propertiesByName
+        ?.get(property)
+    val type =
+      if (field.control == EditorPropertyControl.Color) colourWrapper(value)
+      else
+        declared?.canonicalWrapper(current?.get("type")?.primitiveOrNull()?.contentOrNull)
+          ?: field.defaultEncodedType()
+    val encoded = literal(type, value)
+    if (encoded == current) return state
+    validator.validate(state.document, bodyNodeId, property, encoded)?.let { issue ->
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        issue.message,
+        placement.id,
+        argument,
+      )
+    }
+    val parent =
+      state.document.location(placement.id)
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_LOCATION,
+          "This placement sits nowhere",
+        )
+    val replacementId = state.document.freshNodeId("editor-$key", operationIdPrefix, sequence)
+    val replacement =
+      placement.copy(
+        id = replacementId,
+        component =
+          JsonObject(
+            (placement.component ?: JsonObject(emptyMap())) +
+              ("arguments" to JsonObject(placement.placementArguments() + (argument to encoded)))
+          ),
+      )
+    return state
+      .apply(
+        sequence,
+        listOf(
+          DesignOperation.InsertNode(replacement, parent, afterNodeId = placement.id),
+          DesignOperation.DeleteNode(placement.id),
+        ),
+        selectionAfter = replacementId,
+      )
+      .let { edited ->
+        if (edited.lastOutcome is CommandOutcome.Accepted)
+          edited.copy(
+            propertyErrors = edited.propertyErrors - EditorPropertyLocation(placement.id, argument)
+          )
+        else edited
+      }
+  }
+
+  /**
+   * Swap every placement of a design-only component for the catalog component that now ships it.
+   *
+   * The graduation step of
+   * [`UI_BUILDER_REPETITION_AND_COMPONENTS.md`](../../../../../../docs/design/UI_BUILDER_REPETITION_AND_COMPONENTS.md)
+   * §3: once the app's own `InboxEmail` is in its catalog — a component pack projected from its
+   * discovered composables — the design should call that rather than keep a copy of what it drew.
+   */
+  private fun replaceLocalComponent(
+    state: UiBuilderEditorState,
+    componentKey: String,
+    catalogComponentId: String,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val document = state.document
+    val replacement =
+      catalog.componentsById[catalogComponentId]
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          "The catalog has no component `$catalogComponentId`",
+        )
+    val bodyRoot =
+      componentRootOf(document.components[componentKey])
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_DOCUMENT,
+          "This design defines no component `$componentKey`",
+        )
+    val body = document.componentBody(componentKey)
+    val order = document.treeIndex()
+    val placements =
+      document.nodes.values.filter { it.placementKey() == componentKey }.sortedBy { order(it.id) }
+    // A placement inside the body being dropped goes with it; only the ones that survive are
+    // swapped.
+    val survivors = placements.filterNot { it.id in body }
+    val operations = mutableListOf<DesignOperation>()
+    var firstReplacement: String? = null
+    survivors.forEachIndexed { index, placement ->
+      val parent =
+        document.location(placement.id)
+          ?: return state.rejected(
+            sequence,
+            RejectionCode.INVALID_LOCATION,
+            "Placement ${placement.id} sits nowhere",
+          )
+      // The swap leaves the slot's occupancy as it was, so only the slot's acceptance is asked.
+      val accepts =
+        document.nodes[parent.nodeId]
+          ?.let { catalog.componentsById[it.componentId]?.slot(parent.slot) }
+          ?.accepts(replacement) == true
+      if (!accepts)
+        return state.rejected(
+          sequence,
+          RejectionCode.INVALID_LOCATION,
+          "${replacement.displayName} cannot sit where ${placement.id} does",
+          placement.id,
+        )
+      val nodeId =
+        document.freshNodeId(
+          "editor-${catalogComponentId.replace('/', '-')}-$index",
+          operationIdPrefix,
+          sequence,
+        )
+      if (firstReplacement == null) firstReplacement = nodeId
+      val presets =
+        placement
+          .placementArguments()
+          .entries
+          .filter { (name, value) -> name in replacement.propertiesByName && value is JsonObject }
+          .associate { (name, value) -> name to value as JsonObject }
+      val inserted = mutableListOf<DesignOperation>()
+      replacement
+        .appendDefaultSubtree(
+          catalog = catalog,
+          document = document,
+          nodeId = nodeId,
+          parent = parent,
+          afterNodeId = placement.id,
+          operations = inserted,
+          presetProperties = presets,
+        )
+        ?.let { error ->
+          return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, error, placement.id)
+        }
+      // The placement's layout is the call site's, and it carries across to the call.
+      operations += inserted.map { operation ->
+        if (operation is DesignOperation.InsertNode && operation.node.id == nodeId)
+          operation.copy(node = operation.node.copy(modifiers = placement.modifiers))
+        else operation
+      }
+      operations += DesignOperation.DeleteNode(placement.id)
+    }
+    // With nothing left placing it, the definition goes, and its body — which the undeclaration
+    // hands back to the root list — goes with it.
+    operations += DesignOperation.RemoveComponent(componentKey)
+    operations += DesignOperation.DeleteNode(bodyRoot)
+    return state.apply(sequence, operations, selectionAfter = firstReplacement)
   }
 
   private fun UiBuilderEditorState.apply(

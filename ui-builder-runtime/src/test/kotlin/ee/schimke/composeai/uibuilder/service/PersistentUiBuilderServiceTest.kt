@@ -1850,6 +1850,84 @@ class PersistentUiBuilderServiceTest {
     assertEquals(cell, currentDocument(service).components.getValue("contribution-cell"))
   }
 
+  /**
+   * Making a component of a subtree the screen already holds, in the one batch the editor sends: a
+   * placement takes the subtree's place, the subtree moves out to the root list, and the
+   * declaration finds it a second root and makes it a body. The command ends with the one root it
+   * started with, and one undo puts the subtree back where it was.
+   */
+  @Test
+  fun `a subtree is made a component in one batch and undone in one step`() {
+    val service = service()
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "screen",
+            0,
+            InsertNodeMutationV1(textNode("root"), NodeLocationV1()),
+            InsertNodeMutationV1(textNode("cell"), NodeLocationV1(ParentSlotV1("root", "content"))),
+            InsertNodeMutationV1(
+              textNode("other"),
+              NodeLocationV1(ParentSlotV1("root", "content"), afterNodeId = "cell"),
+            ),
+          )
+        ),
+      )
+    )
+    val before = currentDocument(service)
+    val makeOutcome =
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "make",
+            1,
+            InsertNodeMutationV1(
+              DesignNodeV1(
+                id = "placed",
+                componentId = DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+                component =
+                  DesignComponentInstanceV1("cell-key", mapOf("label" to StringValueV1("Cell"))),
+              ),
+              NodeLocationV1(ParentSlotV1("root", "content"), afterNodeId = "cell"),
+            ),
+            MoveNodeMutationV1("cell", NodeLocationV1()),
+            DeclareComponentMutationV1("cell-key", DesignComponentV1("Cell", "cell")),
+            // The body's text becomes the parameter the placement passes.
+            SetPropertyMutationV1("cell", "text", BindingValueV1("label")),
+          )
+        ),
+      )
+    assertIs<AcceptedOutcomeV1>(
+      (makeOutcome as UiBuilderServiceResponse.OperationOutcome).outcome,
+      "${makeOutcome}",
+    )
+    val made = currentDocument(service)
+    assertEquals(listOf("root"), made.roots)
+    assertEquals(listOf("placed", "other"), made.nodes.getValue("root").slots.getValue("content"))
+    assertEquals("cell", made.components.getValue("cell-key").root)
+    assertEquals(BindingValueV1("label"), made.nodes.getValue("cell").properties["text"])
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-make", "browser", 2, "make")
+        ),
+      )
+    )
+    val undone = currentDocument(service)
+    assertEquals(before.roots, undone.roots)
+    assertEquals(before.nodes, undone.nodes)
+    assertEquals(before.components, undone.components)
+  }
+
   @Test
   fun `a removal that would strand a placement is refused rather than applied`() {
     val service = service()
@@ -4907,7 +4985,9 @@ class PersistentUiBuilderServiceTest {
           )
         }
         val text = node.properties["text"]
-        if (text != null && text !is StringValueV1) {
+        // A binding is a component body reading its placement's argument; the real catalog
+        // validation resolves it against every placement, which this stub does not attempt.
+        if (text != null && text !is StringValueV1 && text !is BindingValueV1) {
           return UiBuilderCatalogIssue("INVALID_PROPERTY", "text must be a string", node.id, "text")
         }
       }

@@ -165,6 +165,7 @@ object CollaborationReducer {
     // states inside the loop above are nobody's document.
     try {
       trace.state.document.requireSingleRoot()
+      trace.state.document.requireKnownComponents()
     } catch (failure: ReducerFailure) {
       return state.rejected(failure.code, failure.message.orEmpty(), nodeId = failure.nodeId)
     }
@@ -469,6 +470,17 @@ object CollaborationReducer {
           field = failure.field,
         )
       }
+    }
+    // Undoing a declaration that something has since come to place would leave that placement
+    // drawing nothing; asked of the finished compensation, as the server asks it.
+    try {
+      changed.document.requireKnownComponents()
+    } catch (failure: ReducerFailure) {
+      return state.rejected(
+        RejectionCode.UNSAFE_COMPENSATION,
+        failure.message.orEmpty(),
+        nodeId = failure.nodeId,
+      )
     }
     if (target.propertyChanges.any { it.address.target != PropertyTarget.Property })
       changed.document.behaviorIssue()?.let { issue ->
@@ -777,6 +789,17 @@ object CollaborationReducer {
           field = failure.field,
         )
       }
+    }
+    // Undoing a declaration that something has since come to place would leave that placement
+    // drawing nothing; asked of the finished compensation, as the server asks it.
+    try {
+      changed.document.requireKnownComponents()
+    } catch (failure: ReducerFailure) {
+      return state.rejected(
+        RejectionCode.UNSAFE_COMPENSATION,
+        failure.message.orEmpty(),
+        nodeId = failure.nodeId,
+      )
     }
     if (undo.target.propertyChanges.any { it.address.target != PropertyTarget.Property })
       changed.document.behaviorIssue()?.let { issue ->

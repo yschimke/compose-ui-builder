@@ -981,6 +981,13 @@ internal fun editorSelectionMenuEntries(
   wrapCandidates: List<EditorCatalogItem>,
   canUnwrap: Boolean,
   onOpenProperties: (() -> Unit)?,
+  /**
+   * Why the selection cannot become a component, or null when it can — the menu always offers the
+   * verb on a single selection, so a refusal is said rather than a row going missing.
+   */
+  makeComponentRefusal: String? = null,
+  /** Whether to offer "Make component" at all: one node is selected. */
+  canOfferMakeComponent: Boolean = false,
   /** Opens the quick editor beside the design, or null where the selection has none. */
   onQuickEdit: (() -> Unit)? = null,
   /** Copies a link that opens this design on this layer, or null where nothing is selected. */
@@ -1105,7 +1112,22 @@ internal fun editorSelectionMenuEntries(
       )
     }
   }
-  if (wrapCandidates.isNotEmpty() || canUnwrap) add(UiBuilderMenuEntry.Divider)
+  if (wrapCandidates.isNotEmpty() || canUnwrap || canOfferMakeComponent)
+    add(UiBuilderMenuEntry.Divider)
+  // Beside the container verbs, because it is one: it turns the subtree into the body of a
+  // component and leaves a placement where it was.
+  if (canOfferMakeComponent) {
+    add(
+      UiBuilderMenuEntry.Action(
+        label = "Make component",
+        icon = UiBuilderMenuIcon.Wrap,
+        enabled = makeComponentRefusal == null,
+        contentDescription = makeComponentRefusal ?: "Make a reusable component of this layer",
+      ) {
+        act(UiBuilderEditorEvent.MakeComponent())
+      }
+    )
+  }
   // Behind one row rather than inline: the containers a selection can be wrapped in run to thirty
   // on this catalog, and a menu whose last verb is thirty rows below the first is not a menu.
   if (wrapCandidates.isNotEmpty()) {

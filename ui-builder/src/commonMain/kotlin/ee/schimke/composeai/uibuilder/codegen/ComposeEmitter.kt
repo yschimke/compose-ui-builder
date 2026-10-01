@@ -1955,6 +1955,14 @@ private val BINDABLE_PROPERTIES: Map<String, Map<String, BindingKind>> =
     "m3/text" to mapOf("text" to BindingKind.STRING, "color" to BindingKind.COLOR),
   )
 
+/**
+ * The text properties of [componentId] a component body may read from an argument — what making a
+ * component from a subtree promotes to parameters. Read from [BINDABLE_PROPERTIES], so the editor
+ * never makes a parameter this exporter would then refuse as `UNSUPPORTED_BINDING`.
+ */
+internal fun bindableTextProperties(componentId: String): Set<String> =
+  BINDABLE_PROPERTIES[componentId].orEmpty().filterValues { it == BindingKind.STRING }.keys
+
 /** What a bound key is, in Kotlin, and how a placement's value is written at the call site. */
 internal enum class BindingKind(val kotlinType: String) {
   COLOR("Color") {
