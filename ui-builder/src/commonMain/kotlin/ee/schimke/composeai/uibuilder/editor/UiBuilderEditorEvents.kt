@@ -252,6 +252,13 @@ sealed interface UiBuilderEditorEvent {
     val afterNodeId: String? = null,
   ) : UiBuilderEditorEvent
 
+  /**
+   * Rename one of a component's parameters: the key its body reads and every placement passes, so
+   * the export writes `InboxEmail(sender = …)` rather than whatever the parameter was first called.
+   */
+  data class RenameComponentParameter(val componentKey: String, val from: String, val to: String) :
+    UiBuilderEditorEvent
+
   /** Rename a component — the composable the export writes. */
   data class RenameLocalComponent(val componentKey: String, val name: String) : UiBuilderEditorEvent
 
@@ -392,6 +399,12 @@ sealed interface UiBuilderEditorEvent {
 
   /** Paste the clipboard into the selected node's first accepting slot, or beside it. */
   data object Paste : UiBuilderEditorEvent
+
+  /**
+   * A clipboard that arrived from outside this editor — another tab, window or IDE — to paste from
+   * instead of the editor's own. Changes the editor, never the document.
+   */
+  data class ReceiveClipboard(val clipboard: EditorClipboard) : UiBuilderEditorEvent
 
   data object Undo : UiBuilderEditorEvent
 

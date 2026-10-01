@@ -204,6 +204,22 @@ internal val PARENT_SCOPED_MODIFIERS =
 /** Names the generated function already uses for itself. */
 private val RESERVED_PARAMETERS = setOf("modifier", "content")
 
+/**
+ * Why [name] cannot be a parameter of a component that already has [existing], or null when it can:
+ * a plain lower-camel Kotlin name, not one the generated function already uses, not taken.
+ */
+internal fun componentParameterRefusal(name: String, existing: Set<String>): String? =
+  when {
+    name.isEmpty() -> "A parameter needs a name"
+    !name.first().isLowerCase() || !name.all(Char::isLetterOrDigit) ->
+      "`$name` is not a parameter name: start with a lower-case letter, then letters and digits"
+    name in KOTLIN_HARD_KEYWORDS || name in RESERVED_PARAMETERS ->
+      "`$name` is a name Kotlin or the generated function already uses"
+    Regex("(argument|capture)\\d+").matches(name) -> "`$name` is a name the export generates"
+    name in existing -> "This component already has a parameter called `$name`"
+    else -> null
+  }
+
 /** What a placement draws as a capability — its body root's — for the slot rules to ask about. */
 internal fun UiBuilderDocument.placedCapability(
   key: String,

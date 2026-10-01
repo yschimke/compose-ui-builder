@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -868,6 +869,7 @@ fun UiBuilderEditor(
     transientNoticeGeneration += 1
   }
   val editorScope = rememberCoroutineScope()
+  val systemClipboard = LocalClipboard.current
   fun selectThread(threadId: String?) {
     selectedThreadId = threadId
     onSelectedThreadChanged?.invoke(threadId)
@@ -954,7 +956,7 @@ fun UiBuilderEditor(
    * the local state — which matters, because an optimistic edit that never becomes a submission
    * would leave the canvas showing a revision that exists nowhere.
    */
-  fun dispatch(event: UiBuilderEditorEvent) {
+  fun reduceAndSubmit(event: UiBuilderEditorEvent) {
     val previous = state
     val current = reducer.reduce(previous, event)
     if (revisionPin?.readOnly == true && current.operationSequence != previous.operationSequence) {
@@ -963,6 +965,35 @@ fun UiBuilderEditor(
     }
     state = current
     reducer.acceptedSubmission(previous, current)?.let { onSubmission?.invoke(it) }
+  }
+  fun dispatch(event: UiBuilderEditorEvent) {
+    when (event) {
+      // A paste may come from another tab, window or IDE: what it copied is on the system
+      // clipboard as text, and a fragment this editor did not copy is pasted instead of its own.
+      UiBuilderEditorEvent.Paste ->
+        if (readsSystemClipboardOnEveryPaste || state.clipboard == null) {
+          editorScope.launch {
+            val incoming = readSystemClipboardText()?.let(::decodeEditorClipboard)
+            if (incoming != null && !incoming.sameFragmentAs(state.clipboard))
+              reduceAndSubmit(UiBuilderEditorEvent.ReceiveClipboard(incoming))
+            reduceAndSubmit(UiBuilderEditorEvent.Paste)
+          }
+          return
+        }
+      else -> Unit
+    }
+    reduceAndSubmit(event)
+    // What a copy or cut took is offered to the rest of the system too, so a design open somewhere
+    // else can paste it. A clipboard the host refuses changes nothing here.
+    if (event == UiBuilderEditorEvent.CopySelected || event == UiBuilderEditorEvent.CutSelected) {
+      state.clipboard?.let { copied ->
+        editorScope.launch {
+          runCatching {
+            systemClipboard.setClipEntry(plainTextClipEntry(encodeEditorClipboard(copied)))
+          }
+        }
+      }
+    }
   }
   fun focusEditor() {
     textInputFocused = false

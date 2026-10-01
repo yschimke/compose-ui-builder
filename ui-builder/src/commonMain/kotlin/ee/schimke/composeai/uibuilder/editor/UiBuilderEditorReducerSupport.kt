@@ -17,6 +17,7 @@ import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyCapability
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
 import ee.schimke.composeai.uibuilder.capability.accepts
+import ee.schimke.composeai.uibuilder.componentRootOf
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -666,17 +667,24 @@ internal fun UiBuilderEditorState.selectionRoots(): List<String> {
 
 internal fun UiBuilderDocument.clip(nodeIds: List<String>): EditorClipboard {
   val collected = linkedMapOf<String, UiBuilderNode>()
+  val declarations = linkedMapOf<String, JsonObject>()
   fun visit(id: String) {
     val node = nodes[id] ?: return
     if (collected.put(id, node) != null) return
     node.slots.values.flatten().forEach(::visit)
+    // A placement travels with its component, body and all, and so does every component that
+    // body places in turn.
+    node.placementKey()?.let { key ->
+      val declaration = components[key] as? JsonObject ?: return@let
+      if (declarations.put(key, declaration) == null) componentRootOf(declaration)?.let(::visit)
+    }
   }
   // Tree order, not the order they were clicked. `paste` walks `rootNodeIds` and lays them down
   // in sequence, so a selection built by shift-clicking D and then B would arrive as C, D, B and
   // silently reorder what was copied.
   val ordered = nodeIds.sortedBy(treeIndex())
   ordered.forEach(::visit)
-  return EditorClipboard(rootNodeIds = ordered, nodes = collected)
+  return EditorClipboard(rootNodeIds = ordered, nodes = collected, components = declarations)
 }
 
 /**
