@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.72.0](https://github.com/yschimke/compose-ui-builder/compare/v3.71.0...v3.72.0) (2026-10-01)
+
+
+### Features
+
+* **ui-builder:** measure the design against its reference, and align layers to it ([#385](https://github.com/yschimke/compose-ui-builder/issues/385)) ([21038bf](https://github.com/yschimke/compose-ui-builder/commit/21038bf512ba923300bb67519fc38cfa1453474f))
+* **ui-builder:** paste components between designs and rename their parameters ([#383](https://github.com/yschimke/compose-ui-builder/issues/383)) ([c36a3cb](https://github.com/yschimke/compose-ui-builder/commit/c36a3cb64aa9ca8be6772c5f940954de90bf9839))
+
+
+### Bug Fixes
+
+* **ui-builder-export:** carry layout/box contentAlignment into RemoteBox ([#382](https://github.com/yschimke/compose-ui-builder/issues/382)) ([aa3b88b](https://github.com/yschimke/compose-ui-builder/commit/aa3b88b5d39b82a6ffeeaea942ea671898ba199f))
+
 ## [3.71.0](https://github.com/yschimke/compose-ui-builder/compare/v3.70.0...v3.71.0) (2026-10-01)
 
 

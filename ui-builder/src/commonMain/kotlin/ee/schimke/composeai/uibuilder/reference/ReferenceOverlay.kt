@@ -59,6 +59,10 @@ internal fun ReferenceOverlayCanvas(
   onMarkDrawn: (ReferenceMarkupKind, List<Float>) -> Unit = { _, _ -> },
   onPieceMoved: (String, Float, Float) -> Unit = { _, _, _ -> },
   modifier: Modifier = Modifier,
+  /** The picture measured against this frame; null draws every fit as [ReferenceFit.Contain]. */
+  facts: ReferenceFacts? = null,
+  /** What the last measurement found, outlined over the frame; see [ReferenceFindings]. */
+  findings: ReferenceFindings? = null,
 ) {
   if (!reference.drawing) return
   val settings = reference.settings
@@ -98,7 +102,9 @@ internal fun ReferenceOverlayCanvas(
       pieceBitmaps = pieceBitmaps,
       selectionHandles = reference.tool == ReferenceTool.MovePiece,
       textMeasurer = textMeasurer,
+      facts = facts,
     )
+    findings?.let { drawFindings(it) }
     if (drafting.size >= 4) {
       drawMark(
         ReferenceMark(
@@ -132,6 +138,8 @@ internal fun DrawScope.drawReferenceStack(
   textMeasurer: TextMeasurer?,
   /** Flattening bakes the base in at full strength; see `flattenReference`. */
   baseAlphaOverride: Float? = null,
+  /** The picture measured against the frame, for the fits that need its size in dp. */
+  facts: ReferenceFacts? = null,
 ) {
   val settings = reference.settings
   val target =
@@ -142,6 +150,8 @@ internal fun DrawScope.drawReferenceStack(
       scale = settings.scale,
       offsetXPx = with(density) { settings.offsetXDp.dp.toPx() },
       offsetYPx = with(density) { settings.offsetYDp.dp.toPx() },
+      fit = settings.fit,
+      facts = facts,
     )
   when (settings.mode) {
     ReferenceDiffMode.Overlay ->
@@ -258,14 +268,7 @@ private fun Modifier.referenceToolInput(
 internal fun ReferencePiece.frameRect(frame: Size): Rect =
   Rect(left * frame.width, top * frame.height, right * frame.width, bottom * frame.height)
 
-/**
- * Where the base reference lands inside the frame: contained, centred, then scaled and nudged.
- *
- * Contain rather than stretch, because a mock exported at a different aspect ratio than the screen
- * is nearly always the *screen* being wrong — stretching it to fit would hide exactly the mismatch
- * the overlay exists to show. The nudge is applied after the scale so that a dp of nudge is a dp on
- * screen at any scale, which is how it behaves under the operator's hand.
- */
+/** Where the base reference lands inside the frame, in its pixels: [referencePlacement]. */
 internal fun referenceTargetRect(
   frame: Size,
   imageWidthPx: Float,
@@ -273,17 +276,21 @@ internal fun referenceTargetRect(
   scale: Float,
   offsetXPx: Float,
   offsetYPx: Float,
-): Rect {
-  if (imageWidthPx <= 0f || imageHeightPx <= 0f || frame.width <= 0f || frame.height <= 0f) {
-    return Rect(Offset.Zero, frame)
-  }
-  val contain = minOf(frame.width / imageWidthPx, frame.height / imageHeightPx)
-  val width = imageWidthPx * contain * scale
-  val height = imageHeightPx * contain * scale
-  val left = (frame.width - width) / 2f + offsetXPx
-  val top = (frame.height - height) / 2f + offsetYPx
-  return Rect(left, top, left + width, top + height)
-}
+  fit: ReferenceFit = ReferenceFit.Contain,
+  facts: ReferenceFacts? = null,
+): Rect =
+  referencePlacement(
+      frameWidth = frame.width,
+      frameHeight = frame.height,
+      imageWidthPx = imageWidthPx,
+      imageHeightPx = imageHeightPx,
+      scale = scale,
+      offsetX = offsetXPx,
+      offsetY = offsetYPx,
+      fit = fit,
+      facts = facts,
+    )
+    .let { Rect(it.left, it.top, it.right, it.bottom) }
 
 private fun DrawScope.drawReference(
   bitmap: ImageBitmap,

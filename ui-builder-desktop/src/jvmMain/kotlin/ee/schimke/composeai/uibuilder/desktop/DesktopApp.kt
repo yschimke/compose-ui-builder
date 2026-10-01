@@ -23,6 +23,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.host.CatalogOverride
 import ee.schimke.composeai.uibuilder.host.DesignFileGuard
 import ee.schimke.composeai.uibuilder.host.DesignFiles
+import ee.schimke.composeai.uibuilder.host.JvmReferenceHost
 import ee.schimke.composeai.uibuilder.host.OfflineCatalog
 import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSession
 import ee.schimke.composeai.uibuilder.host.OfflineUiBuilderSessionView
@@ -134,6 +135,10 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
                   is DesktopDesign.Scratch -> "Desktop offline · saved locally"
                   is DesktopDesign.File -> "Design file · ${current.path}"
                 },
+              // Beside the workspaces rather than beside a design file: a reference is the
+              // operator's scaffolding, and writing it next to a file somebody shares would put
+              // a multi-megabyte mock into their repository.
+              referenceStore = referenceStoreFor(design, storageRoot),
             )
           }
         }
@@ -178,6 +183,16 @@ private fun FrameWindowScope.DesktopMenuBar(
     }
   }
 }
+
+/** Where [design]'s reference overlay is kept under [storageRoot]. */
+internal fun referenceStoreFor(design: DesktopDesign, storageRoot: Path): Path =
+  JvmReferenceHost.storeFor(
+    storageRoot.resolve("references"),
+    when (design) {
+      is DesktopDesign.Scratch -> "scratch:${design.catalog.systemId}:${design.template.orEmpty()}"
+      is DesktopDesign.File -> "file:${design.path.toAbsolutePath().normalize()}"
+    },
+  )
 
 /** How the menu and title name a template: `weather-widget` is "Weather widget". */
 internal fun templateLabel(template: String): String =

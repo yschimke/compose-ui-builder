@@ -72,8 +72,8 @@ class ReferenceImage(
   val heightPx: Int = 0,
   /**
    * Where the picture came from, for provenance only — typically the Figma node it was exported
-   * from. Never fetched: the serve host holds no Figma credential and makes no outbound call for
-   * it, so this is a link an operator can follow, not an import mechanism.
+   * from. Never re-fetched: a host that imported from a link fetched it once, at import, and the
+   * serve host holds no Figma credential at all. This is a link an operator can follow back.
    */
   val sourceUrl: String? = null,
 ) {
@@ -136,6 +136,14 @@ data class ReferenceOverlaySettings(
   val splitPercent: Int = 50,
   /** Draw the SVG's boxes on top of the other modes as well. */
   val alwaysShowBoxes: Boolean = false,
+  /**
+   * How the picture is placed before [scalePercent] and the nudge apply. See [ReferenceFit].
+   *
+   * A host that predates the field drops it and reads back [ReferenceFit.Contain], which is what
+   * every reference stored before it was drawn with — so an old record still lines up, and a new
+   * one on an old host degrades to the historic fit rather than to a broken one.
+   */
+  val fit: ReferenceFit = ReferenceFit.Contain,
 ) {
   val opacity: Float
     get() = opacityPercent.coerceIn(0, 100) / 100f
@@ -468,3 +476,23 @@ internal const val MARKUP_CORNER_RADIUS_DP: Float = 12f
 
 /** The type size a [ReferenceMarkupKind.Text] mark is drawn at, in sp-equivalent dp. */
 internal const val MARKUP_TEXT_SIZE_DP: Float = 14f
+
+/** [ReferenceFacts] for this picture against a frame. */
+fun ReferenceImage.facts(
+  frameWidthDp: Float,
+  frameHeightDp: Float,
+  designDensity: Float,
+  /** The decoded size, for an import whose size was not known up front (an SVG, a stored file). */
+  decodedWidthPx: Int = 0,
+  decodedHeightPx: Int = 0,
+): ReferenceFacts =
+  ReferenceFacts(
+    widthPx = widthPx.takeIf { it > 0 } ?: decodedWidthPx,
+    heightPx = heightPx.takeIf { it > 0 } ?: decodedHeightPx,
+    frameWidthDp = frameWidthDp,
+    frameHeightDp = frameHeightDp,
+    // An SVG has no pixels of its own: it is drawn at whatever size it is asked for, so a declared
+    // density would be a statement about a rasterisation this editor chose.
+    declaredDensity = if (isVector) null else declaredDensityFromName(name),
+    designDensity = designDensity,
+  )

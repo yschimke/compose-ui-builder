@@ -1454,6 +1454,7 @@ private fun LiveSessionApp(
       onSnapshotDesign = {
         references.snapshotDesign(revisionPin?.takeIf { it.pinned }?.requested)
       },
+      onImportReferenceUrl = { url -> references.fetchUrl(url) },
       referenceStatus = referenceStatus,
       pastedReference = pastedReference,
       comments = commentBoard,
