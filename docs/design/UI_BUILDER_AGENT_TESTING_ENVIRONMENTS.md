@@ -495,6 +495,76 @@ COMPOSE_PREVIEW_UI_BUILDER_TOKEN=... node scripts/ui-builder/design-sync.mjs imp
 
 ---
 
+## Testing from Claude Code Cloud Sessions
+
+Cloud sessions can run all four testing environments **if the repository is available**. Repositories can be provided via:
+
+- **GitHub clone** — Automatic if GitHub App is installed on the repo
+- **Local upload** — Upload your repository when GitHub isn't available (up to 100 MB, excludes `.env`, `*.pem`, `id_rsa`)
+
+### Cloud Session Capabilities
+
+Pre-installed tools and services:
+- **Java 21** with Maven and Gradle ✅
+- **Node.js** (versions 20, 21, 22) ✅
+- **Docker** (full engine with compose) ✅
+- **Python 3.x** with pip/poetry ✅
+- All package managers (npm, yarn, cargo, etc.) ✅
+
+**Network access:** Default "Trusted" level includes package registries, cloud platforms, container registries, GitHub, and dev tools. Customize with additional domains if needed.
+
+**Resource limits:** 4 vCPU, 16 GB RAM, 30 GB disk, up to 30-minute command timeout.
+
+### What Cloud Sessions Can Test
+
+**With repository access, cloud sessions can run all four testing methods:**
+
+1. **Gradle tests** ✅
+   ```bash
+   ./gradlew check
+   ./gradlew :ui-builder:test
+   ```
+
+2. **Local Wasm server** ✅
+   ```bash
+   ./gradlew :ui-builder:wasmFrontendDist
+   python3 -m http.server 8080 -d ui-builder/build/wasmDist
+   ```
+
+3. **Local Desktop app** ✅
+   ```bash
+   ./gradlew :ui-builder-desktop:run
+   ```
+
+4. **preview.coo.ee via MCP and Playwright** ✅
+   - Use MCP tools for design manipulation
+   - Use Playwright for UI testing
+
+### What Cloud Sessions Cannot Do
+
+- ❌ Access files on your local machine (only the repository)
+- ❌ Use interactive authentication (browser-based SSO login)
+- ❌ Access localhost services on your machine
+- ❌ Access local network resources directly
+
+### Recommended Cloud Testing Pattern
+
+**Multi-environment approach (same as local):**
+
+1. Run Gradle tests for regression detection
+2. Build and test the Wasm server with Playwright
+3. Build and run the Desktop app for offline workflows
+4. Use preview.coo.ee for integration testing with MCP tools
+
+**For CI/Scheduled Agents:**
+
+Cloud sessions are ideal for:
+- Running `./gradlew check` on every PR or schedule
+- Building and testing Wasm editor in headless mode
+- Running design fixture validation
+- Exercising MCP tools against preview.coo.ee
+
+---
 
 ## Debugging and Troubleshooting
 
