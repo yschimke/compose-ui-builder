@@ -386,7 +386,7 @@ private fun RevisionPane(entry: EditorRevisionEntry, label: String, modifier: Mo
  * layouts and the nodes says what, and is the half somebody can act on.
  */
 @Composable
-private fun RevisionDiffList(diff: EditorRevisionDiff, modifier: Modifier) {
+internal fun RevisionDiffList(diff: EditorRevisionDiff, modifier: Modifier) {
   Column(modifier) {
     Text(
       diff.summaryLine(),
@@ -469,7 +469,7 @@ private fun RevisionDiffRow(
 }
 
 /** The diff in one line: what a reader needs before deciding whether to read the rest. */
-private fun EditorRevisionDiff.summaryLine(): String {
+internal fun EditorRevisionDiff.summaryLine(): String {
   if (identical) return "No difference"
   val parts = buildList {
     if (added > 0) add("$added added")

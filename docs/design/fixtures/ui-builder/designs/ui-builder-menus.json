@@ -3710,7 +3710,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+D"
+            "value": "Ctrl/Cmd+D"
           },
           "style": {
             "type": "enum",
@@ -3840,7 +3840,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+C"
+            "value": "Ctrl/Cmd+C"
           },
           "style": {
             "type": "enum",
@@ -3970,7 +3970,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+X"
+            "value": "Ctrl/Cmd+X"
           },
           "style": {
             "type": "enum",
@@ -4100,7 +4100,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+V"
+            "value": "Ctrl/Cmd+V"
           },
           "style": {
             "type": "enum",
@@ -5191,5 +5191,5 @@
       "afterNodeId": "icon-50"
     }
   ],
-  "expectedDocumentHash": "d0c281b48c33d7b067eb69aaa13abb9f2c8edcf8f2032244f3d1838966da3f04"
+  "expectedDocumentHash": "08cb6d8218b5b94ae9987eb17f7ee249b56ef7c32fb7304586971c635b43f29b"
 }

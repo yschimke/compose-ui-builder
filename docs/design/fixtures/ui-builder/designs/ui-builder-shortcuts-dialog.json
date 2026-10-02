@@ -236,7 +236,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+Shift+Z"
+            "value": "Ctrl/Cmd+Shift+Z"
           },
           "style": {
             "type": "enum",
@@ -363,7 +363,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+Y"
+            "value": "Ctrl/Cmd+Y"
           },
           "style": {
             "type": "enum",
@@ -490,7 +490,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+Z"
+            "value": "Ctrl/Cmd+Z"
           },
           "style": {
             "type": "enum",
@@ -617,7 +617,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+Enter"
+            "value": "Ctrl/Cmd+Enter"
           },
           "style": {
             "type": "enum",
@@ -744,7 +744,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+D"
+            "value": "Ctrl/Cmd+D"
           },
           "style": {
             "type": "enum",
@@ -871,7 +871,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+↑"
+            "value": "Ctrl/Cmd+↑"
           },
           "style": {
             "type": "enum",
@@ -998,7 +998,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+↓"
+            "value": "Ctrl/Cmd+↓"
           },
           "style": {
             "type": "enum",
@@ -1633,7 +1633,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+C"
+            "value": "Ctrl/Cmd+C"
           },
           "style": {
             "type": "enum",
@@ -1760,7 +1760,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+X"
+            "value": "Ctrl/Cmd+X"
           },
           "style": {
             "type": "enum",
@@ -1887,7 +1887,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘+V"
+            "value": "Ctrl/Cmd+V"
           },
           "style": {
             "type": "enum",
@@ -2188,7 +2188,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "value": "Ctrl/⌘ + click a layer"
+            "value": "Ctrl/Cmd + click a layer"
           },
           "style": {
             "type": "enum",
@@ -2672,5 +2672,5 @@
       }
     }
   ],
-  "expectedDocumentHash": "49f0ce9f4bbfc6ee6f05c032aa90cee1d363c3fb31ca62894bbecf5c6c552c6f"
+  "expectedDocumentHash": "f0f611bfa280916c31e69ca0c90e848380f9697f4a69be9b9f5614450baaa1eb"
 }

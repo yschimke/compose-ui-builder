@@ -17,6 +17,15 @@ import ee.schimke.composeai.uibuilder.protocol.CommandConflictV1
  * [UiBuilderServiceRequest.ApplyOperation] (which is how a branch is edited), an export, a
  * thumbnail. What makes it a branch is the record this port reads and writes: its parent, its fork
  * point, its name, owner and status, and the log of commands accepted on it since the fork.
+ *
+ * **A suggestion is a branch** of [UiBuilderBranchKind.SUGGESTION]: a few proposed commands on the
+ * design's head that a person accepts or rejects, like suggestion mode in a document. There is no
+ * second mechanism. Propose it with [UiBuilderBranchRequest.CreateBranch] and `kind = SUGGESTION`,
+ * fill it with ordinary applies on its id, list the open ones with
+ * [UiBuilderBranchRequest.ListBranches] (`kind = SUGGESTION, includeClosed = false`), accept with
+ * [UiBuilderBranchRequest.MergeBranch] (all of it, or the commands named in
+ * [UiBuilderBranchRequest.MergeBranch.acceptOperationIds]) and reject with
+ * [UiBuilderBranchRequest.ArchiveBranch].
  */
 public interface UiBuilderBranchPort {
   public suspend fun executeBranch(call: UiBuilderBranchCall): UiBuilderBranchResponse
@@ -37,18 +46,31 @@ public sealed interface UiBuilderBranchRequest {
    * retention cannot expire the base a merge replays from.
    *
    * [branchId] is the new branch's design id; the service mints one when it is null. Supplying one
-   * makes a retried create idempotent for the same parent, fork revision and name.
+   * makes a retried create idempotent for the same parent, fork revision, name and kind.
+   *
+   * [kind] is [UiBuilderBranchKind.SUGGESTION] for a proposed edit a person will accept or reject;
+   * [name] is then its summary ("Make the play button bigger"). A suggestion is normally forked at
+   * the head ([revision] null), so what it shows is what accepting it would change now.
    */
   public data class CreateBranch(
     val designId: String,
     val name: String,
     val revision: Long? = null,
     val branchId: String? = null,
+    val kind: UiBuilderBranchKind = UiBuilderBranchKind.BRANCH,
   ) : UiBuilderBranchRequest
 
-  /** The branches of [designId], newest first. Needs read on the parent. */
-  public data class ListBranches(val designId: String, val includeClosed: Boolean = true) :
-    UiBuilderBranchRequest
+  /**
+   * The branches of [designId], newest first. Needs read on the parent.
+   *
+   * [kind] narrows the list to one kind — `SUGGESTION` with `includeClosed = false` is "the
+   * suggestions waiting on this design"; null lists both.
+   */
+  public data class ListBranches(
+    val designId: String,
+    val includeClosed: Boolean = true,
+    val kind: UiBuilderBranchKind? = null,
+  ) : UiBuilderBranchRequest
 
   /** One branch's record. Needs read on the branch. */
   public data class GetBranch(val branchId: String) : UiBuilderBranchRequest
@@ -78,12 +100,22 @@ public sealed interface UiBuilderBranchRequest {
    * decision made at merge time, and the report lists it. Skipping a command an undo targets
    * refuses the undo (`UNKNOWN_OPERATION`), so skip both.
    *
+   * [acceptOperationIds] is the same decision said the other way round — "accept only these" — for
+   * accepting part of a suggestion: every logged command it does not name is skipped, as if it were
+   * in [skipOperationIds]. Null accepts the whole log. Naming a command the log does not hold is
+   * refused, as it is for a skip.
+   *
+   * Merging a [UiBuilderBranchKind.BRANCH] archives its open sibling branches. Merging a
+   * [UiBuilderBranchKind.SUGGESTION] archives nothing: two suggestions made at the same revision
+   * are two proposals, not two alternatives, and accepting one says nothing about the other.
+   *
    * Needs write on the parent.
    */
   public data class MergeBranch(
     val branchId: String,
     val dryRun: Boolean = false,
     val skipOperationIds: Set<String> = emptySet(),
+    val acceptOperationIds: Set<String>? = null,
   ) : UiBuilderBranchRequest
 }
 
@@ -96,6 +128,17 @@ public sealed interface UiBuilderBranchResponse {
   public data class Merge(val report: UiBuilderBranchMergeReport) : UiBuilderBranchResponse
 
   public data class Error(val error: UiBuilderServiceError) : UiBuilderBranchResponse
+}
+
+/** What a branch is for. See [UiBuilderBranchPort]. */
+public enum class UiBuilderBranchKind {
+  /** An alternative explored away from the design, merged back or abandoned. */
+  BRANCH,
+
+  /**
+   * A short-lived proposal shown on the design for a person to accept (merge) or reject (archive).
+   */
+  SUGGESTION,
 }
 
 public enum class UiBuilderBranchStatus {
@@ -129,6 +172,13 @@ public data class UiBuilderBranch(
   val mergedAtParentRevision: Long? = null,
   /** For a sibling archived by a merge: the branch whose merge archived it. */
   val supersededByBranchId: String? = null,
+  val kind: UiBuilderBranchKind = UiBuilderBranchKind.BRANCH,
+  /**
+   * The logged commands' operation ids, in log order: what [UiBuilderBranchRequest.MergeBranch]'s
+   * `skipOperationIds` and `acceptOperationIds` name, so a partial accept can be asked for without
+   * reading the log some other way.
+   */
+  val operationIds: List<String> = emptyList(),
 )
 
 /**

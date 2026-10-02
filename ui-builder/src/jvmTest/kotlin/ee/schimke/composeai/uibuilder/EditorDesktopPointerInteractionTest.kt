@@ -109,7 +109,7 @@ class EditorDesktopPointerInteractionTest {
         )
       }
 
-      onNodeWithContentDescription("Undo (Ctrl/⌘+Z)").performClick()
+      onNodeWithContentDescription("Undo (Ctrl/Cmd+Z)").performClick()
       waitForIdle()
       runOnIdle {
         assertEquals(
@@ -118,7 +118,7 @@ class EditorDesktopPointerInteractionTest {
         )
       }
 
-      onNodeWithContentDescription("Redo (Ctrl/⌘+Shift+Z)").performClick()
+      onNodeWithContentDescription("Redo (Ctrl/Cmd+Shift+Z)").performClick()
       waitForIdle()
       runOnIdle {
         assertTrue(
@@ -683,7 +683,7 @@ class EditorDesktopPointerInteractionTest {
       onAllNodesWithText("Episode 140: Lorem ipsum dolor")[0].performClick()
 
       onNodeWithContentDescription("Text property").assertTextEquals("Retained draft")
-      onNodeWithText("Uncommitted edit retained · Ctrl/⌘+Enter applies").assertExists()
+      onNodeWithText("Uncommitted edit retained · Ctrl/Cmd+Enter applies").assertExists()
     }
 
   @Test

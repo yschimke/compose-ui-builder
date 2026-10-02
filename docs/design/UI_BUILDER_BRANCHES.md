@@ -4,6 +4,7 @@ Phase 2 (runtime half) of [compose-ui-builder#375](https://github.com/yschimke/c
 part of [compose-preview-server#1235](https://github.com/yschimke/compose-preview-server/issues/1235).
 Phase 1, the MCP history tools, is
 [compose-preview-server#1256](https://github.com/yschimke/compose-preview-server/issues/1256).
+Phase 4, suggestion mode, is [Suggestions](#suggestions-open-question-3-phase-4) below.
 
 A branch exists so an agent (or a person) can **explore an alternative**, or change a design
 **without trampling somebody editing it live**, and then bring the chosen result back. It adds no
@@ -70,6 +71,16 @@ in `:ui-builder-export` because that is the module both the browser and the serv
 the two cannot drift:
 
 - **The base chain.** `base(c₁)` is the fork revision; `base(cₖ)` is the revision `cₖ₋₁` landed at.
+  It is what each command's positions resolve against.
+- **Staleness from the fork.** Every command's `STALE_*` checks read the window from the fork to
+  the parent's head when the merge began (`StalenessWindow` in the reducer), not the window after
+  its own base: the author of `cₖ` saw the fork and `c₁…cₖ₋₁`, and none of the parent's edits since.
+  So `c₃` overwriting a property the parent changed after the fork is reported however late in the
+  log it comes, and `overwrittenRevision` names that parent head (for an environment field, the
+  parent revision that last wrote it). A key an earlier command of the
+  same replay already wrote is not reported again — the later command overwrites the branch's own
+  value, which its author saw. A skip or a partial accept changes which command replays first, and
+  so changes nothing about what any of them reports.
 - **Every command replays as itself**, undos and redos included.
 - **The first refusal stops the run**, and the report says where and why and how much is left.
 - **A per-command report**: for each command, its author, its base, where it landed, and what it
@@ -169,23 +180,94 @@ merge runs under the service lock. They share the replay (`replayCommandLog`) an
 they differ only in transport, and so in atomicity. Sync was refactored onto the shared loop in this
 change, and `LocalDesignSyncBackTest` still holds it to the same answers.
 
-## Suggestions (open question 3)
+## Suggestions (open question 3, phase 4)
 
-**Yes — suggestions should be short-lived branches under the hood**, and this model is built so
-they can be. A suggestion is a branch of one or a few commands, named for its intent, created by the
-agent and merged or archived by a person; "accept" is `MergeBranch`, "reject" is `ArchiveBranch`,
-"accept part" is a merge with `skipOperationIds`. What phase 4 adds is presentation (pending
-operations drawn over the parent in the editor) and per-operation accept, not a second mechanism.
+**Suggestions are short-lived branches under the hood.** There is no second mechanism: a suggestion
+is a branch whose record says `kind = SUGGESTION`, a person accepts it with the merge and rejects it
+with the archive. What phase 4 adds is the kind, a partial accept, and the editor that shows them.
+
+| | |
+| --- | --- |
+| Propose | `CreateBranch {designId, name = summary, kind = SUGGESTION}` at the head, then ordinary applies on the suggestion's id |
+| List | `ListBranches {designId, includeClosed = false, kind = SUGGESTION}` |
+| Accept | `MergeBranch {branchId}` — the replay-merge above, all or nothing, per-command report |
+| Accept part | `MergeBranch {branchId, acceptOperationIds}` — every logged command not named is skipped |
+| Reject | `ArchiveBranch {branchId}` — by a writer on the design, or by the suggestion's author withdrawing it |
+
+### What differs from a branch
+
+- **The record carries `kind`.** `DesignBranchRecordV1.kind` is never written for an ordinary
+  branch, so a branch stored before suggestions existed reads back unchanged. The port reports it as
+  `UiBuilderBranch.kind`, and `UiBuilderBranch.operationIds` lists the log in order so a caller can
+  name a partial accept without reading the log some other way.
+- **Accepting one archives nothing.** A branch's siblings are the alternatives it was chosen from; a
+  suggestion is a proposal, and two suggestions made at the same revision are two proposals.
+  Merging a suggestion archives no sibling, and merging a branch never archives a suggestion that
+  shares its fork point.
+- **A retried create matches on kind too**, so the same id cannot be a branch on one call and a
+  suggestion on the next.
+- **Accepting none of it is a reject.** `acceptOperationIds = {}` is refused (`BAD_REQUEST`) rather
+  than recorded as a merge that changed nothing.
+
+Everything else is the branch's: inherited access, the fork-point pin (a waiting suggestion pins its
+revision like any open branch), the 1,024-command cap, per-author attribution — an accepted
+suggestion's revisions are the agent's, so the agent can still undo its own change — and the
+all-or-nothing replay. A suggestion made at an older revision still accepts, replayed onto the head;
+its report says what it overwrote.
+
+### In the editor
+
+The comments ("Talk") tab gains a **Suggestions** section above the review verdict, when the host
+supports suggestions or has any to report:
+
+- **One card per open suggestion**: its summary (the branch name), who proposed it and whether that
+  is an agent, how many edits, the revision it was made on, and a one-line document diff ("1 added ·
+  2 changed"). The diff is `documentDiff` between the design **at the suggestion's fork revision**
+  (rebuilt from the editor's own record when it can be) and the suggestion's head, so it is the
+  suggestion's own change; out of reach, it falls back to the design as it is now. A card notes
+  when the design has moved on since the suggestion was made.
+- **Show** swaps the canvas for a read-only review pane — the design now and the design as the
+  suggestion would leave it, side by side, drawn by the canvas's own renderer, with the change
+  list — the way an old revision replaces the canvas rather than being drawn over it.
+- **Accept** and **Reject** go to the host. The outcome is said under the list: what landed and
+  at which revision, what it overwrote (`STALE_*` notices, in words), or — for a refused accept —
+  which command stopped it and why, and that nothing was applied.
+
+`UiBuilderEditor` takes `suggestions`, `onAcceptSuggestion`, `onRejectSuggestion` and
+`suggestionStatus`, all defaulting to nothing, so the section is not drawn on a host without
+suggestions: the MCP App host, the local (browser-storage) host, every preview and every test that
+does not ask for it. The browser host (`BrowserSuggestionHost`, wasmJs) lists through the server's
+suggestion routes and opens each suggestion's document through the ordinary `OpenDesign` protocol
+request by the suggestion's id — it is a design, and it inherits the design's access, so no new
+document route is needed. It polls the list every 15 s (a suggestion arriving does not move the
+design, so nothing comes down the socket for it) and stops at the first answer that is not a list,
+which is what a host without the routes gives. An accepted suggestion reaches the canvas as the
+ordinary delta.
+
+![The Talk panel with two waiting suggestions and a refused accept](evidence/ui-builder-suggestions/suggestions-panel.png)
+
+![A suggestion shown in place of the canvas: now, suggested, and the change list](evidence/ui-builder-suggestions/suggestion-on-canvas.png)
+
+Both are `UiBuilderSuggestionsPreview.kt`, so the preview workflow diffs them.
+
+The partial accept is in the port and the browser host (`accept(suggestion, acceptOperationIds)`);
+the editor's cards accept or reject the whole suggestion. Per-operation checkboxes are a follow-up.
 
 ## Known limits and follow-ups
 
-- **Only the first replayed command sees the parent's concurrent edits as concurrent.** The base
-  chain gives `c₂…cₙ` bases at or after the parent's head, so their staleness checks cannot see edits
-  the parent made between the fork and the merge; a later command that overwrites one is applied
-  with no `STALE_*` notice. Sync has exactly the same property today. Fixing it means a reducer that
-  reads staleness from the fork while reading positions from the predecessor — a reducer change,
-  tracked separately rather than smuggled into this one. The dry-run report and a document diff
-  (below) are the review surface until then.
+- **Sync still checks staleness against the chain base.** The merge's fork window is passed to the
+  reducer in-process; Sync replays over the wire, one `ApplyOperation` per command, and
+  `DesignCommandV1` carries one base revision, so the server cannot tell an offline run's `c₂` from
+  a live edit made at that revision. A Sync `c₂…cₙ` that overwrites a server edit made between the
+  fork and the sync is still applied with no `STALE_*` notice. Fixing it is a wire change — a
+  second, optional revision on the command in compose-preview-contracts (the "staleness base"),
+  which the service would turn into the same `StalenessWindow` — so it needs a contracts release
+  and every client that sends it, and is tracked separately.
+- **The stale delete/restore gate reads the chain base.** A delete or restore whose base is behind
+  the head is refused (`REVISION_MISMATCH`), which in a merge only `c₁` can be; a later delete
+  lands even if the parent edited the node after the fork. Widening the gate to the fork window
+  would refuse every non-first delete once the parent has moved at all, which is a policy change
+  rather than a reporting one, so the dry-run report is still the review surface for it.
 - **Document diff for the server.** `revisionDiff`/`documentDiff` (`editor/RevisionTimeline.kt`)
   works on the editor's `UiBuilderDocument` and `CapabilityCatalog`, so moving it into a module the
   server consumes is not a small change; compose-preview-server#1256's `diff_designs` needs it, and
@@ -206,3 +288,32 @@ In compose-preview-server, after the release carrying this:
 - **Grant scoping**: an agent grant scoped to a design must reach its branches. A branch's design id
   is not its parent's, so the scope check maps a branch id to its `parentDesignId` (via `GetBranch`).
 - Edits keep going through the existing apply tool against the branch id.
+
+### For suggestions
+
+compose-preview-server already wires the branch tools through `UiBuilderBranchPort`; suggestions
+need, after the release carrying phase 4:
+
+- MCP tools, each with an `outputSchema` and listed in `docs/design/CATALOG_MCP.md`:
+  - `ui_builder_suggest {designId, summary, operations}` — `CreateBranch {kind = SUGGESTION}` at
+    the head, then the operations applied on the suggestion's id; answers the suggestion and the
+    outcome of each operation. One call, so an agent cannot leave an empty suggestion behind.
+  - `ui_builder_list_suggestions {designId}` — `ListBranches {kind = SUGGESTION, includeClosed =
+    false}`.
+  - `ui_builder_accept_suggestion {suggestionId, operationIds?}` — `MergeBranch` with
+    `acceptOperationIds`; answers the merge report.
+  - `ui_builder_reject_suggestion {suggestionId}` — `ArchiveBranch`.
+- HTTP routes for the editor, which `BrowserSuggestionHost` already calls (payloads in
+  `DesignSuggestionWire.kt`, `:ui-builder` commonMain):
+  - `GET /api/ui-builder/v1/designs/{id}/suggestions` → `{"suggestions": [{"suggestionId",
+    "summary", "proposedBy", "proposerKind": "agent"|"human", "displayName"?,
+    "createdAtEpochMillis", "forkRevision", "operationIds"}]}`;
+  - `POST …/suggestions/{suggestionId}/accept`, body `{"acceptOperationIds"?: [...]}` → the merge
+    report (`merged`, `parentRevisionAfter`, `commands[]` with `status`, `code`, `nodeId`,
+    `conflicts[]`, `skippedOperationIds`) — a refused merge is a 200 report with `merged: false`;
+  - `POST …/suggestions/{suggestionId}/reject` → the archived suggestion.
+  The decider is the credential, as for review decisions; `proposerKind` comes from the owner's
+  principal kind.
+- Grant scoping already maps a branch id to its parent; a suggestion is a branch, so nothing new.
+- The collaboration rule for compose-ag-plugin's `docs/agent-rules.md`: when a person is present on
+  a design, an agent proposes with `ui_builder_suggest` rather than applying to it directly.
