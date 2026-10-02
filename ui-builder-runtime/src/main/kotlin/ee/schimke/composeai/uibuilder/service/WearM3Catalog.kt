@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.WearScreenTheme
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
@@ -159,6 +160,11 @@ private fun wearScreenScaffoldProperties(): List<PropertyCapabilityV1> =
             "{\"type\":\"color\",\"value\":\"#RRGGBB\"}, or a colourToken naming another role of " +
             "the stock Wear scheme. Unset keeps Wear's own.",
       )
+    } +
+    // The screen's typefaces, one per group of Wear type-scale roles, drawn and generated the same
+    // way as the colours above (yschimke/wear-m3-catalog#684).
+    ThemeTypefaces.WEAR_GROUPS.map { group ->
+      wearString(group.property, notes = ThemeTypefaces.notes(group, wear = true))
     }
 
 // ── The property vocabulary

@@ -7,7 +7,10 @@ import ee.schimke.composeai.uibuilder.canvas.DIALOG_CORNER_DP
 import ee.schimke.composeai.uibuilder.canvas.DIALOG_TONAL_ELEVATION_DP
 import ee.schimke.composeai.uibuilder.canvas.isoDateToEpochMillis
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
+import ee.schimke.composeai.uibuilder.editor.themeHost
+import ee.schimke.composeai.uibuilder.export.AndroidGoogleFonts
 import ee.schimke.composeai.uibuilder.export.KOTLIN_HARD_KEYWORDS
+import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.canonicalJson
@@ -37,6 +40,9 @@ internal class ComposeEmitter(
   private val assetAdapter: ComposeAssetAdapter?,
 ) {
   private val out = StringBuilder()
+
+  /** The typefaces the design's theme host names, declared once at the foot of the file. */
+  private val googleFonts = AndroidGoogleFonts(indent = "  ")
 
   /** Only vectors this document uses reach its generated source and downstream binary. */
   private val usedGoogleMaterialIcons: List<GoogleMaterialIcon> by lazy {
@@ -117,6 +123,10 @@ internal class ComposeEmitter(
     emitComponentFunctions()
     emitRowClasses()
     emitCompatibilityHelpers()
+    googleFonts.declarations.forEach { declaration ->
+      appendLine(declaration)
+      appendLine()
+    }
     val body = out.toString()
 
     out.clear()
@@ -140,6 +150,7 @@ internal class ComposeEmitter(
           )
         else emptyList()) +
         additionalTextImports() +
+        googleFonts.imports +
         listOfNotNull(assetAdapter?.renderer?.importName))
       .distinct()
       .sorted()
@@ -1097,12 +1108,28 @@ internal class ComposeEmitter(
   }
 
   private fun emitSurface(node: UiBuilderNode, level: Int) {
+    // The theme host's typefaces wrap it, as the canvas draws everything inside it under them: a
+    // `MaterialTheme` around the surface with each named role re-pointed at its Google Fonts
+    // family. See [ThemeTypefaces].
+    val roles =
+      if (document.themeHost()?.id == node.id)
+        ThemeTypefaces.m3RoleFamilies(ThemeTypefaces.families(node))
+      else emptyMap()
+    val inner = if (roles.isEmpty()) level else level + 1
+    if (roles.isNotEmpty()) {
+      line(level, "MaterialTheme(")
+      googleFonts.typography("MaterialTheme.typography", roles, depth = level + 1).forEach {
+        appendLine(it)
+      }
+      line(level, ") {")
+    }
     line(
-      level,
+      inner,
       "Surface(${node.modifierArgument()}, shape = ${node.shapeExpression()}, color = ${node.boundColorExpression("containerColor")}, tonalElevation = ${node.number("tonalElevationDp").dpLiteral()}) {",
     )
-    emitChildren(node.slot("content"), level + 1)
-    line(level, "}")
+    emitChildren(node.slot("content"), inner + 1)
+    line(inner, "}")
+    if (roles.isNotEmpty()) line(level, "}")
   }
 
   private fun emitCard(node: UiBuilderNode, level: Int) {
@@ -3297,7 +3324,7 @@ private val HANDLED_FIELDS =
     "m3/snackbar-host" to HandledFields(setOf("visible")),
     "m3/surface" to
       HandledFields(
-        setOf("containerColor", "shape", "shapeDp", "tonalElevationDp"),
+        setOf("containerColor", "shape", "shapeDp", "tonalElevationDp") + ThemeTypefaces.PROPERTIES,
         setOf("content"),
       ),
     "m3/switch" to HandledFields(setOf("checked", "enabled"), events = setOf("click")),

@@ -189,6 +189,7 @@ object WearWidgetCodeExporter {
         )
         .let { probe ->
           probe.background(sizedRoot)
+          probe.themeTypography(sizedRoot, depth = 2)
           contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
           probe.usesTheme
         }
@@ -209,6 +210,7 @@ object WearWidgetCodeExporter {
           frameFillingRoot = contentIds.singleOrNull(),
         )
       val background = emitter.background(sizedRoot)
+      emitter.themeTypography(sizedRoot, depth = 2)
       val body =
         when (contentIds.size) {
           0 -> listOf(emitter.emptyBox(depth))
@@ -275,7 +277,13 @@ object WearWidgetCodeExporter {
             listOf("$pad}")
         }
       if (usesTheme) {
-        appendLine("${INDENT}RemoteMaterialTheme {")
+        val typography = emitters.firstNotNullOfOrNull { it.typography }
+        if (typography == null) appendLine("${INDENT}RemoteMaterialTheme {")
+        else {
+          appendLine("${INDENT}RemoteMaterialTheme(")
+          typography.forEach(::appendLine)
+          appendLine("$INDENT) {")
+        }
         body.forEach(::appendLine)
         appendLine("$INDENT}")
       } else {

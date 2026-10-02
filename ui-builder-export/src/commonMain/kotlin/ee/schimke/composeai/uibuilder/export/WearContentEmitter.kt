@@ -139,6 +139,19 @@ internal class WearContentEmitter(
     return "MaterialTheme.colorScheme.copy(${overrides.joinToString(", ")})"
   }
 
+  /**
+   * The scaffold's typefaces, as the lines of a `typography = …` argument to the screen's
+   * `MaterialTheme`, or null when the design names none. The families are declared through [fonts].
+   * See [ThemeTypefaces].
+   */
+  fun themeTypography(nodeId: String, fonts: AndroidGoogleFonts, depth: Int): List<String>? {
+    val node = document.nodes[nodeId] ?: return null
+    val roles = ThemeTypefaces.wearRoleFamilies(ThemeTypefaces.families(node))
+    if (roles.isEmpty()) return null
+    usesMaterialTheme = true
+    return fonts.typography("MaterialTheme.typography", roles, depth)
+  }
+
   fun emitScaffoldBody(nodeId: String): List<String> {
     val node = document.nodes[nodeId] ?: return refused("the content node `$nodeId` is missing")
     if (node.componentId != WearScreenCodeExporter.TRANSFORMING_LAZY_COLUMN) {

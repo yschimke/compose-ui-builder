@@ -197,6 +197,38 @@ internal class RemoteContentEmitter(
   var usesTheme: Boolean = false
     private set
 
+  private var usesRemoteFontFamily = false
+
+  /** What the last [themeTypography] wrote, for the generator that opens the theme wrapper. */
+  var typography: List<String>? = null
+    private set
+
+  /**
+   * The widget's typography, as the lines of a `typography = …` argument to `RemoteMaterialTheme`,
+   * or null when [host] names no typeface. See [ThemeTypefaces].
+   *
+   * Every role is re-pointed explicitly: `RemoteTypography(defaultFontFamily = …)` fills a family
+   * in only where a style has none, and every stock role declares one. The family goes into the
+   * document by name — `RemoteFontFamily.Named("google:…")` — and the player resolves the face, so
+   * the generated widget needs no font provider of its own.
+   */
+  fun themeTypography(host: UiBuilderNode, depth: Int): List<String>? {
+    val roles = ThemeTypefaces.wearRoleFamilies(ThemeTypefaces.families(host))
+    if (roles.isEmpty()) return null
+    usesTheme = true
+    usesRemoteFontFamily = true
+    val pad = INDENT.repeat(depth)
+    return (listOf("${pad}typography =", "$pad${INDENT}RemoteMaterialTheme.typography.run {") +
+        listOf("$pad$INDENT${INDENT}copy(") +
+        roles.map { (role, family) ->
+          val named =
+            "RemoteFontFamily.Named(${"google:${ThemeTypefaces.familyName(family)}".quoted()})"
+          "$pad$INDENT$INDENT$INDENT$role = $role.copy(fontFamily = $named),"
+        } +
+        listOf("$pad$INDENT$INDENT)", "$pad$INDENT},"))
+      .also { typography = it }
+  }
+
   private var usesMaterialText = false
   private var usesColumn = false
   private var usesRow = false
@@ -2537,6 +2569,8 @@ internal class RemoteContentEmitter(
       imports += "androidx.wear.compose.remote.material3.RemoteColorScheme"
     }
     if (usesTheme) imports += "androidx.wear.compose.remote.material3.RemoteMaterialTheme"
+    if (usesRemoteFontFamily)
+      imports += "androidx.compose.remote.creation.compose.text.RemoteFontFamily"
     if (usesMaterialText) imports += "androidx.wear.compose.remote.material3.RemoteText"
     return imports.sorted()
   }

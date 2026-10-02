@@ -139,6 +139,8 @@ object WearScreenCodeExporter {
     val overlays = root.slots["overlays"].orEmpty().flatMap { emitter.emitOverlay(it, depth = 1) }
     // Read before the imports are, because naming a theme is what imports `MaterialTheme`.
     val colorScheme = emitter.themeColorScheme(rootId)
+    val fonts = AndroidGoogleFonts(INDENT)
+    val typography = emitter.themeTypography(rootId, fonts, depth = 2)
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
     val name = document.screenIdentifier()
@@ -159,7 +161,10 @@ object WearScreenCodeExporter {
             appendLine("package $packageName")
             appendLine()
           }
-          emitter.imports(timeText != null, previews).forEach { appendLine("import $it") }
+          (emitter.imports(timeText != null, previews) + fonts.imports)
+            .distinct()
+            .sorted()
+            .forEach { appendLine("import $it") }
           appendLine()
           appendLine("@Composable")
           appendLine("fun $screenFunction() {")
@@ -206,13 +211,26 @@ object WearScreenCodeExporter {
             appendLine("${INDENT}}")
             overlays.forEach { appendLine(it) }
           }
-          if (colorScheme == null) append(screen)
+          if (colorScheme == null && typography == null) append(screen)
           else {
-            appendLine("${INDENT}MaterialTheme(colorScheme = $colorScheme) {")
+            if (typography == null)
+              appendLine("${INDENT}MaterialTheme(colorScheme = $colorScheme) {")
+            else {
+              // The typefaces as well as the colours: one theme, so the scaffold's text and every
+              // row inside it read the same type scale the canvas drew.
+              appendLine("${INDENT}MaterialTheme(")
+              colorScheme?.let { appendLine("$INDENT${INDENT}colorScheme = $it,") }
+              typography.forEach(::appendLine)
+              appendLine("$INDENT) {")
+            }
             screen.lines().dropLast(1).forEach { appendLine(if (it.isEmpty()) it else INDENT + it) }
             appendLine("${INDENT}}")
           }
           appendLine("}")
+          fonts.declarations.forEach {
+            appendLine()
+            appendLine(it)
+          }
           // `AppScaffold` owns the status strip — `ScreenScaffold` has no `timeText` argument — so
           // a design that declares one gets the pair, frozen, around the screen.
           val appScaffold =

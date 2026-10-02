@@ -2933,6 +2933,36 @@
             "name": "themeCornerRadiusDp",
             "jsonType": "number",
             "required": false
+          },
+          {
+            "name": "themeDisplayTypeface",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The font family for the display roles (displayLarge, displayMedium, displaySmall) of everything this theme host contains. A family name: one of the editor's vendored faces or any Google Fonts family (\"Space Grotesk\", \"Michroma\"); a `google:` prefix is accepted. Generated code sets it as a `GoogleFont` family on the theme's typography. Unset keeps the platform's own face for these roles."
+          },
+          {
+            "name": "themeHeadlineTypeface",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The font family for the headline roles (headlineLarge, headlineMedium, headlineSmall) of everything this theme host contains. A family name: one of the editor's vendored faces or any Google Fonts family (\"Space Grotesk\", \"Michroma\"); a `google:` prefix is accepted. Generated code sets it as a `GoogleFont` family on the theme's typography. Unset keeps the platform's own face for these roles."
+          },
+          {
+            "name": "themeTitleTypeface",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The font family for the title roles (titleLarge, titleMedium, titleSmall) of everything this theme host contains. A family name: one of the editor's vendored faces or any Google Fonts family (\"Space Grotesk\", \"Michroma\"); a `google:` prefix is accepted. Generated code sets it as a `GoogleFont` family on the theme's typography. Unset keeps the platform's own face for these roles."
+          },
+          {
+            "name": "themeBodyTypeface",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The font family for the body roles (bodyLarge, bodyMedium, bodySmall) of everything this theme host contains. A family name: one of the editor's vendored faces or any Google Fonts family (\"Space Grotesk\", \"Michroma\"); a `google:` prefix is accepted. Generated code sets it as a `GoogleFont` family on the theme's typography. Unset keeps the platform's own face for these roles."
+          },
+          {
+            "name": "themeLabelTypeface",
+            "jsonType": "string",
+            "required": false,
+            "notes": "The font family for the label roles (labelLarge, labelMedium, labelSmall) of everything this theme host contains. A family name: one of the editor's vendored faces or any Google Fonts family (\"Space Grotesk\", \"Michroma\"); a `google:` prefix is accepted. Generated code sets it as a `GoogleFont` family on the theme's typography. Unset keeps the platform's own face for these roles."
           }
         ],
         "slotCapabilities": [
