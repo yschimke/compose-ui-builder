@@ -48,7 +48,8 @@ UiBuilderEditor
 ```
 
 `LocalUiBuilderService` answers the released v1 requests — `openDesign`, `getSnapshot`,
-`applyOperation`, `listCatalogs`, `updatePresence` — from designs in `localStorage`, and it applies
+`applyOperation`, `listCatalogs`, `updatePresence` — from designs in this browser's storage
+(IndexedDB, or `localStorage` where there is none; see [Where the bytes live](#where-the-bytes-live)), and it applies
 them with **the same `CollaborationReducer` the server runs**. A design edited offline is not edited
 by a simpler set of rules; it is edited by the same rules with the round trip removed.
 
@@ -71,7 +72,8 @@ editor does send.
 ## What is stored, and what a reload replays
 
 A design is stored as a **seed document plus the commands accepted since**, under one key per
-design (`ui-builder.local.design.<designId>`):
+design (`ui-builder.local.design.<designId>`) — the same key and the same text in IndexedDB as in
+`localStorage`, so moving between them did not change the record:
 
 ```json
 {
@@ -103,9 +105,9 @@ rebuilds that history exactly by being handed the same commands in the same orde
 locally stored design is a replay, and the undo stack survives a reload — which is the whole
 difference between this and writing `document.json` into a key.
 
-One key per design rather than one key holding all of them: `localStorage` has no partial write, so
-a single key would re-encode every design in the browser on each keystroke-sized edit, and one
-design over the quota would take all of them down with it.
+One key per design rather than one key holding all of them: neither store has a partial write of a
+value, so a single key would re-encode every design in the browser on each keystroke-sized edit, and
+one design over the quota would take all of them down with it.
 
 A command whose replay the reducer refuses — a record edited by hand, a log written by a builder
 whose reducer differed — stops the replay. The design opens at the last revision that did apply and
@@ -113,10 +115,11 @@ the refusal is reported, rather than the design becoming unopenable.
 
 ### Compaction, and the history it costs
 
-`localStorage` is about five megabytes per *origin*, shared with every other design in this browser
-and with the preview pages' own keys. So a design's record has a byte budget (1 MB), and past it the
-current document becomes the new seed and the log is dropped. The same thing happens, budget or not,
-when the browser refuses a write outright: compact, and try once more.
+A design's record has a byte budget (1 MB), and past it the current document becomes the new seed
+and the log is dropped. The same thing happens, budget or not, when the browser refuses a write
+outright: compact, and try once more. In `localStorage` the budget is what keeps several designs
+inside an origin's five megabytes; in IndexedDB, whose quota is a share of the disk, it is what
+keeps a reload's replay quick.
 
 What that costs is undo history older than the compaction. It is the right trade against the
 alternative — a design that cannot be saved — and it is stated in the editor rather than hidden: the
@@ -126,9 +129,54 @@ on screen is newer than the one in storage, which an author should be told.
 The in-memory reducer state is deliberately *not* reset by a compaction, so undo keeps working in
 the open tab; only a reload settles the log down to what was written.
 
-`localStorage` rather than IndexedDB because everything stored here is small, textual and read once
-at open. IndexedDB buys asynchrony and a bigger quota, and costs a schema, a migration story and an
-async seam. If compaction stops being enough, that is the change that earns IndexedDB.
+### Where the bytes live
+
+**IndexedDB**, since compaction stopped being enough: `localStorage` is about five megabytes per
+origin, shared with the preview pages' own keys, and a remembered catalog is a good share of that on
+its own. IndexedDB is limited by the disk instead. It cost the three things this document always
+said it would — a schema, a migration story and an async seam — and each is deliberately small.
+
+- **Schema.** Database `ui-builder-local`, version 1. Store `entries` holds every
+  `ui-builder.local.*` key — designs, the remembered catalogs, the two remembered static files —
+  with the same text value `localStorage` held. Store `meta` holds `migratedFromLocalStorage`.
+- **Migration.** The first page that opens the database copies every `ui-builder.local.*` key out
+  of `localStorage` in one transaction, marks it done in the same transaction, and only after that
+  commits removes the copied keys — so there is never a moment with no copy, and never two copies
+  that could disagree afterwards. A second tab opening at the same time finds the mark and copies
+  nothing. A tab still running an older editor keeps writing `localStorage`, where the new one no
+  longer looks; reload old tabs after an upgrade.
+- **The async seam** is put at the two edges where waiting is already natural, not threaded through
+  the reducer. *Open*: before the editor composes, the page opens the database and reads every entry
+  into memory, so a read is a map lookup and `LocalDesignStorage` stays synchronous. *Write*: a
+  write lands in memory at once — so `Stored`, `Compacted` and `Refused` still come back from the
+  same call — and is written behind, in order (read-write transactions on one store commit in the
+  order they were opened). A write the database refuses later (its quota, a full disk) cannot change
+  an answer already given, so it is reported on its own: the editor says *Not saved in this
+  browser* with the reason, exactly as for a synchronous refusal.
+- **Fallback.** A browser with no IndexedDB, or one whose database does not answer within four
+  seconds, stays on `localStorage` with the old budget. If the database exists but will not open,
+  the designs list says so: designs migrated into it on an earlier visit are not visible until it
+  does.
+
+### Asking the browser to keep them
+
+Storage a page writes is *best effort*: under storage pressure a browser may clear it, and Safari
+clears an origin's storage after a week without a visit unless the site is installed. The first time
+a design is saved, the page asks for **persistent storage** (`navigator.storage.persist()`); Chrome
+grants it to an installed or frequently used site without asking, Firefox asks the person. The
+designs list's "nearly full" notice carries the browser's own figures
+(`navigator.storage.estimate()`) — how much this site uses of what the browser allows it — and says
+when the browser has not agreed to keep them. Downloading a copy is still the only thing that
+survives clearing site data.
+
+### Two tabs, one design
+
+Every write and delete is announced on the `ui-builder.local` `BroadcastChannel`. A tab that hears
+one re-reads that key, refreshes its designs list, and — if it has that design open — stops
+writing it: `LocalDesignSession.changedElsewhere`. Its edits still apply on screen, but each save
+answers `Refused` and the editor says *This design was changed in another tab* with a **Reload**
+action. The alternative, last writer wins, would replace the other tab's record wholesale (one key,
+no merge) and lose its work with neither tab saying so; refusing loses nothing durable.
 
 ## The catalog is the hard part
 
@@ -167,18 +215,57 @@ that in as many words (`CATALOG_UNAVAILABLE`) rather than shown an empty canvas.
 
 Each of the four refusals is a sentence in the editor naming the reason, not a dead control.
 
-### The app shell itself
+### The app shell itself: a service worker, by choice
 
-The remaining gap is the Wasm bundle. Opening `/ui-builder/…?storage=local` still fetches the app —
-`index.html`, `uiBuilder.mjs`, `skiko.wasm` — and with the server unreachable that is served by the
-browser's HTTP cache or not at all. Making the shell reliably available offline means a service
-worker, which is deliberately **not** in this change: a service worker registered at `/ui-builder/`
-controls every builder page on the origin, including the eight Playwright harness lanes, and that
-blast radius deserves its own change with its own evidence rather than riding along with the storage
-mode.
+Opening `/ui-builder/…?storage=local` still needs the app — `index.html`, `uiBuilder.mjs`, the two
+Wasm modules — and without help a cold start with the server unreachable gets it from the HTTP
+cache or not at all. `ui-builder-sw.js`, at the root of the web bundle, keeps it on the device.
 
-So today's honest claim is: **a tab that already has the app keeps working with the network gone,
-and a design opened in it is safe.** A cold start still needs the server to hand over the bundle.
+**It is opt-in, never ambient.** A worker registered at `/ui-builder/` controls every builder page
+on the origin, including every automated harness lane that drives one, so the boot script
+(`ui-builder-boot.js`) registers it only when a person asked for offline: the editor running as an
+installed app (`display-mode: standalone` and friends), a `?storage=local` page, or `?offline=1`.
+`?sw=off` unregisters it and deletes its caches. It is never registered inside a frame (an IDE
+webview, an MCP App) or outside a secure context.
+
+**The contract with the host:**
+
+| | |
+| --- | --- |
+| File | `ui-builder-sw.js` at the archive root (`verifyUiBuilderWebArchive` requires it) |
+| Served at | `<editor root>/ui-builder-sw.js` — `/ui-builder/ui-builder-sw.js` on compose-preview-server |
+| Scope | `<editor root>/` — `/ui-builder/`; registered with that explicit `scope` |
+| Headers | `Cache-Control: no-cache` (a release is noticed on the next navigation); a JavaScript media type. `Service-Worker-Allowed: /ui-builder/` is harmless and not needed, since the scope is the script's own directory |
+| Never under the versioned prefix | a worker's URL must stay the same across releases; `/ui-builder/v/<digest>/ui-builder-sw.js` would register a new worker per release |
+
+The editor root is computed in the page: the path up to and including `/ui-builder/` when the page
+is under one, else the page's own directory — so the same bundle served as plain files registers at
+the directory it was served from.
+
+**What it caches, and how:**
+
+- **Navigations, network first.** The shell is the one document a rollout must be able to change,
+  so the server answers whenever it can, and the answer is kept. Offline, an *editor* route (the
+  root, a design id, a catalog's home) gets the last shell this device saw; the designs index and
+  the access, history and delete pages are server pages and are never answered from the cache.
+- **The bundle, cache first.** On install the worker fetches the shell, precaches everything it
+  names (the two Wasm modules, the `.mjs` files, the boot script) and the vendored fonts, one request
+  at a time. Under the server's content-addressed prefix (`/ui-builder/v/<digest>/…`) a URL never
+  changes meaning, so cache first is simply correct; precached copies of unversioned URLs are as
+  fixed, because the cache is named after the bundle.
+- **One cache per bundle.** The build writes a digest of every other file in the bundle into the
+  worker, and names the cache after it. A new release is therefore a new worker byte-for-byte, the
+  browser installs it beside the old one, and activating it deletes the old caches. Until then a
+  small **Reload** notice says a new version is ready; pressing it activates the new worker.
+- **Never** anything that is not a `GET`, the catalog runtimes (`/ui-builder/runtime/…`, which run
+  in sandboxed frames with their own immutable caching), or the API: `/api/ui-builder/v1/…`,
+  `/api/icons/…` and the update sockets are outside the worker's scope altogether. That is why the
+  catalogs, device presets and seed fixture stay where they were — network first with a copy in
+  this browser's storage, as [The catalog is the hard part](#the-catalog-is-the-hard-part) says.
+
+So the claim is now: **once this browser has run the editor online with offline turned on, a cold
+start with the network gone opens it, and a design kept here opens in it.** Without that opt-in the
+older claim stands — a tab that already has the app keeps working, and a cold start needs the server.
 
 ## Creating a design locally
 

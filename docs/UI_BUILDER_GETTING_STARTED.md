@@ -879,6 +879,38 @@ generated Kotlin compiled and captured on Android —
 where each number came from, and what is still not the watch — chiefly that none of these three is a
 live frame, where `SurfaceTransformation` scales each row by its distance from the bezel.
 
+## Mobile and installed use
+
+The web editor works on a phone or tablet. Below 840dp wide it switches to the **compact layout**:
+the canvas on top, and a bottom bar (Components, Layers, Properties, Code) whose panels open as
+sheets. Hold a node still to pick it up (the phone buzzes briefly where it can), then carry it.
+
+**Browsers.** The editor is Kotlin/Wasm with garbage collection (WasmGC), drawn through WebGL:
+Chrome or Edge **119+**, Safari **18.2+** (iOS and iPadOS 18.2+), Firefox **120+**. An older browser
+stops at the boot screen.
+
+**Installing it.** Open the editor and use the browser's *Install app* (Chrome, Edge) or *Share →
+Add to Home Screen* (Safari). Installed, it opens full screen, its chrome stays clear of the notch
+and the home indicator, and it keeps a copy of itself for starting offline (below).
+
+**Offline.** A design kept in this browser (`?storage=local`, or **Keep in this browser**) can be
+edited with no network once this browser has opened its catalog online. To also *start* the editor
+offline, the app itself has to be on the device: the editor keeps it there with a service worker,
+which it registers only when you ask — running as an installed app, on any `?storage=local` page,
+or by adding `?offline=1` to an editor URL. The first visit installs it; from then on a cold start
+with no network opens the last version you had. `?sw=off` on any editor URL removes it again. When
+a newer editor has been installed in the background, a small **Reload** notice offers it.
+
+Offline still has limits, each said in the editor where it applies: **exports** (SVG, PNG) and the
+**native Compose render** are drawn by the server, **comments** need somebody to talk to, and a
+design kept on the server is, of course, on the server. See
+[`UI_BUILDER_LOCAL_STORAGE.md`](design/UI_BUILDER_LOCAL_STORAGE.md) for exactly what works.
+
+**HTTPS matters.** Installing, the service worker, sharing files and the clipboard are only offered
+to a *secure context*: an `https://` origin, or `localhost` / `127.0.0.1`. A server opened from a
+phone over the LAN as `http://192.168.x.y:8080` is **not** one, so on that address none of those
+appear. Put the server behind HTTPS (a reverse proxy, a tunnel) to use them from another device.
+
 ## Getting the design out: Figma, a link, a file
 
 **Export** in the top bar lists the same three verbs the catalog viewer's preview pages offer, for
@@ -890,6 +922,7 @@ menu is for.
 | **Copy SVG** | Puts the Figma-compatible SVG markup on the clipboard. Paste into a Figma page and it lands as editable layers. |
 | **Copy PNG** | Puts the picture on the clipboard as an image, for Figma, Slack, a document. |
 | **Copy SVG link** / **Copy PNG link** | Copies a **live** URL. The server draws the current committed revision every time it is opened, so a link pasted into a pull request or a README keeps up with the design. |
+| **Share SVG** / **Share PNG** | On a phone or tablet whose browser can share files, hands the file to the system share sheet (Files, a chat, another app). Absent on a desktop. Falls back to a download where the sheet refuses the file. |
 | **Download SVG** / **Download PNG** | Saves the current design as a file named after the design. |
 
 Every row renders the committed revision through the server's own export lane — the one the MCP
