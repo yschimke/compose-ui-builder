@@ -1337,6 +1337,7 @@ internal fun AcceptedCommand.subjectNodeId(): String? =
       is DesignOperation.SetProperty -> operation.nodeId
       is DesignOperation.RemoveNodeProperty -> operation.nodeId
       is DesignOperation.SetModifiers -> operation.nodeId
+      is DesignOperation.SetComponentArguments -> operation.nodeId
       is DesignOperation.SetStateVariable -> null
       is DesignOperation.RemoveStateVariable -> null
       is DesignOperation.SetEventBinding -> operation.nodeId
@@ -1363,6 +1364,7 @@ internal fun AcceptedCommand.describeChanges(): List<EditorOperationChange> =
           PropertyTarget.EventBinding -> "${it.address.property} actions"
           PropertyTarget.Property -> it.address.property
           PropertyTarget.Component -> "Component ${it.address.property}"
+          PropertyTarget.ComponentArguments -> "Arguments"
         },
       before = it.before?.displayValue(),
       after = it.afterValue?.displayValue(),

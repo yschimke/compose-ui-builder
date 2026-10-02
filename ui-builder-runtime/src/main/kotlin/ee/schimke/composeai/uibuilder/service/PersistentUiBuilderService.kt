@@ -4092,6 +4092,47 @@ public class PersistentUiBuilderService(
             conflicts,
           )
         }
+        is SetComponentArgumentsMutationV1 -> {
+          val node =
+            working.document.nodes[mutation.nodeId]
+              ?: fail(RejectionCodeV1.UNKNOWN_NODE, "unknown node", index, mutation.nodeId)
+          // The contract's obligation: only an instance passes arguments, and a node that is not
+          // one has nowhere to keep them.
+          val placement =
+            node.component
+              ?: fail(
+                RejectionCodeV1.INVALID_COMMAND,
+                "${mutation.nodeId} is not a component placement",
+                operationIndex = index,
+                nodeId = mutation.nodeId,
+                field = COMPONENT_ARGUMENTS_FIELD,
+              )
+          val before = placement.arguments
+          val document =
+            working.document.copy(
+              nodes =
+                working.document.nodes +
+                  (node.id to node.copy(component = placement.copy(arguments = mutation.arguments)))
+            )
+          // The same staleness question the modifier lane asks: the map is one value, and the last
+          // writer wins with a conflict rather than a refusal.
+          val conflicts =
+            if (staleness.stale(original, touchKey("a", mutation.nodeId)))
+              listOf(
+                CommandConflictV1(
+                  ConflictCodeV1.STALE_PROPERTY_WRITE,
+                  mutation.nodeId,
+                  COMPONENT_ARGUMENTS_FIELD,
+                  staleness.through,
+                )
+              )
+            else emptyList()
+          MutationResult(
+            WorkingDesign(document, working.tombstones, working.positions),
+            ComponentArgumentsChangeV1(mutation.nodeId, before, mutation.arguments),
+            conflicts,
+          )
+        }
         is SetStateVariableMutationV1 -> {
           if (mutation.name.isBlank()) {
             fail(
@@ -4410,6 +4451,41 @@ public class PersistentUiBuilderService(
                 document =
                   working.document.copy(
                     nodes = working.document.nodes + (node.id to node.copy(properties = properties))
+                  )
+              )
+          }
+          is ComponentArgumentsChangeV1 -> {
+            val node =
+              working.document.nodes[change.nodeId]
+                ?: fail(
+                  RejectionCodeV1.UNSAFE_COMPENSATION,
+                  "placement no longer exists",
+                  nodeId = change.nodeId,
+                )
+            val placement =
+              node.component
+                ?: fail(
+                  RejectionCodeV1.UNSAFE_COMPENSATION,
+                  "node no longer places a component",
+                  nodeId = change.nodeId,
+                )
+            val expected = if (undo) change.after else change.before
+            if (placement.arguments != expected) {
+              fail(
+                RejectionCodeV1.UNSAFE_COMPENSATION,
+                "arguments changed after the target operation",
+                nodeId = change.nodeId,
+                field = COMPONENT_ARGUMENTS_FIELD,
+              )
+            }
+            val target = if (undo) change.before else change.after
+            working =
+              working.copy(
+                document =
+                  working.document.copy(
+                    nodes =
+                      working.document.nodes +
+                        (node.id to node.copy(component = placement.copy(arguments = target)))
                   )
               )
           }

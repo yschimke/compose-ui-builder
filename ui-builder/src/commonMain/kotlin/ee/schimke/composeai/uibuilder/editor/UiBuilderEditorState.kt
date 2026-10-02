@@ -647,6 +647,7 @@ class UiBuilderEditorReducer(
         is DesignOperation.SetEventBinding ->
           "Changed ${operation.event} actions on ${label(operation.nodeId)}"
         is DesignOperation.SetModifiers -> "Changed the layout of ${label(operation.nodeId)}"
+        is DesignOperation.SetComponentArguments -> "Changed ${label(operation.nodeId)}"
         is DesignOperation.DeclareComponent ->
           "Declared component ${componentDeclarationName(operation.declaration) ?: operation.componentKey}"
         is DesignOperation.RemoveComponent -> "Removed component ${operation.componentKey}"
@@ -4804,7 +4805,7 @@ class UiBuilderEditorReducer(
         }
       }
     val selectionAfter =
-      rewritePlacements(state, componentKey, sequence, operations) { arguments ->
+      rewritePlacements(state, componentKey, operations) { arguments ->
         val kept = arguments.filterKeys { it in reads }
         val added =
           reads.entries
@@ -4973,7 +4974,7 @@ class UiBuilderEditorReducer(
     val operations = mutableListOf<DesignOperation>()
     // Placements first, so by the time the body reads the new key every placement passes it.
     val selectionAfter =
-      rewritePlacements(state, componentKey, sequence, operations) { arguments ->
+      rewritePlacements(state, componentKey, operations) { arguments ->
         if (from !in arguments) null
         else JsonObject(arguments.entries.associate { (k, v) -> (if (k == from) name else k) to v })
       }
@@ -4987,47 +4988,24 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Replace every placement of [componentKey] whose arguments [rewrite] changes (null: unchanged)
-   * with one passing the rewritten arguments, in the same place — the wire has no mutation that
-   * edits a placement's arguments. Returns what the selection should be afterwards, following a
-   * replaced placement to its replacement.
+   * Rewrite the arguments of every placement of [componentKey] that [rewrite] changes (null:
+   * unchanged), in place — each placement keeps its id. Returns what the selection should be
+   * afterwards, which no longer moves.
    */
   private fun rewritePlacements(
     state: UiBuilderEditorState,
     componentKey: String,
-    sequence: Int,
     operations: MutableList<DesignOperation>,
     rewrite: (JsonObject) -> JsonObject?,
   ): String? {
-    val document = state.document
-    var selectionAfter = state.selectedNodeId
-    document.nodes.values
+    state.document.nodes.values
       .filter { it.placementKey() == componentKey }
+      .sortedBy { it.id }
       .forEach { placement ->
         val rewritten = rewrite(placement.placementArguments()) ?: return@forEach
-        val parent = document.location(placement.id) ?: return@forEach
-        val base = document.freshNodeId("editor-$componentKey", operationIdPrefix, sequence)
-        var replacementId = base
-        var suffix = 2
-        while (
-          operations.any { (it as? DesignOperation.InsertNode)?.node?.id == replacementId }
-        ) replacementId = "$base-${suffix++}"
-        operations +=
-          DesignOperation.InsertNode(
-            placement.copy(
-              id = replacementId,
-              component =
-                JsonObject(
-                  (placement.component ?: JsonObject(emptyMap())) + ("arguments" to rewritten)
-                ),
-            ),
-            parent,
-            afterNodeId = placement.id,
-          )
-        operations += DesignOperation.DeleteNode(placement.id)
-        if (selectionAfter == placement.id) selectionAfter = replacementId
+        operations += DesignOperation.SetComponentArguments(placement.id, rewritten)
       }
-    return selectionAfter
+    return state.selectedNodeId
   }
 
   /**
@@ -5106,7 +5084,7 @@ class UiBuilderEditorReducer(
     val existing = document.bodyBindings(owner).keys
     val name = parameterNameFor(property, null, existing)
     val operations = mutableListOf<DesignOperation>()
-    rewritePlacements(state, owner, sequence, operations) { JsonObject(it + (name to value)) }
+    rewritePlacements(state, owner, operations) { JsonObject(it + (name to value)) }
     operations += DesignOperation.SetProperty(nodeId, property, binding(name))
     return state.apply(sequence, operations, selectionAfter = nodeId)
   }
@@ -5144,7 +5122,7 @@ class UiBuilderEditorReducer(
       }
     }
     val selectionAfter =
-      rewritePlacements(state, componentKey, sequence, operations) { arguments ->
+      rewritePlacements(state, componentKey, operations) { arguments ->
         if (parameter !in arguments) null else JsonObject(arguments - parameter)
       }
     return state.apply(sequence, operations, selectionAfter = selectionAfter)
@@ -5265,11 +5243,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Set one argument of a placement.
-   *
-   * The wire has no mutation that edits a placement's arguments, so the placement is replaced by
-   * one that passes the new value, in the same place, in one command — what draws is identical but
-   * for the argument, and undo puts the old one back.
+   * Set one argument of a placement, keeping the placement: its id is what comments, selection and
+   * reviews hold, so the edit rewrites the arguments it passes rather than the node itself.
    */
   private fun setComponentArgument(
     state: UiBuilderEditorState,
@@ -5312,31 +5287,16 @@ class UiBuilderEditorReducer(
         argument,
       )
     }
-    val parent =
-      state.document.location(placement.id)
-        ?: return state.rejected(
-          sequence,
-          RejectionCode.INVALID_LOCATION,
-          "This placement sits nowhere",
-        )
-    val replacementId = state.document.freshNodeId("editor-$key", operationIdPrefix, sequence)
-    val replacement =
-      placement.copy(
-        id = replacementId,
-        component =
-          JsonObject(
-            (placement.component ?: JsonObject(emptyMap())) +
-              ("arguments" to JsonObject(placement.placementArguments() + (argument to encoded)))
-          ),
-      )
     return state
       .apply(
         sequence,
         listOf(
-          DesignOperation.InsertNode(replacement, parent, afterNodeId = placement.id),
-          DesignOperation.DeleteNode(placement.id),
+          DesignOperation.SetComponentArguments(
+            placement.id,
+            JsonObject(placement.placementArguments() + (argument to encoded)),
+          )
         ),
-        selectionAfter = replacementId,
+        selectionAfter = placement.id,
       )
       .let { edited ->
         if (edited.lastOutcome is CommandOutcome.Accepted)

@@ -169,6 +169,24 @@ class LocalComponentsClipboardTest {
   }
 
   @Test
+  fun `editing what a placement passes keeps the placement`() {
+    val made = made()
+    val placement = made.selection.single()
+
+    val edited =
+      reducer.reduce(made, UiBuilderEditorEvent.CommitProperty(placement, "sender", "Grace Hopper"))
+
+    assertIs<CommandOutcome.Accepted>(edited.lastOutcome, "${edited.lastOutcome}")
+    // The same node, still selected — its id is what comments and reviews hold.
+    assertEquals(listOf(placement), edited.selection)
+    assertEquals(made.document.nodes.keys, edited.document.nodes.keys)
+    val arguments = edited.document.nodes.getValue(placement).component!!["arguments"]!!.jsonObject
+    assertEquals("Grace Hopper", arguments["sender"]!!.jsonObject["value"]!!.jsonPrimitive.content)
+    val undone = reducer.reduce(edited, UiBuilderEditorEvent.Undo)
+    assertEquals(made.document.nodes, undone.document.nodes)
+  }
+
+  @Test
   fun `a parameter name the export could not write is refused`() {
     val made = made()
     for (name in listOf("modifier", "subject", "Author", "fun", "argument0", " ")) {

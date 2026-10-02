@@ -125,6 +125,15 @@ sealed interface DesignOperation {
   @Serializable
   @SerialName("removeComponent")
   data class RemoveComponent(val componentKey: String) : DesignOperation
+
+  /**
+   * Replace what one placement passes to its component's body — the wire's
+   * `SetComponentArgumentsMutationV1`. The placement keeps its id, so the comments, selection and
+   * reviews that name it still find it. Whole-map, so an empty [arguments] passes nothing.
+   */
+  @Serializable
+  @SerialName("setComponentArguments")
+  data class SetComponentArguments(val nodeId: String, val arguments: JsonObject) : DesignOperation
 }
 
 @Serializable data class ParentSlot(val nodeId: String, val slot: String)
@@ -165,6 +174,8 @@ enum class PropertyTarget {
   EventBinding,
   /** A `components` entry; the address's node id is empty and its property is the key. */
   Component,
+  /** A placement's whole `component.arguments` map; the property is always `arguments`. */
+  ComponentArguments,
 }
 
 data class PropertyAddress(
@@ -179,6 +190,7 @@ internal fun UiBuilderDocument.valueAt(address: PropertyAddress): JsonElement? =
     PropertyTarget.EventBinding -> nodes[address.nodeId]?.eventBindings?.get(address.property)
     PropertyTarget.StateVariable -> stateVariables[address.property]
     PropertyTarget.Component -> components[address.property]
+    PropertyTarget.ComponentArguments -> nodes[address.nodeId]?.component?.get("arguments")
   }
 
 internal fun UiBuilderDocument.withValueAt(
@@ -197,6 +209,17 @@ internal fun UiBuilderDocument.withValueAt(
     when (address.target) {
       PropertyTarget.Property -> node.copy(properties = node.properties.updated())
       PropertyTarget.EventBinding -> node.copy(eventBindings = node.eventBindings.updated())
+      PropertyTarget.ComponentArguments -> {
+        val placement =
+          node.component
+            ?: fail(RejectionCode.INVALID_COMMAND, "${node.id} places no component", node.id)
+        node.copy(
+          component =
+            JsonObject(
+              if (value == null) placement - "arguments" else placement + ("arguments" to value)
+            )
+        )
+      }
       PropertyTarget.StateVariable,
       PropertyTarget.Component -> error("handled above")
     }

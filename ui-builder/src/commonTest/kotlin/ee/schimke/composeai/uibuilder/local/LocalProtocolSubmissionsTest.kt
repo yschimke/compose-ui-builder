@@ -10,6 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.jsonObject
@@ -83,6 +84,21 @@ class LocalProtocolSubmissionsTest {
               )
             },
         ),
+      )
+
+    assertEquals(operations, roundTrip(operations))
+  }
+
+  @Test
+  fun `a placement's arguments, and passing none, survive the round trip`() {
+    val operations =
+      listOf(
+        DesignOperation.SetComponentArguments(
+          nodeId = "placed",
+          arguments =
+            Json.parseToJsonElement("""{"label":{"type":"string","value":"Mon"}}""").jsonObject,
+        ),
+        DesignOperation.SetComponentArguments("placed", JsonObject(emptyMap())),
       )
 
     assertEquals(operations, roundTrip(operations))

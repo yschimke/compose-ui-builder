@@ -374,8 +374,12 @@ placement's slot would refuse is refused as a whole. Nothing is redrawn without 
 ![A drifted component's inspector, offering the library's newer version](evidence/ui-builder-local-components/update-before.png)
 ![The same placement after taking it: the new parameters, and no offer](evidence/ui-builder-local-components/update-after.png)
 
-**Not built**: a contracts mutation that edits a placement's arguments in place (so an argument
-edit keeps the placement's id).
+**Arguments edited in place — built.** `setComponentArguments` (compose-preview-contracts) replaces
+the arguments one placement passes and keeps the node, so an argument edit — from the inspector, a
+parameter rename, exposing or inlining a parameter, or taking a newer library version — no longer
+gives the placement a new id and loses the comments, selection and reviews that named it. Whole-map
+like `setEventBinding`, undone through the reducer's property lane and the service's
+`ComponentArgumentsChangeV1`.
 
 It composes with 1b rather than duplicating it: a loop's template is an instance with one argument
 per row field. Which is why this is worth building **before** data-driven loops, not after.

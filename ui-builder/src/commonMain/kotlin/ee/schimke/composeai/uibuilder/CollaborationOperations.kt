@@ -257,6 +257,34 @@ internal fun CollaborationState.applyOperation(
         trace,
       )
     }
+    is DesignOperation.SetComponentArguments -> {
+      val node =
+        document.nodes[operation.nodeId]
+          ?: fail(RejectionCode.UNKNOWN_NODE, "unknown node ${operation.nodeId}", operation.nodeId)
+      if (node.placedComponentKey() == null)
+        fail(
+          RejectionCode.INVALID_COMMAND,
+          "${operation.nodeId} is not a component placement",
+          operation.nodeId,
+          "arguments",
+        )
+      operation.arguments.entries
+        .firstOrNull { (_, value) -> value !is JsonObject }
+        ?.let { (key, _) ->
+          fail(
+            RejectionCode.INVALID_PROPERTY,
+            "argument $key is not a value",
+            operation.nodeId,
+            key,
+          )
+        }
+      writeBehavior(
+        PropertyAddress(operation.nodeId, "arguments", PropertyTarget.ComponentArguments),
+        operation.arguments,
+        baseRevision,
+        trace,
+      )
+    }
     is DesignOperation.SetEnvironment -> {
       val before = document.environment[operation.field]
       val changed =
@@ -533,7 +561,8 @@ internal fun DesignOperation.isPropertyWrite(): Boolean =
     this is DesignOperation.RemoveStateVariable ||
     this is DesignOperation.SetEventBinding ||
     this is DesignOperation.DeclareComponent ||
-    this is DesignOperation.RemoveComponent
+    this is DesignOperation.RemoveComponent ||
+    this is DesignOperation.SetComponentArguments
 
 private fun CollaborationState.removeProperty(
   operation: DesignOperation.RemoveNodeProperty,

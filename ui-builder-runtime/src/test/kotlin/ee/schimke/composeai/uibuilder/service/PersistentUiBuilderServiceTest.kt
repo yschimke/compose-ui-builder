@@ -2,6 +2,8 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.protocol.*
+import ee.schimke.composeai.uibuilder.protocol.RejectedOutcomeV1
+import ee.schimke.composeai.uibuilder.protocol.SetComponentArgumentsMutationV1
 import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
@@ -1926,6 +1928,96 @@ class PersistentUiBuilderServiceTest {
     assertEquals(before.roots, undone.roots)
     assertEquals(before.nodes, undone.nodes)
     assertEquals(before.components, undone.components)
+  }
+
+  /**
+   * What one placement passes changes in place: the node keeps its id — the address comments,
+   * selection and reviews hold — and one undo puts the old arguments back.
+   */
+  @Test
+  fun `a placement's arguments change in place and are undone in one step`() {
+    val service = service()
+    create(service)
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "screen",
+            0,
+            InsertNodeMutationV1(textNode("root"), NodeLocationV1()),
+            InsertNodeMutationV1(textNode("cell"), NodeLocationV1(ParentSlotV1("root", "content"))),
+            InsertNodeMutationV1(
+              DesignNodeV1(
+                id = "placed",
+                componentId = DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+                component =
+                  DesignComponentInstanceV1("cell-key", mapOf("label" to StringValueV1("Mon"))),
+              ),
+              NodeLocationV1(ParentSlotV1("root", "content"), afterNodeId = "cell"),
+            ),
+            MoveNodeMutationV1("cell", NodeLocationV1()),
+            DeclareComponentMutationV1("cell-key", DesignComponentV1("Cell", "cell")),
+            SetPropertyMutationV1("cell", "text", BindingValueV1("label")),
+          )
+        ),
+      )
+    )
+    val before = currentDocument(service)
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "edit",
+            1,
+            SetComponentArgumentsMutationV1.Builder(
+                "placed",
+                mapOf("label" to StringValueV1("Tue")),
+              )
+              .build(),
+          )
+        ),
+      )
+    )
+    val edited = currentDocument(service)
+    assertEquals(before.nodes.keys, edited.nodes.keys)
+    assertEquals(
+      mapOf("label" to StringValueV1("Tue")),
+      edited.nodes.getValue("placed").component?.arguments,
+    )
+
+    // A node that places nothing has no arguments to set.
+    val refused =
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch(
+            "wrong",
+            2,
+            SetComponentArgumentsMutationV1.Builder("root", emptyMap()).build(),
+          )
+        ),
+      )
+    assertIs<RejectedOutcomeV1>(
+      (refused as UiBuilderServiceResponse.OperationOutcome).outcome,
+      "$refused",
+    )
+
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          UiBuilderSubmission.Undo("design", "undo-edit", "browser", 2, "edit")
+        ),
+      )
+    )
+    assertEquals(before.nodes, currentDocument(service).nodes)
   }
 
   /**
