@@ -12,7 +12,7 @@
     "functionName": "CatalogRuntimeRoutingPreview",
     "module": "ui-builder",
     "renderBasename": "CatalogRuntimeRoutingPreview-00544b46.png",
-    "sha256": "db9becbfb021a2e9e5d5161a48630b35e9cd0abf7e308dc82f358ca06af9fca1",
+    "sha256": "dc72dcb3fde027704109597aac552c77f5b22f0e37ebe7a1f42978a0e9040e27",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/CatalogRuntimeRoutingPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.ComponentPackPreviewsKt.ComponentPacksPanelPreview": {
@@ -748,7 +748,7 @@
     "functionName": "UiBuilderUnexportablePalettePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderUnexportablePalettePreview-2c6c35dc.png",
-    "sha256": "d9b9ea132ae74a80f78512db302776540c3d143a7e323680bca5903372cba872",
+    "sha256": "26cde5ac391d04a9fa07a1431dfd9ccd9725f90ba54d60ebad84bbc987fe6e03",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderVariantStripPreview": {
@@ -1108,7 +1108,7 @@
     "functionName": "HelloWearWidgetSamplePreview",
     "module": "ui-builder",
     "renderBasename": "HelloWearWidgetSamplePreview-633f7e0a.png",
-    "sha256": "0300f16cbee8f56b65c8610a1c1fe0d4da11b26e1d6089adf25e391c23a47309",
+    "sha256": "6bdb29b156213dc56628c5a273ad267868d622cfbafdadbd26591154163a1730",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearWidgetSamplePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearWidgetSamplePreviewKt.WearWidgetBackgroundBrushPreview": {
@@ -1124,7 +1124,7 @@
     "functionName": "WearWidgetCodePanePreview",
     "module": "ui-builder",
     "renderBasename": "WearWidgetCodePanePreview-59a2e9f9.png",
-    "sha256": "7c1af2fa552fd8375e973c0eb3408f51d3e3b89d6b29557f4125dd16abf0f15c",
+    "sha256": "1cd957c1836c9b9babbf44c974c117a1deaf556c1bf326a8364c561b7bdb68e8",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearWidgetSamplePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearWidgetSamplePreviewKt.WearWidgetHostShapesPreview": {
@@ -1132,7 +1132,7 @@
     "functionName": "WearWidgetHostShapesPreview",
     "module": "ui-builder",
     "renderBasename": "WearWidgetHostShapesPreview-ff47d71a.png",
-    "sha256": "a74eda11cd6d5d7a5390209d77426ae7b2eb58605dde5b665aef5e75c87f2e5f",
+    "sha256": "2c82dd3a4c06f963f95d74dc2f1a53732d5297c73416b4422621f422113377c4",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearWidgetSamplePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearWidgetSamplePreviewKt.WeatherWearWidgetSamplePreview": {
@@ -1140,7 +1140,7 @@
     "functionName": "WeatherWearWidgetSamplePreview",
     "module": "ui-builder",
     "renderBasename": "WeatherWearWidgetSamplePreview-3ba430aa.png",
-    "sha256": "dacd4f2dda1a59dfc80dd3bd413a65b3462e37a8bb1ee121fd4ce377eefc9c6f",
+    "sha256": "4b1af29e2702e5f476aebd4be1115bddcf78c3b0884b268618b8325acfb06155",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearWidgetSamplePreview.kt"
   }
 }
