@@ -334,3 +334,57 @@ abstract class EmbedReleaseNotes : org.gradle.api.DefaultTask() {
     }
   }
 }
+
+/**
+ * The design document and mutation JSON Schemas, taken from the pinned `ui-builder-protocol` jar
+ * rather than kept here by hand.
+ *
+ * compose-preview-contracts generates them from the protocol's own serializers (since 3.13.0), so a
+ * mutation added there arrives here with the pin bump. The copies this replaced were written by hand
+ * and only *checked* against the serializer, which is how adding `setComponentArguments` turned
+ * this repository's CI red until someone edited a JSON file to match.
+ *
+ * Published under this repository's names with its stable `$id`s, because a release attaches them
+ * at a URL fixed per version (`releases/download/<tag>/<file>`) that a `.uid` or a mutation cites
+ * (#320); only where the content comes from changes.
+ */
+abstract class ExtractProtocolSchemas : org.gradle.api.DefaultTask() {
+  /** The protocol's JVM jar; its `schemas/` entries are the generated schemas. */
+  @get:org.gradle.api.tasks.InputFiles
+  @get:org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.NONE)
+  abstract val protocolJar: org.gradle.api.file.ConfigurableFileCollection
+
+  /** Jar entry under `schemas/` → the file name this repository publishes it as. */
+  @get:org.gradle.api.tasks.Input
+  abstract val schemas: org.gradle.api.provider.MapProperty<String, String>
+
+  /** Published file name → the `$id` it carries. */
+  @get:org.gradle.api.tasks.Input
+  abstract val ids: org.gradle.api.provider.MapProperty<String, String>
+
+  /** Written as `<output>/schemas/<name>`, so it can be a resource root. */
+  @get:org.gradle.api.tasks.OutputDirectory
+  abstract val output: org.gradle.api.file.DirectoryProperty
+
+  @org.gradle.api.tasks.TaskAction
+  fun extract() {
+    val target = output.get().asFile.resolve("schemas")
+    target.deleteRecursively()
+    target.mkdirs()
+    val jar = protocolJar.files.single()
+    java.util.zip.ZipFile(jar).use { zip ->
+      schemas.get().forEach { (entry, name) ->
+        val text =
+          zip.getEntry("schemas/$entry")?.let { zip.getInputStream(it).reader().readText() }
+            ?: throw org.gradle.api.GradleException(
+              "${jar.name} carries no schemas/$entry; is the contracts pin older than 3.13.0?"
+            )
+        val id = ids.get()[name]
+        // The generated file opens `{` on a line of its own; the `$id` goes first inside it.
+        check(text.startsWith("{\n")) { "schemas/$entry does not start with an object" }
+        val published = if (id == null) text else "{\n  \"\$id\": \"$id\",\n" + text.substring(2)
+        target.resolve(name).writeText(published)
+      }
+    }
+  }
+}

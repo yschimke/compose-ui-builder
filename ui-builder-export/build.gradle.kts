@@ -46,6 +46,40 @@ val embedRemoteMaterial3Record =
     )
   }
 
+// The document and mutation JSON Schemas come from the pinned protocol jar, generated there from
+// the serializers; see `ExtractProtocolSchemas`. Resolved non-transitively, the JVM jar alone.
+val protocolSchemaJar =
+  configurations.create("protocolSchemaJar") {
+    isCanBeConsumed = false
+    isTransitive = false
+  }
+
+dependencies {
+  protocolSchemaJar(
+    "ee.schimke.composeai:ui-builder-protocol-jvm:${libs.versions.composeai.contracts.get()}"
+  )
+}
+
+val extractProtocolSchemas =
+  tasks.register<ExtractProtocolSchemas>("extractProtocolSchemas") {
+    protocolJar.from(protocolSchemaJar)
+    schemas.putAll(
+      mapOf(
+        "design-document-v1.schema.json" to "compose-ui-builder-document-v1.schema.json",
+        "design-mutation-v1.schema.json" to "compose-ui-builder-mutation-v1.schema.json",
+      )
+    )
+    ids.putAll(
+      mapOf(
+        "compose-ui-builder-document-v1.schema.json" to
+          "https://schemas.compose-preview.dev/ui-builder/document/v1",
+        "compose-ui-builder-mutation-v1.schema.json" to
+          "https://schemas.compose-preview.dev/ui-builder/mutation/v1",
+      )
+    )
+    output.set(layout.buildDirectory.dir("generated/protocolSchemas"))
+  }
+
 ktfmt { googleStyle() }
 
 kotlin {
@@ -61,6 +95,7 @@ kotlin {
 
   sourceSets {
     commonMain {
+      resources.srcDir(extractProtocolSchemas.map { it.output })
       kotlin.srcDir(rootProject.tasks.named("generateMaterialIconExportSource"))
       kotlin.srcDir(rootProject.tasks.named("generateUiBuilderBuildFeatures"))
       kotlin.srcDir(

@@ -303,7 +303,9 @@ jobs:
           # and would otherwise fail AFTER the Central publish had gone out.
           # The document and mutation JSON Schemas, at a URL fixed per version
           # (`releases/download/<tag>/<file>`) that a `.uid` or a mutation can cite (#320).
-          schemas_dir="ui-builder-export/src/commonMain/resources/schemas"
+          # Extracted from the pinned protocol jar, where they are generated from the serializers.
+          ./gradlew :ui-builder-export:extractProtocolSchemas
+          schemas_dir="ui-builder-export/build/generated/protocolSchemas/schemas"
           schemas=("$schemas_dir/compose-ui-builder-document-v1.schema.json" "$schemas_dir/compose-ui-builder-mutation-v1.schema.json")
           for schema in "${schemas[@]}"; do
             if [ ! -f "$schema" ]; then
