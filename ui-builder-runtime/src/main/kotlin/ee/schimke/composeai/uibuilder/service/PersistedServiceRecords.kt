@@ -181,6 +181,19 @@ internal data class AcceptedOperationRecordV1(
 internal data class ConflictTouchRecordV1(
   val committedRevision: Long,
   val keys: Set<String>,
+  /**
+   * Who wrote these keys, and from which client and starting revision — the batch's
+   * [ReplayRunIdentity]. A Sync's later commands use it to tell the run's own earlier writes from a
+   * concurrent edit (see [StalenessWindow]).
+   *
+   * Absent for an undo, a redo, and every record written before this existed, which therefore match
+   * no run: a write nobody can attribute to the run is reported, never silently treated as the
+   * author's own. Never written when absent, so those records keep the bytes they had.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val actorId: String? = null,
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val clientId: String? = null,
+  /** The revision the batch's author had seen — `DesignCommandV1.authorSawRevision`. */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val authorSawRevision: Long? = null,
 )
 
 @Serializable internal sealed interface ChangeRecordV1

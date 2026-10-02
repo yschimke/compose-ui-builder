@@ -85,7 +85,13 @@ protocol client — no new endpoint, no new document format — with each comman
 ```text
 base(c₁) = R                            the fork point
 base(cₖ) = committedRevision(cₖ₋₁)      the revision this run's predecessor landed at
+stalenessBase(cₖ) = R   (k > 1)         the revision the author actually saw
 ```
+
+The base is where positions resolve; it says nothing about what the author saw, which for every
+command of the run is the fork. So each command after the first also carries
+`DesignCommandV1.stalenessBaseRevision = R`, and the service reads `STALE_*` from there — see the
+last property below.
 
 Three properties come out of that chain, and each is the reason not to do the obvious alternative:
 
@@ -113,6 +119,16 @@ Three properties come out of that chain, and each is the reason not to do the ob
   [`PersistentUiBuilderService`](../../ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/PersistentUiBuilderService.kt);
   a resumed sync is well inside it, a sync resumed after a thousand other operations is not, and
   would double-apply. If retries are ever unattended, that number is what bounds them.)
+
+- **Staleness from the fork, on every command.** The chain base alone would hide a server edit made
+  after R from every command but `c₁`: `c₃`'s base is where `c₂` landed, which is after it. So each
+  `cₖ` past the first sends `stalenessBaseRevision = R`, and the service judges its writes against
+  `(R, head]` instead of `(base(cₖ), head]` — while not reporting an overwrite of the run's *own*
+  earlier writes, which the author saw. The service recognises the run by what it records on each
+  committed batch: the actor, the `clientId` and the revision the author saw (`R` for `c₁`, whose
+  base is R). A write by another client, or one landing between two of the run's commands, is
+  still reported. A command without the field — every live edit, and every client that predates
+  it — is judged exactly as before. The field is deterministic, so the resume property above holds.
 
 ### Replay the run faithfully, including the undos
 

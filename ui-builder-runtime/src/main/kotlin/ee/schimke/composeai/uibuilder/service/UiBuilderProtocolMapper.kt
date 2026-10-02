@@ -237,7 +237,15 @@ private fun DesignSubmissionV1.toServiceSubmission(
   when (this) {
     is DesignCommandV1 ->
       if (actorId != actor.actorId) null
-      else UiBuilderSubmission.Batch(designId, operationId, clientId, baseRevision, operations)
+      else
+        UiBuilderSubmission.Batch(
+          designId,
+          operationId,
+          clientId,
+          baseRevision,
+          operations,
+          stalenessBaseRevision,
+        )
     is UndoCommandV1 ->
       if (actorId != actor.actorId) null
       else
@@ -265,7 +273,16 @@ private fun UiBuilderSubmission.toProtocolSubmission(
 ): DesignSubmissionV1 =
   when (this) {
     is UiBuilderSubmission.Batch ->
-      DesignCommandV1(designId, operationId, actor.actorId, clientId, baseRevision, operations)
+      DesignCommandV1.Builder(
+          designId,
+          operationId,
+          actor.actorId,
+          clientId,
+          baseRevision,
+          operations,
+        )
+        .also { it.stalenessBaseRevision = stalenessBaseRevision }
+        .build()
     is UiBuilderSubmission.Undo ->
       UndoCommandV1(
         designId,

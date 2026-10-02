@@ -1206,7 +1206,7 @@ class FileUiBuilderDesignStoreTest {
 
   private fun committed(operationId: String): CommittedOperationV1 =
     CommittedOperationV1(
-      DesignCommandV1("checkout", operationId, "owner", "browser", 0, emptyList()),
+      DesignCommandV1.Builder("checkout", operationId, "owner", "browser", 0, emptyList()).build(),
       outcomeV1(operationId),
     )
 

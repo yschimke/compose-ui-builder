@@ -465,23 +465,24 @@ internal fun CatalogUpgradePreviewV1.catalogRecoveryCommand(
 ): DesignCommandV1? {
   val targetHash = candidateDocumentHash ?: return null
   if (status != CatalogUpgradePreviewStatusV1.READY) return null
-  return DesignCommandV1(
-    designId = designId,
-    operationId = "catalog-recovery:$previewDigest",
-    actorId = actorId,
-    clientId = clientId,
-    baseRevision = baseRevision,
-    operations =
-      listOf(
-        CatalogUpgradeMutationV1(
-          sourceCatalogPin = sourceCatalogPin,
-          targetCatalogPin = targetCatalogPin,
-          sourceDocumentHash = sourceDocumentHash,
-          targetDocumentHash = targetHash,
-          previewDigest = previewDigest,
-        )
-      ),
-  )
+  return DesignCommandV1.Builder(
+      designId = designId,
+      operationId = "catalog-recovery:$previewDigest",
+      actorId = actorId,
+      clientId = clientId,
+      baseRevision = baseRevision,
+      operations =
+        listOf(
+          CatalogUpgradeMutationV1(
+            sourceCatalogPin = sourceCatalogPin,
+            targetCatalogPin = targetCatalogPin,
+            sourceDocumentHash = sourceDocumentHash,
+            targetDocumentHash = targetHash,
+            previewDigest = previewDigest,
+          )
+        ),
+    )
+    .build()
 }
 
 @Composable

@@ -246,7 +246,16 @@ internal fun UiBuilderSubmission.toProtocol(
 ): DesignSubmissionV1 =
   when (this) {
     is UiBuilderSubmission.Batch ->
-      DesignCommandV1(designId, operationId, actor.actorId, clientId, baseRevision, operations)
+      DesignCommandV1.Builder(
+          designId,
+          operationId,
+          actor.actorId,
+          clientId,
+          baseRevision,
+          operations,
+        )
+        .also { it.stalenessBaseRevision = stalenessBaseRevision }
+        .build()
     is UiBuilderSubmission.Undo ->
       UndoCommandV1(
         designId,
@@ -1156,30 +1165,103 @@ internal fun touchKey(kind: String, vararg parts: String): String =
  * saw — and so which of them a write reports overwriting (`STALE_*`).
  *
  * A write of key `k` is stale when the newest commit that wrote `k` after [since] is at or before
- * [through]. For a live edit the window is `(baseRevision, head]`, which is the long-standing rule.
- * A branch merge replays its log with the base chain (`base(cₖ)` is where `cₖ₋₁` landed), which is
- * right for positions but would hide the parent's concurrent edits from every command after the
- * first; so the merge passes `(forkRevision, parentHeadBeforeMerge]` for every command instead. A
- * key an earlier replayed command already wrote has its newest write past [through] — a write the
- * author saw, because it is the branch's own — so it is not reported again.
+ * [through] and was not made by [run]. For a live edit the window is `(baseRevision, head]`, which
+ * is the long-standing rule.
  *
- * The touch log this reads is pruned against the oldest retained position snapshot, and an open
- * branch pins its fork revision, so `(forkRevision, …]` is always within the window the log keeps.
+ * Two kinds of replay resolve positions along a base chain (`base(cₖ)` is where `cₖ₋₁` landed),
+ * which would hide concurrent edits from every command after the first, so both widen the window
+ * back to where the run started:
+ * - A branch merge passes `(forkRevision, parentHeadBeforeMerge]` for every command. A key an
+ *   earlier replayed command already wrote has its newest write past [through] — a write the author
+ *   saw, because it is the branch's own — so it is not reported again.
+ * - A Sync replays over the wire, one request per command, so there is no "head before the run" to
+ *   pass in. Each command after the first carries `DesignCommandV1.stalenessBaseRevision`, the
+ *   revision the run started from; the window is `(stalenessBaseRevision, head]` and [run] names
+ *   the run, so a newest write the run itself made is the author's own and is not reported again. A
+ *   concurrent write that lands between two of the run's commands is still newer than the run's
+ *   own, and is reported.
+ *
+ * The touch log this reads is pruned against the oldest retained position snapshot. An open branch
+ * pins its fork revision, so `(forkRevision, …]` is always within the window the log keeps. A
+ * Sync's start is not pinned: a run long enough to outlive it reads the touches still retained,
+ * which always cover `(baseRevision, head]` — never less than the command would have been told
+ * without the field.
  */
-internal data class StalenessWindow(val since: Long, val through: Long) {
+internal data class StalenessWindow(
+  val since: Long,
+  val through: Long,
+  val run: ReplayRunIdentity? = null,
+) {
   /** The newest concurrent revision that wrote [key], or null if the author saw the last write. */
-  fun overwritten(design: PersistedDesignV1, key: String): Long? =
-    design.lastTouchSince(since, key)?.takeIf { it <= through }
+  fun overwritten(design: PersistedDesignV1, key: String): Long? {
+    val newest = design.lastTouchSince(since, key) ?: return null
+    if (run != null && run.wrote(newest)) return null
+    return newest.committedRevision.takeIf { it <= through }
+  }
 
   fun stale(design: PersistedDesignV1, key: String): Boolean = overwritten(design, key) != null
 }
 
-/** The newest revision that wrote [key] after [baseRevision], or null if none did. */
-internal fun PersistedDesignV1.lastTouchSince(baseRevision: Long, key: String): Long? =
+/**
+ * One offline run as the service can recognise it across requests: the commands one actor's client
+ * submitted from the same starting revision. Recorded on every batch's [ConflictTouchRecordV1] —
+ * the first command of a run carries no staleness base (its base *is* the start), so its start is
+ * its [DesignCommandV1.baseRevision] — and matched only for a command that carries
+ * `stalenessBaseRevision`, so a live edit is judged exactly as it was before the field existed.
+ */
+internal data class ReplayRunIdentity(
+  val actorId: String,
+  val clientId: String,
+  val startRevision: Long,
+) {
+  fun wrote(touch: ConflictTouchRecordV1): Boolean =
+    touch.actorId == actorId &&
+      touch.clientId == clientId &&
+      touch.authorSawRevision == startRevision
+}
+
+/**
+ * The revision this command's author had seen: [DesignCommandV1.stalenessBaseRevision] when it is
+ * an older revision than the base, otherwise the base. A value at or past the base, or below zero,
+ * is outside what the field means ("never newer than baseRevision") and is read as absent — the
+ * reading a service that predates the field gives it — rather than refused.
+ */
+internal fun DesignCommandV1.authorSawRevision(): Long =
+  stalenessBaseRevision?.takeIf { it in 0 until baseRevision } ?: baseRevision
+
+/** The window [this] command's `STALE_*` checks read, absent a window the caller imposes. */
+internal fun DesignCommandV1.stalenessWindow(
+  actor: AuthenticatedUiBuilderActor,
+  head: Long,
+): StalenessWindow {
+  val seen = authorSawRevision()
+  return if (seen == baseRevision) StalenessWindow(baseRevision, head)
+  else StalenessWindow(seen, head, ReplayRunIdentity(actor.actorId, clientId, seen))
+}
+
+/**
+ * [this] submission as its idempotency fingerprint reads it. An unset staleness base is left out,
+ * so a command sent without one fingerprints to the same bytes it did before the field existed and
+ * an operation recorded then still answers a retry as an idempotent replay.
+ */
+internal fun submissionFingerprint(json: Json, submission: DesignSubmissionV1): String {
+  val element = json.encodeToJsonElement(DesignSubmissionV1.serializer(), submission)
+  val canonical =
+    if (element is JsonObject && element["stalenessBaseRevision"] is JsonNull)
+      JsonObject(element - "stalenessBaseRevision")
+    else element
+  return canonicalJson(canonical)
+}
+
+/** The newest touch that wrote [key] after [baseRevision], or null if none did. */
+internal fun PersistedDesignV1.lastTouchSince(
+  baseRevision: Long,
+  key: String,
+): ConflictTouchRecordV1? =
   conflictTouches
     .asSequence()
     .filter { it.committedRevision > baseRevision && key in it.keys }
-    .maxOfOrNull(ConflictTouchRecordV1::committedRevision)
+    .maxByOrNull(ConflictTouchRecordV1::committedRevision)
 
 internal fun UiBuilderServiceLimits.retainedRevisionsFor(documentBytes: Int): Int {
   if (documentBytes <= 0) return retainedRevisionSnapshots

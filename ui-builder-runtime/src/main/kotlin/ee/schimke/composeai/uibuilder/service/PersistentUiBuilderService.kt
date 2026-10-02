@@ -2266,7 +2266,7 @@ public class PersistentUiBuilderService(
       )
     }
     val wire = submission.toProtocol(actor)
-    val fingerprint = canonicalJson(json.encodeToJsonElement<DesignSubmissionV1>(wire))
+    val fingerprint = submissionFingerprint(json, wire)
     if (design.branch != null && submission.operationId !in design.operationOutcomes) {
       design.branchWriteRefusal(design.branch, submission)?.let { message ->
         return LockedExecution(
@@ -2749,7 +2749,7 @@ public class PersistentUiBuilderService(
             "operation id $operationId is already in $parentId's history",
           )
         }
-        val fingerprint = canonicalJson(json.encodeToJsonElement<DesignSubmissionV1>(rebased))
+        val fingerprint = submissionFingerprint(json, rebased)
         // Attributed to whoever authored it on the branch, not to the merging actor: undo is
         // per-author (`ACTOR_MISMATCH`), so this is what lets that author undo their own work after
         // it lands, and what makes a conflict notice name the right person. The merging actor is
@@ -3225,7 +3225,8 @@ public class PersistentUiBuilderService(
 
   /**
    * [staleness] is which earlier commits the command's `STALE_*` checks treat as concurrent.
-   * Absent, it is everything after the command's own base — the live-editing rule. A branch merge
+   * Absent, it is everything after the revision the command's author saw — its own base for a live
+   * edit, the run's start for a Sync command carrying `stalenessBaseRevision`. A branch merge
    * passes the fork-to-parent-head window instead, so a replayed command that is not the first
    * still sees the parent's concurrent edits while it resolves positions against its predecessor;
    * see [StalenessWindow].
@@ -3258,7 +3259,7 @@ public class PersistentUiBuilderService(
           design,
           actor,
           submission,
-          staleness ?: StalenessWindow(submission.baseRevision, design.document.revision),
+          staleness ?: submission.stalenessWindow(actor, design.document.revision),
         )
       is UndoCommandV1 -> reduceUndo(design, actor, submission)
       is RedoCommandV1 -> reduceRedo(design, actor, submission)
@@ -3795,7 +3796,13 @@ public class PersistentUiBuilderService(
         // what keeps the answer "nobody wrote this" from meaning "we no longer know".
         conflictTouches =
           (design.conflictTouches +
-              ConflictTouchRecordV1(revision, changes.flatMap(ChangeRecordV1::touchKeys).toSet()))
+              ConflictTouchRecordV1(
+                revision,
+                changes.flatMap(ChangeRecordV1::touchKeys).toSet(),
+                actorId = actor.actorId.takeIf { submission is DesignCommandV1 },
+                clientId = (submission as? DesignCommandV1)?.clientId,
+                authorSawRevision = (submission as? DesignCommandV1)?.authorSawRevision(),
+              ))
             .filter { it.committedRevision >= positionSnapshots.first().revision },
         tombstones = working.tombstones,
         updatedAtEpochMillis = now,
