@@ -138,6 +138,9 @@ internal fun Modifier.canvasNodeDrag(
           currentHitTest.value(currentRootPoint.value(down.position)) ?: return@awaitEachGesture
         var lastRoot = currentRootPoint.value(down.position)
         var lastLocal = down.position
+        // A finger covers the node it is holding, so the ghost appearing under it is not enough to
+        // say the hold landed: a short buzz does, where the device has one.
+        if (down.type == PointerType.Touch) pickupHaptic()
         currentOnStarted.value(node, lastRoot)
         try {
           while (true) {
@@ -217,3 +220,9 @@ internal fun String.toPresenceColor(): Color {
   val argb = hex.takeIf { it.length == 8 }?.toULongOrNull(16) ?: return Color(0xff7788aa)
   return Color(argb.toInt())
 }
+
+/**
+ * A short pulse saying a held node is now in hand. A no-op wherever there is no vibration motor to
+ * ask, which is every desktop and the browsers (Safari) that do not expose one.
+ */
+internal expect fun pickupHaptic()
