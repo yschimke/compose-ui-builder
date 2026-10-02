@@ -385,6 +385,55 @@ class WearLayoutAndColourExportTest {
   }
 
   /**
+   * The screen's typefaces (yschimke/wear-m3-catalog#684): the theme gains a typography with each
+   * named role re-pointed at a Google Fonts family the file declares, alongside the colours.
+   */
+  @Test
+  fun `a screen's typefaces are written into its theme as Google Fonts families`() {
+    val themed =
+      export(
+        screenWith(
+          listOf(text("t")),
+          scaffold =
+            properties(
+              "themePrimaryColor" to "#8C9EFF",
+              "themeDisplayTypeface" to "Michroma",
+              "themeBodyTypeface" to "google:Exo 2",
+            ),
+        )
+      )
+
+    assertTrue(
+      "    MaterialTheme(\n" +
+        "        colorScheme = MaterialTheme.colorScheme.copy(primary = Color(0xFF8C9EFF)),\n" +
+        "        typography =\n" +
+        "            MaterialTheme.typography.run {\n" +
+        "                copy(\n" +
+        "                    displayLarge = displayLarge.copy(fontFamily = MichromaFontFamily)," in
+        themed,
+      themed,
+    )
+    assertTrue(
+      "numeralLarge = numeralLarge.copy(fontFamily = MichromaFontFamily)," in themed,
+      themed,
+    )
+    assertTrue("bodyExtraSmall = bodyExtraSmall.copy(fontFamily = Exo2FontFamily)," in themed)
+    assertFalse("labelLarge = " in themed, "an unset group keeps Wear's face")
+    assertTrue(
+      "private val Exo2FontFamily =\n" +
+        "    FontFamily(\n" +
+        "        Font(GoogleFont(\"Exo 2\"), GoogleFontsProvider, FontWeight.Normal)," in themed,
+      themed,
+    )
+    assertTrue("private val GoogleFontsProvider =" in themed)
+    assertTrue("import androidx.compose.ui.text.googlefonts.GoogleFont" in themed)
+    assertTrue("import android.util.Base64" in themed)
+
+    val plain = export(screenWith(listOf(text("t"))))
+    assertFalse("GoogleFont" in plain, plain)
+  }
+
+  /**
    * Every case above in one screen, written where a compile check can pick it up: the assertions
    * here read text, and only a compiler against the real AndroidX library can say it builds.
    */

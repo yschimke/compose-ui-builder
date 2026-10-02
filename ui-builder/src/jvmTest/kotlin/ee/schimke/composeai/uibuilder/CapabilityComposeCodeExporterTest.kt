@@ -143,6 +143,59 @@ class CapabilityComposeCodeExporterTest {
     assertTrue(first.provenance.environmentCanonicalJson.contains("\"fontScale\":1"))
   }
 
+  /**
+   * The root surface's typefaces wrap it in a `MaterialTheme` whose typography re-points each named
+   * role at a Google Fonts family the file declares, as the canvas draws everything inside it.
+   */
+  @Test
+  fun `a themed root surface writes its typefaces as Google Fonts families`() {
+    fun string(value: String) =
+      JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive(value)))
+    val themed =
+      document.copy(
+        roots = listOf("root"),
+        nodes =
+          mapOf(
+            "root" to
+              UiBuilderNode(
+                id = "root",
+                componentId = "m3/surface",
+                properties =
+                  JsonObject(
+                    mapOf(
+                      "themeHeadlineTypeface" to string("Unbounded"),
+                      "themeBodyTypeface" to string("Syne"),
+                    )
+                  ),
+                slots = mapOf("content" to listOf("solo")),
+              ),
+            "solo" to
+              UiBuilderNode(
+                id = "solo",
+                componentId = "m3/text",
+                properties = JsonObject(mapOf("text" to string("Hello"))),
+              ),
+          ),
+      )
+    val result = CapabilityComposeCodeExporter.export(themed, catalog)
+    val source = assertNotNull(result.source)
+
+    assertTrue("  MaterialTheme(\n    typography =\n" in source, source)
+    assertTrue(
+      "headlineSmall = headlineSmall.copy(fontFamily = UnboundedFontFamily)," in source,
+      source,
+    )
+    assertTrue("bodyLarge = bodyLarge.copy(fontFamily = SyneFontFamily)," in source, source)
+    assertFalse("displayLarge = " in source, source)
+    assertTrue("private val GoogleFontsProvider =" in source, source)
+    assertTrue("import androidx.compose.ui.text.googlefonts.GoogleFont" in source, source)
+    // Written, so not reported as a property the export dropped.
+    assertTrue(
+      result.diagnostics.none { it.message.contains("Typeface") },
+      result.diagnostics.toString(),
+    )
+  }
+
   @Test
   fun `a design without the adaptive scaffold carries neither its helper nor its imports`() {
     // Material 3 Adaptive is a separate artifact on a separate version line, so an unused import of

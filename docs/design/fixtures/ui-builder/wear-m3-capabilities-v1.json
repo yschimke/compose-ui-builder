@@ -194,6 +194,34 @@
                     "name": "themeOnErrorColor",
                     "notes": "Re-skins the screen's `onError` role for everything inside it. A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"}, or a colourToken naming another role of the stock Wear scheme. Unset keeps Wear's own.",
                     "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeDisplayTypeface",
+                    "notes": "The font family for the display roles (displayLarge, displayMedium, displaySmall, numeralExtraLarge, numeralLarge, numeralMedium, numeralSmall, numeralExtraSmall) of everything this theme host contains. A family name: one of the editor's vendored faces or any Google Fonts family (\"Space Grotesk\", \"Michroma\"); a `google:` prefix is accepted. Generated code sets it as a `GoogleFont` family on the theme's typography. Unset keeps the platform's own face for these roles.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeTitleTypeface",
+                    "notes": "The font family for the title roles (titleLarge, titleMedium, titleSmall) of everything this theme host contains. A family name: one of the editor's vendored faces or any Google Fonts family (\"Space Grotesk\", \"Michroma\"); a `google:` prefix is accepted. Generated code sets it as a `GoogleFont` family on the theme's typography. Unset keeps the platform's own face for these roles.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeBodyTypeface",
+                    "notes": "The font family for the body roles (bodyLarge, bodyMedium, bodySmall, bodyExtraSmall) of everything this theme host contains. A family name: one of the editor's vendored faces or any Google Fonts family (\"Space Grotesk\", \"Michroma\"); a `google:` prefix is accepted. Generated code sets it as a `GoogleFont` family on the theme's typography. Unset keeps the platform's own face for these roles.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeLabelTypeface",
+                    "notes": "The font family for the label roles (labelLarge, labelMedium, labelSmall) of everything this theme host contains. A family name: one of the editor's vendored faces or any Google Fonts family (\"Space Grotesk\", \"Michroma\"); a `google:` prefix is accepted. Generated code sets it as a `GoogleFont` family on the theme's typography. Unset keeps the platform's own face for these roles.",
+                    "required": false
                 }
             ],
             "role": "Scaffold",

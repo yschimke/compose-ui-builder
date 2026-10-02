@@ -5,6 +5,7 @@ package ee.schimke.composeai.uibuilder.service
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
+import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.inspectUiBuilderArgumentBindings
 import ee.schimke.composeai.uibuilder.export.propertyMatches
@@ -1360,7 +1361,14 @@ internal fun widgetContainerProperties(): List<PropertyCapabilityV1> =
             "this radius behind the content rather than clipping to it."
       }
       .build(),
-  )
+  ) +
+    // The widget's typefaces, one per group of `RemoteTypography` roles; the generated widget
+    // sets them on `RemoteMaterialTheme`'s typography.
+    ThemeTypefaces.WEAR_GROUPS.map { group ->
+      PropertyCapabilityV1.Builder(group.property, JsonPrimitive("string"))
+        .also { it.notes = ThemeTypefaces.notes(group, wear = true) }
+        .build()
+    }
 
 /** Immutable, renderer-neutral request for one exact saved document revision. */
 public data class UiBuilderRenderRequest(

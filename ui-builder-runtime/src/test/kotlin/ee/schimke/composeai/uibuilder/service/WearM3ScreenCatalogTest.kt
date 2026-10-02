@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.WearScreenTheme
 import ee.schimke.composeai.uibuilder.protocol.CatalogBenchmarkV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -100,10 +101,12 @@ class WearM3ScreenCatalogTest {
   fun `the screen scaffold takes no size property`() {
     val scaffold = wear.components.single { it.componentId == "wear-m3/screen-scaffold" }
 
-    // Then its theme, one colour role per property — still nothing that sizes it.
+    // Then its theme, one colour role per property and one typeface per group of type-scale roles
+    // — still nothing that sizes it.
     assertEquals(
       listOf("timeText", "scrollIndicator", "background") +
-        WearScreenTheme.ROLES.map(WearScreenTheme::property),
+        WearScreenTheme.ROLES.map(WearScreenTheme::property) +
+        ThemeTypefaces.WEAR_GROUPS.map { it.property },
       scaffold.properties.map { it.name },
     )
     // `overlays` is the third and it is not a content slot: Wear's dialogs take a `visible` flag

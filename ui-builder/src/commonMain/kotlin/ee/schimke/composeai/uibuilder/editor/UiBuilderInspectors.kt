@@ -79,6 +79,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
+import ee.schimke.composeai.uibuilder.canonicalFamilyName
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.boardItemCount
 import ee.schimke.composeai.uibuilder.canvas.forPlatform
@@ -1637,7 +1638,7 @@ private fun ScreenEnvironmentInspector(
  * vendors ([LocalUiBuilderFontRegistry]); opening the menu asks for all of them, and each option
  * switches from the default face to its own as its family arrives. A family the document names that
  * the host does not ship is still listed, so the menu never claims the design says something it
- * does not — it just cannot be drawn in its face.
+ * does not; it is drawn in its face when the host could fetch it by name, and says so when not.
  */
 @Composable
 private fun TypefacePicker(selected: String?, onPick: (String?) -> Unit) {
@@ -1651,8 +1652,13 @@ private fun TypefacePicker(selected: String?, onPick: (String?) -> Unit) {
   LaunchedEffect(registry, expanded, families) {
     if (expanded) families.forEach { registry?.request(it.name) }
   }
-  val unknown = selected?.takeIf { name -> families.none { it.name == name } }
-  val selectedLabel = families.firstOrNull { it.name == selected }?.label ?: selected
+  // Matched the way the registry resolves a name, so `google:Inter` is the vendored Inter here too.
+  val selectedFamily =
+    selected?.let(::canonicalFamilyName)?.let { name ->
+      families.firstOrNull { canonicalFamilyName(it.name) == name }
+    }
+  val unknown = selected?.takeIf { selectedFamily == null }
+  val selectedLabel = selectedFamily?.label ?: selected
   Text(
     "Typeface",
     style = MaterialTheme.typography.titleSmall,
@@ -1689,16 +1695,18 @@ private fun TypefacePicker(selected: String?, onPick: (String?) -> Unit) {
           label = family.label,
           face = faces[family.name],
           supporting = if (faces[family.name] == null) "Loading…" else null,
-          selected = family.name == selected,
+          selected = family == selectedFamily,
         ) {
           expanded = false
           onPick(family.name)
         }
       }
       unknown?.let { name ->
-        TypefaceOption(name, null, "Not bundled here — drawn in the default face", true) {
-          expanded = false
-        }
+        val face = faces[name]
+        val supporting =
+          if (face != null) "Not bundled — fetched by name"
+          else "Not bundled here — drawn in the default face"
+        TypefaceOption(name, face, supporting, true) { expanded = false }
       }
     }
   }

@@ -157,6 +157,46 @@ class WearWidgetGeneratedSourceQualityTest {
     assertFalse("Color(0xFFFF80123456)" in source, source)
   }
 
+  /**
+   * A widget's typefaces go into the document by name: `RemoteMaterialTheme`'s typography with each
+   * named role on `RemoteFontFamily.Named("google:…")`, which the player resolves — no provider in
+   * the generated widget.
+   */
+  @Test
+  fun `a widget's typefaces are written into RemoteMaterialTheme by name`() {
+    val document = activitySummaryDocument()
+    val rootId = document.roots.single()
+    val root = document.nodes.getValue(rootId)
+    val themed =
+      document.copy(
+        id = "typeface-widget",
+        nodes =
+          document.nodes +
+            (rootId to
+              root.copy(
+                properties =
+                  JsonObject(
+                    root.properties +
+                      ("themeTitleTypeface" to
+                        JsonObject(
+                          mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Syne"))
+                        ))
+                  )
+              )),
+      )
+    val source = generate(themed)
+
+    assertTrue("RemoteMaterialTheme(\n        typography =\n" in source, source)
+    assertTrue(
+      "titleLarge = titleLarge.copy(fontFamily = RemoteFontFamily.Named(\"google:Syne\"))," in
+        source,
+      source,
+    )
+    assertFalse("displayLarge = " in source, source)
+    assertTrue("import androidx.compose.remote.creation.compose.text.RemoteFontFamily" in source)
+    assertFalse("RemoteFontFamily" in generate(), "an untyped widget names no family")
+  }
+
   /** One text per colour spelling the validator admits, on the Large container. */
   private fun colourDocument(): UiBuilderDocument {
     val nodes =

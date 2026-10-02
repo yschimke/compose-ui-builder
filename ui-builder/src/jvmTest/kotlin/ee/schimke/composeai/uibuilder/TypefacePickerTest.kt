@@ -124,6 +124,59 @@ class TypefacePickerTest {
     assertFalse("Comic Sans" in registry.loaded)
   }
 
+  /**
+   * A design that names a family nobody vendored — what an agent theming a design usually writes —
+   * draws in it when the host can fetch it by name, instead of silently in the default face.
+   */
+  @Test
+  fun `a family outside the manifest is fetched by name when the host can`() = runBlocking {
+    val asked = mutableListOf<Pair<String, Int>>()
+    val registry =
+      UiBuilderFontRegistry(
+        scope = this,
+        readManifest = { File(fontsDir, "fonts.json").readText() },
+        readFont = { File(fontsDir, it).readBytes() },
+        readRemoteFont = { family, weight ->
+          asked += family to weight
+          File(fontsDir, "space-grotesk-$weight.ttf").readBytes()
+        },
+      )
+    registry.request("google:Playfair  Display")
+    withTimeout(10_000) { while ("google:Playfair  Display" !in registry.loaded) yield() }
+    assertEquals(listOf("Playfair Display" to 400, "Playfair Display" to 700), asked)
+
+    // A vendored family is still the vendored one, whatever the spelling: no remote request.
+    registry.request("google:inter")
+    withTimeout(10_000) { while ("google:inter" !in registry.loaded) yield() }
+    // And a generic keyword is never sent to a font service.
+    registry.request("sans-serif")
+    repeat(5) { yield() }
+    assertEquals(2, asked.size, "asked: $asked")
+  }
+
+  @Test
+  fun `a remote family with no regular face is not loaded, one with no bold still is`() =
+    runBlocking {
+      val registry =
+        UiBuilderFontRegistry(
+          scope = this,
+          readManifest = { File(fontsDir, "fonts.json").readText() },
+          readFont = { File(fontsDir, it).readBytes() },
+          readRemoteFont = { family, weight ->
+            when {
+              family == "Regular Only" && weight == 400 ->
+                File(fontsDir, "space-grotesk-400.ttf").readBytes()
+              else -> error("HTTP 404")
+            }
+          },
+        )
+      registry.request("Bold Only")
+      registry.request("Regular Only")
+      withTimeout(10_000) { while ("Regular Only" !in registry.loaded) yield() }
+      repeat(5) { yield() }
+      assertFalse("Bold Only" in registry.loaded)
+    }
+
   @Test
   fun `picking a typeface writes it, and choosing Default resets it`() {
     val initial = reducer.initial(document, selectedNodeId = null)

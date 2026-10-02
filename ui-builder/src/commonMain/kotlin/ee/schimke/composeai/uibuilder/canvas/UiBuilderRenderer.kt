@@ -152,6 +152,7 @@ import androidx.wear.compose.material3.timeTextCurvedText
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
+import ee.schimke.composeai.uibuilder.ThemeTypefacesHost
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
 import ee.schimke.composeai.uibuilder.editor.THEME_BACKGROUND
@@ -166,6 +167,7 @@ import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_CUSTOM_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
+import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -183,6 +185,7 @@ import ee.schimke.composeai.uibuilder.nativeOnlyComponentIds
 import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
+import ee.schimke.composeai.uibuilder.rememberThemeRoleFamilies
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasAdapterRegistry
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasDocumentHost
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasDocumentScope
@@ -206,6 +209,7 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.isResolvableAlignment
 import ee.schimke.composeai.uibuilder.renderer.sdk.reconcileCanvasState
 import ee.schimke.composeai.uibuilder.renderer.sdk.uiBuilderModifier
 import ee.schimke.composeai.uibuilder.withFontFamily
+import ee.schimke.composeai.uibuilder.withRoleFamilies
 import ee.schimke.wearcmp.port.LocalWearDeviceConfiguration
 import ee.schimke.wearcmp.port.WearDeviceConfiguration
 import kotlinx.serialization.json.JsonArray
@@ -573,6 +577,13 @@ fun UiBuilderSurface(
       onSurfaceVariant = contentColor ?: baseColorScheme.onSurfaceVariant,
     )
   val typeScale = themeHost?.float(THEME_TYPE_SCALE, 1f)?.coerceIn(0.75f, 1.5f) ?: 1f
+  // The host's typefaces per role group, over the document-wide one: the design's display face on
+  // its display roles and so on, the environment's family on whatever the host leaves unset.
+  val hostTypefaces =
+    rememberThemeRoleFamilies(
+      ThemeTypefaces.families { themeHost?.string(it) },
+      wear = false,
+    )
   // Wear's large corner on a Wear screen — see [WEAR_CARD_CORNER_RADIUS_DP]. Material 3's 16dp
   // default draws a recognisably different card, and the card is most of what a Wear list is.
   val cornerRadius =
@@ -624,7 +635,10 @@ fun UiBuilderSurface(
     LocalContentColor provides colorScheme.onBackground,
     *wearDevice,
   ) {
-    MaterialTheme(colorScheme = colorScheme, typography = typography) {
+    MaterialTheme(
+      colorScheme = colorScheme,
+      typography = typography.withRoleFamilies(hostTypefaces),
+    ) {
       WearCatalogTheme(wearCatalog) {
         val updateExtentInputs = LocalCanvasExtentInputs.current
         Box(
@@ -794,7 +808,11 @@ private fun RenderNode(
           brushes = { next -> slot("background").forEach { child(it, next) } },
           hasBrushes = slot("background").isNotEmpty(),
         ) {
-          slot("content").forEach { child(it, Modifier.fillMaxSize()) }
+          // The widget's typefaces: `RemoteMaterialTheme`'s typography in the generated widget,
+          // Wear's here, where the remote components are drawn by the Wear port.
+          ThemeTypefacesHost(read = { node.string(it) }) {
+            slot("content").forEach { child(it, Modifier.fillMaxSize()) }
+          }
         }
       }
       // **Experimental.** The adaptive widget, edited at Large because Large is the size where
@@ -830,14 +848,16 @@ private fun RenderNode(
       // A viewport is the port's real `ScreenScaffold`; only the unrolled extent is drawn here.
       ROUND_SCREEN_FRAME ->
         WearScreenThemed(node) {
-          WearScreenScaffold(
-            node = node,
-            modifier = measured,
-            screenWidthDp = document.wearScreenWidthDp(LocalUiBuilderFrameGeometry.current),
-            edgeButton = { next -> slot("edgeButton").forEach { child(it, next) } },
-            hasEdgeButton = slot("edgeButton").isNotEmpty(),
-          ) { next ->
-            slot("content").forEach { child(it, next) }
+          ThemeTypefacesHost(read = { node.string(it) }) {
+            WearScreenScaffold(
+              node = node,
+              modifier = measured,
+              screenWidthDp = document.wearScreenWidthDp(LocalUiBuilderFrameGeometry.current),
+              edgeButton = { next -> slot("edgeButton").forEach { child(it, next) } },
+              hasEdgeButton = slot("edgeButton").isNotEmpty(),
+            ) { next ->
+              slot("content").forEach { child(it, next) }
+            }
           }
         }
       // Wear's own `ListHeader`, drawn by Wear Compose. This used to be a `Box` of
