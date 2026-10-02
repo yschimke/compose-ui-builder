@@ -555,6 +555,9 @@ internal fun DesignDocumentV1.detachedComponentRoots(): Set<String> {
 /** What a conflict and a compensation failure call the chain, since the wire has no name for it. */
 internal const val MODIFIERS_FIELD = "modifiers"
 
+/** The field a placement's `setComponentArguments` write is reported under in a conflict. */
+internal const val COMPONENT_ARGUMENTS_FIELD = "arguments"
+
 private const val PREDICATE_FIELD = "predicate"
 
 /**
@@ -1146,6 +1149,8 @@ internal fun ChangeRecordV1.touchKeys(): List<String> =
     is PropertyChangeV1 -> listOf(touchKey("p", nodeId, property))
     // Node granular, because the chain is one value — see [ModifierChangeV1].
     is ModifierChangeV1 -> listOf(touchKey("m", nodeId))
+    // Node granular too: a placement's arguments are one map — see [ComponentArgumentsChangeV1].
+    is ComponentArgumentsChangeV1 -> listOf(touchKey("a", nodeId))
     is StateVariableChangeV1 -> listOf(touchKey("v", name))
     // Key granular, like a state variable: two actors declaring different components do not
     // conflict, and two declaring the same one are writing the same thing.

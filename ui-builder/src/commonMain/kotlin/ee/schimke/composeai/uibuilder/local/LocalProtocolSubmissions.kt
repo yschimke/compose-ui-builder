@@ -26,6 +26,7 @@ import ee.schimke.composeai.uibuilder.protocol.RemoveStateVariableMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.ResetTypefaceEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.RestoreNodeMutationV1
+import ee.schimke.composeai.uibuilder.protocol.SetComponentArgumentsMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetDensityEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetEventBindingMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetExportDevicesEnvironmentChangeV1
@@ -46,6 +47,7 @@ import ee.schimke.composeai.uibuilder.protocol.UpdateEnvironmentMutationV1
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.jsonObject
@@ -200,6 +202,19 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
       )
     is RemoveComponentMutationV1 ->
       MutationMapping.Mapped(listOf(DesignOperation.RemoveComponent(componentKey)))
+    is SetComponentArgumentsMutationV1 ->
+      MutationMapping.Mapped(
+        listOf(
+          DesignOperation.SetComponentArguments(
+            nodeId,
+            JsonObject(
+              arguments.mapValues { (_, value) ->
+                localBridgeJson.encodeToJsonElement(UiValueV1.serializer(), value)
+              }
+            ),
+          )
+        )
+      )
     is SetEventBindingMutationV1 ->
       MutationMapping.Mapped(
         listOf(

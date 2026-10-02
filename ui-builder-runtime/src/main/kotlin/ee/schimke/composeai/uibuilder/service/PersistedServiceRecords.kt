@@ -3,6 +3,7 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.protocol.*
+import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -243,6 +244,20 @@ internal data class ModifierChangeV1(
   val nodeId: String,
   val before: List<DesignModifierV1>,
   val after: List<DesignModifierV1>,
+) : ChangeRecordV1
+
+/**
+ * One placement's whole `arguments` map, before and after.
+ *
+ * Node-granular for the reason [ModifierChangeV1] is: `SetComponentArgumentsMutationV1` writes the
+ * map whole, and two writers editing one placement's arguments are editing the same thing.
+ */
+@Serializable
+@SerialName("componentArguments")
+internal data class ComponentArgumentsChangeV1(
+  val nodeId: String,
+  val before: Map<String, UiValueV1>,
+  val after: Map<String, UiValueV1>,
 ) : ChangeRecordV1
 
 /**

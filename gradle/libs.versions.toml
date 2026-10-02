@@ -190,7 +190,9 @@ composeai-preview-daemon = "3.8.3"
 # DesignStateV1, CommandConflictV1 and AssetBindingV1; compose-preview-contracts#124). Skip 3.13.0.
 # 3.14.0 and 3.15.0 are carried along unchanged here. 3.16.0 adds `DesignCommandV1.stalenessBaseRevision`
 # and its Builder (compose-preview-contracts#131), which Sync uses to report staleness from the fork.
-composeai-contracts = "3.16.0"
+# 3.17.0 adds `SetComponentArgumentsMutationV1` (compose-preview-contracts#133), so an edit to what a
+# component placement passes keeps the placement's id.
+composeai-contracts = "3.17.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 rc-players = "1.65.0"

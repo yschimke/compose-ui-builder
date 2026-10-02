@@ -30,6 +30,7 @@ import ee.schimke.composeai.uibuilder.protocol.ResetExportDevicesEnvironmentChan
 import ee.schimke.composeai.uibuilder.protocol.ResetTypefaceEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.RestoreNodeMutationV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceDeltaV1
+import ee.schimke.composeai.uibuilder.protocol.SetComponentArgumentsMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetDensityEnvironmentChangeV1
 import ee.schimke.composeai.uibuilder.protocol.SetEventBindingMutationV1
 import ee.schimke.composeai.uibuilder.protocol.SetExportDevicesEnvironmentChangeV1
@@ -290,6 +291,14 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
         bridgeJson.decodeFromString(DesignComponentV1.serializer(), declaration.toString()),
       )
     is DesignOperation.RemoveComponent -> RemoveComponentMutationV1(componentKey)
+    is DesignOperation.SetComponentArguments ->
+      SetComponentArgumentsMutationV1.Builder(
+          nodeId,
+          arguments.mapValues { (_, value) ->
+            bridgeJson.decodeFromString(UiValueV1.serializer(), value.toString())
+          },
+        )
+        .build()
     is DesignOperation.SetEnvironment ->
       UpdateEnvironmentMutationV1(
         listOf(
