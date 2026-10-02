@@ -37,6 +37,25 @@ class LocalDesignSessionTest {
     )
 
   @Test
+  fun `once another tab has written the design, edits here are shown but not saved`() {
+    val session = open(seeded())
+    session.submit(LocalDesignFixtures.insert("first", baseRevision = 0))
+    // What the other tab wrote: the record as it stands in storage after its own edit.
+    val otherTab = open(assertNotNull(store.read(LocalDesignFixtures.DESIGN_ID)))
+    otherTab.submit(LocalDesignFixtures.insert("theirs", baseRevision = otherTab.document.revision))
+    val theirs = assertNotNull(store.storedText(LocalDesignFixtures.DESIGN_ID))
+
+    session.markChangedElsewhere()
+    val result =
+      session.submit(LocalDesignFixtures.insert("second", baseRevision = session.document.revision))
+
+    assertIs<CommandOutcome.Accepted>(result.outcome)
+    assertEquals(LocalPersistence.Refused(LocalDesignSession.CHANGED_ELSEWHERE), result.persistence)
+    assertTrue("second" in session.document.nodes, "the edit is still applied in this tab")
+    assertEquals(theirs, store.storedText(LocalDesignFixtures.DESIGN_ID), "the other tab's record")
+  }
+
+  @Test
   fun `an accepted edit is written, and a reload replays it`() {
     val session = open(seeded())
 

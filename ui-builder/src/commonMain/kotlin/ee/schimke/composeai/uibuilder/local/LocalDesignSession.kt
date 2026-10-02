@@ -68,6 +68,22 @@ private constructor(
   var replayRefusals: List<String> = emptyList()
     private set
 
+  /**
+   * True once another tab of this browser has written this design since this one opened it.
+   *
+   * From then on this session's edits are applied and displayed but **not written**: each would
+   * replace the other tab's record wholesale — one key per design, no partial write — and the other
+   * tab's work would be gone without either tab having said so. Refusing is the side that loses
+   * nothing durable; the editor says why, and a reload picks up what the other tab wrote.
+   */
+  var changedElsewhere: Boolean = false
+    private set
+
+  /** See [changedElsewhere]. Called when the browser reports another tab's write. */
+  fun markChangedElsewhere() {
+    changedElsewhere = true
+  }
+
   val document: UiBuilderDocument
     get() = state.document
 
@@ -139,6 +155,7 @@ private constructor(
    * edit.
    */
   private fun persist(): LocalPersistence {
+    if (changedElsewhere) return LocalPersistence.Refused(CHANGED_ELSEWHERE)
     val dropped = record.log.size
     if (store.encodedSize(record) > compactionThresholdBytes) {
       record = compacted()
@@ -193,6 +210,11 @@ private constructor(
      * replays in a few hundred commands.
      */
     const val DEFAULT_COMPACTION_THRESHOLD_BYTES: Int = 1_000_000
+
+    /** The [LocalPersistence.Refused] reason once [changedElsewhere] is set. */
+    const val CHANGED_ELSEWHERE: String =
+      "this design was changed in another tab, so edits here are no longer saved — reload to " +
+        "pick up that tab's changes"
 
     /**
      * Opens [record] by replaying its log onto its seed.

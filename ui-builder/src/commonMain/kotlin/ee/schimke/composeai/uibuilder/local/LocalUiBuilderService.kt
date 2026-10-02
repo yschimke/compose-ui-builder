@@ -80,6 +80,17 @@ class LocalUiBuilderService(
   var lastPersistence: LocalPersistence = LocalPersistence.Stored
     private set
 
+  /**
+   * Another tab of this browser wrote (or deleted) [designId]. An open session for it stops saving
+   * ([LocalDesignSession.changedElsewhere]); returns whether one was open, which is when the editor
+   * has something to tell the person.
+   */
+  fun changedElsewhere(designId: String): Boolean {
+    val session = sessions[designId] ?: return false
+    session.markChangedElsewhere()
+    return true
+  }
+
   suspend fun execute(request: UiBuilderRequestV1): UiBuilderResponseV1 =
     when (request) {
       is ListCatalogsRequestV1 ->

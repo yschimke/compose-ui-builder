@@ -78,9 +78,11 @@ import ee.schimke.composeai.uibuilder.export.encodeNewDesignStates
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.inspector.UiBuilderPageDestination
+import ee.schimke.composeai.uibuilder.local.BrowserStorageEstimate
 import ee.schimke.composeai.uibuilder.local.EditorEditRoute
 import ee.schimke.composeai.uibuilder.local.LocalDesignStore
 import ee.schimke.composeai.uibuilder.local.LocalDesignSyncBack
+import ee.schimke.composeai.uibuilder.local.LocalPersistence
 import ee.schimke.composeai.uibuilder.local.LocalUiBuilderHttpTransport
 import ee.schimke.composeai.uibuilder.local.browserHomeDesigns
 import ee.schimke.composeai.uibuilder.local.editorEditRoute
@@ -238,6 +240,27 @@ private fun LiveSessionApp(
   var catalogRecoveryApplying by remember(config.designId) { mutableStateOf(false) }
   var catalogRecoveryError by remember(config.designId) { mutableStateOf<String?>(null) }
   var updates by remember { mutableStateOf<UiBuilderProtocolUpdateClient?>(null) }
+  // What this browser's storage did with the last edit of a design kept here, when that is worth
+  // saying: a refused write, or another tab having written the same design. Null while all is well.
+  var browserStorageProblem by remember(config.designId) { mutableStateOf<String?>(null) }
+  var changedInAnotherTab by remember(config.designId) { mutableStateOf(false) }
+  DisposableEffect(localSession, config.designId) {
+    val session = localSession
+    val stop =
+      if (session == null) null
+      else
+        BrowserLocalStorageBackend.onExternalChange { key ->
+          if (!key.startsWith(LocalDesignStore.DESIGN_KEY_PREFIX)) return@onExternalChange
+          val designId = key.removePrefix(LocalDesignStore.DESIGN_KEY_PREFIX)
+          if (session.service.changedElsewhere(designId) && designId == config.designId) {
+            changedInAnotherTab = true
+            browserStorageProblem =
+              "This design was changed in another tab. Edits here are no longer saved — reload " +
+                "to pick up that tab's changes."
+          }
+        }
+    onDispose { stop?.invoke() }
+  }
   var authoritativeGeneration by remember { mutableStateOf(0) }
   val inspectionPublisher = remember(scope) { CoalescingInspectionPublisher(scope) }
   var selectedNodeId by remember { mutableStateOf(config.selectors.nodeId) }
@@ -423,6 +446,16 @@ private fun LiveSessionApp(
               sessionStatus =
                 if (response == null) "Live error · unexpected operation response"
                 else "Accepted · syncing authoritative revision…"
+              // The local service answers the edit and the storage write together; a write this
+              // browser refused leaves the edit on screen and must not leave it unsaid.
+              when (val persistence = localSession?.service?.lastPersistence) {
+                is LocalPersistence.Refused ->
+                  browserStorageProblem = "Not saved in this browser: ${persistence.reason}"
+                is LocalPersistence.Compacted ->
+                  if (!changedInAnotherTab) browserStorageProblem = null
+                LocalPersistence.Stored -> if (!changedInAnotherTab) browserStorageProblem = null
+                null -> Unit
+              }
               syncSnapshot(sessionStatus)
             }
             is UiBuilderHttpResult.ServiceError ->
@@ -1202,6 +1235,20 @@ private fun LiveSessionApp(
   var browserDesignSummaries by remember {
     mutableStateOf(LocalDesignStore(BrowserLocalDesignStorage()).list())
   }
+  // Another tab adding, editing or deleting a design kept here changes this list too.
+  DisposableEffect(Unit) {
+    val stop = BrowserLocalStorageBackend.onExternalChange { key ->
+      if (key.startsWith(LocalDesignStore.DESIGN_KEY_PREFIX)) {
+        browserDesignSummaries = LocalDesignStore(BrowserLocalDesignStorage()).list()
+      }
+    }
+    onDispose { stop() }
+  }
+  // The browser's own account of this origin's storage, for the "nearly full" notice.
+  var browserStorageEstimate by remember { mutableStateOf<BrowserStorageEstimate?>(null) }
+  LaunchedEffect(browserDesignSummaries) {
+    browserStorageEstimate = BrowserLocalStorageBackend.estimate()
+  }
 
   if (config.startWithNewDesign && newDesignCatalogs.isNotEmpty()) {
     UiBuilderNewDesignScreen(
@@ -1266,7 +1313,8 @@ private fun LiveSessionApp(
         LocalDesignStore(BrowserLocalDesignStorage()).delete(designId)
         browserDesignSummaries = LocalDesignStore(BrowserLocalDesignStorage()).list()
       },
-      browserStorageNotice = localStorageNotice(browserDesignSummaries),
+      browserStorageNotice =
+        localStorageNotice(browserDesignSummaries, estimate = browserStorageEstimate),
       // Said before anything is made, not discovered when it is: this account's new designs are
       // kept in this browser, and here is why and how to change that.
       accountNotice =
@@ -1401,6 +1449,8 @@ private fun LiveSessionApp(
       onGoToLatest = revisionPin?.takeIf { it.pinned }?.let { { goToLatestRevision() } },
       openingNotice =
         listOfNotNull(
+            // First, because it is about the edits being made right now.
+            browserStorageProblem,
             // A server design this caller may look at but not change. Said once, up front, rather
             // than discovered as a refused save.
             readOnlyNotice(config).takeIf { localSession == null },
@@ -1417,11 +1467,12 @@ private fun LiveSessionApp(
           .takeIf { it.isNotEmpty() }
           ?.joinToString(" "),
       openingNoticeAction =
-        config.copiedFromDesignId?.let { source ->
-          EditorNoticeAction("Open original") {
-            navigateTo("/ui-builder/${encodeUriComponent(source)}")
+        (if (changedInAnotherTab) EditorNoticeAction("Reload") { reloadBrowserPage() } else null)
+          ?: config.copiedFromDesignId?.let { source ->
+            EditorNoticeAction("Open original") {
+              navigateTo("/ui-builder/${encodeUriComponent(source)}")
+            }
           }
-        }
           ?: config.signInUrl
             ?.takeIf { localSession == null && !config.canWrite }
             ?.let { url -> EditorNoticeAction("Sign in") { navigateTo(url) } },
