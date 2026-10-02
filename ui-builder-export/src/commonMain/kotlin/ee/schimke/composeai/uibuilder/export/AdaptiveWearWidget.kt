@@ -180,7 +180,7 @@ object AdaptiveWearWidget {
         ),
         UiBuilderNode(
           id = "adaptive-action-label",
-          componentId = "m3/text",
+          componentId = REMOTE_TEXT_COMPONENT_ID,
           properties = JsonObject(mapOf("text" to literal("string", JsonPrimitive("Join")))),
           modifiers = JsonArray(emptyList()),
           slots = emptyMap(),
@@ -214,15 +214,21 @@ object AdaptiveWearWidget {
   private fun UiBuilderDocument.subtree(id: String): List<String> =
     listOf(id) + nodes[id]?.slots?.values.orEmpty().flatten().flatMap { subtree(it) }
 
+  /**
+   * `remote-m3/remote-text`, the catalog's own `RemoteText`. Not `m3/text`: the published
+   * `remote-m3` catalog does not declare the borrowed Material 3 id, so a seed naming it was
+   * refused as `UNKNOWN_COMPONENT` the moment the service validated it. [style] is a role on
+   * `RemoteTypography`'s Wear scale, which is what that component's `style` accepts.
+   */
   private fun text(id: String, text: String, style: String, color: String) =
     UiBuilderNode(
       id = id,
-      componentId = "m3/text",
+      componentId = REMOTE_TEXT_COMPONENT_ID,
       properties =
         JsonObject(
           mapOf(
             "text" to literal("string", JsonPrimitive(text)),
-            "style" to literal("typographyToken", JsonPrimitive(style)),
+            "style" to enum(style),
             "color" to colorToken(color),
           )
         ),
