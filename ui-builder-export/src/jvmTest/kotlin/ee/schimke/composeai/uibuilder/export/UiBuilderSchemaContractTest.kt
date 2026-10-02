@@ -3,50 +3,51 @@ package ee.schimke.composeai.uibuilder.export
 import com.networknt.schema.InputFormat
 import com.networknt.schema.SchemaRegistry
 import com.networknt.schema.SpecificationVersion
-import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignHomeV1
 import ee.schimke.composeai.uibuilder.protocol.DesignMutationV1
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.elementNames
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class UiBuilderSchemaContractTest {
   private val json = Json { explicitNulls = false }
 
+  /**
+   * The schemas this repository publishes are the protocol's own, generated from its serializers,
+   * plus the stable `$id` a release URL is cited by — not a hand-kept copy checked after the fact.
+   */
   @Test
-  fun `mutation schema variants and required fields match the protocol serializer`() {
-    val schema = schema("schemas/compose-ui-builder-mutation-v1.schema.json")
-    val schemaVariants =
-      schema["oneOf"]!!.jsonArray.associate { variant ->
-        val body = variant.jsonObject
-        val type =
-          body["properties"]!!.jsonObject["type"]!!.jsonObject["const"]!!.jsonPrimitive.content
-        type to body["required"]!!.jsonArray.map { it.jsonPrimitive.content }.toSet()
+  fun `the published schemas are the protocol's generated ones under this repository's ids`() {
+    mapOf(
+        "compose-ui-builder-document-v1.schema.json" to
+          ("design-document-v1.schema.json" to
+            "https://schemas.compose-preview.dev/ui-builder/document/v1"),
+        "compose-ui-builder-mutation-v1.schema.json" to
+          ("design-mutation-v1.schema.json" to
+            "https://schemas.compose-preview.dev/ui-builder/mutation/v1"),
+      )
+      .forEach { (published, source) ->
+        val (generated, id) = source
+        val bundled = schema("schemas/$published")
+        assertEquals(id, bundled["\$id"]?.jsonPrimitive?.content, published)
+        assertEquals(schema("schemas/$generated"), JsonObject(bundled - "\$id"), published)
       }
-    val mutationVariants = DesignMutationV1.serializer().descriptor.getElementDescriptor(1)
-    val serializerVariants =
-      mutationVariants.elementNames.associateWith { type ->
-        val descriptor = mutationVariants.getElementDescriptor(mutationVariants.elementIndex(type))
-        descriptor.requiredFields() + "type"
-      }
-
-    assertEquals(serializerVariants, schemaVariants)
   }
 
   @Test
-  fun `document schema required fields match the protocol serializer`() {
-    val documentSchema = schema("schemas/compose-ui-builder-document-v1.schema.json")
-    val required = documentSchema["required"]!!.jsonArray.map { it.jsonPrimitive.content }.toSet()
-
-    assertEquals(DesignDocumentV1.serializer().descriptor.requiredFields(), required)
+  fun `the mutation schema names every mutation the protocol serializer has`() {
+    val defs = schema("schemas/compose-ui-builder-mutation-v1.schema.json")["\$defs"]!!.jsonObject
+    val mutationVariants = DesignMutationV1.serializer().descriptor.getElementDescriptor(1)
+    mutationVariants.elementNames.forEach { type ->
+      assertTrue(defs.keys.any { it.endsWith(".$type") }, "no schema for mutation $type")
+    }
   }
 
   @Test
@@ -80,12 +81,6 @@ class UiBuilderSchemaContractTest {
       assertTrue(errors.isEmpty(), "$name: ${errors.joinToString()}")
     }
   }
-
-  private fun SerialDescriptor.requiredFields(): Set<String> =
-    elementNames.filterIndexed { index, _ -> !isElementOptional(index) }.toSet()
-
-  private fun SerialDescriptor.elementIndex(name: String): Int =
-    (0 until elementsCount).single { getElementName(it) == name }
 
   private fun schema(path: String) = json.parseToJsonElement(schemaText(path)).jsonObject
 

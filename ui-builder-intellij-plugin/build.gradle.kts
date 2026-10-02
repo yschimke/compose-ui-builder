@@ -147,11 +147,12 @@ intellijPlatformTesting.testIdeUi.register("installedPluginSmoke") {
 
 tasks.named<Test>("test") { useJUnitPlatform() }
 
-// The editor and IntelliJ must validate the same document contract.  The schema belongs beside
-// UiBuilderDocument in the shared export module; copy it into this plugin's resource output rather
-// than maintaining a second checked-in copy that can silently drift.
+// The editor and IntelliJ must validate the same document contract: the schema the export module
+// extracts from the pinned protocol jar, copied into this plugin's resources rather than kept as a
+// second checked-in copy that can silently drift.
 tasks.named<ProcessResources>("processResources") {
-  from(project(":ui-builder-export").layout.projectDirectory.dir("src/commonMain/resources"))
+  dependsOn(":ui-builder-export:extractProtocolSchemas")
+  from(project(":ui-builder-export").layout.buildDirectory.dir("generated/protocolSchemas"))
 }
 
 // `check` must validate the installed archive's descriptor, not only compile against bundled IDE
