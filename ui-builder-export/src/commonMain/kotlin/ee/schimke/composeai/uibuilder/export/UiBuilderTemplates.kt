@@ -113,8 +113,10 @@ enum class WearWidgetSample(
  * `WearWidgetDocument` — the container paints it as the round rect, so the whole squircle is
  * primary and the text sits on it inside the padding.
  *
- * Centring is the child's `alignment`, not the box's: `layout/box` aligns each child by that
- * child's own property, so `contentAlignment` on the box would render nothing.
+ * Centring is the child's `align` modifier, not the box's: `layout/box` aligns each child by that
+ * child's own alignment, and `RemoteBox` takes it as its `contentAlignment`. A modifier rather than
+ * the `alignment` property `m3/text` carries, because the published `remote-m3/remote-text`
+ * declares no such property and every Remote leaf accepts `align`.
  */
 fun helloWidgetUiBuilderDocument(
   designId: String,
@@ -140,17 +142,23 @@ fun helloWidgetUiBuilderDocument(
         ),
         UiBuilderNode(
           id = "hello-text",
-          componentId = "m3/text",
+          componentId = REMOTE_TEXT_COMPONENT_ID,
           properties =
             JsonObject(
               mapOf(
                 "text" to literal("string", JsonPrimitive("Hello, World!")),
                 "color" to colorToken("onPrimary"),
-                "fontSizeSp" to literal("float", JsonPrimitive(20)),
-                "alignment" to literal("enum", JsonPrimitive("center")),
+                "fontSize" to literal("float", JsonPrimitive(20)),
               )
             ),
-          modifiers = JsonArray(emptyList()),
+          modifiers =
+            JsonArray(
+              listOf(
+                JsonObject(
+                  mapOf("type" to JsonPrimitive("align"), "alignment" to JsonPrimitive("center"))
+                )
+              )
+            ),
           slots = emptyMap(),
         ),
       ),
@@ -208,13 +216,13 @@ fun weatherWidgetUiBuilderDocument(
         ),
         UiBuilderNode(
           id = "weather-location",
-          componentId = "m3/text",
+          componentId = REMOTE_TEXT_COMPONENT_ID,
           properties =
             JsonObject(
               mapOf(
                 "text" to literal("string", JsonPrimitive("London")),
                 "color" to literal("color", JsonPrimitive(WEATHER_ON_SUNNY_ARGB)),
-                "fontSizeSp" to literal("float", JsonPrimitive(14)),
+                "fontSize" to literal("float", JsonPrimitive(14)),
                 "textAlign" to literal("enum", JsonPrimitive("center")),
               )
             ),
@@ -223,13 +231,13 @@ fun weatherWidgetUiBuilderDocument(
         ),
         UiBuilderNode(
           id = "weather-reading",
-          componentId = "m3/text",
+          componentId = REMOTE_TEXT_COMPONENT_ID,
           properties =
             JsonObject(
               mapOf(
                 "text" to literal("string", JsonPrimitive("75° ☀️")),
                 "color" to literal("color", JsonPrimitive(WEATHER_ON_SUNNY_ARGB)),
-                "fontSizeSp" to literal("float", JsonPrimitive(36)),
+                "fontSize" to literal("float", JsonPrimitive(36)),
                 "textAlign" to literal("enum", JsonPrimitive("center")),
               )
             ),

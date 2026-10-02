@@ -23,7 +23,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * it would open as an editor full of issues.
  */
 class WearWidgetSampleTemplatesTest {
-  private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
+  private val catalog = CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
   private val reference =
     UiBuilderReducer.replay(
         Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
@@ -31,30 +31,27 @@ class WearWidgetSampleTemplatesTest {
       .document
 
   /**
-   * The widget *contents* validate as ordinary catalog components.
+   * Each sample, host scaffold and all, validates against the `remote-m3` catalog it is offered
+   * for.
    *
-   * Rooted at the surface rather than the host scaffold, because the scaffold belongs to the
-   * `remote-m3` adapter — `:ui-builder-runtime` builds that catalog and owns its tests, and this
-   * module cannot see it without crossing the boundary the runtime's own check exists to hold. What
-   * is in question here is the half an author designs, and every node of it is a plain M3
-   * component, which is exactly the claim: no widget-specific authoring vocabulary was needed.
+   * Its text is `remote-m3/remote-text`, the id the published catalog declares, rather than the
+   * borrowed `m3/text`, which the published catalog does not: a sample naming it was refused as
+   * `UNKNOWN_COMPONENT` on creation.
    */
   @Test
-  fun `the designed contents of both samples validate as ordinary components`() {
+  fun `both samples validate against the remote-m3 catalog`() {
     WearWidgetSample.entries.forEach { sample ->
       val document = sample.document(sample.templateId, reference.catalogPin, reference.environment)
-      val scaffold = document.nodes.getValue(document.roots.single())
-      val contents =
-        document.copy(
-          roots = scaffold.slots.getValue("content"),
-          nodes = document.nodes - scaffold.id,
-        )
 
-      val validation = CapabilityValidator(catalog).validate(contents)
+      val validation = CapabilityValidator(catalog).validate(document)
 
       assertTrue(
         validation.structurallyValid,
         "${sample.templateId}: ${validation.issues.joinToString { it.message }}",
+      )
+      assertTrue(
+        document.nodes.values.none { it.componentId == "m3/text" },
+        "${sample.templateId} borrows m3/text, which the published remote-m3 catalog does not have",
       )
     }
   }
