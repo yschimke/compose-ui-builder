@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.ProvideProductionCatalog
 import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
@@ -45,30 +46,30 @@ import kotlinx.serialization.json.jsonObject
 @Preview(widthDp = 260, heightDp = 120)
 @Composable
 fun HelloWearWidgetSamplePreview() {
-  UiBuilderSurface(
-    document =
-      helloWidgetUiBuilderDocument(
-        designId = "hello-widget-preview",
-        catalogPin = wearWidgetSampleCatalogPin,
-        environment = wearWidgetSampleEnvironment,
-      ),
-    editorOverlay = false,
-  )
+  val document =
+    helloWidgetUiBuilderDocument(
+      designId = "hello-widget-preview",
+      catalogPin = wearWidgetSampleCatalogPin,
+      environment = wearWidgetSampleEnvironment,
+    )
+  ProvideProductionCatalog(document) {
+    UiBuilderSurface(document = document, editorOverlay = false)
+  }
 }
 
 /** The Weather widget from the same sample, in the sunny state its own previews render. */
 @Preview(widthDp = 260, heightDp = 170)
 @Composable
 fun WeatherWearWidgetSamplePreview() {
-  UiBuilderSurface(
-    document =
-      weatherWidgetUiBuilderDocument(
-        designId = "weather-widget-preview",
-        catalogPin = wearWidgetSampleCatalogPin,
-        environment = wearWidgetSampleEnvironment,
-      ),
-    editorOverlay = false,
-  )
+  val document =
+    weatherWidgetUiBuilderDocument(
+      designId = "weather-widget-preview",
+      catalogPin = wearWidgetSampleCatalogPin,
+      environment = wearWidgetSampleEnvironment,
+    )
+  ProvideProductionCatalog(document) {
+    UiBuilderSurface(document = document, editorOverlay = false)
+  }
 }
 
 /**
@@ -96,18 +97,20 @@ fun WearWidgetHostShapesPreview() {
       catalogPin = wearWidgetSampleCatalogPin,
       environment = wearWidgetSampleEnvironment,
     )
-  Row(
-    Modifier.fillMaxSize(),
-    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    WearWidgetHostShape.entries.forEach { shape ->
-      Box(Modifier.weight(1f).fillMaxHeight()) {
-        UiBuilderSurface(
-          document = document,
-          editorOverlay = false,
-          wearWidgetHostShape = shape,
-        )
+  ProvideProductionCatalog(document) {
+    Row(
+      Modifier.fillMaxSize(),
+      horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      WearWidgetHostShape.entries.forEach { shape ->
+        Box(Modifier.weight(1f).fillMaxHeight()) {
+          UiBuilderSurface(
+            document = document,
+            editorOverlay = false,
+            wearWidgetHostShape = shape,
+          )
+        }
       }
     }
   }
@@ -174,16 +177,13 @@ fun WearWidgetCodePanePreview() {
 }
 
 /**
- * The catalog the widget previews author against.
- *
- * The packaged M3 capability catalog, which carries every component these designs use except the
- * two containers — those are synthesised in `:ui-builder-runtime`, which this module may not depend
- * on. The editor draws a node whose component the catalog does not know; only the inspector is
- * poorer for it, and the pane under test is the code one.
+ * The catalog the widget previews author against: the packaged `remote-m3` one, which carries the
+ * widget containers and `remote-m3/remote-text`, drawn by the `wear-m3/text` adapter it names. The
+ * M3 catalog this used to be had neither, so the sample's text drew as "Unsupported component".
  */
 private val wearWidgetPreviewCatalog by lazy {
   CapabilityCatalogParser.parse(
-    checkNotNull(WearWidgetScaffoldSize::class.java.getResource("/m3-catalog-capabilities-v1.json"))
+    checkNotNull(WearWidgetScaffoldSize::class.java.getResource("/remote-m3-capabilities-v1.json"))
       .readText()
   )
 }

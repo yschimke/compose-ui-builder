@@ -38,9 +38,27 @@ fun ProductionUiBuilderPreview() {
 /** The document drawn with its pinned catalog's canvas vocabulary, as a production export is. */
 @Composable
 internal fun ProductionUiBuilderSurface(document: UiBuilderDocument) {
+  ProvideProductionCatalog(document) {
+    UiBuilderSurface(document = document, editorOverlay = false)
+  }
+}
+
+/**
+ * [content] with [document]'s pinned catalog's canvas vocabulary provided, or bare when this
+ * renderer carries no catalog for the pin.
+ *
+ * Separate from [ProductionUiBuilderSurface] so a preview that draws a surface of its own (a host
+ * shape, a size) gets the same adapters: without them a published component such as
+ * `remote-m3/remote-text` draws as "Unsupported component".
+ */
+@Composable
+internal fun ProvideProductionCatalog(
+  document: UiBuilderDocument,
+  content: @Composable () -> Unit,
+) {
   val catalog = productionPreviewCatalog(document)
   if (catalog == null) {
-    UiBuilderSurface(document = document, editorOverlay = false)
+    content()
   } else {
     CompositionLocalProvider(
       LocalUiBuilderCanvasAdapters provides catalog.productionCanvasAdapterIds(),
@@ -52,9 +70,8 @@ internal fun ProductionUiBuilderSurface(document: UiBuilderDocument) {
       LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,
       LocalUiBuilderFrameGeometry provides catalog.frameGeometry,
       LocalUiBuilderCatalogPlatform provides catalog.platform.wireValue,
-    ) {
-      UiBuilderSurface(document = document, editorOverlay = false)
-    }
+      content = content,
+    )
   }
 }
 

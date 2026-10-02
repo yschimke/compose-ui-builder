@@ -363,10 +363,10 @@ private fun remoteMaterial3Components(
  * The properties a published component STATES beyond what its signature derives, transcribed from
  * wear-m3-catalog's `remote-catalog/ui-builder.policy.json`.
  *
- * `RemoteText`'s `style` is a `RemoteTextStyle`, which the derivation drops, yet it is the
- * parameter the component is set through; the published catalog declares it as a role on
- * `RemoteTypography`'s Wear scale and `RemoteContentEmitter` writes it as
- * `RemoteMaterialTheme.typography.<role>`.
+ * `RemoteText`'s `style` is a `RemoteTextStyle` and its `textAlign` a `TextAlign`, which the
+ * derivation drops, yet `style` is the parameter the component is set through; the published
+ * catalog declares it as a role on `RemoteTypography`'s Wear scale and `RemoteContentEmitter`
+ * writes it as `RemoteMaterialTheme.typography.<role>`.
  */
 private fun statedRemoteProperties(componentId: String): List<PropertyCapabilityV1> =
   when (componentId) {
@@ -380,7 +380,14 @@ private fun statedRemoteProperties(componentId: String): List<PropertyCapability
               "A role on `RemoteTypography`'s Wear type scale, written as " +
                 "`style = RemoteMaterialTheme.typography.<role>`."
           }
-          .build()
+          .build(),
+        PropertyCapabilityV1.Builder("textAlign", JsonPrimitive("string"))
+          .also {
+            it.required = false
+            it.allowedValues = listOf("start", "center", "end", "justify").map(::JsonPrimitive)
+            it.notes = "Written as `textAlign = TextAlign.<Value>`."
+          }
+          .build(),
       )
     else -> emptyList()
   }

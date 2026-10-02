@@ -4202,6 +4202,18 @@
                     "name": "style",
                     "notes": "A role on `RemoteTypography`'s Wear type scale, written as `style = RemoteMaterialTheme.typography.<role>`.",
                     "required": false
+                },
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "justify"
+                    ],
+                    "jsonType": "string",
+                    "name": "textAlign",
+                    "notes": "Written as `textAlign = TextAlign.<Value>`.",
+                    "required": false
                 }
             ],
             "role": "Leaf",
