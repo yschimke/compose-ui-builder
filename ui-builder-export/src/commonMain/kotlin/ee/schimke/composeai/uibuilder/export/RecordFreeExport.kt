@@ -46,6 +46,12 @@ object RecordFreeExport {
     generate(document, packageName, packComponents = packComponents, assets = assets)?.let {
       return it
     }
+    wearRootRefusal(platform, document.roots, document.nodes.values.map { it.componentId }) {
+        document.nodes[it]?.componentId
+      }
+      ?.let {
+        return it
+      }
     if (
       !UiBuilderBuildFeatures.remoteCompose || platform != UiBuilderCatalogPlatform.REMOTE_COMPOSE
     )
@@ -68,6 +74,12 @@ object RecordFreeExport {
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
   ): Generated? {
     if (!applies(document, platform)) return null
+    wearRootRefusal(platform, document.roots, document.nodes.values.map { it.componentId }) {
+        document.nodes[it]?.componentId
+      }
+      ?.let {
+        return it
+      }
     if (platform == UiBuilderCatalogPlatform.A2UI) {
       // What the candidate document cannot carry, refused here rather than dropped by the
       // conversion below: A2UI states accessibility and visibility as properties of its own
@@ -120,7 +132,54 @@ object RecordFreeExport {
     platform == UiBuilderCatalogPlatform.A2UI ||
       (UiBuilderBuildFeatures.remoteCompose &&
         platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE) ||
-      document.isRecordFree()
+      document.isRecordFree() ||
+      misplacesWearContent(platform, document.nodes.values.map { it.componentId })
+
+  /**
+   * Why a Wear design that neither Wear emitter takes does not export, or null when this is not
+   * that design.
+   *
+   * Both emitters route on the root ([ROOT_ONLY_COMPONENT_IDS]), so a `wear-m3/button` dropped onto
+   * an empty design and left as its root is written by neither — and used to fall through to the
+   * record-driven generator, which has no record for any component of a record-free catalog and
+   * answered "no component `wear-m3/button` in this catalog" once per component. All true, none of
+   * it the cause, and nothing in it said what to do. The cause is the root, so it is one reason
+   * that says so and replaces those per-component ones: they were the same symptom repeated, and a
+   * designer reading them was being told the catalog lacked the button they had just drawn from it.
+   *
+   * Answered here, where the routing is decided, so the served export, the editor's Code pane and
+   * Issues panel, and the MCP export — every caller of [generate] with a platform — say the same
+   * sentence. Claimed only on a [UiBuilderCatalogPlatform.WEAR] catalog and only for a design
+   * holding a component of a record-free catalog ([CATALOG_SYSTEM_IDS]): one holding nothing but
+   * shared layout or pack components is still the record-driven generator's question, because a
+   * record can back those.
+   */
+  private fun wearRootRefusal(
+    platform: UiBuilderCatalogPlatform,
+    roots: List<String>,
+    componentIds: Collection<String>,
+    componentOf: (nodeId: String) -> String?,
+  ): Generated.Refused? {
+    if (!misplacesWearContent(platform, componentIds)) return null
+    if (roots.singleOrNull()?.let(componentOf) in ROOT_ONLY_COMPONENT_IDS) return null
+    val root =
+      roots.singleOrNull()?.let { "the root is `${componentOf(it) ?: it}`" }
+        ?: "this design has ${roots.size} roots"
+    return Generated.Refused(
+      listOf(
+        "$root, but a Wear design exports only as a Wear screen or a Wear widget: put its " +
+          "content inside a `${WearScreenCodeExporter.SCAFFOLD}` (or start from the " +
+          "\"wear-screen\" template), or make the root a Wear widget container"
+      )
+    )
+  }
+
+  private fun misplacesWearContent(
+    platform: UiBuilderCatalogPlatform,
+    componentIds: Collection<String>,
+  ): Boolean =
+    platform == UiBuilderCatalogPlatform.WEAR &&
+      componentIds.any { it.substringBefore('/') in CATALOG_SYSTEM_IDS }
 
   /**
    * The catalog system ids whose designs export without a component record.
@@ -249,6 +308,64 @@ object RecordFreeExport {
         )
       }
   }
+
+  /**
+   * The tagged overloads above, also answering a Wear design that neither Wear emitter takes.
+   *
+   * The server's **native preview** lane needs [tagNodes], so it cannot use the platform overloads
+   * — and without a platform the two overloads above cannot tell a `wear-m3` design from any other,
+   * so a bare `wear-m3/button` root fell through to the record-driven generator and that lane
+   * reported "no component `wear-m3/button` in this catalog" per component while the export said to
+   * wrap the content in a screen. Passing the catalog's [platform] gets the export's sentence.
+   *
+   * Separate overloads with [platform] last and required rather than a defaulted parameter on the
+   * two above, for binary compatibility (see [nativePreview]): a default argument would replace
+   * their JVM descriptors, and a host compiled against the previous release would fail with
+   * `NoSuchMethodError`. Null behaves exactly as the overloads above.
+   *
+   * Only the Wear root refusal is added: A2UI and inline Remote Compose content still route through
+   * the platform overloads, which take no [tagNodes] because neither writes test tags.
+   */
+  fun generate(
+    document: UiBuilderDocument,
+    packageName: String? = null,
+    tagNodes: Boolean = false,
+    previews: Boolean = !tagNodes,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    platform: UiBuilderCatalogPlatform?,
+  ): Generated? =
+    generate(document, packageName, tagNodes, previews, packComponents, assets)
+      ?: platform?.let {
+        wearRootRefusal(
+          it,
+          document.roots,
+          document.nodes.values.map { node -> node.componentId },
+        ) { id ->
+          document.nodes[id]?.componentId
+        }
+      }
+
+  /** As above, for the saved document the server holds. */
+  fun generate(
+    document: DesignDocumentV1,
+    packageName: String? = null,
+    tagNodes: Boolean = false,
+    previews: Boolean = !tagNodes,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    platform: UiBuilderCatalogPlatform?,
+  ): Generated? =
+    generate(document, packageName, tagNodes, previews, packComponents, assets)
+      ?: platform?.let {
+        wearRootRefusal(
+          it,
+          document.roots,
+          document.nodes.values.map { node -> node.componentId },
+        ) { id ->
+          document.nodes[id]?.componentId
+        }
+      }
 
   /**
    * Whether [document] generates through an emitter here rather than through `ScreenGenerator`.
