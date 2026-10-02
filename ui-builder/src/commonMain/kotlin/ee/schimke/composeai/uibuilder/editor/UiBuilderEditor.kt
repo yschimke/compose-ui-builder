@@ -388,6 +388,14 @@ fun UiBuilderEditor(
   /** Fetches one published component's body and digest, or null; null where there is no library. */
   loadLibrarySymbol: (suspend (EditorLibraryComponent) -> EditorLibrarySymbol?)? = null,
   /**
+   * Publishes one of this design's components to the project library; null where there is no
+   * library to publish to, which hides the button. [onLibraryChanged] is told after a publish, so
+   * the host can read the listing again.
+   */
+  publishLibraryComponent: (suspend (EditorLibraryPublication) -> EditorLibraryPublishResult)? =
+    null,
+  onLibraryChanged: () -> Unit = {},
+  /**
    * Device frames the Screen inspector offers, supplied by the host because `wasmJs` cannot resolve
    * the JVM-only render catalog they come from. Empty (the default) simply hides the menu and
    * leaves the raw fields, so a host that has no catalog to hand still gets a working inspector.
@@ -2302,6 +2310,48 @@ fun UiBuilderEditor(
       onFlatten = ::flattenCurrentReference,
       catalogItems = reducer.catalogItems(""),
       localComponents = reducer.localComponents(state),
+      onPublishComponent =
+        publishLibraryComponent?.let { publish ->
+          { componentKey ->
+            val publication = reducer.libraryPublication(state, componentKey)
+            if (publication == null) {
+              say(
+                reducer.libraryPublicationRefusal(state, componentKey)
+                  ?: "This component cannot be published"
+              )
+            } else {
+              editorScope.launch {
+                say("Publishing ${publication.title} to the project library")
+                when (
+                  val result = runCatching {
+                    publish(publication)
+                  }
+                    .getOrElse {
+                      EditorLibraryPublishResult.Refused(
+                        "The project library could not be reached: ${it.message ?: it}"
+                      )
+                    }
+                ) {
+                  is EditorLibraryPublishResult.Published -> {
+                    dispatch(
+                      UiBuilderEditorEvent.RecordLibrarySource(
+                        publication.componentKey,
+                        EditorLibrarySource(
+                          publication.system,
+                          publication.componentId,
+                          result.digest,
+                        ),
+                      )
+                    )
+                    onLibraryChanged()
+                    say("Published ${publication.title} to the project library")
+                  }
+                  is EditorLibraryPublishResult.Refused -> say(result.message)
+                }
+              }
+            }
+          }
+        },
       onPlaceComponent = { componentId ->
         captureSequence += 1
         captureRequest = ReferenceCaptureRequest(componentId, captureSequence)

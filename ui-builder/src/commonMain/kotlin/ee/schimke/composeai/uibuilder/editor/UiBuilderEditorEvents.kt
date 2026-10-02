@@ -280,6 +280,13 @@ sealed interface UiBuilderEditorEvent {
     val afterNodeId: String? = null,
   ) : UiBuilderEditorEvent
 
+  /**
+   * Record that the project library now holds [componentKey] as [source] — what a publish answers
+   * with — so the design tracks it as a reference rather than a copy, and drift is reported.
+   */
+  data class RecordLibrarySource(val componentKey: String, val source: EditorLibrarySource) :
+    UiBuilderEditorEvent
+
   /** Rename a component — the composable the export writes. */
   data class RenameLocalComponent(val componentKey: String, val name: String) : UiBuilderEditorEvent
 

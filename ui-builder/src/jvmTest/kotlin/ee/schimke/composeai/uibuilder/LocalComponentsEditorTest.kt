@@ -4,6 +4,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.test.*
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorLibraryPublishResult
+import ee.schimke.composeai.uibuilder.editor.EditorLibrarySource
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
@@ -85,6 +87,46 @@ class LocalComponentsEditorTest {
       capture("after")
       onAllNodesWithText("This design").onFirst().assertExists()
       onAllNodesWithText("InboxEmail", substring = true).onFirst().assertExists()
+    }
+
+  /**
+   * The inspector of a placement on a host with a project library: the publish offer, then — once
+   * the library answered with a version — where the library holds it and the update offer.
+   */
+  @Test
+  fun `a placement's inspector offers to publish its component to the project library`() {
+    var state = reducer.initial(inbox(), "email-1")
+    state = reducer.reduce(state, UiBuilderEditorEvent.MakeComponent("Inbox email"))
+    val placement = state.selection.single()
+    publishCapture(state.document, placement, "publish-before")
+    state =
+      reducer.reduce(
+        state,
+        UiBuilderEditorEvent.RecordLibrarySource(
+          "inbox-email",
+          EditorLibrarySource("m3-catalog", "inbox-email", "sha256:one"),
+        ),
+      )
+    assertIs<CommandOutcome.Accepted>(state.lastOutcome, "${state.lastOutcome}")
+    publishCapture(state.document, placement, "publish-after")
+  }
+
+  private fun publishCapture(document: UiBuilderDocument, selected: String, name: String) =
+    runDesktopComposeUiTest(width = 1600, height = 1050) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document,
+            catalog,
+            initialSelectedNodeId = selected,
+            initialInspectorOpen = true,
+            initialComponentsOpen = true,
+            publishLibraryComponent = { EditorLibraryPublishResult.Published("sha256:one") },
+          )
+        }
+      }
+      capture(name)
+      onAllNodesWithText("library", substring = true).onFirst().assertExists()
     }
 
   @Test

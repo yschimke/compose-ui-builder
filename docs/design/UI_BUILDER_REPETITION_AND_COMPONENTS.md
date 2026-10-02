@@ -343,10 +343,27 @@ after that, the version the design already holds is placed again — a newer dig
 is drift for the Issues panel, never a second copy or a silent redraw. The web host reads both routes
 with the builder's own credentials (`ComponentLibraryHost.kt`); a local session has no library.
 
+**Publishing to the project library — built.** A placement's inspector offers "Publish to project
+library" wherever the host serves one. It sends the one-component document a project would commit —
+the declaration under the id it publishes as, its body as the only root, the design's catalog pin —
+to `PUT /api/ui-builder/v1/component-library/{system}/{componentId}`, and records the digest the
+server answers as the component's `source`, so the design that published it holds a reference like
+any design that imports it. A component that was imported or published before goes back under the
+same id, naming the digest it replaces; the server answers a conflict when somebody published in
+between, and the design keeps its copy. A body that places another component is refused before it
+is sent, because the library refuses it on read.
+
+![The inspector of a placement, offering to publish](evidence/ui-builder-local-components/publish-before.png)
+![The same placement once published: where the library holds it, and the update offer](evidence/ui-builder-local-components/publish-after.png)
+
+Where it lands is the host, in the same `ui-builder/components/` layout a repository holds (§3):
+**two homes, the way designs have two**. The host is where a component lives while it moves; the
+repository is where it settles, by copying the host's two files into it. A committed component is
+read first and shadows the host's copy, and the host refuses a publish over an id the project has
+committed — that one is changed in the repository.
+
 **Not built**: a contracts mutation that edits a placement's arguments in place (so an argument
-edit keeps the placement's id); publishing a design's own component to the library from the editor
-(the library is written by committing `ui-builder/components/`, and the server has no write route);
-and taking a newer library version into a design that drifted.
+edit keeps the placement's id); and taking a newer library version into a design that drifted.
 
 It composes with 1b rather than duplicating it: a loop's template is an instance with one argument
 per row field. Which is why this is worth building **before** data-driven loops, not after.
@@ -360,7 +377,7 @@ two halves as [`UI_BUILDER_PROJECT_DESIGNS.md`](UI_BUILDER_PROJECT_DESIGNS.md).
 
 ```text
 ui-builder/designs/index.json        the designs a project has (built)
-ui-builder/components/index.json     the components a project has (proposed)
+ui-builder/components/index.json     the components a project has (built)
 ui-builder/components/<file>.json    one component symbol per file
 ```
 
@@ -369,9 +386,10 @@ A local directory (uncached, because it is the half that changes under you) and 
 palette as `project/<id>`.
 
 **Built so far**, in `ServeUiBuilderComponentLibrary`: both sources, the index and symbol reads,
-both honesty rules below, admin routes and the builder's own read routes — a listing and one symbol
-with its digest and body — and the editor's "Project library" shelf, which imports a symbol with its
-source recorded (§2a).
+both honesty rules below, admin routes and the builder's own routes — a listing, one symbol with its
+digest and body, and a publish into the host's own half (`ServeUiBuilderComponentStore`, stored in
+this same layout and read back as one more directory after the project's) — and the editor's
+"Project library" shelf and publish (§2a).
 A published symbol file is an ordinary `DesignDocumentV1` declaring exactly one component plus the
 nodes its body is made of, so there is no second wire type, no second validator, and no contracts
 release in the path. The drift report — a later read disagreeing with the digest a design
@@ -404,10 +422,10 @@ only has to carry a symbol during the phase where it is still moving — the fai
    draws a second copy.
 3. **Component symbols and instances**, in-document — built: canvas, export, and the editor's
    make / place / edit / swap (§2a).
-4. **`ui-builder/components/`** — the library and its two rules are built on the server
-   (`ServeUiBuilderComponentLibrary`, listed and fetched under
-   `/admin/ui-builder/component-library`); the editor does not yet import from it. Graduation still
-   needs nothing new.
+4. **`ui-builder/components/`** — built: the library and its two rules on the server
+   (`ServeUiBuilderComponentLibrary`), the host-held half editors publish into
+   (`ServeUiBuilderComponentStore`), and the editor's import, drift report and publish (§2a).
+   Graduation still needs nothing new.
 5. **Data-driven loops** — built on the canvas and in the editor's export lane. Two emitters are
    still refused by name: `items(rows, key = { … })` for a loop inside a lazy container, and the
    record-driven lane the code pane and the server use.

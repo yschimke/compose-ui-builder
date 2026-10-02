@@ -384,6 +384,8 @@ class UiBuilderEditorReducer(
         insertLibraryComponent(state, event.symbol, event.target, event.afterNodeId)
       is UiBuilderEditorEvent.RenameLocalComponent ->
         renameLocalComponent(state, event.componentKey, event.name)
+      is UiBuilderEditorEvent.RecordLibrarySource ->
+        recordLibrarySource(state, event.componentKey, event.source)
       is UiBuilderEditorEvent.ReplaceLocalComponent ->
         replaceLocalComponent(state, event.componentKey, event.catalogComponentId)
       is UiBuilderEditorEvent.SetStateVariable ->
@@ -4783,6 +4785,29 @@ class UiBuilderEditorReducer(
       selectionAfter = state.selectedNodeId,
     )
   }
+
+  private fun recordLibrarySource(
+    state: UiBuilderEditorState,
+    componentKey: String,
+    source: EditorLibrarySource,
+  ): UiBuilderEditorState {
+    val declaration = state.document.components[componentKey] as? JsonObject ?: return state
+    val recorded = withLibrarySource(declaration, source)
+    if (recorded == declaration) return state
+    return state.apply(
+      state.operationSequence + 1,
+      listOf(DesignOperation.DeclareComponent(componentKey, recorded)),
+      selectionAfter = state.selectedNodeId,
+    )
+  }
+
+  /** What a publish of [componentKey] would send, or null with [libraryPublicationRefusal]. */
+  fun libraryPublication(state: UiBuilderEditorState, componentKey: String) =
+    state.document.libraryPublication(componentKey)
+
+  /** Why [componentKey] cannot be published as it stands, or null when it can. */
+  fun libraryPublicationRefusal(state: UiBuilderEditorState, componentKey: String) =
+    state.document.libraryPublicationRefusal(componentKey)
 
   private fun renameComponentParameter(
     state: UiBuilderEditorState,
