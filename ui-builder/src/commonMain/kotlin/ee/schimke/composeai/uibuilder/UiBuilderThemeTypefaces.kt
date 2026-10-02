@@ -3,35 +3,10 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.text.font.FontFamily
 import androidx.wear.compose.material3.MaterialTheme as WearMaterialTheme
 import androidx.wear.compose.material3.Typography as WearTypography
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
-
-/**
- * The family each type-scale role is drawn in under a theme host, by role name, for the groups
- * whose family has loaded.
- *
- * [families] is what the host names, by group ([ThemeTypefaces.families]). Each family is asked of
- * the page's font registry here, where it is read, and the result is snapshot state: the canvas
- * draws in the platform face until a family arrives and recomposes in it when it does. A family
- * that never loads — no network, not a Google Fonts family — stays on the platform face, which is
- * what the design looked like before it named one.
- */
-@Composable
-internal fun rememberThemeRoleFamilies(
-  families: Map<ThemeTypefaces.Group, String>,
-  wear: Boolean,
-): Map<String, FontFamily> {
-  if (families.isEmpty()) return emptyMap()
-  val registry = LocalUiBuilderFontRegistry.current
-  LaunchedEffect(registry, families) { families.values.toSet().forEach { registry?.request(it) } }
-  val loaded = LocalUiBuilderFontFamilies.current
-  val byRole =
-    if (wear) ThemeTypefaces.wearRoleFamilies(families) else ThemeTypefaces.m3RoleFamilies(families)
-  return byRole.mapNotNull { (role, name) -> loaded[name]?.let { role to it } }.toMap()
-}
 
 /**
  * Draw [content] under both type scales with the theme host's typefaces applied — Material 3's for
