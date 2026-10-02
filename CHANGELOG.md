@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.74.0](https://github.com/yschimke/compose-ui-builder/compare/v3.73.0...v3.74.0) (2026-10-02)
+
+
+### Features
+
+* **ui-builder:** publish a design's component to the project library ([#393](https://github.com/yschimke/compose-ui-builder/issues/393)) ([20b33d9](https://github.com/yschimke/compose-ui-builder/commit/20b33d94c225dbfd41cadcf81050f39610c5b4d8))
+* **ui-builder:** take a newer library version of an imported component ([#397](https://github.com/yschimke/compose-ui-builder/issues/397)) ([55b5dc5](https://github.com/yschimke/compose-ui-builder/commit/55b5dc5d2852019f18149e7e462d8cf3fb9ca041))
+
+
+### Bug Fixes
+
+* **ci:** skip the release PR pass while a release is in flight ([#398](https://github.com/yschimke/compose-ui-builder/issues/398)) ([7ea6fec](https://github.com/yschimke/compose-ui-builder/commit/7ea6fec2ebac3bd537583b2a71dab1330387efd7))
+* **ui-builder:** export Wear layout, painting modifiers and colours the canvas draws ([#401](https://github.com/yschimke/compose-ui-builder/issues/401)) ([4e9bc98](https://github.com/yschimke/compose-ui-builder/commit/4e9bc98101c626e7640f4f52078d97b3fb024630))
+* **ui-builder:** report STALE_* on every command of a synced offline run ([#395](https://github.com/yschimke/compose-ui-builder/issues/395)) ([9d29f4d](https://github.com/yschimke/compose-ui-builder/commit/9d29f4d6868ea0d2a0d7e6c1eb516f09fe00e045))
+* **ui-builder:** seed the adaptive Wear widget with remote-m3/remote-text ([#396](https://github.com/yschimke/compose-ui-builder/issues/396)) ([fa63461](https://github.com/yschimke/compose-ui-builder/commit/fa6346151e685c0add2932532fae5606b018c753))
+* **ui-builder:** seed the Hello and Weather widget samples with remote-m3/remote-text ([#399](https://github.com/yschimke/compose-ui-builder/issues/399)) ([b1c38ea](https://github.com/yschimke/compose-ui-builder/commit/b1c38ea6d0b46cabb20fba25b86270f3a8f88329))
+
 ## [3.73.0](https://github.com/yschimke/compose-ui-builder/compare/v3.72.0...v3.73.0) (2026-10-02)
 
 
