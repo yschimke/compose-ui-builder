@@ -35,8 +35,10 @@ import kotlinx.serialization.json.JsonPrimitive
  * - `remote-m3/remote-horizontal-page-indicator` and `remote-m3/remote-vertical-page-indicator`
  *   take a pager's state.
  *
- * `remote-m3/remote-text` is left out because `m3/text` already offers text on this palette and is
- * written as the same `RemoteText`; a second Text beside it would be two answers to one question.
+ * `remote-m3/remote-text` is offered beside `m3/text`: both are written as the same `RemoteText`,
+ * but the published catalog declares only the former, so a design or template that must open
+ * against both catalogs names `remote-m3/remote-text`. `m3/text` stays for the designs already
+ * stored against it.
  */
 public object RemoteMaterial3 {
 
@@ -279,6 +281,16 @@ public object RemoteMaterial3 {
         canvasProperties = emptyMap(),
         canvasSlots = emptyMap(),
         canvasDefaults = mapOf("variant" to wrapped("enum", "standard")),
+      ),
+      component(
+        id = REMOTE_TEXT_COMPONENT_ID,
+        record = "remote-catalog/androidx.wear.compose.remote.material3.RemoteTextKt.RemoteText",
+        displayName = "Text",
+        group = "Text",
+        canvas = "wear-m3/text",
+        canvasProperties = mapOf("fontSizeSp" to "fontSize"),
+        canvasSlots = emptyMap(),
+        canvasDefaults = emptyMap(),
       ),
       component(
         id = "remote-m3/remote-title-card",

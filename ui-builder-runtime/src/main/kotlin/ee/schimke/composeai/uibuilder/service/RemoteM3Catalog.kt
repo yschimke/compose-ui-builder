@@ -4,6 +4,7 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.discovery.TargetParameter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.REMOTE_TEXT_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
@@ -333,7 +334,7 @@ private fun remoteMaterial3Components(
         it.properties =
           record.parameters.mapNotNull { parameter ->
             remoteMaterial3Property(record.symbol.name, parameter)
-          }
+          } + statedRemoteProperties(component.componentId)
         it.modifierCapabilities = template.modifierCapabilities.remoteAuthorableModifiers()
         it.wasm =
           supportedWasm
@@ -357,6 +358,55 @@ private fun remoteMaterial3Components(
       }
       .build()
   }
+
+/**
+ * The properties a published component STATES beyond what its signature derives, transcribed from
+ * wear-m3-catalog's `remote-catalog/ui-builder.policy.json`.
+ *
+ * `RemoteText`'s `style` is a `RemoteTextStyle`, which the derivation drops, yet it is the
+ * parameter the component is set through; the published catalog declares it as a role on
+ * `RemoteTypography`'s Wear scale and `RemoteContentEmitter` writes it as
+ * `RemoteMaterialTheme.typography.<role>`.
+ */
+private fun statedRemoteProperties(componentId: String): List<PropertyCapabilityV1> =
+  when (componentId) {
+    REMOTE_TEXT_COMPONENT_ID ->
+      listOf(
+        PropertyCapabilityV1.Builder("style", JsonPrimitive("string"))
+          .also {
+            it.required = false
+            it.allowedValues = REMOTE_TYPOGRAPHY_ROLES.map(::JsonPrimitive)
+            it.notes =
+              "A role on `RemoteTypography`'s Wear type scale, written as " +
+                "`style = RemoteMaterialTheme.typography.<role>`."
+          }
+          .build()
+      )
+    else -> emptyList()
+  }
+
+/** `RemoteTypography`'s roles, as the published `remote-m3/remote-text` lists them. */
+private val REMOTE_TYPOGRAPHY_ROLES =
+  listOf(
+    "displayLarge",
+    "displayMedium",
+    "displaySmall",
+    "titleLarge",
+    "titleMedium",
+    "titleSmall",
+    "labelLarge",
+    "labelMedium",
+    "labelSmall",
+    "bodyLarge",
+    "bodyMedium",
+    "bodySmall",
+    "bodyExtraSmall",
+    "numeralExtraLarge",
+    "numeralLarge",
+    "numeralMedium",
+    "numeralSmall",
+    "numeralExtraSmall",
+  )
 
 /** One parameter of a Remote Material 3 component as a property, or null for one it cannot be. */
 private fun remoteMaterial3Property(
