@@ -47,6 +47,10 @@ data class VendoredFontManifest(val version: Int = 1, val families: List<Vendore
 
 private val manifestJson = Json { ignoreUnknownKeys = true }
 
+/** One family name per line; blank lines and `#` comments skipped. */
+fun parseFamilyList(text: String): List<String> =
+  text.lineSequence().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }.toList()
+
 fun parseVendoredFontManifest(text: String): VendoredFontManifest =
   manifestJson.decodeFromString(VendoredFontManifest.serializer(), text)
 
@@ -81,6 +85,11 @@ class UiBuilderFontRegistry(
   private val readManifest: suspend () -> String,
   private val readFont: suspend (file: String) -> ByteArray,
   private val readRemoteFont: (suspend (family: String, weight: Int) -> ByteArray)? = null,
+  /**
+   * The names [readRemoteFont] can be asked for, one per line (`#` lines are comments), for a
+   * picker to offer; null for a host with no font service, which offers the manifest alone.
+   */
+  private val readRemoteFamilies: (suspend () -> String)? = null,
 ) {
   /** The manifest's text, for a host that reads it for something else too (Wear's device face). */
   suspend fun readManifestText(): String = readManifest()
@@ -91,6 +100,25 @@ class UiBuilderFontRegistry(
   /** The families that can be asked for; empty until the manifest has loaded. */
   var families: List<VendoredFontFamily> by mutableStateOf(emptyList())
     private set
+
+  /**
+   * Every family [readRemoteFont] can fetch, by name, once [loadRemoteFamilies] has read them;
+   * empty before, and for a host with no font service. The picker searches these.
+   */
+  var remoteFamilies: List<String> by mutableStateOf(emptyList())
+    private set
+
+  private var remoteFamiliesRequested = false
+
+  /** Read the list behind [remoteFamilies], once; a failure leaves it empty. */
+  fun loadRemoteFamilies() {
+    val read = readRemoteFamilies ?: return
+    if (remoteFamiliesRequested) return
+    remoteFamiliesRequested = true
+    scope.launch {
+      remoteFamilies = runCatching { parseFamilyList(read()) }.getOrDefault(emptyList())
+    }
+  }
 
   /** Families that have finished loading, by name. */
   val loaded: SnapshotStateMap<String, FontFamily> = mutableStateMapOf()

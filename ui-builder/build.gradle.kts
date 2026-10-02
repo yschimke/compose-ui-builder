@@ -453,7 +453,7 @@ tasks.register<Sync>("wasmFrontendDist") {
     )
   }
   from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {
-    include("*.ttf", "fonts.json", "*OFL.txt", "LICENSE.txt")
+    include("*.ttf", "fonts.json", "google-fonts.txt", "*OFL.txt", "LICENSE.txt")
     into("fonts")
   }
   into(layout.buildDirectory.dir("wasmDist"))

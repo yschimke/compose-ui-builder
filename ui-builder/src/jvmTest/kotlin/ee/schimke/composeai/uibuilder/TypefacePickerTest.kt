@@ -16,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runDesktopComposeUiTest
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -26,7 +27,10 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.editor.fontFamilyChoices
+import ee.schimke.composeai.uibuilder.editor.propertyText
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.editor.themeHost
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.ResetTypefaceEnvironmentChangeV1
@@ -297,6 +301,114 @@ class TypefacePickerTest {
       onAllNodesWithText("Default").onFirst().performClick()
       waitForIdle()
       runOnIdle { assertNull(assertNotNull(latest).document.screenEnvironmentSettings().typeface) }
+    }
+
+  /** The disk registry with a small font service: these families, every one drawn in Orbitron. */
+  private fun serviceRegistry(scope: CoroutineScope) =
+    UiBuilderFontRegistry(
+      scope = scope,
+      readManifest = { File(fontsDir, "fonts.json").readText() },
+      readFont = { File(fontsDir, it).readBytes() },
+      readRemoteFont = { _, weight -> File(fontsDir, "orbitron-$weight.ttf").readBytes() },
+      readRemoteFamilies = { "# test catalogue\nExo 2\nMichroma\nInter\nMajor Mono Display\n" },
+    )
+
+  @Test
+  fun `the picker's choices put vendored faces first and search the service's`() {
+    val vendored = parseVendoredFontManifest(File(fontsDir, "fonts.json").readText()).families
+    val remote = listOf("Exo 2", "Inter", "Michroma", "Major Mono Display")
+
+    val all = fontFamilyChoices(vendored, remote, "")
+    assertEquals(vendored, all.vendored)
+    assertEquals(listOf("Exo 2", "Michroma", "Major Mono Display"), all.remote, "Inter is vendored")
+    assertNull(all.custom)
+
+    val searched = fontFamilyChoices(vendored, remote, "mi")
+    assertEquals(listOf("Michroma"), searched.remote)
+    assertTrue(searched.vendored.none { "mi" !in it.name.lowercase() })
+    assertEquals("Not A Font", fontFamilyChoices(vendored, remote, " Not A Font ").custom)
+    assertNull(fontFamilyChoices(vendored, remote, "michroma").custom, "listed, in any case")
+
+    val capped = fontFamilyChoices(vendored, List(100) { "Family $it" }, "family", limit = 10)
+    assertEquals(10, capped.remote.size)
+    assertEquals(100, capped.remoteMatches)
+  }
+
+  @Test
+  fun `the picker searches the Google Fonts catalogue and commits the family picked`() =
+    runDesktopComposeUiTest(width = 1400, height = 900) {
+      var latest: UiBuilderEditorState? = null
+      var registry: UiBuilderFontRegistry? = null
+      setContent {
+        val scope = rememberCoroutineScope()
+        val fonts = remember { serviceRegistry(scope).also { registry = it } }
+        MaterialTheme {
+          ProvideUiBuilderFonts(fonts) {
+            UiBuilderEditor(
+              document = document,
+              catalog = catalog,
+              chrome = PointerTestUiBuilderChrome,
+              initialInspectorMode = EditorInspectorMode.Screen,
+              initialInspectorOpen = true,
+              initialCanvasZoom = 1f,
+              onStateChanged = { latest = it },
+            )
+          }
+        }
+      }
+      waitUntil(timeoutMillis = 10_000) { assertNotNull(registry).families.isNotEmpty() }
+      onNodeWithContentDescription("Typeface").performScrollTo().performClick()
+      waitUntil(timeoutMillis = 10_000) { assertNotNull(registry).remoteFamilies.isNotEmpty() }
+      onNodeWithContentDescription("Search typefaces").performTextInput("mich")
+      // A query's first results load their face, so the option is drawn in it.
+      waitUntil(timeoutMillis = 10_000) { "Michroma" in assertNotNull(registry).loaded }
+      onNodeWithText("Michroma").performClick()
+      waitForIdle()
+      runOnIdle {
+        assertEquals(
+          "Michroma",
+          assertNotNull(latest).document.screenEnvironmentSettings().typeface,
+        )
+      }
+    }
+
+  @Test
+  fun `the theme panel sets each typeface group on the root surface`() =
+    runDesktopComposeUiTest(width = 1400, height = 1200) {
+      val host = assertNotNull(document.themeHost(), "the fixture is rooted on a Material surface")
+      var latest: UiBuilderEditorState? = null
+      var registry: UiBuilderFontRegistry? = null
+      setContent {
+        val scope = rememberCoroutineScope()
+        val fonts = remember { serviceRegistry(scope).also { registry = it } }
+        MaterialTheme {
+          ProvideUiBuilderFonts(fonts) {
+            UiBuilderEditor(
+              document = document,
+              catalog = catalog,
+              chrome = PointerTestUiBuilderChrome,
+              initialInspectorMode = EditorInspectorMode.Theme,
+              initialInspectorOpen = true,
+              initialCanvasZoom = 1f,
+              onStateChanged = { latest = it },
+            )
+          }
+        }
+      }
+      waitUntil(timeoutMillis = 10_000) { assertNotNull(registry).families.isNotEmpty() }
+      onNodeWithContentDescription("Display typeface").performScrollTo().performClick()
+      waitUntil(timeoutMillis = 10_000) { assertNotNull(registry).remoteFamilies.isNotEmpty() }
+      onNodeWithContentDescription("Search typefaces").performTextInput("Major")
+      onNodeWithText("Major Mono Display").performClick()
+      waitForIdle()
+      onNodeWithContentDescription("Body typeface").performScrollTo().performClick()
+      onNodeWithText("Space Grotesk").performClick()
+      waitForIdle()
+      runOnIdle {
+        val root = assertNotNull(latest).document.nodes.getValue(host.id)
+        assertEquals("Major Mono Display", root.propertyText("themeDisplayTypeface"))
+        assertEquals("Space Grotesk", root.propertyText("themeBodyTypeface"))
+      }
     }
 
   @Test
