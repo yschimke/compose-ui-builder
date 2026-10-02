@@ -88,7 +88,16 @@ internal fun DesignSubmissionV1.rebasedOnto(
   baseRevision: Long,
 ): DesignSubmissionV1 =
   when (this) {
-    is DesignCommandV1 -> copy(designId = designId, baseRevision = baseRevision)
+    // The staleness base is dropped: it names a revision of the branch, which means nothing on the
+    // parent, and the merge passes the fork window for every command instead.
+    is DesignCommandV1 ->
+      newBuilder()
+        .also {
+          it.designId = designId
+          it.baseRevision = baseRevision
+          it.stalenessBaseRevision = null
+        }
+        .build()
     is UndoCommandV1 -> copy(designId = designId, baseRevision = baseRevision)
     is RedoCommandV1 -> copy(designId = designId, baseRevision = baseRevision)
   }

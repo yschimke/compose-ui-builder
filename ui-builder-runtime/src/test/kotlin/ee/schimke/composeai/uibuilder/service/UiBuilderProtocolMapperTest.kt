@@ -65,7 +65,8 @@ class UiBuilderProtocolMapperTest {
           targetCatalogPin = document().catalogPin.copy(catalogRevision = "next"),
         ),
         ApplyOperationRequestV1(
-          DesignCommandV1("design", "batch", trusted.actorId, "browser", 4, mutations)
+          DesignCommandV1.Builder("design", "batch", trusted.actorId, "browser", 4, mutations)
+            .build()
         ),
         ApplyOperationRequestV1(
           UndoCommandV1("design", "undo", trusted.actorId, "browser", 5, "batch")
@@ -87,6 +88,50 @@ class UiBuilderProtocolMapperTest {
       assertEquals(trusted, mapped.call.actor)
       assertEquals(request, UiBuilderProtocolMapper.toProtocolRequest(mapped.call))
     }
+  }
+
+  @Test
+  fun `a command's staleness base reaches the service and comes back unchanged`() {
+    val mutation = SetPropertyMutationV1("node", "text", StringValueV1("Hello"))
+    val replayed =
+      ApplyOperationRequestV1(
+        DesignCommandV1.Builder(
+            "design",
+            "replayed",
+            trusted.actorId,
+            "browser",
+            9,
+            listOf(mutation),
+          )
+          .also { it.stalenessBaseRevision = 4 }
+          .build()
+      )
+    val live =
+      ApplyOperationRequestV1(
+        DesignCommandV1.Builder("design", "live", trusted.actorId, "browser", 9, listOf(mutation))
+          .build()
+      )
+
+    val replayedCall =
+      assertIs<ProtocolRequestMapping.Mapped>(
+        UiBuilderProtocolMapper.toServiceCall(trusted, replayed)
+      )
+    val replayedBatch =
+      assertIs<UiBuilderSubmission.Batch>(
+        assertIs<UiBuilderServiceRequest.ApplyOperation>(replayedCall.call.request).submission
+      )
+    assertEquals(4L, replayedBatch.stalenessBaseRevision)
+    assertEquals(9L, replayedBatch.baseRevision, "positions still resolve against the base")
+    assertEquals(replayed, UiBuilderProtocolMapper.toProtocolRequest(replayedCall.call))
+
+    val liveCall =
+      assertIs<ProtocolRequestMapping.Mapped>(UiBuilderProtocolMapper.toServiceCall(trusted, live))
+    val liveBatch =
+      assertIs<UiBuilderSubmission.Batch>(
+        assertIs<UiBuilderServiceRequest.ApplyOperation>(liveCall.call.request).submission
+      )
+    assertEquals(null, liveBatch.stalenessBaseRevision, "a live edit carries none")
+    assertEquals(live, UiBuilderProtocolMapper.toProtocolRequest(liveCall.call))
   }
 
   @Test
@@ -232,7 +277,9 @@ class UiBuilderProtocolMapperTest {
   @Test
   fun `nested requester actor is checked then removed from collaboration requests`() {
     val forgedSubmission =
-      ApplyOperationRequestV1(DesignCommandV1("design", "op", "forged", "browser", 3, emptyList()))
+      ApplyOperationRequestV1(
+        DesignCommandV1.Builder("design", "op", "forged", "browser", 3, emptyList()).build()
+      )
     val forgedPresence = UpdatePresenceRequestV1("design", presence().copy(actorId = "forged"))
 
     listOf(forgedSubmission, forgedPresence).forEach { request ->

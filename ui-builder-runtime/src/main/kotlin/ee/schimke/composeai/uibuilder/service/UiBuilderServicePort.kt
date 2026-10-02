@@ -260,7 +260,35 @@ public sealed interface UiBuilderSubmission {
     override val clientId: String,
     override val baseRevision: Long,
     val operations: List<DesignMutationV1>,
-  ) : UiBuilderSubmission
+    /**
+     * The revision the author had seen when these edits were made, when that is older than
+     * [baseRevision] — `DesignCommandV1.stalenessBaseRevision`. Null for a live edit, which saw
+     * [baseRevision]. A replayed offline run sends the revision it started from on every command
+     * after the first, so the service reads `STALE_*` from there while positions still resolve
+     * against [baseRevision]; see `UI_BUILDER_BRANCHES.md` → "How it relates to browser checkout
+     * and Sync".
+     */
+    val stalenessBaseRevision: Long? = null,
+  ) : UiBuilderSubmission {
+    /** The constructor of earlier releases, kept so a host compiled against one still links. */
+    public constructor(
+      designId: String,
+      operationId: String,
+      clientId: String,
+      baseRevision: Long,
+      operations: List<DesignMutationV1>,
+    ) : this(designId, operationId, clientId, baseRevision, operations, null)
+
+    /** The `copy` of earlier releases, for the same reason; it keeps [stalenessBaseRevision]. */
+    public fun copy(
+      designId: String = this.designId,
+      operationId: String = this.operationId,
+      clientId: String = this.clientId,
+      baseRevision: Long = this.baseRevision,
+      operations: List<DesignMutationV1> = this.operations,
+    ): Batch =
+      copy(designId, operationId, clientId, baseRevision, operations, stalenessBaseRevision)
+  }
 
   public data class Undo(
     override val designId: String,

@@ -200,21 +200,36 @@ private fun canonicalProtocolJson(element: JsonElement): String =
     is kotlinx.serialization.json.JsonPrimitive -> element.toString()
   }
 
+/**
+ * [this] submission on the wire, based on [authoritativeRevision].
+ *
+ * [stalenessBaseRevision] is the revision the author had actually seen when the edit was made, for
+ * a replayed offline run whose base chain has moved past it
+ * (`DesignCommandV1.stalenessBaseRevision` — the service reads `STALE_*` from it while positions
+ * resolve against the base). Sent only on a batch, and only when it differs from the base: a live
+ * edit, and a run's first command, saw their base, and send what they always sent.
+ */
 fun EditorSubmission.toProtocolSubmission(
   actorId: String,
   clientId: String,
   authoritativeRevision: Int,
+  stalenessBaseRevision: Int? = null,
 ): DesignSubmissionV1 =
   when (this) {
     is EditorSubmission.Batch ->
-      DesignCommandV1(
-        designId = command.designId,
-        operationId = command.operationId,
-        actorId = actorId,
-        clientId = clientId,
-        baseRevision = authoritativeRevision.toLong(),
-        operations = command.operations.map(DesignOperation::toProtocolMutation),
-      )
+      DesignCommandV1.Builder(
+          designId = command.designId,
+          operationId = command.operationId,
+          actorId = actorId,
+          clientId = clientId,
+          baseRevision = authoritativeRevision.toLong(),
+          operations = command.operations.map(DesignOperation::toProtocolMutation),
+        )
+        .also { builder ->
+          builder.stalenessBaseRevision =
+            stalenessBaseRevision?.takeIf { it != authoritativeRevision }?.toLong()
+        }
+        .build()
     is EditorSubmission.Undo ->
       UndoCommandV1(
         designId = command.designId,

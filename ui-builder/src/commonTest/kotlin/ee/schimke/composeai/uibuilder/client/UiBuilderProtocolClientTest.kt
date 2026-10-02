@@ -70,14 +70,15 @@ class UiBuilderProtocolClientTest {
       client(transport)
         .execute(
           ApplyOperationRequestV1(
-            DesignCommandV1(
-              "design",
-              "environment",
-              "actor",
-              "browser",
-              0,
-              listOf(UpdateEnvironmentMutationV1(listOf(SetFontScaleEnvironmentChangeV1(1.4)))),
-            )
+            DesignCommandV1.Builder(
+                "design",
+                "environment",
+                "actor",
+                "browser",
+                0,
+                listOf(UpdateEnvironmentMutationV1(listOf(SetFontScaleEnvironmentChangeV1(1.4)))),
+              )
+              .build()
           )
         )
     }
@@ -128,7 +129,9 @@ class UiBuilderProtocolClientTest {
         requestIds = MonotonicUiBuilderRequestIds("browser"),
       )
     val forged =
-      ApplyOperationRequestV1(DesignCommandV1("design", "op", "forged", "browser", 0, emptyList()))
+      ApplyOperationRequestV1(
+        DesignCommandV1.Builder("design", "op", "forged", "browser", 0, emptyList()).build()
+      )
 
     assertFailsWith<IllegalArgumentException> { runImmediate { client.execute(forged) } }
     assertTrue(transport.requests.isEmpty())
@@ -299,14 +302,15 @@ class UiBuilderProtocolClientTest {
   private fun committed(sequence: Long) =
     CommittedOperationV1(
       submission =
-        DesignCommandV1(
-          designId = "design",
-          operationId = "op-$sequence",
-          actorId = "actor",
-          clientId = "browser",
-          baseRevision = sequence - 1,
-          operations = emptyList(),
-        ),
+        DesignCommandV1.Builder(
+            designId = "design",
+            operationId = "op-$sequence",
+            actorId = "actor",
+            clientId = "browser",
+            baseRevision = sequence - 1,
+            operations = emptyList(),
+          )
+          .build(),
       outcome =
         AcceptedOutcomeV1(
           operationId = "op-$sequence",

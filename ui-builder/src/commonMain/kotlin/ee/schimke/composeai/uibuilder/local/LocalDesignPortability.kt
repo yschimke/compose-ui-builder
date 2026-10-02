@@ -204,8 +204,19 @@ class LocalDesignSyncBack(
         log = record.log,
         maximumRevision = Int.MAX_VALUE.toLong(),
       ) { submission, base ->
+        // Every command of the run was written against the fork, whatever base the chain gives it,
+        // so each one past the first tells the service so: its `STALE_*` checks then read from the
+        // fork, and a server edit made since is reported on whichever command overwrites it — not
+        // only on the first. The fork is this record's, so a re-run sends identical commands.
         val wire =
-          submission.toEditorSubmission().toProtocolSubmission(actorId, clientId, base.toInt())
+          submission
+            .toEditorSubmission()
+            .toProtocolSubmission(
+              actorId,
+              clientId,
+              base.toInt(),
+              stalenessBaseRevision = origin.revision,
+            )
         val answer =
           try {
             execute(ApplyOperationRequestV1(wire))

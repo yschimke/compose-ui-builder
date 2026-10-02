@@ -180,6 +180,13 @@ merge runs under the service lock. They share the replay (`replayCommandLog`) an
 they differ only in transport, and so in atomicity. Sync was refactored onto the shared loop in this
 change, and `LocalDesignSyncBackTest` still holds it to the same answers.
 
+They read staleness alike too: every replayed command, not only the first, reports overwriting an
+edit made since the fork, and none reports overwriting the run's own. The merge passes the fork
+window to the reducer in-process; Sync cannot, so each of its commands after the first carries the
+fork as `DesignCommandV1.stalenessBaseRevision` (compose-preview-contracts#131), and the service
+builds the same window from it (`LocalDesignSyncStalenessTest`, `SyncStalenessBaseTest`). What still
+differs is listed under the known limits below.
+
 ## Suggestions (open question 3, phase 4)
 
 **Suggestions are short-lived branches under the hood.** There is no second mechanism: a suggestion
@@ -255,14 +262,17 @@ the editor's cards accept or reject the whole suggestion. Per-operation checkbox
 
 ## Known limits and follow-ups
 
-- **Sync still checks staleness against the chain base.** The merge's fork window is passed to the
-  reducer in-process; Sync replays over the wire, one `ApplyOperation` per command, and
-  `DesignCommandV1` carries one base revision, so the server cannot tell an offline run's `c₂` from
-  a live edit made at that revision. A Sync `c₂…cₙ` that overwrites a server edit made between the
-  fork and the sync is still applied with no `STALE_*` notice. Fixing it is a wire change — a
-  second, optional revision on the command in compose-preview-contracts (the "staleness base"),
-  which the service would turn into the same `StalenessWindow` — so it needs a contracts release
-  and every client that sends it, and is tracked separately.
+- **Sync reports staleness from the fork over the wire, not from a pinned window.** A merge passes
+  its fork window to the reducer in-process; Sync replays one `ApplyOperation` per command, so each
+  command after the first carries `DesignCommandV1.stalenessBaseRevision` (the fork) and the
+  service reads `STALE_*` from `(fork, head]`, suppressing overwrites of the run's own earlier
+  writes, which it recognises by the actor, `clientId` and starting revision recorded on each
+  committed batch's touch record (`ReplayRunIdentity`). Two differences from a merge remain. A
+  concurrent edit that lands *between* two of the run's commands is reported (a merge runs under
+  the lock, so none can). And the fork is not pinned: a run that outlives the touch window reads
+  only the touches still retained, which always cover `(base, head]` — never less than before the
+  field — but an edit made in the pruned slice right after the fork is not reported. The
+  in-browser `LocalUiBuilderService` ignores the field, as a service that predates it does.
 - **The stale delete/restore gate reads the chain base.** A delete or restore whose base is behind
   the head is refused (`REVISION_MISMATCH`), which in a merge only `c₁` can be; a later delete
   lands even if the parent edited the node after the fork. Widening the gate to the fork window

@@ -167,7 +167,7 @@ class UiBuilderProtocolBridgeTest {
         updatedAtEpochMillis = committedAt,
         nodes = mapOf("title" to title.copy(properties = title.properties - "text")),
       )
-    val command = sent.copy(operationId = "remote-unset")
+    val command = sent.newBuilder().also { it.operationId = "remote-unset" }.build()
     val accepted =
       AcceptedOutcomeV1(
         operationId = command.operationId,
@@ -199,9 +199,12 @@ class UiBuilderProtocolBridgeTest {
         operations =
           listOf(
             CommittedOperationV1(
-              command.copy(
-                operations = listOf(SetPropertyMutationV1("title", "text", NullValueV1))
-              ),
+              command
+                .newBuilder()
+                .also {
+                  it.operations = listOf(SetPropertyMutationV1("title", "text", NullValueV1))
+                }
+                .build(),
               accepted,
             )
           )
@@ -257,14 +260,15 @@ class UiBuilderProtocolBridgeTest {
     val after =
       protocolDocument(revision = 8, text = "After").copy(updatedAtEpochMillis = committedAt)
     val command =
-      DesignCommandV1(
-        designId = before.id,
-        operationId = "remote-property",
-        actorId = "operator",
-        clientId = "browser-a",
-        baseRevision = 7,
-        operations = listOf(SetPropertyMutationV1("title", "text", StringValueV1("After"))),
-      )
+      DesignCommandV1.Builder(
+          designId = before.id,
+          operationId = "remote-property",
+          actorId = "operator",
+          clientId = "browser-a",
+          baseRevision = 7,
+          operations = listOf(SetPropertyMutationV1("title", "text", StringValueV1("After"))),
+        )
+        .build()
     val accepted =
       AcceptedOutcomeV1(
         operationId = command.operationId,
