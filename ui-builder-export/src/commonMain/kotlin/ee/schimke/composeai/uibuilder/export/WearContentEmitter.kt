@@ -67,6 +67,11 @@ internal class WearContentEmitter(
 
   private var usesZIndex = false
 
+  /** `androidx.compose.foundation` symbols a painting modifier used, by path below that package. */
+  private val foundationImports = mutableSetOf<String>()
+
+  private var usesRectangleShape = false
+
   private var usesAlertDialogDefaults = false
 
   /**
@@ -115,6 +120,24 @@ internal class WearContentEmitter(
    * nothing is being tagged, so an ordinary export's `ScreenScaffold` call is unchanged.
    */
   fun rootModifier(nodeId: String): String? = modifierChain(nodeId, authored = false)
+
+  /**
+   * The scaffold's re-skinned colour scheme, as the expression a `MaterialTheme` wrap takes, or
+   * null when the design overrides no role. See [WearScreenTheme].
+   *
+   * A role named as a token reads the stock scheme it is evaluated in — `primary = secondary` swaps
+   * the two — which is also what the canvas resolves it against.
+   */
+  fun themeColorScheme(nodeId: String): String? {
+    val node = document.nodes[nodeId] ?: return null
+    val overrides =
+      WearScreenTheme.ROLES.mapNotNull { role ->
+        colorExpression(node, WearScreenTheme.property(role))?.let { "$role = $it" }
+      }
+    if (overrides.isEmpty()) return null
+    usesMaterialTheme = true
+    return "MaterialTheme.colorScheme.copy(${overrides.joinToString(", ")})"
+  }
 
   fun emitScaffoldBody(nodeId: String): List<String> {
     val node = document.nodes[nodeId] ?: return refused("the content node `$nodeId` is missing")
@@ -228,6 +251,7 @@ internal class WearContentEmitter(
           val symbol = if (variant == "outlined") "OutlinedCard" else "Card"
           usesPlainCard += symbol
           return listOf("${pad}$symbol(", "${pad}${INDENT}onClick = {},") +
+            cardColors(node, nodeId, pad + INDENT, symbol) +
             surfaceArguments(pad + INDENT, nodeId, transformed, symbol) +
             listOf("${pad}) {") +
             content.flatMap { emit(it, depth + 1) } +
@@ -255,6 +279,7 @@ internal class WearContentEmitter(
             listOf("${pad}${INDENT}},", "${pad}${INDENT}title = {") +
             emit(lines[1], depth + 2) +
             listOf("${pad}${INDENT}},") +
+            cardColors(node, nodeId, pad + INDENT, "AppCard") +
             surfaceArguments(pad + INDENT, nodeId, transformed, "AppCard") +
             trailingContent(pad, depth, lines.drop(2), required = true)
         }
@@ -265,6 +290,7 @@ internal class WearContentEmitter(
           listOf("${pad}${INDENT}title = {") +
           title.flatMap { emit(it, depth + 2) } +
           listOf("${pad}${INDENT}},") +
+          cardColors(node, nodeId, pad + INDENT, "TitleCard") +
           surfaceArguments(pad + INDENT, nodeId, transformed, "TitleCard") +
           trailingContent(pad, depth, body)
       }
@@ -437,6 +463,10 @@ internal class WearContentEmitter(
               ",",
           ) +
           (modifier?.let { listOf("${pad}${INDENT}modifier = $it,") } ?: emptyList()) +
+          // Unset is Wear's own `LocalContentColor`, which is the parent button's content colour —
+          // what the canvas draws too, so only an authored colour is written.
+          (colorExpression(node, "color")?.let { listOf("${pad}${INDENT}tint = $it,") }
+            ?: emptyList()) +
           listOf("${pad})")
       }
       WearScreenCodeExporter.ICON_BUTTON -> {
@@ -522,6 +552,7 @@ internal class WearContentEmitter(
           // A determinate indicator takes `progress` as a lambda; the indeterminate overload takes
           // no progress at all, which is what an absent property means rather than zero.
           (progress?.let { listOf("${pad}${INDENT}progress = { ${it.dp()}f },") } ?: emptyList()) +
+          progressColors(node).map { "${pad}${INDENT}$it," } +
           (modifierChain(nodeId, transformedHeight(transformed))?.let {
             listOf("${pad}${INDENT}modifier = $it,")
           } ?: emptyList()) +
@@ -826,6 +857,15 @@ internal class WearContentEmitter(
     val node = document.nodes[nodeId] ?: return null
     if (node.componentId != "layout/column") return null
     if (node.modifiers.isNotEmpty()) return null
+    // The same for a column that moves its lines — centres them, ends them, spreads them — which
+    // the slots would drop too. A plain gap between lines is not that: it is the slot spacing the
+    // component publishes, and is what this recognition replaces by design.
+    if (
+      node.string("verticalArrangement") in COLUMN_ARRANGED ||
+        node.string("horizontalAlignment") in setOf("center", "end")
+    ) {
+      return null
+    }
     val children = node.slots["children"].orEmpty()
     if (children.isEmpty()) return null
     if (children.any { document.nodes[it]?.componentId != WearScreenCodeExporter.TEXT }) return null
@@ -877,9 +917,122 @@ internal class WearContentEmitter(
     depth: Int,
   ): List<String> {
     val children = node.slots[slot].orEmpty()
-    val modifier = modifierChain(node.id)
-    val head = if (modifier == null) "${pad}$symbol {" else "${pad}$symbol(modifier = $modifier) {"
-    return listOf(head) + children.flatMap { emit(it, depth + 1) } + listOf("${pad}}")
+    val arguments =
+      listOfNotNull(modifierChain(node.id)?.let { "modifier = $it" }) +
+        containerArguments(symbol, node)
+    val head =
+      when (arguments.size) {
+        0 -> listOf("${pad}$symbol {")
+        1 -> listOf("${pad}$symbol(${arguments.single()}) {")
+        else -> listOf("${pad}$symbol(") + arguments.map { "${pad}${INDENT}$it," } + "${pad}) {"
+      }
+    return head + children.flatMap { emit(it, depth + 1) } + listOf("${pad}}")
+  }
+
+  /**
+   * How a `Row`, `Column` or `Box` lays its children out, read exactly as the canvas reads it.
+   *
+   * These were declared, drawn, and dropped here with no diagnostic (yschimke/wear-m3-catalog#680):
+   * a centred column, a `spaceBetween` scale and a centred icon row all generated as top-start
+   * packed layouts while the export gate read green. Each rule below is the canvas's own
+   * (`UiBuilderRenderer`'s `verticalArrangement` and friends), so the two lanes cannot disagree:
+   *
+   * - A spacing composes with the three aligned arrangements through `spacedBy(space, alignment)`,
+   *   and is spent on the three `space*` ones, which distribute the free space themselves.
+   * - A row centres its children vertically when it says nothing, which is the canvas's default and
+   *   not Compose's `Top` — so it is written out unless the row asks for the top. The Remote lane
+   *   writes the same centre for the same reason.
+   * - Anything at Compose's own default is omitted, so a container that says nothing keeps the
+   *   short form.
+   */
+  private fun containerArguments(symbol: String, node: UiBuilderNode): List<String> =
+    when (symbol) {
+      "Column" ->
+        listOfNotNull(
+          arrangement(
+              node.string("verticalArrangement"),
+              node.number("verticalSpacingDp") ?: 0f,
+              aligned = mapOf("center" to "CenterVertically", "bottom" to "Bottom"),
+              bare = mapOf("center" to "Center", "bottom" to "Bottom"),
+            )
+            ?.let { "verticalArrangement = $it" },
+          when (node.string("horizontalAlignment")) {
+            "center" -> "CenterHorizontally"
+            "end" -> "End"
+            else -> null
+          }?.let {
+            usesAlignment = true
+            "horizontalAlignment = Alignment.$it"
+          },
+        )
+      "Row" ->
+        listOfNotNull(
+          arrangement(
+              node.string("horizontalArrangement"),
+              node.number("horizontalSpacingDp") ?: 0f,
+              aligned = mapOf("center" to "CenterHorizontally", "end" to "End"),
+              bare = mapOf("center" to "Center", "end" to "End"),
+            )
+            ?.let { "horizontalArrangement = $it" },
+          when (node.string("verticalAlignment")) {
+            "top" -> null
+            "bottom" -> "Bottom"
+            else -> "CenterVertically"
+          }?.let {
+            usesAlignment = true
+            "verticalAlignment = Alignment.$it"
+          },
+        )
+      else ->
+        listOfNotNull(
+          node
+            .string("contentAlignment")
+            .takeIf { it != "topStart" }
+            ?.let(ScreenDocumentProjection.ALIGNMENT_MEMBERS::get)
+            ?.let {
+              usesAlignment = true
+              "contentAlignment = Alignment.$it"
+            }
+        )
+    }
+
+  /**
+   * One axis's `Arrangement`, or null for the start-of-axis default with no gap.
+   *
+   * [aligned] names the `Alignment` member `spacedBy` takes beside a gap for each non-start word,
+   * and [bare] the `Arrangement` member the same word is alone; a start word with a gap is the
+   * one-argument `spacedBy`, which is already start-aligned.
+   */
+  private fun arrangement(
+    value: String,
+    spacing: Float,
+    aligned: Map<String, String>,
+    bare: Map<String, String>,
+  ): String? {
+    val spread =
+      when (value) {
+        "spaceBetween" -> "SpaceBetween"
+        "spaceAround" -> "SpaceAround"
+        "spaceEvenly" -> "SpaceEvenly"
+        else -> null
+      }
+    val expression =
+      when {
+        spread != null -> "Arrangement.$spread"
+        value in aligned ->
+          if (spacing > 0f) {
+            usesDp = true
+            usesAlignment = true
+            "Arrangement.spacedBy(${spacing.dp()}.dp, Alignment.${aligned.getValue(value)})"
+          } else "Arrangement.${bare.getValue(value)}"
+        spacing > 0f -> {
+          usesDp = true
+          "Arrangement.spacedBy(${spacing.dp()}.dp)"
+        }
+        else -> return null
+      }
+    usesArrangement = true
+    return expression
   }
 
   /**
@@ -1000,6 +1153,50 @@ internal class WearContentEmitter(
           usesZIndex = true
           "zIndex(${(number("zIndex") ?: 0f).dp()}f)"
         }
+        // The four painting modifiers `wear-m3/card` and `layout/box` declare, which this refused
+        // while the canvas drew them (yschimke/wear-m3-catalog#681) — so the one way to tint a
+        // card could be authored and seen but not shipped. Each reads its value the way the
+        // canvas's `uiBuilderModifier` does, and a value the canvas ignores is ignored here too:
+        // that is what keeps the two pictures the same, not a refusal of a modifier that draws
+        // nothing.
+        "background" -> {
+          val color = modifierColor(modifier) ?: return@mapNotNull null
+          val shape = modifierShape(text("shape")) ?: return@mapNotNull null
+          foundationImports += "background"
+          "background($color${shape.argument()})"
+        }
+        "border" -> {
+          val color = modifierColor(modifier) ?: return@mapNotNull null
+          val width = number("widthDp") ?: return@mapNotNull null
+          val shape = modifierShape(text("shape")) ?: return@mapNotNull null
+          foundationImports += "border"
+          "border(${dp(width)}, $color${shape.argument()})"
+        }
+        "clip" -> {
+          val shape = modifierShape(text("shape")) ?: return@mapNotNull null
+          drawImports += "clip"
+          "clip(${shape.expression ?: rectangle()})"
+        }
+        "shadow" -> {
+          val elevation = number("elevationDp") ?: return@mapNotNull null
+          val shape = modifierShape(text("shape")) ?: return@mapNotNull null
+          val clip = modifier["clip"]?.jsonPrimitive?.booleanOrNull
+          drawImports += "shadow"
+          // The canvas clips when the shadow has any elevation unless told otherwise, which is
+          // also `Modifier.shadow`'s own default, so only a contrary answer is written.
+          val clipArgument = if (clip != null && clip != (elevation > 0f)) ", clip = $clip" else ""
+          "shadow(${dp(elevation)}, ${shape.expression ?: rectangle()}$clipArgument)"
+        }
+        "wrapContentSize" -> {
+          val alignment = text("alignment")
+          if (alignment == null) layout("wrapContentSize()")
+          else {
+            val member =
+              ScreenDocumentProjection.ALIGNMENT_MEMBERS[alignment] ?: return@mapNotNull null
+            usesAlignment = true
+            layout("wrapContentSize(Alignment.$member)")
+          }
+        }
         // Identity rather than layout. The native lane's own tag is written first and wins; an
         // authored one is kept in an export, where it is the only tag.
         "testTag" ->
@@ -1023,6 +1220,52 @@ internal class WearContentEmitter(
         }
       }
     }
+
+  /**
+   * A painting modifier's shape, or null when the canvas would not resolve it and so draws nothing.
+   *
+   * [ShapeArgument.expression] is null for no shape at all, which is the rectangle every one of
+   * these modifiers defaults to. The three names are the canvas's own radii on a Wear screen — its
+   * corner radius there is Wear's large card corner, 26dp, with medium and small at ¾ and ½ of it —
+   * written as numbers rather than `MaterialTheme.shapes`, whose medium and small are not those.
+   */
+  private fun modifierShape(value: String?): ShapeArgument? {
+    val radius =
+      when (value) {
+        null,
+        "" -> return ShapeArgument(null)
+        "large" -> WEAR_CORNER_RADIUS_DP
+        "medium" -> WEAR_CORNER_RADIUS_DP * 0.75f
+        "small" -> WEAR_CORNER_RADIUS_DP * 0.5f
+        else -> value.toFloatOrNull() ?: return null
+      }
+    foundationImports += "shape.RoundedCornerShape"
+    usesDp = true
+    return ShapeArgument("RoundedCornerShape(${radius.dp()}.dp)")
+  }
+
+  private class ShapeArgument(val expression: String?) {
+    fun argument(): String = expression?.let { ", $it" }.orEmpty()
+  }
+
+  private fun rectangle(): String {
+    usesRectangleShape = true
+    return "RectangleShape"
+  }
+
+  /**
+   * A modifier's `color`, which is a typed value rather than a node property: a literal or a
+   * `colorToken` the canvas can draw, and null for anything else, which the canvas ignores.
+   */
+  private fun modifierColor(modifier: JsonObject): String? {
+    val color = modifier["color"] as? JsonObject ?: return null
+    val value = color["value"]?.jsonPrimitive?.contentOrNull ?: return null
+    return when (color["type"]?.jsonPrimitive?.contentOrNull) {
+      "color" -> value.takeIf { it.startsWith("#") }?.let(::colorValueExpression)
+      "colorToken" -> value.takeIf { it in MODIFIER_COLOR_TOKENS }?.let(::colorValueExpression)
+      else -> null
+    }
+  }
 
   /**
    * `weight`, in the three scopes that define one: `Row`, `Column` and `ButtonGroup`, whose own
@@ -1204,6 +1447,54 @@ internal class WearContentEmitter(
         content?.let { "contentColor = $it" },
       )
     return "$defaults.$function(${arguments.joinToString(", ")})"
+  }
+
+  /**
+   * `colors = CardDefaults.…Colors(…)` for a card that recolours itself, which is how a themed card
+   * is written: `wear-m3/card` had no colour of its own, so the only way to tint one was a
+   * `background` modifier drawn behind the card's own container (yschimke/wear-m3-catalog#681).
+   *
+   * `OutlinedCard` draws no container, and `CardDefaults.outlinedCardColors` takes none, so a
+   * container colour there is refused by name rather than dropped — the rule the buttons keep.
+   */
+  private fun cardColors(
+    node: UiBuilderNode,
+    nodeId: String,
+    pad: String,
+    symbol: String,
+  ): List<String> {
+    val container = colorExpression(node, "containerColor")
+    val content = colorExpression(node, "contentColor")
+    if (container == null && content == null) return emptyList()
+    if (symbol == "OutlinedCard" && container != null) {
+      return refused(
+        "`${node.componentId}` (node `$nodeId`) sets `containerColor` on `OutlinedCard`, which " +
+          "draws no container — Wear's `CardDefaults.outlinedCardColors` takes only content colours"
+      )
+    }
+    val function = if (symbol == "OutlinedCard") "outlinedCardColors" else "cardColors"
+    listPaddingDefaults += "CardDefaults"
+    val arguments =
+      listOfNotNull(
+        container?.let { "containerColor = $it" },
+        content?.let { "contentColor = $it" },
+      )
+    return listOf("${pad}colors = CardDefaults.$function(${arguments.joinToString(", ")}),")
+  }
+
+  /**
+   * A progress indicator's `colors`, from the two roles it draws: the indicator and its track.
+   * Every Wear indicator takes the same `ProgressIndicatorColors`, so one call serves all four.
+   */
+  private fun progressColors(node: UiBuilderNode): List<String> {
+    val arguments =
+      listOfNotNull(
+        colorExpression(node, "indicatorColor")?.let { "indicatorColor = $it" },
+        colorExpression(node, "trackColor")?.let { "trackColor = $it" },
+      )
+    if (arguments.isEmpty()) return emptyList()
+    listPaddingDefaults += "ProgressIndicatorDefaults"
+    return listOf("colors = ProgressIndicatorDefaults.colors(${arguments.joinToString(", ")})")
   }
 
   private fun refused(reason: String): List<String> {
@@ -1499,6 +1790,8 @@ internal class WearContentEmitter(
     layoutImports.forEach { add("androidx.compose.foundation.layout.$it") }
     drawImports.forEach { add("androidx.compose.ui.draw.$it") }
     if (usesZIndex) add("androidx.compose.ui.zIndex")
+    foundationImports.forEach { add("androidx.compose.foundation.$it") }
+    if (usesRectangleShape) add("androidx.compose.ui.graphics.RectangleShape")
     if (timeText) add("androidx.wear.compose.material3.TimeText")
     if (timeText) add("androidx.wear.compose.material3.timeTextCurvedText")
     if (usesListHeader) add("androidx.wear.compose.material3.ListHeader")
@@ -1635,6 +1928,11 @@ internal class WearContentEmitter(
     val property = node.properties[name] as? JsonObject ?: return null
     val value =
       property["value"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotEmpty) ?: return null
+    return colorValueExpression(value)
+  }
+
+  /** [colorExpression] for a value already read, wherever it came from. */
+  private fun colorValueExpression(value: String): String {
     return if (value.startsWith("#")) {
       val hex = value.removePrefix("#").uppercase()
       val argb = if (hex.length == 6) "FF$hex" else hex
@@ -1746,6 +2044,33 @@ internal class WearContentEmitter(
         "OutlinedIconButton",
         "IconButton",
       )
+
+    /** The canvas's corner radius on a Wear screen: Wear's large card corner. */
+    const val WEAR_CORNER_RADIUS_DP = 26f
+
+    /** The colour tokens the canvas resolves inside a modifier; anything else it ignores. */
+    val MODIFIER_COLOR_TOKENS =
+      setOf(
+        "background",
+        "surface",
+        "surfaceContainer",
+        "surfaceContainerLow",
+        "surfaceContainerHigh",
+        "surfaceContainerHighest",
+        "primary",
+        "onPrimary",
+        "secondary",
+        "onSecondary",
+        "tertiary",
+        "onTertiary",
+        "onSurface",
+        "onSurfaceVariant",
+        "outlineVariant",
+        "transparent",
+      )
+
+    /** The `verticalArrangement` words that move a column's children off the top. */
+    val COLUMN_ARRANGED = setOf("center", "bottom", "spaceBetween", "spaceAround", "spaceEvenly")
 
     /** The buttons whose colours function has no `containerColor`, because they draw none. */
     val NO_CONTAINER_BUTTON_SYMBOLS = setOf("OutlinedButton", "ChildButton", "OutlinedIconButton")

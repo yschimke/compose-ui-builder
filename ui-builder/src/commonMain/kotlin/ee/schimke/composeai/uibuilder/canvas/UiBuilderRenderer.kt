@@ -171,6 +171,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.WearScreenTheme
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostSpec
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
@@ -828,14 +829,16 @@ private fun RenderNode(
       // `ScreenScaffold` is a composable the author calls, so `WearScreenCodeExporter` names it.
       // A viewport is the port's real `ScreenScaffold`; only the unrolled extent is drawn here.
       ROUND_SCREEN_FRAME ->
-        WearScreenScaffold(
-          node = node,
-          modifier = measured,
-          screenWidthDp = document.wearScreenWidthDp(LocalUiBuilderFrameGeometry.current),
-          edgeButton = { next -> slot("edgeButton").forEach { child(it, next) } },
-          hasEdgeButton = slot("edgeButton").isNotEmpty(),
-        ) { next ->
-          slot("content").forEach { child(it, next) }
+        WearScreenThemed(node) {
+          WearScreenScaffold(
+            node = node,
+            modifier = measured,
+            screenWidthDp = document.wearScreenWidthDp(LocalUiBuilderFrameGeometry.current),
+            edgeButton = { next -> slot("edgeButton").forEach { child(it, next) } },
+            hasEdgeButton = slot("edgeButton").isNotEmpty(),
+          ) { next ->
+            slot("content").forEach { child(it, next) }
+          }
         }
       // Wear's own `ListHeader`, drawn by Wear Compose. This used to be a `Box` of
       // `WEAR_LIST_HEADER_HEIGHT_DP` with a centred `Text` at `WEAR_LIST_HEADER_SP`, which is the
@@ -950,6 +953,8 @@ private fun RenderNode(
           segments = node.integer("segments", 1),
           enabled = node.bool("enabled", true),
           modifier = measured,
+          indicatorColor = node.wearColor("indicatorColor"),
+          trackColor = node.wearColor("trackColor"),
         )
       "wear-m3/page-indicator" ->
         WearCanvasPageIndicator(
@@ -961,6 +966,8 @@ private fun RenderNode(
           size = node.string("size"),
           enabled = node.bool("enabled", true),
           modifier = measured,
+          containerColor = node.wearColor("containerColor"),
+          contentColor = node.wearColor("contentColor"),
         ) {
           slot("content").forEach { wearChild(it, Modifier) }
         }
@@ -1035,7 +1042,12 @@ private fun RenderNode(
           onTextLayout = { host.recordTextLayout(path, it) },
         )
       "wear-m3/card" ->
-        WearCanvasCard(node.string("variant"), measured) {
+        WearCanvasCard(
+          node.string("variant"),
+          measured,
+          containerColor = node.wearColor("containerColor"),
+          contentColor = node.wearColor("contentColor"),
+        ) {
           slot("content").forEach { wearChild(it, Modifier) }
         }
       "wear-m3/button" ->
@@ -2801,6 +2813,92 @@ private fun UiBuilderNode.wearColor(name: String): Color {
   val value = string(name)
   if (value.startsWith("#")) return Color(parseArgb(value))
   return wearThemeColor(value)
+}
+
+/**
+ * The scaffold's theme: Wear's scheme, and the Material 3 one a few foundation nodes resolve tokens
+ * through, with the roles the design overrides replaced — the same `copy` the generated screen
+ * wraps itself in. See [WearScreenTheme]. A role named as a token reads the stock scheme around it,
+ * as the generated `MaterialTheme.colorScheme.copy(primary = MaterialTheme.colorScheme.…)` does.
+ */
+@Composable
+private fun WearScreenThemed(node: UiBuilderNode, content: @Composable () -> Unit) {
+  val overrides =
+    WearScreenTheme.ROLES.mapNotNull { role ->
+        node.string(WearScreenTheme.property(role)).takeIf(String::isNotEmpty)?.let { role to it }
+      }
+      .toMap()
+  if (overrides.isEmpty()) {
+    content()
+    return
+  }
+  val resolved =
+    overrides
+      .mapNotNull { (name, value) ->
+        val color =
+          if (value.startsWith("#")) Color(parseArgb(value))
+          else wearThemeColor(value).takeIf { it != Color.Unspecified }
+        color?.let { name to it }
+      }
+      .toMap()
+  fun role(name: String): Color? = resolved[name]
+  val wear = WearMaterialTheme.colorScheme
+  val wearScheme =
+    wear.copy(
+      primary = role("primary") ?: wear.primary,
+      onPrimary = role("onPrimary") ?: wear.onPrimary,
+      primaryContainer = role("primaryContainer") ?: wear.primaryContainer,
+      onPrimaryContainer = role("onPrimaryContainer") ?: wear.onPrimaryContainer,
+      secondary = role("secondary") ?: wear.secondary,
+      onSecondary = role("onSecondary") ?: wear.onSecondary,
+      secondaryContainer = role("secondaryContainer") ?: wear.secondaryContainer,
+      onSecondaryContainer = role("onSecondaryContainer") ?: wear.onSecondaryContainer,
+      tertiary = role("tertiary") ?: wear.tertiary,
+      onTertiary = role("onTertiary") ?: wear.onTertiary,
+      tertiaryContainer = role("tertiaryContainer") ?: wear.tertiaryContainer,
+      onTertiaryContainer = role("onTertiaryContainer") ?: wear.onTertiaryContainer,
+      surfaceContainerLow = role("surfaceContainerLow") ?: wear.surfaceContainerLow,
+      surfaceContainer = role("surfaceContainer") ?: wear.surfaceContainer,
+      surfaceContainerHigh = role("surfaceContainerHigh") ?: wear.surfaceContainerHigh,
+      onSurface = role("onSurface") ?: wear.onSurface,
+      onSurfaceVariant = role("onSurfaceVariant") ?: wear.onSurfaceVariant,
+      outline = role("outline") ?: wear.outline,
+      outlineVariant = role("outlineVariant") ?: wear.outlineVariant,
+      background = role("background") ?: wear.background,
+      onBackground = role("onBackground") ?: wear.onBackground,
+      error = role("error") ?: wear.error,
+      onError = role("onError") ?: wear.onError,
+    )
+  val mobile = MaterialTheme.colorScheme
+  val mobileScheme =
+    mobile.copy(
+      primary = role("primary") ?: mobile.primary,
+      onPrimary = role("onPrimary") ?: mobile.onPrimary,
+      primaryContainer = role("primaryContainer") ?: mobile.primaryContainer,
+      onPrimaryContainer = role("onPrimaryContainer") ?: mobile.onPrimaryContainer,
+      secondary = role("secondary") ?: mobile.secondary,
+      onSecondary = role("onSecondary") ?: mobile.onSecondary,
+      secondaryContainer = role("secondaryContainer") ?: mobile.secondaryContainer,
+      onSecondaryContainer = role("onSecondaryContainer") ?: mobile.onSecondaryContainer,
+      tertiary = role("tertiary") ?: mobile.tertiary,
+      onTertiary = role("onTertiary") ?: mobile.onTertiary,
+      tertiaryContainer = role("tertiaryContainer") ?: mobile.tertiaryContainer,
+      onTertiaryContainer = role("onTertiaryContainer") ?: mobile.onTertiaryContainer,
+      surfaceContainerLow = role("surfaceContainerLow") ?: mobile.surfaceContainerLow,
+      surfaceContainer = role("surfaceContainer") ?: mobile.surfaceContainer,
+      surfaceContainerHigh = role("surfaceContainerHigh") ?: mobile.surfaceContainerHigh,
+      onSurface = role("onSurface") ?: mobile.onSurface,
+      onSurfaceVariant = role("onSurfaceVariant") ?: mobile.onSurfaceVariant,
+      outline = role("outline") ?: mobile.outline,
+      outlineVariant = role("outlineVariant") ?: mobile.outlineVariant,
+      background = role("background") ?: mobile.background,
+      onBackground = role("onBackground") ?: mobile.onBackground,
+      error = role("error") ?: mobile.error,
+      onError = role("onError") ?: mobile.onError,
+    )
+  MaterialTheme(colorScheme = mobileScheme) {
+    WearMaterialTheme(colorScheme = wearScheme, content = content)
+  }
 }
 
 private fun UiBuilderNode.shape(themeCornerRadius: Float) =

@@ -3837,6 +3837,27 @@ public class PersistentUiBuilderService(
               mutation.node.id,
             )
           }
+          // A node arrives with its slots empty, and each child arrives with a `location` naming
+          // it. A slot list here is not a placement: nothing allocates the child a position under
+          // this node, so a child inserted later in the same batch failed as an internal,
+          // retryable error when the snapshot walked to an id that did not exist yet, and an
+          // existing child would be held by two parents at once. Refused by name instead, because
+          // resending the same batch can never succeed.
+          mutation.node.slots.forEach { (slot, children) ->
+            children.firstOrNull()?.let { child ->
+              fail(
+                RejectionCodeV1.INVALID_COMMAND,
+                "slot `$slot` of `${mutation.node.id}` names `$child`, which " +
+                  (if (child in working.document.nodes) "is already placed elsewhere"
+                  else "does not exist") +
+                  ": insert `${mutation.node.id}` with its slots empty, then insert or move each " +
+                  "child with a location naming that slot",
+                index,
+                mutation.node.id,
+                "slots.$slot",
+              )
+            }
+          }
           // An insert is a write of every property at once, and it is how an `asset/image` with a
           // key nothing resolves arrived (#484): checked here, per property, the way a
           // `setProperty` of the same value would be.

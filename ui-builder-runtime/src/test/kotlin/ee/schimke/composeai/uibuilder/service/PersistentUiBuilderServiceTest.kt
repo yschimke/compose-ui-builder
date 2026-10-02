@@ -4147,6 +4147,63 @@ class PersistentUiBuilderServiceTest {
   }
 
   @Test
+  fun `an insert whose slots name a child is refused by name rather than failing internally`() {
+    // yschimke/wear-m3-catalog#683: the parent listed a child inserted later in the same batch,
+    // and the snapshot walked to an id that did not exist yet — an `internal`, retryable error for
+    // a batch that can never succeed.
+    val service = service()
+    create(service)
+    val parent = textNode("parent").copy(slots = mapOf("content" to listOf("child")))
+    val forward =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch(
+              "forward",
+              0,
+              InsertNodeMutationV1(parent, NodeLocationV1()),
+              InsertNodeMutationV1(
+                textNode("child"),
+                NodeLocationV1(ParentSlotV1("parent", "content")),
+              ),
+            )
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_COMMAND, forward.code)
+    assertEquals("parent", forward.nodeId)
+    assertEquals("slots.content", forward.field)
+    assertEquals(0, forward.operationIndex)
+    assertTrue("`child`, which does not exist" in forward.message, forward.message)
+    assertTrue(currentDocument(service).nodes.isEmpty())
+
+    // An existing node is not a placement either: it would be held by two parents.
+    accepted(
+      execute(
+        service,
+        owner,
+        UiBuilderServiceRequest.ApplyOperation(
+          batch("existing", 0, InsertNodeMutationV1(textNode("child"), NodeLocationV1()))
+        ),
+      )
+    )
+    val twice =
+      rejected(
+        execute(
+          service,
+          owner,
+          UiBuilderServiceRequest.ApplyOperation(
+            batch("twice", 1, InsertNodeMutationV1(parent, NodeLocationV1()))
+          ),
+        )
+      )
+    assertEquals(RejectionCodeV1.INVALID_COMMAND, twice.code)
+    assertTrue("already placed elsewhere" in twice.message, twice.message)
+  }
+
+  @Test
   fun `a write is checked against the catalog's value rules where the value is chosen`() {
     // The catalog decides what a value of a kind looks like
     // (`UiBuilderCatalogExecutor.validateWrite`);

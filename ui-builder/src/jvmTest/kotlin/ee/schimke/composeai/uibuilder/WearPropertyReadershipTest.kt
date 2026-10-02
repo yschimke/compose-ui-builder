@@ -59,6 +59,8 @@ class WearPropertyReadershipTest {
       listOf(
           "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearScreenCodeExporter.kt",
           "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearContentEmitter.kt",
+          // The screen theme's roles, which the canvas and the generator both read through it.
+          "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearScreenTheme.kt",
         )
         .map { moduleFile("ui-builder-export", it) }
 
