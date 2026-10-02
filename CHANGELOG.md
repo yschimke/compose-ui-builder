@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.75.0](https://github.com/yschimke/compose-ui-builder/compare/v3.74.0...v3.75.0) (2026-10-02)
+
+
+### Features
+
+* **ui-builder:** edit a placement's arguments in place ([#406](https://github.com/yschimke/compose-ui-builder/issues/406)) ([f0880f1](https://github.com/yschimke/compose-ui-builder/commit/f0880f18cfd564f3e511d1138155d584bb22883c))
+
+
+### Bug Fixes
+
+* **editor:** stop reporting a missing Kotlin symbol for Wear designs the Wear generator writes ([#403](https://github.com/yschimke/compose-ui-builder/issues/403)) ([dbe1e89](https://github.com/yschimke/compose-ui-builder/commit/dbe1e892839e911f61c988372d0e9da3d16383de))
+* **export:** say to wrap Wear content in a screen when the root is neither a screen nor a widget ([#404](https://github.com/yschimke/compose-ui-builder/issues/404)) ([b5ab295](https://github.com/yschimke/compose-ui-builder/commit/b5ab295a3de282313a5c1881e5a27f0d681528bb))
+
 ## [3.74.0](https://github.com/yschimke/compose-ui-builder/compare/v3.73.0...v3.74.0) (2026-10-02)
 
 
