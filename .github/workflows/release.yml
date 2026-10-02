@@ -360,6 +360,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    outputs:
+      pr: ${{ steps.rp.outputs.pr }}
+      in_flight: ${{ steps.preflight.outputs.in_flight }}
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -405,3 +408,27 @@ jobs:
         run: |
           echo "::error::release-please failed and no release was in flight — see the step above."
           exit 1
+
+  # Which Maven coordinates merging the release PR would publish, as one comment on that PR. The
+  # publish plan only runs inside the release, so the answer was visible only after the
+  # irreversible upload. Same script, same Maven Central baseline, run against the release PR's
+  # head; see `.github/scripts/release-pr-publish-plan.sh` (shared with compose-preview-daemon, compose-ai-tools and rc-players). It follows
+  # `update-release-pr` and annotates the PR that pass just wrote; it skips while another run's
+  # release is in flight, because that PR is about to be rewritten. Informational: it never fails.
+  release-pr-publish-plan:
+    needs: update-release-pr
+    if: ${{ !cancelled() && needs.update-release-pr.result == 'success' && needs.update-release-pr.outputs.in_flight != 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # create/edit the comment on the release PR
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Comment the publish plan on the release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RP_PR: ${{ needs.update-release-pr.outputs.pr }}
+        run: ./.github/scripts/release-pr-publish-plan.sh
