@@ -492,13 +492,16 @@ private fun LiveSessionApp(
   // revision imported. Not re-asked per edit: the library moves when somebody merges to the
   // project, not when somebody types, and a round trip behind every keystroke would buy nothing.
   val pinnedRevision = revisionPin?.takeIf { it.pinned }?.requested
-  LaunchedEffect(config.designId, pinnedRevision) {
+  // Moved on by a publish from this editor: the library it lists and the drift it reports both
+  // changed, and nothing else would tell this page to read them again.
+  var libraryGeneration by remember { mutableStateOf(0) }
+  LaunchedEffect(config.designId, pinnedRevision, libraryGeneration) {
     componentDrift = loadComponentDrift(config.designId, pinnedRevision)
   }
   // What the project shares, read once per design: the shelf only has to be as fresh as the
   // library, and an import fetches the symbol it places at the moment it is pressed.
   var componentLibrary by remember { mutableStateOf(emptyList<EditorLibraryComponent>()) }
-  LaunchedEffect(config.designId, localSession) {
+  LaunchedEffect(config.designId, localSession, libraryGeneration) {
     componentLibrary = if (localSession == null) loadComponentLibrary() else emptyList()
   }
 
@@ -1435,6 +1438,8 @@ private fun LiveSessionApp(
       componentDrift = componentDrift,
       componentLibrary = componentLibrary,
       loadLibrarySymbol = if (localSession == null) ::loadLibrarySymbol else null,
+      publishLibraryComponent = if (localSession == null) ::publishLibraryComponent else null,
+      onLibraryChanged = { libraryGeneration += 1 },
       devicePresets = devicePresets,
       newDesignCatalogs = newDesignCatalogs,
       onCreateDesign = createDesign,

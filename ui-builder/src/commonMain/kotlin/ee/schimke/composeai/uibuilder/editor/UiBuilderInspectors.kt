@@ -155,6 +155,8 @@ internal fun PropertyInspector(
   catalogItems: List<EditorCatalogItem>,
   /** This design's own components, for a selected placement's header. */
   localComponents: List<EditorLocalComponent> = emptyList(),
+  /** Publishes a component to the project library by key; null where there is no library. */
+  onPublishComponent: ((String) -> Unit)? = null,
   onPlaceComponent: (String) -> Unit,
   onPromotePiece: (ReferencePiece) -> Unit,
   canPromotePiece: (ReferencePiece) -> Boolean,
@@ -246,6 +248,7 @@ internal fun PropertyInspector(
           onFlatten = onFlatten,
           catalogItems = catalogItems,
           localComponents = localComponents,
+          onPublishComponent = onPublishComponent,
           onPlaceComponent = onPlaceComponent,
           onPromotePiece = onPromotePiece,
           canPromotePiece = canPromotePiece,
@@ -297,6 +300,8 @@ private fun InspectorBody(
   catalogItems: List<EditorCatalogItem>,
   /** This design's own components, for a selected placement's header. */
   localComponents: List<EditorLocalComponent> = emptyList(),
+  /** Publishes a component to the project library by key; null where there is no library. */
+  onPublishComponent: ((String) -> Unit)? = null,
   onPlaceComponent: (String) -> Unit,
   onPromotePiece: (ReferencePiece) -> Unit,
   canPromotePiece: (ReferencePiece) -> Boolean,
@@ -432,7 +437,7 @@ private fun InspectorBody(
     }
     val placed = node.placementKey()?.let { key -> localComponents.firstOrNull { it.key == key } }
     if (placed != null) {
-      LocalComponentHeader(placed, node.id, onTextInputFocusChanged, dispatch)
+      LocalComponentHeader(placed, node.id, onTextInputFocusChanged, onPublishComponent, dispatch)
     } else {
       LocalUiBuilderChrome.current.InspectorNodeIdentity(node.componentId, node.id)
     }
@@ -2305,6 +2310,7 @@ private fun LocalComponentHeader(
   component: EditorLocalComponent,
   nodeId: String,
   onTextInputFocusChanged: (Boolean) -> Unit,
+  onPublish: ((String) -> Unit)?,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   var draft by remember(component.key, component.name) { mutableStateOf(component.name) }
@@ -2343,6 +2349,20 @@ private fun LocalComponentHeader(
       )
       component.parameters.forEach { parameter ->
         ParameterNameField(component.key, parameter, onTextInputFocusChanged, dispatch)
+      }
+    }
+    if (onPublish != null) {
+      val source = component.source
+      Text(
+        if (source == null)
+          "Only this design has ${component.name}. Publishing puts it in the project library, " +
+            "for every design in the project to place."
+        else "In the project library as ${source.componentId}.",
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.padding(top = 8.dp),
+      )
+      TextButton(onClick = { onPublish(component.key) }) {
+        Text(if (source == null) "Publish to project library" else "Publish update to library")
       }
     }
     component.publishedAs?.let { published ->
