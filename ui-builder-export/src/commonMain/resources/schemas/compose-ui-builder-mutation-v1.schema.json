@@ -14,6 +14,7 @@
     { "type": "object", "required": ["type", "name"], "properties": { "type": { "const": "removeStateVariable" } }, "additionalProperties": true },
     { "type": "object", "required": ["type", "componentKey", "declaration"], "properties": { "type": { "const": "declareComponent" } }, "additionalProperties": true },
     { "type": "object", "required": ["type", "componentKey"], "properties": { "type": { "const": "removeComponent" } }, "additionalProperties": true },
+    { "type": "object", "required": ["type", "nodeId", "arguments"], "properties": { "type": { "const": "setComponentArguments" } }, "additionalProperties": true },
     { "type": "object", "required": ["type", "nodeId", "event", "actions"], "properties": { "type": { "const": "setEventBinding" } }, "additionalProperties": true },
     { "type": "object", "required": ["type", "nodeId", "modifiers"], "properties": { "type": { "const": "setModifiers" } }, "additionalProperties": true },
     { "type": "object", "required": ["type", "changes"], "properties": { "type": { "const": "updateEnvironment" } }, "additionalProperties": true },
