@@ -110,6 +110,7 @@ internal object StarterContent {
       "remote-m3/remote-curved-progress-indicator" to mapOf("progress" to starterFraction(0.6)),
       "remote-m3/remote-slider" to mapOf("value" to starterFraction(0.5)),
       "remote-m3/remote-stepper" to mapOf("value" to starterFraction(0.5)),
+      "remote-m3/remote-text" to mapOf("text" to starterLiteral("string", "Text")),
     )
 
   /**

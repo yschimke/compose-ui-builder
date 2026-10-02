@@ -4115,6 +4115,124 @@
         },
         {
             "code": null,
+            "componentId": "remote-m3/remote-text",
+            "displayName": "Text",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "string",
+                        "object"
+                    ],
+                    "name": "text",
+                    "notes": "`RemoteText`'s `text: RemoteString`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`RemoteText`'s `color: RemoteColor?`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "fontSize",
+                    "notes": "`RemoteText`'s `fontSize: RemoteTextUnit?`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "maxLines",
+                    "notes": "`RemoteText`'s `maxLines: Int`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "displayLarge",
+                        "displayMedium",
+                        "displaySmall",
+                        "titleLarge",
+                        "titleMedium",
+                        "titleSmall",
+                        "labelLarge",
+                        "labelMedium",
+                        "labelSmall",
+                        "bodyLarge",
+                        "bodyMedium",
+                        "bodySmall",
+                        "bodyExtraSmall",
+                        "numeralExtraLarge",
+                        "numeralLarge",
+                        "numeralMedium",
+                        "numeralSmall",
+                        "numeralExtraSmall"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "A role on `RemoteTypography`'s Wear type scale, written as `style = RemoteMaterialTheme.typography.<role>`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/text",
+                "canvasMapping": {
+                    "defaults": {},
+                    "properties": {
+                        "fontSizeSp": "fontSize"
+                    },
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/text`, the adapter the published catalog names; the widget plays `RemoteText` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "remote-m3/remote-title-card",
             "displayName": "Title card",
             "modifierCapabilities": [
@@ -4506,6 +4624,9 @@
                 "remote-m3/remote-switch-button": {
                     "group": "Selection buttons"
                 },
+                "remote-m3/remote-text": {
+                    "group": "Text"
+                },
                 "remote-m3/remote-text-button": {
                     "group": "Buttons"
                 },
@@ -4536,6 +4657,7 @@
                 "Sliders",
                 "Steppers",
                 "Communication",
+                "Text",
                 "Content",
                 "Styles",
                 "Embedded"

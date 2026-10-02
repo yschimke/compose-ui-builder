@@ -523,6 +523,9 @@ object CapabilityCatalogParser {
           numberEditor(0.0, 360.0, 1.0),
         ("remote-m3/remote-curved-progress-indicator" to "dotFadeOutFraction") to
           numberEditor(0.0, 1.0, 0.05),
+        // `RemoteText`, on the same ranges `m3/text` gives the same two parameters.
+        ("remote-m3/remote-text" to "fontSize") to numberEditor(1.0, 512.0, 1.0),
+        ("remote-m3/remote-text" to "maxLines") to numberEditor(1.0, 100.0, 1.0),
       )
 
   private fun angleEditor() = numberEditor(-360.0, 360.0, 1.0)

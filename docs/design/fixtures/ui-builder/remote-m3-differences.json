@@ -1,7 +1,7 @@
 [
   {
     "field": "componentMenu.groupOrder",
-    "why": "Deliberate, and here the frozen side is not even a Remote Compose taxonomy: `remoteM3Catalog` never declares a componentMenu of its own, so it inherits the packaged Material 3 one wholesale — Scaffolds, Layout, Navigation, Text inputs — shelf names for a catalog of widget containers, shaders and typefaces. The policy states :remote-catalog's own @CatalogComponent(group = ...) vocabulary, led by Widget Container and Scaffold templates because a Remote design starts from a container and everything else goes inside one. RE-REVIEWED after yschimke/wear-m3-catalog#410: `Selection buttons`, `Edge-hugging buttons`, `Sliders` and `Steppers` are declared only in `src/snapshot/kotlin`, so the released-lane order never named them and under the snapshot lane the editor appended all four after every ordered group and sorted them alphabetically. Added in place — the three button families together after `Buttons`, then the two value pickers — so the stated order is the one a person sees. RE-REVIEWED when the built-in catalog began offering the Remote Material 3 components: it now shelves them under the policy's own `Buttons`, `Selection buttons`, `Edge-hugging buttons`, `Sliders` and `Steppers`, inserted after `Containment`, so those twenty-one components agree with the policy and their per-component exemptions were deleted. The remaining order difference is the inherited Material 3 taxonomy described above.",
+    "why": "Deliberate, and here the frozen side is not even a Remote Compose taxonomy: `remoteM3Catalog` never declares a componentMenu of its own, so it inherits the packaged Material 3 one wholesale — Scaffolds, Layout, Navigation, Text inputs — shelf names for a catalog of widget containers, shaders and typefaces. The policy states :remote-catalog's own @CatalogComponent(group = ...) vocabulary, led by Widget Container and Scaffold templates because a Remote design starts from a container and everything else goes inside one. RE-REVIEWED after yschimke/wear-m3-catalog#410: `Selection buttons`, `Edge-hugging buttons`, `Sliders` and `Steppers` are declared only in `src/snapshot/kotlin`, so the released-lane order never named them and under the snapshot lane the editor appended all four after every ordered group and sorted them alphabetically. Added in place — the three button families together after `Buttons`, then the two value pickers — so the stated order is the one a person sees. RE-REVIEWED when the built-in catalog began offering the Remote Material 3 components: it now shelves them under the policy's own `Buttons`, `Selection buttons`, `Edge-hugging buttons`, `Sliders` and `Steppers`, inserted after `Containment`, so those twenty-one components agree with the policy and their per-component exemptions were deleted. The remaining order difference is the inherited Material 3 taxonomy described above. RE-REVIEWED when the built-in catalog began offering `remote-m3/remote-text` on the policy's own `Text` shelf, which inserted `Text` after `Communication` on the frozen side; its per-component exemption was deleted.",
     "policy": [
       "Widget Container",
       "Scaffold templates",
@@ -36,6 +36,7 @@
       "Sliders",
       "Steppers",
       "Communication",
+      "Text",
       "Content",
       "Styles",
       "Embedded"
@@ -118,14 +119,6 @@
     "why": "A component the frozen catalog does not have, so it has no shelf to disagree with — and unlike its siblings this one's shelf is no longer a derivation. It was filed by the sorted-first catalog id of the stickers drawing its symbol, which is what one id per symbol costs, and wear-m3-catalog#425 replaced that with a `group` stated in the catalog's own `ui-builder.policy.json`. So this exemption is now recording an authored placement rather than an accident nobody chose: reviewed against the catalog's sections, and it moves only when the catalog moves it.",
     "policy": {
       "group": "Iconography"
-    },
-    "frozen": null
-  },
-  {
-    "field": "componentMenu.components.remote-m3/remote-text",
-    "why": "A component the frozen catalog does not have, so it has no shelf to disagree with — and unlike its siblings this one's shelf is no longer a derivation. It was filed by the sorted-first catalog id of the stickers drawing its symbol, which is what one id per symbol costs, and wear-m3-catalog#425 replaced that with a `group` stated in the catalog's own `ui-builder.policy.json`. So this exemption is now recording an authored placement rather than an accident nobody chose: reviewed against the catalog's sections, and it moves only when the catalog moves it.",
-    "policy": {
-      "group": "Text"
     },
     "frozen": null
   },
