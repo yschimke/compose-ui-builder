@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.WearScreenTheme
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
@@ -144,7 +145,21 @@ private fun wearScreenScaffoldProperties(): List<PropertyCapabilityV1> =
             "`background` — pure black — rather than to the editor theme's surface."
       }
       .build(),
-  )
+  ) +
+    // The screen's theme, one Wear colour role per property. The canvas draws the whole screen
+    // under Wear's scheme with these roles replaced and the generated screen wraps itself in the
+    // same `MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(…))`, so every component
+    // inside follows — including the ones with no colour of their own
+    // (yschimke/wear-m3-catalog#682).
+    WearScreenTheme.ROLES.map { role ->
+      wearString(
+        WearScreenTheme.property(role),
+        notes =
+          "Re-skins the screen's `$role` role for everything inside it. A colour, written as " +
+            "{\"type\":\"color\",\"value\":\"#RRGGBB\"}, or a colourToken naming another role of " +
+            "the stock Wear scheme. Unset keeps Wear's own.",
+      )
+    }
 
 // ── The property vocabulary
 //
@@ -601,6 +616,9 @@ private fun wearOnlyComponents(
               "names the action; set it when the icon is the whole button — an icon button's only " +
               "accessible name is this.",
           ),
+          // `Icon`'s `tint`. Unset inherits the parent's content colour, which is what a button's
+          // `contentColor` reaches it through.
+          wearColor(),
         ),
       // The one component in this group the canvas does NOT draw with Wear Compose, and the
       // difference is stated rather than left to be discovered. `BuilderIcon` is the canvas's own
@@ -763,6 +781,9 @@ private fun wearOnlyComponents(
           ),
           number("progress", "0..1. Absent is the indeterminate form, which takes no progress."),
           number("segments", "How many segments the segmented circular form is divided into."),
+          // `ProgressIndicatorDefaults.colors(indicatorColor, trackColor)`, which all four take.
+          wearColor("indicatorColor"),
+          wearColor("trackColor"),
         ),
       extra = "Wear publishes four, and which one you get is the `variant`.",
     ),
@@ -780,7 +801,10 @@ private fun wearOnlyComponents(
             listOf("extra-small", "small", "medium", "large"),
             "`EdgeButtonSize`. The button's shape comes from the screen's bottom curve, so its " +
               "size is chosen from upstream's four rather than set in dp.",
-          )
+          ),
+          // `ButtonDefaults.buttonColors`, which `EdgeButton` takes as the filled button does.
+          wearColor("containerColor"),
+          wearColor("contentColor"),
         ),
       extra =
         "The button that hugs the bottom of a round screen. It belongs in the scaffold's " +
@@ -1301,6 +1325,11 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
               "The item's identity, written as the generated lazy list's `key`. An identity " +
                 "rather than a look: two rows sharing one are one row to a lazy layout.",
           ),
+          // `CardDefaults.cardColors`, which is how a card is tinted: a `background` modifier
+          // paints behind the card's own container rather than recolouring it. `OutlinedCard`
+          // draws no container, so a `containerColor` there is refused at export.
+          wearColor("containerColor"),
+          wearColor("contentColor"),
           wearClickAction(),
         ),
     )

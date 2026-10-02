@@ -137,6 +137,8 @@ object WearScreenCodeExporter {
     // the `ScreenScaffold` rather than a node inside it — and because its `visible` flag hoists a
     // `remember` that has to be declared above both.
     val overlays = root.slots["overlays"].orEmpty().flatMap { emitter.emitOverlay(it, depth = 1) }
+    // Read before the imports are, because naming a theme is what imports `MaterialTheme`.
+    val colorScheme = emitter.themeColorScheme(rootId)
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
     val name = document.screenIdentifier()
@@ -172,31 +174,44 @@ object WearScreenCodeExporter {
           // built. A screen that brought its own nested one inside every destination it was
           // dropped into, and its `TimeText` froze the clock at the design's `10:10` in shipping
           // code. The previews below supply both, which is where a frozen time belongs.
-          append("${INDENT}ScreenScaffold(scrollState = listState")
-          emitter.rootModifier(rootId)?.let { append(", modifier = $it") }
-          appendLine(",")
-          // The indicator is the design's choice, and the capture guard is not. The guard stays on
-          // both arms: a long screenshot composites many frames into one image, and an indicator
-          // painted at a different offset in every slice lands as a column of dashes down the
-          // edge. `LocalScrollCaptureInProgress` is the platform's own signal for that — Android's
-          // system long-screenshot sets it — so reading it is app behaviour rather than a preview
-          // concession.
-          if (root.flag("scrollIndicator") ?: true) {
-            appendLine(
-              "${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
-            )
-          } else {
-            appendLine("${INDENT}${INDENT}scrollIndicator = null,")
+          // The screen's theme wraps the scaffold and its dialogs, which is everything the design
+          // draws, so a re-skinned primary reaches the edge button and the progress ring as well
+          // as the rows that name a colour. Written as an indented block around the unchanged
+          // screen rather than threaded through every emitter's depth.
+          val screen = StringBuilder()
+          with(screen) {
+            append("${INDENT}ScreenScaffold(scrollState = listState")
+            emitter.rootModifier(rootId)?.let { append(", modifier = $it") }
+            appendLine(",")
+            // The indicator is the design's choice, and the capture guard is not. The guard stays
+            // on both arms: a long screenshot composites many frames into one image, and an
+            // indicator painted at a different offset in every slice lands as a column of dashes
+            // down the edge. `LocalScrollCaptureInProgress` is the platform's own signal for that —
+            // Android's system long-screenshot sets it — so reading it is app behaviour rather than
+            // a preview concession.
+            if (root.flag("scrollIndicator") ?: true) {
+              appendLine(
+                "${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
+              )
+            } else {
+              appendLine("${INDENT}${INDENT}scrollIndicator = null,")
+            }
+            if (edgeButton != null) {
+              appendLine("${INDENT}${INDENT}edgeButton = {")
+              edgeButton.forEach { appendLine(it) }
+              appendLine("${INDENT}${INDENT}},")
+            }
+            appendLine("${INDENT}) { contentPadding ->")
+            body.forEach { appendLine(it) }
+            appendLine("${INDENT}}")
+            overlays.forEach { appendLine(it) }
           }
-          if (edgeButton != null) {
-            appendLine("${INDENT}${INDENT}edgeButton = {")
-            edgeButton.forEach { appendLine(it) }
-            appendLine("${INDENT}${INDENT}},")
+          if (colorScheme == null) append(screen)
+          else {
+            appendLine("${INDENT}MaterialTheme(colorScheme = $colorScheme) {")
+            screen.lines().dropLast(1).forEach { appendLine(if (it.isEmpty()) it else INDENT + it) }
+            appendLine("${INDENT}}")
           }
-          appendLine("${INDENT}) { contentPadding ->")
-          body.forEach { appendLine(it) }
-          appendLine("${INDENT}}")
-          overlays.forEach { appendLine(it) }
           appendLine("}")
           // `AppScaffold` owns the status strip — `ScreenScaffold` has no `timeText` argument — so
           // a design that declares one gets the pair, frozen, around the screen.

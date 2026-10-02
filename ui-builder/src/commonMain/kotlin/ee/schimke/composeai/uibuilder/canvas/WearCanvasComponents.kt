@@ -57,6 +57,7 @@ import androidx.wear.compose.material3.OpenOnPhoneDialogDefaults
 import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.OutlinedCard
 import androidx.wear.compose.material3.OutlinedIconButton
+import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SegmentedCircularProgressIndicator
 import androidx.wear.compose.material3.Slider
@@ -471,14 +472,21 @@ internal fun WearCanvasProgressIndicator(
   segments: Int,
   enabled: Boolean,
   modifier: Modifier = Modifier,
+  indicatorColor: Color = Color.Unspecified,
+  trackColor: Color = Color.Unspecified,
 ) {
   val clamped = progress.coerceIn(0f, 1f)
+  // The design's two colours over the library's own: `Unspecified` is "Wear's default" to
+  // `ProgressIndicatorDefaults.colors`, as it is in the generated call.
+  val colors =
+    ProgressIndicatorDefaults.colors(indicatorColor = indicatorColor, trackColor = trackColor)
   when (variant) {
     "linear" ->
       LinearProgressIndicator(
         progress = { clamped },
         modifier = modifier.fillMaxWidth(),
         enabled = enabled,
+        colors = colors,
       )
     "segmented-circular" ->
       SegmentedCircularProgressIndicator(
@@ -488,16 +496,22 @@ internal fun WearCanvasProgressIndicator(
         progress = { clamped },
         modifier = modifier,
         enabled = enabled,
+        colors = colors,
       )
     // `ArcProgressIndicator` takes start and end angles rather than a progress fraction, so the
     // authored `progress` has nowhere to go and this draws the library's indeterminate arc. Called
     // out rather than faked: sweeping the end angle by `clamped` myself would be a replica of a
     // determinate arc that upstream does not offer at this call site.
-    "arc" -> ArcProgressIndicator(modifier = modifier)
+    "arc" -> ArcProgressIndicator(modifier = modifier, colors = colors)
     // `circular` and anything unrecognised. A default rather than a refusal: an unknown enum is a
     // document the validator should be complaining about, not a reason for the canvas to go blank.
     else ->
-      CircularProgressIndicator(progress = { clamped }, modifier = modifier, enabled = enabled)
+      CircularProgressIndicator(
+        progress = { clamped },
+        modifier = modifier,
+        enabled = enabled,
+        colors = colors,
+      )
   }
 }
 
@@ -528,10 +542,14 @@ internal fun WearCanvasEdgeButton(
   size: String,
   enabled: Boolean,
   modifier: Modifier = Modifier,
+  containerColor: Color = Color.Unspecified,
+  contentColor: Color = Color.Unspecified,
   content: @Composable () -> Unit,
 ) {
   EdgeButton(
     onClick = {},
+    // `EdgeButton` is the filled shape, and the generated call recolours it the same way.
+    colors = ButtonDefaults.buttonColors(containerColor, contentColor),
     buttonSize =
       when (size) {
         "extra-small" -> EdgeButtonSize.ExtraSmall
@@ -856,8 +874,15 @@ internal fun wearTextStyle(style: String): TextStyle =
 internal fun WearCanvasCard(
   variant: String,
   modifier: Modifier = Modifier,
+  containerColor: Color = Color.Unspecified,
+  contentColor: Color = Color.Unspecified,
   content: @Composable () -> Unit,
 ) {
+  // The design's colours over the card's own, as the generated `CardDefaults.cardColors(…)` writes
+  // them. `OutlinedCard` has no container to recolour, and the export refuses one there.
+  val colors =
+    if (variant == "outlined") CardDefaults.outlinedCardColors(contentColor = contentColor)
+    else CardDefaults.cardColors(containerColor = containerColor, contentColor = contentColor)
   // **Both halves of the row transformation.** Outside a `TransformingLazyColumn` there is none and
   // the library's own default applies — it is internal, so the honest way to leave it in place is
   // not to pass the argument. Inside one, the list provides the real thing and it is passed here,
@@ -872,12 +897,13 @@ internal fun WearCanvasCard(
     // line rather than under an empty heading.
     "title" ->
       if (transformation == null) {
-        TitleCard(onClick = {}, title = { body() }, modifier = modifier) {}
+        TitleCard(onClick = {}, title = { body() }, modifier = modifier, colors = colors) {}
       } else {
         TitleCard(
           onClick = {},
           title = { body() },
           modifier = modifier,
+          colors = colors,
           transformation = transformation,
         ) {}
       }
@@ -885,27 +911,48 @@ internal fun WearCanvasCard(
     // one, so it is left empty rather than invented.
     "app" ->
       if (transformation == null) {
-        AppCard(onClick = {}, appName = {}, title = { body() }, modifier = modifier) {}
+        AppCard(
+          onClick = {},
+          appName = {},
+          title = { body() },
+          modifier = modifier,
+          colors = colors,
+        ) {}
       } else {
         AppCard(
           onClick = {},
           appName = {},
           title = { body() },
           modifier = modifier,
+          colors = colors,
           transformation = transformation,
         ) {}
       }
     "outlined" ->
       if (transformation == null) {
-        OutlinedCard(onClick = {}, modifier = modifier) { body() }
+        OutlinedCard(onClick = {}, modifier = modifier, colors = colors) { body() }
       } else {
-        OutlinedCard(onClick = {}, modifier = modifier, transformation = transformation) { body() }
+        OutlinedCard(
+          onClick = {},
+          modifier = modifier,
+          colors = colors,
+          transformation = transformation,
+        ) {
+          body()
+        }
       }
     else ->
       if (transformation == null) {
-        Card(onClick = {}, modifier = modifier) { body() }
+        Card(onClick = {}, modifier = modifier, colors = colors) { body() }
       } else {
-        Card(onClick = {}, modifier = modifier, transformation = transformation) { body() }
+        Card(
+          onClick = {},
+          modifier = modifier,
+          colors = colors,
+          transformation = transformation,
+        ) {
+          body()
+        }
       }
   }
 }
