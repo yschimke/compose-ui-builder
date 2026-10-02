@@ -261,6 +261,17 @@ private fun LiveSessionApp(
         }
     onDispose { stop?.invoke() }
   }
+  // IndexedDB refuses a write after the edit that made it has been answered, so its refusal
+  // arrives on its own and is said the same way a synchronous one is.
+  DisposableEffect(localSession) {
+    val stop =
+      if (localSession == null) null
+      else
+        BrowserLocalStorageBackend.onWriteFailure { reason ->
+          browserStorageProblem = "Not saved in this browser: $reason"
+        }
+    onDispose { stop?.invoke() }
+  }
   var authoritativeGeneration by remember { mutableStateOf(0) }
   val inspectionPublisher = remember(scope) { CoalescingInspectionPublisher(scope) }
   var selectedNodeId by remember { mutableStateOf(config.selectors.nodeId) }
@@ -1314,7 +1325,15 @@ private fun LiveSessionApp(
         browserDesignSummaries = LocalDesignStore(BrowserLocalDesignStorage()).list()
       },
       browserStorageNotice =
-        localStorageNotice(browserDesignSummaries, estimate = browserStorageEstimate),
+        listOfNotNull(
+            BrowserLocalStorageBackend.unavailableReason?.let {
+              "This browser's design database could not be opened ($it), so designs kept here " +
+                "on an earlier visit are not shown."
+            },
+            localStorageNotice(browserDesignSummaries, estimate = browserStorageEstimate),
+          )
+          .joinToString(" ")
+          .ifEmpty { null },
       // Said before anything is made, not discovered when it is: this account's new designs are
       // kept in this browser, and here is why and how to change that.
       accountNotice =
