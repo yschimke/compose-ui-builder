@@ -4,8 +4,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.test.*
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorLibraryComponent
 import ee.schimke.composeai.uibuilder.editor.EditorLibraryPublishResult
 import ee.schimke.composeai.uibuilder.editor.EditorLibrarySource
+import ee.schimke.composeai.uibuilder.editor.EditorLibrarySymbol
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
@@ -110,6 +112,92 @@ class LocalComponentsEditorTest {
     assertIs<CommandOutcome.Accepted>(state.lastOutcome, "${state.lastOutcome}")
     publishCapture(state.document, placement, "publish-after")
   }
+
+  /**
+   * An imported component the library has moved on from: the inspector offers its newer version,
+   * and once taken shows the new parameters and no offer.
+   */
+  @Test
+  fun `a drifted component's inspector offers the library's newer version`() {
+    fun binding(key: String) =
+      JsonObject(mapOf("type" to JsonPrimitive("binding"), "value" to JsonPrimitive(key)))
+    fun symbol(digest: String, vararg parameters: String) =
+      EditorLibrarySymbol(
+        component =
+          EditorLibraryComponent("m3-catalog", "inbox-email", "project/inbox-email", "Inbox email"),
+        digest = digest,
+        declaration =
+          JsonObject(mapOf("name" to JsonPrimitive("InboxEmail"), "root" to JsonPrimitive("row"))),
+        nodes =
+          (listOf(
+              UiBuilderNode(
+                id = "row",
+                componentId = "layout/row",
+                slots = mapOf("children" to parameters.toList()),
+              )
+            ) +
+              parameters.map {
+                UiBuilderNode(
+                  id = it,
+                  componentId = "m3/text",
+                  properties = JsonObject(mapOf("text" to binding(it))),
+                )
+              })
+            .associateBy { it.id },
+      )
+    var state = reducer.initial(inbox(), "inbox")
+    val target = checkNotNull(reducer.libraryComponentTarget(state, symbol("sha256:one")))
+    state =
+      reducer.reduce(
+        state,
+        UiBuilderEditorEvent.InsertLibraryComponent(
+          symbol("sha256:one", "sender", "subject"),
+          target,
+        ),
+      )
+    assertIs<CommandOutcome.Accepted>(state.lastOutcome, "${state.lastOutcome}")
+    val drift =
+      listOf(
+        ComponentDriftFinding(
+          componentKey = "inbox-email",
+          system = "m3-catalog",
+          componentId = "inbox-email",
+          paletteId = "project/inbox-email",
+          state = ComponentDriftState.DRIFTED,
+          importedDigest = "sha256:one",
+          currentDigest = "sha256:two",
+        )
+      )
+    val newer = symbol("sha256:two", "sender", "snippet")
+    updateCapture(state.document, state.selection.single(), drift, newer, "update-before")
+    state = reducer.reduce(state, UiBuilderEditorEvent.UpdateLibraryComponent("inbox-email", newer))
+    assertIs<CommandOutcome.Accepted>(state.lastOutcome, "${state.lastOutcome}")
+    updateCapture(state.document, state.selection.single(), drift, newer, "update-after")
+  }
+
+  private fun updateCapture(
+    document: UiBuilderDocument,
+    selected: String,
+    drift: List<ComponentDriftFinding>,
+    newer: EditorLibrarySymbol,
+    name: String,
+  ) =
+    runDesktopComposeUiTest(width = 1600, height = 1050) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document,
+            catalog,
+            initialSelectedNodeId = selected,
+            initialInspectorOpen = true,
+            initialComponentsOpen = true,
+            componentDrift = drift,
+            loadLibrarySymbol = { newer },
+          )
+        }
+      }
+      capture(name)
+    }
 
   private fun publishCapture(document: UiBuilderDocument, selected: String, name: String) =
     runDesktopComposeUiTest(width = 1600, height = 1050) {

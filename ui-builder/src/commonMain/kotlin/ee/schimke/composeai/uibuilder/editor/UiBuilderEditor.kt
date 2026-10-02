@@ -2352,6 +2352,30 @@ fun UiBuilderEditor(
             }
           }
         },
+      onUpdateFromLibrary =
+        loadLibrarySymbol?.let { load ->
+          { componentKey ->
+            // The drift row names the symbol, palette id included, as the server spells it.
+            val finding = state.componentDrift.firstOrNull { it.componentKey == componentKey }
+            if (finding != null) {
+              val listed =
+                componentLibrary.firstOrNull {
+                  it.system == finding.system && it.componentId == finding.componentId
+                }
+                  ?: EditorLibraryComponent(
+                    system = finding.system,
+                    componentId = finding.componentId,
+                    paletteId = finding.paletteId,
+                    title = finding.componentId,
+                  )
+              editorScope.launch {
+                val symbol = runCatching { load(listed) }.getOrNull()
+                if (symbol == null) say("Could not fetch ${listed.title} from the project library")
+                else dispatch(UiBuilderEditorEvent.UpdateLibraryComponent(componentKey, symbol))
+              }
+            }
+          }
+        },
       onPlaceComponent = { componentId ->
         captureSequence += 1
         captureRequest = ReferenceCaptureRequest(componentId, captureSequence)

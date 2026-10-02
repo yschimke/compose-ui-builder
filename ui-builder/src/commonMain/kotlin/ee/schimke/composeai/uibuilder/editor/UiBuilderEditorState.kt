@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.CollaborationReducer
 import ee.schimke.composeai.uibuilder.CollaborationState
 import ee.schimke.composeai.uibuilder.CommandApplication
 import ee.schimke.composeai.uibuilder.CommandOutcome
+import ee.schimke.composeai.uibuilder.ComponentDriftState
 import ee.schimke.composeai.uibuilder.DesignCommand
 import ee.schimke.composeai.uibuilder.DesignOperation
 import ee.schimke.composeai.uibuilder.ParentSlot
@@ -384,6 +385,8 @@ class UiBuilderEditorReducer(
         insertLibraryComponent(state, event.symbol, event.target, event.afterNodeId)
       is UiBuilderEditorEvent.RenameLocalComponent ->
         renameLocalComponent(state, event.componentKey, event.name)
+      is UiBuilderEditorEvent.UpdateLibraryComponent ->
+        updateLibraryComponent(state, event.componentKey, event.symbol)
       is UiBuilderEditorEvent.RecordLibrarySource ->
         recordLibrarySource(state, event.componentKey, event.source)
       is UiBuilderEditorEvent.ReplaceLocalComponent ->
@@ -4366,7 +4369,9 @@ class UiBuilderEditorReducer(
    * The components this design defines, for the palette's "This design" shelf and the inspector.
    */
   fun localComponents(state: UiBuilderEditorState): List<EditorLocalComponent> =
-    state.document.localComponents(catalog)
+    state.document.localComponents(catalog).map { component ->
+      if (newerInLibrary(state, component.key)) component.copy(newerInLibrary = true) else component
+    }
 
   /** What a component's palette tile draws: one placement of it, as a design of its own. */
   fun localComponentPreview(state: UiBuilderEditorState, componentKey: String): UiBuilderDocument? {
@@ -4676,6 +4681,147 @@ class UiBuilderEditorReducer(
       )
     return state.apply(sequence, operations, selectionAfter = nodeId)
   }
+
+  /**
+   * Take a newer version of an imported component from the library, in place.
+   *
+   * The design's copy is what it draws until somebody decides otherwise — drift is reported, never
+   * redrawn — and this is that decision. The body is replaced by the symbol's, the declaration
+   * records the new digest, and every placement keeps its place, its layout and the arguments the
+   * new body still reads: the ones it no longer reads are dropped, and a text parameter it newly
+   * reads starts as its own name, as a first placement's does.
+   */
+  private fun updateLibraryComponent(
+    state: UiBuilderEditorState,
+    componentKey: String,
+    symbol: EditorLibrarySymbol,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val document = state.document
+    val wanted = symbol.component
+    val declaration =
+      document.components[componentKey] as? JsonObject
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_DOCUMENT,
+          "This design defines no component `$componentKey`",
+        )
+    val recorded = componentSource(declaration)
+    if (
+      recorded == null || recorded.first != wanted.system || recorded.second != wanted.componentId
+    )
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_DOCUMENT,
+        "${componentDeclarationName(declaration) ?: componentKey} was not imported from " +
+          "${wanted.title}",
+      )
+    if (recorded.third == symbol.digest) return state
+    val oldRoot = componentRootOf(declaration) ?: return state
+    val bodyRoot =
+      componentRootOf(symbol.declaration)?.takeIf { it in symbol.nodes }
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_DOCUMENT,
+          "${wanted.title} was published without the body it names",
+        )
+    symbol.nodes.values
+      .firstOrNull { it.componentId !in catalog.componentsById }
+      ?.let {
+        return state.rejected(
+          sequence,
+          RejectionCode.INVALID_DOCUMENT,
+          "${wanted.title} now uses ${it.componentId}, which this design's catalog does not have",
+        )
+      }
+    val capability = catalog.componentsById.getValue(symbol.nodes.getValue(bodyRoot).componentId)
+    // Every placement has to be able to hold the new version where it already sits, or the update
+    // would leave a slot holding something it refuses.
+    document.nodes.values
+      .filter { it.placementKey() == componentKey }
+      .forEach { placement ->
+        val parent = document.location(placement.id) ?: return@forEach
+        val accepts =
+          document.nodes[parent.nodeId]
+            ?.let { catalog.componentsById[it.componentId]?.slot(parent.slot) }
+            ?.accepts(capability) == true
+        if (!accepts)
+          return state.rejected(
+            sequence,
+            RejectionCode.INVALID_LOCATION,
+            "The new ${wanted.title} cannot sit where ${placement.id} does",
+            placement.id,
+          )
+      }
+
+    val operations = mutableListOf<DesignOperation>()
+    val taken = document.takenIdentities()
+    val copyRoot =
+      freshCopyId(document.freshNodeId("$bodyRoot-import", operationIdPrefix, sequence), taken)
+    symbol.nodes.appendDuplicateSubtree(
+      sourceNodeId = bodyRoot,
+      copyNodeId = copyRoot,
+      parent = null,
+      afterNodeId = null,
+      operations = operations,
+      taken = taken,
+    )
+    // The library's name, unless another component here already goes by it.
+    val libraryName = componentDeclarationName(symbol.declaration)
+    val name =
+      libraryName?.takeIf { wanted ->
+        document.components.none { (key, other) ->
+          key != componentKey && componentDeclarationName(other) == wanted
+        }
+      } ?: componentDeclarationName(declaration)
+    operations +=
+      DesignOperation.DeclareComponent(
+        componentKey,
+        withLibrarySource(
+          JsonObject(
+            symbol.declaration +
+              ("root" to JsonPrimitive(copyRoot)) +
+              listOfNotNull(name?.let { "name" to JsonPrimitive(it) })
+          ),
+          EditorLibrarySource(wanted.system, wanted.componentId, symbol.digest),
+        ),
+      )
+    // The old body, which the new declaration handed back to the root list.
+    operations += DesignOperation.DeleteNode(oldRoot)
+
+    val reads = linkedMapOf<String, JsonElement?>()
+    symbol.nodes.values
+      .sortedBy { it.id }
+      .forEach { node ->
+        node.properties.forEach { (property, value) ->
+          val parameter = value.bindingKey() ?: return@forEach
+          if (parameter in reads) return@forEach
+          val declared = catalog.componentsById[node.componentId]?.propertiesByName?.get(property)
+          reads[parameter] =
+            if (declared?.typeNames()?.authoredTypes() == setOf("string"))
+              literal("string", JsonPrimitive(parameter.humanLabel()))
+            else null
+        }
+      }
+    val selectionAfter =
+      rewritePlacements(state, componentKey, sequence, operations) { arguments ->
+        val kept = arguments.filterKeys { it in reads }
+        val added =
+          reads.entries
+            .filter { (key, starter) -> key !in kept && starter != null }
+            .associate { (key, starter) -> key to starter!! }
+        JsonObject(kept + added).takeIf { it != arguments }
+      }
+    return state.apply(sequence, operations, selectionAfter = selectionAfter)
+  }
+
+  /** Whether the library holds a newer version of [componentKey] than this design imported. */
+  fun newerInLibrary(state: UiBuilderEditorState, componentKey: String): Boolean =
+    // Only findings still about the copy this design holds: taking the new version locally changes
+    // the recorded digest before the host has read the drift report again.
+    state.componentDrift.stillDescribing(state.document).any {
+      it.componentKey == componentKey && it.state == ComponentDriftState.DRIFTED
+    }
 
   private fun insertLocalComponent(
     state: UiBuilderEditorState,
