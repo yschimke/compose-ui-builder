@@ -1982,17 +1982,25 @@ class UiBuilderEditorReducer(
   fun problems(
     document: UiBuilderDocument,
     assetBytes: (contentDigest: String) -> ByteArray? = { null },
-  ): List<EditorProblem> =
-    (CapabilityComposeCodeExporter.diagnose(document, catalog)
-        // A Wear widget is a WearWidgetDocument of Remote Compose, not a Compose call tree. Its
-        // root is the launcher-owned frame that WearWidgetCodeExporter deliberately removes, and
-        // RemoteContentEmitter owns its children. Keep the structural capability diagnostics, but
-        // do not report the ordinary Compose emitter's missing-symbol answer for a language it does
-        // not write. The dedicated generator below reports every actual Remote Compose refusal.
-        .filterNot {
-          document.isWearWidget() &&
-            it.code in setOf("MISSING_CODE_CAPABILITY", "UNSUPPORTED_CODE_COMPONENT")
-        }
+  ): List<EditorProblem> {
+    val export = exportOutcome(document, assetBytes)
+    return (CapabilityComposeCodeExporter.diagnose(document, catalog)
+        // "No Kotlin symbol/import mapping exists" and "no typed call emitter exists" are
+        // `CapabilityComposeCodeExporter` describing *itself*, and it is not what writes a design's
+        // Kotlin: the export runs a dedicated emitter (`RecordFreeExport` — a Wear widget's
+        // Remote Compose, a Wear screen's `ScreenScaffold`, an A2UI program) or the record-driven
+        // `ScreenGenerator`. `wear-m3` leaves `code` null on every component on purpose for exactly
+        // that reason, so a Wear screen that generates cleanly was listed as blocked on every
+        // node — "Missing code capability" under a heading promising what the export refuses.
+        //
+        // So the two codes are dropped wherever the generator that does run has given its own
+        // answer and it is authoritative: always for a dedicated emitter, whose refusals are
+        // appended below in its own words, and for the record path when it generates. Where the
+        // record path refuses they stay, beside its refusals, because there they point at the node
+        // of a design that really does not export — the one case they were ever true of. Every
+        // other capability diagnostic (pin drift, a disallowed modifier, an unknown component) is
+        // kept: those are questions no generator asks.
+        .filterNot { it.code in GENERATOR_OWNED_CODES && export?.answersForTheEmitter == true }
         .filter { it.severity == ComposeExportSeverity.ERROR && it.code != "UNKNOWN_PROPERTY" }
         .map { diagnostic ->
           EditorProblem(
@@ -2011,7 +2019,7 @@ class UiBuilderEditorReducer(
         // Appended rather than replacing: the capability diagnostics still answer questions the
         // generator does not ask — catalog pin drift, a modifier the catalog disallows on a
         // component — and dropping them to unify the source would narrow the panel's promise.
-        exportRefusals(document, assetBytes) +
+        export?.refusals.orEmpty() +
         undeclaredPropertyProblems(document) +
         // Not a refusal — the export runs — but the one property a whole design is judged by that
         // commits and changes nothing visible (#485). The same notice the served export attaches.
@@ -2031,6 +2039,7 @@ class UiBuilderEditorReducer(
           }
         ))
       .distinctBy { it.code to it.message }
+  }
 
   private fun undeclaredPropertyProblems(document: UiBuilderDocument): List<EditorProblem> =
     document.nodes.values.sortedBy(UiBuilderNode::id).flatMap { node ->
@@ -2249,7 +2258,8 @@ class UiBuilderEditorReducer(
     }
 
   /**
-   * What the export would refuse, as editor problems.
+   * What the export would refuse, and which generator says so — or null when the design could not
+   * be read at all.
    *
    * `nodeId` is deliberately null: a refusal names the component and the reason in its text, and
    * the generator reports against the *projected* screen rather than the document's node ids. A
@@ -2264,14 +2274,15 @@ class UiBuilderEditorReducer(
    * blocker on a design that exports perfectly well, and told a designer to go and undo the widget
    * they had just drawn.
    */
-  private fun exportRefusals(
+  private fun exportOutcome(
     document: UiBuilderDocument,
     assetBytes: (contentDigest: String) -> ByteArray?,
-  ): List<EditorProblem> =
+  ): ExportOutcome? =
   // Total, because the panel's contract is to *report* rather than throw. A malformed property
   // makes `toProtocolDocument` fail its decode, and a panel that propagated that would take the
   // editor down over the one document whose problems a designer most needs listed. The capability
-  // diagnostics above already name that document's real fault.
+  // diagnostics above already name that document's real fault — and keep all of them, since null
+  // here says nothing about which generator would have answered.
   runCatching {
     when (
       val recordFree =
@@ -2282,22 +2293,46 @@ class UiBuilderEditorReducer(
           assets = document.widgetAssetBytes(assetBytes),
         )
     ) {
-      is RecordFreeExport.Generated.Refused -> recordFree.reasons
+      is RecordFreeExport.Generated.Refused ->
+        ExportOutcome(dedicated = true, reasons = recordFree.reasons)
       // It generates. The gate below would still refuse it — that is the whole reason these
-      // designs have their own emitter — so asking it anything here is asking the wrong question.
-      is RecordFreeExport.Generated.Emitted -> emptyList()
-      null -> ScreenExportGate.refusals(document.toProtocolDocument(), exportRecord)
+      // designs have their own emitter — so asking it anything here is asking the wrong
+      // question.
+      is RecordFreeExport.Generated.Emitted ->
+        ExportOutcome(dedicated = true, reasons = emptyList())
+      null ->
+        ExportOutcome(
+          dedicated = false,
+          reasons = ScreenExportGate.refusals(document.toProtocolDocument(), exportRecord),
+        )
     }
   }
-    .getOrElse { emptyList() }
-    .map {
-      EditorProblem(
-        code = "COMPOSE_EXPORT_REFUSED",
-        message = it,
-        nodeId = null,
-        componentId = null,
-      )
-    }
+    .getOrNull()
+
+  /**
+   * Which generator writes a design, and what it refused.
+   *
+   * @param dedicated whether a `RecordFreeExport` emitter owns the design rather than the
+   *   record-driven `ScreenGenerator`.
+   */
+  private class ExportOutcome(val dedicated: Boolean, val reasons: List<String>) {
+    /**
+     * Whether this answer replaces the capability exporter's own "no symbol" / "no emitter" one: a
+     * dedicated emitter's always does, the record path's only when it generates.
+     */
+    val answersForTheEmitter: Boolean
+      get() = dedicated || reasons.isEmpty()
+
+    val refusals: List<EditorProblem>
+      get() = reasons.map {
+        EditorProblem(
+          code = "COMPOSE_EXPORT_REFUSED",
+          message = it,
+          nodeId = null,
+          componentId = null,
+        )
+      }
+  }
 
   fun themeSettings(state: UiBuilderEditorState): EditorThemeSettings {
     val host = state.document.themeHost() ?: return EditorThemeSettings()
@@ -5708,3 +5743,10 @@ internal fun UiBuilderDocument.widgetAssetBytes(
 
 /** The Code pane's rendering of an A2UI message: indented, because a person reads it there. */
 private val a2uiMessageJson = kotlinx.serialization.json.Json { prettyPrint = true }
+
+/**
+ * The capability diagnostics that describe `CapabilityComposeCodeExporter`'s own reach rather than
+ * the design: whether *it* has a Kotlin symbol, and whether *it* has a typed call emitter. See
+ * [UiBuilderEditorReducer.problems] for when the generator that actually runs answers instead.
+ */
+private val GENERATOR_OWNED_CODES = setOf("MISSING_CODE_CAPABILITY", "UNSUPPORTED_CODE_COMPONENT")

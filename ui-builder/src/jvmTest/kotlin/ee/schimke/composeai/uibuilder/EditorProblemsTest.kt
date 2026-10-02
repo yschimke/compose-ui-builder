@@ -20,8 +20,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
 /**
@@ -378,6 +380,46 @@ class EditorProblemsTest {
     assertTrue(
       reported.any { it.code == "UNSUPPORTED_CODE_COMPONENT" && it.nodeId == player.id },
       "$reported",
+    )
+  }
+
+  @Test
+  fun `a mobile component with no Kotlin symbol is still reported against its node`() {
+    // The Wear fix drops this diagnostic where a dedicated emitter writes the design, because there
+    // it is the wrong exporter describing itself. A Material 3 screen the record-driven export
+    // refuses is not that case: the node with no symbol is one the designer can be pointed at.
+    val unmapped =
+      CapabilityCatalogParser.parse(
+        Json.encodeToString(
+          JsonObject.serializer(),
+          Json.parseToJsonElement(resource("/m3-catalog-capabilities-v1.json")).jsonObject.let {
+            catalogJson ->
+            JsonObject(
+              catalogJson +
+                ("components" to
+                  JsonArray(
+                    catalogJson.getValue("components").jsonArray.map { component ->
+                      val fields = component.jsonObject
+                      if (fields["componentId"] == JsonPrimitive("m3/text"))
+                        JsonObject(fields + ("code" to JsonNull))
+                      else fields
+                    }
+                  ))
+            )
+          },
+        )
+      )
+
+    val reported = UiBuilderEditorReducer(unmapped).problems(document)
+
+    assertTrue(
+      reported.any {
+        it.code == "MISSING_CODE_CAPABILITY" &&
+          it.componentId == "m3/text" &&
+          it.nodeId != null &&
+          it.blocking
+      },
+      reported.toString(),
     )
   }
 
