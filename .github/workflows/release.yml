@@ -360,9 +360,48 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # An ordinary push and a release-PR merge hold separate concurrency slots, so on an
+      # ordinary push this pass can run while another run's release is still a draft.
+      # release-please cannot see drafts: it would baseline on the release before and rewrite
+      # the release PR with history that is already released, until the next push. The guard
+      # skips the pass while a release is in flight (the release run's own pass, after
+      # `finish-release`, writes the PR), and closes a duplicate a mid-run merge still produced.
+      # See `.github/scripts/release-pr-race-guard.sh`.
+      - name: Check whether a release is in flight
+        id: preflight
+        if: ${{ needs.release-please.outputs.release_created != 'true' }}
+        env:
+          MODE: check
+        run: ./.github/scripts/release-pr-race-guard.sh
+
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: rp
+        if: ${{ steps.preflight.outputs.in_flight != 'true' }}
+        # The failure this tolerates is the race's own: updating a release PR that merged out
+        # from under it. The last step re-raises anything else.
+        continue-on-error: true
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           skip-github-release: true
+
+      - name: Discard a release PR the race produced
+        id: repair
+        if: ${{ always() && needs.release-please.outputs.release_created != 'true' && steps.preflight.outputs.in_flight != 'true' }}
+        env:
+          MODE: repair
+          RP_PR: ${{ steps.rp.outputs.pr }}
+        run: ./.github/scripts/release-pr-race-guard.sh
+
+      - name: Re-raise a release-please failure the race does not explain
+        if: ${{ always() && steps.rp.outcome == 'failure' && steps.repair.outputs.raced != 'true' }}
+        run: |
+          echo "::error::release-please failed and no release was in flight — see the step above."
+          exit 1
