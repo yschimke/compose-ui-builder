@@ -75,3 +75,20 @@ Named so nobody looks for them here: the HTTP/WebSocket routes and the MCP desig
 specs boot a server, which is why they are integration tests of the *host* — the
 `ui-builder-project-boundary.sh` and `ui-builder-catalog-literals.sh` gates, which scan server
 sources, and `serve-web`.
+
+## Cursor Cloud specific instructions
+
+See the editor with the desktop JVM app, using [`docs/AGENT_TESTING.md`](docs/AGENT_TESTING.md).
+
+- JDK 21 is the default `java`. JDK 17 (headless) is at `/usr/lib/jvm/java-17-openjdk-amd64`.
+  Gradle finds both under `/usr/lib/jvm`. `:ui-builder-runtime` and `:ui-builder-export` compile
+  on the 17 toolchain; the editor and `:ui-builder-desktop` compile and launch on 21. Before
+  `:ui-builder-desktop:run`, set `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64` and run
+  `./gradlew --stop` when a daemon was started on another JDK.
+- `Cannot create Linux GL context` in the Skiko log is the software-rendering fallback. The
+  window still opens on the session display (`DISPLAY=:1`) or under `xvfb-run`.
+- Representative checks: `./gradlew :ui-builder-runtime:test :ui-builder-export:jvmTest`.
+  `./gradlew check` also links Kotlin/Wasm and uses the 6 GB Kotlin daemon in `gradle.properties`.
+- The default Material 3 scratch is the Jetcaster fixture. Its Code pane reports when that
+  document is outside what export accepts. **File → New from template → Material 3 · Blank**,
+  then insert a component, produces Compose source.
