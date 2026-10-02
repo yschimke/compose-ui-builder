@@ -1084,7 +1084,7 @@
     "functionName": "WearScreenCodePanePreview",
     "module": "ui-builder",
     "renderBasename": "WearScreenCodePanePreview-81971946.png",
-    "sha256": "6e68c804145059fb70718a8c40d3b75238b1168cdd8f47f6d0b819773cf4139d",
+    "sha256": "d215727371779926d5d563b0542ed43f53694233bfaf7b3516e29ee3f853195e",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearScreenSamplePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearScreenSamplePreviewKt.WearScreenSamplePreview": {
