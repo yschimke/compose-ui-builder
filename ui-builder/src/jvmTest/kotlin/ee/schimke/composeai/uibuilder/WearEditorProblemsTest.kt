@@ -114,27 +114,29 @@ class WearEditorProblemsTest {
   }
 
   /**
-   * A bare `wear-m3/button` as the design's only root is neither a Wear screen nor a widget, so no
-   * Wear emitter takes it and it falls to the record-driven generator — which has no record for a
-   * `wear-m3` component and refuses. That refusal is real, and the panel must keep saying so: the
-   * fix for it is to put the button inside a Wear screen scaffold, not to hide the blocker.
+   * A bare `wear-m3/button` as the design's only root is neither a Wear screen nor a widget, so
+   * neither Wear emitter writes it and the export refuses. That refusal is real and the panel keeps
+   * it — but as its cause, which is the root, and with what to do about it. It used to be the
+   * record-driven generator's "no component `wear-m3/button` in this catalog" once per component,
+   * beside the capability exporter's "No Kotlin symbol/import mapping exists" on the node: three
+   * symptoms, none of them saying to wrap the button in a screen.
    */
   @Test
-  fun `a bare wear button at the root is refused by the real export, and the panel says so`() {
+  fun `a bare wear button at the root is refused by the real export, and the panel says why`() {
     val bare = seed.copy(roots = listOf("cell-0"), nodes = button("cell-0"))
     val refused = assertIs<EditorGeneratedCode.Refused>(reducer.generatedCode(bare))
+    val cause =
+      "the root is `wear-m3/button`, but a Wear design exports only as a Wear screen or a Wear " +
+        "widget: put its content inside a `wear-m3/screen-scaffold` (or start from the " +
+        "\"wear-screen\" template), or make the root a Wear widget container"
+    assertEquals(listOf(cause), refused.reasons, "the Code pane says the same thing")
 
     val reported = reducer.problems(bare)
 
-    assertTrue(
-      reported.any {
-        it.code == "COMPOSE_EXPORT_REFUSED" && it.blocking && "wear-m3/button" in it.message
-      },
-      "$reported",
-    )
-    assertTrue(
-      refused.reasons.all { reason -> reported.any { it.message == reason } },
-      "every reason the export gives is in the panel: ${refused.reasons} vs $reported",
+    assertEquals(
+      listOf("COMPOSE_EXPORT_REFUSED" to cause),
+      reported.filter { it.blocking }.map { it.code to it.message },
+      "one root cause, in the export's words, and not the capability exporter's: $reported",
     )
   }
 
