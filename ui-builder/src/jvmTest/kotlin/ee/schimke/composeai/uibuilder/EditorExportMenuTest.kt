@@ -65,6 +65,45 @@ class EditorExportMenuTest {
   }
 
   @Test
+  fun `a phone that can share files gets a Share row for each picture, before Download`() {
+    val groups =
+      exportMenuEntries(
+        exportFormatsFor(svg = true, png = true, a2uiJson = true),
+        supportsShare = true,
+      )
+
+    assertEquals(
+      listOf(
+        listOf("Copy SVG", "Copy PNG", "Copy A2UI JSON"),
+        listOf("Copy SVG link", "Copy PNG link", "Copy A2UI JSON link"),
+        listOf("Share SVG", "Share PNG"),
+        listOf("Download SVG", "Download PNG", "Download A2UI JSON"),
+      ),
+      groups.map { group -> group.map { it.label } },
+    )
+  }
+
+  @Test
+  fun `a host that cannot share answers Share by downloading`() {
+    val host =
+      object : UiBuilderExportHost {
+        override val formats = listOf(EditorExportFormat.Png)
+
+        override suspend fun copyPicture(format: EditorExportFormat) = "copied"
+
+        override suspend fun copyLink(format: EditorExportFormat) = "linked"
+
+        override suspend fun download(format: EditorExportFormat) = "downloaded"
+      }
+
+    assertEquals(false, host.supportsShare)
+    assertEquals(
+      "downloaded",
+      runBlocking { host.perform(EditorExportMenuEntry.Share(EditorExportFormat.Png)) },
+    )
+  }
+
+  @Test
   fun `a catalog without svg keeps every png row and loses every svg row`() {
     val groups = exportMenuEntries(exportFormatsFor(svg = false, png = true))
 

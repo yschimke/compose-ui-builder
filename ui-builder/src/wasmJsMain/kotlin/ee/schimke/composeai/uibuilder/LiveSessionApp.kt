@@ -1261,6 +1261,7 @@ private fun LiveSessionApp(
       onDownloadBrowserDesign = { designId ->
         downloadBrowserDesign(designId)?.let { sessionStatus = "Local error · $it" }
       },
+      browserDesignSaveLabel = remember { browserDesignSaveLabel() },
       onDeleteBrowserDesign = { designId ->
         LocalDesignStore(BrowserLocalDesignStorage()).delete(designId)
         browserDesignSummaries = LocalDesignStore(BrowserLocalDesignStorage()).list()

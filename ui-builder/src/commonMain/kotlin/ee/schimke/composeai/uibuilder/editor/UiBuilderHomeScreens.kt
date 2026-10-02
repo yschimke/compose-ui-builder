@@ -636,6 +636,11 @@ fun UiBuilderNewDesignScreen(
   onOpenBrowserDesign: ((designId: String) -> Unit)? = null,
   /** Saves one of [browserDesigns] as a file: the only copy that outlives this browser's data. */
   onDownloadBrowserDesign: ((designId: String) -> Unit)? = null,
+  /**
+   * What [onDownloadBrowserDesign]'s button says: "Download", or "Share" where the host hands the
+   * file to a phone's share sheet instead (which offers saving it too).
+   */
+  browserDesignSaveLabel: String = "Download",
   /** Removes one of [browserDesigns] from this browser, after the person has confirmed it. */
   onDeleteBrowserDesign: ((designId: String) -> Unit)? = null,
   /** Why this browser may soon refuse to keep more, or null while there is room. */
@@ -719,6 +724,7 @@ fun UiBuilderNewDesignScreen(
                 designs = browserDesigns,
                 onOpen = onOpenBrowserDesign,
                 onDownload = onDownloadBrowserDesign,
+                downloadLabel = browserDesignSaveLabel,
                 onDelete = onDeleteBrowserDesign,
                 storageNotice = browserStorageNotice,
               )
@@ -992,6 +998,7 @@ private fun BrowserDesignsPanel(
   designs: List<UiBuilderBrowserDesign>,
   onOpen: ((designId: String) -> Unit)?,
   onDownload: ((designId: String) -> Unit)?,
+  downloadLabel: String,
   onDelete: ((designId: String) -> Unit)?,
   storageNotice: String?,
 ) {
@@ -1051,9 +1058,9 @@ private fun BrowserDesignsPanel(
               TextButton(
                 onClick = { onDownload(design.designId) },
                 modifier =
-                  Modifier.semantics { contentDescription = "Download ${design.designId}" },
+                  Modifier.semantics { contentDescription = "$downloadLabel ${design.designId}" },
               ) {
-                Text("Download")
+                Text(downloadLabel)
               }
             }
             if (onDelete != null) {

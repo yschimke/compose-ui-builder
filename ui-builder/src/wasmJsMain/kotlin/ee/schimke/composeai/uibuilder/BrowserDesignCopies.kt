@@ -25,9 +25,27 @@ internal fun downloadBrowserDesign(designId: String): String? {
   val text =
     LocalDesignStore(BrowserLocalDesignStorage()).storedText(designId)
       ?: return "this browser no longer holds $designId"
+  if (browserCanShareDesignCopy()) {
+    // Straight from the tap, with no await before it, so the share sheet still has the tap's user
+    // activation. Its answer is not waited for: the sheet is the feedback, and a refusal has
+    // already fallen back to the download this function always did.
+    shareOrDownloadTextPromise("$designId.ui-builder.json", text, "application/json")
+    return null
+  }
   downloadText("$designId.ui-builder.json", text)
   return null
 }
+
+/** What the browser-design row's save button says: Share where the share sheet takes files. */
+internal fun browserDesignSaveLabel(): String =
+  if (browserCanShareDesignCopy()) "Share" else "Download"
+
+/**
+ * Asked of a `.json` rather than of any file: Safari shares one, Chrome on Android does not, and a
+ * button labelled Share that downloads would be a small lie on every press.
+ */
+private fun browserCanShareDesignCopy(): Boolean =
+  browserCanShareFile("design.ui-builder.json", "application/json")
 
 /**
  * Creates [document] on this page's server under its own id, through the create-only route. Null on

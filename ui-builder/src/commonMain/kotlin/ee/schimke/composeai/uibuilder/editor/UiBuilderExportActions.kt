@@ -76,6 +76,22 @@ interface UiBuilderExportHost {
 
   /** Saves the rendered design through the browser; returns a sentence for the toolbar. */
   suspend fun download(format: EditorExportFormat): String
+
+  /**
+   * Whether this host can hand a rendered file to the platform's share sheet.
+   *
+   * True only where that is the natural way out of a page — a phone or tablet browser whose
+   * `navigator.canShare` accepts files. A desktop keeps exactly the menu it had.
+   */
+  val supportsShare: Boolean
+    get() = false
+
+  /**
+   * Hands the rendered design to the share sheet; returns a sentence for the toolbar. A host that
+   * cannot share — or a share the platform refuses — saves the file instead, which is where a
+   * person reaching for Share wanted it to end up anyway.
+   */
+  suspend fun share(format: EditorExportFormat): String = download(format)
 }
 
 /** One row of the Export menu. */
@@ -108,6 +124,14 @@ sealed interface EditorExportMenuEntry {
       get() = "A live URL that always shows the current design"
   }
 
+  data class Share(override val format: EditorExportFormat) : EditorExportMenuEntry {
+    override val label: String
+      get() = "Share ${format.label}"
+
+    override val detail: String
+      get() = "Send the file to another app"
+  }
+
   data class Download(override val format: EditorExportFormat) : EditorExportMenuEntry {
     override val label: String
       get() = "Download ${format.label}"
@@ -129,12 +153,19 @@ sealed interface EditorExportMenuEntry {
 fun exportMenuEntries(
   formats: List<EditorExportFormat>,
   supportsLinks: Boolean = true,
+  supportsShare: Boolean = false,
 ): List<List<EditorExportMenuEntry>> =
   if (formats.isEmpty()) emptyList()
   else
-    listOf(
+    listOfNotNull(
       formats.filter { it != EditorExportFormat.Rc }.map(EditorExportMenuEntry::CopyPicture),
       if (supportsLinks) formats.map(EditorExportMenuEntry::CopyLink) else emptyList(),
+      // Only the two pictures: a phone's share sheet has somewhere to send an SVG or a PNG, and
+      // nowhere a Remote Compose document means anything.
+      formats
+        .filter { it == EditorExportFormat.Svg || it == EditorExportFormat.Png }
+        .map(EditorExportMenuEntry::Share)
+        .takeIf { supportsShare && it.isNotEmpty() },
       formats.map(EditorExportMenuEntry::Download),
     )
 
@@ -143,6 +174,7 @@ suspend fun UiBuilderExportHost.perform(entry: EditorExportMenuEntry): String =
   when (entry) {
     is EditorExportMenuEntry.CopyPicture -> copyPicture(entry.format)
     is EditorExportMenuEntry.CopyLink -> copyLink(entry.format)
+    is EditorExportMenuEntry.Share -> share(entry.format)
     is EditorExportMenuEntry.Download -> download(entry.format)
   }
 
@@ -191,5 +223,10 @@ fun UiBuilderExportHost.refusing(reason: String): UiBuilderExportHost {
     override suspend fun copyLink(format: EditorExportFormat): String = reason
 
     override suspend fun download(format: EditorExportFormat): String = reason
+
+    override val supportsShare: Boolean
+      get() = delegate.supportsShare
+
+    override suspend fun share(format: EditorExportFormat): String = reason
   }
 }

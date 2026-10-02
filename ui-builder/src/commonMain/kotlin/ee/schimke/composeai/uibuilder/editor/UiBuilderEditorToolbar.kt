@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -595,8 +596,8 @@ internal fun EditorToolbar(
 @Composable
 private fun ExportMenu(host: UiBuilderExportHost, showStatus: Boolean = true) {
   val groups =
-    remember(host.formats, host.supportsLinks) {
-      exportMenuEntries(host.formats, host.supportsLinks)
+    remember(host.formats, host.supportsLinks, host.supportsShare) {
+      exportMenuEntries(host.formats, host.supportsLinks, host.supportsShare)
     }
   if (groups.isEmpty()) return
   var open by remember { mutableStateOf(false) }
@@ -639,6 +640,9 @@ private fun ExportMenu(host: UiBuilderExportHost, showStatus: Boolean = true) {
                       when (entry) {
                         is EditorExportMenuEntry.CopyPicture -> UiBuilderMenuIcon.Copy
                         is EditorExportMenuEntry.CopyLink -> UiBuilderMenuIcon.Link
+                        // The menu icon set has no share glyph, and a host chrome that draws its
+                        // own icons never offers Share: it is a phone browser's row.
+                        is EditorExportMenuEntry.Share -> UiBuilderMenuIcon.Link
                         is EditorExportMenuEntry.Download -> UiBuilderMenuIcon.Download
                       },
                     onClick = {
@@ -695,6 +699,7 @@ internal fun ExportMenuRows(
             when (entry) {
               is EditorExportMenuEntry.CopyPicture -> Icons.Filled.ContentCopy
               is EditorExportMenuEntry.CopyLink -> Icons.Filled.Link
+              is EditorExportMenuEntry.Share -> Icons.Filled.Share
               is EditorExportMenuEntry.Download -> Icons.Filled.Download
             },
             contentDescription = null,

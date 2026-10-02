@@ -110,6 +110,32 @@ internal class BrowserExportHost(
     return if (outcome.isEmpty()) "Downloading $designId.${format.extension}" else outcome
   }
 
+  /** A phone browser whose share sheet takes files; see [browserCanShareFiles]. */
+  override val supportsShare: Boolean by lazy { browserCanShareFiles() }
+
+  override suspend fun share(format: EditorExportFormat): String {
+    if (!supportsShare) return download(format)
+    val document = currentDocument(format)
+    val url = sameOriginRequestUrl(if (document == null) livePath(format) else suppliedPath(format))
+    val filename = "$designId.${format.extension}"
+    val outcome =
+      try {
+        awaitJsString(sharePromise(url, filename, format.mediaType(), document))
+      } catch (failure: Exception) {
+        return "Share failed: ${failure.message?.trimJsError() ?: "unknown error"}"
+      }
+    return outcome.ifEmpty { "Shared $filename" }
+  }
+
+  private fun EditorExportFormat.mediaType(): String =
+    when (this) {
+      EditorExportFormat.Svg -> "image/svg+xml"
+      EditorExportFormat.Png -> "image/png"
+      EditorExportFormat.Json,
+      EditorExportFormat.A2uiJson -> "application/json"
+      EditorExportFormat.Rc -> "application/octet-stream"
+    }
+
   private fun currentDocument(format: EditorExportFormat): String? =
     if (format == EditorExportFormat.Svg) null
     else suppliedDocument?.invoke(format)?.let { Json.encodeToString(it.toDesignDocumentV1()) }
@@ -299,6 +325,57 @@ private external fun copyPngImagePromise(url: String, document: String?): Promis
 private external fun downloadPromise(
   url: String,
   filename: String,
+  document: String?,
+): Promise<JsString>
+
+/**
+ * Fetches the rendered file and hands it to the share sheet, downloading it instead where the sheet
+ * will not take it.
+ *
+ * The fetch comes first, so this spends some of the tap's user activation before `share` — fine on
+ * Chrome, whose activation outlives a render, and the reason a refusal (`NotAllowedError`) falls
+ * back to a download rather than failing. A person closing the sheet (`AbortError`) is told so and
+ * nothing is saved. Resolves empty when the sheet took the file.
+ */
+@JsFun(
+  """(url, filename, type, content) => {
+    const request = content == null ? undefined : {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: content,
+    };
+    return fetch(url, request).then(async (response) => {
+      if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + await response.text());
+      const blob = await response.blob();
+      const save = () => {
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = filename;
+        anchor.rel = 'noopener';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      };
+      const file = new File([blob], filename, { type });
+      if (typeof navigator.canShare !== 'function' || !navigator.canShare({ files: [file] })) {
+        save();
+        return 'This browser cannot share ' + filename + ', so it was downloaded instead';
+      }
+      try {
+        await navigator.share({ files: [file], title: filename });
+        return '';
+      } catch (error) {
+        if (error && error.name === 'AbortError') return 'Share cancelled';
+        save();
+        return 'Could not share ' + filename + ', so it was downloaded instead';
+      }
+    });
+  }"""
+)
+private external fun sharePromise(
+  url: String,
+  filename: String,
+  type: String,
   document: String?,
 ): Promise<JsString>
 
