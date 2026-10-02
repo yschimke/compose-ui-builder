@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.kotlin.multiplatform)
@@ -424,7 +426,9 @@ tasks.register<Sync>("wasmFrontendDist") {
   }
   from(skikoRuntimeDir) { include("skiko.mjs", "skiko.wasm") }
   from(layout.buildDirectory.dir("kotlin-multiplatform-resources/aggregated-resources/wasmJs"))
-  from(layout.projectDirectory.dir("src/wasmJsMain/resources")) { include("index.html") }
+  from(layout.projectDirectory.dir("src/wasmJsMain/resources")) {
+    include("index.html", "ui-builder-sw.js")
+  }
   // The boot screen's progress bar counts decoded Wasm bytes, which only the build knows ahead of
   // time: behind a compressing proxy `Content-Length` is the compressed size, or absent.
   val wasmFiles =
@@ -456,7 +460,51 @@ tasks.register<Sync>("wasmFrontendDist") {
     include("*.ttf", "fonts.json", "*OFL.txt", "LICENSE.txt")
     into("fonts")
   }
-  into(layout.buildDirectory.dir("wasmDist"))
+  val distDir = layout.buildDirectory.dir("wasmDist")
+  into(distDir)
+  // The service worker names its cache after the bundle, so a new bundle is a new worker and the
+  // browser retires the old cache — which means the worker's own bytes must change whenever any
+  // other file does. Written after the copy, over the finished tree, so the digest is of exactly
+  // what ships; the file list is what the worker precaches, since a first visit fetches all of it
+  // before the worker controls the page.
+  doLast {
+    val root = distDir.get().asFile
+    val worker = root.resolve("ui-builder-sw.js")
+    val digest = MessageDigest.getInstance("SHA-256")
+    root
+      .walkTopDown()
+      .filter { it.isFile && it != worker }
+      .sortedBy { it.relativeTo(root).invariantSeparatorsPath }
+      .forEach { file ->
+        digest.update(file.relativeTo(root).invariantSeparatorsPath.toByteArray())
+        digest.update(file.length().toString().toByteArray())
+        file.inputStream().use { input ->
+          val buffer = ByteArray(64 * 1024)
+          while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            digest.update(buffer, 0, read)
+          }
+        }
+      }
+    val version = digest.digest().take(8).joinToString("") { "%02x".format(it) }
+    // The shell is fetched (and its references found) by the worker itself; licences and notes
+    // are not fetched by anything.
+    val bundle =
+      root
+        .walkTopDown()
+        .filter { it.isFile && it != worker }
+        .map { it.relativeTo(root).invariantSeparatorsPath }
+        .filter { it != "index.html" && !it.endsWith(".txt") && !it.endsWith(".md") }
+        .sorted()
+        .joinToString(",", "[", "]") { "\"$it\"" }
+    worker.writeText(
+      worker
+        .readText()
+        .replace("@UI_BUILDER_SW_VERSION@", version)
+        .replace("@UI_BUILDER_SW_BUNDLE@", bundle)
+    )
+  }
 }
 
 // `:server:installDist` stages the development Wasm app while callers may also request the Kotlin

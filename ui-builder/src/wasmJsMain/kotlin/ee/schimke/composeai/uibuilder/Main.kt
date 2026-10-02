@@ -173,13 +173,21 @@ fun main() {
   // sans for the life of the page. The file is the bundle's own, cached for good.
   MainScope().launch {
     fonts.registerWearDeviceFonts()
+    // Designs kept in this browser live in IndexedDB, which only answers asynchronously: read it
+    // into memory once, here, so every read after this is as synchronous as `localStorage` was.
+    // Only the live session keeps designs; an IDE host or an MCP App owns its document.
+    if (liveSessionEnabled() && !mcpAppEnabled() && !hostBridgeEnabled()) {
+      BrowserLocalStorageBackend.hydrate()
+    }
     ComposeViewport(viewportContainerId = "composeApp") {
       ProvideUiBuilderFonts(fonts) {
-        when {
-          mcpAppEnabled() -> McpAppHostApp()
-          hostBridgeEnabled() -> HostBridgeApp()
-          liveSessionEnabled() -> LiveSessionApp()
-          else -> VisualFixtureApp(captureMode())
+        ProvideBrowserViewportInsets {
+          when {
+            mcpAppEnabled() -> McpAppHostApp()
+            hostBridgeEnabled() -> HostBridgeApp()
+            liveSessionEnabled() -> LiveSessionApp()
+            else -> VisualFixtureApp(captureMode())
+          }
         }
       }
     }

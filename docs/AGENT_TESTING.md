@@ -64,6 +64,21 @@ Traps:
 editor looks right. It needs the Wasm build, which is the heaviest thing in the repo to compile, so
 prefer CI for it.
 
+It runs three lanes, all by default; `SMOKE_LANES=mobile,offline node smoke.mjs <wasmDist>` picks
+some:
+
+- `desktop` — the capture modes at 1400×900.
+- `mobile` — the interactive editor as a phone opens it: 412×915 CSS px, device pixel ratio 2.625,
+  `isMobile`, `hasTouch`. This is the compact layout under real mobile emulation, which the desktop
+  app under Xvfb (option 1) cannot give.
+- `offline` — the phone again with `?offline=1`: waits for the service worker to control the page,
+  cuts the network, and opens the editor in a fresh tab, which must still come up ready. `127.0.0.1`
+  is a secure context, so the worker registers over plain HTTP there.
+
+In a sandbox, Playwright's Chromium may already be installed (for example under `/opt/pw-browsers`
+with a global `playwright` package); link that package into a `node_modules` above the script
+rather than running `npx playwright install`.
+
 ## 3. The deployed editor
 
 `https://preview.coo.ee/ui-builder/` needs WebGL (Skiko draws through it). When a browser has none,

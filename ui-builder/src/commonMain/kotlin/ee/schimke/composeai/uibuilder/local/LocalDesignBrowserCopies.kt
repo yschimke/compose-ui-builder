@@ -85,12 +85,49 @@ fun localStorageNotice(
   summaries: List<LocalDesignSummary>,
   budgetChars: Int = LOCAL_STORAGE_BUDGET_CHARS,
   warnFraction: Double = 0.8,
+  estimate: BrowserStorageEstimate? = null,
 ): String? {
+  // Kept in IndexedDB, the designs are not what fills the origin first: the browser's own estimate
+  // of this origin's usage against its quota is the number that predicts a refusal.
+  if (estimate != null && estimate.indexedDb) {
+    if (estimate.usageBytes < estimate.quotaBytes * warnFraction) return null
+    return "Browser storage is nearly full (${estimate.summary()}). Download a copy you want to " +
+      "keep, then delete it from this browser to make room."
+  }
   val used = summaries.sumOf { it.storedBytes.toLong() }
   if (used < budgetChars * warnFraction) return null
   val percent = (used * 100 / budgetChars).coerceAtMost(100)
-  return "Browser storage is nearly full ($percent% used by designs kept here). Download a copy " +
-    "you want to keep, then delete it from this browser to make room."
+  return "Browser storage is nearly full ($percent% used by designs kept here" +
+    (estimate?.let { "; ${it.summary()}" } ?: "") +
+    "). Download a copy you want to keep, then delete it from this browser to make room."
+}
+
+/**
+ * What `navigator.storage.estimate()` and `persisted()` say about this origin.
+ *
+ * [indexedDb] is where the designs are, which decides which number matters: in `localStorage` the
+ * five-megabyte area runs out long before the origin's quota does, so the designs' own size is the
+ * warning; in IndexedDB the origin's quota is the only limit.
+ */
+data class BrowserStorageEstimate(
+  val usageBytes: Long,
+  val quotaBytes: Long,
+  val persisted: Boolean,
+  val indexedDb: Boolean,
+) {
+  /** "3.2 MB of 1,024 MB this browser allows this site", plus whether it may clear it. */
+  fun summary(): String =
+    "${megabytes(usageBytes)} of ${megabytes(quotaBytes)} this browser allows this site" +
+      if (persisted) "" else ", which it may clear when space runs short"
+
+  private fun megabytes(bytes: Long): String {
+    val tenths = (bytes * 10 + MEGABYTE / 2) / MEGABYTE
+    return "${tenths / 10}.${tenths % 10} MB"
+  }
+
+  private companion object {
+    const val MEGABYTE = 1_048_576L
+  }
 }
 
 /** Half of the ~5 MB most browsers give an origin, in characters. See [localStorageNotice]. */

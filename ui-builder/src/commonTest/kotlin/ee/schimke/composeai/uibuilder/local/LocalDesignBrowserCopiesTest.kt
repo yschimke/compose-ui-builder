@@ -121,6 +121,58 @@ class LocalDesignBrowserCopiesTest {
   }
 
   @Test
+  fun `in IndexedDB the origin's quota, not the designs' size, decides the warning`() {
+    val bigDesigns =
+      listOf(
+        LocalDesignSummary(
+          designId = "a",
+          catalogSystemId = "m3-catalog",
+          title = "A",
+          updatedAtEpochMillis = 1,
+          storedBytes = 9_000_000,
+        )
+      )
+    val roomy =
+      BrowserStorageEstimate(
+        usageBytes = 9_000_000,
+        quotaBytes = 1_000_000_000,
+        persisted = true,
+        indexedDb = true,
+      )
+    assertNull(localStorageNotice(bigDesigns, estimate = roomy))
+
+    val full = roomy.copy(usageBytes = 950_000_000, persisted = false)
+    val notice = assertNotNull(localStorageNotice(bigDesigns, estimate = full))
+    assertTrue("906.0 MB of 953.7 MB" in notice, notice)
+    assertTrue("may clear" in notice, notice)
+  }
+
+  @Test
+  fun `in localStorage the estimate is added to the designs' own warning`() {
+    val summaries =
+      listOf(
+        LocalDesignSummary(
+          designId = "a",
+          catalogSystemId = "m3-catalog",
+          title = "A",
+          updatedAtEpochMillis = 1,
+          storedBytes = 9_000,
+        )
+      )
+    val estimate =
+      BrowserStorageEstimate(
+        usageBytes = 1_048_576,
+        quotaBytes = 10_485_760,
+        persisted = true,
+        indexedDb = false,
+      )
+    val notice =
+      assertNotNull(localStorageNotice(summaries, budgetChars = 10_000, estimate = estimate))
+    assertTrue("90%" in notice, notice)
+    assertTrue("1.0 MB of 10.0 MB this browser allows this site" in notice, notice)
+  }
+
+  @Test
   fun `a published copy starts at revision zero with no home of its own`() {
     val wire =
       LocalDesignFixtures.document()
