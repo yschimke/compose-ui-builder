@@ -23,6 +23,12 @@ internal actual fun platformFont(identity: String, data: ByteArray, weight: Font
  * page with no such module (the renderer runtime, whose own path is already immutable) resolves
  * against itself.
  *
+ * A family the manifest does not list comes from the host's Google Fonts route
+ * ([GOOGLE_FONTS_ROUTE]) instead. The page's own `connect-src` admits only this origin, so the
+ * browser cannot fetch `fonts.gstatic.com` itself; the host fetches the file once, keeps it, and
+ * answers same-origin. A host without the route answers 404, and the family stays on the default
+ * face exactly as it did before.
+ *
  * Same-origin and token-carrying like every other request the page makes ([sameOriginRequestUrl]).
  */
 @OptIn(ExperimentalEncodingApi::class)
@@ -31,7 +37,16 @@ fun browserFontRegistry(baseUrl: String = bundleFontsBaseUrl()): UiBuilderFontRe
     scope = MainScope(),
     readManifest = { fetchText("${baseUrl}fonts.json") },
     readFont = { file -> Base64.decode(fetchBase64("$baseUrl$file")) },
+    readRemoteFont = { family, weight ->
+      Base64.decode(fetchBase64(googleFontUrl(family, weight)))
+    },
   )
+
+/** Where a host serves a Google Fonts family's TrueType file at one weight. */
+internal const val GOOGLE_FONTS_ROUTE = "/api/fonts/google"
+
+internal fun googleFontUrl(family: String, weight: Int): String =
+  "$GOOGLE_FONTS_ROUTE/${encodeUriComponent(family)}/$weight"
 
 @JsFun(
   """() => {

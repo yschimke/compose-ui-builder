@@ -61,13 +61,21 @@ fun parseVendoredFontManifest(text: String): VendoredFontManifest =
  * unresolved name is the default face, which is the right answer for a font the host cannot fetch
  * too, and retrying on every recomposition would turn one missing file into a request loop.
  *
+ * A name the manifest does not list is not the end of it when the host can reach a font service:
+ * [readRemoteFont] asks it for the family by name, which is how a design that names any Google
+ * Fonts family — the usual result of an agent picking a face — draws in it rather than in the
+ * default face. Without one, such a name resolves to nothing, as before.
+ *
  * @param readManifest the manifest's text; failures leave the registry with no families.
  * @param readFont a manifest file's bytes, by the name the manifest gives it.
+ * @param readRemoteFont a family's file at one weight, by family name, from outside the manifest;
+ *   null for a host with no such service.
  */
 class UiBuilderFontRegistry(
   private val scope: CoroutineScope,
   private val readManifest: suspend () -> String,
   private val readFont: suspend (file: String) -> ByteArray,
+  private val readRemoteFont: (suspend (family: String, weight: Int) -> ByteArray)? = null,
 ) {
   internal suspend fun readManifestText(): String = readManifest()
 
@@ -103,24 +111,73 @@ class UiBuilderFontRegistry(
     if (manifestLoaded) load(name) else loadFamilies()
   }
 
+  /**
+   * Load [name] into [loaded] under exactly that key, since it is the document's spelling the
+   * renderer looks up. The manifest is matched by [canonicalFamilyName], so `google:Inter` and
+   * `inter` are the vendored Inter; anything else goes to [readRemoteFont] when there is one.
+   */
   private fun load(name: String) {
-    val family = families.firstOrNull { it.name == name } ?: return
-    scope.launch {
-      runCatching {
-        FontFamily(
-          family.fonts.map { file ->
-            platformFont(
-              identity = "ui-builder:${family.name}:${file.weight}",
-              data = readFont(file.file),
-              weight = FontWeight(file.weight),
+    val canonical = canonicalFamilyName(name) ?: return
+    val family = families.firstOrNull { canonicalFamilyName(it.name) == canonical }
+    val remote = readRemoteFont
+    when {
+      family != null ->
+        scope.launch {
+          runCatching {
+            FontFamily(
+              family.fonts.map { file ->
+                platformFont(
+                  identity = "ui-builder:${family.name}:${file.weight}",
+                  data = readFont(file.file),
+                  weight = FontWeight(file.weight),
+                )
+              }
             )
           }
-        )
-      }
-        .onSuccess { loaded[name] = it }
+            .onSuccess { loaded[name] = it }
+        }
+      // A generic keyword is the manifest's to answer; no font service has a family called `serif`.
+      remote != null && canonical !in GENERIC_FAMILY_NAMES ->
+        scope.launch {
+          val family = remoteFamilyName(name)
+          // Regular is the family: without it there is nothing to draw. Bold is a bonus, so a
+          // family that has no 700 still loads, and its bold text is synthesised from the 400.
+          val fonts =
+            REMOTE_FONT_WEIGHTS.mapNotNull { weight ->
+              runCatching {
+                  platformFont(
+                    identity = "ui-builder:remote:$family:$weight",
+                    data = remote(family, weight),
+                    weight = FontWeight(weight),
+                  )
+                }
+                .getOrNull()
+                ?: if (weight == FontWeight.Normal.weight) return@launch else null
+            }
+          loaded[name] = FontFamily(fonts)
+        }
     }
   }
 }
+
+/** The weights fetched for a family the manifest does not list: the two the vendored ones carry. */
+private val REMOTE_FONT_WEIGHTS = listOf(400, 700)
+
+private val GENERIC_FAMILY_NAMES = setOf("serif", "monospace", "sans-serif", "cursive", "fantasy")
+
+/**
+ * The family a document's typeface names, without the `google:` prefix Remote Compose documents and
+ * catalog themes spell a downloadable family with, and with its whitespace tidied.
+ */
+internal fun remoteFamilyName(name: String): String =
+  name.trim().removePrefix("google:").trim().replace(Regex("\\s+"), " ")
+
+/**
+ * [remoteFamilyName] for comparison — family names are not case-sensitive anywhere they resolve —
+ * or null for a name that is nothing once the prefix and whitespace are gone.
+ */
+internal fun canonicalFamilyName(name: String): String? =
+  remoteFamilyName(name).lowercase().takeIf { it.isNotEmpty() }
 
 /**
  * Hand the Wear port the face Wear's type scale names, from this host's vendored fonts.
