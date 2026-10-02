@@ -157,6 +157,8 @@ internal fun PropertyInspector(
   localComponents: List<EditorLocalComponent> = emptyList(),
   /** Publishes a component to the project library by key; null where there is no library. */
   onPublishComponent: ((String) -> Unit)? = null,
+  /** Takes the library's newer version of a component, by key; null where there is no library. */
+  onUpdateFromLibrary: ((String) -> Unit)? = null,
   onPlaceComponent: (String) -> Unit,
   onPromotePiece: (ReferencePiece) -> Unit,
   canPromotePiece: (ReferencePiece) -> Boolean,
@@ -249,6 +251,7 @@ internal fun PropertyInspector(
           catalogItems = catalogItems,
           localComponents = localComponents,
           onPublishComponent = onPublishComponent,
+          onUpdateFromLibrary = onUpdateFromLibrary,
           onPlaceComponent = onPlaceComponent,
           onPromotePiece = onPromotePiece,
           canPromotePiece = canPromotePiece,
@@ -302,6 +305,8 @@ private fun InspectorBody(
   localComponents: List<EditorLocalComponent> = emptyList(),
   /** Publishes a component to the project library by key; null where there is no library. */
   onPublishComponent: ((String) -> Unit)? = null,
+  /** Takes the library's newer version of a component, by key; null where there is no library. */
+  onUpdateFromLibrary: ((String) -> Unit)? = null,
   onPlaceComponent: (String) -> Unit,
   onPromotePiece: (ReferencePiece) -> Unit,
   canPromotePiece: (ReferencePiece) -> Boolean,
@@ -437,7 +442,14 @@ private fun InspectorBody(
     }
     val placed = node.placementKey()?.let { key -> localComponents.firstOrNull { it.key == key } }
     if (placed != null) {
-      LocalComponentHeader(placed, node.id, onTextInputFocusChanged, onPublishComponent, dispatch)
+      LocalComponentHeader(
+        placed,
+        node.id,
+        onTextInputFocusChanged,
+        onPublishComponent,
+        onUpdateFromLibrary,
+        dispatch,
+      )
     } else {
       LocalUiBuilderChrome.current.InspectorNodeIdentity(node.componentId, node.id)
     }
@@ -2311,6 +2323,7 @@ private fun LocalComponentHeader(
   nodeId: String,
   onTextInputFocusChanged: (Boolean) -> Unit,
   onPublish: ((String) -> Unit)?,
+  onUpdateFromLibrary: ((String) -> Unit)?,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   var draft by remember(component.key, component.name) { mutableStateOf(component.name) }
@@ -2351,8 +2364,19 @@ private fun LocalComponentHeader(
         ParameterNameField(component.key, parameter, onTextInputFocusChanged, dispatch)
       }
     }
+    val source = component.source
+    if (component.newerInLibrary && source != null && onUpdateFromLibrary != null) {
+      Text(
+        "The project library has a newer ${source.componentId}. Taking it replaces this design's " +
+          "copy; every placement keeps its place and its content.",
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.padding(top = 8.dp),
+      )
+      TextButton(onClick = { onUpdateFromLibrary(component.key) }) {
+        Text("Take the library version")
+      }
+    }
     if (onPublish != null) {
-      val source = component.source
       Text(
         if (source == null)
           "Only this design has ${component.name}. Publishing puts it in the project library, " +

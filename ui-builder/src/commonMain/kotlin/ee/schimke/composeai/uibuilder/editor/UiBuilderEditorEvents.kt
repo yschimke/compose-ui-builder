@@ -281,6 +281,13 @@ sealed interface UiBuilderEditorEvent {
   ) : UiBuilderEditorEvent
 
   /**
+   * Replace the design's copy of [componentKey] with [symbol], the version the library holds now:
+   * the decision a drift report leaves to the design's owner.
+   */
+  data class UpdateLibraryComponent(val componentKey: String, val symbol: EditorLibrarySymbol) :
+    UiBuilderEditorEvent
+
+  /**
    * Record that the project library now holds [componentKey] as [source] — what a publish answers
    * with — so the design tracks it as a reference rather than a copy, and drift is reported.
    */

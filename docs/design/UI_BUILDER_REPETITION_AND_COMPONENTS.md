@@ -362,8 +362,20 @@ repository is where it settles, by copying the host's two files into it. A commi
 read first and shadows the host's copy, and the host refuses a publish over an id the project has
 committed — that one is changed in the repository.
 
+**Taking a newer library version — built.** When the drift report says the library has moved on
+from a component this design imported, the placement's inspector says so and offers "Take the
+library version". It fetches the symbol and replaces the design's copy in one undoable step: the new
+body goes in, the declaration records the new digest (and the library's name, unless another
+component here already has it), and the old body goes. Every placement stays where it was, with its
+layout and the arguments the new body still reads; arguments it no longer reads are dropped, and a
+text parameter it newly reads starts as its own name, as a first placement's does. An update a
+placement's slot would refuse is refused as a whole. Nothing is redrawn without that press.
+
+![A drifted component's inspector, offering the library's newer version](evidence/ui-builder-local-components/update-before.png)
+![The same placement after taking it: the new parameters, and no offer](evidence/ui-builder-local-components/update-after.png)
+
 **Not built**: a contracts mutation that edits a placement's arguments in place (so an argument
-edit keeps the placement's id); and taking a newer library version into a design that drifted.
+edit keeps the placement's id).
 
 It composes with 1b rather than duplicating it: a loop's template is an instance with one argument
 per row field. Which is why this is worth building **before** data-driven loops, not after.

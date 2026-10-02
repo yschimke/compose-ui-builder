@@ -44,6 +44,8 @@ data class EditorLocalComponent(
   val publishedAs: ComponentCapability? = null,
   /** Where the project library holds this component, once it was imported or published there. */
   val source: EditorLibrarySource? = null,
+  /** The library's drift report says it holds a newer version than this design's copy. */
+  val newerInLibrary: Boolean = false,
 )
 
 /** A component's place in the project library: the version a design holds is [digest]. */
