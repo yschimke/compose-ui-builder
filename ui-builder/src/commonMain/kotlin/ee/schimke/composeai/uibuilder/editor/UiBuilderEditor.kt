@@ -7,7 +7,6 @@ package ee.schimke.composeai.uibuilder.editor
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -186,6 +185,9 @@ internal val EditorColors =
  * sheet.
  */
 private const val MOBILE_EDITING_SHEET_FRACTION = 0.5f
+
+/** The compact layout's bottom tab bar, above whatever home-indicator inset the window has. */
+internal val MOBILE_DOCK_HEIGHT = 56.dp
 
 internal enum class MobileEditorPanel {
   None,
@@ -2533,9 +2535,26 @@ fun UiBuilderEditor(
         // window). That surface owns no editor chrome: toolbars, navigator, inspector and status
         // stay with the visual editor instead of being duplicated around a read-only render.
         val dedicatedOutput = EditorPane.Editor !in availablePanes
+        // The notch, the rounded corners, the home indicator and an overlaid keyboard, on a phone
+        // browser; nothing anywhere else. The background still runs under them; the chrome does
+        // not.
+        val viewportInsets = LocalEditorViewportInsets.current
         Column(
           Modifier.fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .padding(
+              start = viewportInsets.left,
+              top = viewportInsets.top,
+              end = viewportInsets.right,
+              // The compact dock pads itself so its surface reaches the screen's edge; an open
+              // keyboard covers the home indicator, so it is the only inset left at the bottom.
+              bottom =
+                when {
+                  viewportInsets.keyboardOpen -> viewportInsets.keyboard
+                  compact -> 0.dp
+                  else -> viewportInsets.bottom
+                },
+            )
             .focusRequester(editorFocusRequester)
             .focusable()
             .onPreviewKeyEvent { event ->
@@ -2650,7 +2669,7 @@ fun UiBuilderEditor(
               noticeAction = openingNoticeAction,
             )
           }
-          Box(Modifier.fillMaxSize()) {
+          BoxWithConstraints(Modifier.fillMaxSize()) {
             if (dedicatedOutput) {
               Row(Modifier.fillMaxSize()) {
                 if (EditorPane.Preview in state.panes) {
@@ -2909,8 +2928,16 @@ fun UiBuilderEditor(
               val editingSheet =
                 mobilePanel == MobileEditorPanel.Properties ||
                   (mobilePanel == MobileEditorPanel.Code && generatedCode != null)
-              val editingSheetHeight =
-                this@BoxWithConstraints.maxHeight * MOBILE_EDITING_SHEET_FRACTION
+              // This box's height rather than the window's: the sheets are a fraction of this box,
+              // and
+              // an open keyboard has already been taken out of it.
+              val editingSheetHeight = maxHeight * MOBILE_EDITING_SHEET_FRACTION
+              // While the keyboard is up the dock is hidden: the sheet being typed into needs the
+              // room more than the tabs that would close it, and the keyboard covers the home
+              // indicator the dock would otherwise pad for.
+              val dockHeight =
+                if (viewportInsets.keyboardOpen) 0.dp
+                else MOBILE_DOCK_HEIGHT + viewportInsets.bottom
               canvas(
                 Modifier.fillMaxSize()
                   .background(LocalUiBuilderEditorPalette.current.workspace)
@@ -2918,7 +2945,7 @@ fun UiBuilderEditor(
                     start = 8.dp,
                     top = 8.dp,
                     end = 8.dp,
-                    bottom = if (editingSheet) editingSheetHeight + 64.dp else 64.dp,
+                    bottom = (if (editingSheet) editingSheetHeight else 0.dp) + dockHeight + 8.dp,
                   ),
                 Alignment.Center,
               )
@@ -2938,7 +2965,7 @@ fun UiBuilderEditor(
                   Modifier.align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .fillMaxHeight(0.72f)
-                    .padding(bottom = 56.dp)
+                    .padding(bottom = dockHeight)
                     .graphicsLayer { alpha = if (carrying) 0f else 1f },
                   open,
                   true,
@@ -2951,7 +2978,7 @@ fun UiBuilderEditor(
                   Modifier.align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
-                    .padding(bottom = 56.dp),
+                    .padding(bottom = dockHeight),
                   // Never, here: the compact layout draws the authoring canvas and has no room for
                   // a preview pane beside it, so nothing on this branch draws a device or an axis.
                   false,
@@ -2964,16 +2991,19 @@ fun UiBuilderEditor(
                   Modifier.align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
-                    .padding(bottom = 56.dp),
+                    .padding(bottom = dockHeight),
                 )
               }
-              MobilePanelDock(
-                panel = mobilePanel,
-                onPanelChanged = {
-                  mobilePanel = if (mobilePanel == it) MobileEditorPanel.None else it
-                },
-                modifier = Modifier.align(Alignment.BottomCenter),
-              )
+              if (!viewportInsets.keyboardOpen) {
+                MobilePanelDock(
+                  panel = mobilePanel,
+                  onPanelChanged = {
+                    mobilePanel = if (mobilePanel == it) MobileEditorPanel.None else it
+                  },
+                  modifier = Modifier.align(Alignment.BottomCenter),
+                  bottomInset = viewportInsets.bottom,
+                )
+              }
             }
           }
         }

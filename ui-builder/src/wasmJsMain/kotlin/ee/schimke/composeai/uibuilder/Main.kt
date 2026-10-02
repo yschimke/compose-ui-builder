@@ -175,11 +175,13 @@ fun main() {
     fonts.registerWearDeviceFonts()
     ComposeViewport(viewportContainerId = "composeApp") {
       ProvideUiBuilderFonts(fonts) {
-        when {
-          mcpAppEnabled() -> McpAppHostApp()
-          hostBridgeEnabled() -> HostBridgeApp()
-          liveSessionEnabled() -> LiveSessionApp()
-          else -> VisualFixtureApp(captureMode())
+        ProvideBrowserViewportInsets {
+          when {
+            mcpAppEnabled() -> McpAppHostApp()
+            hostBridgeEnabled() -> HostBridgeApp()
+            liveSessionEnabled() -> LiveSessionApp()
+            else -> VisualFixtureApp(captureMode())
+          }
         }
       }
     }

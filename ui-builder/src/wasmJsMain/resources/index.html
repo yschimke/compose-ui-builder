@@ -2,7 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      `viewport-fit=cover` lets the canvas run under a notch and the home indicator; the editor pads
+      its own chrome by the safe area instead (`BrowserViewportInsets.kt`). `resizes-content` asks
+      Chrome on Android to shrink the page when the keyboard opens, so the Properties sheet stays
+      above it. Safari ignores it and overlays the keyboard; the editor reads that from
+      `visualViewport` and pads by it.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <!-- The boot screen's background, so the browser chrome around it matches before Wasm loads. -->
+    <meta name="theme-color" content="#fef7ff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141218" media="(prefers-color-scheme: dark)" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Compose UI Builder Preview</title>
     <!--
       The import map comes before every module preload below, not after them. Chrome fixes a
@@ -46,6 +62,12 @@
         }
       }
       html, body, #composeApp { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+      /*
+        The dynamic viewport height where the browser has it: `100%` of a phone's initial
+        containing block is the height with the address bar hidden, so the bottom dock sat under
+        the bar until the page was scrolled — which this page never is.
+      */
+      html, body { height: 100vh; height: 100dvh; overscroll-behavior: none; }
       body { background: white; }
       #composeApp canvas { display: block; }
       #ui-builder-boot {

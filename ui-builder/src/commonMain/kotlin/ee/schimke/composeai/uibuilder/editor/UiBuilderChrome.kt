@@ -1051,6 +1051,7 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
               }
             )
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+            .revealAboveKeyboard()
             .onFocusChanged { model.onFocusChanged(it.isFocused) }
             .semantics { contentDescription = model.label }
             .then(
@@ -1136,6 +1137,7 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
       onValueChange = model.onValueChange,
       modifier =
         model.modifier
+          .revealAboveKeyboard()
           .onFocusChanged { model.onFocusChanged(it.isFocused) }
           .onPreviewKeyEvent { event ->
             val submitChord =

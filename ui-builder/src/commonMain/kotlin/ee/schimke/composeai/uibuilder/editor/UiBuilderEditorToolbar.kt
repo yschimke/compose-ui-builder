@@ -14,13 +14,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.TextAutoSize
@@ -73,6 +73,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.CommandOutcome
@@ -313,9 +314,18 @@ internal fun MobilePanelDock(
   panel: MobileEditorPanel,
   onPanelChanged: (MobileEditorPanel) -> Unit,
   modifier: Modifier = Modifier,
+  bottomInset: Dp = 0.dp,
 ) {
-  Surface(modifier.fillMaxWidth().height(56.dp), tonalElevation = 6.dp) {
-    Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+  // The surface runs down to the screen's edge, under a phone's home indicator; the tabs sit above
+  // it, where a thumb can reach them without the system taking the swipe.
+  Surface(
+    modifier.fillMaxWidth().height(MOBILE_DOCK_HEIGHT + bottomInset),
+    tonalElevation = 6.dp,
+  ) {
+    Row(
+      Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top).height(MOBILE_DOCK_HEIGHT),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
       MobilePanelButton("Components", MobileEditorPanel.Components, panel, onPanelChanged)
       MobilePanelButton("Layers", MobileEditorPanel.Layers, panel, onPanelChanged)
       MobilePanelButton("Properties", MobileEditorPanel.Properties, panel, onPanelChanged)
