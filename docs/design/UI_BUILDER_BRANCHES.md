@@ -71,6 +71,16 @@ in `:ui-builder-export` because that is the module both the browser and the serv
 the two cannot drift:
 
 - **The base chain.** `base(c₁)` is the fork revision; `base(cₖ)` is the revision `cₖ₋₁` landed at.
+  It is what each command's positions resolve against.
+- **Staleness from the fork.** Every command's `STALE_*` checks read the window from the fork to
+  the parent's head when the merge began (`StalenessWindow` in the reducer), not the window after
+  its own base: the author of `cₖ` saw the fork and `c₁…cₖ₋₁`, and none of the parent's edits since.
+  So `c₃` overwriting a property the parent changed after the fork is reported however late in the
+  log it comes, and `overwrittenRevision` names that parent head (for an environment field, the
+  parent revision that last wrote it). A key an earlier command of the
+  same replay already wrote is not reported again — the later command overwrites the branch's own
+  value, which its author saw. A skip or a partial accept changes which command replays first, and
+  so changes nothing about what any of them reports.
 - **Every command replays as itself**, undos and redos included.
 - **The first refusal stops the run**, and the report says where and why and how much is left.
 - **A per-command report**: for each command, its author, its base, where it landed, and what it
@@ -245,13 +255,19 @@ the editor's cards accept or reject the whole suggestion. Per-operation checkbox
 
 ## Known limits and follow-ups
 
-- **Only the first replayed command sees the parent's concurrent edits as concurrent.** The base
-  chain gives `c₂…cₙ` bases at or after the parent's head, so their staleness checks cannot see edits
-  the parent made between the fork and the merge; a later command that overwrites one is applied
-  with no `STALE_*` notice. Sync has exactly the same property today. Fixing it means a reducer that
-  reads staleness from the fork while reading positions from the predecessor — a reducer change,
-  tracked separately rather than smuggled into this one. The dry-run report and a document diff
-  (below) are the review surface until then.
+- **Sync still checks staleness against the chain base.** The merge's fork window is passed to the
+  reducer in-process; Sync replays over the wire, one `ApplyOperation` per command, and
+  `DesignCommandV1` carries one base revision, so the server cannot tell an offline run's `c₂` from
+  a live edit made at that revision. A Sync `c₂…cₙ` that overwrites a server edit made between the
+  fork and the sync is still applied with no `STALE_*` notice. Fixing it is a wire change — a
+  second, optional revision on the command in compose-preview-contracts (the "staleness base"),
+  which the service would turn into the same `StalenessWindow` — so it needs a contracts release
+  and every client that sends it, and is tracked separately.
+- **The stale delete/restore gate reads the chain base.** A delete or restore whose base is behind
+  the head is refused (`REVISION_MISMATCH`), which in a merge only `c₁` can be; a later delete
+  lands even if the parent edited the node after the fork. Widening the gate to the fork window
+  would refuse every non-first delete once the parent has moved at all, which is a policy change
+  rather than a reporting one, so the dry-run report is still the review surface for it.
 - **Document diff for the server.** `revisionDiff`/`documentDiff` (`editor/RevisionTimeline.kt`)
   works on the editor's `UiBuilderDocument` and `CapabilityCatalog`, so moving it into a module the
   server consumes is not a small change; compose-preview-server#1256's `diff_designs` needs it, and

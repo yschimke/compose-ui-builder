@@ -2372,9 +2372,10 @@ public class PersistentUiBuilderService(
     actor: AuthenticatedUiBuilderActor,
     wire: DesignSubmissionV1,
     fingerprint: String,
+    staleness: StalenessWindow? = null,
   ): Reduced {
     val operationId = wire.operationId()
-    val reduction = reduce(design, actor, wire)
+    val reduction = reduce(design, actor, wire, staleness)
     if (reduction.outcome is AcceptedOutcomeV1) {
       documentQuotaIssue(reduction.design.document, countRejection = true)?.let {
         return Reduced.Unrecorded(
@@ -2733,6 +2734,10 @@ public class PersistentUiBuilderService(
     var working: PersistedDesignV1 = parent
     val committed = mutableListOf<CommittedOperationV1>()
     val authors = branchDesign.branchLog.associate { it.operationId() to it.actorId() }
+    // Positions come from the base chain; staleness from the fork. Every replayed command's author
+    // saw the fork and the branch's own earlier commands and nothing the parent did since, so each
+    // one — not only the first — reports overwriting a parent edit made between the fork and now.
+    val staleness = StalenessWindow(since = record.forkRevision, through = parent.document.revision)
     val replay =
       replayCommandLog(record.forkRevision, log) { command, base ->
         val rebased = command.rebasedOnto(parentId, base)
@@ -2751,7 +2756,7 @@ public class PersistentUiBuilderService(
         // recorded on the branch record. These ids come from the branch's own log, which only
         // this service wrote — never from a request.
         val author = AuthenticatedUiBuilderActor(rebased.actorId())
-        when (val reduced = reduceAndRecord(working, author, rebased, fingerprint)) {
+        when (val reduced = reduceAndRecord(working, author, rebased, fingerprint, staleness)) {
           is Reduced.Unrecorded -> ReplayAnswer.of(reduced.outcome)
           is Reduced.Recorded -> {
             val outcome = reduced.outcome
@@ -3218,10 +3223,18 @@ public class PersistentUiBuilderService(
     )
   }
 
+  /**
+   * [staleness] is which earlier commits the command's `STALE_*` checks treat as concurrent.
+   * Absent, it is everything after the command's own base — the live-editing rule. A branch merge
+   * passes the fork-to-parent-head window instead, so a replayed command that is not the first
+   * still sees the parent's concurrent edits while it resolves positions against its predecessor;
+   * see [StalenessWindow].
+   */
   private fun reduce(
     design: PersistedDesignV1,
     actor: AuthenticatedUiBuilderActor,
     submission: DesignSubmissionV1,
+    staleness: StalenessWindow? = null,
   ): ReductionResult {
     if (submission.designId() != design.document.id || submission.clientId().isBlank()) {
       return rejectedReduction(
@@ -3240,7 +3253,13 @@ public class PersistentUiBuilderService(
       )
     }
     return when (submission) {
-      is DesignCommandV1 -> reduceBatch(design, actor, submission)
+      is DesignCommandV1 ->
+        reduceBatch(
+          design,
+          actor,
+          submission,
+          staleness ?: StalenessWindow(submission.baseRevision, design.document.revision),
+        )
       is UndoCommandV1 -> reduceUndo(design, actor, submission)
       is RedoCommandV1 -> reduceRedo(design, actor, submission)
     }
@@ -3250,6 +3269,7 @@ public class PersistentUiBuilderService(
     design: PersistedDesignV1,
     actor: AuthenticatedUiBuilderActor,
     command: DesignCommandV1,
+    staleness: StalenessWindow,
   ): ReductionResult {
     if (command.operations.isEmpty()) {
       return rejectedReduction(
@@ -3345,6 +3365,7 @@ public class PersistentUiBuilderService(
           basePositions = batchPositions,
           index,
           catalog,
+          staleness,
         )
       if (applied.error != null) {
         return rejectedReduction(design, command.operationId, applied.error)
@@ -3792,6 +3813,7 @@ public class PersistentUiBuilderService(
     basePositions: Map<String, StableNodePositionV1>,
     index: Int,
     catalog: CatalogCapabilityV1,
+    staleness: StalenessWindow,
   ): MutationResult =
     try {
       when (mutation) {
@@ -3864,15 +3886,12 @@ public class PersistentUiBuilderService(
             document = document.rebuildLocation(positions, mutation.location.parent)
           }
           val conflicts =
-            if (
-              command.baseRevision < original.document.revision &&
-                original.touchedSince(command.baseRevision, touchKey("s", mutation.nodeId))
-            )
+            if (staleness.stale(original, touchKey("s", mutation.nodeId)))
               listOf(
                 CommandConflictV1(
                   ConflictCodeV1.STALE_MOVE,
                   mutation.nodeId,
-                  overwrittenRevision = original.document.revision,
+                  overwrittenRevision = staleness.through,
                 )
               )
             else emptyList()
@@ -3943,6 +3962,7 @@ public class PersistentUiBuilderService(
             original,
             index,
             catalog,
+            staleness,
           )
         // The explicit spelling of the null write (compose-preview-contracts 2.10.0, #480): the
         // same path, so the change record is the same `afterPresent = false` either way.
@@ -3956,6 +3976,7 @@ public class PersistentUiBuilderService(
             original,
             index,
             catalog,
+            staleness,
           )
         is UpdateEnvironmentMutationV1 -> {
           if (mutation.changes.isEmpty()) {
@@ -3987,10 +4008,7 @@ public class PersistentUiBuilderService(
           }
           val conflicts = fields.mapNotNull { environmentField ->
             val overwrittenRevision =
-              original.lastTouchSince(
-                command.baseRevision,
-                touchKey("e", environmentField.name),
-              )
+              staleness.overwritten(original, touchKey("e", environmentField.name))
             overwrittenRevision?.let {
               CommandConflictV1(
                 code = ConflictCodeV1.STALE_ENVIRONMENT_WRITE,
@@ -4027,10 +4045,7 @@ public class PersistentUiBuilderService(
           // rewriting this node's chain since the base revision is a conflict rather than a
           // refusal, because the chain is a value and the last writer wins.
           val conflicts =
-            if (
-              command.baseRevision < original.document.revision &&
-                original.touchedSince(command.baseRevision, touchKey("m", mutation.nodeId))
-            )
+            if (staleness.stale(original, touchKey("m", mutation.nodeId)))
               listOf(
                 CommandConflictV1(
                   // `STALE_PROPERTY_WRITE` because the wire has no modifier-specific code, and
@@ -4039,7 +4054,7 @@ public class PersistentUiBuilderService(
                   ConflictCodeV1.STALE_PROPERTY_WRITE,
                   mutation.nodeId,
                   MODIFIERS_FIELD,
-                  original.document.revision,
+                  staleness.through,
                 )
               )
             else emptyList()
@@ -4078,7 +4093,7 @@ public class PersistentUiBuilderService(
           MutationResult(
             WorkingDesign(document, working.tombstones, working.positions),
             StateVariableChangeV1(mutation.name, before, mutation.declaration),
-            staleStateWrites(original, command, mutation.name),
+            staleStateWrites(original, staleness, mutation.name),
           )
         }
         is RemoveStateVariableMutationV1 -> {
@@ -4108,7 +4123,7 @@ public class PersistentUiBuilderService(
           MutationResult(
             WorkingDesign(document, working.tombstones, working.positions),
             StateVariableChangeV1(mutation.name, before, null),
-            staleStateWrites(original, command, mutation.name),
+            staleStateWrites(original, staleness, mutation.name),
           )
         }
         is DeclareComponentMutationV1 -> {
@@ -4140,7 +4155,7 @@ public class PersistentUiBuilderService(
           MutationResult(
             WorkingDesign(document, working.tombstones, working.positions),
             ComponentChangeV1(mutation.componentKey, before, mutation.declaration),
-            staleComponentWrites(original, command, mutation.componentKey),
+            staleComponentWrites(original, staleness, mutation.componentKey),
           )
         }
         is RemoveComponentMutationV1 -> {
@@ -4173,7 +4188,7 @@ public class PersistentUiBuilderService(
           MutationResult(
             WorkingDesign(document, working.tombstones, working.positions),
             ComponentChangeV1(mutation.componentKey, before, null),
-            staleComponentWrites(original, command, mutation.componentKey),
+            staleComponentWrites(original, staleness, mutation.componentKey),
           )
         }
         is SetEventBindingMutationV1 -> {
@@ -4231,19 +4246,13 @@ public class PersistentUiBuilderService(
           // The same staleness question the property and modifier lanes ask, one field over: a
           // binding is a value, and the last writer wins.
           val conflicts =
-            if (
-              command.baseRevision < original.document.revision &&
-                original.touchedSince(
-                  command.baseRevision,
-                  touchKey("b", mutation.nodeId, mutation.event),
-                )
-            )
+            if (staleness.stale(original, touchKey("b", mutation.nodeId, mutation.event)))
               listOf(
                 CommandConflictV1(
                   ConflictCodeV1.STALE_PROPERTY_WRITE,
                   mutation.nodeId,
                   eventBindingField(mutation.event),
-                  original.document.revision,
+                  staleness.through,
                 )
               )
             else emptyList()
@@ -4274,6 +4283,7 @@ public class PersistentUiBuilderService(
     original: PersistedDesignV1,
     index: Int,
     catalog: CatalogCapabilityV1,
+    staleness: StalenessWindow,
   ): MutationResult {
     val node =
       working.document.nodes[nodeId]
@@ -4307,16 +4317,13 @@ public class PersistentUiBuilderService(
       } else node.copy(properties = node.properties - property)
     val document = working.document.copy(nodes = working.document.nodes + (node.id to written))
     val conflicts =
-      if (
-        command.baseRevision < original.document.revision &&
-          original.touchedSince(command.baseRevision, touchKey("p", nodeId, property))
-      )
+      if (staleness.stale(original, touchKey("p", nodeId, property)))
         listOf(
           CommandConflictV1(
             ConflictCodeV1.STALE_PROPERTY_WRITE,
             nodeId,
             property,
-            original.document.revision,
+            staleness.through,
           )
         )
       else emptyList()

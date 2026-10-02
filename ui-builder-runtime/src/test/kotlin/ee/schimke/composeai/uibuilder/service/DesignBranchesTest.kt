@@ -301,6 +301,86 @@ class DesignBranchesTest {
   }
 
   @Test
+  fun `every replayed command reports the parent edits it overwrites, not only the first`() {
+    val service = service(createTempDirectory("branches"))
+    seed(service)
+    accepted(service, owner, batch("design", "body", 1, InsertNodeMutationV1(text("body"), inRoot)))
+    branch(service, owner, "Rewrite", branchId = "design-a")
+    accepted(service, owner, setText("design-a", "a-1", 2, "Branch title"))
+    accepted(service, owner, setText("design-a", "a-2", 3, "Branch body", nodeId = "body"))
+    accepted(service, owner, setText("design-a", "a-3", 4, "Branch body again", nodeId = "body"))
+    accepted(service, owner, batch("design-a", "a-4", 5, MoveNodeMutationV1("title", inRoot)))
+    // After the fork the parent rewrites the body and moves the title; neither is the branch's
+    // first command's business, so before the fix only a-1's (empty) check could see them.
+    accepted(service, owner, setText("design", "p-1", 2, "Parent body", nodeId = "body"))
+    accepted(service, owner, batch("design", "p-2", 3, MoveNodeMutationV1("title", inRoot)))
+
+    val report = merge(service, owner, "design-a", dryRun = true)
+    assertTrue(report.merged, report.toString())
+    // Positions still follow the base chain.
+    assertEquals(listOf(2L, 5L, 6L, 7L), report.commands.map { it.baseRevision })
+    assertEquals(
+      listOf(
+        emptyList(),
+        // The 2nd command overwrites the parent's concurrent body: reported against the parent's
+        // head when the merge began, the revision it overwrote.
+        listOf(CommandConflictV1(ConflictCodeV1.STALE_PROPERTY_WRITE, "body", "text", 4)),
+        // The 3rd overwrites a-2, which its author saw: not reported a second time.
+        emptyList(),
+        listOf(CommandConflictV1(ConflictCodeV1.STALE_MOVE, "title", null, 4)),
+      ),
+      report.commands.map { it.conflicts },
+    )
+
+    val merged = merge(service, owner, "design-a")
+    assertEquals(report.commands.map { it.conflicts }, merged.commands.map { it.conflicts })
+    assertEquals(StringValueV1("Branch body again"), document(service, "design").text("body"))
+  }
+
+  @Test
+  fun `a multi-command merge the parent did not race reports no conflicts`() {
+    val service = service(createTempDirectory("branches"))
+    seed(service)
+    accepted(service, owner, batch("design", "body", 1, InsertNodeMutationV1(text("body"), inRoot)))
+    branch(service, owner, "Title only", branchId = "design-a")
+    accepted(service, owner, setText("design-a", "a-1", 2, "One"))
+    accepted(service, owner, setText("design-a", "a-2", 3, "Two"))
+    accepted(service, owner, batch("design-a", "a-3", 4, MoveNodeMutationV1("title", inRoot)))
+    accepted(service, owner, setText("design-a", "a-4", 5, "Three"))
+    // The parent edits something else entirely.
+    accepted(service, owner, setText("design", "p-1", 2, "Parent body", nodeId = "body"))
+
+    val report = merge(service, owner, "design-a")
+    assertTrue(report.merged, report.toString())
+    assertEquals(listOf("a-1", "a-2", "a-3", "a-4"), report.commands.map { it.operationId })
+    assertTrue(report.commands.all { it.conflicts.isEmpty() }, report.toString())
+    val parent = document(service, "design")
+    assertEquals(StringValueV1("Three"), parent.text("title"))
+    assertEquals(StringValueV1("Parent body"), parent.text("body"))
+  }
+
+  @Test
+  fun `whether a command replays first or later does not change what it reports overwriting`() {
+    val service = service(createTempDirectory("branches"))
+    seed(service)
+    accepted(service, owner, batch("design", "body", 1, InsertNodeMutationV1(text("body"), inRoot)))
+    branch(service, owner, "Mixed", branchId = "design-a")
+    accepted(service, owner, setText("design-a", "a-1", 2, "Branch title"))
+    accepted(service, owner, setText("design-a", "a-2", 3, "Branch body", nodeId = "body"))
+    accepted(service, owner, setText("design-a", "a-3", 4, "Branch body 2", nodeId = "body"))
+    accepted(service, owner, setText("design", "p-1", 2, "Parent body", nodeId = "body"))
+    val stale = listOf(CommandConflictV1(ConflictCodeV1.STALE_PROPERTY_WRITE, "body", "text", 3))
+
+    // a-2 skipped: a-3 is now the branch's first write of the body, second in the replay.
+    val skipped = merge(service, owner, "design-a", dryRun = true, skip = setOf("a-2"))
+    assertEquals(listOf("a-1", "a-3"), skipped.commands.map { it.operationId })
+    assertEquals(listOf(emptyList(), stale), skipped.commands.map { it.conflicts })
+    // a-1 skipped: a-2 is first in the replay, and says the same thing it says second.
+    val first = merge(service, owner, "design-a", dryRun = true, skip = setOf("a-1"))
+    assertEquals(listOf(stale, emptyList()), first.commands.map { it.conflicts })
+  }
+
+  @Test
   fun `retention cannot expire an open branch's fork point, and releases it once closed`() {
     val root = createTempDirectory("branches")
     val limits =

@@ -240,6 +240,50 @@ class DesignSuggestionsTest {
   }
 
   @Test
+  fun `a partial accept reports the edits it overwrites on every accepted command`() {
+    val service = service(createTempDirectory("suggestions"))
+    seed(service)
+    grantEditor(service, agent)
+    accepted(service, owner, batch("design", "body", 1, InsertNodeMutationV1(text("body"), inRoot)))
+    suggest(service, agent, "Three things", "design-s")
+    accepted(service, agent, setText("design-s", "s-1", 2, "Title"))
+    accepted(
+      service,
+      agent,
+      batch("design-s", "s-2", 3, InsertNodeMutationV1(text("extra"), inRoot)),
+    )
+    accepted(service, agent, setText("design-s", "s-3", 4, "Agent body", nodeId = "body"))
+    // The person edits the body while the suggestion waits.
+    accepted(service, owner, setText("design", "p-1", 2, "Person body", nodeId = "body"))
+
+    val report =
+      assertIs<UiBuilderBranchResponse.Merge>(
+          execute(
+            service,
+            owner,
+            UiBuilderBranchRequest.MergeBranch(
+              "design-s",
+              acceptOperationIds = setOf("s-1", "s-3"),
+            ),
+          )
+        )
+        .report
+    assertTrue(report.merged, report.toString())
+    assertEquals(listOf("s-1", "s-3"), report.commands.map { it.operationId })
+    assertEquals(listOf("s-2"), report.skippedOperationIds)
+    assertEquals(
+      listOf(
+        emptyList(),
+        listOf(CommandConflictV1(ConflictCodeV1.STALE_PROPERTY_WRITE, "body", "text", 3)),
+      ),
+      report.commands.map { it.conflicts },
+    )
+    val parent = document(service, "design")
+    assertEquals(StringValueV1("Agent body"), parent.text("body"))
+    assertFalse("extra" in parent.nodes)
+  }
+
+  @Test
   fun `suggestions and their outcome survive a restart`() {
     val root = createTempDirectory("suggestions")
     val first = service(root)
