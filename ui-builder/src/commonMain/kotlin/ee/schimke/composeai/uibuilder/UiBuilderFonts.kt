@@ -142,18 +142,16 @@ class UiBuilderFontRegistry(
           val family = remoteFamilyName(name)
           // Regular is the family: without it there is nothing to draw. Bold is a bonus, so a
           // family that has no 700 still loads, and its bold text is synthesised from the 400.
-          val fonts =
-            REMOTE_FONT_WEIGHTS.mapNotNull { weight ->
-              runCatching {
-                  platformFont(
-                    identity = "ui-builder:remote:$family:$weight",
-                    data = remote(family, weight),
-                    weight = FontWeight(weight),
-                  )
-                }
-                .getOrNull()
-                ?: if (weight == FontWeight.Normal.weight) return@launch else null
+          val fonts = REMOTE_FONT_WEIGHTS.mapNotNull { weight ->
+            runCatching {
+              platformFont(
+                identity = "ui-builder:remote:$family:$weight",
+                data = remote(family, weight),
+                weight = FontWeight(weight),
+              )
             }
+              .getOrNull() ?: if (weight == FontWeight.Normal.weight) return@launch else null
+          }
           loaded[name] = FontFamily(fonts)
         }
     }

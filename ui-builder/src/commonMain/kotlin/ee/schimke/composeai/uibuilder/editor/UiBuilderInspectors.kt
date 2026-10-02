@@ -1706,9 +1706,7 @@ private fun TypefacePicker(selected: String?, onPick: (String?) -> Unit) {
         val supporting =
           if (face != null) "Not bundled — fetched by name"
           else "Not bundled here — drawn in the default face"
-        TypefaceOption(name, face, supporting, true) {
-          expanded = false
-        }
+        TypefaceOption(name, face, supporting, true) { expanded = false }
       }
     }
   }
