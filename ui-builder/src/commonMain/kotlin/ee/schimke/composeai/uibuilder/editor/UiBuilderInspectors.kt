@@ -31,7 +31,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
@@ -44,7 +43,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -77,9 +75,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
-import ee.schimke.composeai.uibuilder.canonicalFamilyName
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.boardItemCount
 import ee.schimke.composeai.uibuilder.canvas.forPlatform
@@ -90,6 +86,7 @@ import ee.schimke.composeai.uibuilder.canvas.withScreenFields
 import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_CLICK_COMPONENTS
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
+import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -392,7 +389,11 @@ private fun InspectorBody(
       return@Column
     }
     if (state.inspectorMode == EditorInspectorMode.Theme) {
-      ThemeBuilder(themeSettings, onTextInputFocusChanged, dispatch)
+      // Scrolled for the reason the Screen tab is: the typeface pickers below the colour fields
+      // run past a short panel.
+      Column(Modifier.verticalScroll(rememberScrollState())) {
+        ThemeBuilder(themeSettings, state.document.themeHost(), onTextInputFocusChanged, dispatch)
+      }
       return@Column
     }
     if (state.inspectorMode == EditorInspectorMode.Screen) {
@@ -753,28 +754,49 @@ private fun PropertyControl(
       if (stateVariables.isNotEmpty() && field.control != EditorPropertyControl.Unsupported) {
         StateBindMenu(field, stateVariables, needsComparison, onTextInputFocusChanged, onBind)
       }
-      when (field.control) {
-        EditorPropertyControl.Boolean -> {
-          val checked = field.value.toBooleanStrictOrNull() ?: false
-          LocalUiBuilderChrome.current.InspectorBooleanProperty(field.label, checked) {
-            commit(it.toString())
-          }
+      // A theme typeface is a family name, and a family name is picked rather than typed: the
+      // picker searches the vendored faces and the Google Fonts catalogue and draws each in itself.
+      if (field.name in ThemeTypefaces.PROPERTIES) {
+        FontFamilyPicker(
+          selected = field.value.takeIf { it.isNotBlank() },
+          contentDescription = field.label,
+          onTextInputFocusChanged = onTextInputFocusChanged,
+        ) {
+          commit(it.orEmpty())
         }
-        EditorPropertyControl.Enum ->
-          if (field.name == "iconKey")
-            GoogleIconPropertyControl(field, onTextInputFocusChanged, commit)
-          else EnumPropertyControl(field, commit)
-        EditorPropertyControl.Number ->
-          DraftPropertyControl(
-            field,
-            onTextInputFocusChanged,
-            draft,
-            onDraftChange,
-            commit,
-            showSteppers = true,
-          )
-        EditorPropertyControl.Color ->
-          ColorPropertyControl(field, commit) {
+      } else
+        when (field.control) {
+          EditorPropertyControl.Boolean -> {
+            val checked = field.value.toBooleanStrictOrNull() ?: false
+            LocalUiBuilderChrome.current.InspectorBooleanProperty(field.label, checked) {
+              commit(it.toString())
+            }
+          }
+          EditorPropertyControl.Enum ->
+            if (field.name == "iconKey")
+              GoogleIconPropertyControl(field, onTextInputFocusChanged, commit)
+            else EnumPropertyControl(field, commit)
+          EditorPropertyControl.Number ->
+            DraftPropertyControl(
+              field,
+              onTextInputFocusChanged,
+              draft,
+              onDraftChange,
+              commit,
+              showSteppers = true,
+            )
+          EditorPropertyControl.Color ->
+            ColorPropertyControl(field, commit) {
+              DraftPropertyControl(
+                field,
+                onTextInputFocusChanged,
+                draft,
+                onDraftChange,
+                commit,
+                showSteppers = false,
+              )
+            }
+          EditorPropertyControl.Text ->
             DraftPropertyControl(
               field,
               onTextInputFocusChanged,
@@ -783,19 +805,9 @@ private fun PropertyControl(
               commit,
               showSteppers = false,
             )
-          }
-        EditorPropertyControl.Text ->
-          DraftPropertyControl(
-            field,
-            onTextInputFocusChanged,
-            draft,
-            onDraftChange,
-            commit,
-            showSteppers = false,
-          )
-        EditorPropertyControl.Unsupported ->
-          LocalUiBuilderChrome.current.InspectorMessage(field.value.ifEmpty { "Not set" })
-      }
+          EditorPropertyControl.Unsupported ->
+            LocalUiBuilderChrome.current.InspectorMessage(field.value.ifEmpty { "Not set" })
+        }
     }
   }
 }
@@ -1623,6 +1635,7 @@ private fun ScreenEnvironmentInspector(
   )
   TypefacePicker(
     selected = current.typeface,
+    onTextInputFocusChanged = onTextInputFocusChanged,
     onPick = { family ->
       // From `current`, like the device menus: this control owns one field and commits it alone.
       dispatch(UiBuilderEditorEvent.UpdateEnvironment(current.copy(typeface = family)))
@@ -1641,24 +1654,11 @@ private fun ScreenEnvironmentInspector(
  * does not; it is drawn in its face when the host could fetch it by name, and says so when not.
  */
 @Composable
-private fun TypefacePicker(selected: String?, onPick: (String?) -> Unit) {
-  val registry = LocalUiBuilderFontRegistry.current
-  val families = registry?.families.orEmpty()
-  val faces = LocalUiBuilderFontFamilies.current
-  var expanded by remember { mutableStateOf(false) }
-  // The list is wanted only once the Screen panel is open, which is well after first load.
-  LaunchedEffect(registry) { registry?.loadFamilies() }
-  LaunchedEffect(registry, selected) { selected?.let { registry?.request(it) } }
-  LaunchedEffect(registry, expanded, families) {
-    if (expanded) families.forEach { registry?.request(it.name) }
-  }
-  // Matched the way the registry resolves a name, so `google:Inter` is the vendored Inter here too.
-  val selectedFamily =
-    selected?.let(::canonicalFamilyName)?.let { name ->
-      families.firstOrNull { canonicalFamilyName(it.name) == name }
-    }
-  val unknown = selected?.takeIf { selectedFamily == null }
-  val selectedLabel = selectedFamily?.label ?: selected
+private fun TypefacePicker(
+  selected: String?,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  onPick: (String?) -> Unit,
+) {
   Text(
     "Typeface",
     style = MaterialTheme.typography.titleSmall,
@@ -1670,75 +1670,12 @@ private fun TypefacePicker(selected: String?, onPick: (String?) -> Unit) {
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     style = MaterialTheme.typography.bodySmall,
   )
-  Box(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-    OutlinedButton(
-      onClick = { expanded = true },
-      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Typeface" },
-    ) {
-      Text(
-        selectedLabel ?: "Default",
-        fontFamily = selected?.let(faces::get),
-        style = MaterialTheme.typography.bodyLarge,
-        maxLines = 1,
-        modifier = Modifier.weight(1f),
-      )
-      Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
-    }
-    TrackEditorOverlay(expanded)
-    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-      TypefaceOption("Default", null, "The platform's own face", selected == null) {
-        expanded = false
-        onPick(null)
-      }
-      families.forEach { family ->
-        TypefaceOption(
-          label = family.label,
-          face = faces[family.name],
-          supporting = if (faces[family.name] == null) "Loading…" else null,
-          selected = family == selectedFamily,
-        ) {
-          expanded = false
-          onPick(family.name)
-        }
-      }
-      unknown?.let { name ->
-        val face = faces[name]
-        val supporting =
-          if (face != null) "Not bundled — fetched by name"
-          else "Not bundled here — drawn in the default face"
-        TypefaceOption(name, face, supporting, true) { expanded = false }
-      }
-    }
-  }
-}
-
-@Composable
-private fun TypefaceOption(
-  label: String,
-  face: FontFamily?,
-  supporting: String?,
-  selected: Boolean,
-  onClick: () -> Unit,
-) {
-  DropdownMenuItem(
-    text = {
-      Column {
-        Text(label, fontFamily = face, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-        supporting?.let {
-          Text(
-            it,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
-      }
-    },
-    trailingIcon =
-      if (selected) {
-        { Icon(Icons.Filled.Check, contentDescription = "Current typeface", Modifier.size(18.dp)) }
-      } else null,
-    modifier = Modifier.semantics { this.selected = selected },
-    onClick = onClick,
+  FontFamilyPicker(
+    selected = selected,
+    contentDescription = "Typeface",
+    onTextInputFocusChanged = onTextInputFocusChanged,
+    modifier = Modifier.padding(top = 6.dp),
+    onPick = onPick,
   )
 }
 
@@ -2247,6 +2184,7 @@ private fun EnvironmentTextField(
 @Composable
 private fun ThemeBuilder(
   settings: EditorThemeSettings,
+  host: UiBuilderNode?,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
@@ -2289,6 +2227,55 @@ private fun ThemeBuilder(
       },
     )
   )
+  ThemeTypefacePickers(host, onTextInputFocusChanged, dispatch)
+}
+
+/**
+ * The theme host's typefaces, one picker per group of type-scale roles (see [ThemeTypefaces]).
+ *
+ * Commits on pick, unlike the fields above: a family is one choice, and the thing to do after
+ * making it is to look at the canvas. Each writes the host's property directly, which is also what
+ * the same picker in the property list does.
+ */
+@Composable
+private fun ThemeTypefacePickers(
+  host: UiBuilderNode?,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  Text(
+    "Typefaces",
+    style = MaterialTheme.typography.titleSmall,
+    fontWeight = FontWeight.Bold,
+    modifier = Modifier.padding(top = 16.dp),
+  )
+  if (host == null) {
+    Text(
+      "A root Material surface carries the theme; add one to set its typefaces.",
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
+    )
+    return
+  }
+  Text(
+    "A family for each group of type roles. Unset keeps the platform's face.",
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.bodySmall,
+  )
+  ThemeTypefaces.GROUPS.forEach { group ->
+    Text(
+      group.name.replaceFirstChar { it.uppercase() },
+      style = MaterialTheme.typography.labelMedium,
+      modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+    )
+    FontFamilyPicker(
+      selected = host.propertyText(group.property).takeIf { it.isNotBlank() },
+      contentDescription = "${group.name.replaceFirstChar { it.uppercase() }} typeface",
+      onTextInputFocusChanged = onTextInputFocusChanged,
+    ) { family ->
+      dispatch(UiBuilderEditorEvent.CommitProperty(host.id, group.property, family.orEmpty()))
+    }
+  }
 }
 
 @Composable

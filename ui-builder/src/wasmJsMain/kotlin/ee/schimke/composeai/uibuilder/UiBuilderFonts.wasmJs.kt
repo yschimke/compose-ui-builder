@@ -35,6 +35,8 @@ fun browserFontRegistry(baseUrl: String = bundleFontsBaseUrl()): UiBuilderFontRe
     readRemoteFont = { family, weight ->
       Base64.decode(fetchBase64(googleFontUrl(family, weight)))
     },
+    // The fonts.google.com catalogue, shipped beside the vendored manifest for the picker.
+    readRemoteFamilies = { fetchText("${baseUrl}google-fonts.txt") },
   )
 
 /** Where a host serves a Google Fonts family's TrueType file at one weight. */
