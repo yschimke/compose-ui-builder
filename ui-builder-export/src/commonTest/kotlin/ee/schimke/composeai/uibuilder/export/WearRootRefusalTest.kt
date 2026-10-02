@@ -48,6 +48,43 @@ class WearRootRefusalTest {
   }
 
   @Test
+  fun `the tagged overloads give the same sentence when handed the platform`() {
+    // The server's native preview lane needs `tagNodes`, which only the platform-less overloads
+    // take. Handed the platform, they refuse exactly as the export does; without it, nothing moves.
+    val bare = document(listOf("cell-0"), button("cell-0"))
+    val saved = bare.toDesignDocumentV1()
+
+    listOf(
+        RecordFreeExport.generate(
+          bare,
+          "com.example",
+          tagNodes = true,
+          platform = UiBuilderCatalogPlatform.WEAR,
+        ),
+        RecordFreeExport.generate(
+          saved,
+          "com.example",
+          tagNodes = true,
+          platform = UiBuilderCatalogPlatform.WEAR,
+        ),
+      )
+      .forEach {
+        assertEquals(listOf(expected), assertIs<RecordFreeExport.Generated.Refused>(it).reasons)
+      }
+
+    assertNull(RecordFreeExport.generate(saved, "com.example", tagNodes = true))
+    assertNull(RecordFreeExport.generate(saved, "com.example", tagNodes = true, platform = null))
+    assertNull(
+      RecordFreeExport.generate(
+        saved,
+        "com.example",
+        tagNodes = true,
+        platform = UiBuilderCatalogPlatform.MOBILE,
+      )
+    )
+  }
+
+  @Test
   fun `several roots are named as several roots`() {
     val two = document(listOf("cell-0", "cell-1"), button("cell-0") + button("cell-1"))
 

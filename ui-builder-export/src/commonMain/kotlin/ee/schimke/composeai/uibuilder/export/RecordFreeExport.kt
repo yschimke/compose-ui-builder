@@ -310,6 +310,64 @@ object RecordFreeExport {
   }
 
   /**
+   * The tagged overloads above, also answering a Wear design that neither Wear emitter takes.
+   *
+   * The server's **native preview** lane needs [tagNodes], so it cannot use the platform overloads
+   * — and without a platform the two overloads above cannot tell a `wear-m3` design from any other,
+   * so a bare `wear-m3/button` root fell through to the record-driven generator and that lane
+   * reported "no component `wear-m3/button` in this catalog" per component while the export said to
+   * wrap the content in a screen. Passing the catalog's [platform] gets the export's sentence.
+   *
+   * Separate overloads with [platform] last and required rather than a defaulted parameter on the
+   * two above, for binary compatibility (see [nativePreview]): a default argument would replace
+   * their JVM descriptors, and a host compiled against the previous release would fail with
+   * `NoSuchMethodError`. Null behaves exactly as the overloads above.
+   *
+   * Only the Wear root refusal is added: A2UI and inline Remote Compose content still route through
+   * the platform overloads, which take no [tagNodes] because neither writes test tags.
+   */
+  fun generate(
+    document: UiBuilderDocument,
+    packageName: String? = null,
+    tagNodes: Boolean = false,
+    previews: Boolean = !tagNodes,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    platform: UiBuilderCatalogPlatform?,
+  ): Generated? =
+    generate(document, packageName, tagNodes, previews, packComponents, assets)
+      ?: platform?.let {
+        wearRootRefusal(
+          it,
+          document.roots,
+          document.nodes.values.map { node -> node.componentId },
+        ) { id ->
+          document.nodes[id]?.componentId
+        }
+      }
+
+  /** As above, for the saved document the server holds. */
+  fun generate(
+    document: DesignDocumentV1,
+    packageName: String? = null,
+    tagNodes: Boolean = false,
+    previews: Boolean = !tagNodes,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    platform: UiBuilderCatalogPlatform?,
+  ): Generated? =
+    generate(document, packageName, tagNodes, previews, packComponents, assets)
+      ?: platform?.let {
+        wearRootRefusal(
+          it,
+          document.roots,
+          document.nodes.values.map { node -> node.componentId },
+        ) { id ->
+          document.nodes[id]?.componentId
+        }
+      }
+
+  /**
    * Whether [document] generates through an emitter here rather than through `ScreenGenerator`.
    *
    * Public because one caller needs the question without the answer: the server's **native
