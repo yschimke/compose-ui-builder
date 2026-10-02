@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.73.0](https://github.com/yschimke/compose-ui-builder/compare/v3.72.0...v3.73.0) (2026-10-02)
+
+
+### Features
+
+* design suggestions — accept or reject proposed edits ([#390](https://github.com/yschimke/compose-ui-builder/issues/390)) ([53c7d10](https://github.com/yschimke/compose-ui-builder/commit/53c7d1054818eb9029b4019d121fdb25663034f5))
+* **ui-builder:** expose any bindable property as a component parameter, and detach instances ([#387](https://github.com/yschimke/compose-ui-builder/issues/387)) ([98601be](https://github.com/yschimke/compose-ui-builder/commit/98601be670a0b57a61491f24e2d3acec27b81897))
+* **ui-builder:** place components from the project library ([#389](https://github.com/yschimke/compose-ui-builder/issues/389)) ([71deee3](https://github.com/yschimke/compose-ui-builder/commit/71deee33a93511ae5159fad9f29389f48ed9039e))
+
+
+### Bug Fixes
+
+* **ui-builder-runtime:** report parent edits overwritten by every replayed merge command ([#392](https://github.com/yschimke/compose-ui-builder/issues/392)) ([f41609e](https://github.com/yschimke/compose-ui-builder/commit/f41609e749eef8885779ffc5dc1ebaaa3a213f24))
+* **ui-builder:** right-click on a small selected node opens its menu; shortcut hints render under a CSP ([#391](https://github.com/yschimke/compose-ui-builder/issues/391)) ([8fb8017](https://github.com/yschimke/compose-ui-builder/commit/8fb8017a89b2bfb26d12c60e57b1a81c4e6eaabf))
+
 ## [3.72.0](https://github.com/yschimke/compose-ui-builder/compare/v3.71.0...v3.72.0) (2026-10-01)
 
 
