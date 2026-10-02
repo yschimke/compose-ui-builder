@@ -161,3 +161,117 @@
     },
   };
 })();
+
+// The offline service worker (`ui-builder-sw.js`), registered only for a person who asked for it.
+//
+// A worker at the editor's root controls every builder page on this origin — including every
+// automated harness that drives one — so it is never registered on its own: only when the editor is
+// running as an installed app, or the address says `?storage=local` (a design kept in this browser,
+// whose point is to work offline) or `?offline=1`. `?sw=off` takes it away again, caches included.
+//
+// The script and the scope are resolved against the page, not hard-coded, so the same bundle works
+// behind compose-preview-server (`/ui-builder/…`, assets under a versioned prefix) and served as
+// plain files from anywhere. Registered after `load`, so it never competes with the Wasm download.
+(() => {
+  try {
+    if (!('serviceWorker' in navigator) || !globalThis.isSecureContext) return;
+    // An embedded editor (an IDE webview, an MCP App frame) belongs to its host, not to this origin.
+    if (globalThis.top !== globalThis || globalThis.composeUiBuilderMcpApp) return;
+  } catch (_) {
+    return;
+  }
+  const params = new URLSearchParams(location.search);
+  const marker = '/ui-builder/';
+  const at = location.pathname.indexOf(marker);
+  const root =
+    at >= 0
+      ? location.pathname.slice(0, at + marker.length)
+      : location.pathname.slice(0, location.pathname.lastIndexOf('/') + 1);
+  const scope = new URL(root, location.origin).href;
+  const script = new URL('ui-builder-sw.js', scope).href;
+
+  if (params.get('sw') === 'off') {
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) =>
+        Promise.all(registrations.filter((r) => r.scope === scope).map((r) => r.unregister())),
+      )
+      .then(() => globalThis.caches?.keys())
+      .then((names) =>
+        Promise.all(
+          (names || []).filter((n) => n.startsWith('ui-builder-shell-')).map((n) => caches.delete(n)),
+        ),
+      )
+      .catch((error) => console.warn('ui-builder: could not remove the offline worker', error));
+    return;
+  }
+
+  const installed = ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay'].some(
+    (mode) => globalThis.matchMedia?.('(display-mode: ' + mode + ')').matches,
+  ) || navigator.standalone === true;
+  const optedIn = installed || params.get('storage') === 'local' || params.get('offline') === '1';
+  if (!optedIn) return;
+
+  // A small notice, outside the editor's canvas, when a newer editor is installed and waiting.
+  const offerUpdate = (registration) => {
+    if (!registration.waiting || !navigator.serviceWorker.controller) return;
+    if (document.getElementById('ui-builder-update')) return;
+    const notice = document.createElement('div');
+    notice.id = 'ui-builder-update';
+    notice.setAttribute('role', 'status');
+    notice.style.cssText =
+      'position:fixed;z-index:20;left:50%;transform:translateX(-50%);' +
+      'bottom:calc(72px + env(safe-area-inset-bottom, 0px));display:flex;gap:12px;align-items:center;' +
+      'padding:8px 8px 8px 16px;border-radius:999px;background:#322f35;color:#f5eff7;' +
+      'font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 2px 8px #0005';
+    const text = document.createElement('span');
+    text.textContent = 'A new version of the editor is ready';
+    const reload = document.createElement('button');
+    reload.type = 'button';
+    reload.textContent = 'Reload';
+    reload.style.cssText =
+      'border:0;border-radius:999px;padding:6px 14px;background:#d0bcff;color:#381e72;font:inherit;' +
+      'font-weight:600;cursor:pointer';
+    reload.addEventListener('click', () => {
+      reload.disabled = true;
+      registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
+    });
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.textContent = '×';
+    dismiss.setAttribute('aria-label', 'Dismiss');
+    dismiss.style.cssText =
+      'border:0;background:transparent;color:inherit;font:inherit;font-size:18px;cursor:pointer;padding:0 8px';
+    dismiss.addEventListener('click', () => notice.remove());
+    notice.append(text, reload, dismiss);
+    document.body.appendChild(notice);
+  };
+
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // Only after the person pressed Reload: a first install also changes the controller.
+    if (reloading || !document.getElementById('ui-builder-update')) return;
+    reloading = true;
+    location.reload();
+  });
+
+  const register = () =>
+    navigator.serviceWorker
+      .register(script, { scope, updateViaCache: 'none' })
+      .then((registration) => {
+        document.documentElement.dataset.uiBuilderOffline = 'registered';
+        offerUpdate(registration);
+        registration.addEventListener('updatefound', () => {
+          const incoming = registration.installing;
+          incoming?.addEventListener('statechange', () => {
+            if (incoming.state === 'installed') offerUpdate(registration);
+          });
+        });
+      })
+      .catch((error) => {
+        document.documentElement.dataset.uiBuilderOffline = 'failed';
+        console.warn('ui-builder: the offline worker could not be registered', error);
+      });
+  if (document.readyState === 'complete') register();
+  else globalThis.addEventListener('load', register, { once: true });
+})();

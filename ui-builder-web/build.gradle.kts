@@ -142,6 +142,9 @@ configurations.named("runtimeElements") {
 abstract class VerifyUiBuilderWebArchive : DefaultTask() {
   @get:Internal val mcpAppShellPath: String = "mcp-app/ui-builder-mcp-app.html"
 
+  /** The offline service worker; a host serves it at `<editor root>/ui-builder-sw.js`. */
+  @get:Internal val serviceWorkerPath: String = "ui-builder-sw.js"
+
   @get:InputFile
   @get:PathSensitive(PathSensitivity.NONE)
   abstract val archiveFile: RegularFileProperty
@@ -164,6 +167,10 @@ abstract class VerifyUiBuilderWebArchive : DefaultTask() {
           "remote-m3-capabilities-v1.json",
           "fonts/fonts.json",
           "ui-builder-web.json",
+          // The offline service worker. At the root on purpose: a worker's scope cannot be wider
+          // than its own directory without a `Service-Worker-Allowed` header, and the editor's
+          // pages are the root's. See `ui-builder-boot.js` for when it is registered.
+          serviceWorkerPath,
           mcpAppShellPath,
         )
       val missing = required - names.toSet()
@@ -184,6 +191,11 @@ abstract class VerifyUiBuilderWebArchive : DefaultTask() {
         "$mcpAppShellPath has lost its layout placeholder"
       }
       check("@UI_BUILDER_VERSION@" !in shell) { "$mcpAppShellPath was packaged without its version" }
+      val worker =
+        zip.getInputStream(zip.getEntry(serviceWorkerPath)).bufferedReader().readText()
+      check("@UI_BUILDER_SW_VERSION@" !in worker && "@UI_BUILDER_SW_BUNDLE@" !in worker) {
+        "$serviceWorkerPath was packaged without its bundle digest"
+      }
     }
   }
 }
