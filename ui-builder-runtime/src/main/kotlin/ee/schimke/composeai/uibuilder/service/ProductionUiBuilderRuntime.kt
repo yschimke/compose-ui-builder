@@ -1517,6 +1517,14 @@ public object PackagedUiBuilderRenderBundle {
   public const val DOCUMENT_OVERRIDE_KEY: String = "uiBuilder.document.v1"
 
   /**
+   * The system property naming the directory of Google Fonts files (`<slug>-<weight>.ttf`) the
+   * bundle's preview draws a design's typefaces from: `:ui-builder`'s
+   * `GOOGLE_FONTS_DIRECTORY_PROPERTY`, which a host sets on the daemon it starts for [PREVIEW_ID].
+   * Unset, every family the bundle does not vendor draws in the default face.
+   */
+  public const val GOOGLE_FONTS_DIRECTORY_PROPERTY: String = "uiBuilder.googleFontsDir"
+
+  /**
    * The bundle's own statement of the Java feature version its classes need, beside the bundle.
    *
    * Written by `:ui-builder-render-bundle` from the same catalog entry `:ui-builder`'s toolchain

@@ -22,16 +22,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.rcplayer.compose.RcComposePlayer
 import ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry
 import ee.schimke.composeai.rcplayer.compose.RcCustomContent
+import ee.schimke.composeai.rcplayer.compose.RcFontVariations
 import ee.schimke.composeai.rcplayer.compose.RcPlayerTheme
+import ee.schimke.composeai.rcplayer.compose.RcTypefaceLoader
 import ee.schimke.composeai.rcplayer.compose.composeSupportReport
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.rcplayer.protocol.RcDocumentCodec
 import ee.schimke.composeai.rcplayer.runtime.RcNamedValue
 import ee.schimke.composeai.rcplayer.runtime.RcPlayerEvent
+import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_CUSTOM_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -136,6 +140,7 @@ internal fun RemoteComposeDocument(
     namedValues = namedValues,
     onEvent = onEvent,
     customComponents = customComponents,
+    typefaces = hostTypefaces(),
   )
 }
 
@@ -231,7 +236,29 @@ internal fun PlayedInlineRemoteContent(
         else -> inherited
       },
     customComponents = customComponents,
+    typefaces = hostTypefaces(),
   )
+}
+
+/**
+ * The player's faces: the families the host has loaded ([LocalUiBuilderFontFamilies]), by the name
+ * the document carries — a theme's `google:Exo 2` included — over the player's own defaults.
+ *
+ * Without it the player drew every named family in its default face, so a Remote widget's theme
+ * typefaces were lost in the canvas and in every PNG of it, though the generated widget names them.
+ */
+@Composable
+private fun hostTypefaces(): RcTypefaceLoader {
+  val loaded = LocalUiBuilderFontFamilies.current
+  return remember(loaded) {
+    object : RcTypefaceLoader {
+      override val families: Set<String>
+        get() = RcTypefaceLoader.Default.families + loaded.keys
+
+      override fun typeface(family: String, variations: RcFontVariations?): FontFamily? =
+        loaded[family] ?: RcTypefaceLoader.Default.typeface(family, variations)
+    }
+  }
 }
 
 /**
