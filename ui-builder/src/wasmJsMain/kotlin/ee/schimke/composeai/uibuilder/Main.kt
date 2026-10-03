@@ -1468,12 +1468,16 @@ internal fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
  * being a constant in `:ui-builder`. A failure is not fatal — the inspector falls back to the raw
  * width/height/density fields, which is where it was before the menu existed.
  */
-internal suspend fun loadDevicePresets(cache: CachedLocalText?): List<UiBuilderDevicePreset> =
+internal suspend fun loadDevicePresets(
+  cache: CachedLocalText?,
+  /** This host's route by default; an MCP App reads them from the URL its shell names. */
+  path: String = DEVICE_PRESETS_PATH,
+): List<UiBuilderDevicePreset> =
   try {
     devicePresetJson
       .decodeFromString(
         DevicePresetsPayload.serializer(),
-        cache?.text(DEVICE_PRESETS_PATH) { fetchText(it) } ?: fetchText(DEVICE_PRESETS_PATH),
+        cache?.text(path) { fetchText(it) } ?: fetchText(path),
       )
       .presets
       .map {

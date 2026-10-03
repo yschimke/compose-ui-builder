@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.editor.FocusedCanvasUiBuilderChrome
 import ee.schimke.composeai.uibuilder.editor.MaterialUiBuilderChrome
@@ -60,6 +61,11 @@ fun McpAppEditorScreen(
   onHelp: (() -> Unit)? = null,
   /** Called once each editor has been composed: the browser marks the page ready. */
   onEditorShown: () -> Unit = {},
+  /**
+   * The device frames the Screen dock offers and the variant strip draws, when the host supplies
+   * them (see `mcpAppDevicePresetsUrl`); empty leaves the raw width, height and density fields.
+   */
+  devicePresets: List<UiBuilderDevicePreset> = emptyList(),
   modifier: Modifier = Modifier,
 ) {
   val document = state.document ?: return
@@ -86,6 +92,7 @@ fun McpAppEditorScreen(
           catalog = catalog,
           chrome = if (layout == McpAppLayout.Focused) focusedChrome else MaterialUiBuilderChrome,
           sessionLabel = session.file.name,
+          devicePresets = devicePresets,
           onStateChanged = onEditorState,
           onHelp = onHelp,
           onCommentOnNode =

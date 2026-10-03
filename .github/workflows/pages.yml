@@ -55,6 +55,12 @@ jobs:
             --pattern 'compose-preview-ui-builder-web-*.zip' --dir "$RUNNER_TEMP"
           mkdir -p "$RUNNER_TEMP/web"
           unzip -q "$RUNNER_TEMP"/compose-preview-ui-builder-web-*.zip -d "$RUNNER_TEMP/web"
+      - name: Refresh the device presets
+        # The hosted service's own frame catalog; the committed copy stays if it cannot be read.
+        run: |
+          curl -fsS --retry 3 https://preview.coo.ee/api/ui-builder/v1/device-presets -o "$RUNNER_TEMP/presets.json" \
+            && python3 -m json.tool "$RUNNER_TEMP/presets.json" > /dev/null \
+            && cp "$RUNNER_TEMP/presets.json" site/device-presets.json || true
       - name: Serve the editor beside the site
         # live.html runs this copy, so the gallery's "Open in the editor" is the latest release.
         run: cp -r "$RUNNER_TEMP/web" site/editor

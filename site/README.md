@@ -9,6 +9,7 @@ The GitHub Pages site for Compose UI Builder: plain HTML/CSS/JS, no build step.
 | `gallery.html`, `gallery.json` | the gallery; one manifest entry per design |
 | `live.html`, `js/mcp-host.js` | the live editor, for any gallery design |
 | `designs/*.uid` | the designs the page opens (see below) |
+| `device-presets.json` | a copy of preview.coo.ee's `/api/ui-builder/v1/device-presets`, refreshed on every deploy |
 | `styles.css` | light and dark themes |
 | `site.js` | the agent tabs, copy buttons, and `VIDEO_URL` |
 | `img/*.png` | screenshots, generated (see below) |
@@ -18,7 +19,9 @@ The GitHub Pages site for Compose UI Builder: plain HTML/CSS/JS, no build step.
 `live.html?design=<gallery id>` runs the real editor with no server. The Pages workflow unpacks the
 latest released `compose-preview-ui-builder-web-<v>.zip` at `editor/`, and `js/mcp-host.js` opens
 its MCP App shell (`editor/mcp-app/ui-builder-mcp-app.html`) in a frame, playing the chat client's
-side of that protocol with the `.uid` file held in the page. Edits are kept in this browser
+side of that protocol with the `.uid` file held in the page. It also names `device-presets.json`
+through the shell's `__COMPOSE_UI_BUILDER_DEVICE_PRESETS__` placeholder, so the Screen dock offers
+real device frames and the preview strip draws a design's export devices. Edits are kept in this browser
 (`localStorage`); **Reset** returns to the committed design, **Download .uid** saves it.
 
 To try it locally, unpack a release zip at `site/editor/` (git-ignored) and serve the directory:
@@ -41,6 +44,11 @@ Every PNG in `img/` is the real editor, captured by
 showcase pictures open the editor's MCP App shell beside a small chat column that stages the
 prompt; the comment in step 2 is the real `ui/message` the editor sends. The gallery pictures are
 taken through `live.html` itself, so a capture also proves the live page boots.
+
+The step and hero designs claim the small, large and XL round watches as export devices, so the
+preview strip shows all three and the Compose export writes them as `@Preview(device = …)`. CI's
+`ui-builder-web-smoke` job captures the same pictures from each pull request's own editor build and
+uploads them as the `site-screenshots` artifact.
 
 The Pages workflow re-captures them on every deploy from the **latest release**, and runs weekly
 and on each published release, so the page follows the editor without commits. The copies committed

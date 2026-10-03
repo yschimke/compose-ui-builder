@@ -232,6 +232,16 @@ class VariantPaneTest {
     )
   }
 
+  @Test
+  fun `a watch is compared at Wear OS's largest font size, not a phone's`() {
+    val wear = wearScreenUiBuilderDocument("list", JsonObject(emptyMap()), document.environment)
+
+    val pane = wear.variantPanes(presets, setOf(EditorVariantAxis.LargeFont)).single()
+
+    assertEquals("Font 1.24×", pane.label)
+    assertEquals("1.24", pane.document.environment["fontScale"]?.let(::plain))
+  }
+
   /** Two panes of the same design, so the render session id is what keeps their geometry apart. */
   @Test
   fun `every pane has its own render session id`() {
