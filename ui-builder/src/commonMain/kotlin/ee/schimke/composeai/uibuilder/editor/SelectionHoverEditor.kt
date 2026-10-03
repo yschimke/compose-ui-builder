@@ -5,6 +5,7 @@
 
 package ee.schimke.composeai.uibuilder.editor
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -94,6 +95,10 @@ internal fun SelectionHoverEditor(
     color = MaterialTheme.colorScheme.surface,
     tonalElevation = 4.dp,
     shadowElevation = 8.dp,
+    // Outlined, because the card floats over the design: a dark Wear button is the same tone as
+    // the card's surface, so on a watch the card read as one more button rather than as the
+    // editor's own chrome.
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     modifier = Modifier.semantics { contentDescription = "Selection editor" },
   ) {
     Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
