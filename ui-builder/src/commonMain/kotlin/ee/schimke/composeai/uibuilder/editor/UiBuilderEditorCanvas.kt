@@ -97,6 +97,8 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import ee.schimke.composeai.uibuilder.LocalUiBuilderAssetBitmaps
 import ee.schimke.composeai.uibuilder.LocalUiBuilderAssetBytes
+import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
+import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
 import ee.schimke.composeai.uibuilder.canvas.CanvasExtentLayout
 import ee.schimke.composeai.uibuilder.canvas.DeviceSceneHost
 import ee.schimke.composeai.uibuilder.canvas.LocalRemoteComposeDocuments
@@ -1611,7 +1613,7 @@ private fun DragBitmapPreviewGhost(bitmap: ImageBitmap, modifier: Modifier = Mod
  * last.
  */
 @Composable
-private fun ConstrainedFramePane(
+internal fun ConstrainedFramePane(
   document: UiBuilderDocument,
   widthDp: Float,
   heightDp: Float,
@@ -1646,6 +1648,12 @@ private fun ConstrainedFramePane(
   val remoteDocuments = LocalRemoteComposeDocuments.current
   val assetBitmaps = LocalUiBuilderAssetBitmaps.current
   val assetBytes = LocalUiBuilderAssetBytes.current
+  // The design's typefaces: the registry the scene asks for a family, and the families it has.
+  // Without them the scene drew every theme typeface in the stock Wear face. The loaded names
+  // re-key the scene below, because a family that lands after it has settled asks nothing of it.
+  val fontRegistry = LocalUiBuilderFontRegistry.current
+  val fontFamilies = LocalUiBuilderFontFamilies.current
+  val loadedFontNames = fontFamilies.keys.toSet()
   Box(Modifier.size((widthDp * scale).dp, (heightDp * scale).dp)) {
     Surface(
       Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
@@ -1685,8 +1693,8 @@ private fun ConstrainedFramePane(
       // rotating side button and a Wear list turns through its own snap behaviour — see
       // [DeviceSceneHost] for why that needs a scene rather than a subtree. The locals are carried
       // by value because a scene starts with none of them, and the list is the pane's own: a
-      // design's components, its assets and the host shape it is drawn in are the same ones the
-      // canvas beside it uses.
+      // design's components, its assets, its fonts and the host shape it is drawn in are the same
+      // ones the canvas beside it uses.
       //
       // In-process unless a device pane is handed the catalog's pinned runtime. That runtime is a
       // sandboxed iframe booting its own Wasm, so the palette, drag ghost and frame companion never
@@ -1711,7 +1719,7 @@ private fun ConstrainedFramePane(
       } else
         DeviceSceneHost(
           key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
-          contentKey = document,
+          contentKey = document to loadedFontNames,
           // The Surface's own pixels: it is `widthDp * densityRatio` *dp* wide, so the scene is
           // that
           // times the host's density. Sized as that many pixels instead, it matched only at host
@@ -1735,6 +1743,8 @@ private fun ConstrainedFramePane(
               LocalRemoteComposeDocuments provides remoteDocuments,
               LocalUiBuilderAssetBitmaps provides assetBitmaps,
               LocalUiBuilderAssetBytes provides assetBytes,
+              LocalUiBuilderFontRegistry provides fontRegistry,
+              LocalUiBuilderFontFamilies provides fontFamilies,
             ) {
               UiBuilderSurface(
                 document = document,
