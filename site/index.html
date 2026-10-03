@@ -92,18 +92,44 @@
   <section id="get-started" class="start">
     <h2>Get started</h2>
     <p class="section-lede">Everything runs on the hosted service at
-      <a href="https://preview.coo.ee/ui-builder/">preview.coo.ee</a>. The only setup is one line
-      for your agent.</p>
+      <a href="https://preview.coo.ee/ui-builder/">preview.coo.ee</a>. The only setup is the
+      skill and one MCP server for your agent.</p>
 
     <ol class="start-steps">
       <li>
         <span class="step-num">1</span>
         <div>
+          <h3>Install the skill</h3>
+          <p>The <a href="https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder"><code>compose-ui-builder</code>
+            skill</a> teaches your agent how to work on a design: which tools to call, how to pick
+            components from the catalog, how to answer comments and when to show you a render.</p>
+          <div class="tabs" role="tablist" aria-label="Choose your agent">
+            <button role="tab" aria-selected="true" aria-controls="tab-skill-claude" id="ts-claude" data-agent="claude">Claude Code</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-skill-codex" id="ts-codex" data-agent="codex" tabindex="-1">Codex</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-skill-other" id="ts-other" data-agent="other" tabindex="-1">Cursor &amp; others</button>
+          </div>
+          <div class="tab-panel" role="tabpanel" id="tab-skill-claude" aria-labelledby="ts-claude">
+            <pre><code>/plugin marketplace add yschimke/skills
+/plugin install compose-skills@yschimke-skills</code></pre>
+          </div>
+          <div class="tab-panel" role="tabpanel" id="tab-skill-codex" aria-labelledby="ts-codex" hidden>
+            <pre><code>codex plugin marketplace add yschimke/skills</code></pre>
+            <p>Then enable <code>compose-skills</code> from <code>/plugins</code>.</p>
+          </div>
+          <div class="tab-panel" role="tabpanel" id="tab-skill-other" aria-labelledby="ts-other" hidden>
+            <p>Any agent that reads skills, with the <a href="https://github.com/vercel-labs/skills">skills CLI</a>:</p>
+            <pre><code>npx skills add yschimke/skills --global --yes --skill compose-ui-builder</code></pre>
+          </div>
+        </div>
+      </li>
+      <li>
+        <span class="step-num">2</span>
+        <div>
           <h3>Connect your agent, once</h3>
           <div class="tabs" role="tablist" aria-label="Choose your agent">
-            <button role="tab" aria-selected="true" aria-controls="tab-claude" id="t-claude">Claude Code</button>
-            <button role="tab" aria-selected="false" aria-controls="tab-codex" id="t-codex" tabindex="-1">Codex</button>
-            <button role="tab" aria-selected="false" aria-controls="tab-other" id="t-other" tabindex="-1">Cursor &amp; others</button>
+            <button role="tab" aria-selected="true" aria-controls="tab-claude" id="t-claude" data-agent="claude">Claude Code</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-codex" id="t-codex" data-agent="codex" tabindex="-1">Codex</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-other" id="t-other" data-agent="other" tabindex="-1">Cursor &amp; others</button>
           </div>
           <div class="tab-panel" role="tabpanel" id="tab-claude" aria-labelledby="t-claude">
             <pre><code>claude mcp add --transport http compose-preview-catalog https://preview.coo.ee/mcp</code></pre>
@@ -127,7 +153,7 @@ url = "https://preview.coo.ee/mcp"</code></pre>
         </div>
       </li>
       <li>
-        <span class="step-num">2</span>
+        <span class="step-num">3</span>
         <div>
           <h3>Create a design</h3>
           <p>Open <a href="https://preview.coo.ee/ui-builder/">preview.coo.ee/ui-builder</a>, sign in
@@ -136,7 +162,7 @@ url = "https://preview.coo.ee/mcp"</code></pre>
         </div>
       </li>
       <li>
-        <span class="step-num">3</span>
+        <span class="step-num">4</span>
         <div>
           <h3>Hand it to your agent</h3>
           <p>Press <strong>Copy prompt for your agent</strong> in the editor's toolbar, paste it into
