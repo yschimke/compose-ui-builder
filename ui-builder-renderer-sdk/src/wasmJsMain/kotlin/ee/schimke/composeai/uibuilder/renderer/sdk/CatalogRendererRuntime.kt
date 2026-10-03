@@ -14,6 +14,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.ComposeViewport
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
@@ -122,7 +125,13 @@ private fun startRuntimeViewport(
     ) -> Unit,
 ) {
   ComposeViewport(viewportContainerId = "composeApp") {
-    Box(Modifier.fillMaxSize()) {
+    // Skiko's web renderer clears the canvas to opaque white before every frame, so whatever the
+    // design leaves undrawn — a round watch's corners, a widget's rounded ones — was white, over
+    // the backdrop the editor paints behind this frame. Clear it back to transparent first; the
+    // root draws straight onto the canvas, so this reaches the frame's own pixels.
+    Box(
+      Modifier.fillMaxSize().drawBehind { drawRect(Color.Transparent, blendMode = BlendMode.Clear) }
+    ) {
       val pending = state.render
       val current = pending.document
       val request = pending.request
