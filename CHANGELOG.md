@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.78.0](https://github.com/yschimke/compose-ui-builder/compare/v3.77.0...v3.78.0) (2026-10-03)
+
+
+### Features
+
+* configurable default text style; Wear headline→title; CI on release PRs ([#416](https://github.com/yschimke/compose-ui-builder/issues/416)) ([f565983](https://github.com/yschimke/compose-ui-builder/commit/f565983c8b9b23369d1ba62a3fb859d5ed79e91b))
+
+
+### Bug Fixes
+
+* **build:** resolve ui-builder-protocol through the contracts BOM ([#415](https://github.com/yschimke/compose-ui-builder/issues/415)) ([a7a0dd5](https://github.com/yschimke/compose-ui-builder/commit/a7a0dd59fc578a61a439b6bcec4e2c34ddd0def8))
+* **deps:** rc-players 2.1.0 ([#417](https://github.com/yschimke/compose-ui-builder/issues/417)) ([6c37023](https://github.com/yschimke/compose-ui-builder/commit/6c37023499a6629318c8a463597581df736f2dd2))
+
 ## [3.77.0](https://github.com/yschimke/compose-ui-builder/compare/v3.76.0...v3.77.0) (2026-10-03)
 
 
