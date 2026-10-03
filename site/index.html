@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Compose UI Builder</title>
+  <meta name="description" content="Design real Jetpack Compose screens with your coding agent. Start from a template, describe what you want, point at what to change, and export Compose code.">
+  <meta property="og:title" content="Compose UI Builder">
+  <meta property="og:description" content="Design real Jetpack Compose screens with your coding agent.">
+  <meta property="og:image" content="img/hero.png">
+  <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="#"><img src="img/icon.svg" alt="" width="28" height="28">Compose UI Builder</a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="https://github.com/yschimke/compose-ui-builder">GitHub</a>
+      <a class="btn btn-small" href="#get-started">Get started</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <p class="eyebrow">For Jetpack Compose &amp; Compose Multiplatform</p>
+    <h1>Design real Compose screens <span class="accent">with your agent.</span></h1>
+    <p class="lede">
+      A visual editor for real, compiled Compose components that works hand in hand with your
+      coding agent. Three steps from idea to Compose code you can ship:
+    </p>
+
+    <ol id="how" class="steps">
+      <li class="step">
+        <a class="shot" href="img/step-1-template.png"><img src="img/step-1-template.png" alt="The Wear list screen template open in the editor" width="1280" height="800"></a>
+        <div class="step-text">
+          <span class="step-num">1</span>
+          <div>
+            <h3>Start from a template</h3>
+            <p>Pick a <strong>Wear list screen</strong>, a phone scaffold or a Wear widget. It opens as a <code>.uid</code> design file you keep in git.</p>
+          </div>
+        </div>
+      </li>
+      <li class="step">
+        <a class="shot" href="img/step-2-prompt.png"><img src="img/step-2-prompt.png" alt="A prompt in the agent chat and the updated Wear library screen in the editor" width="1200" height="760"></a>
+        <div class="step-text">
+          <span class="step-num">2</span>
+          <div>
+            <h3>Tell your agent what you want</h3>
+            <p>Describe the screen in plain words. The agent edits the design and the open editor reloads as the file changes.</p>
+          </div>
+        </div>
+      </li>
+      <li class="step">
+        <a class="shot" href="img/step-3-iterate.png"><img src="img/step-3-iterate.png" alt="A comment on the Podcasts button arriving in the chat with the node attached" width="1200" height="760"></a>
+        <div class="step-text">
+          <span class="step-num">3</span>
+          <div>
+            <h3>Iterate through chat</h3>
+            <p>Right-click anything and comment. Your note lands in the chat with that exact node attached.</p>
+          </div>
+        </div>
+      </li>
+    </ol>
+
+    <div class="cta-row">
+      <a class="btn" href="#get-started">Get started</a>
+      <a class="btn btn-ghost" id="video-cta" href="#video" hidden>&#9654; Watch the demo</a>
+      <a class="btn btn-ghost" href="https://preview.coo.ee/ui-builder/">Open the web editor</a>
+    </div>
+  </header>
+
+  <section class="showcase">
+    <h2>Your chat, the canvas and the code, together</h2>
+    <p class="section-lede">The agent works on the same saved design you see. Every pixel on the
+      canvas is drawn by Compose itself, and the export is the Kotlin that draws it.</p>
+    <figure class="hero-shot">
+      <img src="img/hero.png" alt="An agent chat beside the Compose UI Builder: a Wear OS library screen on the canvas and its generated Compose code in the side panel" loading="lazy" width="1440" height="860">
+    </figure>
+  </section>
+
+  <section id="video" class="video" hidden>
+    <h2>See it in action</h2>
+    <div class="video-frame"></div>
+  </section>
+
+  <section id="get-started" class="start">
+    <h2>Get started</h2>
+    <p class="section-lede">Connect your agent to the hosted Compose Preview MCP server. The first
+      call asks you to approve access in your browser; designs stay private to you and the people
+      you share them with.</p>
+
+    <div class="tabs" role="tablist" aria-label="Choose your agent">
+      <button role="tab" aria-selected="true" aria-controls="tab-claude" id="t-claude">Claude Code</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-codex" id="t-codex" tabindex="-1">Codex</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-other" id="t-other" tabindex="-1">Cursor &amp; other MCP clients</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-none" id="t-none" tabindex="-1">No agent</button>
+    </div>
+
+    <div class="tab-panel" role="tabpanel" id="tab-claude" aria-labelledby="t-claude">
+      <p>Add the server once:</p>
+      <pre><code>claude mcp add --transport http compose-preview https://preview.coo.ee/mcp</code></pre>
+      <p>Already have a token? Pass it as a header to skip the approval step:</p>
+      <pre><code>claude mcp add --transport http compose-preview https://preview.coo.ee/mcp \
+  --header "X-Compose-Preview-Token: $COMPOSE_PREVIEW_TOKEN"</code></pre>
+    </div>
+    <div class="tab-panel" role="tabpanel" id="tab-codex" aria-labelledby="t-codex" hidden>
+      <p>Add this to <code>~/.codex/config.toml</code>:</p>
+      <pre><code>[mcp_servers.compose-preview]
+url = "https://preview.coo.ee/mcp"</code></pre>
+    </div>
+    <div class="tab-panel" role="tabpanel" id="tab-other" aria-labelledby="t-other" hidden>
+      <p>Any client that speaks Streamable HTTP MCP works. For Cursor, add to
+        <code>.cursor/mcp.json</code>; most other clients use the same shape:</p>
+      <pre><code>{
+  "mcpServers": {
+    "compose-preview": {
+      "type": "http",
+      "url": "https://preview.coo.ee/mcp"
+    }
+  }
+}</code></pre>
+    </div>
+    <div class="tab-panel" role="tabpanel" id="tab-none" aria-labelledby="t-none" hidden>
+      <ul class="plain">
+        <li><a href="https://preview.coo.ee/ui-builder/">Open the web editor</a>, no install needed.</li>
+        <li>Download the desktop app for macOS, Windows or Linux from the
+          <a href="https://github.com/yschimke/compose-ui-builder/releases/latest">latest release</a>.</li>
+        <li>Install the IntelliJ plugin from the same release
+          (<em>Settings → Plugins → Install Plugin from Disk</em>, IntelliJ IDEA 2026.2+).</li>
+      </ul>
+    </div>
+
+    <div class="try">
+      <p>Then try this prompt:</p>
+      <pre><code>Create a Wear OS design from the wear-list template in the Compose UI Builder,
+turn it into a podcast library with "Latest episodes" and "Podcasts" buttons,
+and give me a link to open it.</code></pre>
+    </div>
+  </section>
+
+  <section id="features" class="features">
+    <h2>Built for the way Compose apps are actually made</h2>
+    <div class="feature-grid">
+      <article>
+        <h3>Real components, not mockups</h3>
+        <p>The canvas renders compiled Material 3 and Wear Material 3 composables. What you see is what Compose draws.</p>
+      </article>
+      <article>
+        <h3>You and your agent, one design</h3>
+        <p>Browser, IDE and agent edits all go through one revisioned design, so changes arrive live wherever it is open.</p>
+      </article>
+      <article>
+        <h3>Point at it, talk about it</h3>
+        <p>Comments carry the node, its properties and a picture into the chat. No more describing which button you mean.</p>
+      </article>
+      <article>
+        <h3>Readable Compose export</h3>
+        <p>Get idiomatic Kotlin that calls real components, or your own project's composables when you point it at your module.</p>
+      </article>
+      <article>
+        <h3>Phones, tablets and Wear OS</h3>
+        <p>Design adaptive phone and tablet screens, Wear OS screens, and Wear widgets built on Remote Compose.</p>
+      </article>
+      <article>
+        <h3>Designs live in git</h3>
+        <p>A design is a <code>.uid</code> file. Review it in a pull request with rendered before/after images, not JSON diffs.</p>
+      </article>
+      <article>
+        <h3>Figma-compatible SVG</h3>
+        <p>Export any saved revision as SVG for design review, pinned to the exact catalog it was built with.</p>
+      </article>
+      <article>
+        <h3>Wherever you work</h3>
+        <p>Web, a native desktop app, an IntelliJ tool window, or inside your agent's chat as an MCP App.</p>
+      </article>
+    </div>
+
+    <div class="feature-shots">
+      <figure>
+        <img src="img/feature-code.png" alt="The editor with the Compose export panel open beside a Wear screen" loading="lazy" width="1280" height="800">
+        <figcaption>The design and its Compose source, side by side.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/feature-material.png" alt="A Material 3 tablet inbox with a list and reading pane in the editor" loading="lazy" width="1440" height="900">
+        <figcaption>Adaptive Material 3 layouts, built from the same catalog your app uses.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="closing">
+    <h2>Build your next screen in a conversation.</h2>
+    <a class="btn" href="#get-started">Get started</a>
+  </section>
+
+  <footer class="footer">
+    <p>Compose UI Builder is open source under the Apache 2.0 license ·
+      <a href="https://github.com/yschimke/compose-ui-builder">GitHub</a> ·
+      <a href="https://github.com/yschimke/compose-ui-builder/releases">Releases</a> ·
+      <a href="https://github.com/yschimke/compose-ui-builder/blob/main/docs/UI_BUILDER_GETTING_STARTED.md">Docs</a></p>
+    <p class="muted">Screenshots are captured automatically from the latest release.</p>
+  </footer>
+
+  <script src="site.js"></script>
+</body>
+</html>
