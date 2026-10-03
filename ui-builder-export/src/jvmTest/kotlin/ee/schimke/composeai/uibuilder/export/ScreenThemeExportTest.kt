@@ -22,10 +22,15 @@ class ScreenThemeExportTest {
     generateSequence(File(".").absoluteFile) { it.parentFile }
       .first { File(it, "docs/design/fixtures/ui-builder/m3-catalog-components-v1.json").isFile }
 
-  private val record =
-    json.decodeFromString<ComponentRecordFile>(
-      File(root, "docs/design/fixtures/ui-builder/m3-catalog-components-v1.json").readText()
-    )
+  /** The m3 record plus the foundation one, for the board's `Column`; the two claim no id twice. */
+  private val record: ComponentRecordFile = run {
+    fun read(name: String) =
+      json.decodeFromString<ComponentRecordFile>(
+        File(root, "docs/design/fixtures/ui-builder/$name").readText()
+      )
+    val m3 = read("m3-catalog-components-v1.json")
+    m3.copy(components = m3.components + read("compose-foundation-components-v1.json").components)
+  }
 
   private fun document(theme: String = "light", surface: String, text: String = "") =
     json.decodeFromString<DesignDocumentV1>(
@@ -124,6 +129,50 @@ class ScreenThemeExportTest {
       )
     assertFalse("MaterialTheme(" in source, source)
     assertTrue("MaterialTheme.typography.titleLarge" in source, source)
+  }
+
+  @Test
+  fun `a theme host inside a board themes the whole board, as the canvas draws it`() {
+    val document =
+      json.decodeFromString<DesignDocumentV1>(
+        """
+        {
+          "schema": "compose-ui-builder-document/v1-candidate",
+          "id": "board", "title": "Board", "revision": 0,
+          "catalogPin": {"systemId": "m3-catalog", "catalogRevision": "candidate",
+            "capabilityDigest": "candidate", "nativeRuntimeId": "candidate"},
+          "environment": {"widthDp": 360, "heightDp": 640, "density": 1.0, "theme": "light",
+            "locale": "en-US", "fontScale": 1.0, "layoutDirection": "ltr"},
+          "roots": ["board"],
+          "nodes": {
+            "board": {"id": "board", "componentId": "layout/column", "properties": {},
+              "slots": {"children": ["first", "second"]}, "modifiers": []},
+            "first": {"id": "first", "componentId": "m3/surface",
+              "properties": {"themePrimaryColor": {"type": "string", "value": "#FF336699"}},
+              "slots": {"content": []}, "modifiers": []},
+            "second": {"id": "second", "componentId": "m3/surface", "properties": {},
+              "slots": {"content": []}, "modifiers": []}
+          }
+        }
+        """
+      )
+    val source = source(document)
+    assertTrue("primary = Color(0xFF336699)" in source, source)
+    assertTrue(Regex("MaterialTheme\\([^)]*\\) \\{\\s+Column").containsMatchIn(source), source)
+  }
+
+  @Test
+  fun `a themed design whose environment follows the system refuses rather than guessing`() {
+    val outcome =
+      ScreenExportGate.export(
+        document(
+          theme = "system",
+          surface = """"themePrimaryColor": {"type": "string", "value": "#FF336699"}""",
+        ),
+        record,
+      )
+    val reasons = assertIs<ScreenExportGate.Outcome.Refused>(outcome).reasons
+    assertTrue(reasons.any { "environment theme is `system`" in it }, reasons.toString())
   }
 
   @Test

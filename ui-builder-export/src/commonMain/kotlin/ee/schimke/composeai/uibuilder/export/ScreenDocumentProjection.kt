@@ -270,11 +270,27 @@ object ScreenDocumentProjection {
       roots.forEach { pass.node(it) }
       return Outcome.Refused((listOf(counted) + pass.reasons).distinct())
     }
-    // The theme host the canvas draws the design under: the root, when it is a surface.
+    // The theme host the canvas draws the design under: the first surface among the top-level
+    // nodes — the root, or the items of the board an Add beside wrapped it in (`topLevelNodes` in
+    // `UiBuilderBoard`). One level, as there. The theme still wraps the whole root, because the
+    // canvas draws every item of the board under it.
+    val rootNode = document.nodes[roots.single()]
+    val topLevel =
+      if (rootNode?.componentId == BOARD_CATALOG_ID)
+        rootNode.slots[BOARD_SLOT].orEmpty().mapNotNull(document.nodes::get)
+      else listOfNotNull(rootNode)
     val theme =
-      document.nodes[roots.single()]
-        ?.takeIf { it.componentId == SURFACE_CATALOG_ID }
+      topLevel
+        .firstOrNull { it.componentId == SURFACE_CATALOG_ID }
         ?.let { ScreenTheme.of(it, dark = document.environment.theme == ThemeV1.DARK) }
+    if (theme != null && document.environment.theme == ThemeV1.SYSTEM) {
+      // The canvas picks the baseline scheme with `isSystemInDarkTheme()`, and the generated screen
+      // has no way to make that choice: a value here is a call, never a branch. Writing either one
+      // would change every role the theme leaves unset whenever the viewer's mode is the other.
+      pass.reasons +=
+        "the design sets a theme on its surface and its environment theme is `system`, which " +
+          "the export cannot follow at runtime; set the environment theme to light or dark"
+    }
     pass.themeParameters = theme != null
     val root =
       pass.node(roots.single())?.let { content ->
@@ -3182,6 +3198,9 @@ object ScreenDocumentProjection {
     "androidx.compose.foundation.shape.RoundedCornerShape"
   private const val TEXT_STYLE = "androidx.compose.ui.text.TextStyle"
   private const val SURFACE_CATALOG_ID = "m3/surface"
+  /** A board: the single root an Add beside wraps a design's items in. See `UiBuilderBoard`. */
+  private const val BOARD_CATALOG_ID = "layout/column"
+  private const val BOARD_SLOT = "children"
   private const val THEME = "androidx.compose.material3.MaterialTheme"
   private const val COLOR_SCHEME = "androidx.compose.material3.ColorScheme"
   private const val TYPOGRAPHY = "androidx.compose.material3.Typography"
