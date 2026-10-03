@@ -81,3 +81,35 @@ for (const pre of document.querySelectorAll('pre.prompt')) {
   });
   pre.after(toggle);
 }
+
+// Screenshots open full size in a viewer on the page; a click outside the picture, or Esc,
+// closes it. Without JS the step pictures still link to their PNGs.
+const viewer = document.createElement('dialog');
+viewer.className = 'viewer';
+viewer.innerHTML = '<figure><img alt=""><figcaption></figcaption></figure>';
+document.body.appendChild(viewer);
+const viewerImg = viewer.querySelector('img');
+const viewerCaption = viewer.querySelector('figcaption');
+viewer.addEventListener('click', (event) => {
+  // The dialog itself is the backdrop area; the figure stops short of it.
+  if (!event.target.closest('figure')) viewer.close();
+});
+viewer.addEventListener('close', () => viewerImg.removeAttribute('src'));
+for (const img of document.querySelectorAll('.shot img, .hero-shot img, .feature-shots img')) {
+  const target = img.closest('a') ?? img;
+  target.classList.add('zoomable');
+  if (target === img) {
+    img.tabIndex = 0;
+    img.setAttribute('role', 'button');
+    img.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); target.click(); }
+    });
+  }
+  target.addEventListener('click', (event) => {
+    event.preventDefault();
+    viewerImg.src = img.currentSrc || img.src;
+    viewerImg.alt = img.alt;
+    viewerCaption.textContent = img.alt;
+    viewer.showModal();
+  });
+}

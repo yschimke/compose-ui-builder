@@ -11,7 +11,7 @@ The GitHub Pages site for Compose UI Builder: plain HTML/CSS/JS, no build step.
 | `designs/*.uid` | the designs the page opens (see below) |
 | `device-presets.json` | a copy of preview.coo.ee's `/api/ui-builder/v1/device-presets`, refreshed on every deploy |
 | `styles.css` | light and dark themes |
-| `site.js` | the agent tabs, copy buttons, and `VIDEO_URL` |
+| `site.js` | the agent tabs, copy buttons, the screenshot viewer, and `VIDEO_URL` |
 | `img/*.png` | screenshots, generated (see below) |
 
 ## The live editor
