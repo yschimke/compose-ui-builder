@@ -4,12 +4,25 @@
     "github>yschimke/renovate-config",
     "helpers:pinGitHubActionDigests"
   ],
-  "description": "Extends the shared preset at yschimke/renovate-config, which owns the release-train grouping for the ee.schimke.composeai group: compose-ai-tools, compose-preview-daemon, compose-preview-contracts and rc-players each get a group of their own, so a BOM bump here rides the same group it does in the sibling repositories. The rules below are this repository's own.",
+  "description": "Extends the shared preset at yschimke/renovate-config, which owns the release-train grouping for the ee.schimke.composeai group: compose-ai-tools, compose-preview-daemon, compose-preview-contracts and rc-players each get a group of their own, so a BOM bump here rides the same group it does in the sibling repositories. The rules below are this repository's own. Everything else the preset changes about how PRs are opened and merged is set back to what this repository had under config:recommended, so adopting the preset changes grouping and nothing else: no automerge (manual merges; opt in later by deleting the automerge settings below), no `dependencies` label, rangeStrategy auto, semantic commits auto-detected, two PRs an hour, and the UTC schedule.",
+  "automerge": false,
+  "labels": [],
+  "rangeStrategy": "auto",
+  "semanticCommits": "auto",
+  "prHourlyLimit": 2,
+  "timezone": "UTC",
   "prConcurrentLimit": 5,
   "schedule": [
     "before 5am on Monday"
   ],
   "packageRules": [
+    {
+      "description": "The preset groups GitHub Actions as `github-actions`; keep this repository's existing group name so the branch and PR title do not change.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "GitHub Actions"
+    },
     {
       "description": "The design-render reusable workflow is pinned to a commit on compose-preview-server's main and bumped by the custom manager below, not the github-actions manager, which only tracks tags.",
       "matchManagers": [
@@ -19,6 +32,13 @@
         "yschimke/compose-preview-server"
       ],
       "enabled": false
+    },
+    {
+      "description": "No automerge, for any update type. The shared preset turns automerge on for minor/patch/digest/pin in a packageRule, and a top-level `automerge: false` does not override a packageRule, so this one has to be a rule too, and the last one: the last match wins. ui-builder has always merged Renovate PRs by hand; opting in later means deleting this rule and the top-level setting.",
+      "matchPackageNames": [
+        "*"
+      ],
+      "automerge": false
     }
   ],
   "customManagers": [
