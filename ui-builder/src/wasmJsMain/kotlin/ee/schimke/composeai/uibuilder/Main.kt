@@ -604,17 +604,20 @@ private fun updateCatalogRuntimeSurface(
         documentJson, widthDp, heightDp, density, mode, selectedNodeId, selectionEnabled,
         revealNodeId, scrollNodeId, scrollDeltaY, scrollSequence,
       };
-      // What the frame is BUILT for: its native pixel size and surface mode are fixed when it is
-      // created. The document is not part of it. An edit used to change this key, so every edit
-      // tore the frame down and cold-booted the catalog's whole Wasm runtime again -- a blank pane
-      // for as long as that took -- when a live frame takes the new document in one message.
-      // The device pixel ratio too: the frame's CSS size is derived from it, and browser zoom
-      // changes it.
+      // What the frame is BUILT for: its density and surface mode are fixed when it is created.
+      // Neither the document nor the size is part of it. An edit used to change this key, so every
+      // edit tore the frame down and cold-booted the catalog's whole Wasm runtime again -- a blank
+      // pane for as long as that took -- when a live frame takes the new document in one message.
+      // The size did the same: an unrolled design's height follows its content, so a font arriving
+      // or a text growing a line rebooted the runtime too, and a live frame is resized in place,
+      // since the runtime lays out at the size each render request names. The device pixel ratio
+      // stays: the frame's CSS size is derived from it, and browser zoom changes it.
       const pixelRatio = globalThis.devicePixelRatio || 1;
-      const compositionKey = widthDp + '|' + heightDp + '|' + density + '|' + mode + '|' + pixelRatio;
+      const compositionKey = density + '|' + mode + '|' + pixelRatio;
       let controller = host.__uiBuilderCatalogRuntime;
       if (controller && !controller.disposed && controller.runtimeId === runtimeId &&
           controller.compositionKey === compositionKey) {
+        controller.resize(widthDp, heightDp);
         controller.render = render;
         controller.renderLatest();
         controller.drawOverlay();
@@ -627,18 +630,8 @@ private fun updateCatalogRuntimeSurface(
       const frame = document.createElement('iframe');
       frame.title = 'Pinned catalog design renderer';
       frame.sandbox = 'allow-scripts';
-      const nativeWidth = Math.max(1, widthDp * density);
-      const nativeHeight = Math.max(1, heightDp * density);
-      // The runtime lays out in DEVICE pixels, like any Compose canvas: a frame whose CSS size was
-      // the native size drew the design into 1/devicePixelRatio of itself, the top-left 38% on a
-      // 2.625x phone and white beyond. Sized at native / ratio CSS pixels, its device pixels are
-      // the native ones, which is also what its inspection bounds are reported in.
-      const frameWidth = nativeWidth / pixelRatio;
-      const frameHeight = nativeHeight / pixelRatio;
-      frame.style.cssText = 'position:absolute;top:0;left:0;width:' + frameWidth +
-        'px;height:' + frameHeight + 'px;border:0;background:transparent;transform-origin:top left;' +
-        'transform:scale(' + (host.clientWidth / frameWidth) + ',' +
-        (host.clientHeight / frameHeight) + ')';
+      frame.style.cssText = 'position:absolute;top:0;left:0;border:0;background:transparent;' +
+        'transform-origin:top left';
       const overlay = document.createElement('div');
       overlay.setAttribute('aria-label', 'Editor selection overlay');
       overlay.style.cssText = 'position:absolute;inset:0;z-index:1;overflow:hidden';
@@ -660,10 +653,25 @@ private fun updateCatalogRuntimeSurface(
         runtimeId,
         compositionKey,
         frame,
-        frameWidth,
-        frameHeight,
+        frameWidth: 0,
+        frameHeight: 0,
         render,
         disposed: false,
+        // The runtime lays out in DEVICE pixels, like any Compose canvas: a frame whose CSS size
+        // was the native size drew the design into 1/devicePixelRatio of itself, the top-left 38%
+        // on a 2.625x phone and white beyond. Sized at native / ratio CSS pixels, its device
+        // pixels are the native ones, which is also what its inspection bounds are reported in.
+        resize(nextWidthDp, nextHeightDp) {
+          const width = Math.max(1, nextWidthDp * density) / pixelRatio;
+          const height = Math.max(1, nextHeightDp * density) / pixelRatio;
+          if (width === this.frameWidth && height === this.frameHeight) return;
+          this.frameWidth = width;
+          this.frameHeight = height;
+          frame.style.width = width + 'px';
+          frame.style.height = height + 'px';
+          frame.style.transform = 'scale(' + (host.clientWidth / width) + ',' +
+            (host.clientHeight / height) + ')';
+        },
         request(type, payload) {
           if (!manifest || !frame.contentWindow) return;
           const requestId = surfaceId + '-' + (++sequence);
@@ -769,6 +777,7 @@ private fun updateCatalogRuntimeSurface(
           overlay.remove();
         },
       };
+      controller.resize(widthDp, heightDp);
       host.__uiBuilderCatalogRuntime = controller;
       const finiteBound = (value) => Number.isFinite(value) && Math.abs(value) <= 1000000;
       const validBounds = (bounds) => bounds == null || (
