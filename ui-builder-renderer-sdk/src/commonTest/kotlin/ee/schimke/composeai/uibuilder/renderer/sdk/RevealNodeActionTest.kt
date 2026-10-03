@@ -35,7 +35,7 @@ class RevealNodeActionTest {
       )
 
     assertEquals(
-      listOf("horizontalUnroll", "revealNode"),
+      listOf("horizontalUnroll", "inspectionUpdates", "revealNode"),
       reply.message.payload.getValue("capabilities").jsonArray.map { it.jsonPrimitive.content },
     )
     // What an editor that predates the list already reads, unchanged.

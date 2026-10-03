@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.encodeToString
@@ -154,6 +155,93 @@ class CatalogRuntimeProtocolTest {
       endpoint.rendered(first.requestId, snapshot(document(1))).code(),
     )
     assertEquals("rendered", endpoint.rendered(second.requestId, snapshot(document(2))).type)
+  }
+
+  @Test
+  fun `a completed render reports its later layout until a newer render starts`() {
+    val endpoint = initializedEndpoint()
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    val render = requestRender(endpoint, host, "render-1", document())
+    // Nothing to update before the render is answered.
+    assertNull(endpoint.inspectionUpdated(render.requestId, snapshot(document())))
+    assertEquals("rendered", endpoint.rendered(render.requestId, snapshot(document())).type)
+
+    // A font arrives and the text reflows taller.
+    val taller = snapshot(document(), bottom = 180f)
+    val update = assertNotNull(endpoint.inspectionUpdated(render.requestId, taller))
+    assertEquals(INSPECTION_UPDATED, update.type)
+    assertEquals(render.requestId, update.requestId)
+    assertNull(endpoint.inspectionUpdated("render-0", taller))
+    assertNull(endpoint.inspectionUpdated(render.requestId, snapshot(document(2))))
+
+    requestRender(endpoint, host, "render-2", document(2))
+    assertNull(endpoint.inspectionUpdated(render.requestId, taller))
+  }
+
+  @Test
+  fun `the runtime announces inspection updates`() {
+    val reply =
+      assertIs<CatalogRuntimeCommand.Reply>(
+        CatalogRuntimeProtocolEndpoint(RUNTIME)
+          .receive(
+            ORIGIN,
+            true,
+            CatalogRuntimeHostSession(RUNTIME).request("initialize", "initialize"),
+          )
+      )
+    assertTrue(
+      CATALOG_RUNTIME_CAPABILITY_INSPECTION_UPDATES in
+        reply.message.payload.getValue("capabilities").toString()
+    )
+  }
+
+  @Test
+  fun `host accepts updates for the completed render only`() {
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    val taller = snapshot(document(), bottom = 180f)
+    host.request(
+      "render-1",
+      "renderDocument",
+      buildJsonObject { put("document", documentElement(document())) },
+    )
+    // Before the render is answered an update is not one of its renders.
+    assertNull(host.accept("null", true, encode(response("render-1", taller, INSPECTION_UPDATED))))
+    assertEquals(
+      "rendered",
+      host.accept("null", true, encode(response("render-1", snapshot(document()))))?.type,
+    )
+    assertEquals(
+      INSPECTION_UPDATED,
+      host.accept("null", true, encode(response("render-1", taller, INSPECTION_UPDATED)))?.type,
+    )
+    // Repeated: every later layout is accepted, not just the first.
+    assertEquals(
+      INSPECTION_UPDATED,
+      host.accept("null", true, encode(response("render-1", taller, INSPECTION_UPDATED)))?.type,
+    )
+    assertNull(host.accept("null", true, encode(response("render-0", taller, INSPECTION_UPDATED))))
+    assertNull(
+      host.accept(
+        "null",
+        true,
+        encode(response("render-1", taller.copy(documentId = "other"), INSPECTION_UPDATED)),
+      )
+    )
+    assertNull(
+      host.accept(
+        "https://elsewhere",
+        true,
+        encode(response("render-1", taller, INSPECTION_UPDATED)),
+      )
+    )
+
+    // Once a newer render is in flight the old one's layout is not the picture on screen.
+    host.request(
+      "render-2",
+      "renderDocument",
+      buildJsonObject { put("document", documentElement(document(2))) },
+    )
+    assertNull(host.accept("null", true, encode(response("render-1", taller, INSPECTION_UPDATED))))
   }
 
   @Test
@@ -357,9 +445,12 @@ class CatalogRuntimeProtocolTest {
       mapOf("root" to UiBuilderNode("root", "layout/box")),
     )
 
-  private fun snapshot(document: UiBuilderDocument): UiBuilderInspectionSnapshot {
+  private fun snapshot(
+    document: UiBuilderDocument,
+    bottom: Float = 100f,
+  ): UiBuilderInspectionSnapshot {
     val collector = UiBuilderInspectionCollector(document)
-    collector.recordNodeBounds("root", 0f, 0f, 100f, 100f)
+    collector.recordNodeBounds("root", 0f, 0f, 100f, bottom)
     return collector.snapshot()
   }
 
