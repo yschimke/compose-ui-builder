@@ -1,0 +1,62 @@
+// The demo video. Set this to a YouTube embed URL (https://www.youtube-nocookie.com/embed/<id>)
+// or a direct .mp4 URL, and the page shows the "Watch the demo" button and the video section.
+const VIDEO_URL = '';
+
+if (VIDEO_URL) {
+  const frame = document.querySelector('.video-frame');
+  if (/\.(mp4|webm)(\?|$)/.test(VIDEO_URL)) {
+    const video = document.createElement('video');
+    video.src = VIDEO_URL;
+    video.controls = true;
+    video.poster = 'img/hero.png';
+    frame.appendChild(video);
+  } else {
+    const iframe = document.createElement('iframe');
+    iframe.src = VIDEO_URL;
+    iframe.title = 'Compose UI Builder demo';
+    iframe.allow = 'accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen';
+    iframe.allowFullscreen = true;
+    frame.appendChild(iframe);
+  }
+  document.getElementById('video').hidden = false;
+  document.getElementById('video-cta').hidden = false;
+}
+
+// Agent tabs, with arrow-key navigation.
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+function select(tab) {
+  for (const t of tabs) {
+    const on = t === tab;
+    t.setAttribute('aria-selected', String(on));
+    t.tabIndex = on ? 0 : -1;
+    document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+  }
+}
+tabs.forEach((tab, i) => {
+  tab.addEventListener('click', () => select(tab));
+  tab.addEventListener('keydown', (event) => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    if (!step) return;
+    const next = tabs[(i + step + tabs.length) % tabs.length];
+    select(next);
+    next.focus();
+  });
+});
+
+// Copy buttons on code blocks.
+for (const pre of document.querySelectorAll('pre')) {
+  const button = document.createElement('button');
+  button.className = 'copy';
+  button.type = 'button';
+  button.textContent = 'Copy';
+  button.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(pre.querySelector('code').innerText);
+      button.textContent = 'Copied';
+    } catch {
+      button.textContent = 'Press Ctrl+C';
+    }
+    setTimeout(() => (button.textContent = 'Copy'), 1500);
+  });
+  pre.appendChild(button);
+}

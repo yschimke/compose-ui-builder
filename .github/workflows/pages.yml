@@ -1,0 +1,79 @@
+name: Landing Page
+
+# Publishes site/ to GitHub Pages, with its screenshots re-captured from the latest release.
+#
+# The screenshots in site/img are the real editor: scripts/site-screenshots/capture.mjs opens the
+# released Wasm archive's MCP App shell in Chromium on committed designs and photographs it. Every
+# deploy captures them again, so a release updates the page without anyone committing pictures; the
+# copies committed in site/img are what the page falls back to if a capture fails, and what a local
+# preview shows. The weekly run keeps the page current even when nothing here changed.
+#
+# One-time setup: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - site/**
+      - scripts/site-screenshots/**
+      - .github/workflows/pages.yml
+  release:
+    types: [published]
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.21.0
+      - run: npm ci
+        working-directory: scripts/site-screenshots
+      - run: npx playwright install --with-deps chromium
+        working-directory: scripts/site-screenshots
+      - name: Download the latest released editor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo "$GITHUB_REPOSITORY" \
+            --pattern 'compose-preview-ui-builder-web-*.zip' --dir "$RUNNER_TEMP"
+          mkdir -p "$RUNNER_TEMP/web"
+          unzip -q "$RUNNER_TEMP"/compose-preview-ui-builder-web-*.zip -d "$RUNNER_TEMP/web"
+      - name: Capture screenshots
+        # A failed capture keeps the committed screenshots rather than holding the page back.
+        continue-on-error: true
+        run: node capture.mjs "$RUNNER_TEMP/web" ../../site/img
+        working-directory: scripts/site-screenshots
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: site-screenshots
+          path: site/img
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,0 +1,12 @@
+{
+  "name": "compose-ui-builder-site-screenshots",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "node capture.mjs ../../ui-builder/build/wasmDist ../../site/img"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}
