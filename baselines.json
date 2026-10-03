@@ -284,7 +284,7 @@
     "functionName": "GoogleHomeWearLargeExtentPreview",
     "module": "ui-builder",
     "renderBasename": "GoogleHomeWearLargeExtentPreview-acf37d76.png",
-    "sha256": "7679f04cde42084483e798becec02b5c5f848ec161a3e9c660f24ab5e00a7bb1",
+    "sha256": "376db331089daa9d6bea296aa22bb83d5e04f84c056308f3378134dc62fbc546",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/GoogleAppSizePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.GoogleAppSizePreviewsKt.GoogleHomeWearLargePreview_width=240dp,height=240dp,dpi=320": {
@@ -300,7 +300,7 @@
     "functionName": "GoogleHomeWearSmallExtentPreview",
     "module": "ui-builder",
     "renderBasename": "GoogleHomeWearSmallExtentPreview-a9441752.png",
-    "sha256": "4c51ee4988c433fa4bff3bb665caec11b4263c2c61a9da85826b6fc3860ecdcf",
+    "sha256": "342ea82ea5dea77fe7439e19f443f8ea8932eabc4b88e31b9f3a178909880450",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/GoogleAppSizePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.GoogleAppSizePreviewsKt.GoogleHomeWearSmallPreview_width=192dp,height=192dp,dpi=320": {
@@ -500,7 +500,7 @@
     "functionName": "UiBuilderWearDeviceViewPopOutPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderWearDeviceViewPopOutPreview-ee606353.png",
-    "sha256": "27e32c3ced8ae252e501c0a4c11a267e2b9132d3a09ed7095bd046dc9ac81077",
+    "sha256": "c698ccef978027bf01251c2c1adc154f8602653588aab674db5762036a65cde4",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderDeviceViewPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderAdaptivePaneVariantsPreview": {
@@ -956,7 +956,7 @@
     "functionName": "JetcasterWearLibraryLargeExtentPreview",
     "module": "ui-builder",
     "renderBasename": "JetcasterWearLibraryLargeExtentPreview-4ac6d0ea.png",
-    "sha256": "fcd2c518950cc76d6a7475b76df2634ec5b2571196320e2556fc37c12c964b12",
+    "sha256": "6094ba7ad6d4a8ead866196d6c643a07d0b19cf3289e5e9e1540ab8a91f841bf",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearSampleDesignPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearSampleDesignPreviewsKt.JetcasterWearLibraryLargePreview_width=240dp,height=240dp,dpi=320": {
@@ -972,7 +972,7 @@
     "functionName": "JetcasterWearLibrarySmallExtentPreview",
     "module": "ui-builder",
     "renderBasename": "JetcasterWearLibrarySmallExtentPreview-800b25b2.png",
-    "sha256": "0d1bacbcacebbf77b2d72d8c771a6ed2f883e01114afbf8a1fbc2cc0a54c2f20",
+    "sha256": "87adf12b2579bd1df033cfb8813c633050b6b0f366001e04c3bd031c40e3abd4",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearSampleDesignPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearSampleDesignPreviewsKt.JetcasterWearLibrarySmallPreview_width=192dp,height=192dp,dpi=320": {
@@ -988,7 +988,7 @@
     "functionName": "JetcasterWearQueueLargeExtentPreview",
     "module": "ui-builder",
     "renderBasename": "JetcasterWearQueueLargeExtentPreview-71e2cfc9.png",
-    "sha256": "d48e5af18342752bcf24d8c1ae99368c1cc5855ad5b32c6d99c917860dbfcaa4",
+    "sha256": "cb6da3b76733ce9c1d2ff5a11bd4ddb9e81b06b3eb5bb207480ce6fc5cddb80e",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearSampleDesignPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearSampleDesignPreviewsKt.JetcasterWearQueueLargePreview_width=240dp,height=240dp,dpi=320": {
@@ -1004,7 +1004,7 @@
     "functionName": "JetcasterWearQueueSmallExtentPreview",
     "module": "ui-builder",
     "renderBasename": "JetcasterWearQueueSmallExtentPreview-37a652f2.png",
-    "sha256": "dd06532376d046edc0a607d8850fd805c565d4dfe95f2de0e0fbae9d8968a7c0",
+    "sha256": "8c56b80f7e78f8d65b5fbc0686546b25582f6ebdcd97bae8a9317b8c31b2ac9f",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearSampleDesignPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearSampleDesignPreviewsKt.JetcasterWearQueueSmallPreview_width=192dp,height=192dp,dpi=320": {
@@ -1020,7 +1020,7 @@
     "functionName": "WearStarterGreetingLargeExtentPreview",
     "module": "ui-builder",
     "renderBasename": "WearStarterGreetingLargeExtentPreview-92512c2b.png",
-    "sha256": "344d812560e6b77b552c4702dff7da9b5cb8652941cf6290f1c67ec71aa4b4ee",
+    "sha256": "5c0ac2c548e3d34504add236c3bdd222ef65fb3e4bf209392567041abedd6a60",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearSampleDesignPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearSampleDesignPreviewsKt.WearStarterGreetingLargePreview_width=240dp,height=240dp,dpi=320": {
@@ -1052,7 +1052,7 @@
     "functionName": "WearStarterListLargeExtentPreview",
     "module": "ui-builder",
     "renderBasename": "WearStarterListLargeExtentPreview-3c9db794.png",
-    "sha256": "8f80bfcdbd68ff18ace7589687cb535399b12cdf532927fe3ed6eb292f797922",
+    "sha256": "76c6e122f9dabced81a6e3fcdec792905d1461a0af9adbfd00eeab020a3d88cd",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearSampleDesignPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearSampleDesignPreviewsKt.WearStarterListLargePreview_width=240dp,height=240dp,dpi=320": {
@@ -1068,7 +1068,7 @@
     "functionName": "WearStarterListSmallExtentPreview",
     "module": "ui-builder",
     "renderBasename": "WearStarterListSmallExtentPreview-532774ad.png",
-    "sha256": "5d68be7883c7692b2701d6072eaba8b4b289d8b6e69d01ee9225c9fae7945e4a",
+    "sha256": "8e471ae7551312be4a8115e56fcca625c9595d01b1c6fb05fb70b67eabdac78d",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearSampleDesignPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearSampleDesignPreviewsKt.WearStarterListSmallPreview_width=192dp,height=192dp,dpi=320": {
@@ -1092,7 +1092,7 @@
     "functionName": "WearScreenCodePanePreview",
     "module": "ui-builder",
     "renderBasename": "WearScreenCodePanePreview-81971946.png",
-    "sha256": "4db28cf4b91f8a255393e91dd07b6fd96ca5be82926312942ad2b29de9f94112",
+    "sha256": "db2f943b55f90a8117f37383aefeeff8122ee86faa64a160d2a12e7285a57c9d",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/WearScreenSamplePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.WearScreenSamplePreviewKt.WearScreenSamplePreview": {
