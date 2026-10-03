@@ -9,6 +9,9 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +33,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -318,8 +323,21 @@ private fun CommentThreadCard(
   onTextInputFocusChanged: (Boolean) -> Unit,
 ) {
   val anchorLabel = thread.anchorLabel(marks, nodeLabel)
+  // Hovering a card is what shows its pin on the canvas: pins are hidden otherwise, so they do
+  // not sit over the design someone is looking at.
+  val hoveredThread = LocalHoveredCommentThread.current
+  val hover = remember { MutableInteractionSource() }
+  val hovered by hover.collectIsHoveredAsState()
+  LaunchedEffect(hovered, thread.id) {
+    if (hovered) hoveredThread?.value = thread.id
+    else if (hoveredThread?.value == thread.id) hoveredThread.value = null
+  }
+  DisposableEffect(thread.id) {
+    onDispose { if (hoveredThread?.value == thread.id) hoveredThread.value = null }
+  }
   Column(
     Modifier.fillMaxWidth()
+      .hoverable(hover)
       .padding(top = 8.dp)
       .onGloballyPositioned { coordinates ->
         // Where this card sits inside the scrolled column, asked of the parent rather than of the
@@ -468,6 +486,13 @@ internal fun DesignCommentThread.anchorLabel(
  * something a person clicks and a screen reader announces — the presence overlay beside it draws
  * rectangles nobody interacts with, which is why that one is a canvas and this one is not.
  */
+/**
+ * The comment thread a pointer is over in the panel, shared with the canvas's [CommentPinOverlay];
+ * null outside an editor, where no pin is shown for hover.
+ */
+internal val LocalHoveredCommentThread =
+  androidx.compose.runtime.staticCompositionLocalOf<MutableState<String?>?> { null }
+
 @Composable
 internal fun CommentPinOverlay(
   threads: List<DesignCommentThread>,
@@ -477,11 +502,16 @@ internal fun CommentPinOverlay(
   modifier: Modifier = Modifier,
 ) {
   if (threads.isEmpty()) return
+  // Only the thread being looked at: the one hovered in the panel, or the one open there (which
+  // is how a touch screen, with no hover, shows it). Every pin at once sat over the design.
+  val hovered = LocalHoveredCommentThread.current?.value
+  if (threads.none { it.id == hovered || it.id == selectedThreadId }) return
   var size by remember { mutableStateOf(IntSize.Zero) }
   val density = LocalDensity.current
   Box(modifier.fillMaxSize().onSizeChanged { size = it }) {
     if (size.width == 0 || size.height == 0) return@Box
     threads.forEachIndexed { index, thread ->
+      if (thread.id != hovered && thread.id != selectedThreadId) return@forEachIndexed
       val point = thread.anchor?.pointOn(marks) ?: return@forEachIndexed
       val selected = thread.id == selectedThreadId
       val label = "${index + 1}"

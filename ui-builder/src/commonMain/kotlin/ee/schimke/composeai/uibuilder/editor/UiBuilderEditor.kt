@@ -84,6 +84,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.isWearWidget
 import ee.schimke.composeai.uibuilder.frameGeometry
+import ee.schimke.composeai.uibuilder.inspector.LocalHoveredCommentThread
 import ee.schimke.composeai.uibuilder.inspector.LocalUiBuilderPageDestinations
 import ee.schimke.composeai.uibuilder.inspector.SuggestionRow
 import ee.schimke.composeai.uibuilder.inspector.UiBuilderPageDestination
@@ -935,6 +936,8 @@ fun UiBuilderEditor(
   // Which conversation is open, in the panel and under the pin. Editor state rather than document
   // state, and per design: which thread somebody has expanded is a fact about a moment.
   var selectedThreadId by remember(document.id) { mutableStateOf(linkedThreadId) }
+  // The thread a pointer is over in the panel: its pin shows on the canvas while it is.
+  val hoveredThread = remember(document.id) { mutableStateOf<String?>(null) }
   // A sentence the editor itself put up — a refused edit under a pinned revision, the answer to a
   // Copy link — kept apart from [openingNotice], which is the host's and does not expire.
   var transientNotice by remember(document.id) { mutableStateOf<String?>(null) }
@@ -2466,6 +2469,7 @@ fun UiBuilderEditor(
   // Provided once here rather than at each surface: the canvas, every palette thumbnail and the
   // preview frame all draw a pack component, and all of them should draw its placeholder.
   CompositionLocalProvider(
+    LocalHoveredCommentThread provides hoveredThread,
     LocalUiBuilderChrome provides chrome,
     LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
     LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,
