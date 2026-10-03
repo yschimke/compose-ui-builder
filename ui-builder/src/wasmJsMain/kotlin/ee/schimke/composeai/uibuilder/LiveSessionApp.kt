@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,6 +45,8 @@ import ee.schimke.composeai.uibuilder.client.UiBuilderProtocolUpdateClient
 import ee.schimke.composeai.uibuilder.client.preparePropertyDelta
 import ee.schimke.composeai.uibuilder.client.toProtocolSubmission
 import ee.schimke.composeai.uibuilder.client.toRendererDocument
+import ee.schimke.composeai.uibuilder.editor.CommentNotificationsController
+import ee.schimke.composeai.uibuilder.editor.CommentNotificationsState
 import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.editor.DesignReview
 import ee.schimke.composeai.uibuilder.editor.DesignSuggestions
@@ -110,6 +113,7 @@ import ee.schimke.composeai.uibuilder.reference.ReferenceImportOutcome
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import ee.schimke.composeai.uibuilder.reference.RestoredReference
 import kotlin.io.encoding.Base64
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -636,6 +640,35 @@ private fun LiveSessionApp(
       if (board.sequence > commentBoard.sequence) commentBoard = board
       commentBoardLoaded = true
     }
+  }
+
+  // "Notify me about replies" beside the board. Per page rather than per design: a push
+  // subscription belongs to this origin, and what it is for is the person's choice on the server.
+  // Loading only asks the server; the permission prompt is the switch's click and nothing else.
+  val commentNotifications =
+    remember(config.localStorage) {
+      CommentNotificationsController(
+        BrowserCommentNotificationHost(hostedByServer = !config.localStorage)
+      )
+    }
+  val commentNotificationsState by commentNotifications.state.collectAsState()
+  // Published only once decided, so a test reading `hidden` knows the server was asked — the state
+  // starts hidden before anything has been.
+  var commentNotificationsDecided by remember(commentNotifications) { mutableStateOf(false) }
+  LaunchedEffect(commentNotifications) {
+    commentNotifications.load()
+    commentNotificationsDecided = true
+  }
+  LaunchedEffect(commentNotificationsState, commentNotificationsDecided) {
+    if (!commentNotificationsDecided) return@LaunchedEffect
+    publishCommentNotificationsState(
+      when (val state = commentNotificationsState) {
+        CommentNotificationsState.Hidden -> "hidden"
+        CommentNotificationsState.InstallFirst -> "install-first"
+        is CommentNotificationsState.Blocked -> "blocked"
+        is CommentNotificationsState.Toggle -> if (state.on) "on" else "off"
+      }
+    )
   }
 
   // The review section's browser half: who approved which revision, and this person's verdict
@@ -1583,6 +1616,12 @@ private fun LiveSessionApp(
       pastedReference = pastedReference,
       comments = commentBoard,
       commentStatus = commentStatus,
+      commentNotifications = commentNotificationsState,
+      onToggleCommentNotifications = {
+        // Undispatched, so the permission request inside runs within this click's handler: the
+        // browser only shows its prompt for a gesture, and Safari checks that strictly.
+        scope.launch(start = CoroutineStart.UNDISPATCHED) { commentNotifications.toggle() }
+      },
       onPostComment = { draft ->
         scope.launch { commentStatus = commentHost.post(draft, config.displayName) }
       },
