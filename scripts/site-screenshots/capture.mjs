@@ -388,7 +388,14 @@ for (const item of gallery) {
 }
 const siteServer = await listen(async (request, response) => {
   const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname));
-  const file = path.startsWith('/editor/') ? join(root, path.slice('/editor/'.length)) : join(site, path);
+  // live.html names the presets under the editor, where Pages copies them (an MCP App fetches only
+  // below its asset base); here they come from the site's own copy.
+  const file =
+    path === '/editor/device-presets.json'
+      ? join(site, 'device-presets.json')
+      : path.startsWith('/editor/')
+        ? join(root, path.slice('/editor/'.length))
+        : join(site, path);
   if (!file.startsWith(root) && !file.startsWith(site)) return response.writeHead(403).end();
   try {
     const body = await readFile(file.endsWith('/') ? join(file, 'index.html') : file).catch(

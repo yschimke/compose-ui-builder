@@ -25,8 +25,9 @@ package ee.schimke.composeai.uibuilder
  * none of this archive: its shell points `<base href>` at the origin that does, and declares that
  * origin in the resource's CSP. There the rule is the same with the base in place of the page:
  * resolve against it, and refuse anything outside `composeUiBuilderMcpApp.assetBase` (or the
- * optional `catalogBase`, see `McpAppCatalogs`). No credential is involved — `fetch` sends cookies
- * only same-origin, and this origin is not the page's.
+ * optional `catalogBase`, see `McpAppCatalogs`) except the one `devicePresets` URL the shell names,
+ * which a static host may serve from beside the archive rather than inside it. No credential is
+ * involved — `fetch` sends cookies only same-origin, and this origin is not the page's.
  */
 @JsFun(
   """(url) => {
@@ -37,7 +38,10 @@ package ee.schimke.composeai.uibuilder
         const root = new URL(base, document.baseURI);
         return inside.origin === root.origin && inside.pathname.startsWith(root.pathname);
       });
-      if (!allowed) {
+      const presets = app.devicePresets && !app.devicePresets.startsWith('__')
+        ? new URL(app.devicePresets, document.baseURI).href
+        : null;
+      if (!allowed && inside.href !== presets) {
         throw new Error('UI-builder MCP App requests must stay under the editor assets: ' + url);
       }
       return inside.toString();
