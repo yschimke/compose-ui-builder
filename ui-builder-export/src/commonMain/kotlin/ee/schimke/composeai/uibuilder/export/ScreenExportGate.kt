@@ -32,9 +32,13 @@ object ScreenExportGate {
 
   /** The packages a generated screen may name. Narrow on purpose; widening is a reviewed act. */
   // Bound layout spacing uses kotlin.math.max to preserve the canvas's nonnegative gap rule, and a
-  // gradient's brush takes its colours as a `List`, which `kotlin.collections.listOf` builds.
+  // gradient's brush takes its colours as a `List`, which `kotlin.collections.listOf` builds. A
+  // theme's Google Fonts provider decodes Play services' certificates with
+  // `kotlin.io.encoding.Base64`: that package is the codec alone, and `kotlin.io` beside it — files
+  // —
+  // stays out, because a package is matched with its subpackages and not its parent.
   val EXPRESSION_PACKAGES: Set<String> =
-    setOf("androidx.compose", "kotlin.math", "kotlin.collections")
+    setOf("androidx.compose", "kotlin.math", "kotlin.collections", "kotlin.io.encoding")
 
   /** The package a generated screen is emitted into. */
   const val PACKAGE_NAME: String = "generated.uibuilder"
@@ -89,7 +93,7 @@ object ScreenExportGate {
           val generated =
             ScreenGenerator.generate(
               projected.document,
-              resolvable,
+              projected.resolvable(resolvable),
               PACKAGE_NAME,
               EXPRESSION_PACKAGES,
             )

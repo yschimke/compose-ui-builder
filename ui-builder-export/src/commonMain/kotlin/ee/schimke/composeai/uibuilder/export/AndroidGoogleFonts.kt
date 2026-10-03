@@ -57,11 +57,11 @@ class AndroidGoogleFonts(private val indent: String = "    ") {
       if (isEmpty) emptyList()
       else
         listOf(
-          "android.util.Base64",
           "androidx.compose.ui.text.font.FontFamily",
           "androidx.compose.ui.text.font.FontWeight",
           "androidx.compose.ui.text.googlefonts.Font",
           "androidx.compose.ui.text.googlefonts.GoogleFont",
+          "kotlin.io.encoding.Base64",
         )
 
   /**
@@ -97,12 +97,11 @@ class AndroidGoogleFonts(private val indent: String = "    ") {
           appendLine("$i$i${i}listOf(")
           GMS_FONTS_CERTIFICATES.forEach { chunks ->
             appendLine("$i$i$i${i}listOf(")
-            appendLine("$i$i$i$i${i}Base64.decode(")
+            appendLine("$i$i$i$i${i}Base64.Default.decode(")
             chunks.forEachIndexed { index, chunk ->
-              val joiner = if (index == chunks.lastIndex) "," else " +"
+              val joiner = if (index == chunks.lastIndex) "" else " +"
               appendLine("$i$i$i$i$i$i\"$chunk\"$joiner")
             }
-            appendLine("$i$i$i$i$i${i}Base64.DEFAULT,")
             appendLine("$i$i$i$i$i),")
             appendLine("$i$i$i$i),")
           }
@@ -111,8 +110,13 @@ class AndroidGoogleFonts(private val indent: String = "    ") {
         }
     }
 
-  private companion object {
-    /** Play services' development and production font-provider certificates, base64. */
+  internal companion object {
+    /**
+     * Play services' development and production font-provider certificates, base64, in chunks a
+     * generated file can write one per line. Decoded with `kotlin.io.encoding.Base64` rather than
+     * `android.util.Base64`, so the declaration compiles on any Kotlin target and names only the
+     * standard library.
+     */
     val GMS_FONTS_CERTIFICATES: List<List<String>> =
       listOf(
         listOf(

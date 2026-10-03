@@ -427,7 +427,10 @@ class WearLayoutAndColourExportTest {
     )
     assertTrue("private val GoogleFontsProvider =" in themed)
     assertTrue("import androidx.compose.ui.text.googlefonts.GoogleFont" in themed)
-    assertTrue("import android.util.Base64" in themed)
+    // The standard library's codec, so the provider names nothing outside Compose and Kotlin.
+    assertTrue("import kotlin.io.encoding.Base64" in themed, themed)
+    assertTrue("Base64.Default.decode(" in themed, themed)
+    assertFalse("android.util.Base64" in themed, themed)
 
     val plain = export(screenWith(listOf(text("t"))))
     assertFalse("GoogleFont" in plain, plain)
