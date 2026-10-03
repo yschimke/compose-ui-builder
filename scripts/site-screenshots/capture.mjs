@@ -354,13 +354,17 @@ const SCENES = {
     );
     // The toolbar's code toggle, in the editor frame.
     await click(JSON.parse(process.env.CODE_TOGGLE ?? '[1022, 86]'));
+    // Off the toolbar, so its "Code · hide" tooltip is not in the picture.
+    await page.mouse.move(5, 795);
     await settle(2_500);
     return page;
   },
-  // Features: a Material 3 tablet design.
+  // Features: the adaptive Material 3 design, previewed on a phone and a tablet.
   async 'feature-material'() {
+    const gmail = JSON.parse(await design('google-gmail-tablet'));
+    gmail.environment = { ...gmail.environment, exportDevices: ['id:pixel_9', 'id:pixel_tablet'] };
     const { page } = await open(
-      { fileName: 'gmail.uid', text: await design('google-gmail-tablet'), layout: 'full' },
+      { fileName: 'gmail.uid', text: JSON.stringify(gmail, null, 2), layout: 'full' },
       { width: 1440, height: 900 },
     );
     return page;
@@ -387,7 +391,15 @@ const siteServer = await listen(async (request, response) => {
   const file = path.startsWith('/editor/') ? join(root, path.slice('/editor/'.length)) : join(site, path);
   if (!file.startsWith(root) && !file.startsWith(site)) return response.writeHead(403).end();
   try {
-    const body = await readFile(file.endsWith('/') ? join(file, 'index.html') : file);
+    const body = await readFile(file.endsWith('/') ? join(file, 'index.html') : file).catch(
+      (error) => {
+        // A local or CI build (`wasmFrontendDist`) has no MCP App shell: the web archive's
+        // packaging adds it. live.html cannot boot without it, so serve the shell's source, as the
+        // chat scenes above already do; a release archive answers with its own copy first.
+        if (path !== '/editor/mcp-app/ui-builder-mcp-app.html') throw error;
+        return readFile(join(repo, 'ui-builder-web/src/mcp-app/ui-builder-mcp-app.html'));
+      },
+    );
     response.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(body);
   } catch {
     response.writeHead(404).end();
