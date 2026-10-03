@@ -9,7 +9,11 @@
   in `/`, the unpacked archive's root), and declares that origin in the resource's
   `_meta.ui.csp.resourceDomains` and `connectDomains`. It may also fill in
   __COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__ with `focused` or `full`, the editor the panel opens in;
-  left as it is, or any other value, it opens `focused`. Nothing else is substituted at serve time;
+  left as it is, or any other value, it opens `focused`. And it may fill in
+  __COMPOSE_UI_BUILDER_DEVICE_PRESETS__ with a URL answering like its
+  `/api/ui-builder/v1/device-presets` (declared in `connectDomains`), which gives the Screen dock
+  its device menus and the variant strip its device panes; left as it is, there are none.
+  Nothing else is substituted at serve time;
   the version was written in by the build.
 -->
 <html lang="en">
@@ -27,6 +31,7 @@
       globalThis.composeUiBuilderMcpApp = {
         assetBase: "__COMPOSE_UI_BUILDER_ASSET_BASE__",
         layout: "__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__",
+        devicePresets: "__COMPOSE_UI_BUILDER_DEVICE_PRESETS__",
         version: "@UI_BUILDER_VERSION@",
       };
     </script>

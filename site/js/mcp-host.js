@@ -10,14 +10,21 @@
  * Mounts the editor into `frame` on `text`, a `.uid` design.
  *
  * `editorBase` is the URL of the unpacked editor archive (ending in `/`); `layout` is `focused` or
- * `full`. `onSave(text)` is called with every save; `onMessage(text)` with each comment the person
+ * `full`. `devicePresets` is a URL answering like a host's `/api/ui-builder/v1/device-presets`,
+ * which gives the editor its device menus and device previews. `onSave(text)` is called with every save; `onMessage(text)` with each comment the person
  * sends from the editor. Returns `{ text(), replace(text) }`.
  */
-export async function mountEditor({ frame, editorBase, fileName, text, layout = 'focused', onSave, onMessage }) {
+export async function mountEditor({
+  frame, editorBase, fileName, text, layout = 'focused', devicePresets, onSave, onMessage,
+}) {
   const base = new URL(editorBase, location.href).href;
   const shell = (await (await fetch(new URL('mcp-app/ui-builder-mcp-app.html', base))).text())
     .replaceAll('__COMPOSE_UI_BUILDER_ASSET_BASE__', base)
-    .replaceAll('__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__', layout);
+    .replaceAll('__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__', layout)
+    .replaceAll(
+      '__COMPOSE_UI_BUILDER_DEVICE_PRESETS__',
+      devicePresets ? new URL(devicePresets, location.href).href : '__COMPOSE_UI_BUILDER_DEVICE_PRESETS__',
+    );
 
   const uri = 'host-resource://design';
   const state = { text, version: 1 };

@@ -157,10 +157,11 @@ over a stdio pipe.
 So the resource is a **small shell** (about 5 KB), `mcp-app/ui-builder-mcp-app.html` in the web archive:
 
 - `<base href="__COMPOSE_UI_BUILDER_ASSET_BASE__">` and
-  `globalThis.composeUiBuilderMcpApp = { assetBase, layout, version }`. The version is written in
-  at build time. The asset base is the placeholder a server **must** fill in: an absolute URL,
-  ending in `/`, of the unpacked archive's root. The layout,
-  `__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__`, is the one it **may** fill in; see below.
+  `globalThis.composeUiBuilderMcpApp = { assetBase, layout, devicePresets, version }`. The version
+  is written in at build time. The asset base is the placeholder a server **must** fill in: an
+  absolute URL, ending in `/`, of the unpacked archive's root. The layout,
+  `__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__`, and the device presets,
+  `__COMPOSE_UI_BUILDER_DEVICE_PRESETS__`, are the ones it **may** fill in; see below.
 - The same import map, preloads, boot screen and module script as `index.html`, all relative, so
   they resolve against the base.
 - In this mode the editor's own requests (`sameOriginRequestUrl`) must stay under
@@ -221,7 +222,11 @@ compose-preview-server has not changed. This is the whole of its side:
      `~/.compose-preview/settings.json` (compose-preview-server#1242): exactly `focused` or `full`.
      Default `focused` when the setting is absent; pass any other value through as `focused`, or
      validate it in the settings schema as the enum `["focused", "full"]`. The value is substituted
-     once, when the resource is read; changing the setting applies to the next open.
+     once, when the resource is read; changing the setting applies to the next open. Every
+     `__COMPOSE_UI_BUILDER_DEVICE_PRESETS__` may be replaced by the server's own
+     `<origin>/api/ui-builder/v1/device-presets`: with it the Screen dock offers device menus and
+     the variant strip draws the design's export devices; left unfilled there are none. A static
+     host can serve a copy of that answer instead, as the landing page does (`site/js/mcp-host.js`).
    - `_meta.ui.csp: { resourceDomains: [<asset origin>], connectDomains: [<asset origin>] }`.
    - `_meta["openai/ui"]: { preferredDisplayMode: "fullscreen", availableDisplayModes: ["fullscreen"] }`.
 3. **Asset origin.** Serve the same unpacked web archive the server already carries

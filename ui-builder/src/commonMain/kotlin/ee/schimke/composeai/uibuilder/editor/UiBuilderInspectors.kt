@@ -1531,7 +1531,7 @@ private fun ScreenEnvironmentInspector(
       },
     )
   }
-  VariantAxisPicker(variantAxes, variantsDrawn) {
+  VariantAxisPicker(document, variantAxes, variantsDrawn) {
     dispatch(UiBuilderEditorEvent.ToggleVariantAxis(it))
   }
   Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1787,6 +1787,7 @@ private fun DevicePresetPicker(
  */
 @Composable
 private fun VariantAxisPicker(
+  document: UiBuilderDocument,
   selected: Set<EditorVariantAxis>,
   drawn: Boolean,
   onToggle: (EditorVariantAxis) -> Unit,
@@ -1801,8 +1802,8 @@ private fun VariantAxisPicker(
     choices =
       EditorVariantAxis.entries.map { axis ->
         UiBuilderInspectorChoiceModel(
-          label = axis.label,
-          contentDescription = "Compare ${axis.label}",
+          label = axis.labelFor(document),
+          contentDescription = "Compare ${axis.labelFor(document)}",
           selected = axis in selected,
           enabled = drawn,
           onClick = { onToggle(axis) },

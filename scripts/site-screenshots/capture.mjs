@@ -65,8 +65,12 @@ function listen(handler) {
 
 const assets = await listen(async (request, response) => {
   const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname));
-  const file = join(root, path);
-  if (!file.startsWith(root)) return response.writeHead(403).end();
+  // The device presets are the site's copy of a host's /api/ui-builder/v1/device-presets.
+  const file =
+    path === '/device-presets.json' ? join(repo, 'site/device-presets.json') : join(root, path);
+  if (!file.startsWith(root) && path !== '/device-presets.json') {
+    return response.writeHead(403).end();
+  }
   try {
     const body = await readFile(file);
     response
@@ -85,7 +89,8 @@ const sandbox = await listen((request, response) => {
   const layout = new URL(request.url, 'http://x').searchParams.get('layout') ?? 'focused';
   const shell = shellTemplate
     .replaceAll('__COMPOSE_UI_BUILDER_ASSET_BASE__', assetBase)
-    .replaceAll('__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__', layout);
+    .replaceAll('__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__', layout)
+    .replaceAll('__COMPOSE_UI_BUILDER_DEVICE_PRESETS__', `${assetBase}device-presets.json`);
   response.writeHead(200, { 'content-type': TYPES['.html'] }).end(shell);
 });
 
@@ -235,16 +240,26 @@ async function open(options, viewport) {
 
 // The Wear list template exactly as New from template seeds it (SiteTemplateDesignsTest keeps it
 // current), and the agent's result, replayed from a committed design.
-const WEAR_LIST = await readFile(join(repo, 'site/designs/wear-list.uid'), 'utf8');
-const WEAR_LIBRARY = await design('jetcaster-wear-library', 'Wear list screen');
+// Both claim the three round watches as export devices, so the preview strip draws all three and
+// the Compose export writes them as @Preview(device = …). An editor whose shell has no device
+// presets (a release before them) skips the panes rather than guessing at their geometry.
+const WEAR_DEVICES = ['id:wearos_small_round', 'id:wearos_large_round', 'id:wearos_xl_round'];
+const withWearDevices = (text) => {
+  const document = JSON.parse(text);
+  document.environment = { ...document.environment, exportDevices: WEAR_DEVICES };
+  return JSON.stringify(document, null, 2);
+};
+const WEAR_LIST = withWearDevices(await readFile(join(repo, 'site/designs/wear-list.uid'), 'utf8'));
+const WEAR_LIBRARY = withWearDevices(await design('jetcaster-wear-library', 'Wear list screen'));
 
 const PROMPT =
   'Turn this Wear list into the Jetcaster library: a "Your library" title, buttons for ' +
   'Latest episodes and Podcasts, then a Queue section with Up Next.';
 
 const SCENES = {
-  // Step 1: a template in the full editor, the canvas unrolled on the left and two display
-  // variants previewed on the right, switched on from the Screen dock's "Also compare" chips.
+  // Step 1: a template in the full editor, the canvas unrolled on the left and, on the right, the
+  // three watches it claims plus the large-font variant (1.24× on Wear), switched on from the
+  // Screen dock's "Also compare" chips.
   async 'step-1-template'() {
     const { page, click, settle } = await open(
       { fileName: 'wear-list.uid', text: WEAR_LIST, layout: 'full' },
@@ -252,8 +267,6 @@ const SCENES = {
     );
     const at = (name, fallback) => JSON.parse(process.env[name] ?? fallback);
     await click(at('SCREEN_DOCK', '[1254, 232]'));
-    await settle();
-    await click(at('COMPARE_DARK', '[954, 290]'));
     await settle();
     await click(at('COMPARE_FONT', '[1099, 290]'));
     await settle();

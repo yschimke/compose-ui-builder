@@ -58,6 +58,7 @@
       fileName,
       text: saved ?? original,
       layout: params.get('layout') ?? 'full',
+      devicePresets: 'device-presets.json',
       onSave: (text) => {
         if (resetting) return;
         try { localStorage.setItem(storageKey, text); } catch {}

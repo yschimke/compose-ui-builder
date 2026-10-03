@@ -7,6 +7,8 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.hostSpec
+import ee.schimke.composeai.uibuilder.export.isWearScreen
+import ee.schimke.composeai.uibuilder.export.isWearWidget
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -28,12 +30,34 @@ enum class EditorVariantAxis(val label: String) {
   /** The design mirrored, for the half of the world that reads the other way. */
   Rtl("RTL"),
 
-  /** The design at the largest font scale the accessibility settings commonly reach. */
+  /**
+   * The design at the largest font scale its platform's accessibility settings commonly reach:
+   * [LARGE_FONT_VARIANT_SCALE], or [WEAR_LARGE_FONT_VARIANT_SCALE] on a watch. [label] is the
+   * phone's; [labelFor] says which one a given design gets.
+   */
   LargeFont("Font 1.5×"),
 }
 
-/** The font scale [EditorVariantAxis.LargeFont] draws at. */
+/** The font scale [EditorVariantAxis.LargeFont] draws a phone, tablet or desktop design at. */
 const val LARGE_FONT_VARIANT_SCALE: Double = 1.5
+
+/**
+ * The font scale [EditorVariantAxis.LargeFont] draws a Wear design at: the largest step of Wear
+ * OS's own font size setting. A watch never reaches 1.5, so comparing one there would show a layout
+ * no wearer can produce while hiding the one the largest setting actually does.
+ */
+const val WEAR_LARGE_FONT_VARIANT_SCALE: Double = 1.24
+
+/** The scale [EditorVariantAxis.LargeFont] draws this design at; see the two constants. */
+fun UiBuilderDocument.largeFontVariantScale(): Double =
+  if (isWearScreen() || isWearWidget()) WEAR_LARGE_FONT_VARIANT_SCALE else LARGE_FONT_VARIANT_SCALE
+
+/** What this axis is called for [document]: the large-font one names the scale it draws at. */
+fun EditorVariantAxis.labelFor(document: UiBuilderDocument): String =
+  when (this) {
+    EditorVariantAxis.LargeFont -> "Font ${trimmedDensity(document.largeFontVariantScale())}×"
+    else -> label
+  }
 
 /**
  * One pane of the variant strip: a title, and the document to draw in it.
@@ -144,10 +168,10 @@ fun UiBuilderDocument.variantPanes(
       .map { axis ->
         UiBuilderVariantPane(
           id = "variant-axis-${axis.name.lowercase()}",
-          label = axis.label,
+          label = axis.labelFor(this),
           widthDp = settings.widthDp.toFloat(),
           heightDp = settings.heightDp.toFloat(),
-          document = withEnvironmentOverrides(axis.overrides()),
+          document = withEnvironmentOverrides(axis.overrides(this)),
         )
       }
   return devicePanes + axisPanes
@@ -174,12 +198,13 @@ internal fun deviceVariantLabel(preset: UiBuilderDevicePreset): String =
 internal fun trimmedDensity(density: Double): String = density.toString().removeSuffix(".0")
 
 /** What one axis writes over the design's own environment. */
-private fun EditorVariantAxis.overrides(): Map<String, JsonPrimitive> =
+private fun EditorVariantAxis.overrides(document: UiBuilderDocument): Map<String, JsonPrimitive> =
   when (this) {
     EditorVariantAxis.Dark -> mapOf("theme" to JsonPrimitive(EditorScreenTheme.Dark.wireValue))
     EditorVariantAxis.Rtl ->
       mapOf("layoutDirection" to JsonPrimitive(EditorLayoutDirection.Rtl.wireValue))
-    EditorVariantAxis.LargeFont -> mapOf("fontScale" to JsonPrimitive(LARGE_FONT_VARIANT_SCALE))
+    EditorVariantAxis.LargeFont ->
+      mapOf("fontScale" to JsonPrimitive(document.largeFontVariantScale()))
   }
 
 /**

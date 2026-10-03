@@ -48,8 +48,9 @@ val hostBridgeVersion = 1
 // The MCP App shell (`src/mcp-app/ui-builder-mcp-app.html`, `McpAppHostApp.kt`) a server serves as
 // a `text/html;profile=mcp-app` resource for its `.uid` file entrypoint (#364). The number is the
 // contract between that shell and the server: the placeholder it must fill in
-// (`__COMPOSE_UI_BUILDER_ASSET_BASE__`), the one it may (`__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__`,
-// `focused` or `full`; left alone it means `focused`), and where the shell sits in the archive
+// (`__COMPOSE_UI_BUILDER_ASSET_BASE__`), the ones it may (`__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__`,
+// `focused` or `full`; left alone it means `focused`; and `__COMPOSE_UI_BUILDER_DEVICE_PRESETS__`,
+// a device-presets URL; left alone there are none), and where the shell sits in the archive
 // (`mcp-app/ui-builder-mcp-app.html`). Bump it only for a change a server that fills in version 1
 // would get wrong — an optional placeholder a version-1 server leaves untouched is not one.
 val mcpAppVersion = 1
@@ -181,14 +182,17 @@ abstract class VerifyUiBuilderWebArchive : DefaultTask() {
           name.startsWith("/") || name.contains('\\') || name.split('/').any { it == ".." }
         }
       check(unsafe.isEmpty()) { "UI-builder web archive contains unsafe paths: $unsafe" }
-      // The server fills in the asset base, and may fill in the layout; the build must have filled
-      // in its own.
+      // The server fills in the asset base, and may fill in the layout and the device presets; the
+      // build must have filled in its own.
       val shell = zip.getInputStream(zip.getEntry(mcpAppShellPath)).bufferedReader().readText()
       check("__COMPOSE_UI_BUILDER_ASSET_BASE__" in shell) {
         "$mcpAppShellPath has lost its asset-base placeholder"
       }
       check("__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__" in shell) {
         "$mcpAppShellPath has lost its layout placeholder"
+      }
+      check("__COMPOSE_UI_BUILDER_DEVICE_PRESETS__" in shell) {
+        "$mcpAppShellPath has lost its device-presets placeholder"
       }
       check("@UI_BUILDER_VERSION@" !in shell) { "$mcpAppShellPath was packaged without its version" }
       val worker =

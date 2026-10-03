@@ -19,6 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.mcpapp.McpAppCatalogs
@@ -81,6 +82,11 @@ internal fun McpAppHostApp() {
   LaunchedEffect(layout) { publishMcpAppLayout(layout.wireValue) }
   // Whether the host takes `ui/message`: the node menu offers Comment only where it can be sent.
   var hostTakesMessages by remember { mutableStateOf(false) }
+  // The device frames, from the URL the shell names; without one the dock keeps its raw fields.
+  var devicePresets by remember { mutableStateOf<List<UiBuilderDevicePreset>>(emptyList()) }
+  LaunchedEffect(Unit) {
+    mcpAppDevicePresetsUrl()?.let { devicePresets = loadDevicePresets(cache = null, path = it) }
+  }
   val catalogs = remember {
     McpAppCatalogs(
       fetchAsset = ::fetchMcpAppAsset,
@@ -175,6 +181,7 @@ internal fun McpAppHostApp() {
     },
     onHelp = { scope.launch { runCatching { bridge?.openLink(MCP_APP_GUIDE_URL) } } },
     onEditorShown = { markReady() },
+    devicePresets = devicePresets,
   )
 }
 
@@ -321,6 +328,17 @@ private external fun mcpAppLayout(): String
 /** The layout on show, as `data-ui-builder-layout` on the page, for a harness to read. */
 @JsFun("(layout) => document.documentElement.setAttribute('data-ui-builder-layout', layout)")
 private external fun publishMcpAppLayout(layout: String)
+
+/**
+ * The shell's `devicePresets`: a URL answering in the shape of a host's
+ * `/api/ui-builder/v1/device-presets`, or null when the shell leaves its placeholder unfilled. A
+ * server fills it with its own route; a static host can serve a copy of one.
+ */
+internal fun mcpAppDevicePresetsUrl(): String? =
+  mcpAppDevicePresets().takeIf { it.isNotBlank() && !it.startsWith("__") }
+
+@JsFun("() => String(globalThis.composeUiBuilderMcpApp?.devicePresets ?? '')")
+private external fun mcpAppDevicePresets(): String
 
 @JsFun("() => String(globalThis.composeUiBuilderMcpApp?.catalogBase ?? '')")
 private external fun mcpAppCatalogBase(): String
