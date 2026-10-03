@@ -466,9 +466,11 @@ class CatalogRuntimeHostSession(
       }
     }
     pending.remove(response.requestId)
-    if (expected is Pending.Inspection && expected.responseType == "rendered") {
-      completedRender =
-        if (response.type == "rendered") response.requestId to expected.document else null
+    // Only a completion moves it. An error for an older render can arrive after a newer one has
+    // completed, and clearing it then refused every later layout of the render on screen; the
+    // runtime itself stops reporting a render the moment a newer one starts.
+    if (response.type == "rendered" && expected is Pending.Inspection) {
+      completedRender = response.requestId to expected.document
     }
     return response
   }

@@ -245,6 +245,45 @@ class CatalogRuntimeProtocolTest {
   }
 
   @Test
+  fun `an older render's late error keeps a newer completed render's updates`() {
+    val host = CatalogRuntimeHostSession(RUNTIME)
+    host.request(
+      "render-1",
+      "renderDocument",
+      buildJsonObject { put("document", documentElement(document(1))) },
+    )
+    host.request(
+      "render-2",
+      "renderDocument",
+      buildJsonObject { put("document", documentElement(document(2))) },
+    )
+    assertEquals(
+      "rendered",
+      host.accept("null", true, encode(response("render-2", snapshot(document(2)))))?.type,
+    )
+    val staleError =
+      CatalogRuntimeMessage(
+        schema = CATALOG_RUNTIME_PROTOCOL_SCHEMA,
+        protocolVersion = CATALOG_RUNTIME_PROTOCOL_VERSION,
+        runtimeId = RUNTIME,
+        requestId = "render-1",
+        type = "error",
+        payload = buildJsonObject { put("code", "STALE_RENDER_COMPLETION") },
+      )
+    assertEquals("error", host.accept("null", true, encode(staleError))?.type)
+    assertEquals(
+      INSPECTION_UPDATED,
+      host
+        .accept(
+          "null",
+          true,
+          encode(response("render-2", snapshot(document(2), bottom = 180f), INSPECTION_UPDATED)),
+        )
+        ?.type,
+    )
+  }
+
+  @Test
   fun `action cannot return a newer inspection revision`() {
     val endpoint = initializedEndpoint()
     val host = CatalogRuntimeHostSession(RUNTIME)
