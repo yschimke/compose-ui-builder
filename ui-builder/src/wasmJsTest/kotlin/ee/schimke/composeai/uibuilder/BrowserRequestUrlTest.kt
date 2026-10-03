@@ -49,9 +49,9 @@ class BrowserRequestUrlTest {
   }
 
   @Test
-  fun `OpenCode prompt hands an agent a credential-free MCP design handoff`() {
+  fun `the agent prompt hands any agent a credential-free MCP design handoff`() {
     val prompt =
-      openCodeUiBuilderPrompt(
+      agentUiBuilderPrompt(
         mcpEndpoint = "https://preview.example/mcp",
         designUrl = "https://preview.example/ui-builder/settings",
         designId = "settings",
@@ -66,6 +66,13 @@ class BrowserRequestUrlTest {
     assertTrue(prompt.contains("ui-builder-write`"))
     assertTrue(prompt.contains("ui-builder-export`"))
     assertFalse(prompt.contains("token="))
+    // Named the way every setup path names it, with the setup line for an agent that lacks it.
+    assertTrue(prompt.contains("`compose-preview-catalog` MCP server"))
+    assertTrue(
+      prompt.contains(
+        "claude mcp add --transport http compose-preview-catalog https://preview.example/mcp"
+      )
+    )
   }
 
   @Test

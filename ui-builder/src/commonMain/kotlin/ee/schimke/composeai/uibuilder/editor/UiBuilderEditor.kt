@@ -592,7 +592,7 @@ fun UiBuilderEditor(
    */
   theme: UiBuilderEditorTheme = UiBuilderEditorTheme.Default,
   /**
-   * Copies an OpenCode-ready prompt for working on this live design through MCP.
+   * Copies a prompt that hands this live design to any MCP-capable agent.
    *
    * Null where this editor has no live server or clipboard. The host owns the prompt because it
    * knows its origin; the editor only makes the workflow discoverable.
