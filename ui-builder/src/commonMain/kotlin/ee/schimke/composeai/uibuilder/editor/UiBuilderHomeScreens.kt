@@ -79,9 +79,10 @@ private fun rememberNewDesignFormState(
   catalogs: List<UiBuilderNewDesignCatalog>,
   initialCatalogSystemId: String,
   initialDesignId: String?,
+  allowPublic: Boolean = false,
 ): NewDesignFormState =
-  remember(catalogs, initialCatalogSystemId, initialDesignId) {
-    NewDesignFormState(catalogs, initialCatalogSystemId, initialDesignId)
+  remember(catalogs, initialCatalogSystemId, initialDesignId, allowPublic) {
+    NewDesignFormState(catalogs, initialCatalogSystemId, initialDesignId, allowPublic)
   }
 
 /**
@@ -96,7 +97,9 @@ private class NewDesignFormState(
   val catalogs: List<UiBuilderNewDesignCatalog>,
   initialCatalogSystemId: String,
   initialDesignId: String?,
+  val allowPublic: Boolean,
 ) {
+  var publicRead by mutableStateOf(false)
   private val initialCatalog =
     catalogs.firstOrNull { it.systemId == initialCatalogSystemId } ?: catalogs.first()
 
@@ -142,6 +145,26 @@ private class NewDesignFormState(
 private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) {
 
   Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Text("Visibility", style = MaterialTheme.typography.labelLarge)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      FilterChip(
+        selected = !form.publicRead,
+        onClick = { form.publicRead = false },
+        label = { Text("Private") },
+      )
+      if (form.allowPublic)
+        FilterChip(
+          selected = form.publicRead,
+          onClick = { form.publicRead = true },
+          label = { Text("Public (read only)") },
+        )
+    }
+    Text(
+      if (form.publicRead) "Anyone with the link can view. Only authorized editors can change it."
+      else if (form.allowPublic) "Only you and invited collaborators. Change this later in Sharing."
+      else "Sharing options require a server with visibility controls.",
+      style = MaterialTheme.typography.bodySmall,
+    )
     Text("Catalog", style = MaterialTheme.typography.labelLarge)
     // In platform order — phone, watch, Remote Compose widget — and grouped under a platform
     // heading only where a platform has more than one catalog to choose between. With one
@@ -331,6 +354,7 @@ internal fun NewDesignDialog(
   onDismiss: (() -> Unit)?,
   /** The pre-filled name; null rolls a random one, which is what a person should see. */
   initialDesignId: String? = null,
+  onCreatePublic: ((String, String, String, List<NewDesignState>) -> Unit)? = null,
   onCreate:
     (
       catalogSystemId: String,
@@ -339,9 +363,15 @@ internal fun NewDesignDialog(
       state: List<NewDesignState>,
     ) -> Unit,
 ) {
-  val form = rememberNewDesignFormState(catalogs, initialCatalogSystemId, initialDesignId)
+  val form =
+    rememberNewDesignFormState(
+      catalogs,
+      initialCatalogSystemId,
+      initialDesignId,
+      onCreatePublic != null,
+    )
   val submit = {
-    onCreate(
+    (if (form.publicRead) onCreatePublic ?: onCreate else onCreate)(
       form.selectedCatalog.systemId,
       form.designId,
       form.selectedTemplate.id,
@@ -658,6 +688,7 @@ fun UiBuilderNewDesignScreen(
    * name so its render does not change every time it is drawn.
    */
   initialDesignId: String? = null,
+  onCreatePublic: ((String, String, String, List<NewDesignState>) -> Unit)? = null,
   onCreate:
     (
       catalogSystemId: String,
@@ -667,7 +698,14 @@ fun UiBuilderNewDesignScreen(
     ) -> Unit,
 ) {
   require(catalogs.isNotEmpty()) { "new design screen requires at least one catalog" }
-  val form = rememberNewDesignFormState(catalogs, initialCatalogSystemId, initialDesignId)
+  val form =
+    rememberNewDesignFormState(
+      catalogs,
+      initialCatalogSystemId,
+      initialDesignId,
+      onCreatePublic != null,
+    )
+  val create = if (form.publicRead) onCreatePublic ?: onCreate else onCreate
   MaterialTheme(colorScheme = EditorColors) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
       BoxWithConstraints {
@@ -698,9 +736,9 @@ fun UiBuilderNewDesignScreen(
             // The one-press way in, first: most people arriving here want a blank screen or the
             // smallest sample, and the full form below is for choosing a kind and a name.
             if (accountNotice != null) AccountNotice(accountNotice, accountNoticeAction)
-            QuickStartStrip(form, onCreate)
+            QuickStartStrip(form, create)
             val newPanel: @Composable (Modifier) -> Unit = { modifier ->
-              NewDesignHomePanel(modifier, form, onCreate)
+              NewDesignHomePanel(modifier, form, create)
             }
             val designsPanel: @Composable (Modifier) -> Unit = { modifier ->
               ExistingDesignsPanel(

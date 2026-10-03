@@ -231,6 +231,29 @@ private fun LiveSessionApp(
   var devicePresets by remember { mutableStateOf<List<UiBuilderDevicePreset>>(emptyList()) }
   var pageDestinations by remember { mutableStateOf<List<UiBuilderPageDestination>>(emptyList()) }
   var sessionStatus by remember { mutableStateOf("Connecting…") }
+  var designVisibility by
+    remember(config.designId) { mutableStateOf<DesignVisibilityPayload?>(null) }
+  LaunchedEffect(config.designId, localSession) {
+    if (localSession == null && !config.startWithNewDesign && config.designVisibilitySupported) {
+      while (true) {
+        try {
+          designVisibility =
+            Json { ignoreUnknownKeys = true }
+              .decodeFromString(
+                DesignVisibilityPayload.serializer(),
+                fetchText(
+                  "/api/ui-builder/v1/designs/${encodeUriComponent(config.designId)}/visibility"
+                ),
+              )
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+          throw cancelled
+        } catch (_: Exception) {
+          designVisibility = null
+        }
+        delay(15_000L)
+      }
+    }
+  }
   // Why the design could not be opened, or null while it still might. Distinct from [sessionStatus]
   // because that string is only ever read from inside the editor, which is exactly the branch a
   // refused open never reaches — so the reason needs somewhere to live that the failure path can
@@ -1124,6 +1147,18 @@ private fun LiveSessionApp(
    * it to this browser, rewrites the URL and re-enters the editor. One seed, two places to put the
    * result.
    */
+  val createPublicDesign: ((String, String, String, List<NewDesignState>) -> Unit)? =
+    if (localSession == null && config.canWrite && config.designVisibilitySupported) {
+      { catalog, design, template, state ->
+        navigateToNewDesign(
+          catalog,
+          design,
+          template,
+          encodeNewDesignStates(state),
+          publicRead = true,
+        )
+      }
+    } else null
   val createDesign: (String, String, String, List<NewDesignState>) -> Unit =
     { catalogSystemId, designId, templateId, state ->
       if (localSession == null && config.canWrite) {
@@ -1382,6 +1417,7 @@ private fun LiveSessionApp(
           ?.takeIf { localSession == null && !config.canWrite }
           ?.let { url -> EditorNoticeAction("Sign in with GitHub") { navigateTo(url) } },
       onCreate = createDesign,
+      onCreatePublic = createPublicDesign,
     )
     LaunchedEffect(newDesignCatalogs) { markReady() }
     return
@@ -1435,6 +1471,16 @@ private fun LiveSessionApp(
       clientId = config.clientId,
       operationIdPrefix = config.operationIdPrefix,
       sessionLabel = sessionStatus,
+      visibilityLabel =
+        if (localSession != null) "Private · this browser"
+        else
+          when (designVisibility?.visibility) {
+            "public" -> "Public (read only) · anyone with the link"
+            "private" -> "Private · invited collaborators only"
+            else -> "Visibility unavailable"
+          },
+      onManageVisibility =
+        if (designVisibility?.canManage == true) ({ openDesignSharing(config.designId) }) else null,
       // No Reconnect while a revision is pinned. There is no session to reconnect: the pinned page
       // opened one snapshot and holds no socket, and the button's own handler would fetch the head
       // and replace the document under a banner still naming the revision — the exact lie the
@@ -1453,7 +1499,7 @@ private fun LiveSessionApp(
         val route =
           editorEditRoute(
             keptInBrowser = localSession != null,
-            canWrite = config.canWrite,
+            canWrite = config.canWrite && designVisibility?.canWrite != false,
             revisionPinned = revisionPin?.pinned == true,
           )
         if (route == EditorEditRoute.BrowserCopy) {
@@ -1534,7 +1580,14 @@ private fun LiveSessionApp(
       // to it would hand its recipient a page that will not open. See [isDesignUrlPathSafe].
       onCopyDesignLink =
         if (!isDesignUrlPathSafe(config.designId)) null
-        else { selectors -> copyDesignLink(designUrlPath(config.designId, selectors)) },
+        else
+          { selectors ->
+            val result = copyDesignLink(designUrlPath(config.designId, selectors))
+            result +
+              if (designVisibility?.visibility == "private")
+                " · Private: recipients need access from the owner."
+              else ""
+          },
       initialCatalogQuery = catalogQuery,
       initialEnabledPacks = enabledPacks,
       initialPinnedComponents = pinnedComponents,
@@ -1547,6 +1600,7 @@ private fun LiveSessionApp(
       devicePresets = devicePresets,
       newDesignCatalogs = newDesignCatalogs,
       onCreateDesign = createDesign,
+      onCreatePublicDesign = createPublicDesign,
       onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
       // A fork of the design as it is now, owned by whoever presses it: the copy route reads the
       // source as the caller, so this lends nothing a reader could not already open.
@@ -1930,3 +1984,10 @@ internal fun readOnlyNotice(config: LiveSessionConfig): String? =
  * enough for "the agent says it has proposed something" and rare enough to cost nothing.
  */
 private const val SUGGESTION_POLL_INTERVAL_MILLIS = 15_000L
+
+@kotlinx.serialization.Serializable
+private data class DesignVisibilityPayload(
+  val visibility: String,
+  val canWrite: Boolean,
+  val canManage: Boolean,
+)
