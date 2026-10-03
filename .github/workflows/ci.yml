@@ -219,6 +219,10 @@ jobs:
       # fail-open path are pinned against a fixture repository (#247).
       - name: Run Maven publish plan tests
         run: .github/scripts/test-maven-publish-plan.sh
+      # Relabels a release PR whose release was cut outside release-please; only ever runs for real
+      # on the push after such a release, so which PRs it may touch is pinned here.
+      - name: Run release PR relabel tests
+        run: .github/scripts/test-release-pr-mark-tagged.sh
       - name: remote-m3 catalog-level equivalence
         run: |
           .github/scripts/ui-builder-equivalence.sh \

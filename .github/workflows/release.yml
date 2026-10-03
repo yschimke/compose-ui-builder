@@ -78,6 +78,24 @@ jobs:
       publish: ${{ steps.plan.outputs.publish }}
       publish_tag: ${{ steps.plan.outputs.tag }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ !inputs.publish_tag }}
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      # A release finished outside release-please (by hand, or through `publish_tag` after
+      # release-please could not create it) leaves its merged PR `autorelease: pending`, and
+      # release-please then fails every later run: it retries that release, and refuses to open the
+      # next release PR while an "untagged, merged release PR" is outstanding. That wedged every
+      # push after v3.79.0. Once the PR's tag and release both exist, mark it tagged, as
+      # release-please would have. See `.github/scripts/release-pr-mark-tagged.sh`.
+      - name: Mark a release PR released outside release-please as tagged
+        if: ${{ !inputs.publish_tag }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./.github/scripts/release-pr-mark-tagged.sh
+
       # Skipped when republishing: a recovery run must not be able to cut an unrelated release as a
       # side effect of retrying an upload.
       #
