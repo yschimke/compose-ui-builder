@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.76.0](https://github.com/yschimke/compose-ui-builder/compare/v3.75.0...v3.76.0) (2026-10-03)
+
+
+### Features
+
+* **editor:** a searchable font picker for typefaces, in the Theme panel and the property list ([#411](https://github.com/yschimke/compose-ui-builder/issues/411)) ([15e02e8](https://github.com/yschimke/compose-ui-builder/commit/15e02e803ea56c656006df2d8200b80f31f0b266))
+* **ui-builder:** custom typefaces — any Google Fonts family, and theme typefaces per role group ([#408](https://github.com/yschimke/compose-ui-builder/issues/408)) ([746c444](https://github.com/yschimke/compose-ui-builder/commit/746c44406927ae3cc9f2e8a32291d6c6a3cca870))
+* **ui-builder:** mobile and offline web — safe-area/IME insets, Web Share, service worker, IndexedDB ([#410](https://github.com/yschimke/compose-ui-builder/issues/410)) ([3918a40](https://github.com/yschimke/compose-ui-builder/commit/3918a4060b63dfb926d51a88cbb2d247b1a7b32a))
+
+
+### Bug Fixes
+
+* **deps:** compose-ai-tools 2.32.2 and compose-preview-daemon 3.13.0 ([#412](https://github.com/yschimke/compose-ui-builder/issues/412)) ([941e1ee](https://github.com/yschimke/compose-ui-builder/commit/941e1ee314a0f99cc5fa54f4afedc37f4fc056af))
+
 ## [3.75.0](https://github.com/yschimke/compose-ui-builder/compare/v3.74.0...v3.75.0) (2026-10-02)
 
 
