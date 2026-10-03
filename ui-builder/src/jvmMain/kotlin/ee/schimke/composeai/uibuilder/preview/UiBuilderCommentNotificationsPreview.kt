@@ -25,7 +25,7 @@ import ee.schimke.composeai.uibuilder.inspector.CommentNotificationsToggle
  * colour, and the iPhone sentence that replaces the switch. Hidden, the fifth state and the usual
  * one, draws nothing and so has no picture.
  */
-@Preview(widthDp = 360, heightDp = 420)
+@Preview(widthDp = 360, heightDp = 460)
 @Composable
 fun UiBuilderCommentNotificationsPreview() {
   MaterialTheme(colorScheme = darkColorScheme()) {
