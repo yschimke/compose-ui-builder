@@ -4,6 +4,7 @@ package ee.schimke.composeai.uibuilder
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -105,6 +106,37 @@ class BrowserRequestUrlTest {
     assertFalse("token" in DESIGN_URL_IDENTITY_KEYS)
   }
 
+  @Test
+  fun `an MCP App fetches its assets and the presets its shell names, and nothing else`() {
+    // live.html: the editor under /site/editor/, the presets the shell names beside the site.
+    setMcpApp("https://example.test/site/editor/", "https://example.test/site/device-presets.json")
+    try {
+      assertEquals(
+        "https://example.test/site/editor/catalog.json",
+        sameOriginRequestUrl("https://example.test/site/editor/catalog.json"),
+      )
+      assertEquals(
+        "https://example.test/site/device-presets.json",
+        sameOriginRequestUrl("https://example.test/site/device-presets.json"),
+      )
+      assertFailsWith<Throwable> { sameOriginRequestUrl("https://example.test/site/other.json") }
+    } finally {
+      clearMcpApp()
+    }
+  }
+
+  @Test
+  fun `an unfilled presets placeholder lets nothing extra through`() {
+    setMcpApp("https://example.test/editor/", "__COMPOSE_UI_BUILDER_DEVICE_PRESETS__")
+    try {
+      assertFailsWith<Throwable> {
+        sameOriginRequestUrl("https://example.test/device-presets.json")
+      }
+    } finally {
+      clearMcpApp()
+    }
+  }
+
   private fun withPageQuery(query: String, block: () -> Unit) {
     val original = currentLocation()
     try {
@@ -120,3 +152,10 @@ class BrowserRequestUrlTest {
 
 @JsFun("(value) => window.history.replaceState(null, '', value)")
 private external fun replaceLocation(value: String)
+
+@JsFun(
+  "(assetBase, devicePresets) => { globalThis.composeUiBuilderMcpApp = { assetBase, devicePresets }; }"
+)
+private external fun setMcpApp(assetBase: String, devicePresets: String)
+
+@JsFun("() => { delete globalThis.composeUiBuilderMcpApp; }") private external fun clearMcpApp()

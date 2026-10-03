@@ -19,13 +19,15 @@ The GitHub Pages site for Compose UI Builder: plain HTML/CSS/JS, no build step.
 `live.html?design=<gallery id>` runs the real editor with no server. The Pages workflow unpacks the
 latest released `compose-preview-ui-builder-web-<v>.zip` at `editor/`, and `js/mcp-host.js` opens
 its MCP App shell (`editor/mcp-app/ui-builder-mcp-app.html`) in a frame, playing the chat client's
-side of that protocol with the `.uid` file held in the page. It also names `device-presets.json`
-through the shell's `__COMPOSE_UI_BUILDER_DEVICE_PRESETS__` placeholder, so the Screen dock offers
-real device frames and the preview strip draws a design's export devices. Edits are kept in this browser
+side of that protocol with the `.uid` file held in the page. It also names
+`editor/device-presets.json` through the shell's `__COMPOSE_UI_BUILDER_DEVICE_PRESETS__`
+placeholder, so the Screen dock offers real device frames and the preview strip draws a design's
+export devices. The copy has to sit under `editor/`: an MCP App fetches only below its asset base,
+and editors up to 3.79 fail to start when the presets URL is outside it. Edits are kept in this browser
 (`localStorage`); **Reset** returns to the committed design, **Download .uid** saves it.
 
-To try it locally, unpack a release zip at `site/editor/` (git-ignored) and serve the directory:
-`python3 -m http.server -d site`.
+To try it locally, unpack a release zip at `site/editor/` (git-ignored), copy
+`device-presets.json` into it, and serve the directory: `python3 -m http.server -d site`.
 
 ## Designs
 

@@ -1516,7 +1516,9 @@ internal suspend fun loadDevicePresets(
       }
   } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
     throw cancelled
-  } catch (_: Exception) {
+  } catch (_: Throwable) {
+    // Throwable, not Exception: a refusal thrown in JS (`sameOriginRequestUrl`) arrives as a
+    // JsException, and an MCP App that could not read its presets must still start, without them.
     emptyList()
   }
 

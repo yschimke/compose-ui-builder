@@ -58,7 +58,8 @@
       fileName,
       text: saved ?? original,
       layout: params.get('layout') ?? 'full',
-      devicePresets: 'device-presets.json',
+      // Under the editor: an MCP App fetches only below its assetBase, so a copy sits there.
+      devicePresets: 'editor/device-presets.json',
       onSave: (text) => {
         if (resetting) return;
         try { localStorage.setItem(storageKey, text); } catch {}
