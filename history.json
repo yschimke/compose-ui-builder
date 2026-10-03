@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "76ebf1a7825070b16e55447547f00fefbf923c16",
+    "generatedFrom": "690915436b222bb41ef73395218b33533c65b0be",
     "previews": {
         "ui-builder/ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview": {
             "path": "renders/ui-builder/ProductionUiBuilderPreview-a424cc38.png",
@@ -1201,6 +1201,21 @@
                     "commit": "5a96a38cb67560849b5e5cb642c0fcd69b769534",
                     "date": "2026-09-26T06:38:28Z",
                     "sourceSha": "b884cd36",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderCommentNotificationsPreviewKt.UiBuilderCommentNotificationsPreview": {
+            "path": "renders/ui-builder/UiBuilderCommentNotificationsPreview-2dfd8641.png",
+            "versions": [
+                {
+                    "blob": "57a2c8adc32afcc8767aad42ea5722ca39dbfac4",
+                    "commit": "690915436b222bb41ef73395218b33533c65b0be",
+                    "date": "2026-10-03T11:13:47Z",
+                    "sourceSha": "76dd116b",
                     "commits": 1
                 }
             ],
