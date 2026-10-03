@@ -371,6 +371,7 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.BindPropertyToState ->
         bindPropertyToState(state, event.nodeId, event.property, event.variable, event.equalsValue)
       is UiBuilderEditorEvent.UnbindProperty -> unbindProperty(state, event.nodeId, event.property)
+      is UiBuilderEditorEvent.ClearProperty -> clearProperty(state, event.nodeId, event.property)
       is UiBuilderEditorEvent.MakeComponent -> makeComponent(state, event.name)
       is UiBuilderEditorEvent.InsertLocalComponent ->
         insertLocalComponent(state, event.componentKey, event.target, event.afterNodeId)
@@ -3969,6 +3970,23 @@ class UiBuilderEditorReducer(
    * Needed because a bound property refuses a typed literal — `commitProperty` will not rewrite a
    * state read into a value — so without this a binding is a one-way door.
    */
+  private fun clearProperty(
+    state: UiBuilderEditorState,
+    nodeId: String,
+    propertyName: String,
+  ): UiBuilderEditorState {
+    val node = state.document.nodes[nodeId] ?: return state
+    if (propertyName !in node.properties) return state
+    val property =
+      catalog.componentsById[node.componentId]?.propertiesByName?.get(propertyName) ?: return state
+    if (property.required) return state
+    return state.apply(
+      state.operationSequence + 1,
+      listOf(DesignOperation.RemoveNodeProperty(nodeId, propertyName)),
+      selectionAfter = nodeId,
+    )
+  }
+
   private fun unbindProperty(
     state: UiBuilderEditorState,
     nodeId: String,

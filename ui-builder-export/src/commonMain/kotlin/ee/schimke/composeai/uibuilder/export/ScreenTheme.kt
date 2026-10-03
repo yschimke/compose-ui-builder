@@ -37,12 +37,17 @@ private constructor(
   val cornerRadiusDp: Float?,
   /** The family each [ThemeTypefaces] group names, by group. */
   val families: Map<ThemeTypefaces.Group, String>,
+  /** The Material 3 role text with no `style` is set in, or null for the theme's `bodyLarge`. */
+  val textRole: String?,
 ) {
   val scalesType: Boolean
     get() = typeScale != 1f
 
   companion object {
     const val COMPONENT_ID: String = "builder/material-theme"
+
+    /** `ProvideTextStyle`, which sets the [textRole] inside the theme. */
+    const val TEXT_STYLE_COMPONENT_ID: String = "builder/provide-text-style"
 
     const val PRIMARY: String = "themePrimaryColor"
     const val BACKGROUND: String = "themeBackgroundColor"
@@ -58,7 +63,8 @@ private constructor(
      */
     val PROPERTIES: Set<String> =
       setOf(PRIMARY, BACKGROUND, SURFACE, CONTENT, TYPE_SCALE, CORNER_RADIUS) +
-        ThemeTypefaces.PROPERTIES
+        ThemeTypefaces.PROPERTIES +
+        ThemeTextStyle.PROPERTY
 
     /**
      * The `ColorScheme` roles each colour property sets — the same table the canvas copies onto its
@@ -101,6 +107,7 @@ private constructor(
         typeScale = host.number(TYPE_SCALE)?.toFloat()?.coerceIn(0.75f, 1.5f) ?: 1f,
         cornerRadiusDp = host.number(CORNER_RADIUS)?.toFloat()?.coerceIn(0f, 48f),
         families = ThemeTypefaces.families { host.text(it) },
+        textRole = ThemeTextStyle.role { host.text(it) }?.let(ThemeTextStyle::m3Role),
       )
     }
 
@@ -153,6 +160,23 @@ private constructor(
                 "slots": [{"name": "content", "required": true}],
                 "code": {"call": "MaterialTheme()", "imports": ["androidx.compose.material3.MaterialTheme"]},
                 "signatureKnown": true
+              },
+              {
+                "canonicalId": "ui-builder/androidx.compose.material3.TextKt.ProvideTextStyle",
+                "componentIds": ["$TEXT_STYLE_COMPONENT_ID"],
+                "symbol": {
+                  "jvmOwner": "androidx.compose.material3.TextKt",
+                  "callable": "androidx.compose.material3.ProvideTextStyle",
+                  "name": "ProvideTextStyle",
+                  "origin": "LIBRARY"
+                },
+                "parameters": [
+                  {"name": "value", "type": "TextStyle", "hasDefault": false, "typeFqn": "androidx.compose.ui.text.TextStyle"},
+                  {"name": "content", "type": "@Composable () -> Unit", "hasDefault": false, "composableSlot": true}
+                ],
+                "slots": [{"name": "content", "required": true}],
+                "code": {"call": "ProvideTextStyle()", "imports": ["androidx.compose.material3.ProvideTextStyle"]},
+                "signatureKnown": true
               }
             ]
           }
@@ -161,11 +185,12 @@ private constructor(
         )
     }
 
-    /**
-     * [record] with [RECORD]'s `MaterialTheme` added, unless it already resolves [COMPONENT_ID].
-     */
-    fun withThemeRecord(record: ComponentRecordFile): ComponentRecordFile =
-      if (record.components.any { COMPONENT_ID in it.componentIds }) record
-      else record.copy(components = record.components + RECORD.components)
+    /** [record] with each of [RECORD]'s components it does not already resolve added. */
+    fun withThemeRecord(record: ComponentRecordFile): ComponentRecordFile {
+      val claimed = record.components.flatMapTo(mutableSetOf()) { it.componentIds }
+      val missing = RECORD.components.filter { it.componentIds.none(claimed::contains) }
+      return if (missing.isEmpty()) record
+      else record.copy(components = record.components + missing)
+    }
   }
 }

@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.editor.themeHost
 import ee.schimke.composeai.uibuilder.export.AndroidGoogleFonts
 import ee.schimke.composeai.uibuilder.export.KOTLIN_HARD_KEYWORDS
+import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -1111,25 +1112,29 @@ internal class ComposeEmitter(
     // The theme host's typefaces wrap it, as the canvas draws everything inside it under them: a
     // `MaterialTheme` around the surface with each named role re-pointed at its Google Fonts
     // family. See [ThemeTypefaces].
+    val host = document.themeHost()?.id == node.id
     val roles =
-      if (document.themeHost()?.id == node.id)
-        ThemeTypefaces.m3RoleFamilies(ThemeTypefaces.families(node))
-      else emptyMap()
-    val inner = if (roles.isEmpty()) level else level + 1
+      if (host) ThemeTypefaces.m3RoleFamilies(ThemeTypefaces.families(node)) else emptyMap()
+    // The host's default text role, provided inside the theme so it is the themed role. See
+    // [ThemeTextStyle].
+    val textRole = if (host) ThemeTextStyle.role(node)?.let(ThemeTextStyle::m3Role) else null
+    var inner = level
     if (roles.isNotEmpty()) {
       line(level, "MaterialTheme(")
       googleFonts.typography("MaterialTheme.typography", roles, depth = level + 1).forEach {
         appendLine(it)
       }
       line(level, ") {")
+      inner++
     }
+    if (textRole != null) line(inner++, "ProvideTextStyle(MaterialTheme.typography.$textRole) {")
     line(
       inner,
       "Surface(${node.modifierArgument()}, shape = ${node.shapeExpression()}, color = ${node.boundColorExpression("containerColor")}, tonalElevation = ${node.number("tonalElevationDp").dpLiteral()}) {",
     )
     emitChildren(node.slot("content"), inner + 1)
     line(inner, "}")
-    if (roles.isNotEmpty()) line(level, "}")
+    while (inner > level) line(--inner, "}")
   }
 
   private fun emitCard(node: UiBuilderNode, level: Int) {
@@ -3324,7 +3329,9 @@ private val HANDLED_FIELDS =
     "m3/snackbar-host" to HandledFields(setOf("visible")),
     "m3/surface" to
       HandledFields(
-        setOf("containerColor", "shape", "shapeDp", "tonalElevationDp") + ThemeTypefaces.PROPERTIES,
+        setOf("containerColor", "shape", "shapeDp", "tonalElevationDp") +
+          ThemeTypefaces.PROPERTIES +
+          ThemeTextStyle.PROPERTY,
         setOf("content"),
       ),
     "m3/switch" to HandledFields(setOf("checked", "enabled"), events = setOf("click")),

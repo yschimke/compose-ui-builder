@@ -1,11 +1,14 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.runDesktopComposeUiTest
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.wear.compose.material3.LocalTextStyle as WearLocalTextStyle
 import androidx.wear.compose.material3.MaterialTheme as WearMaterialTheme
 import androidx.wear.compose.material3.Typography as WearTypography
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
@@ -49,6 +52,33 @@ class ThemeTypefacesTest {
     assertSame(face, wear.numeralSmall.fontFamily)
     assertEquals(WearTypography().displayLarge, wear.displayLarge)
   }
+
+  /**
+   * The host's default text role ([ThemeTextStyle]) becomes the ambient style on both scales, each
+   * as its own role: Wear has no headline roles, so a headline takes the matching title role there.
+   */
+  @Test
+  fun `a theme host's default text role is the ambient style on both scales`() =
+    runDesktopComposeUiTest {
+      var m3: TextStyle? = null
+      var wear: TextStyle? = null
+      var expectedM3: TextStyle? = null
+      var expectedWear: TextStyle? = null
+      setContent {
+        WearMaterialTheme {
+          ThemeTypefacesHost(read = mapOf("themeTextStyle" to "headlineSmall")::get) {
+            m3 = LocalTextStyle.current
+            wear = WearLocalTextStyle.current
+            expectedM3 = MaterialTheme.typography.headlineSmall
+            expectedWear = WearMaterialTheme.typography.titleSmall
+          }
+        }
+      }
+      waitForIdle()
+      assertEquals(expectedM3?.fontSize, m3?.fontSize)
+      assertEquals(expectedWear?.fontSize, wear?.fontSize)
+      assertNotEquals(WearTypography().bodyLarge.fontSize, wear?.fontSize)
+    }
 
   /**
    * The canvas path end to end: a host naming a family the manifest does not list gets it from the

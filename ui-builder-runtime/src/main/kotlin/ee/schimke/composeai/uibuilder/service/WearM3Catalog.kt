@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.WearScreenTheme
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -165,7 +166,13 @@ private fun wearScreenScaffoldProperties(): List<PropertyCapabilityV1> =
     // way as the colours above (yschimke/wear-m3-catalog#684).
     ThemeTypefaces.WEAR_GROUPS.map { group ->
       wearString(group.property, notes = ThemeTypefaces.notes(group, wear = true))
-    }
+    } +
+    // The role text with no `style` of its own is set in; see [ThemeTextStyle].
+    wearString(
+      ThemeTextStyle.PROPERTY,
+      notes = ThemeTextStyle.notes(wear = true),
+      allowed = ThemeTextStyle.WEAR_ROLES,
+    )
 
 // ── The property vocabulary
 //

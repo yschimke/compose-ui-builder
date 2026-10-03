@@ -190,6 +190,7 @@ object WearWidgetCodeExporter {
         .let { probe ->
           probe.background(sizedRoot)
           probe.themeTypography(sizedRoot, depth = 2)
+          probe.themeTextStyle(sizedRoot)
           contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
           probe.usesTheme
         }
@@ -211,6 +212,7 @@ object WearWidgetCodeExporter {
         )
       val background = emitter.background(sizedRoot)
       emitter.themeTypography(sizedRoot, depth = 2)
+      emitter.themeTextStyle(sizedRoot)
       val body =
         when (contentIds.size) {
           0 -> listOf(emitter.emptyBox(depth))
@@ -284,7 +286,7 @@ object WearWidgetCodeExporter {
           typography.forEach(::appendLine)
           appendLine("$INDENT) {")
         }
-        body.forEach(::appendLine)
+        emitter.provideTextStyle(body, depth = 2).forEach(::appendLine)
         appendLine("$INDENT}")
       } else {
         body.forEach(::appendLine)

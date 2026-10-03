@@ -141,6 +141,8 @@ object WearScreenCodeExporter {
     val colorScheme = emitter.themeColorScheme(rootId)
     val fonts = AndroidGoogleFonts(INDENT)
     val typography = emitter.themeTypography(rootId, fonts, depth = 2)
+    // The role text with no `style` is set in, as the canvas provides it; see [ThemeTextStyle].
+    val textRole = ThemeTextStyle.role(root)?.let(ThemeTextStyle::wearRole)
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
     val name = document.screenIdentifier()
@@ -161,7 +163,14 @@ object WearScreenCodeExporter {
             appendLine("package $packageName")
             appendLine()
           }
-          (emitter.imports(timeText != null, previews) + fonts.imports)
+          (emitter.imports(timeText != null, previews) +
+              fonts.imports +
+              if (textRole != null)
+                listOf(
+                  "androidx.wear.compose.material3.MaterialTheme",
+                  "androidx.wear.compose.material3.ProvideTextStyle",
+                )
+              else emptyList())
             .distinct()
             .sorted()
             .forEach { appendLine("import $it") }
@@ -210,6 +219,14 @@ object WearScreenCodeExporter {
             body.forEach { appendLine(it) }
             appendLine("${INDENT}}")
             overlays.forEach { appendLine(it) }
+          }
+          if (textRole != null) {
+            // Inside the theme, so the role is the themed one; around everything the screen draws.
+            val provided = screen.lines().dropLast(1)
+            screen.clear()
+            screen.appendLine("${INDENT}ProvideTextStyle(MaterialTheme.typography.$textRole) {")
+            provided.forEach { screen.appendLine(if (it.isEmpty()) it else INDENT + it) }
+            screen.appendLine("${INDENT}}")
           }
           if (colorScheme == null && typography == null) append(screen)
           else {

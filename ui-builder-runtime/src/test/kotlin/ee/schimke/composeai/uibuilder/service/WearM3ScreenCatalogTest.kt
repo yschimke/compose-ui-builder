@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.WearScreenTheme
 import ee.schimke.composeai.uibuilder.protocol.CatalogBenchmarkV1
@@ -106,7 +107,8 @@ class WearM3ScreenCatalogTest {
     assertEquals(
       listOf("timeText", "scrollIndicator", "background") +
         WearScreenTheme.ROLES.map(WearScreenTheme::property) +
-        ThemeTypefaces.WEAR_GROUPS.map { it.property },
+        ThemeTypefaces.WEAR_GROUPS.map { it.property } +
+        ThemeTextStyle.PROPERTY,
       scaffold.properties.map { it.name },
     )
     // `overlays` is the third and it is not a content slot: Wear's dialogs take a `visible` flag

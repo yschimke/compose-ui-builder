@@ -229,6 +229,36 @@ internal class RemoteContentEmitter(
       .also { typography = it }
   }
 
+  /** What the last [themeTextStyle] read: the Wear role text with no `style` is set in. */
+  var textRole: String? = null
+    private set
+
+  /**
+   * The role [host] sets text with no `style` of its own in (see [ThemeTextStyle]), or null when it
+   * names none. Reading one puts the widget under `RemoteMaterialTheme`, inside which
+   * [provideTextStyle] provides it.
+   */
+  fun themeTextStyle(host: UiBuilderNode): String? =
+    ThemeTextStyle.role(host)?.let(ThemeTextStyle::wearRole)?.also {
+      usesTheme = true
+      textRole = it
+    }
+
+  /**
+   * [body] — the lines inside `RemoteMaterialTheme`, whose content opens at [depth] — under the
+   * role [themeTextStyle] read, as `ProvideRemoteTextStyle(RemoteMaterialTheme.typography.<role>) {
+   * … }`; unchanged when there is none. `RemoteMaterialTheme` provides `bodyLarge` the same way, so
+   * this replaces its default rather than adding to it. The call is `@RestrictTo`, which the widget
+   * file's `@file:Suppress("RestrictedApi")` already covers.
+   */
+  fun provideTextStyle(body: List<String>, depth: Int): List<String> {
+    val role = textRole ?: return body
+    val pad = INDENT.repeat(depth)
+    return listOf("${pad}ProvideRemoteTextStyle(RemoteMaterialTheme.typography.$role) {") +
+      body.map { if (it.isEmpty()) it else INDENT + it } +
+      listOf("$pad}")
+  }
+
   private var usesMaterialText = false
   private var usesColumn = false
   private var usesRow = false
@@ -2569,6 +2599,7 @@ internal class RemoteContentEmitter(
       imports += "androidx.wear.compose.remote.material3.RemoteColorScheme"
     }
     if (usesTheme) imports += "androidx.wear.compose.remote.material3.RemoteMaterialTheme"
+    if (textRole != null) imports += "androidx.wear.compose.remote.material3.ProvideRemoteTextStyle"
     if (usesRemoteFontFamily)
       imports += "androidx.compose.remote.creation.compose.text.RemoteFontFamily"
     if (usesMaterialText) imports += "androidx.wear.compose.remote.material3.RemoteText"

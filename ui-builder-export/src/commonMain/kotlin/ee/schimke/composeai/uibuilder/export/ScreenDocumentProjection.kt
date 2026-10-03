@@ -2814,7 +2814,7 @@ object ScreenDocumentProjection {
         ScreenNode(
           ScreenTheme.COMPONENT_ID,
           arguments = holders.associateWith { read(it, THEME_HOLDERS.getValue(it)) ?: return null },
-          slots = mapOf("content" to listOf(content)),
+          slots = mapOf("content" to listOf(textStyled(content, theme.textRole) ?: return null)),
         ),
       )
       val colorScheme =
@@ -2854,6 +2854,21 @@ object ScreenDocumentProjection {
         ) ?: return null,
       )
       return functionCall(fontsName, mapOf("provider" to googleFontProvider()))
+    }
+
+    /**
+     * [content] under the host's default text role — `ProvideTextStyle(typography.<role>)`, over
+     * the theme's own `bodyLarge` (see [ThemeTextStyle]) — or [content] itself when [role] is null.
+     * The role is read off the theme function's parameter, as every role inside it is.
+     */
+    private fun textStyled(content: ScreenNode, role: String?): ScreenNode? {
+      if (role == null) return content
+      val style = pathValue(listOf(THEME, "typography", role), TEXT_STYLE) ?: return null
+      return ScreenNode(
+        ScreenTheme.TEXT_STYLE_COMPONENT_ID,
+        arguments = mapOf("value" to style),
+        slots = mapOf("content" to listOf(content)),
+      )
     }
 
     /** A private composable [themed] writes, added ahead of those already written. */

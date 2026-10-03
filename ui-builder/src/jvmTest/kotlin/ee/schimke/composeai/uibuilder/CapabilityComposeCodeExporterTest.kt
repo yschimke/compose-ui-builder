@@ -147,6 +147,59 @@ class CapabilityComposeCodeExporterTest {
    * The root surface's typefaces wrap it in a `MaterialTheme` whose typography re-points each named
    * role at a Google Fonts family the file declares, as the canvas draws everything inside it.
    */
+  /**
+   * The root surface's default text role ([ThemeTextStyle]) is provided inside the theme, so text
+   * with no style of its own takes it.
+   */
+  @Test
+  fun `a themed root surface writes its default text role as ProvideTextStyle`() {
+    fun themed(role: String) =
+      document.copy(
+        roots = listOf("root"),
+        nodes =
+          mapOf(
+            "root" to
+              UiBuilderNode(
+                id = "root",
+                componentId = "m3/surface",
+                properties =
+                  JsonObject(
+                    mapOf(
+                      "themeTextStyle" to
+                        JsonObject(
+                          mapOf("type" to JsonPrimitive("enum"), "value" to JsonPrimitive(role))
+                        )
+                    )
+                  ),
+                slots = mapOf("content" to listOf("solo")),
+              ),
+            "solo" to
+              UiBuilderNode(
+                id = "solo",
+                componentId = "m3/text",
+                properties =
+                  JsonObject(
+                    mapOf(
+                      "text" to
+                        JsonObject(
+                          mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("Hi"))
+                        )
+                    )
+                  ),
+              ),
+          ),
+      )
+    val labels =
+      assertNotNull(CapabilityComposeCodeExporter.export(themed("labelLarge"), catalog).source)
+    assertTrue(
+      "  ProvideTextStyle(MaterialTheme.typography.labelLarge) {\n    Surface(" in labels,
+      labels,
+    )
+    val headlines =
+      assertNotNull(CapabilityComposeCodeExporter.export(themed("headlineSmall"), catalog).source)
+    assertTrue("ProvideTextStyle(MaterialTheme.typography.headlineSmall) {" in headlines, headlines)
+  }
+
   @Test
   fun `a themed root surface writes its typefaces as Google Fonts families`() {
     fun string(value: String) =

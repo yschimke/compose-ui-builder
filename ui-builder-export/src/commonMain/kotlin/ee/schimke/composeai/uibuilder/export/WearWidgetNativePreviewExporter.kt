@@ -106,6 +106,7 @@ internal object WearWidgetNativePreviewExporter {
           .let { probe ->
             probe.background(root)
             probe.themeTypography(root, depth = 2)
+            probe.themeTextStyle(root)
             contentIds.singleOrNull()?.let { probe.emit(it, depth = 1) }
             probe.usesTheme
           }
@@ -124,6 +125,7 @@ internal object WearWidgetNativePreviewExporter {
       )
     val background = emitter.background(root)
     val typography = emitter.themeTypography(root, depth = 2)
+    emitter.themeTextStyle(root)
     val body =
       when (contentIds.size) {
         // Through the emitter, so the file imports the `RemoteBox` and `RemoteModifier` it calls.
@@ -176,7 +178,7 @@ internal object WearWidgetNativePreviewExporter {
               typography.forEach(::appendLine)
               appendLine("$INDENT) {")
             }
-            body.forEach(::appendLine)
+            emitter.provideTextStyle(body, depth = 2).forEach(::appendLine)
             appendLine("$INDENT}")
           } else {
             body.forEach(::appendLine)

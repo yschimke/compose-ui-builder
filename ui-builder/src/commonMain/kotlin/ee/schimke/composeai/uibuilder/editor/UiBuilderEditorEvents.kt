@@ -216,6 +216,12 @@ sealed interface UiBuilderEditorEvent {
   data class CommitProperty(val nodeId: String, val property: String, val draft: String) :
     UiBuilderEditorEvent
 
+  /**
+   * Remove an optional property, so the node falls back to whatever its runtime defaults — a theme
+   * host's `themeTextStyle` back to `bodyLarge`. A required or unset property is left alone.
+   */
+  data class ClearProperty(val nodeId: String, val property: String) : UiBuilderEditorEvent
+
   /** Make a property read a state variable instead of holding a literal. */
   data class BindPropertyToState(
     val nodeId: String,

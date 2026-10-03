@@ -412,6 +412,40 @@ class TypefacePickerTest {
     }
 
   @Test
+  fun `the theme panel sets the default text style, and default unsets it`() =
+    runDesktopComposeUiTest(width = 1400, height = 1200) {
+      val host = assertNotNull(document.themeHost(), "the fixture is rooted on a Material surface")
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialInspectorMode = EditorInspectorMode.Theme,
+            initialInspectorOpen = true,
+            initialCanvasZoom = 1f,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      onNodeWithContentDescription("Default text style").performScrollTo().performClick()
+      onNodeWithText("labelLarge").performClick()
+      waitForIdle()
+      runOnIdle {
+        val root = assertNotNull(latest).document.nodes.getValue(host.id)
+        assertEquals("labelLarge", root.propertyText("themeTextStyle"))
+      }
+      onNodeWithContentDescription("Default text style").performScrollTo().performClick()
+      onNodeWithText("bodyLarge (default)", useUnmergedTree = true).performClick()
+      waitForIdle()
+      runOnIdle {
+        val root = assertNotNull(latest).document.nodes.getValue(host.id)
+        assertEquals("", root.propertyText("themeTextStyle"))
+      }
+    }
+
+  @Test
   fun `the canvas redraws in the design's family once it has loaded`() =
     runDesktopComposeUiTest(width = 800, height = 900) {
       var registry: UiBuilderFontRegistry? = null

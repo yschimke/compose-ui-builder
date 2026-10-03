@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
+import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -37,7 +38,8 @@ class WearWidgetContainerCatalogTest {
     containers.forEach { container ->
       assertEquals(
         listOf("background", "horizontalPaddingDp", "verticalPaddingDp", "cornerRadiusDp") +
-          ThemeTypefaces.WEAR_GROUPS.map { it.property },
+          ThemeTypefaces.WEAR_GROUPS.map { it.property } +
+          ThemeTextStyle.PROPERTY,
         container.properties.map { it.name },
         container.componentId,
       )

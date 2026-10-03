@@ -79,6 +79,55 @@ class WearLayoutAndColourExportTest {
   private fun refusals(document: UiBuilderDocument): List<String> =
     assertIs<WearScreenCodeExporter.Result.Refused>(WearScreenCodeExporter.export(document)).reasons
 
+  /**
+   * A text's role is written against Wear's own type scale: Wear's numerals pass through, and the
+   * Material 3 `headline*` roles Wear has no counterpart for write the matching title role, as the
+   * canvas draws them — `MaterialTheme.typography.headlineLarge` does not compile against Wear's.
+   */
+  @Test
+  fun `a text's role is written against Wear's type scale`() {
+    val source =
+      export(
+        screenWith(
+          listOf(
+            UiBuilderNode(
+              "reading",
+              WearScreenCodeExporter.TEXT,
+              properties("text" to "412", "style" to "numeralMedium"),
+            ),
+            UiBuilderNode(
+              "heading",
+              WearScreenCodeExporter.TEXT,
+              properties("text" to "Range", "style" to "headlineSmall"),
+            ),
+          )
+        )
+      )
+    assertTrue("style = MaterialTheme.typography.numeralMedium" in source, source)
+    assertTrue("style = MaterialTheme.typography.titleSmall" in source, source)
+    assertFalse("headline" in source, source)
+  }
+
+  /**
+   * The screen's default text role ([ThemeTextStyle]) is provided around everything it draws, as
+   * Wear's role: a Material 3 headline role, which Wear lacks, writes the matching title role.
+   */
+  @Test
+  fun `a screen's default text role is provided as Wear's role`() {
+    val source =
+      export(
+        screenWith(listOf(text("t")), scaffold = properties("themeTextStyle" to "headlineSmall"))
+      )
+    assertTrue("ProvideTextStyle(MaterialTheme.typography.titleSmall) {" in source, source)
+    assertTrue("import androidx.wear.compose.material3.ProvideTextStyle" in source, source)
+    assertTrue(
+      Regex("ProvideTextStyle\\(MaterialTheme.typography.titleSmall\\) \\{\\s+ScreenScaffold\\(")
+        .containsMatchIn(source),
+      source,
+    )
+    assertFalse("ProvideTextStyle" in export(screenWith(listOf(text("t")))))
+  }
+
   @Test
   fun `a column writes its alignment and spacing`() {
     val source =

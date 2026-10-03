@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
@@ -42,7 +43,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -86,6 +89,7 @@ import ee.schimke.composeai.uibuilder.canvas.withScreenFields
 import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_CLICK_COMPONENTS
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
+import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
@@ -105,6 +109,7 @@ import ee.schimke.composeai.uibuilder.reference.ReferenceWorkbench
 import ee.schimke.composeai.uibuilder.renderer.sdk.SelectableGoogleMaterialIcons
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.googleMaterialIcon
+import ee.schimke.composeai.uibuilder.role
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -2274,6 +2279,75 @@ private fun ThemeTypefacePickers(
       onTextInputFocusChanged = onTextInputFocusChanged,
     ) { family ->
       dispatch(UiBuilderEditorEvent.CommitProperty(host.id, group.property, family.orEmpty()))
+    }
+  }
+  Text(
+    "Default text style",
+    style = MaterialTheme.typography.labelMedium,
+    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+  )
+  TextRolePicker(
+    selected = host.propertyText(ThemeTextStyle.PROPERTY).takeIf { it.isNotBlank() },
+    roles = ThemeTextStyle.M3_ROLES,
+  ) { role ->
+    dispatch(
+      if (role == null) UiBuilderEditorEvent.ClearProperty(host.id, ThemeTextStyle.PROPERTY)
+      else UiBuilderEditorEvent.CommitProperty(host.id, ThemeTextStyle.PROPERTY, role)
+    )
+  }
+}
+
+/**
+ * The type role text with no `style` of its own is set in ([ThemeTextStyle]), picked from [roles]
+ * with each drawn in itself — under the theme the panel is editing, so a role shows the size and
+ * the face the canvas will use. [onPick] gets null for the default, which unsets the property.
+ */
+@Composable
+private fun TextRolePicker(selected: String?, roles: List<String>, onPick: (String?) -> Unit) {
+  var expanded by remember { mutableStateOf(false) }
+  Box(Modifier.fillMaxWidth()) {
+    OutlinedButton(
+      onClick = { expanded = true },
+      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Default text style" },
+    ) {
+      Text(
+        selected ?: "${ThemeTextStyle.DEFAULT} (default)",
+        maxLines = 1,
+        modifier = Modifier.weight(1f),
+      )
+      Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+    }
+    TrackEditorOverlay(expanded)
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+      fun pick(role: String?) {
+        expanded = false
+        onPick(role)
+      }
+      DropdownMenuItem(
+        text = { Text("${ThemeTextStyle.DEFAULT} (default)") },
+        trailingIcon =
+          if (selected == null) {
+            { Icon(Icons.Filled.Check, contentDescription = "Current text style") }
+          } else null,
+        onClick = { pick(null) },
+      )
+      roles.forEach { role ->
+        DropdownMenuItem(
+          text = {
+            Text(
+              role,
+              style = MaterialTheme.typography.role(role) ?: LocalTextStyle.current,
+              maxLines = 1,
+            )
+          },
+          trailingIcon =
+            if (role == selected) {
+              { Icon(Icons.Filled.Check, contentDescription = "Current text style") }
+            } else null,
+          modifier = Modifier.semantics { this.selected = role == selected },
+          onClick = { pick(role) },
+        )
+      }
     }
   }
 }

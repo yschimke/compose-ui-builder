@@ -411,6 +411,34 @@ jobs:
           echo "::error::release-please failed and no release was in flight — see the step above."
           exit 1
 
+  # CI for the release PR. release-please writes that PR with `github.token`, and GitHub starts no
+  # workflow from an event that token causes, so the PR's `pull_request` CI never ran: the required
+  # `gradle` check was missing on every release PR, which then merged with no build at all (#414).
+  # A `workflow_dispatch` is the one event that token may still start, and the runs it starts report
+  # their checks on the release branch's head commit, which is what the PR's required checks read.
+  # Dispatched after every pass that wrote the PR, so a rewritten release PR is built again.
+  release-pr-ci:
+    needs: update-release-pr
+    if: ${{ !cancelled() && needs.update-release-pr.result == 'success' && needs.update-release-pr.outputs.pr != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write # dispatch ci.yml
+    steps:
+      - name: Run CI on the release PR's branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RP_PR: ${{ needs.update-release-pr.outputs.pr }}
+        run: |
+          set -euo pipefail
+          branch="$(jq -r '.headBranchName // empty' <<<"$RP_PR")"
+          if [ -z "$branch" ]; then
+            echo "release-please reported no PR branch; nothing to build"
+            exit 0
+          fi
+          gh workflow run ci.yml --ref "$branch"
+          echo "dispatched ci.yml on $branch"
+
   # Which Maven coordinates merging the release PR would publish, as one comment on that PR. The
   # publish plan only runs inside the release, so the answer was visible only after the
   # irreversible upload. Same script, same Maven Central baseline, run against the release PR's

@@ -197,6 +197,47 @@ class WearWidgetGeneratedSourceQualityTest {
     assertFalse("RemoteFontFamily" in generate(), "an untyped widget names no family")
   }
 
+  /**
+   * A widget's default text role ([ThemeTextStyle]) is provided inside `RemoteMaterialTheme`, over
+   * its own `bodyLarge`, so a `RemoteText` with no style takes it.
+   */
+  @Test
+  fun `a widget's default text role is provided inside RemoteMaterialTheme`() {
+    val document = activitySummaryDocument()
+    val rootId = document.roots.single()
+    val root = document.nodes.getValue(rootId)
+    val themed =
+      document.copy(
+        id = "text-style-widget",
+        nodes =
+          document.nodes +
+            (rootId to
+              root.copy(
+                properties =
+                  JsonObject(
+                    root.properties +
+                      ("themeTextStyle" to
+                        JsonObject(
+                          mapOf(
+                            "type" to JsonPrimitive("enum"),
+                            "value" to JsonPrimitive("headlineSmall"),
+                          )
+                        ))
+                  )
+              )),
+      )
+    val source = generate(themed)
+
+    // Wear has no headline roles; the matching title role stands in, as on the canvas.
+    assertTrue(
+      "    RemoteMaterialTheme {\n        ProvideRemoteTextStyle(RemoteMaterialTheme.typography.titleSmall) {\n" in
+        source,
+      source,
+    )
+    assertTrue("import androidx.wear.compose.remote.material3.ProvideRemoteTextStyle" in source)
+    assertFalse("ProvideRemoteTextStyle" in generate(), "a widget with no role provides none")
+  }
+
   /** One text per colour spelling the validator admits, on the Large container. */
   private fun colourDocument(): UiBuilderDocument {
     val nodes =

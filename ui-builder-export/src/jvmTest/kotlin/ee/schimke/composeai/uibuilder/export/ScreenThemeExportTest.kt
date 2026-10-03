@@ -120,6 +120,15 @@ class ScreenThemeExportTest {
   }
 
   @Test
+  fun `the default text role is provided inside the theme`() {
+    val source =
+      source(document(surface = """"themeTextStyle": {"type": "enum", "value": "labelLarge"}"""))
+    assertTrue("ProvideTextStyle(value = " in source, source)
+    assertTrue(Regex("\\.labelLarge\\) \\{\\s+Surface").containsMatchIn(source), source)
+    assertFalse("MaterialTheme.typography" in source, source)
+  }
+
+  @Test
   fun `an unthemed surface exports as before, reading MaterialTheme`() {
     // The theme's record is added only to a themed screen: the generator reserves every recorded
     // component's name, so carrying `MaterialTheme` always refused this `MaterialTheme.typography`.
