@@ -110,7 +110,11 @@ maven-publish = "0.37.0"
 # writes the generated screen the way Compose is written by hand. 2.26.0
 # (compose-ai-tools#5581) names a slot lambda's parameter and reads it, which is how a Scaffold's
 # content is padded by the `contentPadding` it is handed; it is built against contracts 3.11.0.
-composeai-tools = "2.26.0"
+# 2.32.2 is built against compose-preview-daemon 3.13.0 (compose-ai-tools#5681) and names
+# @AnimatedPreview APNG captures `.apng` (compose-ai-tools#5679); the preview diff now compares
+# motion format and timing as well as the frame hash (compose-ai-tools#5680,
+# compose-ai-tools#5682).
+composeai-tools = "2.32.2"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -167,7 +171,11 @@ composeai-tools = "2.26.0"
 # `Type.Builder(...).build()` and derivation to `newBuilder()`, exactly as contracts 3.0.0 did in
 # #910; `ServeDesignPageStoreTest`'s unknown-enum case still asserts the drop.
 # 3.8.3 is what compose-ai-tools 2.24.0 was built against; the two lines move together.
-composeai-preview-daemon = "3.8.3"
+# 3.13.0 is what compose-ai-tools 2.32.2 was built against. It honours @AnimatedPreview
+# `format = Apng` with changed-region frames and per-frame delays, and advances animated captures
+# by the exact frame interval (compose-preview-daemon#203, compose-preview-daemon#206,
+# compose-preview-daemon#207, compose-preview-daemon#208), so motion previews re-time.
+composeai-preview-daemon = "3.13.0"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
