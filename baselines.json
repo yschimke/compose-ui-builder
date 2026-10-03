@@ -463,6 +463,14 @@
     "sha256": "158a35b3d4dc0784100c4e4d08e0cb9aabd12f5cdee36e1ed219085b2027aac7",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderChromeMockPreview.kt"
   },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderCommentNotificationsPreviewKt.UiBuilderCommentNotificationsPreview": {
+    "captureLabel": "",
+    "functionName": "UiBuilderCommentNotificationsPreview",
+    "module": "ui-builder",
+    "renderBasename": "UiBuilderCommentNotificationsPreview-2dfd8641.png",
+    "sha256": "e74cd35e89effff8273e96321ee4ff6e3085d3f132271752a1b78a42343ead27",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderCommentNotificationsPreview.kt"
+  },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderCommentsPreviewKt.UiBuilderCommentPinsOverMarkupPreview": {
     "captureLabel": "",
     "functionName": "UiBuilderCommentPinsOverMarkupPreview",

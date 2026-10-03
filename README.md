@@ -64,6 +64,7 @@ Auto-generated from `main`. Browse inline or compare against PR branches.
 | `TabRowStateSelectionPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/TabRowStateSelectionPreview-60d29606.png" width="150" /> |
 | `CatalogTextInputPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/CatalogTextInputPreview-4d9a7b59.png" width="150" /> |
 | `UiBuilderChromeMockPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderChromeMockPreview-2062a8f7.png" width="150" /> |
+| `UiBuilderCommentNotificationsPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderCommentNotificationsPreview-2dfd8641.png" width="150" /> |
 | `UiBuilderCommentPinsOverMarkupPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderCommentPinsOverMarkupPreview-0019b7e0.png" width="150" /> |
 | `UiBuilderCommentsPanelPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderCommentsPanelPreview-557e08f3.png" width="150" /> |
 | `UiBuilderDeviceViewPopOutPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderDeviceViewPopOutPreview-a1422731.png" width="150" /> |
