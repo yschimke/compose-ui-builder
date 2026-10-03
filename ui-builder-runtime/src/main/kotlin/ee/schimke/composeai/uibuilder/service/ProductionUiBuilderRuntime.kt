@@ -1327,41 +1327,36 @@ internal fun slotAccepts(slot: SlotCapabilityV1, component: ComponentCapabilityV
 /**
  * The Wear widget host frame's authored parameters.
  *
- * These are `androidx.glance.wear.composable.WearWidgetContainer`'s four arguments. The one that
- * matters most is `background`: on-device it is the *widget's* own background — the brush passed to
- * `WearWidgetDocument` — and the container paints it as the round rect, so the coloured squircle IS
- * the widget. A scaffold without it forced an author to fake the background with a filled surface
- * inside the content slot, which draws a coloured rectangle inside a differently-coloured frame:
- * not what any widget looks like.
+ * The one that matters most is `background`: on-device it is the *widget's* own background — the
+ * brush passed to `WearWidgetDocument` — and the container paints it as the round rect, so the
+ * coloured squircle IS the widget. A scaffold without it forced an author to fake the background
+ * with a filled surface inside the content slot, which draws a coloured rectangle inside a
+ * differently-coloured frame: not what any widget looks like.
  *
- * Defaults match upstream. `background` defaults to the literal `#FF272430` that
- * `WearWidgetContainer` forks from
+ * `background` defaults to the literal `#FF272430` that `WearWidgetContainer` forks from
  * `androidx.wear.compose.material3.ColorScheme.surfaceContainerLow` and applies when a widget
- * declares no background of its own; padding and radius default to the 8dp/26dp squircle spec every
- * shipped `WidgetPreviewParams` provider carries.
+ * declares no background of its own.
+ *
+ * Padding and corner radius are deliberately NOT here. `WearWidgetParams` hands them to the widget
+ * per host shape — 0 rectangular, 26 squircle, 999 round — so they are the host's, and
+ * [ee.schimke.composeai.uibuilder.export.WearWidgetHostShape] already shows a design in every shape
+ * as a view rather than an edit. Declaring them made the catalog promise an authored value the host
+ * ignores, and the published remote-m3 catalog dropped them for that reason
+ * (yschimke/wear-m3-catalog#623). A stored design that still carries one is read as an override by
+ * the renderer and the exporters, as before; it just cannot be authored any more.
  */
 internal fun widgetContainerProperties(): List<PropertyCapabilityV1> =
   listOf(
     PropertyCapabilityV1.Builder("background", JsonPrimitive("string"))
       .also {
         it.notes =
-          "The widget's own background, painted by the host as the rounded rect. Defaults to " +
-            "#FF272430, the colour WearWidgetContainer applies to a widget that declares none."
+          "The widget's own background, painted by the host inside the frame it draws. Defaults " +
+            "to #FF272430, the colour WearWidgetContainer applies to a widget that declares none. " +
+            "Padding and corner radius are not properties: WearWidgetParams hands them to the " +
+            "widget per host shape (0 rectangular, 26 squircle, 999 round), so the outermost box " +
+            "never authors a radius."
       }
-      .build(),
-    PropertyCapabilityV1.Builder("horizontalPaddingDp", JsonPrimitive("number"))
-      .also { it.notes = "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec." }
-      .build(),
-    PropertyCapabilityV1.Builder("verticalPaddingDp", JsonPrimitive("number"))
-      .also { it.notes = "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec." }
-      .build(),
-    PropertyCapabilityV1.Builder("cornerRadiusDp", JsonPrimitive("number"))
-      .also {
-        it.notes =
-          "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws " +
-            "this radius behind the content rather than clipping to it."
-      }
-      .build(),
+      .build()
   ) +
     // The widget's typefaces, one per group of `RemoteTypography` roles; the generated widget
     // sets them on `RemoteMaterialTheme`'s typography.

@@ -581,15 +581,17 @@ widget-specific authoring vocabulary, so anything you can do to them you can do 
 
 Note where the boundary falls. The scaffold **is** the host frame, modelled on
 `androidx.glance.wear.composable.WearWidgetContainer`: picking Small or Large picks the content box
-(200×60dp or 200×108dp on a 240dp screen), and the frame adds padding around it. It carries the
-container's own four parameters and nothing else —
+(200×60dp or 200×108dp on a 240dp screen), and the frame adds padding around it. Of the
+container's parameters it carries one, plus the widget's theme typefaces and default text style —
 
 | Property | Default | What it is |
 | --- | --- | --- |
 | `background` | `#FF272430` | The **widget's** background, which the host paints as the rounded rect. The default is the literal `WearWidgetContainer` forks from Wear Material 3's `surfaceContainerLow` and applies when a widget declares none. |
-| `horizontalPaddingDp` | `8` | `WearWidgetParams.horizontalPaddingDp`. |
-| `verticalPaddingDp` | `8` | `WearWidgetParams.verticalPaddingDp`. |
-| `cornerRadiusDp` | `26` | `WearWidgetParams.cornerRadiusDp` — 26 squircle, 999 round, 0 rectangular. |
+
+Padding and corner radius are not properties. `WearWidgetParams` hands them to the widget per host
+shape — 8/8/26 for the squircle, 0 radius for the rectangle, 999 for round — so they belong to the
+host, not to the design; switch the host shape in the editor to see the widget in each frame. A
+design saved while they were authorable keeps its values as an override.
 
 The background belongs on the scaffold, not on a surface inside it. On-device the coloured squircle
 **is** the widget: `WearWidgetDocument(background = …)` hands the brush to the container, which
