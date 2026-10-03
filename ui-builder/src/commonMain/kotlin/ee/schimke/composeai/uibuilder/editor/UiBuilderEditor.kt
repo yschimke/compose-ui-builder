@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -225,6 +227,8 @@ fun UiBuilderEditor(
   clientId: String = EDITOR_CLIENT_ID,
   operationIdPrefix: String = clientId,
   sessionLabel: String = "Local session",
+  visibilityLabel: String = "Private · this device",
+  onManageVisibility: (() -> Unit)? = null,
   onReconnect: (() -> Unit)? = null,
   onSubmission: ((EditorSubmission) -> Unit)? = null,
   authoritativeGeneration: Int = 0,
@@ -567,6 +571,7 @@ fun UiBuilderEditor(
    */
   onCopyDesignLink: (suspend (DesignUrlSelectors) -> String)? = null,
   newDesignCatalogs: List<UiBuilderNewDesignCatalog> = emptyList(),
+  onCreatePublicDesign: ((String, String, String, List<NewDesignState>) -> Unit)? = null,
   onCreateDesign:
     ((
       catalogSystemId: String,
@@ -2580,6 +2585,21 @@ fun UiBuilderEditor(
               )
             }
         ) {
+          if (!focusedCanvas && !dedicatedOutput && hostChrome == null) {
+            Row(
+              Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              Text(
+                visibilityLabel,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.weight(1f),
+              )
+              if (onManageVisibility != null)
+                TextButton(onClick = onManageVisibility) { Text("Sharing") }
+            }
+          }
           if (focusedCanvas) {
             // No toolbar: the host's own bar above the editor is the focused layout's chrome.
           } else if (!dedicatedOutput && hostChrome != null) {
@@ -3037,6 +3057,7 @@ fun UiBuilderEditor(
                 ?: newDesignCatalogs.first().systemId,
             onDismiss = { showNewDesign = false },
             onCreate = onCreateDesign,
+            onCreatePublic = onCreatePublicDesign,
           )
         }
       }

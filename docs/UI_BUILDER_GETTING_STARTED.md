@@ -1421,3 +1421,17 @@ global OpenCode configuration). Replace the example URL with the builder host:
 Do not add a bearer header or browser token to this configuration. The agent requests its own
 short-lived `ui-builder-read`, `ui-builder-write`, and `ui-builder-export` grant and passes that
 token only to the UI-builder tool calls that need it.
+
+## Visibility and sharing
+
+New server designs start **Private**. Choose **Public (read only)** in the creation form to let
+anyone with the link view the design. The editor shows the current mode above the toolbar;
+owners can use **Sharing** to switch modes or invite viewers and editors. Making a design private
+again keeps invited collaborators and removes public access. A private host still requires its
+usual authentication even for a public design.
+
+Browser-only designs remain private to that browser. Publish one to a server before sharing a link.
+Private links contain no credentials: recipients need their own access, and agents use their own
+approved grant. Public visibility never grants editing. An agent authorized by the owner can edit
+or change sharing in either mode. Older servers that do not advertise visibility support keep the
+existing create flow; the editor does not offer a public creation choice they cannot honor.

@@ -79,6 +79,8 @@ import kotlinx.serialization.json.putJsonObject
 @Composable
 fun UiBuilderEditorChromePreview() {
   UiBuilderEditor(
+    visibilityLabel = "Private · invited collaborators only",
+    onManageVisibility = {},
     document = editorChromePreviewDocument,
     catalog = editorChromePreviewCatalog,
     initialSelectedNodeId = EDITOR_CHROME_PREVIEW_SELECTION,
@@ -408,6 +410,7 @@ fun UiBuilderNewDesignPreview() {
         ),
       ),
     initialCatalogSystemId = "m3-catalog",
+    onCreatePublic = { _, _, _, _ -> },
     onCreate = { _, _, _, _ -> },
   )
 }

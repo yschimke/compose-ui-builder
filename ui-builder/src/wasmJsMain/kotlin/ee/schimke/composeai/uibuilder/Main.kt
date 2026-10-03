@@ -1168,6 +1168,7 @@ internal data class LiveSessionConfig(
    * what to offer, never a gate: the server authorizes every write where it lands.
    */
   val canWrite: Boolean = true,
+  val designVisibilitySupported: Boolean = false,
   /** Why [canWrite] is false, in the server's words. */
   val writeDeniedReason: String? = null,
   /** Where to sign in and come back here, when the server offers GitHub sign-in to this caller. */
@@ -1424,6 +1425,7 @@ internal fun liveSessionConfig(identity: ServerIdentity): LiveSessionConfig =
   liveSessionConfig(identity.actorId)
     .copy(
       canWrite = identity.canWrite,
+      designVisibilitySupported = identity.designVisibilitySupported,
       writeDeniedReason = identity.writeDeniedReason,
       signInUrl = identity.signInUrl,
     )
@@ -1519,6 +1521,7 @@ internal suspend fun loadDevicePresets(
 internal data class ServerIdentity(
   val actorId: String?,
   val canWrite: Boolean = true,
+  val designVisibilitySupported: Boolean = false,
   val writeDeniedReason: String? = null,
   val signInUrl: String? = null,
   val authenticationRequired: Boolean = false,
@@ -1538,6 +1541,7 @@ internal suspend fun resolveServerIdentity(): ServerIdentity =
           actorId = payload.actorId.takeIf { it.isNotBlank() },
           // Absent from an older server: it would take the edit, as it always has.
           canWrite = payload.canWrite ?: true,
+          designVisibilitySupported = payload.designVisibilitySupported,
           writeDeniedReason = payload.writeDeniedReason,
           signInUrl = payload.signInUrl,
         )
@@ -1637,6 +1641,7 @@ private val identityJson = Json { ignoreUnknownKeys = true }
 private data class IdentityPayload(
   val actorId: String = "",
   val canWrite: Boolean? = null,
+  val designVisibilitySupported: Boolean = false,
   val writeDeniedReason: String? = null,
   val signInUrl: String? = null,
 )
@@ -2123,7 +2128,7 @@ internal external fun navigateToUiBuilderPage(catalogSystemId: String, designId:
  * reads it to authenticate the write and to carry it into the permalink it redirects to.
  */
 @JsFun(
-  """(catalogSystemId, designId, templateId, state, carried) => {
+  """(catalogSystemId, designId, templateId, state, publicRead, carried) => {
     const current = new URL(globalThis.location.href);
     const action = new URL(
       '/ui-builder/designs',
@@ -2146,6 +2151,7 @@ internal external fun navigateToUiBuilderPage(catalogSystemId: String, designId:
     field('designId', designId);
     field('catalog', catalogSystemId);
     field('template', templateId);
+    field('visibility', publicRead ? 'public' : 'private');
     if (state && state !== '[]') field('state', state);
     globalThis.document.body.appendChild(form);
     form.submit();
@@ -2156,6 +2162,7 @@ private external fun navigateToNewDesignWith(
   designId: String,
   templateId: String,
   state: String,
+  publicRead: Boolean,
   carried: String,
 )
 
@@ -2165,12 +2172,14 @@ internal fun navigateToNewDesign(
   designId: String,
   templateId: String,
   state: String,
+  publicRead: Boolean = false,
 ) =
   navigateToNewDesignWith(
     catalogSystemId = catalogSystemId,
     designId = designId,
     templateId = templateId,
     state = state,
+    publicRead = publicRead,
     carried = DESIGN_URL_IDENTITY_KEYS.joinToString(","),
   )
 
@@ -2945,3 +2954,13 @@ private fun Color.toCssColor(): String {
   val rgba = (argb shl 8) or ((argb ushr 24) and 0xFF)
   return "#" + rgba.toUInt().toString(16).padStart(8, '0')
 }
+
+@JsFun(
+  """(design) => {
+  const url = new URL(globalThis.location.href);
+  url.pathname = '/ui-builder/' + encodeURIComponent(design) + '/access';
+  url.hash = '';
+  globalThis.location.assign(url.toString());
+}"""
+)
+internal external fun openDesignSharing(design: String)

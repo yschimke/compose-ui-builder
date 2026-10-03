@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
@@ -58,6 +59,27 @@ class NewDesignKeyboardTest {
         listOf(NewDesignState("expanded", NewDesignStateType.Flag, JsonPrimitive(true))),
         state,
       )
+    }
+
+  @Test
+  fun `creation defaults to private and uses the selected visibility for submit and quick start`() =
+    runDesktopComposeUiTest(width = 900, height = 1100) {
+      val creations = mutableListOf<String>()
+      setContent {
+        UiBuilderNewDesignScreen(
+          catalogs = listOf(catalog),
+          initialCatalogSystemId = catalog.systemId,
+          onCreate = { _, _, _, _ -> creations += "private" },
+          onCreatePublic = { _, _, _, _ -> creations += "public" },
+        )
+      }
+      onNodeWithContentDescription("Design ID").performImeAction()
+      onNodeWithText("Public (read only)").performScrollTo().performClick()
+      onNodeWithContentDescription("Design ID").performImeAction()
+      onNodeWithContentDescription("New from blank").performScrollTo().performClick()
+      onNodeWithText("Private").performScrollTo().performClick()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
+      assertEquals(listOf("private", "public", "public", "private"), creations)
     }
 
   private companion object {
