@@ -415,7 +415,7 @@ for (const item of gallery) {
     page.on('pageerror', (error) => console.warn('page error:', String(error)));
     // When the editor never comes up, these say why: its console errors and the requests it lost.
     page.on('console', (message) => {
-      if (message.type() === 'error') console.warn(`${item.id} console:`, message.text());
+      if (message.type() === 'error' || process.env.DEBUG_CONSOLE) console.warn(`${item.id} console:`, message.text());
     });
     page.on('requestfailed', (request) =>
       console.warn(`${item.id} request failed:`, request.url(), request.failure()?.errorText),
