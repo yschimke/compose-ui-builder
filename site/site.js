@@ -64,3 +64,20 @@ for (const pre of document.querySelectorAll('pre')) {
   });
   pre.appendChild(button);
 }
+
+// The agent prompt: collapsed to its first lines until asked for, so Get started stays readable.
+for (const pre of document.querySelectorAll('pre.prompt')) {
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'prompt-toggle';
+  const label = () => (toggle.textContent = pre.classList.contains('collapsed')
+    ? 'Show the whole prompt' : 'Show less');
+  label();
+  toggle.setAttribute('aria-expanded', 'false');
+  toggle.addEventListener('click', () => {
+    const collapsed = pre.classList.toggle('collapsed');
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    label();
+  });
+  pre.after(toggle);
+}

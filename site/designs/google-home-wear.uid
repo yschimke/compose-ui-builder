@@ -25,6 +25,7 @@
     "networkAccess": false,
     "exportDevices": [
       "id:wearos_small_round",
+      "id:wearos_large_round",
       "id:wearos_xl_round"
     ]
   },

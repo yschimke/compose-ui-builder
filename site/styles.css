@@ -89,8 +89,9 @@ section { padding: clamp(56px, 8vw, 104px) 20px; max-width: 1200px; margin: 0 au
   display: inline-block; margin: 0 0 10px; padding: 3px 12px; border-radius: 999px;
   background: var(--surface-2); color: var(--muted); font-size: .85rem; font-weight: 600;
 }
-.hero h1 { font-size: clamp(1.9rem, 3.4vw, 2.9rem); margin: 0 auto .25em; max-width: 1000px; }
+.hero h1 { font-size: clamp(1.9rem, 3.4vw, 2.9rem); margin: 0 auto .25em; max-width: 1000px; text-wrap: balance; }
 .accent {
+  display: inline-block; white-space: nowrap;
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
@@ -179,7 +180,20 @@ pre {
   background: var(--code-bg); color: var(--code-fg); border-radius: 12px; font-size: .88rem; line-height: 1.5;
 }
 pre code { font-size: inherit; }
-pre.prompt { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Commands wrap rather than scroll, so the Copy button never sits over the end of one. */
+pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* The agent prompt is long: the first lines show, the rest behind "Show the whole prompt". Copy
+   copies all of it either way. */
+pre.prompt.collapsed {
+  max-height: 11.5em; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent);
+  mask-image: linear-gradient(to bottom, #000 60%, transparent);
+}
+.prompt-toggle {
+  font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; margin: -6px 0 12px;
+  padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line);
+  background: transparent; color: var(--accent);
+}
 .placeholder { color: #ffd479; font-style: italic; }
 .copy {
   position: absolute; top: 8px; right: 8px; font: 600 .75rem system-ui, sans-serif; cursor: pointer;
