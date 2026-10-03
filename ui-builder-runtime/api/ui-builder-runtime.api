@@ -133,6 +133,7 @@ public abstract interface class ee/schimke/composeai/uibuilder/service/IconOutli
 
 public final class ee/schimke/composeai/uibuilder/service/PackagedUiBuilderRenderBundle {
 	public static final field DOCUMENT_OVERRIDE_KEY Ljava/lang/String;
+	public static final field GOOGLE_FONTS_DIRECTORY_PROPERTY Ljava/lang/String;
 	public static final field INSTANCE Lee/schimke/composeai/uibuilder/service/PackagedUiBuilderRenderBundle;
 	public static final field MANIFEST_RESOURCE Ljava/lang/String;
 	public static final field PREVIEW_ID Ljava/lang/String;

@@ -35,11 +35,19 @@ fun ProductionUiBuilderPreview() {
   ProductionUiBuilderSurface(decodeProductionRendererDocument(source))
 }
 
-/** The document drawn with its pinned catalog's canvas vocabulary, as a production export is. */
+/**
+ * The document drawn with its pinned catalog's canvas vocabulary, as a production export is, in
+ * [fonts]: the design's typefaces, there for the first frame, since this daemon draws one.
+ */
 @Composable
-internal fun ProductionUiBuilderSurface(document: UiBuilderDocument) {
+internal fun ProductionUiBuilderSurface(
+  document: UiBuilderDocument,
+  fonts: Map<String, androidx.compose.ui.text.font.FontFamily> = ProductionFontFamilies.production,
+) {
   ProvideProductionCatalog(document) {
-    UiBuilderSurface(document = document, editorOverlay = false)
+    CompositionLocalProvider(LocalUiBuilderFontFamilies provides fonts) {
+      UiBuilderSurface(document = document, editorOverlay = false)
+    }
   }
 }
 
