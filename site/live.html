@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Live editor · Compose UI Builder</title>
+  <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    html, body { height: 100%; }
+    body { display: flex; flex-direction: column; }
+    .live-bar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 10px clamp(12px, 3vw, 24px); border-bottom: 1px solid var(--line); background: var(--surface);
+    }
+    .live-bar .brand { font-size: .95rem; }
+    .live-bar .title { color: var(--muted); font-size: .92rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .live-bar button { font: inherit; font-size: .88rem; cursor: pointer; }
+    .live-stage { flex: 1; min-height: 0; position: relative; background: #141218; }
+    .live-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .live-note { position: absolute; inset: 0; display: grid; place-items: center; color: #cac4d0; text-align: center; padding: 24px; }
+  </style>
+</head>
+<body>
+  <div class="live-bar">
+    <a class="brand" href="./"><img src="img/icon.svg" alt="" width="24" height="24">Compose UI Builder</a>
+    <span class="title" id="title"></span>
+    <button class="btn btn-ghost btn-small" id="reset" type="button">Reset</button>
+    <button class="btn btn-ghost btn-small" id="download" type="button">Download .uid</button>
+    <a class="btn btn-small" href="gallery.html">Gallery</a>
+  </div>
+  <div class="live-stage">
+    <p class="live-note" id="note">Loading the editor…</p>
+    <iframe id="app" title="Compose UI Builder" sandbox="allow-scripts allow-same-origin allow-popups allow-downloads"></iframe>
+  </div>
+  <script type="module">
+    import { mountEditor } from './js/mcp-host.js';
+
+    // ?design=<gallery id>; ?layout=focused|full (full by default).
+    const params = new URLSearchParams(location.search);
+    // ?bare=1 hides the bar, for the gallery's screenshots.
+    if (params.has('bare')) document.querySelector('.live-bar').hidden = true;
+    const gallery = await (await fetch('gallery.json')).json();
+    const entry = gallery.find((it) => it.id === params.get('design')) ?? gallery[0];
+    const fileName = entry.file.split('/').pop();
+    const storageKey = 'compose-ui-builder-site:' + entry.id;
+    document.title = entry.title + ' · Compose UI Builder';
+    document.getElementById('title').textContent = entry.title + ' · ' + entry.kind;
+
+    const original = await (await fetch(entry.file)).text();
+    let saved = null;
+    try { saved = localStorage.getItem(storageKey); } catch {}
+
+    let resetting = false;
+    const editor = await mountEditor({
+      frame: document.getElementById('app'),
+      editorBase: 'editor/',
+      fileName,
+      text: saved ?? original,
+      layout: params.get('layout') ?? 'full',
+      onSave: (text) => {
+        if (resetting) return;
+        try { localStorage.setItem(storageKey, text); } catch {}
+      },
+    });
+    document.getElementById('note').textContent =
+      'The editor needs WebGL and loads about 40 MB on first use.';
+
+    // A reload rather than editor.replace(): the editor keeps unsaved edits through an external
+    // change on purpose, so replacing the file under a dirty canvas would not reset it.
+    document.getElementById('reset').addEventListener('click', () => {
+      resetting = true;
+      try { localStorage.removeItem(storageKey); } catch {}
+      location.reload();
+    });
+    document.getElementById('download').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(new Blob([editor.text()], { type: 'application/json' }));
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+  </script>
+</body>
+</html>

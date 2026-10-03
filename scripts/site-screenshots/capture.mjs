@@ -14,7 +14,7 @@
 // SCENES may need adjusting: run this, look at the PNGs, and fix the numbers.
 
 import { createServer } from 'node:http';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -52,6 +52,8 @@ const TYPES = {
   '.otf': 'font/otf',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
+  '.css': 'text/css',
+  '.uid': 'application/json',
 };
 
 function listen(handler) {
@@ -231,7 +233,9 @@ async function open(options, viewport) {
   return { page, click, settle: (ms = 900) => page.waitForTimeout(ms) };
 }
 
-const WEAR_LIST = await design('wear-starter-list', 'Wear list screen');
+// The Wear list template exactly as New from template seeds it (SiteTemplateDesignsTest keeps it
+// current), and the agent's result, replayed from a committed design.
+const WEAR_LIST = await readFile(join(repo, 'site/designs/wear-list.uid'), 'utf8');
 const WEAR_LIBRARY = await design('jetcaster-wear-library', 'Wear list screen');
 
 const PROMPT =
@@ -239,35 +243,28 @@ const PROMPT =
   'Latest episodes and Podcasts, then a Queue section with Up Next.';
 
 const SCENES = {
-  // Step 1: a template, opened in the full editor.
+  // Step 1: a template in the full editor, the canvas unrolled on the left and two display
+  // variants previewed on the right, switched on from the Screen dock's "Also compare" chips.
   async 'step-1-template'() {
-    const { page } = await open(
+    const { page, click, settle } = await open(
       { fileName: 'wear-list.uid', text: WEAR_LIST, layout: 'full' },
       { width: 1280, height: 800 },
     );
+    const at = (name, fallback) => JSON.parse(process.env[name] ?? fallback);
+    await click(at('SCREEN_DOCK', '[1254, 232]'));
+    await settle();
+    await click(at('COMPARE_DARK', '[954, 290]'));
+    await settle();
+    await click(at('COMPARE_FONT', '[1099, 290]'));
+    await settle();
+    await click(at('SCREEN_DOCK_CLOSE', '[1197, 138]'));
+    await page.mouse.move(5, 795);
+    await settle(2_500);
     return page;
   },
-  // Step 2: the prompt, and the agent's edit arriving in the open editor.
-  async 'step-2-prompt'() {
-    const { page, settle } = await open(
-      {
-        fileName: 'wear-list.uid',
-        text: WEAR_LIST,
-        layout: 'focused',
-        chat: [{ role: 'user', text: PROMPT }],
-      },
-      { width: 1200, height: 760 },
-    );
-    await page.evaluate((text) => {
-      tool('Edited wear-list.uid · 13 nodes');
-      globalThis.fakeHost.externalWrite(text);
-      say('agent', 'Done: two ListHeaders and three Wear Material 3 buttons with icons. The editor beside us has reloaded it, so point at anything you want changed.');
-    }, WEAR_LIBRARY);
-    await settle(4_000);
-    return page;
-  },
-  // Step 3: a comment on a node, which the editor sends into the chat with the node attached.
-  async 'step-3-iterate'() {
+  // Step 2: the prompt, the agent's edit, and a comment on a node, which the editor sends into
+  // the chat with the node attached.
+  async 'step-2-iterate'() {
     const { page, click, settle } = await open(
       {
         fileName: 'wear-list.uid',
@@ -320,8 +317,8 @@ const SCENES = {
     await settle(2_500);
     return page;
   },
-  // Features: the generated Compose source beside the canvas, and a Material 3 tablet design.
-  async 'feature-code'() {
+  // Step 3: the generated Compose source beside the canvas.
+  async 'step-3-export'() {
     const { page, click, settle } = await open(
       { fileName: 'wear-list.uid', text: WEAR_LIBRARY, layout: 'full' },
       { width: 1280, height: 800 },
@@ -331,6 +328,7 @@ const SCENES = {
     await settle(2_500);
     return page;
   },
+  // Features: a Material 3 tablet design.
   async 'feature-material'() {
     const { page } = await open(
       { fileName: 'gmail.uid', text: await design('google-gmail-tablet'), layout: 'full' },
@@ -340,11 +338,75 @@ const SCENES = {
   },
 };
 
+// The gallery: each design opened through the site's own live.html, from a server that lays the
+// editor archive at site/editor/ the way the Pages workflow does, so a capture also proves the
+// live page boots. Designs the gallery takes from committed fixtures are replayed to .uid first.
+const site = join(repo, 'site');
+const gallery = JSON.parse(await readFile(join(site, 'gallery.json'), 'utf8'));
+for (const item of gallery) {
+  if (item.fixture) await writeFile(join(site, item.file), (await design(item.fixture)) + '\n');
+}
+const siteServer = await listen(async (request, response) => {
+  const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname));
+  const file = path.startsWith('/editor/') ? join(root, path.slice('/editor/'.length)) : join(site, path);
+  if (!file.startsWith(root) && !file.startsWith(site)) return response.writeHead(403).end();
+  try {
+    const body = await readFile(file.endsWith('/') ? join(file, 'index.html') : file);
+    response.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(body);
+  } catch {
+    response.writeHead(404).end();
+  }
+});
+for (const item of gallery) {
+  SCENES[`gallery/${item.id}`] = async () => {
+    const page = await browser.newPage({
+      viewport: { width: 1200, height: 750 },
+      deviceScaleFactor: 2,
+      locale: 'en-US',
+    });
+    page.on('pageerror', (error) => console.warn('page error:', String(error)));
+    await page.goto(
+      `http://127.0.0.1:${siteServer.port}/live.html?design=${item.id}&layout=focused&bare=1`,
+    );
+    const frame = await (await page.waitForSelector('#app')).contentFrame();
+    await frame.waitForFunction(
+      () => document.documentElement.getAttribute('data-ui-builder-ready') === 'true',
+      null,
+      { timeout: 240_000 },
+    );
+    await page.waitForTimeout(4_000);
+    return page;
+  };
+}
+
+// For finding click points: `SHOTS=explore EXPLORE='x,y;x,y'` opens the Wear list in the full
+// editor and saves explore-<n>.png after each click (points in the editor frame, CSS pixels).
+SCENES.explore = async () => {
+  const { page, click, settle } = await open(
+    { fileName: 'wear-list.uid', text: WEAR_LIST, layout: 'full' },
+    { width: 1280, height: 800 },
+  );
+  const points = (process.env.EXPLORE ?? '').split(';').filter(Boolean);
+  for (const [index, point] of points.entries()) {
+    const [x, y, button] = point.split(',');
+    if (button === 'wheel') {
+      await page.mouse.move(Number(x) + (await (await page.$('#app')).boundingBox()).x, Number(y));
+      await page.mouse.wheel(0, 600);
+    } else {
+      await click([Number(x), Number(y)], button ? { button } : undefined);
+    }
+    await settle(1_200);
+    await page.screenshot({ path: join(out, `explore-${index}.png`) });
+  }
+  return page;
+};
+
 let failed = false;
 for (const [name, scene] of Object.entries(SCENES)) {
-  if (only && !only.includes(name)) continue;
+  if (only ? !only.includes(name) : name === 'explore') continue;
   try {
     const page = await scene();
+    await mkdir(dirname(join(out, `${name}.png`)), { recursive: true });
     await page.screenshot({ path: join(out, `${name}.png`) });
     await page.close();
     console.log(`ok   ${name}.png`);
@@ -354,5 +416,5 @@ for (const [name, scene] of Object.entries(SCENES)) {
   }
 }
 await browser.close();
-for (const s of [assets, sandbox, hostServer]) s.server.close();
+for (const s of [assets, sandbox, hostServer, siteServer]) s.server.close();
 process.exit(failed ? 1 : 0);

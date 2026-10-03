@@ -8,6 +8,9 @@ name: Landing Page
 # copies committed in site/img are what the page falls back to if a capture fails, and what a local
 # preview shows. The weekly run keeps the page current even when nothing here changed.
 #
+# The same archive is deployed at site/editor/, where live.html opens the gallery's designs in the
+# real editor with no server: the editor's MCP App shell, hosted by site/js/mcp-host.js.
+#
 # One-time setup: Settings → Pages → Build and deployment → Source: "GitHub Actions".
 
 on:
@@ -16,6 +19,7 @@ on:
     paths:
       - site/**
       - scripts/site-screenshots/**
+      - docs/design/fixtures/ui-builder/designs/**
       - .github/workflows/pages.yml
   release:
     types: [published]
@@ -51,6 +55,9 @@ jobs:
             --pattern 'compose-preview-ui-builder-web-*.zip' --dir "$RUNNER_TEMP"
           mkdir -p "$RUNNER_TEMP/web"
           unzip -q "$RUNNER_TEMP"/compose-preview-ui-builder-web-*.zip -d "$RUNNER_TEMP/web"
+      - name: Serve the editor beside the site
+        # live.html runs this copy, so the gallery's "Open in the editor" is the latest release.
+        run: cp -r "$RUNNER_TEMP/web" site/editor
       - name: Capture screenshots
         # A failed capture keeps the committed screenshots rather than holding the page back.
         continue-on-error: true

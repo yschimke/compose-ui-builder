@@ -17,6 +17,7 @@
     <div class="nav-links">
       <a href="#how">How it works</a>
       <a href="#features">Features</a>
+      <a href="gallery.html">Gallery</a>
       <a href="https://github.com/yschimke/compose-ui-builder">GitHub</a>
       <a class="btn btn-small" href="#get-started">Get started</a>
     </div>
@@ -27,37 +28,40 @@
     <h1>Design real Compose screens <span class="accent">with your agent.</span></h1>
     <p class="lede">
       A visual editor for real, compiled Compose components that works hand in hand with your
-      coding agent. Three steps from idea to Compose code you can ship:
+      coding agent. Three steps from idea to code you can ship:
     </p>
 
     <ol id="how" class="steps">
       <li class="step">
-        <a class="shot" href="img/step-1-template.png"><img src="img/step-1-template.png" alt="The Wear list screen template open in the editor" width="1280" height="800"></a>
+        <a class="shot" href="img/step-1-template.png"><img src="img/step-1-template.png" alt="The Wear list template on the canvas, with dark and large-font previews beside it" width="1280" height="800"></a>
         <div class="step-text">
           <span class="step-num">1</span>
           <div>
             <h3>Start from a template</h3>
-            <p>Pick a <strong>Wear list screen</strong>, a phone scaffold or a Wear widget. It opens as a <code>.uid</code> design file you keep in git.</p>
+            <p>Pick a <strong>Wear list screen</strong>, a phone scaffold or a Wear widget. The full,
+              unrolled screen sits on the left, with instant interactive previews on the right.</p>
           </div>
         </div>
       </li>
       <li class="step">
-        <a class="shot" href="img/step-2-prompt.png"><img src="img/step-2-prompt.png" alt="A prompt in the agent chat and the updated Wear library screen in the editor" width="1200" height="760"></a>
+        <a class="shot" href="img/step-2-iterate.png"><img src="img/step-2-iterate.png" alt="A prompt in the agent chat, the updated Wear screen, and a comment on one button sent back to the chat" width="1200" height="760"></a>
         <div class="step-text">
           <span class="step-num">2</span>
           <div>
-            <h3>Tell your agent what you want</h3>
-            <p>Describe the screen in plain words. The agent edits the design and the open editor reloads as the file changes.</p>
+            <h3>Iterate with your agent</h3>
+            <p>Describe the screen and watch the edit land. Then right-click anything to comment,
+              and your note reaches the chat with that exact element attached.</p>
           </div>
         </div>
       </li>
       <li class="step">
-        <a class="shot" href="img/step-3-iterate.png"><img src="img/step-3-iterate.png" alt="A comment on the Podcasts button arriving in the chat with the node attached" width="1200" height="760"></a>
+        <a class="shot" href="img/step-3-export.png"><img src="img/step-3-export.png" alt="The generated Compose source beside the design" width="1280" height="800"></a>
         <div class="step-text">
           <span class="step-num">3</span>
           <div>
-            <h3>Iterate through chat</h3>
-            <p>Right-click anything and comment. Your note lands in the chat with that exact node attached.</p>
+            <h3>Export code and SVG</h3>
+            <p>Copy readable Compose code for your app, SVG that pastes into Figma as editable
+              layers, or a PNG for review.</p>
           </div>
         </div>
       </li>
@@ -86,57 +90,77 @@
 
   <section id="get-started" class="start">
     <h2>Get started</h2>
-    <p class="section-lede">Connect your agent to the hosted Compose Preview MCP server. The first
-      call asks you to approve access in your browser; designs stay private to you and the people
-      you share them with.</p>
+    <p class="section-lede">Everything runs on the hosted service at
+      <a href="https://preview.coo.ee/ui-builder/">preview.coo.ee</a>. The only setup is one line
+      for your agent.</p>
 
-    <div class="tabs" role="tablist" aria-label="Choose your agent">
-      <button role="tab" aria-selected="true" aria-controls="tab-claude" id="t-claude">Claude Code</button>
-      <button role="tab" aria-selected="false" aria-controls="tab-codex" id="t-codex" tabindex="-1">Codex</button>
-      <button role="tab" aria-selected="false" aria-controls="tab-other" id="t-other" tabindex="-1">Cursor &amp; other MCP clients</button>
-      <button role="tab" aria-selected="false" aria-controls="tab-none" id="t-none" tabindex="-1">No agent</button>
-    </div>
-
-    <div class="tab-panel" role="tabpanel" id="tab-claude" aria-labelledby="t-claude">
-      <p>Add the server once:</p>
-      <pre><code>claude mcp add --transport http compose-preview https://preview.coo.ee/mcp</code></pre>
-      <p>Already have a token? Pass it as a header to skip the approval step:</p>
-      <pre><code>claude mcp add --transport http compose-preview https://preview.coo.ee/mcp \
-  --header "X-Compose-Preview-Token: $COMPOSE_PREVIEW_TOKEN"</code></pre>
-    </div>
-    <div class="tab-panel" role="tabpanel" id="tab-codex" aria-labelledby="t-codex" hidden>
-      <p>Add this to <code>~/.codex/config.toml</code>:</p>
-      <pre><code>[mcp_servers.compose-preview]
+    <ol class="start-steps">
+      <li>
+        <span class="step-num">1</span>
+        <div>
+          <h3>Connect your agent, once</h3>
+          <div class="tabs" role="tablist" aria-label="Choose your agent">
+            <button role="tab" aria-selected="true" aria-controls="tab-claude" id="t-claude">Claude Code</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-codex" id="t-codex" tabindex="-1">Codex</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-other" id="t-other" tabindex="-1">Cursor &amp; others</button>
+          </div>
+          <div class="tab-panel" role="tabpanel" id="tab-claude" aria-labelledby="t-claude">
+            <pre><code>claude mcp add --transport http compose-preview-catalog https://preview.coo.ee/mcp</code></pre>
+          </div>
+          <div class="tab-panel" role="tabpanel" id="tab-codex" aria-labelledby="t-codex" hidden>
+            <p>Add to <code>~/.codex/config.toml</code>:</p>
+            <pre><code>[mcp_servers.compose-preview-catalog]
 url = "https://preview.coo.ee/mcp"</code></pre>
-    </div>
-    <div class="tab-panel" role="tabpanel" id="tab-other" aria-labelledby="t-other" hidden>
-      <p>Any client that speaks Streamable HTTP MCP works. For Cursor, add to
-        <code>.cursor/mcp.json</code>; most other clients use the same shape:</p>
-      <pre><code>{
+          </div>
+          <div class="tab-panel" role="tabpanel" id="tab-other" aria-labelledby="t-other" hidden>
+            <p>Any Streamable HTTP MCP client. For Cursor, <code>.cursor/mcp.json</code>:</p>
+            <pre><code>{
   "mcpServers": {
-    "compose-preview": {
-      "type": "http",
-      "url": "https://preview.coo.ee/mcp"
-    }
+    "compose-preview-catalog": { "type": "http", "url": "https://preview.coo.ee/mcp" }
   }
 }</code></pre>
-    </div>
-    <div class="tab-panel" role="tabpanel" id="tab-none" aria-labelledby="t-none" hidden>
-      <ul class="plain">
-        <li><a href="https://preview.coo.ee/ui-builder/">Open the web editor</a>, no install needed.</li>
-        <li>Download the desktop app for macOS, Windows or Linux from the
-          <a href="https://github.com/yschimke/compose-ui-builder/releases/latest">latest release</a>.</li>
-        <li>Install the IntelliJ plugin from the same release
-          (<em>Settings → Plugins → Install Plugin from Disk</em>, IntelliJ IDEA 2026.2+).</li>
-      </ul>
-    </div>
+          </div>
+          <p>Restart your agent so it picks the server up. Already using the
+            <a href="https://github.com/yschimke/compose-ag-plugin">Compose plugins</a>? Their
+            <code>compose-catalogs</code> plugin is this same server, so skip this step.</p>
+        </div>
+      </li>
+      <li>
+        <span class="step-num">2</span>
+        <div>
+          <h3>Create a design</h3>
+          <p>Open <a href="https://preview.coo.ee/ui-builder/">preview.coo.ee/ui-builder</a>, sign in
+            with GitHub, choose <strong>New design</strong> and pick a template, such as the Wear list
+            screen.</p>
+        </div>
+      </li>
+      <li>
+        <span class="step-num">3</span>
+        <div>
+          <h3>Hand it to your agent</h3>
+          <p>Press <strong>Copy OpenCode AI prompt</strong> in the editor's toolbar, paste it into
+            your agent, and say what you want:</p>
+          <pre><code>&lt;the copied prompt&gt;
 
-    <div class="try">
-      <p>Then try this prompt:</p>
-      <pre><code>Create a Wear OS design from the wear-list template in the Compose UI Builder,
-turn it into a podcast library with "Latest episodes" and "Podcasts" buttons,
-and give me a link to open it.</code></pre>
-    </div>
+Turn it into a podcast library with "Latest episodes" and "Podcasts" buttons,
+then a Queue section with Up Next.</code></pre>
+          <p>The prompt names the design and the server and tells the agent to ask for its own access,
+            which you approve in the browser. No token is ever pasted. Keep the editor open beside
+            the chat: the agent's edits appear as it makes them.</p>
+        </div>
+      </li>
+    </ol>
+
+    <p class="start-note">Prefer to work locally or offline? The desktop app, the IntelliJ plugin and
+      <code>compose-preview-server ui</code> keep designs as <code>.uid</code> files in your repository.
+      See <a href="https://github.com/yschimke/compose-ui-builder/blob/main/docs/UI_BUILDER_GETTING_STARTED.md">running it locally</a>.</p>
+  </section>
+
+  <section class="gallery-teaser">
+    <h2>See what people build</h2>
+    <p class="section-lede">A Wear widget, a Wear OS app and an adaptive Material 3 app, each one
+      openable live in your browser.</p>
+    <div class="cta-row"><a class="btn" href="gallery.html">Open the gallery</a></div>
   </section>
 
   <section id="features" class="features">
@@ -176,11 +200,7 @@ and give me a link to open it.</code></pre>
       </article>
     </div>
 
-    <div class="feature-shots">
-      <figure>
-        <img src="img/feature-code.png" alt="The editor with the Compose export panel open beside a Wear screen" loading="lazy" width="1280" height="800">
-        <figcaption>The design and its Compose source, side by side.</figcaption>
-      </figure>
+    <div class="feature-shots single">
       <figure>
         <img src="img/feature-material.png" alt="A Material 3 tablet inbox with a list and reading pane in the editor" loading="lazy" width="1440" height="900">
         <figcaption>Adaptive Material 3 layouts, built from the same catalog your app uses.</figcaption>

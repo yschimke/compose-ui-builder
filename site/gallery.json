@@ -1,0 +1,28 @@
+[
+  {
+    "id": "weather-widget",
+    "title": "Weather widget",
+    "kind": "Wear widget · Remote Compose",
+    "description": "A Glance Wear widget body from the WearWidget sample, previewed in round and rectangular hosts.",
+    "file": "designs/weather-widget.uid",
+    "source": "ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderTemplates.kt"
+  },
+  {
+    "id": "google-home-wear",
+    "title": "Home devices",
+    "kind": "Wear OS app · Wear Material 3",
+    "description": "Cards, switch buttons, a slider and an EdgeButton in a TransformingLazyColumn: a smart-home device list.",
+    "file": "designs/google-home-wear.uid",
+    "fixture": "google-home-wear",
+    "source": "docs/design/fixtures/ui-builder/designs/google-home-wear.json"
+  },
+  {
+    "id": "google-gmail-tablet",
+    "title": "Inbox and reading pane",
+    "kind": "Adaptive app · Material 3",
+    "description": "A list-detail mail layout: a NavigationSuiteScaffold around a supporting-pane scaffold, search bar, filter chips and a reading pane.",
+    "file": "designs/google-gmail-tablet.uid",
+    "fixture": "google-gmail-tablet",
+    "source": "docs/design/fixtures/ui-builder/designs/google-gmail-tablet.json"
+  }
+]
