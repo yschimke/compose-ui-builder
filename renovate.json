@@ -1,31 +1,15 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended",
-    ":dependencyDashboard",
+    "github>yschimke/renovate-config",
     "helpers:pinGitHubActionDigests"
   ],
+  "description": "Extends the shared preset at yschimke/renovate-config, which owns the release-train grouping for the ee.schimke.composeai group: compose-ai-tools, compose-preview-daemon, compose-preview-contracts and rc-players each get a group of their own, so a BOM bump here rides the same group it does in the sibling repositories. The rules below are this repository's own.",
   "prConcurrentLimit": 5,
   "schedule": [
     "before 5am on Monday"
   ],
   "packageRules": [
-    {
-      "matchManagers": [
-        "github-actions"
-      ],
-      "groupName": "GitHub Actions"
-    },
-    {
-      "matchManagers": [
-        "gradle"
-      ],
-      "matchPackageNames": [
-        "ee.schimke.composeai:compose-ai-tools-bom",
-        "ee.schimke.composeai:compose-preview-daemon-bom"
-      ],
-      "groupName": "Compose AI Tools and preview daemon"
-    },
     {
       "description": "The design-render reusable workflow is pinned to a commit on compose-preview-server's main and bumped by the custom manager below, not the github-actions manager, which only tracks tags.",
       "matchManagers": [
