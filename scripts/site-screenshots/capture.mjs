@@ -308,10 +308,11 @@ const SCENES = {
       .waitForFunction(() => globalThis.fakeHost.messages.length > 0, null, { timeout: 20_000 })
       .catch(() => console.warn('step-2: the comment did not reach the chat; check STEP3_TARGET'));
     await settle(1_500);
-    // Then Quick edit on the "Your library" header: its text, edited in place beside the node.
-    await click(JSON.parse(process.env.QUICK_EDIT_TARGET ?? '[336, 166]'), { button: 'right' });
+    // Then Quick edit on the "Up Next" label, the last row's text: its size and its words,
+    // edited in place, in a card that opens over the dark end of the list.
+    await click(JSON.parse(process.env.QUICK_EDIT_TARGET ?? '[348, 556]'), { button: 'right' });
     await settle();
-    await click(JSON.parse(process.env.QUICK_EDIT_ROW ?? '[415, 199]'));
+    await click(JSON.parse(process.env.QUICK_EDIT_ROW ?? '[427, 81]'));
     await page.mouse.move(5, 5);
     await settle(1_500);
     return page;

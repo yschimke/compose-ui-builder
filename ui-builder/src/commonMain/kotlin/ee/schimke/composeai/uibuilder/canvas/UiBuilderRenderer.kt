@@ -1141,11 +1141,19 @@ private fun RenderNode(
           // `layout/lazy-column` each already draw around. Without this the whole editor is blank
           // for
           // a Wear screen, because the extent's height is the content's.
+          //
+          //
+          // Each row is handed the full width, as the real list hands it
+          // (`WearCanvasTransformingLazyColumn`'s `fillMaxWidth()`), and centred as the real list
+          // centres them. Handed nothing, a row that sizes to its content — `ListHeader` centres
+          // its label within the width it is given — sat at the start of the column, so the extent
+          // drew every header left-aligned while the device previews beside it drew them centred.
           Column(
             modifier = measured,
             verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp", 4f).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
           ) {
-            items.forEach { child(it, Modifier) }
+            items.forEach { child(it, Modifier.fillMaxWidth()) }
           }
         } else {
           // The real lazy column, scaling and fading its rows through the library's own
