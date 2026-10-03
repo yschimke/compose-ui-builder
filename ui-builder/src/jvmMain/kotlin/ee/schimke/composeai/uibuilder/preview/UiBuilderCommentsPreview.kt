@@ -86,6 +86,9 @@ fun UiBuilderCommentPinsOverMarkupPreview() {
     initialInspectorOpen = true,
     restoredReference = referencePreviewOverlay,
     comments = commentsPreviewBoard,
+    // A pin shows only for the thread being looked at, so open the arrow's: the one this render
+    // exists to show beside its stroke.
+    linkedThreadId = "t-arrow",
     onPostComment = {},
     onResolveCommentThread = { _, _ -> },
   )
