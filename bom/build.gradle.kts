@@ -4,10 +4,9 @@ plugins { id("composeai.maven-publishing-platform") }
 
 // The BOM for everything this repository publishes.
 //
-// Four coordinates on one version line, and a consumer wanting three of them has to name three
-// versions and keep them in step. compose-preview-server does exactly that today — four entries
-// in its version catalog behind one `composeai-ui-builder` ref — which works precisely because a
-// human keeps them equal. Importing this platform makes that structural instead:
+// Three coordinates on Maven Central — `:ui-builder-runtime`, `:ui-builder-export` and
+// `:ui-builder-render-bundle` — and a consumer naming each one by version has to keep them in step
+// by hand. Importing this platform makes that structural instead:
 //
 //     implementation(platform("ee.schimke.composeai:compose-preview-ui-builder-bom:<version>"))
 //     implementation("ee.schimke.composeai:compose-preview-ui-builder-runtime")
@@ -50,8 +49,9 @@ composeAiPlatformPublishing {
     artifactId = "compose-preview-ui-builder-bom",
     displayName = "Compose UI Builder — Bill of Materials",
     description =
-      "Version constraints for every Compose UI Builder artifact, so a host aligns the design " +
-        "service, the export projection and the packaged frontend with one coordinate.",
+      "Version constraints for every Compose UI Builder artifact on Maven Central, so a host " +
+        "aligns the design service, the export projection and the render bundle with one " +
+        "coordinate. The web editor ships as a GitHub release asset and is not constrained here.",
   )
   inceptionYear.set("2026")
 }
