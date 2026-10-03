@@ -794,7 +794,20 @@ private fun updateCatalogRuntimeSurface(
         try { message = JSON.parse(event.data); } catch { return; }
         if (!manifest || message.schema !== 'compose-ui-builder-renderer/v' + manifest.protocolVersion ||
             message.protocolVersion !== manifest.protocolVersion ||
-            message.runtimeId !== runtimeId || !pending.has(message.requestId)) return;
+            message.runtimeId !== runtimeId) return;
+        if (message.type === 'inspectionUpdated') {
+          // The drawn render's layout after it changed — a font that arrived after the first frame
+          // reflowed the text taller. The frame was sized from the `rendered` reply alone, so
+          // without this whatever the reflow pushed down stayed cut off. Only for the render on
+          // screen: an update for one already replaced is a picture of the wrong document.
+          if (message.requestId !== latestRenderRequestId || !renderedRef ||
+              !validInspection(message.payload?.inspection, renderedRef)) return;
+          host.__uiBuilderInspection = message.payload.inspection;
+          host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
+          controller.drawOverlay();
+          return;
+        }
+        if (!pending.has(message.requestId)) return;
         const expected = pending.get(message.requestId);
         const expectedType = {
           initialize: 'initialized',

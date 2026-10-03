@@ -20,6 +20,8 @@ import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 
 private var latestSnapshot: UiBuilderInspectionSnapshot? = null
 private var completedRenderRequestId: String? = null
+/** The layout the editor last heard of, so an unchanged one is not sent again. */
+private var reportedSnapshot: UiBuilderInspectionSnapshot? = null
 private lateinit var endpoint: CatalogRuntimeProtocolEndpoint
 
 private data class RenderRequest(
@@ -130,14 +132,31 @@ private fun startRuntimeViewport(
         )
           return@content
         latestSnapshot = snapshot
-        if (completedRenderRequestId == request.requestId) return@content
+        if (completedRenderRequestId == request.requestId) {
+          // The render has been answered, but its layout can still change: a font that arrives
+          // after the first frame reflows the text taller, and the editor sizes its frame from what
+          // it was last told. Report the settled change against the same request.
+          scheduleMeasuredResponse(UPDATE_SETTLE_MS) {
+            val latest = latestSnapshot ?: return@scheduleMeasuredResponse
+            if (completedRenderRequestId != request.requestId || latest == reportedSnapshot)
+              return@scheduleMeasuredResponse
+            endpoint.inspectionUpdated(request.requestId, latest)?.let {
+              reportedSnapshot = latest
+              postRuntimeMessage(endpoint.encode(it))
+            }
+          }
+          return@content
+        }
         scheduleMeasuredResponse(
           if (snapshot.generation.measuredNodeIds.isEmpty()) UNMEASURED_SETTLE_MS
           else MEASURED_SETTLE_MS
         ) {
           if (completedRenderRequestId == request.requestId) return@scheduleMeasuredResponse
           val response = endpoint.rendered(request.requestId, snapshot)
-          if (response.type == "rendered") completedRenderRequestId = request.requestId
+          if (response.type == "rendered") {
+            completedRenderRequestId = request.requestId
+            reportedSnapshot = snapshot
+          }
           postRuntimeMessage(endpoint.encode(response))
         }
       }
@@ -193,6 +212,8 @@ private fun postRuntimeMessage(encoded: String): Unit =
 
 private const val MEASURED_SETTLE_MS = 32
 private const val UNMEASURED_SETTLE_MS = 250
+/** How long a completed render's layout must hold still before an update is sent. */
+private const val UPDATE_SETTLE_MS = 100
 
 private fun scheduleMeasuredResponse(delayMs: Int, callback: () -> Unit): Unit =
   js(

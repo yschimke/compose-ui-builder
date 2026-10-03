@@ -29,6 +29,14 @@ typealias CatalogRuntimeMessage = UiBuilderRendererMessageV1
 const val CATALOG_RUNTIME_CAPABILITY_REVEAL_NODE = "revealNode"
 
 /**
+ * Every runtime built on this SDK keeps reporting a completed render's layout as
+ * `inspectionUpdated` messages carrying the render's request id, whenever it changes after the
+ * `rendered` reply: a font that arrives after the first frame reflows the text, and an editor that
+ * sized the frame from the first reply alone cut off whatever the reflow pushed down.
+ */
+const val CATALOG_RUNTIME_CAPABILITY_INSPECTION_UPDATES = "inspectionUpdates"
+
+/**
  * The catalog draws a horizontal scroller whole when the document says so — see
  * [UI_BUILDER_UNROLLED_AXIS_KEY]. Declared by the catalog, never assumed: a lazy row that ignores
  * the signal is measured against an unbounded width, and the runtime's surface fails.
@@ -86,6 +94,8 @@ class CatalogRuntimeProtocolEndpoint(
   private var parentOrigin: String? = null
   private var activeDocument: DocumentRef? = null
   private var pendingRender: Pair<String, DocumentRef>? = null
+  /** The render [inspectionUpdated] reports on: the last one [rendered] completed. */
+  private var completedRender: Pair<String, DocumentRef>? = null
   private val pendingActions = mutableMapOf<String, DocumentRef>()
   // Replay detection, bounded: the editor keeps one frame for a whole editing session and sends a
   // render per edit, so an unbounded record grew with every edit. Its request ids only increase, so
@@ -150,9 +160,12 @@ class CatalogRuntimeProtocolEndpoint(
               put(
                 "capabilities",
                 JsonArray(
-                  (setOf(CATALOG_RUNTIME_CAPABILITY_REVEAL_NODE) + capabilities).sorted().map {
-                    JsonPrimitive(it)
-                  }
+                  (setOf(
+                      CATALOG_RUNTIME_CAPABILITY_REVEAL_NODE,
+                      CATALOG_RUNTIME_CAPABILITY_INSPECTION_UPDATES,
+                    ) + capabilities)
+                    .sorted()
+                    .map { JsonPrimitive(it) }
                 ),
               )
             },
@@ -220,6 +233,7 @@ class CatalogRuntimeProtocolEndpoint(
           )
         }
         activeDocument = null
+        completedRender = null
         pendingActions.clear()
         pendingRender = message.requestId to DocumentRef(document.id, document.revision)
         CatalogRuntimeCommand.Render(message.requestId, document, renderPayload.second)
@@ -243,6 +257,7 @@ class CatalogRuntimeProtocolEndpoint(
     if (pendingRender == requestId to ref) {
       activeDocument = ref
       pendingRender = null
+      completedRender = requestId to ref
       return inspectionReply(requestId, "rendered", snapshot)
     }
     return actionRejected(
@@ -250,6 +265,19 @@ class CatalogRuntimeProtocolEndpoint(
       "STALE_RENDER_COMPLETION",
       "render completion does not match the pending request and document revision",
     )
+  }
+
+  /**
+   * The completed render [requestId]'s layout after it changed, or null when [snapshot] is not of
+   * that render's document — a newer render has started, or this one never completed.
+   */
+  fun inspectionUpdated(
+    requestId: String,
+    snapshot: UiBuilderInspectionSnapshot,
+  ): CatalogRuntimeMessage? {
+    val ref = DocumentRef(snapshot.documentId, snapshot.documentRevision)
+    if (completedRender != requestId to ref || activeDocument != ref) return null
+    return inspectionReply(requestId, INSPECTION_UPDATED, snapshot)
   }
 
   fun actionDispatched(
@@ -362,6 +390,9 @@ class CatalogRuntimeHostSession(
 
   private val pending = mutableMapOf<String, Pending>()
 
+  /** The last render the runtime completed, whose [INSPECTION_UPDATED] messages are accepted. */
+  private var completedRender: Pair<String, DocumentRef>? = null
+
   fun request(
     requestId: String,
     type: String,
@@ -409,6 +440,7 @@ class CatalogRuntimeHostSession(
       } catch (_: Exception) {
         return null
       }
+    if (response.type == INSPECTION_UPDATED) return acceptInspectionUpdate(response)
     val expected = pending[response.requestId]
     if (
       response.schema != protocolSchema ||
@@ -434,6 +466,32 @@ class CatalogRuntimeHostSession(
       }
     }
     pending.remove(response.requestId)
+    // Only a completion moves it. An error for an older render can arrive after a newer one has
+    // completed, and clearing it then refused every later layout of the render on screen; the
+    // runtime itself stops reporting a render the moment a newer one starts.
+    if (response.type == "rendered" && expected is Pending.Inspection) {
+      completedRender = response.requestId to expected.document
+    }
+    return response
+  }
+
+  /**
+   * A later layout of the last completed render, accepted for that render's document only: an
+   * update for an older render, or one that arrives once a newer render is pending, is dropped.
+   */
+  private fun acceptInspectionUpdate(response: CatalogRuntimeMessage): CatalogRuntimeMessage? {
+    val (requestId, document) = completedRender ?: return null
+    if (
+      response.schema != protocolSchema ||
+        response.protocolVersion != protocolVersion ||
+        response.runtimeId != runtimeId ||
+        response.requestId != requestId ||
+        pending.values.any { it is Pending.Inspection && it.responseType == "rendered" }
+    )
+      return null
+    val snapshot = validatedInspection(response.payload) ?: return null
+    if (snapshot.documentId != document.id || snapshot.documentRevision != document.revision)
+      return null
     return response
   }
 
@@ -515,6 +573,9 @@ private fun UiBuilderRendererSurfaceV2.isValid(): Boolean =
     density <= MAX_SURFACE_DENSITY &&
     surfaceId.isNotBlank() &&
     surfaceId.length <= MAX_SURFACE_ID_LENGTH
+
+/** The message type a runtime reports a completed render's changed layout with. */
+const val INSPECTION_UPDATED = "inspectionUpdated"
 
 private fun rendererProtocolSchema(protocolVersion: Int): String =
   when (protocolVersion) {
