@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ChainLink
+import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.discovery.ScreenAction
 import ee.schimke.composeai.discovery.ScreenDocument
 import ee.schimke.composeai.discovery.ScreenNode
@@ -61,6 +62,7 @@ import ee.schimke.composeai.uibuilder.protocol.StateValueV1
 import ee.schimke.composeai.uibuilder.protocol.StateVariableV1
 import ee.schimke.composeai.uibuilder.protocol.StringValueV1
 import ee.schimke.composeai.uibuilder.protocol.TestTagModifierV1
+import ee.schimke.composeai.uibuilder.protocol.ThemeV1
 import ee.schimke.composeai.uibuilder.protocol.ToggleActionV1
 import ee.schimke.composeai.uibuilder.protocol.TypographyTokenValueV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
@@ -215,7 +217,20 @@ object ScreenDocumentProjection {
        * digest, so the person bundling the picture knows exactly which line to replace.
        */
       val assetPlaceholders: List<AssetPlaceholder> = emptyList(),
-    ) : Outcome
+      /** Whether the root is wrapped in the design's theme; see [ScreenTheme]. */
+      val themed: Boolean = false,
+    ) : Outcome {
+      /**
+       * [record] with what this projection's own calls resolve through: the `MaterialTheme` a
+       * themed root is wrapped in, which no catalog records.
+       *
+       * Added only to a themed screen. The generator reserves the name of every component the
+       * record holds, so a record carrying `MaterialTheme` refuses any screen that reads
+       * `MaterialTheme.typography` — which an unthemed screen does for every text style.
+       */
+      fun resolvable(record: ComponentRecordFile): ComponentRecordFile =
+        if (themed) ScreenTheme.withThemeRecord(record) else record
+    }
 
     /** Every unexpressible thing found, not the first — a builder wants the whole list. */
     data class Refused(val reasons: List<String>) : Outcome
@@ -255,7 +270,16 @@ object ScreenDocumentProjection {
       roots.forEach { pass.node(it) }
       return Outcome.Refused((listOf(counted) + pass.reasons).distinct())
     }
-    val root = pass.node(roots.single())
+    // The theme host the canvas draws the design under: the root, when it is a surface.
+    val theme =
+      document.nodes[roots.single()]
+        ?.takeIf { it.componentId == SURFACE_CATALOG_ID }
+        ?.let { ScreenTheme.of(it, dark = document.environment.theme == ThemeV1.DARK) }
+    pass.themeParameters = theme != null
+    val root =
+      pass.node(roots.single())?.let { content ->
+        if (theme == null) content else pass.themed(content, theme, screenName)
+      }
     val projected = root?.let {
       pass.finish(ScreenDocument(screenName, it, pass.state.values.toList()))
     }
@@ -279,6 +303,7 @@ object ScreenDocumentProjection {
     return Outcome.Projected(
       checkNotNull(projected),
       assetPlaceholders = pass.assetPlaceholders.toList(),
+      themed = theme != null,
     )
   }
 
@@ -499,6 +524,15 @@ object ScreenDocumentProjection {
 
     private var bindingScope: BindingScope? = null
     private var functionScope: FunctionBody? = null
+
+    /**
+     * Whether the root is being projected inside the theme function [themed] writes, where theme
+     * roles read that function's parameters rather than `MaterialTheme`. See [pathValue].
+     */
+    var themeParameters = false
+
+    /** The functions [themed] writes around the root, outermost first. */
+    private val themeFunctions = mutableListOf<JsonObject>()
     private val functions = linkedMapOf<String, FunctionBody>()
     private val defining = mutableSetOf<String>()
 
@@ -554,13 +588,13 @@ object ScreenDocumentProjection {
 
     fun finish(screen: ScreenDocument): ScreenDocument? {
       if (reasons.isNotEmpty()) return null
-      if (functions.isEmpty()) return screen
+      if (functions.isEmpty() && themeFunctions.isEmpty()) return screen
       return shared(
         JsonObject(
           Json.encodeToJsonElement(screen).jsonObject +
-            ("functions" to JsonArray(functions.values.map { it.encode() }))
+            ("functions" to JsonArray(themeFunctions + functions.values.map { it.encode() }))
         ),
-        "reusable components",
+        if (functions.isEmpty()) "the design's theme" else "reusable components",
       )
     }
 
@@ -1178,6 +1212,8 @@ object ScreenDocumentProjection {
         // Recomposition identity rather than design. Spent, like a variant selector is, and for a
         // reason that is written down: see [IDENTITY_PROPERTIES].
         if (property in IDENTITY_PROPERTIES) continue
+        // The design's theme, which [themed] writes around the root; not `Surface` arguments.
+        if (node.componentId == SURFACE_CATALOG_ID && property in ScreenTheme.PROPERTIES) continue
         if (unplaceable(property, node)) continue
         // How a parent box aligns this node — `BoxScope.align`, so a scoped link decided by the
         // slot the node sits in, exactly as the authored `align` modifier is.
@@ -2212,9 +2248,7 @@ object ScreenDocumentProjection {
      * `12.dp` would silently pin it.
      */
     private fun shapeOf(name: String): ScreenValue? =
-      SHAPE_TOKENS[name]?.let { path ->
-        ScreenValue.Reference(path.first(), path.drop(1), typeFqn = SHAPE)
-      }
+      SHAPE_TOKENS[name]?.let { path -> pathValue(path, SHAPE) }
         ?: SHAPE_CONSTANTS[name]?.let { ScreenValue.Reference(it, typeFqn = SHAPE) }
         ?: name.toDoubleOrNull()?.let { radius ->
           dp(radius)?.let { corner ->
@@ -2424,13 +2458,7 @@ object ScreenDocumentProjection {
         return ScreenValue.Construct(
           callableFqn = COLOR_PAINTER,
           positional =
-            listOf(
-              ScreenValue.Reference(
-                rootFqn = THEME,
-                members = listOf("colorScheme", "surfaceVariant"),
-                typeFqn = COLOR,
-              )
-            ),
+            listOfNotNull(pathValue(listOf(THEME, "colorScheme", "surfaceVariant"), COLOR)),
           typeFqn = PAINTER,
         )
       }
@@ -2704,10 +2732,280 @@ object ScreenDocumentProjection {
           "$where is the $kind token `$name`, which is not one this catalog's theme defines"
         )
       }
-      return ScreenValue.Reference(
-        rootFqn = path.first(),
-        members = path.drop(1),
+      return pathValue(path, typeFqn)
+    }
+
+    /**
+     * A qualified path as a value: `MaterialTheme.colorScheme.primary`, `Alignment.Center`.
+     *
+     * Theme roles are the exception once the root is themed. A screen that calls `MaterialTheme(…)`
+     * cannot also read `MaterialTheme.colorScheme` — the generator refuses an import whose name the
+     * file already spends on a call — so inside a themed root a role is read off the theme
+     * function's own parameter instead: `colorScheme.primary`, the same value the `MaterialTheme`
+     * around it provides. See [themed].
+     */
+    private fun pathValue(path: List<String>, typeFqn: String): ScreenValue? {
+      if (!themeParameters || path.first() != THEME) {
+        return ScreenValue.Reference(
+          rootFqn = path.first(),
+          members = path.drop(1),
+          typeFqn = typeFqn,
+        )
+      }
+      val (holder, role) = path[1] to path.drop(2)
+      if (functionScope != null) {
+        return refuse(
+          "a reusable component inside the themed surface reads the theme role " +
+            "`${(listOf(holder) + role).joinToString(".")}`, which this export cannot write " +
+            "inside a component yet; read it outside the component or set the role directly"
+        )
+      }
+      val holderType = THEME_HOLDERS.getValue(holder)
+      val read = scopedRead("ParameterRead", "parameter", holder, holderType) ?: return null
+      return ScreenValue.Chain(
+        receiver = read,
+        links = role.map { ChainLink("$holderType.$it", property = true, member = true) },
         typeFqn = typeFqn,
+      )
+    }
+
+    /**
+     * [content] — the projected root surface — inside the `MaterialTheme` [theme] describes, as the
+     * call the screen body makes.
+     *
+     * The theme is written as up to three private functions, outermost first, because each value
+     * the next one needs can only be named once it is a parameter:
+     * - `<Screen>Fonts(provider)`: the Google Fonts provider, built once, from which each family is
+     *   built — the provider carries Play services' certificates, which inlined into every `Font`
+     *   of every family would be most of the file. Only when the theme names a typeface.
+     * - `<Screen>Typography(base, display, …)`: the baseline type scale and each family, from which
+     *   the themed typography is built. Only when the theme scales type or names a typeface.
+     * - `<Screen>Theme(colorScheme, typography, shapes)`: `MaterialTheme` around the surface. Theme
+     *   roles inside it read these parameters (see [pathValue]), so all three are always passed.
+     *
+     * The baselines are the canvas's: `lightColorScheme()` or `darkColorScheme()` by the design's
+     * environment, `Typography()` and `Shapes()`.
+     */
+    fun themed(content: ScreenNode, theme: ScreenTheme, screenName: String): ScreenNode? {
+      val themeName = "${screenName}Theme"
+      val typographyName = "${screenName}Typography"
+      val fontsName = "${screenName}Fonts"
+      fun read(name: String, type: String) = scopedRead("ParameterRead", "parameter", name, type)
+      val holders = THEME_HOLDERS.keys.toList()
+      define(
+        themeName,
+        holders.map { it to THEME_HOLDERS.getValue(it) },
+        ScreenNode(
+          ScreenTheme.COMPONENT_ID,
+          arguments = holders.associateWith { read(it, THEME_HOLDERS.getValue(it)) ?: return null },
+          slots = mapOf("content" to listOf(content)),
+        ),
+      )
+      val colorScheme =
+        ScreenValue.Construct(
+          callableFqn = if (theme.dark) DARK_COLOR_SCHEME else LIGHT_COLOR_SCHEME,
+          named =
+            theme.colors.mapValues { (role, literal) ->
+              color(literal, "the theme's `$role`") ?: return null
+            },
+          typeFqn = COLOR_SCHEME,
+        )
+      val shapes = themeShapes(theme.cornerRadiusDp) ?: return null
+      val themeCall = { typography: ScreenValue ->
+        functionCall(
+          themeName,
+          mapOf("colorScheme" to colorScheme, "typography" to typography, "shapes" to shapes),
+        )
+      }
+      val baseline = ScreenValue.Construct(TYPOGRAPHY, typeFqn = TYPOGRAPHY)
+      if (!theme.scalesType && theme.families.isEmpty()) return themeCall(baseline)
+      // In the order the groups are declared, so a design's parameters read display to label.
+      val groups = ThemeTypefaces.GROUPS.filter { it in theme.families }
+      define(
+        typographyName,
+        listOf("base" to TYPOGRAPHY) + groups.map { it.name to FONT_FAMILY },
+        themeCall(themedTypography(theme, groups) ?: return null) ?: return null,
+      )
+      if (groups.isEmpty()) return functionCall(typographyName, mapOf("base" to baseline))
+      val provider = read("provider", GOOGLE_FONT_PROVIDER) ?: return null
+      define(
+        fontsName,
+        listOf("provider" to GOOGLE_FONT_PROVIDER),
+        functionCall(
+          typographyName,
+          mapOf("base" to baseline) +
+            groups.associate { it.name to googleFontFamily(theme.families.getValue(it), provider) },
+        ) ?: return null,
+      )
+      return functionCall(fontsName, mapOf("provider" to googleFontProvider()))
+    }
+
+    /** A private composable [themed] writes, added ahead of those already written. */
+    private fun define(name: String, parameters: List<Pair<String, String>>, root: ScreenNode) {
+      themeFunctions.add(
+        0,
+        buildJsonObject {
+          put("name", name)
+          put("parameters", JsonArray(parameters.map { (it, type) -> parameter(it, type) }))
+          put("root", Json.encodeToJsonElement(root))
+        },
+      )
+    }
+
+    private fun functionCall(name: String, arguments: Map<String, ScreenValue>): ScreenNode? =
+      shared<ScreenNode>(
+        JsonObject(
+          Json.encodeToJsonElement(ScreenNode("", arguments)).jsonObject +
+            ("function" to JsonPrimitive(name))
+        ),
+        "the design's theme",
+      )
+
+    /**
+     * `base.copy(…)` with each role [theme] changes: scaled by its type scale, the way
+     * `UiBuilderRenderer` scales a text's style, and set in the family of the group it belongs to.
+     */
+    private fun themedTypography(
+      theme: ScreenTheme,
+      groups: List<ThemeTypefaces.Group>,
+    ): ScreenValue? {
+      val base = scopedRead("ParameterRead", "parameter", "base", TYPOGRAPHY) ?: return null
+      fun role(name: String) = ChainLink("$TYPOGRAPHY.$name", property = true, member = true)
+      fun scaled(role: String, unit: String) =
+        ScreenValue.Chain(
+          receiver = base,
+          links =
+            listOf(
+              role(role),
+              ChainLink("$TEXT_STYLE.$unit", property = true, member = true),
+              ChainLink(
+                "$TEXT_UNIT.times",
+                positional = listOf(ScreenValue.Fractional32(theme.typeScale)),
+                member = true,
+              ),
+            ),
+          typeFqn = TEXT_UNIT,
+        )
+      val familyOf = groups.flatMap { group -> group.m3Roles.map { it to group.name } }.toMap()
+      val roles = TYPOGRAPHY_TOKENS.keys.filter { theme.scalesType || it in familyOf }
+      val changed = roles.associateWith { name ->
+        val named = buildMap {
+          familyOf[name]?.let { group ->
+            put(
+              "fontFamily",
+              scopedRead("ParameterRead", "parameter", group, FONT_FAMILY) ?: return null,
+            )
+          }
+          if (theme.scalesType) {
+            put("fontSize", scaled(name, "fontSize"))
+            put("lineHeight", scaled(name, "lineHeight"))
+          }
+        }
+        ScreenValue.Chain(
+          receiver = base,
+          links = listOf(role(name), ChainLink("$TEXT_STYLE.copy", named = named, member = true)),
+          typeFqn = TEXT_STYLE,
+        )
+      }
+      return ScreenValue.Chain(
+        receiver = base,
+        links = listOf(ChainLink("$TYPOGRAPHY.copy", named = changed, member = true)),
+        typeFqn = TYPOGRAPHY,
+      )
+    }
+
+    /**
+     * The three shape roles the canvas derives from one corner radius — `large` at the radius,
+     * `medium` at three quarters, `small` at half — or the baseline `Shapes()` when the theme sets
+     * none, which is the same 16dp the canvas defaults to.
+     */
+    private fun themeShapes(radius: Float?): ScreenValue? {
+      if (radius == null) return ScreenValue.Construct(SHAPES, typeFqn = SHAPES)
+      fun corner(factor: Double) =
+        dp(radius * factor)?.let {
+          ScreenValue.Construct(
+            callableFqn = ROUNDED_CORNER_SHAPE_FQN,
+            positional = listOf(it),
+            typeFqn = ROUNDED_CORNER_SHAPE_FQN,
+          )
+        }
+      return ScreenValue.Construct(
+        callableFqn = SHAPES,
+        named =
+          mapOf(
+            "small" to (corner(0.5) ?: return null),
+            "medium" to (corner(0.75) ?: return null),
+            "large" to (corner(1.0) ?: return null),
+          ),
+        typeFqn = SHAPES,
+      )
+    }
+
+    /**
+     * `FontFamily(Font(GoogleFont("Michroma"), provider, FontWeight.Normal), …)`: the weights a
+     * type scale uses, each fetched from Google Fonts on first use, as `AndroidGoogleFonts` writes
+     * them for the other exporters.
+     */
+    private fun googleFontFamily(family: String, provider: ScreenValue): ScreenValue =
+      ScreenValue.Construct(
+        callableFqn = FONT_FAMILY,
+        positional =
+          listOf("Normal", "Medium", "Bold").map { weight ->
+            ScreenValue.Construct(
+              callableFqn = "$GOOGLE_FONTS.Font",
+              positional =
+                listOf(
+                  ScreenValue.Construct(
+                    callableFqn = GOOGLE_FONT,
+                    positional = listOf(ScreenValue.Text(ThemeTypefaces.familyName(family))),
+                    typeFqn = GOOGLE_FONT,
+                  ),
+                  provider,
+                  ScreenValue.Reference(FONT_WEIGHT, listOf(weight), typeFqn = FONT_WEIGHT),
+                ),
+              typeFqn = FONT,
+            )
+          },
+        typeFqn = FONT_FAMILY,
+      )
+
+    /**
+     * Google Play services' font provider, with its two published certificates decoded by
+     * `kotlin.io.encoding.Base64` — the standard library's, so the generated file names nothing
+     * outside Compose and Kotlin. See `AndroidGoogleFonts` for why a generated file carries them.
+     */
+    private fun googleFontProvider(): ScreenValue {
+      fun list(items: List<ScreenValue>) =
+        ScreenValue.Construct(LIST_OF, positional = items, typeFqn = LIST)
+      val certificates =
+        AndroidGoogleFonts.GMS_FONTS_CERTIFICATES.map { chunks ->
+          list(
+            listOf(
+              ScreenValue.Chain(
+                receiver =
+                  ScreenValue.Reference(BASE64, listOf("Default"), typeFqn = "$BASE64.Default"),
+                links =
+                  listOf(
+                    ChainLink(
+                      "$BASE64.decode",
+                      positional = listOf(ScreenValue.Text(chunks.joinToString(""))),
+                      member = true,
+                    )
+                  ),
+                typeFqn = "kotlin.ByteArray",
+              )
+            )
+          )
+        }
+      return ScreenValue.Construct(
+        callableFqn = GOOGLE_FONT_PROVIDER,
+        named =
+          mapOf(
+            "providerAuthority" to ScreenValue.Text("com.google.android.gms.fonts"),
+            "providerPackage" to ScreenValue.Text("com.google.android.gms"),
+            "certificates" to list(certificates),
+          ),
+        typeFqn = GOOGLE_FONT_PROVIDER,
       )
     }
 
@@ -2802,11 +3100,7 @@ object ScreenDocumentProjection {
             "$where is the enum value `$entry`, which is not one of " +
               mapping.members.keys.sorted().joinToString(", ")
           )
-      return ScreenValue.Reference(
-        rootFqn = path.first(),
-        members = path.drop(1),
-        typeFqn = mapping.typeFqn,
-      )
+      return pathValue(path, mapping.typeFqn)
     }
 
     /**
@@ -2887,7 +3181,29 @@ object ScreenDocumentProjection {
   private const val ROUNDED_CORNER_SHAPE_FQN =
     "androidx.compose.foundation.shape.RoundedCornerShape"
   private const val TEXT_STYLE = "androidx.compose.ui.text.TextStyle"
+  private const val SURFACE_CATALOG_ID = "m3/surface"
   private const val THEME = "androidx.compose.material3.MaterialTheme"
+  private const val COLOR_SCHEME = "androidx.compose.material3.ColorScheme"
+  private const val TYPOGRAPHY = "androidx.compose.material3.Typography"
+  private const val SHAPES = "androidx.compose.material3.Shapes"
+  private const val LIGHT_COLOR_SCHEME = "androidx.compose.material3.lightColorScheme"
+  private const val DARK_COLOR_SCHEME = "androidx.compose.material3.darkColorScheme"
+  private const val TEXT_UNIT = "androidx.compose.ui.unit.TextUnit"
+  private const val FONT_FAMILY = "androidx.compose.ui.text.font.FontFamily"
+  private const val FONT = "androidx.compose.ui.text.font.Font"
+  private const val GOOGLE_FONTS = "androidx.compose.ui.text.googlefonts"
+  private const val GOOGLE_FONT = "$GOOGLE_FONTS.GoogleFont"
+  private const val GOOGLE_FONT_PROVIDER = "$GOOGLE_FONT.Provider"
+  private const val BASE64 = "kotlin.io.encoding.Base64"
+  private const val LIST_OF = "kotlin.collections.listOf"
+  private const val LIST = "kotlin.collections.List"
+
+  /**
+   * The three `MaterialTheme` accessors a theme role reads, by name, and their types — the
+   * parameters of the theme function a themed root is projected inside. See `Pass.pathValue`.
+   */
+  private val THEME_HOLDERS: Map<String, String> =
+    linkedMapOf("colorScheme" to COLOR_SCHEME, "typography" to TYPOGRAPHY, "shapes" to SHAPES)
 
   /**
    * Material 3's colour roles, as the accessor path that reads each one.
