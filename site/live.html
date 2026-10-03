@@ -51,20 +51,27 @@
     let saved = null;
     try { saved = localStorage.getItem(storageKey); } catch {}
 
+    let resetting = false;
     const editor = await mountEditor({
       frame: document.getElementById('app'),
       editorBase: 'editor/',
       fileName,
       text: saved ?? original,
       layout: params.get('layout') ?? 'full',
-      onSave: (text) => { try { localStorage.setItem(storageKey, text); } catch {} },
+      onSave: (text) => {
+        if (resetting) return;
+        try { localStorage.setItem(storageKey, text); } catch {}
+      },
     });
     document.getElementById('note').textContent =
       'The editor needs WebGL and loads about 40 MB on first use.';
 
+    // A reload rather than editor.replace(): the editor keeps unsaved edits through an external
+    // change on purpose, so replacing the file under a dirty canvas would not reset it.
     document.getElementById('reset').addEventListener('click', () => {
+      resetting = true;
       try { localStorage.removeItem(storageKey); } catch {}
-      editor.replace(original);
+      location.reload();
     });
     document.getElementById('download').addEventListener('click', () => {
       const link = document.createElement('a');
