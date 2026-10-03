@@ -373,6 +373,51 @@ class CommentNotificationsControllerTest {
   }
 
   @Test
+  fun onlyOneOfRepliesAndMentionsShowsOffAndTheClickAddsTheOther() = runBlocking {
+    val host =
+      FakeHost(permission = PushPermission.Granted, subscription = SUBSCRIPTION).apply {
+        respond("POST", "/api/push/subscribe", 201, """{"kinds":["replies"],"devices":1}""")
+        respond(
+          "PUT",
+          "/api/push/preferences",
+          200,
+          """{"kinds":["mentions","replies"],"devices":1}""",
+        )
+      }
+    val controller = CommentNotificationsController(host)
+    controller.load()
+    assertEquals(CommentNotificationsState.Toggle(on = false), controller.state.value)
+    host.permissionAnswer = PushPermission.Granted
+    controller.toggle()
+    assertEquals(CommentNotificationsState.Toggle(on = true), controller.state.value)
+    assertEquals(
+      """{"kinds":["mentions","replies"]}""",
+      host.bodies.getValue("PUT /api/push/preferences").single(),
+    )
+    assertFalse("DELETE /api/push/subscribe" in host.bodies)
+  }
+
+  @Test
+  fun aSignedOutPreferencesSaveRemovesTheBrowserSubscription() = runBlocking {
+    val host =
+      FakeHost(permission = PushPermission.Granted, subscription = SUBSCRIPTION).apply {
+        respond(
+          "POST",
+          "/api/push/subscribe",
+          201,
+          """{"kinds":["mentions","replies","reviews"],"devices":1}""",
+        )
+        respond("PUT", "/api/push/preferences", 401)
+      }
+    val controller = CommentNotificationsController(host)
+    controller.load()
+    controller.toggle()
+    assertEquals(CommentNotificationsState.Hidden, controller.state.value)
+    assertNull(host.subscription, "the previous account's subscription must not keep delivering")
+    assertTrue("unregisterWorker" in host.calls)
+  }
+
+  @Test
   fun aBrowserFailureIsASentenceNotACrash() = runBlocking {
     val host = FakeHost().apply { subscribeFailure = "Registration failed - permission denied" }
     val controller = CommentNotificationsController(host)

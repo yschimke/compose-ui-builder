@@ -264,7 +264,7 @@ class CommentNotificationsController(private val host: CommentNotificationHost) 
       bound = true
       kinds =
         decodeOrNull(PushPreferencesWire.serializer(), response.body)?.kinds?.toSet().orEmpty()
-      return CommentNotificationsState.Toggle(on = kinds.any { it in REPLY_KINDS })
+      return CommentNotificationsState.Toggle(on = kinds.containsAll(REPLY_KINDS))
     }
     bound = false
     if (response.status in 400..499) {
@@ -360,7 +360,7 @@ class CommentNotificationsController(private val host: CommentNotificationHost) 
     }
     bound = true
     kinds = decodeOrNull(PushPreferencesWire.serializer(), response.body)?.kinds?.toSet() ?: desired
-    return CommentNotificationsState.Toggle(on = kinds.any { it in REPLY_KINDS })
+    return CommentNotificationsState.Toggle(on = kinds.containsAll(REPLY_KINDS))
   }
 
   private suspend fun turnOff(): CommentNotificationsState {
@@ -403,7 +403,15 @@ class CommentNotificationsController(private val host: CommentNotificationHost) 
         PUSH_PREFERENCES_PATH,
         pushJson.encodeToString(PushKindsWire.serializer(), PushKindsWire(next.sorted())),
       )
-    if (response.status == 401) return CommentNotificationsState.Hidden
+    if (response.status == 401) {
+      // Signed out since the subscription was bound: it must not keep delivering the previous
+      // account's notifications to this browser, as every other 401 path already ensures.
+      host.unsubscribe()
+      host.unregisterWorker()
+      bound = false
+      kinds = emptySet()
+      return CommentNotificationsState.Hidden
+    }
     if (response.status !in 200..299) {
       return CommentNotificationsState.Toggle(
         on = !on,
@@ -411,7 +419,7 @@ class CommentNotificationsController(private val host: CommentNotificationHost) 
       )
     }
     kinds = decodeOrNull(PushPreferencesWire.serializer(), response.body)?.kinds?.toSet() ?: next
-    return CommentNotificationsState.Toggle(on = kinds.any { it in REPLY_KINDS })
+    return CommentNotificationsState.Toggle(on = kinds.containsAll(REPLY_KINDS))
   }
 
   /** What went wrong, as a state rather than a crash: the browser refusing, a host that threw. */
