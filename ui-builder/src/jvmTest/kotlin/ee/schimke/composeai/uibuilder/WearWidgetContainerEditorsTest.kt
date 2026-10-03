@@ -8,14 +8,15 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * The container's parameters have to be reachable from the inspector, not merely declared.
+ * The container's `background` has to be reachable from the inspector, not merely declared.
  *
- * Both halves of this failed when the properties were added. `background` is typed `"string"`, so
- * it fell through to a plain text field with no hint that a colour or a token was what it wanted;
- * and the three dimensions fell through to *nothing*, because the `…Dp` rule only offers a number
- * editor for a property the Compose exporter emits — and Remote Compose is deliberately outside
- * that exporter. A property the catalog declares and the renderer reads but the inspector will not
- * show is the same as not having it.
+ * It is typed `"string"`, so it fell through to a plain text field with no hint that a colour or a
+ * token was what it wanted. A property the catalog declares and the renderer reads but the
+ * inspector will not show is the same as not having it.
+ *
+ * Padding and corner radius used to be pinned here as number controls. The container no longer
+ * declares them — `WearWidgetParams` hands them to the widget per host shape — so the override
+ * table no longer carries editors for them either.
  *
  * Parsed from a synthetic catalog rather than the real `remote-m3` one: that catalog is synthesised
  * in `:ui-builder-runtime`, which this module may not depend on. What is under test is the override
@@ -43,22 +44,6 @@ class WearWidgetContainerEditorsTest {
     assertTrue("onPrimary" in editor.suggestedValues, editor.suggestedValues.toString())
   }
 
-  @Test
-  fun `padding and corner radius are number controls`() {
-    val properties =
-      catalog.componentsById.getValue("remote-m3/widget-container-large").propertiesByName
-
-    listOf("horizontalPaddingDp", "verticalPaddingDp", "cornerRadiusDp").forEach { name ->
-      val editor = assertNotNull(properties.getValue(name).editor, name)
-      assertEquals(PropertyEditorControl.NUMBER, editor.control, name)
-      assertEquals(0.0, editor.minimum, name)
-    }
-    // 999dp is the corner radius `RoundWidgetPreviewParams` uses for a fully round container, so a
-    // bound short of it would make the round shape unauthorable.
-    val radius = assertNotNull(properties.getValue("cornerRadiusDp").editor)
-    assertTrue(radius.maximum != null && radius.maximum >= 999.0, radius.maximum.toString())
-  }
-
   private companion object {
     val CONTAINER_CATALOG =
       """
@@ -80,10 +65,7 @@ class WearWidgetContainerEditorsTest {
             "traits": ["ScreenContent"],
             "slots": [],
             "properties": [
-              { "name": "background", "jsonType": "string", "required": false },
-              { "name": "horizontalPaddingDp", "jsonType": "number", "required": false },
-              { "name": "verticalPaddingDp", "jsonType": "number", "required": false },
-              { "name": "cornerRadiusDp", "jsonType": "number", "required": false }
+              { "name": "background", "jsonType": "string", "required": false }
             ],
             "modifierCapabilities": [],
             "wasm": { "platformSupported": true, "adapterStatus": "supported" }
@@ -95,10 +77,7 @@ class WearWidgetContainerEditorsTest {
             "traits": ["ScreenContent"],
             "slots": [],
             "properties": [
-              { "name": "background", "jsonType": "string", "required": false },
-              { "name": "horizontalPaddingDp", "jsonType": "number", "required": false },
-              { "name": "verticalPaddingDp", "jsonType": "number", "required": false },
-              { "name": "cornerRadiusDp", "jsonType": "number", "required": false }
+              { "name": "background", "jsonType": "string", "required": false }
             ],
             "modifierCapabilities": [],
             "wasm": { "platformSupported": true, "adapterStatus": "supported" }

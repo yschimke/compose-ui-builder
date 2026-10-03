@@ -659,26 +659,18 @@ object CapabilityCatalogParser {
       REMOTE_MATERIAL_3_NUMBER_EDITORS
 
   /**
-   * Editors for the four container parameters, none of which the type rules can supply.
+   * The editor for the container's `background`, which the type rules cannot supply.
    *
-   * `background` is declared `"string"`, so it fell through to a plain text field — you could type
+   * It is declared `"string"`, so it fell through to a plain text field — you could type
    * `#FF2196F3` into it and nothing would tell you that was the shape it wanted, or that a token
-   * like `primary` was also legal. The three dimensions are worse: the `…Dp` rule only offers a
-   * number editor for a property the **Compose exporter** emits, and Remote Compose is deliberately
-   * outside that exporter, so padding and corner radius arrived uneditable. A property the catalog
-   * declares and the renderer reads but the inspector will not show is the same as not having it.
+   * like `primary` was also legal.
    *
-   * `cornerRadiusDp` deliberately reaches 999: that is the value `RoundWidgetPreviewParams` uses
-   * for a fully round container, and a bound that stopped short of it would make the round shape
-   * unauthorable.
+   * Padding and corner radius had number editors here too, until the container stopped declaring
+   * them: they are the host's (`WearWidgetParams`, per host shape), not the widget's, and the
+   * editor shows each shape as a view instead.
    */
   private fun widgetContainerEditors(componentId: String) =
-    listOf(
-      (componentId to "background") to colorEditor(),
-      (componentId to "horizontalPaddingDp") to numberEditor(0.0, MAXIMUM_AUTHORED_DP, 1.0),
-      (componentId to "verticalPaddingDp") to numberEditor(0.0, MAXIMUM_AUTHORED_DP, 1.0),
-      (componentId to "cornerRadiusDp") to numberEditor(0.0, MAXIMUM_AUTHORED_DP, 1.0),
-    )
+    listOf((componentId to "background") to colorEditor())
 
   private fun objectEditor(kind: String) = PropertyEditorCapability(objectKind = kind)
 

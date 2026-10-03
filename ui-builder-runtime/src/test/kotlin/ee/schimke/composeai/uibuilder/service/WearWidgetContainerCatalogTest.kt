@@ -33,18 +33,19 @@ class WearWidgetContainerCatalogTest {
     catalog.components.single { it.componentId == AdaptiveWearWidget.COMPONENT_ID }
 
   @Test
-  fun `both containers declare WearWidgetContainer's four parameters, then the widget's typefaces`() {
+  fun `both containers declare the widget's background, then its typefaces, and no host frame`() {
     assertEquals(2, containers.size)
     containers.forEach { container ->
       assertEquals(
-        listOf("background", "horizontalPaddingDp", "verticalPaddingDp", "cornerRadiusDp") +
+        listOf("background") +
           ThemeTypefaces.WEAR_GROUPS.map { it.property } +
           ThemeTextStyle.PROPERTY,
         container.properties.map { it.name },
         container.componentId,
       )
-      // None is required: an empty brush and the shipped 8/8/26 spec are what a widget that says
-      // nothing gets, which is the container's own behaviour rather than a default this invented.
+      // None is required: an empty brush is what a widget that says nothing gets, which is the
+      // container's own behaviour rather than a default this invented. Padding and radius are
+      // absent on purpose — the host hands them in per shape (`WearWidgetParams`).
       assertTrue(container.properties.none { it.required }, container.componentId)
     }
   }

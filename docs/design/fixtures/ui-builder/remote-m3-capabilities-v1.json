@@ -17,28 +17,7 @@
                     "allowedValues": [],
                     "jsonType": "string",
                     "name": "background",
-                    "notes": "The widget's own background, painted by the host as the rounded rect. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "horizontalPaddingDp",
-                    "notes": "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "verticalPaddingDp",
-                    "notes": "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "cornerRadiusDp",
-                    "notes": "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws this radius behind the content rather than clipping to it.",
+                    "notes": "The widget's own background, painted by the host inside the frame it draws. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none. Padding and corner radius are not properties: WearWidgetParams hands them to the widget per host shape (0 rectangular, 26 squircle, 999 round), so the outermost box never authors a radius.",
                     "required": false
                 },
                 {
@@ -159,28 +138,7 @@
                     "allowedValues": [],
                     "jsonType": "string",
                     "name": "background",
-                    "notes": "The widget's own background, painted by the host as the rounded rect. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "horizontalPaddingDp",
-                    "notes": "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "verticalPaddingDp",
-                    "notes": "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "cornerRadiusDp",
-                    "notes": "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws this radius behind the content rather than clipping to it.",
+                    "notes": "The widget's own background, painted by the host inside the frame it draws. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none. Padding and corner radius are not properties: WearWidgetParams hands them to the widget per host shape (0 rectangular, 26 squircle, 999 round), so the outermost box never authors a radius.",
                     "required": false
                 },
                 {
@@ -301,28 +259,7 @@
                     "allowedValues": [],
                     "jsonType": "string",
                     "name": "background",
-                    "notes": "The widget's own background, painted by the host as the rounded rect. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "horizontalPaddingDp",
-                    "notes": "WearWidgetParams.horizontalPaddingDp; 8 in every shipped preview spec.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "verticalPaddingDp",
-                    "notes": "WearWidgetParams.verticalPaddingDp; 8 in every shipped preview spec.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "number",
-                    "name": "cornerRadiusDp",
-                    "notes": "WearWidgetParams.cornerRadiusDp: 26 squircle, 999 round, 0 rectangular. The host draws this radius behind the content rather than clipping to it.",
+                    "notes": "The widget's own background, painted by the host inside the frame it draws. Defaults to #FF272430, the colour WearWidgetContainer applies to a widget that declares none. Padding and corner radius are not properties: WearWidgetParams hands them to the widget per host shape (0 rectangular, 26 squircle, 999 round), so the outermost box never authors a radius.",
                     "required": false
                 },
                 {
