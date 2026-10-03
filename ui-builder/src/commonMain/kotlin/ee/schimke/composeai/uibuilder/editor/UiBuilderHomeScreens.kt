@@ -162,7 +162,7 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
     Text(
       if (form.publicRead) "Anyone with the link can view. Only authorized editors can change it."
       else if (form.allowPublic) "Only you and invited collaborators. Change this later in Sharing."
-      else "Sharing options require a server with visibility controls.",
+      else "Public sharing isn't available here.",
       style = MaterialTheme.typography.bodySmall,
     )
     Text("Catalog", style = MaterialTheme.typography.labelLarge)

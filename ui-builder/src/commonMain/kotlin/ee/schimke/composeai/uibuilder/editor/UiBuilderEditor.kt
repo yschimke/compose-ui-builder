@@ -227,7 +227,12 @@ fun UiBuilderEditor(
   clientId: String = EDITOR_CLIENT_ID,
   operationIdPrefix: String = clientId,
   sessionLabel: String = "Local session",
-  visibilityLabel: String = "Private · this device",
+  /**
+   * Who can open this design, in a line above the toolbar; null draws no line. Null by default
+   * because only the host knows: an IDE bridge or MCP app editing a server design must not claim it
+   * is private to this device.
+   */
+  visibilityLabel: String? = null,
   onManageVisibility: (() -> Unit)? = null,
   onReconnect: (() -> Unit)? = null,
   onSubmission: ((EditorSubmission) -> Unit)? = null,
@@ -2585,7 +2590,7 @@ fun UiBuilderEditor(
               )
             }
         ) {
-          if (!focusedCanvas && !dedicatedOutput && hostChrome == null) {
+          if (visibilityLabel != null && !focusedCanvas && !dedicatedOutput && hostChrome == null) {
             Row(
               Modifier.fillMaxWidth().padding(horizontal = 12.dp),
               verticalAlignment = Alignment.CenterVertically,

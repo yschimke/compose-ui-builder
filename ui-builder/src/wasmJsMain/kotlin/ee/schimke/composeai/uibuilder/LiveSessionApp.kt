@@ -1473,6 +1473,7 @@ private fun LiveSessionApp(
       sessionLabel = sessionStatus,
       visibilityLabel =
         if (localSession != null) "Private · this browser"
+        else if (!config.designVisibilitySupported) null
         else
           when (designVisibility?.visibility) {
             "public" -> "Public (read only) · anyone with the link"
@@ -1583,10 +1584,10 @@ private fun LiveSessionApp(
         else
           { selectors ->
             val result = copyDesignLink(designUrlPath(config.designId, selectors))
-            result +
-              if (designVisibility?.visibility == "private")
-                " · Private: recipients need access from the owner."
-              else ""
+            // Only on a copy that landed: a failure message must not read as a sharing hint.
+            if (designVisibility?.visibility == "private" && result.startsWith("Link copied"))
+              "$result · Private: recipients need access from the owner."
+            else result
           },
       initialCatalogQuery = catalogQuery,
       initialEnabledPacks = enabledPacks,
