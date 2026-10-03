@@ -58,3 +58,7 @@ __pycache__/
 # daemon keeps using when present. Ignore at any depth.
 .compose-preview-history/
 publishing-manifest.json
+
+# The landing page: the editor archive the Pages workflow deploys, and capture dependencies
+/site/editor/
+/scripts/site-screenshots/node_modules/

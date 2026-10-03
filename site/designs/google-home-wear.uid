@@ -1,0 +1,466 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "google-home-wear",
+  "title": "Google Home — Devices (Wear)",
+  "revision": 22,
+  "catalogPin": {
+    "systemId": "wear-m3",
+    "catalogRevision": "wear-screen-scaffold-v1",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 192,
+    "heightDp": 192,
+    "density": 2,
+    "theme": "dark",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "browserZoomPercent": 100,
+    "fixedTime": "2024-05-16T12:00:00Z",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:wearos_small_round",
+      "id:wearos_xl_round"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "home-screen"
+  ],
+  "nodes": {
+    "home-screen": {
+      "id": "home-screen",
+      "componentId": "wear-m3/screen-scaffold",
+      "properties": {
+        "timeText": {
+          "type": "string",
+          "value": "10:10"
+        },
+        "scrollIndicator": {
+          "type": "bool",
+          "value": true
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "home-list"
+        ],
+        "edgeButton": [
+          "home-add"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "home-list": {
+      "id": "home-list",
+      "componentId": "wear-m3/transforming-lazy-column",
+      "properties": {
+        "transformation": {
+          "type": "enum",
+          "value": "spec"
+        },
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 4
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "items": [
+          "hdr-home",
+          "home-summary",
+          "sub-living",
+          "living-lamp",
+          "living-lamp-brightness",
+          "living-tv",
+          "sub-cameras",
+          "camera-front",
+          "camera-garden"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "hdr-home": {
+      "id": "hdr-home",
+      "componentId": "wear-m3/list-header",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Home"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "home-summary": {
+      "id": "home-summary",
+      "componentId": "wear-m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "title"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "home-summary"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "content": [
+          "home-summary-body"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "home-summary-body": {
+      "id": "home-summary-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "home-summary-line-0",
+          "home-summary-line-1"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "home-summary-line-0": {
+      "id": "home-summary-line-0",
+      "componentId": "wear-m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "2 lights on"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "home-summary-line-1": {
+      "id": "home-summary-line-1",
+      "componentId": "wear-m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Nest Hub · 21°C"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "sub-living": {
+      "id": "sub-living",
+      "componentId": "wear-m3/list-sub-header",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Living room"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "living-lamp": {
+      "id": "living-lamp",
+      "componentId": "wear-m3/switch-button",
+      "properties": {
+        "label": {
+          "type": "string",
+          "value": "Floor lamp"
+        },
+        "secondaryLabel": {
+          "type": "string",
+          "value": "On · 60%"
+        },
+        "checked": {
+          "type": "bool",
+          "value": true
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "living-lamp-brightness": {
+      "id": "living-lamp-brightness",
+      "componentId": "wear-m3/slider",
+      "properties": {
+        "value": {
+          "type": "float",
+          "value": 6
+        },
+        "valueFrom": {
+          "type": "float",
+          "value": 0
+        },
+        "valueTo": {
+          "type": "float",
+          "value": 10
+        },
+        "steps": {
+          "type": "float",
+          "value": 9
+        },
+        "segmented": {
+          "type": "enum",
+          "value": "segmented"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "living-tv": {
+      "id": "living-tv",
+      "componentId": "wear-m3/switch-button",
+      "properties": {
+        "label": {
+          "type": "string",
+          "value": "TV backlight"
+        },
+        "secondaryLabel": {
+          "type": "string",
+          "value": "Off"
+        },
+        "checked": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "sub-cameras": {
+      "id": "sub-cameras",
+      "componentId": "wear-m3/list-sub-header",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Cameras"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "camera-front": {
+      "id": "camera-front",
+      "componentId": "wear-m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "app"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "camera-front"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "content": [
+          "camera-front-body"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "camera-front-body": {
+      "id": "camera-front-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "camera-front-line-0",
+          "camera-front-line-1"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "camera-front-line-0": {
+      "id": "camera-front-line-0",
+      "componentId": "wear-m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Front door"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "camera-front-line-1": {
+      "id": "camera-front-line-1",
+      "componentId": "wear-m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Person seen 4 min ago"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "camera-garden": {
+      "id": "camera-garden",
+      "componentId": "wear-m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "app"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "camera-garden"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "content": [
+          "camera-garden-body"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "camera-garden-body": {
+      "id": "camera-garden-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "camera-garden-line-0",
+          "camera-garden-line-1"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "camera-garden-line-0": {
+      "id": "camera-garden-line-0",
+      "componentId": "wear-m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Garden"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "camera-garden-line-1": {
+      "id": "camera-garden-line-1",
+      "componentId": "wear-m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Quiet"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "home-add": {
+      "id": "home-add",
+      "componentId": "wear-m3/edge-button",
+      "properties": {
+        "size": {
+          "type": "enum",
+          "value": "small"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "home-add-icon"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "home-add-icon": {
+      "id": "home-add-icon",
+      "componentId": "wear-m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "add"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    }
+  },
+  "assets": {}
+}

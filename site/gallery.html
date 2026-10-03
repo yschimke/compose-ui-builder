@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gallery · Compose UI Builder</title>
+  <meta name="description" content="Example Compose UI Builder designs: a Wear widget, a Wear OS app and an adaptive Material 3 app. Open any of them live in the editor.">
+  <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="./"><img src="img/icon.svg" alt="" width="28" height="28">Compose UI Builder</a>
+    <div class="nav-links">
+      <a href="./#how">How it works</a>
+      <a href="gallery.html" aria-current="page">Gallery</a>
+      <a href="https://github.com/yschimke/compose-ui-builder">GitHub</a>
+      <a class="btn btn-small" href="./#get-started">Get started</a>
+    </div>
+  </nav>
+
+  <header class="hero hero-compact">
+    <h1>Gallery</h1>
+    <p class="lede">Designs made in Compose UI Builder, each drawn by real Compose components.
+      Open any of them in the live editor, right here in your browser: edits stay on this device.</p>
+  </header>
+
+  <section class="gallery">
+    <div class="gallery-grid" id="gallery"></div>
+  </section>
+
+  <footer class="footer">
+    <p>Screenshots are captured automatically from the latest release ·
+      <a href="https://github.com/yschimke/compose-ui-builder">GitHub</a></p>
+  </footer>
+
+  <script type="module">
+    const repo = 'https://github.com/yschimke/compose-ui-builder/blob/main/';
+    const items = await (await fetch('gallery.json')).json();
+    const grid = document.getElementById('gallery');
+    for (const item of items) {
+      const card = document.createElement('article');
+      card.className = 'gallery-card';
+      card.innerHTML = `
+        <a class="shot" href="live.html?design=${encodeURIComponent(item.id)}">
+          <img src="img/gallery/${item.id}.png" alt="" loading="lazy">
+          <span class="play">Open live</span>
+        </a>
+        <div class="gallery-text">
+          <p class="kind"></p>
+          <h3></h3>
+          <p class="desc"></p>
+          <div class="gallery-links">
+            <a class="btn btn-small" href="live.html?design=${encodeURIComponent(item.id)}">Open in the editor</a>
+            <a class="btn btn-ghost btn-small" href="${item.file}" download>Download .uid</a>
+            <a href="${repo}${item.source}">Source</a>
+          </div>
+        </div>`;
+      card.querySelector('.kind').textContent = item.kind;
+      card.querySelector('h3').textContent = item.title;
+      card.querySelector('.desc').textContent = item.description;
+      card.querySelector('img').alt = item.title + ' in the Compose UI Builder';
+      grid.appendChild(card);
+    }
+  </script>
+</body>
+</html>
