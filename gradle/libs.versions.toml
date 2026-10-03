@@ -203,7 +203,7 @@ composeai-preview-daemon = "3.13.0"
 composeai-contracts = "3.17.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
-rc-players = "1.65.0"
+rc-players = "2.1.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.6.0"
