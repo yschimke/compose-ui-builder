@@ -47,17 +47,34 @@ val embedRemoteMaterial3Record =
   }
 
 // The document and mutation JSON Schemas come from the pinned protocol jar, generated there from
-// the serializers; see `ExtractProtocolSchemas`. Resolved non-transitively, the JVM jar alone.
+// the serializers; see `ExtractProtocolSchemas`. The JVM jar alone: the attributes pick the JVM
+// variant of the multiplatform root module, and the dependency (not the configuration) is
+// non-transitive so its own dependencies stay out. Not the configuration: a non-transitive
+// configuration does not follow the platform's edges either, so the BOM's constraints would never
+// apply and the versionless coordinate would fail to resolve.
+//
+// The coordinate carries no version. The contracts BOM supplies it, as it does for every other
+// contracts module this build names: the contracts repository publishes only the modules a release
+// changes, so `ui-builder-protocol-jvm` at the BOM's own version is a 404 whenever a release skips
+// it (3.15.0 is one). The BOM constrains the root module, not `-jvm`, which is why this names the
+// root and selects the JVM variant by attribute rather than naming the `-jvm` artifact directly.
 val protocolSchemaJar =
   configurations.create("protocolSchemaJar") {
     isCanBeConsumed = false
-    isTransitive = false
+    attributes {
+      attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+      attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+      attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.JAR))
+      attribute(
+        org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.attribute,
+        org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.jvm,
+      )
+    }
   }
 
 dependencies {
-  protocolSchemaJar(
-    "ee.schimke.composeai:ui-builder-protocol-jvm:${libs.versions.composeai.contracts.get()}"
-  )
+  protocolSchemaJar(platform(libs.composeai.contracts.bom))
+  protocolSchemaJar(libs.composeai.ui.builder.protocol) { isTransitive = false }
 }
 
 val extractProtocolSchemas =
