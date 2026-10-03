@@ -179,6 +179,8 @@ pre {
   background: var(--code-bg); color: var(--code-fg); border-radius: 12px; font-size: .88rem; line-height: 1.5;
 }
 pre code { font-size: inherit; }
+pre.prompt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.placeholder { color: #ffd479; font-style: italic; }
 .copy {
   position: absolute; top: 8px; right: 8px; font: 600 .75rem system-ui, sans-serif; cursor: pointer;
   padding: 4px 10px; border-radius: 999px; border: 1px solid #ffffff33; background: #ffffff14; color: var(--code-fg);

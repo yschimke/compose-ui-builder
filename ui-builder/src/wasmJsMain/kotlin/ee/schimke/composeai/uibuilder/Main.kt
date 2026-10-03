@@ -2188,6 +2188,9 @@ internal external fun openUiBuilderGuide()
  * session, so the prompt names the server by the name the landing page, `.mcp.json` and the
  * compose-ag-plugin's `compose-catalogs` plugin all give it, `compose-preview-catalog`, and has the
  * agent stop and ask for the one-line setup when it is missing rather than improvise a connection.
+ *
+ * The landing page's Get started section (`site/index.html`) quotes this prompt for the hosted
+ * service; change it there too.
  */
 internal fun agentUiBuilderPrompt(
   mcpEndpoint: String,
