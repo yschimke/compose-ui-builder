@@ -258,19 +258,12 @@ const PROMPT =
 
 const SCENES = {
   // Step 1: a template in the full editor, the canvas unrolled on the left and, on the right, the
-  // three watches it claims plus the large-font variant (1.24× on Wear), switched on from the
-  // Screen dock's "Also compare" chips.
+  // three watches it claims (small, large and XL round), drawn as interactive device previews.
   async 'step-1-template'() {
-    const { page, click, settle } = await open(
+    const { page, settle } = await open(
       { fileName: 'wear-list.uid', text: WEAR_LIST, layout: 'full' },
       { width: 1280, height: 800 },
     );
-    const at = (name, fallback) => JSON.parse(process.env[name] ?? fallback);
-    await click(at('SCREEN_DOCK', '[1254, 232]'));
-    await settle();
-    await click(at('COMPARE_FONT', '[1099, 290]'));
-    await settle();
-    await click(at('SCREEN_DOCK_CLOSE', '[1197, 138]'));
     await page.mouse.move(5, 795);
     await settle(2_500);
     return page;
@@ -352,8 +345,15 @@ const SCENES = {
       { fileName: 'wear-list.uid', text: WEAR_LIBRARY, layout: 'full' },
       { width: 1280, height: 800 },
     );
-    // The toolbar's code toggle, in the editor frame.
-    await click(JSON.parse(process.env.CODE_TOGGLE ?? '[1022, 86]'));
+    // The Preview pane off (the view menu's Preview row), so the code has the room the device
+    // previews took; then the toolbar's code toggle. Points in the editor frame.
+    await click(JSON.parse(process.env.STEP3_VIEW_MENU ?? '[1130, 100]'));
+    await settle();
+    await click(JSON.parse(process.env.STEP3_VIEW_PREVIEW ?? '[1008, 196]'));
+    await settle();
+    await page.keyboard.press('Escape');
+    await settle();
+    await click(JSON.parse(process.env.CODE_TOGGLE ?? '[1086, 100]'));
     // Off the toolbar, so its "Code · hide" tooltip is not in the picture.
     await page.mouse.move(5, 795);
     await settle(2_500);
