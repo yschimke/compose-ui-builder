@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.79.0](https://github.com/yschimke/compose-ui-builder/compare/v3.78.0...v3.79.0) (2026-10-03)
+
+
+### Features
+
+* landing page for GitHub Pages with generated screenshots ([#419](https://github.com/yschimke/compose-ui-builder/issues/419)) ([8b2cfe3](https://github.com/yschimke/compose-ui-builder/commit/8b2cfe35a1a7b11b172485da3f9c37076dc5358b))
+* **site:** gallery with live editor, preview.coo.ee getting started ([#421](https://github.com/yschimke/compose-ui-builder/issues/421)) ([0270de2](https://github.com/yschimke/compose-ui-builder/commit/0270de221e3f4c2a81a72a4e1ed46db3deb222ac))
+* **ui-builder:** agent-neutral handoff prompt ([#422](https://github.com/yschimke/compose-ui-builder/issues/422)) ([a4d3caa](https://github.com/yschimke/compose-ui-builder/commit/a4d3caad7f08251dcb399601e2c2c38511126e6e))
+* **ui-builder:** device presets in MCP App hosts; Wear compares at font 1.24 ([#424](https://github.com/yschimke/compose-ui-builder/issues/424)) ([73bde2b](https://github.com/yschimke/compose-ui-builder/commit/73bde2bc12727930d304de84d173daee4e08ad4c))
+
+
+### Bug Fixes
+
+* **deps:** compose-ai-tools 2.32.4 and compose-preview-daemon 3.13.1 ([#423](https://github.com/yschimke/compose-ui-builder/issues/423)) ([e54138a](https://github.com/yschimke/compose-ui-builder/commit/e54138a7628f857e6028a9e47225e064554c2fa7))
+* **ui-builder:** draw a design's typefaces in production renders ([#425](https://github.com/yschimke/compose-ui-builder/issues/425)) ([261247b](https://github.com/yschimke/compose-ui-builder/commit/261247b10fb44801fdb174e22e3f2ea526d6ec0c))
+
 ## [3.78.0](https://github.com/yschimke/compose-ui-builder/compare/v3.77.0...v3.78.0) (2026-10-03)
 
 
