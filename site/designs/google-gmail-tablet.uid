@@ -24,9 +24,8 @@
     "animations": "settled",
     "networkAccess": false,
     "exportDevices": [
-      "id:pixel_tablet",
-      "id:pixel_fold",
-      "id:pixel_7"
+      "id:pixel_9",
+      "id:pixel_tablet"
     ]
   },
   "stateVariables": {},

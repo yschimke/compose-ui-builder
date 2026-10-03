@@ -372,8 +372,15 @@ const SCENES = {
 // live page boots. Designs the gallery takes from committed fixtures are replayed to .uid first.
 const site = join(repo, 'site');
 const gallery = JSON.parse(await readFile(join(site, 'gallery.json'), 'utf8'));
+// A gallery design is about one design across devices, so each carries the devices it previews on
+// (`devices` in gallery.json) as its export devices: the preview strip draws them, live.html opens
+// with them, and the Compose export writes them as @Preview(device = …). A widget needs none: it
+// previews in its launcher hosts on its own.
 for (const item of gallery) {
-  if (item.fixture) await writeFile(join(site, item.file), (await design(item.fixture)) + '\n');
+  if (!item.fixture) continue;
+  const document = JSON.parse(await design(item.fixture));
+  if (item.devices) document.environment = { ...document.environment, exportDevices: item.devices };
+  await writeFile(join(site, item.file), JSON.stringify(document, null, 2) + '\n');
 }
 const siteServer = await listen(async (request, response) => {
   const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname));
@@ -389,13 +396,14 @@ const siteServer = await listen(async (request, response) => {
 for (const item of gallery) {
   SCENES[`gallery/${item.id}`] = async () => {
     const page = await browser.newPage({
-      viewport: { width: 1200, height: 750 },
+      viewport: { width: 1440, height: 900 },
       deviceScaleFactor: 2,
       locale: 'en-US',
     });
     page.on('pageerror', (error) => console.warn('page error:', String(error)));
     await page.goto(
-      `http://127.0.0.1:${siteServer.port}/live.html?design=${item.id}&layout=focused&bare=1`,
+      // The full editor, Editor + Preview: the design on its canvas and on every device it claims.
+      `http://127.0.0.1:${siteServer.port}/live.html?design=${item.id}&layout=full&bare=1`,
     );
     const frame = await (await page.waitForSelector('#app')).contentFrame();
     await frame.waitForFunction(
