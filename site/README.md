@@ -70,7 +70,7 @@ node capture.mjs /path/to/unpacked-zip ../../site/img
 ```
 
 `SHOTS=hero,gallery/weather-widget` captures only some. If the editor's chrome moves, the click
-points in `capture.mjs` (the Screen dock and its compare chips, the view menu, the code toggle, the comment and Quick edit menus)
+points in `capture.mjs` (the view menu, the code toggle, the comment and Quick edit menus)
 may need adjusting. Each can be overridden from the environment while tuning, `DEBUG_SHOTS=1` saves
 the open comment menu, and `SHOTS=explore EXPLORE='x,y;x,y'` clicks through the editor saving a
 picture after each step (`EXPLORE_SCENE=chat` for step 2's focused canvas).
