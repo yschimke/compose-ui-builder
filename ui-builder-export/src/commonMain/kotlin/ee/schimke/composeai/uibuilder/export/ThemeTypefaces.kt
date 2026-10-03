@@ -121,3 +121,85 @@ object ThemeTypefaces {
     node.properties[it]?.stringOrNull()
   }
 }
+
+/**
+ * The type role a theme host sets text in when the text names none.
+ *
+ * Both `MaterialTheme`s provide `bodyLarge` as the ambient text style, so a text with no `style`
+ * has always been set in the body role — and so in the body typeface. That is right for running
+ * text and wrong for a design whose plain text is mostly labels or figures, which then had to name
+ * a role on every node. This makes the ambient role the theme's choice: the canvas, the catalog
+ * runtimes and the generated code all provide it as `ProvideTextStyle(typography.<role>)` inside
+ * the theme. Unset keeps `bodyLarge`.
+ *
+ * One property, read by both scales. A role one scale lacks resolves to its nearest member of that
+ * scale ([m3Role], [wearRole]), so a design keeps drawing when its theme host moves between them.
+ */
+object ThemeTextStyle {
+  const val PROPERTY: String = "themeTextStyle"
+
+  /** What both themes provide when the host sets nothing. */
+  const val DEFAULT: String = "bodyLarge"
+
+  /** Material 3's roles, the values an `m3/surface` offers. */
+  val M3_ROLES: List<String> =
+    listOf("display", "headline", "title", "body", "label").flatMap { prefix ->
+      listOf("Large", "Medium", "Small").map { prefix + it }
+    }
+
+  /** Wear's roles, the values a Wear or Remote Material 3 theme host offers. */
+  val WEAR_ROLES: List<String> =
+    listOf("displayLarge", "displayMedium", "displaySmall") +
+      listOf("titleLarge", "titleMedium", "titleSmall") +
+      listOf("labelLarge", "labelMedium", "labelSmall") +
+      listOf("bodyLarge", "bodyMedium", "bodySmall", "bodyExtraSmall") +
+      listOf(
+        "numeralExtraLarge",
+        "numeralLarge",
+        "numeralMedium",
+        "numeralSmall",
+        "numeralExtraSmall",
+      )
+
+  /**
+   * The role [read] names on a host, or null when it names none (or names nothing either scale
+   * has).
+   */
+  fun role(read: (property: String) -> String?): String? =
+    read(PROPERTY)?.trim()?.takeIf { it in M3_ROLES || it in WEAR_ROLES }
+
+  /** The role [node] names, read the way every emitter reads a string property. */
+  fun role(node: UiBuilderNode): String? = role { node.properties[it]?.stringOrNull() }
+
+  /**
+   * [role] as a Material 3 role. Wear's numerals are figures set large, so they take the display
+   * and headline sizes in order; `bodyExtraSmall` takes `bodySmall`.
+   */
+  fun m3Role(role: String): String =
+    when (role) {
+      "numeralExtraLarge" -> "displayLarge"
+      "numeralLarge" -> "displayMedium"
+      "numeralMedium" -> "displaySmall"
+      "numeralSmall" -> "headlineLarge"
+      "numeralExtraSmall" -> "headlineMedium"
+      "bodyExtraSmall" -> "bodySmall"
+      else -> role
+    }
+
+  /** [role] as a Wear role. Wear has no headline roles; they take the matching title role. */
+  fun wearRole(role: String): String =
+    when (role) {
+      "headlineLarge" -> "titleLarge"
+      "headlineMedium" -> "titleMedium"
+      "headlineSmall" -> "titleSmall"
+      else -> role
+    }
+
+  /** What an agent reads about the property in the catalog. */
+  fun notes(wear: Boolean): String =
+    "The type role a text with no `style` of its own is set in, for everything this theme host " +
+      "contains — and with it that role's size and typeface. Both themes default to " +
+      "`$DEFAULT`; choose `${if (wear) "labelMedium" else "labelLarge"}` for a design whose plain " +
+      "text is mostly labels, or a display role for one that is mostly figures. Generated code " +
+      "provides it as `ProvideTextStyle(MaterialTheme.typography.<role>)` inside the theme."
+}

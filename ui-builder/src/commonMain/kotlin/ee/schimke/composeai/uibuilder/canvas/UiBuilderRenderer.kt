@@ -152,6 +152,7 @@ import androidx.wear.compose.material3.timeTextCurvedText
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
+import ee.schimke.composeai.uibuilder.ProvideThemeTextStyle
 import ee.schimke.composeai.uibuilder.ThemeTypefacesHost
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
@@ -167,6 +168,7 @@ import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_CUSTOM_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
+import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
@@ -639,94 +641,102 @@ fun UiBuilderSurface(
       colorScheme = colorScheme,
       typography = typography.withRoleFamilies(hostTypefaces),
     ) {
-      WearCatalogTheme(wearCatalog) {
-        val updateExtentInputs = LocalCanvasExtentInputs.current
-        Box(
-          (renderSurface?.let { Modifier.requiredSize(it.widthDp.dp, it.heightDp.dp) }
-              ?: Modifier.fillMaxSize())
-            // A detached container has no root surface of its own under it to paint the design's
-            // ground, so its rows would sit on whatever the host happens to be.
-            .then(
-              if (detachedFrom != null) Modifier.background(colorScheme.background) else Modifier
-            )
-        ) {
-          CanvasDocumentHost(
-            document = document,
-            adapterIds = canvasAdapterIds,
-            adapterMappings = canvasAdapterMappings,
-            mode = if (effectiveUnrolled) CanvasMode.AuthoringUnrolled else CanvasMode.Device,
-            density = density,
-            modifier = Modifier.fillMaxSize(),
-            renderSessionId = renderSessionId,
-            // This canvas measures its own extent (`CanvasExtentLayout`); the host's is for a
-            // runtime drawing into a root the size it was handed.
-            measureUnrolledExtent = false,
-            runtimeActionController = runtimeActionController,
-            onInspectionSnapshot = onInspectionSnapshot,
-            onInspectionInvalidated = onInspectionInvalidated,
-            onStateSnapshot = { state ->
-              updateExtentInputs?.invoke(CanvasExtentInputs(document, state))
-            },
-            onOverlayBounds = { path, rect -> overlayBounds[path] = rect },
-            onOverlayBoundsForgotten = { path -> overlayBounds.remove(path) },
-            rootModifier = { entry ->
-              when {
-                entry.node.componentId.startsWith("remote-m3/widget-container-") ->
-                  Modifier.align(Alignment.Center)
-                // A screen is taller than its frame by design — the stadium IS the scroll extent —
-                // so it is pinned to the top and centred across, the way a long screenshot reads.
-                entry.adapterId == ROUND_SCREEN_FRAME -> Modifier.align(Alignment.TopCenter)
-                else -> Modifier
-              }
-            },
-          ) { entry, rootModifier ->
-            RenderNode(document = document, entry = entry, host = this, modifier = rootModifier)
-          }
-          if (editorOverlay) {
-            // Every box the selected node drew, not one: a node id is what the editor selects, and
-            // once a node can draw more than once the outline follows all of them rather than
-            // whichever copy the map happened to answer with.
-            val selected = overlayBounds.filterKeys { it.nodeId == selectedNodeId }.values.toList()
-            Canvas(
-              // The design's box, not the incoming constraints: a surface measured against an
-              // unbounded axis — the pop-out beside the device frame — wraps its content, and a
-              // `fillMaxSize` overlay there came out zero along that axis and caught no click.
-              Modifier.matchParentSize()
-                .then(
-                  if (!overlayTakesInput) {
-                    // The device frame: every box each drawing of a node reported, so a click on
-                    // any
-                    // copy a loop or a component draws selects that node — the inspection keeps one
-                    // box per id, and hit-testing it found only the copy that measured last.
-                    Modifier.passThroughClick { position ->
-                      overlayBounds
-                        .filterValues { it.contains(position) }
-                        .minByOrNull { (_, rect) -> rect.width * rect.height }
-                        ?.key
-                        ?.let { onNodeSelected?.invoke(it.nodeId) }
-                    }
-                  } else
-                    Modifier.pointerInput(overlayBounds.toMap(), onNodeSelected) {
-                      detectTapGestures { position ->
+      // The host's default text role ([ThemeTextStyle]) over the theme's own `bodyLarge`, for every
+      // text that names no style.
+      ProvideThemeTextStyle(ThemeTextStyle.role { themeHost?.string(it) }) {
+        WearCatalogTheme(wearCatalog) {
+          val updateExtentInputs = LocalCanvasExtentInputs.current
+          Box(
+            (renderSurface?.let { Modifier.requiredSize(it.widthDp.dp, it.heightDp.dp) }
+                ?: Modifier.fillMaxSize())
+              // A detached container has no root surface of its own under it to paint the design's
+              // ground, so its rows would sit on whatever the host happens to be.
+              .then(
+                if (detachedFrom != null) Modifier.background(colorScheme.background) else Modifier
+              )
+          ) {
+            CanvasDocumentHost(
+              document = document,
+              adapterIds = canvasAdapterIds,
+              adapterMappings = canvasAdapterMappings,
+              mode = if (effectiveUnrolled) CanvasMode.AuthoringUnrolled else CanvasMode.Device,
+              density = density,
+              modifier = Modifier.fillMaxSize(),
+              renderSessionId = renderSessionId,
+              // This canvas measures its own extent (`CanvasExtentLayout`); the host's is for a
+              // runtime drawing into a root the size it was handed.
+              measureUnrolledExtent = false,
+              runtimeActionController = runtimeActionController,
+              onInspectionSnapshot = onInspectionSnapshot,
+              onInspectionInvalidated = onInspectionInvalidated,
+              onStateSnapshot = { state ->
+                updateExtentInputs?.invoke(CanvasExtentInputs(document, state))
+              },
+              onOverlayBounds = { path, rect -> overlayBounds[path] = rect },
+              onOverlayBoundsForgotten = { path -> overlayBounds.remove(path) },
+              rootModifier = { entry ->
+                when {
+                  entry.node.componentId.startsWith("remote-m3/widget-container-") ->
+                    Modifier.align(Alignment.Center)
+                  // A screen is taller than its frame by design — the stadium IS the scroll extent
+                  // —
+                  // so it is pinned to the top and centred across, the way a long screenshot reads.
+                  entry.adapterId == ROUND_SCREEN_FRAME -> Modifier.align(Alignment.TopCenter)
+                  else -> Modifier
+                }
+              },
+            ) { entry, rootModifier ->
+              RenderNode(document = document, entry = entry, host = this, modifier = rootModifier)
+            }
+            if (editorOverlay) {
+              // Every box the selected node drew, not one: a node id is what the editor selects,
+              // and
+              // once a node can draw more than once the outline follows all of them rather than
+              // whichever copy the map happened to answer with.
+              val selected =
+                overlayBounds.filterKeys { it.nodeId == selectedNodeId }.values.toList()
+              Canvas(
+                // The design's box, not the incoming constraints: a surface measured against an
+                // unbounded axis — the pop-out beside the device frame — wraps its content, and a
+                // `fillMaxSize` overlay there came out zero along that axis and caught no click.
+                Modifier.matchParentSize()
+                  .then(
+                    if (!overlayTakesInput) {
+                      // The device frame: every box each drawing of a node reported, so a click on
+                      // any
+                      // copy a loop or a component draws selects that node — the inspection keeps
+                      // one
+                      // box per id, and hit-testing it found only the copy that measured last.
+                      Modifier.passThroughClick { position ->
                         overlayBounds
                           .filterValues { it.contains(position) }
                           .minByOrNull { (_, rect) -> rect.width * rect.height }
                           ?.key
-                          // The editor selects a node, because a node is what its inspector
-                          // edits. Which copy was tapped is the question the selection model has
-                          // yet to be asked.
                           ?.let { onNodeSelected?.invoke(it.nodeId) }
                       }
-                    }
-                )
-            ) {
-              selected.forEach { rect ->
-                drawRect(
-                  Color(0xff6750a4),
-                  rect.topLeft,
-                  rect.size,
-                  style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
-                )
+                    } else
+                      Modifier.pointerInput(overlayBounds.toMap(), onNodeSelected) {
+                        detectTapGestures { position ->
+                          overlayBounds
+                            .filterValues { it.contains(position) }
+                            .minByOrNull { (_, rect) -> rect.width * rect.height }
+                            ?.key
+                            // The editor selects a node, because a node is what its inspector
+                            // edits. Which copy was tapped is the question the selection model has
+                            // yet to be asked.
+                            ?.let { onNodeSelected?.invoke(it.nodeId) }
+                        }
+                      }
+                  )
+              ) {
+                selected.forEach { rect ->
+                  drawRect(
+                    Color(0xff6750a4),
+                    rect.topLeft,
+                    rect.size,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
+                  )
+                }
               }
             }
           }

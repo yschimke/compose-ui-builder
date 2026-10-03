@@ -21,6 +21,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.NewDesignStateType
+import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
@@ -316,10 +317,13 @@ class UiBuilderEditorStateTest {
     val submission = assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, themed))
     assertEquals(6, submission.command.operations.size)
     assertTrue(
-      // The theme panel owns the colours, scale and corners. The typefaces are free-text family
-      // names with no control of their own there yet, so they stay in the property list.
+      // The theme panel owns the colours, scale and corners. The typefaces and the default text
+      // style stay in the property list as well: a Wear or Remote theme host has no theme panel,
+      // so the property list is where those are set there.
       reducer.propertyFields(themed.copy(selection = listOf("root-surface"))).none {
-        it.name.startsWith("theme") && it.name !in ThemeTypefaces.PROPERTIES
+        it.name.startsWith("theme") &&
+          it.name !in ThemeTypefaces.PROPERTIES &&
+          it.name != ThemeTextStyle.PROPERTY
       }
     )
 

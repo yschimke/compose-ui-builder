@@ -5,6 +5,7 @@ package ee.schimke.composeai.uibuilder.service
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
+import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.inspectUiBuilderArgumentBindings
@@ -1368,7 +1369,14 @@ internal fun widgetContainerProperties(): List<PropertyCapabilityV1> =
       PropertyCapabilityV1.Builder(group.property, JsonPrimitive("string"))
         .also { it.notes = ThemeTypefaces.notes(group, wear = true) }
         .build()
-    }
+    } +
+    // The role text with no `style` of its own is set in; see [ThemeTextStyle].
+    PropertyCapabilityV1.Builder(ThemeTextStyle.PROPERTY, JsonPrimitive("string"))
+      .also {
+        it.notes = ThemeTextStyle.notes(wear = true)
+        it.allowedValues = ThemeTextStyle.WEAR_ROLES.map(::JsonPrimitive)
+      }
+      .build()
 
 /** Immutable, renderer-neutral request for one exact saved document revision. */
 public data class UiBuilderRenderRequest(

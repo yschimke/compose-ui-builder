@@ -108,6 +108,26 @@ class WearLayoutAndColourExportTest {
     assertFalse("headline" in source, source)
   }
 
+  /**
+   * The screen's default text role ([ThemeTextStyle]) is provided around everything it draws, as
+   * Wear's role: a Material 3 headline role, which Wear lacks, writes the matching title role.
+   */
+  @Test
+  fun `a screen's default text role is provided as Wear's role`() {
+    val source =
+      export(
+        screenWith(listOf(text("t")), scaffold = properties("themeTextStyle" to "headlineSmall"))
+      )
+    assertTrue("ProvideTextStyle(MaterialTheme.typography.titleSmall) {" in source, source)
+    assertTrue("import androidx.wear.compose.material3.ProvideTextStyle" in source, source)
+    assertTrue(
+      Regex("ProvideTextStyle\\(MaterialTheme.typography.titleSmall\\) \\{\\s+ScreenScaffold\\(")
+        .containsMatchIn(source),
+      source,
+    )
+    assertFalse("ProvideTextStyle" in export(screenWith(listOf(text("t")))))
+  }
+
   @Test
   fun `a column writes its alignment and spacing`() {
     val source =
