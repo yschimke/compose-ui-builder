@@ -22,26 +22,30 @@ if (VIDEO_URL) {
   document.getElementById('video-cta').hidden = false;
 }
 
-// Agent tabs, with arrow-key navigation.
+// Agent tabs, with arrow-key navigation. Every tab list on the page offers the same agents, so
+// choosing one in any list switches them all.
 const tabs = [...document.querySelectorAll('[role="tab"]')];
-function select(tab) {
+function select(agent) {
   for (const t of tabs) {
-    const on = t === tab;
+    const on = t.dataset.agent === agent;
     t.setAttribute('aria-selected', String(on));
     t.tabIndex = on ? 0 : -1;
     document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
   }
 }
-tabs.forEach((tab, i) => {
-  tab.addEventListener('click', () => select(tab));
-  tab.addEventListener('keydown', (event) => {
-    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-    if (!step) return;
-    const next = tabs[(i + step + tabs.length) % tabs.length];
-    select(next);
-    next.focus();
+for (const list of document.querySelectorAll('[role="tablist"]')) {
+  const group = [...list.querySelectorAll('[role="tab"]')];
+  group.forEach((tab, i) => {
+    tab.addEventListener('click', () => select(tab.dataset.agent));
+    tab.addEventListener('keydown', (event) => {
+      const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+      if (!step) return;
+      const next = group[(i + step + group.length) % group.length];
+      select(next.dataset.agent);
+      next.focus();
+    });
   });
-});
+}
 
 // Copy buttons on code blocks.
 for (const pre of document.querySelectorAll('pre')) {
