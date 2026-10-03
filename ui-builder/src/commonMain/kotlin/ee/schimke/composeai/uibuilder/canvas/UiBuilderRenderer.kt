@@ -2232,8 +2232,12 @@ private fun WearScreenScaffold(
         // `CurvedTextDelegate.doDraw` truncates when the text is more than a pixel wider than the
         // sweep the layout allotted it, and `TimeText` is allotted slightly less than its text,
         // so the last glyph was dropped: "10:10" drew "10:1". Padded, the glyph dropped is the
-        // space. Remove the pad when the port stops truncating text that fits.
-        timeTextCurvedText("$time ")
+        // pad. An em space rather than a space: on a small round watch the shortfall is wider
+        // than a space, and "10:10 " still drew "10:1". Above a font scale of 1 the shortfall
+        // outgrows any one pad, which is the port's to fix (wear-compose-foundation's
+        // `CurvedTextDelegate.truncate`). Remove the pad when the port stops truncating text
+        // that fits.
+        timeTextCurvedText("$time\u2003")
       }
     }
   }
