@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.81.0](https://github.com/yschimke/compose-ui-builder/compare/v3.80.0...v3.81.0) (2026-10-03)
+
+
+### Features
+
+* **site:** connect through compose-catalogs; open screenshots in a viewer ([#445](https://github.com/yschimke/compose-ui-builder/issues/445)) ([19524bf](https://github.com/yschimke/compose-ui-builder/commit/19524bfc4d28289bd2bb0e3bd06f59a4ecc09ab2))
+
+
+### Bug Fixes
+
+* **renderer-sdk:** a catalog runtime's canvas is transparent where the design draws nothing ([#447](https://github.com/yschimke/compose-ui-builder/issues/447)) ([0ed734b](https://github.com/yschimke/compose-ui-builder/commit/0ed734b5569021232f19c1934477b5180bfd5647))
+* **site:** step 1 shows the three watches; step 3 hides the device previews ([#446](https://github.com/yschimke/compose-ui-builder/issues/446)) ([1d125d1](https://github.com/yschimke/compose-ui-builder/commit/1d125d1f00e40197ddcbfe96214663462d46fa7a))
+* **ui-builder:** an MCP App starts when its device presets cannot be read ([#443](https://github.com/yschimke/compose-ui-builder/issues/443)) ([bcf5696](https://github.com/yschimke/compose-ui-builder/commit/bcf56962d8dc2fba43a37d63bf8c588b361c9042))
+* **ui-builder:** only show design visibility where the host knows it ([#441](https://github.com/yschimke/compose-ui-builder/issues/441)) ([1e4f107](https://github.com/yschimke/compose-ui-builder/commit/1e4f107ab1f2c0f740b4468ca6a3e51aee3364b5))
+
 ## [3.80.0](https://github.com/yschimke/compose-ui-builder/compare/v3.79.0...v3.80.0) (2026-10-03)
 
 
