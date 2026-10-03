@@ -476,7 +476,7 @@
     "functionName": "UiBuilderCommentPinsOverMarkupPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderCommentPinsOverMarkupPreview-0019b7e0.png",
-    "sha256": "2dc2a491f335f3a7ba8b1700d4a14a106a39714842965c5159c1213803fe626d",
+    "sha256": "750c8d45ede9ae7a11693e92c6397d5d41449091c36f71ddee942437850fc25e",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderCommentsPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderCommentsPreviewKt.UiBuilderCommentsPanelPreview": {
@@ -484,7 +484,7 @@
     "functionName": "UiBuilderCommentsPanelPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderCommentsPanelPreview-557e08f3.png",
-    "sha256": "ca25d7b812a096bf98dca2f44a5c2774f5e17a9273dbf51e40d59de1a7af5a1a",
+    "sha256": "e8a4a049a20f83037466955a4350c692b16df8aa0b7fafa9b33ba88398861d8b",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderCommentsPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderDeviceViewPreviewKt.UiBuilderDeviceViewPopOutPreview": {
