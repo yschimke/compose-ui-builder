@@ -32,8 +32,11 @@ permissions:
 concurrency:
   # Quoted: the `chore(main): release ` literal contains `: `, which YAML would otherwise read as a
   # nested mapping. A merged release PR gets its own slot so an ordinary push cannot replace it
-  # while the publish is still pending.
-  group: "release-${{ github.ref }}-${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'chore(main): release ') && github.sha || 'updates' }}"
+  # while the publish is still pending — and so does a recovery dispatch (`publish_tag`), for the
+  # same reason: GitHub keeps one PENDING run per group, so a recovery queued in the shared
+  # `updates` slot was replaced by the next push to main before it started (v3.79.0, run
+  # 37120371481: cancelled with zero jobs).
+  group: "release-${{ github.ref }}-${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'chore(main): release ') && github.sha || inputs.publish_tag && format('recover-{0}', inputs.publish_tag) || 'updates' }}"
   cancel-in-progress: false
 
 # What a release of this repository is:
@@ -77,10 +80,20 @@ jobs:
     steps:
       # Skipped when republishing: a recovery run must not be able to cut an unrelated release as a
       # side effect of retrying an upload.
+      #
+      # The token. `github.token` cannot create a release (or its tag) whose commits ADD a workflow
+      # file: GitHub answers `Resource not accessible by integration`, and no `permissions:` key
+      # grants it, because the `workflows` permission is never given to that token. v3.79.0 was
+      # the first release whose range added one (`pages.yml`) and failed this way on every run
+      # until it was cut by hand; no release that only modified workflows has. RELEASE_PLEASE_TOKEN
+      # — a fine-grained token or GitHub App token for this repository with Contents, Pull
+      # requests and Workflows write — lifts that; unset, the step keeps using `github.token` and
+      # the recovery path (`publish_tag`) is how such a release is finished.
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         if: ${{ !inputs.publish_tag }}
         with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           skip-github-pull-request: true
@@ -93,7 +106,8 @@ jobs:
       - name: Ensure the release tag exists for the draft
         if: ${{ !cancelled() && steps.release.outputs.release_created == 'true' }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          # Creating the tag ref is subject to the same workflow-file rule as the release above.
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ steps.release.outputs.tag_name }}
           SHA: ${{ github.sha }}
