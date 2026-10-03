@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.77.0](https://github.com/yschimke/compose-ui-builder/compare/v3.76.0...v3.77.0) (2026-10-03)
+
+
+### Features
+
+* **export:** write an m3/surface theme host's theme into the generated screen ([#413](https://github.com/yschimke/compose-ui-builder/issues/413)) ([d335365](https://github.com/yschimke/compose-ui-builder/commit/d335365049ae8d975324f16bfb19da458d63047b))
+
 ## [3.76.0](https://github.com/yschimke/compose-ui-builder/compare/v3.75.0...v3.76.0) (2026-10-03)
 
 
