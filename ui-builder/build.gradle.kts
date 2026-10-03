@@ -46,16 +46,17 @@ val uiBuilderJava = JavaLanguageVersion.of(libs.versions.java.ui.builder.get().t
 val uiBuilderLauncher = javaToolchains.launcherFor { languageVersion.set(uiBuilderJava) }
 
 /**
- * Wear's face for the JVM, under `fonts/` on the classpath: the vendored manifest and Roboto Flex,
- * which `ensureBundledWearDeviceFonts` registers with the Wear port as `roboto-flex` — the name the
- * Wear type scale asks for. Without it every JVM render of a Wear screen (the previews, the tests,
- * the desktop app) is set in the platform's fallback sans. The browser serves the same files from
- * the bundle's `fonts/` and registers them itself.
+ * The vendored families for the JVM, under `fonts/` on the classpath: the manifest and every file
+ * it names. Roboto Flex is what `ensureBundledWearDeviceFonts` registers with the Wear port as
+ * `roboto-flex` — the name the Wear type scale asks for — so a JVM render of a Wear screen (the
+ * previews, the tests, the desktop app) is not set in the platform's fallback sans. The rest are
+ * what `ProductionFontFamilies` draws a design's named typefaces in for a production render, as the
+ * browser does from the bundle's own `fonts/`; about 4.5 MB, in a bundle only the server unpacks.
  */
 val stageWearDeviceFonts =
   tasks.register<Sync>("stageWearDeviceFonts") {
     from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {
-      include("fonts.json", "RobotoFlex.ttf", "RobotoFlex-OFL.txt")
+      include("fonts.json", "*.ttf", "*.txt")
       into("fonts")
     }
     into(layout.buildDirectory.dir("generated/wearDeviceFonts"))

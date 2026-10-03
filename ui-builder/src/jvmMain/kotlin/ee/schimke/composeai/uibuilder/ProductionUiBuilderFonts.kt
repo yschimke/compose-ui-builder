@@ -66,7 +66,9 @@ internal class ProductionFontFamilies(
               Font("ui-builder:${family.name}:${file.weight}", it, FontWeight(file.weight))
             }
           }
-        return fonts.takeIf { it.isNotEmpty() }?.let(::FontFamily)
+        // A manifest family whose files this classpath lacks is still a Google Fonts family the
+        // host may have cached, so it falls through to the cache rather than to the default face.
+        if (fonts.isNotEmpty()) return FontFamily(fonts)
       }
     if (canonical in GENERIC_FAMILIES) return null
     val directory = googleFontsDirectory ?: return null

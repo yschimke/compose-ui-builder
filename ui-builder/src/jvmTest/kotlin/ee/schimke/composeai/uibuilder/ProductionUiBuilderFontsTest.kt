@@ -54,6 +54,32 @@ class ProductionUiBuilderFontsTest {
   }
 
   @Test
+  fun `every family the manifest vendors resolves from the packaged classpath`() {
+    val fonts =
+      ProductionFontFamilies(
+        readResource = { path ->
+          ProductionFontFamilies::class.java.getResourceAsStream(path)?.use { it.readBytes() }
+        },
+        googleFontsDirectory = null,
+      )
+    val names =
+      parseVendoredFontManifest(File(vendored, "fonts.json").readText()).families.map { it.name }
+    assertEquals(emptyList(), names.filter { fonts[it] == null })
+  }
+
+  @Test
+  fun `a vendored family whose files are missing falls through to the host's cache`() {
+    val fonts =
+      ProductionFontFamilies(
+        readResource = { path ->
+          if (path == "/fonts/fonts.json") File(vendored, "fonts.json").readBytes() else null
+        },
+        googleFontsDirectory = cache("orbitron"),
+      )
+    assertNotNull(fonts["Orbitron"])
+  }
+
+  @Test
   fun `any other family resolves from the host's cache by the server's file name`() {
     val fonts = fonts(cache("michroma", "exo-2"))
     assertNotNull(fonts["Michroma"])
