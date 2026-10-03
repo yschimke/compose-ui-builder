@@ -1381,13 +1381,21 @@ are better asked of the agent.
 the design; the chat is where the result should be seen. How the host side works is
 [`design/UI_BUILDER_MCP_APP_HOST.md`](design/UI_BUILDER_MCP_APP_HOST.md).
 
-### OpenCode
+### Handing a design to an agent
 
-The **Copy OpenCode AI prompt** button in a live design copies the current design URL, this host's
-MCP endpoint, and the link to the maintained
+The **Copy prompt for your agent** button in a live design copies the current design URL, this
+host's MCP endpoint, and the link to the maintained
 [`compose-ui-builder` skill](https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder).
-Paste it into an OpenCode session to hand the design to an agent without sharing the browser's
-credential.
+Paste it into any MCP-capable agent to hand the design over without sharing the browser's
+credential. The prompt names the server `compose-preview-catalog`, as the landing page, this
+compose-preview-server's `.mcp.json` and the compose-ag-plugin's `compose-catalogs` plugin do, and asks
+the agent to stop and request the one-line setup if that server is missing, for example:
+
+```sh
+claude mcp add --transport http compose-preview-catalog https://preview.example/mcp
+```
+
+#### OpenCode
 
 For repeated work against one host, add the MCP server to the project's `opencode.jsonc` (or the
 global OpenCode configuration). Replace the example URL with the builder host:
@@ -1397,7 +1405,7 @@ global OpenCode configuration). Replace the example URL with the builder host:
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "servers": {
-      "ui-builder": {
+      "compose-preview-catalog": {
         "type": "remote",
         "url": "https://preview.example/mcp",
         "oauth": false,

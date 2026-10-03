@@ -194,7 +194,7 @@ internal suspend fun copyDesignLink(path: String): String {
 internal suspend fun copyAiPrompt(prompt: String): String =
   try {
     val outcome = awaitJsString(copyTextPromise(prompt))
-    if (outcome.isEmpty()) "OpenCode prompt copied" else outcome
+    if (outcome.isEmpty()) "Prompt copied · paste it into your agent" else outcome
   } catch (failure: Exception) {
     "Copy AI prompt failed: ${failure.message ?: "unknown error"}"
   }

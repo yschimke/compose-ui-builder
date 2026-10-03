@@ -2166,26 +2166,34 @@ internal external fun openUiBuilderGuide()
  * A credential-free handoff: the agent asks for its own scoped grant instead of inheriting the
  * browser session. Keeping this beside the browser host makes the copied endpoint documentary, not
  * a second configuration format that can drift from the served page.
+ *
+ * Written for any agent, not one harness. An agent cannot add an MCP server to its own running
+ * session, so the prompt names the server by the name the landing page, `.mcp.json` and the
+ * compose-ag-plugin's `compose-catalogs` plugin all give it, `compose-preview-catalog`, and has the
+ * agent stop and ask for the one-line setup when it is missing rather than improvise a connection.
  */
-internal fun openCodeUiBuilderPrompt(
+internal fun agentUiBuilderPrompt(
   mcpEndpoint: String,
   designUrl: String,
   designId: String,
 ): String =
   """
-  Work with the Compose UI Builder design `$designId`.
-
-  First load the `compose-ui-builder` skill from https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder and follow its collaboration and MCP guidance.
-
-  Connect to this server's MCP endpoint:
-  $mcpEndpoint
-
-  The design is:
+  Work with the Compose UI Builder design `$designId`:
   $designUrl
+
+  Use the `$UI_BUILDER_MCP_SERVER_NAME` MCP server, $mcpEndpoint. If your tools do not include it, stop and ask me to add it and restart this session, for example:
+  claude mcp add --transport http $UI_BUILDER_MCP_SERVER_NAME $mcpEndpoint
+
+  If you can, load the `compose-ui-builder` skill from https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder and follow its collaboration and MCP guidance.
 
   Request `ui-builder-read`, `ui-builder-write`, and `ui-builder-export` through the server's agent-access flow. Do not put a bearer token in a URL, command line, repository, or chat. Once approved, read the design and its comments before editing; use its current revision as `baseRevision`, make edits with `ui_builder_apply`, then check the Compose export with `ui_builder_export`. Report the design URL and revision after each visible step.
   """
     .trimIndent()
+
+/**
+ * The MCP server name every setup path uses for a compose-preview host; see [agentUiBuilderPrompt].
+ */
+internal const val UI_BUILDER_MCP_SERVER_NAME: String = "compose-preview-catalog"
 
 /**
  * Leave for the host's index of every design this account may open.

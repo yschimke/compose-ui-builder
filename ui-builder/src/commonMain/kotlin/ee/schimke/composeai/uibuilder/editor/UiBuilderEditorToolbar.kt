@@ -273,7 +273,7 @@ internal fun MobileEditorToolbar(
           if (onCopyAiPrompt != null) {
             add(
               UiBuilderMenuEntry.Action(
-                label = "Copy OpenCode AI prompt",
+                label = "Copy prompt for your agent",
                 icon = UiBuilderMenuIcon.Copy,
                 onClick = {
                   expanded = false
@@ -484,7 +484,7 @@ internal fun EditorToolbar(
         ToolbarIconAction("Fork this design", "", UiBuilderChromeIcon.Copy, true, onForkDesign)
       }
       if (onCopyAiPrompt != null) {
-        ToolbarIconAction("Copy OpenCode AI prompt", "", UiBuilderChromeIcon.Copy, true) {
+        ToolbarIconAction("Copy prompt for your agent", "", UiBuilderChromeIcon.Copy, true) {
           scope.launch { onNotice(onCopyAiPrompt()) }
         }
       }

@@ -1534,7 +1534,7 @@ private fun LiveSessionApp(
         else {
           {
             copyAiPrompt(
-              openCodeUiBuilderPrompt(
+              agentUiBuilderPrompt(
                 mcpEndpoint = "${pageOrigin().trimEnd('/')}/mcp",
                 designUrl = shareableUrl(designUrlPath(config.designId)),
                 designId = config.designId,
