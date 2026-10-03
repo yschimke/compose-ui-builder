@@ -113,8 +113,10 @@ maven-publish = "0.37.0"
 # 2.32.2 is built against compose-preview-daemon 3.13.0 (compose-ai-tools#5681) and names
 # @AnimatedPreview APNG captures `.apng` (compose-ai-tools#5679); the preview diff now compares
 # motion format and timing as well as the frame hash (compose-ai-tools#5680,
-# compose-ai-tools#5682).
-composeai-tools = "2.32.2"
+# compose-ai-tools#5682). 2.32.4 resolves the daemon modules it injects through the daemon BOM
+# (compose-ai-tools#5684), its BOM imports the daemon and contracts BOMs (compose-ai-tools#5686),
+# and it is built against compose-preview-daemon 3.13.1 (compose-ai-tools#5687).
+composeai-tools = "2.32.4"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -175,7 +177,9 @@ composeai-tools = "2.32.2"
 # `format = Apng` with changed-region frames and per-frame delays, and advances animated captures
 # by the exact frame interval (compose-preview-daemon#203, compose-preview-daemon#206,
 # compose-preview-daemon#207, compose-preview-daemon#208), so motion previews re-time.
-composeai-preview-daemon = "3.13.0"
+# 3.13.1 is what compose-ai-tools 2.32.4 was built against; it gives the cmp-android lane the
+# pinned Robolectric clock (compose-preview-daemon#209).
+composeai-preview-daemon = "3.13.1"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
