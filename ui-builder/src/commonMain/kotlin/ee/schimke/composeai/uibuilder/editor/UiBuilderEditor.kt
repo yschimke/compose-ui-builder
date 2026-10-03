@@ -470,6 +470,14 @@ fun UiBuilderEditor(
   /** A sentence from the host — a refused comment, a feed that dropped. */
   commentStatus: String? = null,
   /**
+   * "Notify me about replies" beside the board: what to draw, decided by the host's
+   * [CommentNotificationsController]. Hidden by default, which is every preview, every test and
+   * every host that is not compose-preview-server's own page.
+   */
+  commentNotifications: CommentNotificationsState = CommentNotificationsState.Hidden,
+  /** The switch's click. Null alongside a hidden [commentNotifications]. */
+  onToggleCommentNotifications: (() -> Unit)? = null,
+  /**
    * Who approved or rejected which revision, as the host last reported it. Shown at the top of the
    * comments tab, with Approve and Request changes for the revision on screen.
    */
@@ -2447,6 +2455,8 @@ fun UiBuilderEditor(
             }
           }
         },
+      commentNotifications = commentNotifications,
+      onToggleCommentNotifications = onToggleCommentNotifications,
       onTextInputFocusChanged = { textInputFocused = it },
       dispatch = ::dispatch,
       modifier = modifier,

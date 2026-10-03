@@ -359,6 +359,41 @@ Pins are drawn by `CommentPinOverlay`, above the reference overlay and the prese
 is the one thing on that canvas a person clicks that is not part of the design, so it must not end
 up under a mock somebody has just turned the opacity up on.
 
+## Notify me about replies
+
+Web Push reaches somebody whose tab is closed. compose-preview-server sends it (its
+`docs/serve/NOTIFICATIONS.md`, compose-preview-server#1306) and offers a switch in Settings →
+Notifications; the Talk panel carries the same switch, **Notify me about replies**, under its
+opening sentence, because the person who just asked a question is the one who wants the answer.
+
+- **What it turns on.** The `replies` and `mentions` kinds. Turning it on reads the person's
+  preferences first and keeps anything else they chose (`reviews`); with no device subscribed yet
+  the server answers its every-kind default, which nobody chose, so only the two are sent. Turning it
+  off removes the two with `PUT /api/push/preferences` when something else is still on, and
+  otherwise deletes this browser's subscription and unregisters the push worker.
+- **When it is shown.** Only on the live page compose-preview-server serves: not `?storage=local`,
+  not inside any frame (an IDE webview, an MCP App, an embed), never in the desktop app or a
+  preview. The page must be a secure context with a service worker, `PushManager` and
+  `Notification`, `GET /api/push/key` must answer a key (it 404s when push is off on the server,
+  and on a static host), and `GET /api/push/preferences` must not answer 401 (signed out). An iPhone
+  or iPad in an ordinary Safari tab gets *Add to Home Screen to get notifications* instead, with the
+  same detection serve-web uses. A denied permission shows the switch off with how to allow it.
+- **The flow is serve-web's** (`serve-web/src/push/settings.ts`): permission is asked from the click
+  and never on load, `/push-sw.js` is registered at scope `/` only then, the subscription is posted
+  to `POST /api/push/subscribe`, and on every load an existing subscription is re-posted *without*
+  `kinds` before the switch shows on, so a browser that changed hands is rebound to whoever is
+  signed in. A 4xx to that re-post unsubscribes the browser; a 5xx or no answer says it could not be
+  confirmed and keeps it.
+- **Where a notification lands.** The server's notification URL is the thread permalink
+  `/ui-builder/<designId>#thread=<threadId>`, which this editor already opens on the Talk panel with
+  that thread selected and scrolled to — including when the push worker focuses an open tab and
+  only the fragment changes.
+
+`CommentNotificationsController` (common, tested in `CommentNotificationsControllerTest`) is the
+state machine; `BrowserCommentNotificationHost` is the browser half. The page publishes the decided
+state as `data-ui-builder-comment-notifications` (`hidden`, `off`, `on`, `blocked`,
+`install-first`) on the root element, for a browser harness to read.
+
 ## Evidence
 
 `UiBuilderCommentsPanelPreview` and `UiBuilderCommentPinsOverMarkupPreview` render the panel and the

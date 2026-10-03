@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.editor.CommentNotificationsState
 import ee.schimke.composeai.uibuilder.editor.DesignCommentAnchor
 import ee.schimke.composeai.uibuilder.editor.DesignCommentBoard
 import ee.schimke.composeai.uibuilder.editor.DesignCommentDraft
@@ -108,6 +109,9 @@ internal fun CommentsInspector(
   /** A sentence from the host — a refusal, a socket that dropped. */
   hostStatus: String?,
   onTextInputFocusChanged: (Boolean) -> Unit,
+  /** "Notify me about replies", where the host can offer it; see [CommentNotificationsToggle]. */
+  notifications: CommentNotificationsState = CommentNotificationsState.Hidden,
+  onToggleNotifications: (() -> Unit)? = null,
 ) {
   var draft by remember { mutableStateOf("") }
   var reply by remember(selectedThreadId) { mutableStateOf("") }
@@ -142,6 +146,7 @@ internal fun CommentsInspector(
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     style = MaterialTheme.typography.bodySmall,
   )
+  CommentNotificationsToggle(notifications, onToggleNotifications)
   HorizontalDivider(Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline)
 
   if (onPost == null) {

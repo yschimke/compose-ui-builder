@@ -179,6 +179,8 @@ internal fun PropertyInspector(
   onPostComment: ((DesignCommentDraft) -> Unit)?,
   onResolveCommentThread: ((String, Boolean) -> Unit)?,
   onCopyThreadLink: ((DesignCommentThread) -> Unit)?,
+  commentNotifications: CommentNotificationsState = CommentNotificationsState.Hidden,
+  onToggleCommentNotifications: (() -> Unit)? = null,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
   modifier: Modifier = Modifier.width(INSPECTOR_WIDTH).fillMaxHeight(),
@@ -272,6 +274,8 @@ internal fun PropertyInspector(
           onPostComment = onPostComment,
           onResolveCommentThread = onResolveCommentThread,
           onCopyThreadLink = onCopyThreadLink,
+          commentNotifications = commentNotifications,
+          onToggleCommentNotifications = onToggleCommentNotifications,
           onTextInputFocusChanged = onTextInputFocusChanged,
           propertyDrafts = propertyDrafts,
           dispatch = dispatch,
@@ -327,6 +331,8 @@ private fun InspectorBody(
   onPostComment: ((DesignCommentDraft) -> Unit)?,
   onResolveCommentThread: ((String, Boolean) -> Unit)?,
   onCopyThreadLink: ((DesignCommentThread) -> Unit)?,
+  commentNotifications: CommentNotificationsState = CommentNotificationsState.Hidden,
+  onToggleCommentNotifications: (() -> Unit)? = null,
   onTextInputFocusChanged: (Boolean) -> Unit,
   propertyDrafts: MutableMap<InspectorPropertyDraftKey, InspectorPropertyDraft>,
   dispatch: (UiBuilderEditorEvent) -> Unit,
@@ -389,6 +395,8 @@ private fun InspectorBody(
           onCopyLink = onCopyThreadLink,
           hostStatus = commentStatus,
           onTextInputFocusChanged = onTextInputFocusChanged,
+          notifications = commentNotifications,
+          onToggleNotifications = onToggleCommentNotifications,
         )
       }
       return@Column
