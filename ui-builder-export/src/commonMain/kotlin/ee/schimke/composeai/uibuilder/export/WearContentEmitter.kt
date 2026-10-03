@@ -1852,10 +1852,24 @@ internal class WearContentEmitter(
    * where the design truncated it. Unset properties write nothing, so an undecorated text keeps the
    * short form.
    */
+  /**
+   * [role] as a member of Wear's `Typography`. Material 3's `headline*` roles have no Wear
+   * counterpart — a catalog shared with mobile offered them, and older designs carry them — so they
+   * write the matching title role, which is what `wearTextStyle` draws on the canvas. Writing
+   * `MaterialTheme.typography.headlineLarge` against Wear's theme does not compile.
+   */
+  private fun wearTypographyRole(role: String): String =
+    when (role) {
+      "headlineLarge" -> "titleLarge"
+      "headlineMedium" -> "titleMedium"
+      "headlineSmall" -> "titleSmall"
+      else -> role
+    }
+
   private fun textArguments(node: UiBuilderNode): List<String> = buildList {
     node.stringOrNull("style")?.takeIf(String::isNotEmpty)?.let {
       usesMaterialTheme = true
-      add("style = MaterialTheme.typography.$it")
+      add("style = MaterialTheme.typography.${wearTypographyRole(it)}")
     }
     colorExpression(node, "color")?.let { add("color = $it") }
     node.stringOrNull("fontWeight")?.let {
