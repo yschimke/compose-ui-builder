@@ -166,8 +166,17 @@ url = "https://preview.coo.ee/mcp"</code></pre>
         <div>
           <h3>Hand it to your agent</h3>
           <p>Press <strong>Copy prompt for your agent</strong> in the editor's toolbar, paste it into
-            your agent, and say what you want:</p>
-          <pre><code>&lt;the copied prompt&gt;
+            your agent, and add what you want after it. The prompt names your design in place of
+            <code>&lt;design&gt;</code>:</p>
+          <pre class="prompt"><code>Work with the Compose UI Builder design `<span class="placeholder">&lt;design&gt;</span>`:
+https://preview.coo.ee/ui-builder/<span class="placeholder">&lt;design&gt;</span>
+
+Use the `compose-preview-catalog` MCP server, https://preview.coo.ee/mcp. If your tools do not include it, stop and ask me to add it and restart this session, for example:
+claude mcp add --transport http compose-preview-catalog https://preview.coo.ee/mcp
+
+If you can, load the `compose-ui-builder` skill from https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder and follow its collaboration and MCP guidance.
+
+Request `ui-builder-read`, `ui-builder-write`, and `ui-builder-export` through the server's agent-access flow. Do not put a bearer token in a URL, command line, repository, or chat. Once approved, read the design and its comments before editing; use its current revision as `baseRevision`, make edits with `ui_builder_apply`, then check the Compose export with `ui_builder_export`. Report the design URL and revision after each visible step.
 
 Turn it into a podcast library with "Latest episodes" and "Podcasts" buttons,
 then a Queue section with Up Next.</code></pre>
