@@ -1,0 +1,87 @@
+name: Site Screenshots
+
+# Keeps the landing page's screenshots (site/img) current, without anyone running the capture.
+#
+# Builds this commit's Wasm editor, runs scripts/site-screenshots/capture.mjs against it, and when a
+# picture changed, opens (or updates) one pull request, `site-screenshots/refresh`, carrying them. A
+# person reviews the pictures there like any other change; merging it publishes them, since the
+# Pages workflow deploys the committed site as it is.
+#
+# A capture is deterministic: the same editor and the same designs give byte-identical PNGs, so
+# the pull request only appears when something visible moved. Pull requests check the same capture
+# without committing it: ci.yml's `ui-builder-web-smoke` uploads it as the `site-screenshots`
+# artifact.
+#
+# The pull request is opened with the workflow's own token, so GitHub does not run CI on it; it
+# changes only images.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ui-builder/**
+      - ui-builder-web/**
+      - site/**
+      - scripts/site-screenshots/**
+      - docs/design/fixtures/ui-builder/designs/**
+      - .github/workflows/site-screenshots.yml
+  schedule:
+    - cron: '41 5 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: site-screenshots
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # the site-screenshots/refresh branch
+      pull-requests: write # its pull request
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+      - run: ./gradlew :ui-builder:wasmFrontendDist
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.21.0
+      - run: npm ci
+        working-directory: scripts/site-screenshots
+      - run: npx playwright install --with-deps chromium
+        working-directory: scripts/site-screenshots
+      - name: Refresh the device presets
+        # The hosted service's own frame catalog; the committed copy stays if it cannot be read.
+        run: |
+          curl -fsS --retry 3 https://preview.coo.ee/api/ui-builder/v1/device-presets -o "$RUNNER_TEMP/presets.json" \
+            && python3 -m json.tool "$RUNNER_TEMP/presets.json" > /dev/null \
+            && cp "$RUNNER_TEMP/presets.json" site/device-presets.json || true
+      - run: node capture.mjs ../../ui-builder/build/wasmDist ../../site/img
+        working-directory: scripts/site-screenshots
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          branch: site-screenshots/refresh
+          delete-branch: true
+          add-paths: |
+            site/img/**
+            site/designs/**
+            site/device-presets.json
+          commit-message: 'chore(site): refresh screenshots'
+          title: 'chore(site): refresh screenshots'
+          body: |
+            The landing page's screenshots, re-captured from `main`'s editor by `site-screenshots.yml`.
+
+            Review the pictures in the diff; merging publishes them on the next Pages deploy.

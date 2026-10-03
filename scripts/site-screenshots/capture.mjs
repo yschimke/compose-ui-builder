@@ -306,7 +306,13 @@ const SCENES = {
     await page.keyboard.press('Enter');
     await page
       .waitForFunction(() => globalThis.fakeHost.messages.length > 0, null, { timeout: 20_000 })
-      .catch(() => console.warn('step-3: the comment did not reach the chat; check STEP3_TARGET'));
+      .catch(() => console.warn('step-2: the comment did not reach the chat; check STEP3_TARGET'));
+    await settle(1_500);
+    // Then Quick edit on the "Your library" header: its text, edited in place beside the node.
+    await click(JSON.parse(process.env.QUICK_EDIT_TARGET ?? '[336, 166]'), { button: 'right' });
+    await settle();
+    await click(JSON.parse(process.env.QUICK_EDIT_ROW ?? '[415, 199]'));
+    await page.mouse.move(5, 5);
     await settle(1_500);
     return page;
   },
@@ -325,8 +331,17 @@ const SCENES = {
       },
       { width: 1440, height: 860 },
     );
-    // The toolbar's code toggle, in the editor frame: the design and its Compose source together.
-    await click(JSON.parse(process.env.HERO_CODE_TOGGLE ?? '[753, 85]'));
+    // The Preview pane off (the view menu's Preview row), so the canvas and the code share the
+    // width rather than three panes squeezing the canvas to a thumbnail; then the code toggle.
+    await click(JSON.parse(process.env.HERO_VIEW_MENU ?? '[855, 85]'));
+    await settle();
+    if (process.env.DEBUG_SHOTS) await page.screenshot({ path: join(out, 'debug-hero-menu.png') });
+    await click(JSON.parse(process.env.HERO_VIEW_PREVIEW ?? '[736, 179]'));
+    await settle();
+    await page.keyboard.press('Escape');
+    await settle();
+    await click(JSON.parse(process.env.HERO_CODE_TOGGLE ?? '[818, 85]'));
+    await page.mouse.move(5, 845);
     await settle(2_500);
     return page;
   },
@@ -395,9 +410,13 @@ for (const item of gallery) {
 // For finding click points: `SHOTS=explore EXPLORE='x,y;x,y'` opens the Wear list in the full
 // editor and saves explore-<n>.png after each click (points in the editor frame, CSS pixels).
 SCENES.explore = async () => {
+  // EXPLORE_SCENE=chat opens step 2's chat and focused canvas on the library design instead.
+  const chat = process.env.EXPLORE_SCENE === 'chat';
   const { page, click, settle } = await open(
-    { fileName: 'wear-list.uid', text: WEAR_LIST, layout: 'full' },
-    { width: 1280, height: 800 },
+    chat
+      ? { fileName: 'wear-list.uid', text: WEAR_LIBRARY, layout: 'focused', chat: [{ role: 'user', text: PROMPT }] }
+      : { fileName: 'wear-list.uid', text: WEAR_LIST, layout: 'full' },
+    chat ? { width: 1200, height: 760 } : { width: 1280, height: 800 },
   );
   const points = (process.env.EXPLORE ?? '').split(';').filter(Boolean);
   for (const [index, point] of points.entries()) {

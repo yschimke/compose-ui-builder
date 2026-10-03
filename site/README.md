@@ -46,13 +46,17 @@ prompt; the comment in step 2 is the real `ui/message` the editor sends. The gal
 taken through `live.html` itself, so a capture also proves the live page boots.
 
 The step and hero designs claim the small, large and XL round watches as export devices, so the
-preview strip shows all three and the Compose export writes them as `@Preview(device = …)`. CI's
-`ui-builder-web-smoke` job captures the same pictures from each pull request's own editor build and
-uploads them as the `site-screenshots` artifact.
+preview strip shows all three and the Compose export writes them as `@Preview(device = …)`.
 
-The Pages workflow re-captures them on every deploy from the **latest release**, and runs weekly
-and on each published release, so the page follows the editor without commits. The copies committed
-here are the fallback if a capture fails and what a local preview shows. To refresh them:
+**They update themselves.** `.github/workflows/site-screenshots.yml` runs on every push to `main`
+that touches the editor, the site or the designs (and weekly): it builds that commit's editor,
+captures, and when a picture changed opens or updates the `site-screenshots/refresh` pull request.
+Merge it to publish them; the Pages workflow deploys the committed images as they are. Captures are
+deterministic, so that pull request only appears when something visible moved. On a pull request,
+CI's `ui-builder-web-smoke` job captures the same pictures from that pull request's editor and
+uploads them as the `site-screenshots` artifact, without committing them.
+
+To capture by hand:
 
 ```sh
 cd scripts/site-screenshots
@@ -64,10 +68,10 @@ node capture.mjs /path/to/unpacked-zip ../../site/img
 ```
 
 `SHOTS=hero,gallery/weather-widget` captures only some. If the editor's chrome moves, the click
-points in `capture.mjs` (the Screen dock and its compare chips, the code toggle, the comment menu)
+points in `capture.mjs` (the Screen dock and its compare chips, the view menu, the code toggle, the comment and Quick edit menus)
 may need adjusting. Each can be overridden from the environment while tuning, `DEBUG_SHOTS=1` saves
 the open comment menu, and `SHOTS=explore EXPLORE='x,y;x,y'` clicks through the editor saving a
-picture after each step.
+picture after each step (`EXPLORE_SCENE=chat` for step 2's focused canvas).
 
 ## Adding a gallery design
 
