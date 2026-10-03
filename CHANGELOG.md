@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.80.0](https://github.com/yschimke/compose-ui-builder/compare/v3.79.0...v3.80.0) (2026-10-03)
+
+
+### Features
+
+* make design visibility explicit in the editor ([#437](https://github.com/yschimke/compose-ui-builder/issues/437)) ([e77a38e](https://github.com/yschimke/compose-ui-builder/commit/e77a38eb20327fb36e69fa67fd3845178a264a94))
+* **site:** screenshots refresh themselves; Quick edit and a roomier showcase ([#426](https://github.com/yschimke/compose-ui-builder/issues/426)) ([01e9091](https://github.com/yschimke/compose-ui-builder/commit/01e909168e7e0308ed68d51abacda1ed2d9800e2))
+* **ui-builder:** "Notify me about replies" switch in the comments panel ([#427](https://github.com/yschimke/compose-ui-builder/issues/427)) ([76dd116](https://github.com/yschimke/compose-ui-builder/commit/76dd116b414779e6cd14ad9963a9c1dd22deb3a7))
+
+
+### Bug Fixes
+
+* **deps:** compose-ai-tools 2.33.0, compose-preview-daemon 3.13.2 and rc-players 2.1.2 ([#436](https://github.com/yschimke/compose-ui-builder/issues/436)) ([b5a7cf1](https://github.com/yschimke/compose-ui-builder/commit/b5a7cf1a3f43f2fdac25ceb57e3928b30f648dd1))
+* **site:** unblock the screenshot refresh; gallery shows each design's devices ([#435](https://github.com/yschimke/compose-ui-builder/issues/435)) ([f8f961c](https://github.com/yschimke/compose-ui-builder/commit/f8f961c97d324b0b8a10fbdbf66dde7da7aabf7f))
+* **ui-builder:** centre Wear list rows on the canvas; outline the Quick edit card ([#428](https://github.com/yschimke/compose-ui-builder/issues/428)) ([7fa5c2c](https://github.com/yschimke/compose-ui-builder/commit/7fa5c2cb036bc6c3fca5b639eda7c17683fbc26a))
+* **ui-builder:** device previews draw theme typefaces; comment pins show on hover ([#434](https://github.com/yschimke/compose-ui-builder/issues/434)) ([b0ed7f3](https://github.com/yschimke/compose-ui-builder/commit/b0ed7f37f31c89faeeecd0c4aca7e1032162161b))
+* **ui-builder:** grow a runtime-drawn frame when its layout changes after the first frame ([#430](https://github.com/yschimke/compose-ui-builder/issues/430)) ([599f961](https://github.com/yschimke/compose-ui-builder/commit/599f96125c6e363e2ca9579325521eb1995372cf))
+* **ui-builder:** remote-m3 widget containers stop declaring host padding and radius ([#429](https://github.com/yschimke/compose-ui-builder/issues/429)) ([68c0bef](https://github.com/yschimke/compose-ui-builder/commit/68c0befda6146ac0404324e1341037962a38ac79))
+* **ui-builder:** resize a live catalog runtime frame instead of rebooting it ([#438](https://github.com/yschimke/compose-ui-builder/issues/438)) ([382edd6](https://github.com/yschimke/compose-ui-builder/commit/382edd6f3d0baf3d858276801b9e4fbb007ad1ab))
+
 ## [3.79.0](https://github.com/yschimke/compose-ui-builder/compare/v3.78.0...v3.79.0) (2026-10-03)
 
 
