@@ -413,6 +413,16 @@ for (const item of gallery) {
       locale: 'en-US',
     });
     page.on('pageerror', (error) => console.warn('page error:', String(error)));
+    // When the editor never comes up, these say why: its console errors and the requests it lost.
+    page.on('console', (message) => {
+      if (message.type() === 'error') console.warn(`${item.id} console:`, message.text());
+    });
+    page.on('requestfailed', (request) =>
+      console.warn(`${item.id} request failed:`, request.url(), request.failure()?.errorText),
+    );
+    page.on('response', (response) => {
+      if (response.status() >= 400) console.warn(`${item.id} ${response.status()}:`, response.url());
+    });
     await page.goto(
       // The full editor, Editor + Preview: the design on its canvas and on every device it claims.
       `http://127.0.0.1:${siteServer.port}/live.html?design=${item.id}&layout=full&bare=1`,
