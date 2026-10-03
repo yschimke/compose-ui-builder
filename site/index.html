@@ -126,30 +126,32 @@
         <span class="step-num">2</span>
         <div>
           <h3>Connect your agent, once</h3>
+          <p>The <a href="https://github.com/yschimke/compose-ag-plugin/tree/main/plugins/compose-catalogs"><code>compose-catalogs</code>
+            plugin</a> connects your agent to the hosted MCP server, <code>preview.coo.ee/mcp</code>.</p>
           <div class="tabs" role="tablist" aria-label="Choose your agent">
             <button role="tab" aria-selected="true" aria-controls="tab-claude" id="t-claude" data-agent="claude">Claude Code</button>
             <button role="tab" aria-selected="false" aria-controls="tab-codex" id="t-codex" data-agent="codex" tabindex="-1">Codex</button>
             <button role="tab" aria-selected="false" aria-controls="tab-other" id="t-other" data-agent="other" tabindex="-1">Cursor &amp; others</button>
           </div>
           <div class="tab-panel" role="tabpanel" id="tab-claude" aria-labelledby="t-claude">
-            <pre><code>claude mcp add --transport http compose-preview-catalog https://preview.coo.ee/mcp</code></pre>
+            <pre><code>/plugin marketplace add yschimke/compose-ag-plugin
+/plugin install compose-catalogs@compose-ag-plugin</code></pre>
+            <p>It asks for an optional token: leave it blank and approve access in the browser instead.</p>
           </div>
           <div class="tab-panel" role="tabpanel" id="tab-codex" aria-labelledby="t-codex" hidden>
-            <p>Add to <code>~/.codex/config.toml</code>:</p>
-            <pre><code>[mcp_servers.compose-preview-catalog]
-url = "https://preview.coo.ee/mcp"</code></pre>
+            <pre><code>codex plugin marketplace add yschimke/compose-ag-plugin</code></pre>
+            <p>Then enable <code>compose-catalogs</code> from <code>/plugins</code>.</p>
           </div>
           <div class="tab-panel" role="tabpanel" id="tab-other" aria-labelledby="t-other" hidden>
-            <p>Any Streamable HTTP MCP client. For Cursor, <code>.cursor/mcp.json</code>:</p>
+            <p>Without plugins, add the server to any Streamable HTTP MCP client. For Cursor,
+              <code>.cursor/mcp.json</code>:</p>
             <pre><code>{
   "mcpServers": {
     "compose-preview-catalog": { "type": "http", "url": "https://preview.coo.ee/mcp" }
   }
 }</code></pre>
           </div>
-          <p>Restart your agent so it picks the server up. Already using the
-            <a href="https://github.com/yschimke/compose-ag-plugin">Compose plugins</a>? Their
-            <code>compose-catalogs</code> plugin is this same server, so skip this step.</p>
+          <p>Restart your agent so it picks the server up.</p>
         </div>
       </li>
       <li>
