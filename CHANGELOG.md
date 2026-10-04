@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.82.0](https://github.com/yschimke/compose-ui-builder/compare/v3.81.0...v3.82.0) (2026-10-04)
+
+
+### Features
+
+* **editor:** make agent handoff and presence central ([#449](https://github.com/yschimke/compose-ui-builder/issues/449)) ([063bedf](https://github.com/yschimke/compose-ui-builder/commit/063bedf030a099e7b66c9448d7bdc0a45b8c7c62))
+* **editor:** make recent designs preview first ([#451](https://github.com/yschimke/compose-ui-builder/issues/451)) ([dc974d3](https://github.com/yschimke/compose-ui-builder/commit/dc974d3ae318bd684903fafb062cd64fefdb2353))
+* **editor:** round wear widget card previews ([#455](https://github.com/yschimke/compose-ui-builder/issues/455)) ([5f11c12](https://github.com/yschimke/compose-ui-builder/commit/5f11c12f61813b1c8a0a5e59bfa6d7d4202c85df))
+* **editor:** streamline new design choices ([#448](https://github.com/yschimke/compose-ui-builder/issues/448)) ([3bf5d6e](https://github.com/yschimke/compose-ui-builder/commit/3bf5d6e648775c91778f12fd1d958a21f81623fe))
+* support adaptive list-detail and pane sizing ([#452](https://github.com/yschimke/compose-ui-builder/issues/452)) ([8790321](https://github.com/yschimke/compose-ui-builder/commit/87903215c495954c77b5558c4b9ef94d643bc73f))
+
+
+### Bug Fixes
+
+* **editor:** scroll new design dialog and collapse advanced types ([#457](https://github.com/yschimke/compose-ui-builder/issues/457)) ([1a102bf](https://github.com/yschimke/compose-ui-builder/commit/1a102bf6f9db61c15e6f56da69c92144911218c7))
+
 ## [3.81.0](https://github.com/yschimke/compose-ui-builder/compare/v3.80.0...v3.81.0) (2026-10-03)
 
 
