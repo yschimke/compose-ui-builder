@@ -52,6 +52,8 @@ jobs:
       #
       # This is the check that would have caught compose-preview-server's 3.3.0-3.8.0 breakage,
       # where six releases shipped a POM naming an artifact nobody had uploaded.
+      - name: Verify durable generation from published artifacts
+        run: ./scripts/check-ui-builder-production-consumer.sh
       - name: Verify the publishing lane
         run: ./scripts/check-ui-builder-external-consumer.sh
       # The two archives the server consumes. `check` builds and verifies both, but naming them

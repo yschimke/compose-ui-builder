@@ -1,0 +1,93 @@
+{
+  "schema": "compose-ui-builder-production/v1-candidate",
+  "catalogDigest": "df448956605b680b670765fb35fa0b0298b208308da17f37d251fc7c3c611777",
+  "imports": [
+    "src/main/ui/components/EpisodeCard.uid"
+  ],
+  "entryPoint": {
+    "id": "queue",
+    "kotlinFunction": "example.ui.QueueScreen",
+    "kind": "screen",
+    "visibility": "public",
+    "inputModel": "library",
+    "root": "root",
+    "bindings": [
+      {
+        "nodeId": "title",
+        "property": "text",
+        "path": [
+          "title"
+        ],
+        "expectedType": {
+          "kind": "scalar",
+          "scalar": "string"
+        }
+      }
+    ],
+    "components": [
+      {
+        "nodeId": "featured",
+        "componentId": "episode-card",
+        "dataPath": [
+          "featured"
+        ]
+      }
+    ]
+  },
+  "design": {
+    "schema": "compose-ui-builder-document/v1-candidate",
+    "id": "Queue",
+    "title": "Queue",
+    "revision": 0,
+    "catalogPin": {
+      "systemId": "m3-catalog",
+      "catalogRevision": "candidate",
+      "capabilityDigest": "candidate",
+      "nativeRuntimeId": "candidate"
+    },
+    "environment": {
+      "widthDp": 1280,
+      "heightDp": 800,
+      "density": 1.0,
+      "theme": "dark",
+      "dynamicColor": false,
+      "locale": "en-US",
+      "fontScale": 1.0,
+      "layoutDirection": "ltr",
+      "windowPosture": "flat",
+      "browserZoomPercent": 100,
+      "fixedTime": "2024-05-16T12:00:00Z",
+      "animations": "settled",
+      "networkAccess": false
+    },
+    "stateVariables": {},
+    "roots": [
+      "root"
+    ],
+    "nodes": {
+      "root": {
+        "id": "root",
+        "componentId": "layout/column",
+        "slots": {
+          "children": [
+            "title",
+            "featured"
+          ]
+        },
+        "properties": {}
+      },
+      "title": {
+        "id": "title",
+        "componentId": "m3/text",
+        "slots": {},
+        "properties": {}
+      },
+      "featured": {
+        "id": "featured",
+        "componentId": "production/episode-card",
+        "slots": {},
+        "properties": {}
+      }
+    }
+  }
+}

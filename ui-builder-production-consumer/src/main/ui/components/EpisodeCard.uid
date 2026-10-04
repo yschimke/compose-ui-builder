@@ -1,0 +1,67 @@
+{
+  "schema": "compose-ui-builder-production/v1-candidate",
+  "catalogDigest": "df448956605b680b670765fb35fa0b0298b208308da17f37d251fc7c3c611777",
+  "imports": [
+    "src/main/ui/models/LibraryModels.uid"
+  ],
+  "entryPoint": {
+    "id": "episode-card",
+    "kotlinFunction": "example.ui.components.EpisodeCard",
+    "kind": "component",
+    "visibility": "internal",
+    "inputModel": "external",
+    "root": "root",
+    "bindings": [
+      {
+        "nodeId": "root",
+        "property": "text",
+        "path": [
+          "title"
+        ],
+        "expectedType": {
+          "kind": "scalar",
+          "scalar": "string"
+        }
+      }
+    ]
+  },
+  "design": {
+    "schema": "compose-ui-builder-document/v1-candidate",
+    "id": "episode-card",
+    "title": "episode-card",
+    "revision": 0,
+    "catalogPin": {
+      "systemId": "m3-catalog",
+      "catalogRevision": "candidate",
+      "capabilityDigest": "candidate",
+      "nativeRuntimeId": "candidate"
+    },
+    "environment": {
+      "widthDp": 1280,
+      "heightDp": 800,
+      "density": 1.0,
+      "theme": "dark",
+      "dynamicColor": false,
+      "locale": "en-US",
+      "fontScale": 1.0,
+      "layoutDirection": "ltr",
+      "windowPosture": "flat",
+      "browserZoomPercent": 100,
+      "fixedTime": "2024-05-16T12:00:00Z",
+      "animations": "settled",
+      "networkAccess": false
+    },
+    "stateVariables": {},
+    "roots": [
+      "root"
+    ],
+    "nodes": {
+      "root": {
+        "id": "root",
+        "componentId": "m3/text",
+        "slots": {},
+        "properties": {}
+      }
+    }
+  }
+}

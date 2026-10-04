@@ -104,6 +104,26 @@ class ProductionProjectFilesTest {
   }
 
   @Test
+  fun `Git pathspec metacharacters cannot admit an untracked file`() {
+    writeInputs()
+    Files.copy(root.resolve("Library.uid"), root.resolve("[L]ibrary.uid"))
+    val invalid =
+      assertIs<ProductionContractResult.Invalid>(
+        ProductionProjectFiles.load(root, listOf("[L]ibrary.uid"))
+      )
+    assertContains(invalid.issues.map { it.code }, "UNTRACKED_INPUT")
+  }
+
+  @Test
+  fun `tracked files reached through a symbolic link directory are refused`() {
+    writeInputs()
+    Files.move(root.resolve("models"), root.resolve("actualModels"))
+    Files.createSymbolicLink(root.resolve("models"), root.resolve("actualModels"))
+    val invalid = assertIs<ProductionContractResult.Invalid>(load())
+    assertContains(invalid.issues.map { it.code }, "INPUT_OUTSIDE_PROJECT")
+  }
+
+  @Test
   fun `unknown schema in a tracked file is refused rather than treated as a draft`() {
     writeInputs()
     val path = root.resolve("models/LibraryModels.uid")
