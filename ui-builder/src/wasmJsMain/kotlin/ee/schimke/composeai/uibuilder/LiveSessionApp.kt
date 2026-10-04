@@ -70,6 +70,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderUnavailableScreen
 import ee.schimke.composeai.uibuilder.editor.catalogRecoveryCommand
 import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
 import ee.schimke.composeai.uibuilder.editor.refusing
+import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
@@ -121,6 +122,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.skia.Image
 
@@ -790,12 +792,29 @@ private fun LiveSessionApp(
     bootPhase("Opening the design")
     // Form-factor order — Mobile, Wear, RemoteCompose — however the host lists them: the chooser
     // is a "what am I making" question, not a catalog registry.
-    fun installCatalogList(availableCatalogs: List<CatalogCapabilityV1>) {
+    suspend fun installCatalogList(availableCatalogs: List<CatalogCapabilityV1>) {
+      val fixture = runCatching {
+        val path = "jetcaster-discover-operations-v1.json"
+        Json.parseToJsonElement(localSession?.text?.text(path) { fetchText(it) } ?: fetchText(path))
+          .jsonObject
+      }
+        .getOrNull()
       catalogCapabilities = availableCatalogs
       newDesignCatalogs =
-        availableCatalogs.mapNotNull(::newDesignCatalog).sortedBy {
-          NEW_DESIGN_CATALOG_ORDER.indexOf(it.systemId)
-        }
+        availableCatalogs
+          .mapNotNull { capability ->
+            newDesignCatalog(capability)?.let { choice ->
+              if (fixture == null) choice
+              else
+                choice.withTemplatePreviews(
+                  CapabilityCatalogParser.parse(
+                    Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
+                  ),
+                  fixture,
+                )
+            }
+          }
+          .sortedBy { NEW_DESIGN_CATALOG_ORDER.indexOf(it.systemId) }
     }
     if (config.localStorage || config.startWithNewDesign) {
       // A local session can be asked for a catalog this browser has never seen — the first visit

@@ -10,6 +10,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -50,11 +51,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
@@ -224,6 +227,7 @@ private fun NewDesignChoice(
   label: String,
   supportingText: String,
   onClick: () -> Unit,
+  preview: @Composable () -> Unit = {},
 ) {
   Surface(
     modifier =
@@ -245,6 +249,7 @@ private fun NewDesignChoice(
       horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
       RadioButton(selected = selected, onClick = null)
+      preview()
       Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.titleSmall)
         if (supportingText.isNotBlank())
@@ -266,12 +271,19 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
       form.selectedCatalog.templates.forEach { template ->
-        NewDesignChoice(
-          selected = template.id == form.selectedTemplate.id,
-          label = template.label,
-          supportingText = template.supportingText,
-          onClick = { form.selectedTemplateId = template.id },
-        )
+        key(form.selectedCatalogId, template.id) {
+          NewDesignChoice(
+            selected = template.id == form.selectedTemplate.id,
+            label = template.label,
+            supportingText = template.supportingText,
+            onClick = { form.selectedTemplateId = template.id },
+            preview = {
+              TemplateThumbnail(template, form.selectedCatalog.previewCatalog) {
+                form.selectedTemplateId = template.id
+              }
+            },
+          )
+        }
       }
     }
     Text("Design ID", style = MaterialTheme.typography.labelLarge)
@@ -1206,13 +1218,18 @@ private fun DesignThumbnail(
     if (revision != null)
       picture = runCatching { loadThumbnail(design.designId, revision) }.getOrNull()
   }
-  Box(
-    Modifier.size(width = 64.dp, height = 96.dp)
-      .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
-    contentAlignment = Alignment.Center,
-  ) {
+  DesignThumbnailFrame(Modifier.size(width = 64.dp, height = 96.dp)) {
     picture?.let { Image(it, contentDescription = null, contentScale = ContentScale.Fit) }
   }
+}
+
+@Composable
+internal fun DesignThumbnailFrame(modifier: Modifier, content: @Composable BoxScope.() -> Unit) {
+  Box(
+    modifier.clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+    contentAlignment = Alignment.Center,
+    content = content,
+  )
 }
 
 /**

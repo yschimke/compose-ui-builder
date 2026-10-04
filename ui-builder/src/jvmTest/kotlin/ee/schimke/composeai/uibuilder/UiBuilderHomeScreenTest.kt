@@ -6,12 +6,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.test.*
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.UiBuilderReleaseNote
 import ee.schimke.composeai.uibuilder.editor.homeDesignFolders
+import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import java.io.File
 import kotlin.test.Test
@@ -20,6 +22,8 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 
@@ -264,36 +268,49 @@ class UiBuilderHomeScreenTest {
       var created: Pair<String, String>? = null
       val types =
         listOf(
-          UiBuilderNewDesignCatalog(
-            "m3-catalog",
-            "Android app",
-            listOf(
-              UiBuilderNewDesignTemplate("blank", "Blank screen", "Empty phone screen"),
-              UiBuilderNewDesignTemplate("hello", "Hello sample", "Phone starter"),
+            UiBuilderNewDesignCatalog(
+              "m3-catalog",
+              "Android app",
+              listOf(
+                UiBuilderNewDesignTemplate("blank", "Blank screen", "Empty phone screen"),
+                UiBuilderNewDesignTemplate("hello", "Hello sample", "Phone starter"),
+              ),
             ),
-          ),
-          UiBuilderNewDesignCatalog(
-            "wear-m3",
-            "Wear",
-            listOf(
-              UiBuilderNewDesignTemplate("wear-screen", "Blank screen", "Empty watch screen"),
-              UiBuilderNewDesignTemplate("wear-list", "Activity list", "Watch starter"),
+            UiBuilderNewDesignCatalog(
+              "wear-m3",
+              "Wear",
+              listOf(
+                UiBuilderNewDesignTemplate("wear-screen", "Blank screen", "Empty watch screen"),
+                UiBuilderNewDesignTemplate("wear-list", "Activity list", "Watch starter"),
+              ),
             ),
-          ),
-          UiBuilderNewDesignCatalog(
-            "remote-m3",
-            "RemoteCompose",
-            listOf(
-              UiBuilderNewDesignTemplate("wear-widget-small", "Blank small widget", "Empty widget"),
-              UiBuilderNewDesignTemplate("weather-widget", "Weather", "Widget starter"),
+            UiBuilderNewDesignCatalog(
+              "remote-m3",
+              "RemoteCompose",
+              listOf(
+                UiBuilderNewDesignTemplate(
+                  "wear-widget-small",
+                  "Blank small widget",
+                  "Empty widget",
+                ),
+                UiBuilderNewDesignTemplate("weather-widget", "Weather", "Widget starter"),
+              ),
             ),
-          ),
-          UiBuilderNewDesignCatalog(
-            "a2ui",
-            "A2UI surface",
-            listOf(UiBuilderNewDesignTemplate("column", "Column", "A2UI starter")),
-          ),
-        )
+            UiBuilderNewDesignCatalog(
+              "a2ui",
+              "A2UI surface",
+              listOf(UiBuilderNewDesignTemplate("column", "Column", "A2UI starter")),
+            ),
+          )
+          .map { choice ->
+            if (choice.systemId == "a2ui") choice
+            else
+              choice.withTemplatePreviews(
+                CapabilityCatalogParser.parse(resource("/${choice.systemId}-capabilities-v1.json")),
+                Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json"))
+                  .jsonObject,
+              )
+          }
       setContent {
         UiBuilderNewDesignScreen(
           catalogs = types,
@@ -303,6 +320,7 @@ class UiBuilderHomeScreenTest {
         )
       }
       fun capture(name: String) {
+        onNodeWithText("UI Builder").performScrollTo()
         val folder =
           File(System.getProperty("uiBuilderProjectDir"), "build/new-design-evidence").apply {
             mkdirs()
@@ -317,8 +335,10 @@ class UiBuilderHomeScreenTest {
           )
       }
       capture("mobile-app")
-      onNodeWithText("Hello sample").performClick()
-      onNodeWithText("Wear app").performClick()
+      onNodeWithTag("template-preview-hello", useUnmergedTree = true).performClick()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
+      assertEquals("m3-catalog" to "hello", created)
+      onNodeWithText("Wear app").performScrollTo().performClick()
       onNodeWithText("Hello sample").assertDoesNotExist()
       onNodeWithText("Activity list").assertIsDisplayed()
       capture("wear-app")
@@ -357,6 +377,9 @@ class UiBuilderHomeScreenTest {
     onNodeWithText("New design").assertIsDisplayed()
     onNodeWithText("Recent designs").assertDoesNotExist()
   }
+
+  private fun resource(path: String): String =
+    requireNotNull(javaClass.getResource(path)).readText()
 }
 
 private val FOLDER_HEADINGS = setOf("Tiles", "wear", "No folder")
