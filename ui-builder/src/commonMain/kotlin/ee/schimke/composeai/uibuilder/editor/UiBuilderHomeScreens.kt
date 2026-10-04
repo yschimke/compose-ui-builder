@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -1270,14 +1271,22 @@ private fun DesignThumbnail(
       )
   DesignThumbnailFrame(previewModifier) {
     val image = picture
-    if (image != null)
+    if (image != null) {
+      val isWidget = design.catalogSystemId == "remote-m3"
+      val ratio = image.width.toFloat() / image.height
+      val imageModifier =
+        if (isWidget)
+          Modifier.padding(8.dp)
+            .aspectRatio(ratio, matchHeightConstraintsFirst = ratio >= 1f)
+            .clip(RoundedCornerShape(percent = 12))
+        else Modifier.fillMaxSize().padding(8.dp)
       Image(
         image,
         contentDescription = "Preview of ${design.title.ifBlank { design.designId }}",
         contentScale = ContentScale.Fit,
-        modifier = Modifier.fillMaxSize().padding(8.dp),
+        modifier = imageModifier,
       )
-    else
+    } else
       Text(
         if (loading) "Loading preview…" else "Preview unavailable",
         style = MaterialTheme.typography.bodySmall,
