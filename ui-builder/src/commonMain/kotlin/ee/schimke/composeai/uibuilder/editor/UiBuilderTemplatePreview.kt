@@ -19,6 +19,7 @@ import androidx.wear.compose.foundation.LocalReduceMotion
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderInlineDialogs
+import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
@@ -63,7 +64,8 @@ internal fun TemplateThumbnail(
   onSelect: () -> Unit,
 ) {
   val document = template.previewDocument ?: return
-  val (width, height) = remember(document) { document.canvasFrameDp(WearWidgetHostShape.Default) }
+  val hostShape = WearWidgetHostShape.Squircle
+  val (width, height) = remember(document) { document.canvasFrameDp(hostShape) }
   val scale = minOf(80f / width, 104f / height)
   val hostDensity = LocalDensity.current.density
   // Lay out in the host's dp before shrinking. A phone/watch seed's display density would
@@ -89,6 +91,7 @@ internal fun TemplateThumbnail(
     ) {
       CompositionLocalProvider(
         LocalReduceMotion provides true,
+        LocalWearWidgetHostShape provides hostShape,
         LocalUiBuilderInlineDialogs provides true,
         LocalUiBuilderCatalogPlatform provides (catalog?.platform?.wireValue ?: "mobile"),
         LocalUiBuilderFrameGeometry provides
