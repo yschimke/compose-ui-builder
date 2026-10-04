@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.83.0](https://github.com/yschimke/compose-ui-builder/compare/v3.82.0...v3.83.0) (2026-10-04)
+
+
+### Features
+
+* **codegen:** add opt-in durable Compose generation ([#465](https://github.com/yschimke/compose-ui-builder/issues/465)) ([4aa879d](https://github.com/yschimke/compose-ui-builder/commit/4aa879ddebe8d03979bb974d04be9be5c98ebdf9))
+* **export:** add production contracts and model generation ([#461](https://github.com/yschimke/compose-ui-builder/issues/461)) ([2fe8cbb](https://github.com/yschimke/compose-ui-builder/commit/2fe8cbba4b053cdd9570b0e8248d80efb4e0324c))
+
+
+### Bug Fixes
+
+* follow-ups from reviewing recent editor and CI changes ([#466](https://github.com/yschimke/compose-ui-builder/issues/466)) ([9e67dac](https://github.com/yschimke/compose-ui-builder/commit/9e67dacbde65b2d1822a70ea0ac2403e6eba94df))
+* preserve compiled Wasm caches on editor startup ([#464](https://github.com/yschimke/compose-ui-builder/issues/464)) ([64fabaf](https://github.com/yschimke/compose-ui-builder/commit/64fabafc1a724e69db284cc34821bc2e28eac1c1))
+* render Material designs with checkout exporter ([#462](https://github.com/yschimke/compose-ui-builder/issues/462)) ([ab36d9d](https://github.com/yschimke/compose-ui-builder/commit/ab36d9d92eae87b842f39f189b47d2b8e1b4decd))
+
 ## [3.82.0](https://github.com/yschimke/compose-ui-builder/compare/v3.81.0...v3.82.0) (2026-10-04)
 
 
