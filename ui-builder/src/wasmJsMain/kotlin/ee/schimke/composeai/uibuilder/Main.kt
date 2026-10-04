@@ -1808,7 +1808,7 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
     "m3-catalog" ->
       UiBuilderNewDesignCatalog(
         systemId = "m3-catalog",
-        label = "Android app",
+        label = "Mobile app",
         platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
         templates =
           listOf(
@@ -1833,12 +1833,12 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
           listOf(
             UiBuilderNewDesignTemplate(
               id = "wear-widget-small",
-              label = "Small widget",
+              label = "Blank small widget",
               supportingText = "216×76dp host with a single content slot.",
             ),
             UiBuilderNewDesignTemplate(
               id = "wear-widget-large",
-              label = "Large widget",
+              label = "Blank large widget",
               supportingText = "216×124dp host with a single content slot.",
             ),
             UiBuilderNewDesignTemplate(
@@ -1869,7 +1869,7 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
           listOf(
             UiBuilderNewDesignTemplate(
               id = UiBuilderNewDesignSeed.WEAR_SCREEN_TEMPLATE,
-              label = "Blank Wear screen",
+              label = "Blank screen",
               supportingText =
                 "A starting point: a ScreenScaffold with its clock and scroll indicator, over an " +
                   "empty list.",

@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
+import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
@@ -23,6 +24,8 @@ data class UiBuilderNewDesignTemplate(
   val id: String,
   val label: String,
   val supportingText: String,
+  /** The exact starting document, rendered as a thumbnail in the chooser. */
+  val previewDocument: UiBuilderDocument? = null,
 )
 
 data class UiBuilderNewDesignCatalog(
@@ -31,6 +34,7 @@ data class UiBuilderNewDesignCatalog(
   val templates: List<UiBuilderNewDesignTemplate>,
   /** Which kind of screen it authors; the chooser orders and groups catalogs by it. */
   val platform: UiBuilderCatalogPlatform = UiBuilderCatalogPlatform.MOBILE,
+  val previewCatalog: CapabilityCatalog? = null,
 )
 
 /**

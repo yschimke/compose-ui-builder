@@ -41,6 +41,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.problemHeading
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -371,44 +372,65 @@ fun UiBuilderNewDesignPreview() {
     initialDesignId = "sunny-otter",
     catalogs =
       listOf(
-        UiBuilderNewDesignCatalog(
-          systemId = "m3-catalog",
-          label = "Mobile",
-          templates =
-            listOf(
-              UiBuilderNewDesignTemplate("blank", "Blank", "A scaffold and an empty container."),
-              UiBuilderNewDesignTemplate(
-                "jetcaster",
-                "Jetcaster",
-                "The frozen discover screen, as a starting point.",
+          UiBuilderNewDesignCatalog(
+            systemId = "m3-catalog",
+            label = "Mobile app",
+            templates =
+              listOf(
+                UiBuilderNewDesignTemplate(
+                  "blank",
+                  "Blank screen",
+                  "A scaffold and an empty container.",
+                ),
+                UiBuilderNewDesignTemplate(
+                  "hello",
+                  "Hello sample",
+                  "A headline and a line of text to edit.",
+                ),
               ),
+          ),
+          UiBuilderNewDesignCatalog(
+            systemId = "wear-m3",
+            label = "Wear app",
+            templates =
+              listOf(
+                UiBuilderNewDesignTemplate(
+                  "wear-screen",
+                  "Blank screen",
+                  "A ScreenScaffold with its clock and scroll indicator, over an empty list.",
+                )
+              ),
+          ),
+          UiBuilderNewDesignCatalog(
+            systemId = "remote-m3",
+            label = "Wear widget",
+            templates =
+              listOf(
+                UiBuilderNewDesignTemplate(
+                  "wear-widget-small",
+                  "Blank small widget",
+                  "216×76dp host with a single content slot.",
+                )
+              ),
+          ),
+        )
+        .map { choice ->
+          choice.withTemplatePreviews(
+            CapabilityCatalogParser.parse(
+              UiBuilderDocument::class
+                .java
+                .getResource("/${choice.systemId}-capabilities-v1.json")!!
+                .readText()
             ),
-        ),
-        UiBuilderNewDesignCatalog(
-          systemId = "wear-m3",
-          label = "Wear",
-          templates =
-            listOf(
-              UiBuilderNewDesignTemplate(
-                "wear-screen",
-                "Wear screen",
-                "A ScreenScaffold with its clock and scroll indicator, over an empty list.",
+            Json.parseToJsonElement(
+                UiBuilderDocument::class
+                  .java
+                  .getResource("/jetcaster-discover-operations-v1.json")!!
+                  .readText()
               )
-            ),
-        ),
-        UiBuilderNewDesignCatalog(
-          systemId = "remote-m3",
-          label = "RemoteCompose",
-          templates =
-            listOf(
-              UiBuilderNewDesignTemplate(
-                "wear-widget-small",
-                "Small widget",
-                "216×76dp host with a single content slot.",
-              )
-            ),
-        ),
-      ),
+              .jsonObject,
+          )
+        },
     initialCatalogSystemId = "m3-catalog",
     onCreatePublic = { _, _, _, _ -> },
     onCreate = { _, _, _, _ -> },
