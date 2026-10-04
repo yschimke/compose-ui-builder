@@ -44,13 +44,15 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Bump the pinned commit of compose-preview-server's reusable design-render workflow to the head of its main branch.",
+      "description": "Bump the pinned commit of compose-preview-server's reusable design-render workflow, and the server-ref input that names the same commit, to the head of its main branch.",
       "managerFilePatterns": [
         "/^\\.github/workflows/[^/]+\\.ya?ml$/"
       ],
       "matchStrings": [
-        "uses: (?<depName>yschimke/compose-preview-server)/\\.github/workflows/[^@\\s]+@(?<currentDigest>[0-9a-f]{40}) # (?<currentValue>main)"
+        "uses: (?<depName>yschimke/compose-preview-server)/\\.github/workflows/[^@\\s]+@(?<currentDigest>[0-9a-f]{40}) # (?<currentValue>main)",
+        "server-ref: (?<currentDigest>[0-9a-f]{40}) # (?<currentValue>main)"
       ],
+      "depNameTemplate": "yschimke/compose-preview-server",
       "datasourceTemplate": "git-refs",
       "packageNameTemplate": "https://github.com/{{depName}}"
     }

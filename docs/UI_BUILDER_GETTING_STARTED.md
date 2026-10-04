@@ -315,7 +315,7 @@ Everything a design can have done to it from outside the editor is on its card:
 - **Open** it.
 - **Duplicate** it — a copy at revision zero with its own history, comments and access list; the
   design it was copied from is untouched. This is the same `POST /ui-builder/designs/copy` the home
-  screen's **Start from this** uses.
+  screen's **Duplicate** uses.
 - **Share** it, which is the design's own access page.
 - **Move** it into a shared folder, or clear the field to return it to the top level.
 - **Delete** it, behind a disclosure that says what is about to be lost. Owner-only, and it is the
