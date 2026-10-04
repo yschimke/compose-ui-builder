@@ -1,0 +1,105 @@
+{
+  "schema": "compose-ui-builder-production/v1-candidate",
+  "imports": [],
+  "models": [
+    {
+      "id": "library",
+      "kotlinType": "example.ui.LibraryUiData",
+      "ownership": "generated",
+      "fields": [
+        {
+          "name": "title",
+          "type": {
+            "kind": "scalar",
+            "scalar": "string",
+            "nullable": false
+          },
+          "property": null
+        },
+        {
+          "name": "episode",
+          "type": {
+            "kind": "model",
+            "modelId": "episode",
+            "nullable": false
+          },
+          "property": null
+        },
+        {
+          "name": "episodes",
+          "type": {
+            "kind": "list",
+            "element": {
+              "kind": "model",
+              "modelId": "episode",
+              "nullable": false
+            },
+            "nullable": false
+          },
+          "property": null
+        },
+        {
+          "name": "featured",
+          "type": {
+            "kind": "model",
+            "modelId": "external",
+            "nullable": false
+          },
+          "property": null
+        },
+        {
+          "name": "subtitle",
+          "type": {
+            "kind": "scalar",
+            "scalar": "string",
+            "nullable": true
+          },
+          "property": null
+        }
+      ]
+    },
+    {
+      "id": "episode",
+      "kotlinType": "example.ui.EpisodeUiData",
+      "ownership": "generated",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "scalar",
+            "scalar": "string",
+            "nullable": false
+          },
+          "property": null
+        },
+        {
+          "name": "title",
+          "type": {
+            "kind": "scalar",
+            "scalar": "string",
+            "nullable": false
+          },
+          "property": null
+        }
+      ]
+    },
+    {
+      "id": "external",
+      "kotlinType": "example.domain.ProjectEpisode",
+      "ownership": "external",
+      "fields": [
+        {
+          "name": "title",
+          "type": {
+            "kind": "scalar",
+            "scalar": "string",
+            "nullable": false
+          },
+          "property": "displayTitle"
+        }
+      ]
+    }
+  ],
+  "entryPoint": null,
+  "design": null
+}
