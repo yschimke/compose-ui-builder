@@ -125,6 +125,7 @@ import org.jetbrains.skia.Image
 private external fun suppressBrowserContextMenu()
 
 fun main() {
+  recordStartupMark("kotlin-start")
   stripPageToken()
   val rendererRuntimeId = sandboxRendererRuntimeId()
   if (rendererRuntimeId.isNotEmpty()) {
@@ -172,13 +173,18 @@ fun main() {
   // `roboto-flex` once, so a Wear screen composed before it was registered would keep the fallback
   // sans for the life of the page. The file is the bundle's own, cached for good.
   MainScope().launch {
+    bootPhase("Preparing fonts")
     fonts.registerWearDeviceFonts()
+    recordStartupMark("fonts-ready")
     // Designs kept in this browser live in IndexedDB, which only answers asynchronously: read it
     // into memory once, here, so every read after this is as synchronous as `localStorage` was.
     // Only the live session keeps designs; an IDE host or an MCP App owns its document.
     if (liveSessionEnabled() && !mcpAppEnabled() && !hostBridgeEnabled()) {
       BrowserLocalStorageBackend.hydrate()
     }
+    recordStartupMark("storage-ready")
+    bootPhase("Starting the editor")
+    recordStartupMark("compose-start")
     ComposeViewport(viewportContainerId = "composeApp") {
       ProvideUiBuilderFonts(fonts) {
         ProvideBrowserViewportInsets {
@@ -627,6 +633,7 @@ private fun updateCatalogRuntimeSurface(
       if (controller) controller.dispose();
       host.replaceChildren();
       const root = '/ui-builder/runtime/' + encodeURIComponent(runtimeId) + '/';
+      globalThis.composeUiBuilderBoot?.mark?.('renderer-requested');
       const frame = document.createElement('iframe');
       frame.title = 'Pinned catalog design renderer';
       frame.sandbox = 'allow-scripts';
@@ -828,6 +835,7 @@ private fun updateCatalogRuntimeSurface(
             !validInspection(message.payload?.inspection, expected)) return;
         pending.delete(message.requestId);
         if (message.type === 'initialized') {
+          globalThis.composeUiBuilderBoot?.mark?.('renderer-ready');
           initialized = true;
           const listed = message.payload?.capabilities;
           capabilities = Array.isArray(listed)
@@ -840,6 +848,7 @@ private fun updateCatalogRuntimeSurface(
           // Edits now reach one live frame back to back; an answer for a revision already replaced
           // must not put its selection bounds over the newer drawing.
           if (message.requestId !== latestRenderRequestId) return;
+          globalThis.composeUiBuilderBoot?.mark?.('preview-rendered');
           host.__uiBuilderInspection = message.payload.inspection;
           host.__uiBuilderInspectionJson = JSON.stringify(message.payload.inspection);
           delete host.__uiBuilderRuntimeError;
@@ -2416,6 +2425,7 @@ internal fun browserNowMillis(): Long = browserNow().toLong()
 internal fun markReady() {
   markReadyAttribute()
   dismissBootScreen()
+  recordEditorStartupReady()
 }
 
 @JsFun("() => document.documentElement.setAttribute('data-ui-builder-ready', 'true')")
@@ -2439,6 +2449,23 @@ private external fun markReadyAttribute()
 }"""
 )
 internal external fun dismissBootScreen()
+
+/** Startup milestones are optional in embedded hosts that do not ship the boot script. */
+@JsFun("(name) => globalThis.composeUiBuilderBoot?.mark?.(name)")
+private external fun recordStartupMark(name: String)
+
+// Ready means the editor host is installed. Two animation frames provide a paint opportunity;
+// the pinned preview's validated `rendered` reply is measured separately, not inferred from it.
+@JsFun(
+  """() => {
+    const boot = globalThis.composeUiBuilderBoot;
+    if (!boot?.mark || !globalThis.__uiBuilderStartup ||
+        globalThis.__uiBuilderStartup.marks['editor-ready'] !== undefined) return;
+    boot.mark('editor-ready');
+    requestAnimationFrame(() => requestAnimationFrame(() => boot.mark('editor-paint-opportunity')));
+  }"""
+)
+private external fun recordEditorStartupReady()
 
 /** What the boot screen says the editor is doing, until [dismissBootScreen]. */
 @JsFun("(text) => globalThis.composeUiBuilderBoot?.phase(text)")

@@ -40,14 +40,10 @@
       { "imports": { "@js-joda/core": "./js-joda.esm.js" } }
     </script>
     <!--
-      Start the two big downloads now rather than when the module graph reaches them: without these,
-      `uiBuilder.wasm` is not requested until `uiBuilder.mjs` and `uiBuilder.import-object.mjs`
-      (and everything that imports) have downloaded and parsed one after another. `crossorigin`
-      makes each preload the same request (`cors`, same-origin credentials) the loaders make, so
-      the browser hands them the preloaded response instead of fetching twice.
+      Preload the module graph, but let its loaders fetch Wasm directly. In Chromium, Wasm
+      responses supplied by rel=preload did not consume compiled-code cache entries on repeat
+      opens, even though the bytes were cached. Direct streaming fetches preserve that cache.
     -->
-    <link rel="preload" href="uiBuilder.wasm" as="fetch" type="application/wasm" crossorigin />
-    <link rel="preload" href="skiko.wasm" as="fetch" type="application/wasm" crossorigin />
     <link rel="modulepreload" href="uiBuilder.mjs" />
     <link rel="modulepreload" href="uiBuilder.import-object.mjs" />
     <link rel="modulepreload" href="skiko.mjs" />
@@ -96,9 +92,6 @@
       #ui-builder-boot .boot-bar {
         position: absolute; inset: 0; transform-origin: left; background: var(--boot-accent);
         transform: scaleX(0.3); animation: boot-indeterminate 1.4s ease-in-out infinite;
-      }
-      #ui-builder-boot[data-progress="determinate"] .boot-bar {
-        animation: none; transition: transform 200ms linear;
       }
       #ui-builder-boot[data-state="failed"] .boot-bar { animation: none; background: #b3261e; }
       #ui-builder-boot .boot-quip { margin: 0; min-height: 2.9em; color: var(--boot-muted); font-style: italic; }

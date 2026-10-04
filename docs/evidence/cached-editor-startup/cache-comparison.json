@@ -1,0 +1,158 @@
+{
+  "browser": "Chromium 153.0.8010.12",
+  "rendering": "headless SwiftShader",
+  "method": "Same production Wasm bytes, baseline versus candidate HTML/boot JS. Three fresh Chromium processes per variant sharing a variant-specific disk profile. Local HTTP; tracing enabled. Ready time is observed after the readiness signal, not the User Timing mark. Two warm samples are diagnostic, not a performance guarantee.",
+  "samples": [
+    {
+      "variant": "before",
+      "visit": 0,
+      "bootActive": true,
+      "readyMs": 4299.599999964237,
+      "wasm": [
+        {
+          "file": "uiBuilder.wasm",
+          "transfer": 30024831,
+          "decoded": 30024531
+        },
+        {
+          "file": "skiko.wasm",
+          "transfer": 8640616,
+          "decoded": 8640316
+        }
+      ],
+      "errors": [],
+      "counts": {
+        "v8.wasm.streamFromResponseCallback": 2,
+        "v8.wasm.compileConsume": 40,
+        "v8.wasm.compileConsumeDone": 2
+      }
+    },
+    {
+      "variant": "before",
+      "visit": 1,
+      "bootActive": true,
+      "readyMs": 3618,
+      "wasm": [
+        {
+          "file": "uiBuilder.wasm",
+          "transfer": 0,
+          "decoded": 30024531
+        },
+        {
+          "file": "skiko.wasm",
+          "transfer": 0,
+          "decoded": 8640316
+        }
+      ],
+      "errors": [],
+      "counts": {
+        "v8.wasm.streamFromResponseCallback": 2,
+        "v8.wasm.compileConsume": 73,
+        "v8.wasm.compileConsumeDone": 2
+      }
+    },
+    {
+      "variant": "before",
+      "visit": 2,
+      "bootActive": true,
+      "readyMs": 2846.399999976158,
+      "wasm": [
+        {
+          "file": "uiBuilder.wasm",
+          "transfer": 0,
+          "decoded": 30024531
+        },
+        {
+          "file": "skiko.wasm",
+          "transfer": 0,
+          "decoded": 8640316
+        }
+      ],
+      "errors": [],
+      "counts": {
+        "v8.wasm.streamFromResponseCallback": 2,
+        "v8.wasm.compileConsume": 60,
+        "v8.wasm.compileConsumeDone": 2
+      }
+    },
+    {
+      "variant": "after",
+      "visit": 0,
+      "bootActive": true,
+      "readyMs": 3044.599999964237,
+      "wasm": [
+        {
+          "file": "skiko.wasm",
+          "transfer": 8640616,
+          "decoded": 8640316
+        },
+        {
+          "file": "uiBuilder.wasm",
+          "transfer": 30024831,
+          "decoded": 30024531
+        }
+      ],
+      "errors": [],
+      "counts": {
+        "v8.wasm.streamFromResponseCallback": 2,
+        "v8.wasm.compileConsume": 71,
+        "v8.wasm.compileConsumeDone": 2,
+        "v8.wasm.compiledModule": 3,
+        "v8.wasm.cachedModule": 3,
+        "v8.wasm.compileDigestForCreate": 3
+      }
+    },
+    {
+      "variant": "after",
+      "visit": 1,
+      "bootActive": true,
+      "readyMs": 2189.400000035763,
+      "wasm": [
+        {
+          "file": "skiko.wasm",
+          "transfer": 0,
+          "decoded": 8640316
+        },
+        {
+          "file": "uiBuilder.wasm",
+          "transfer": 0,
+          "decoded": 30024531
+        }
+      ],
+      "errors": [],
+      "counts": {
+        "v8.wasm.streamFromResponseCallback": 2,
+        "v8.wasm.compileConsume": 51,
+        "v8.wasm.moduleCacheHit": 2,
+        "v8.wasm.compileConsumeDone": 2,
+        "v8.wasm.compileDigestForConsume": 2
+      }
+    },
+    {
+      "variant": "after",
+      "visit": 2,
+      "bootActive": true,
+      "readyMs": 2120.5,
+      "wasm": [
+        {
+          "file": "skiko.wasm",
+          "transfer": 0,
+          "decoded": 8640316
+        },
+        {
+          "file": "uiBuilder.wasm",
+          "transfer": 0,
+          "decoded": 30024531
+        }
+      ],
+      "errors": [],
+      "counts": {
+        "v8.wasm.streamFromResponseCallback": 2,
+        "v8.wasm.compileConsume": 123,
+        "v8.wasm.moduleCacheHit": 2,
+        "v8.wasm.compileConsumeDone": 2,
+        "v8.wasm.compileDigestForConsume": 2
+      }
+    }
+  ]
+}

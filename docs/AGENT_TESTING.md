@@ -64,7 +64,7 @@ Traps:
 editor looks right. It needs the Wasm build, which is the heaviest thing in the repo to compile, so
 prefer CI for it.
 
-It runs three lanes, all by default; `SMOKE_LANES=mobile,offline node smoke.mjs <wasmDist>` picks
+It runs four lanes, all by default; `SMOKE_LANES=mobile,offline node smoke.mjs <wasmDist>` picks
 some:
 
 - `desktop` — the capture modes at 1400×900.
@@ -75,9 +75,58 @@ some:
   cuts the network, and opens the editor in a fresh tab, which must still come up ready. `127.0.0.1`
   is a secure context, so the worker registers over plain HTTP there.
 
+- `cache` — starts Chromium three times with the same temporary disk profile and checks the second
+  and third visits consume compiled-code cache entries for both Wasm modules. The profile is removed
+  afterwards; `wasm-cache.json` and per-visit Wasm traces are kept beside the screenshots.
+
 In a sandbox, Playwright's Chromium may already be installed (for example under `/opt/pw-browsers`
 with a global `playwright` package); link that package into a `node_modules` above the script
 rather than running `npx playwright install`.
+
+### Cached startup measurements
+
+The desktop and mobile smoke lanes also reopen the editor in a fresh tab in the same browser
+context, using an isolated temporary disk profile. Incognito memory caches may reject the large
+Wasm assets and cannot reliably exercise this path. Static assets are immutable for the lifetime of
+the test server. The warm visit must load both Wasm resources from the HTTP cache, preserve the original `fetch` function, and reach ready
+without the boot screen. A screenshot directory also receives `startup.json` with navigation-relative
+milestones and Wasm Resource Timing entries. `HARNESS_CHROMIUM` can select an already-installed
+Chromium executable.
+
+```sh
+npm --prefix scripts/ui-builder-web-smoke ci
+npm --prefix scripts/ui-builder-web-smoke test
+SMOKE_LANES=desktop,mobile node scripts/ui-builder-web-smoke/smoke.mjs \
+  ui-builder/build/wasmDist build/web-smoke
+```
+
+`globalThis.__uiBuilderStartup` holds a bounded set of first-occurrence milestones; the same names
+appear as `ui-builder:*` User Timing marks in a browser performance trace. There are no design ids,
+actor ids or document contents in them, and they are not persisted or uploaded.
+
+- `kotlin-start`, `fonts-ready`, `storage-ready`, `compose-start` separate Wasm initialisation from
+  font registration, local storage hydration and starting the editor host.
+- `identity-start`, `design-start`, `design-loaded` describe a hosted design's opening path; fixture
+  and embedded-host modes need not report them.
+- `editor-ready` is the editor host's readiness signal. `editor-paint-opportunity` is two animation
+  frames later, giving it an opportunity to paint; it is not proof that a pinned preview has drawn.
+- `renderer-requested`, `renderer-ready`, `preview-rendered` separately report the first pinned
+  renderer's creation, validated initialisation reply and validated render reply. These can arrive
+  after the boot screen is removed. An in-process fixture has no pinned renderer and no such marks.
+
+HTTP cache hits alone do **not** prove compiled-Wasm caching. To check that separately in Chromium,
+record the `disabled-by-default-devtools.timeline` trace category and look for
+`v8.wasm.moduleCacheHit` on repeat visits, including a browser restart with the same profile. Keep
+asset URLs stable and leave DevTools' “Disable cache” unchecked. Compare like-for-like bundles,
+browser versions and devices; software WebGL and background compilation make absolute timings noisy.
+
+The boot script must leave the original fetch Response untouched. Rebuilding it with
+`new Response(stream, { headers })` preserves streaming and the MIME type but discards the network
+response's compiled-code cache metadata. The phase-based indicator intentionally avoids byte-counting
+interception. The shells preload the JavaScript module graph, but leave Wasm requests to the
+streaming loaders: Chromium 153 created code-cache entries with `rel=preload as=fetch` Wasm links
+but did not consume them on subsequent browser starts. Direct fetches consumed both module caches.
+Neither a service worker nor another copy of the Wasm bytes solves that metadata loss.
 
 ## 3. The deployed editor
 
