@@ -832,14 +832,25 @@ private fun LiveSessionApp(
         availableCatalogs
           .mapNotNull { capability ->
             newDesignCatalog(capability)?.let { choice ->
+              // The previews are decoration on the chooser. One catalog whose record fails the
+              // parser's validation keeps its plain entry rather than taking the whole list —
+              // and, beside an open, the design being opened — down with it.
               if (fixture == null) choice
               else
-                choice.withTemplatePreviews(
-                  CapabilityCatalogParser.parse(
-                    Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
-                  ),
-                  fixture,
-                )
+                runCatching {
+                    choice.withTemplatePreviews(
+                      CapabilityCatalogParser.parse(
+                        Json.encodeToJsonElement(CatalogCapabilityV1.serializer(), capability)
+                      ),
+                      fixture,
+                    )
+                  }
+                  .onFailure { failure ->
+                    println(
+                      "compose-ui-builder: no template previews for ${choice.systemId}: $failure"
+                    )
+                  }
+                  .getOrDefault(choice)
             }
           }
           .sortedBy { NEW_DESIGN_CATALOG_ORDER.indexOf(it.systemId) }
