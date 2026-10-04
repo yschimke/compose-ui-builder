@@ -56,6 +56,8 @@ import ee.schimke.composeai.uibuilder.editor.EditorLibraryComponent
 import ee.schimke.composeai.uibuilder.editor.EditorNoticeAction
 import ee.schimke.composeai.uibuilder.editor.EditorSubmission
 import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS
+import ee.schimke.composeai.uibuilder.editor.UiBuilderAgentHost
+import ee.schimke.composeai.uibuilder.editor.UiBuilderAgentPreferences
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCatalogRecoveryUi
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCollaborator
 import ee.schimke.composeai.uibuilder.editor.UiBuilderDocumentPreview
@@ -383,6 +385,28 @@ private fun LiveSessionApp(
       mutableStateOf(readPinnedComponents(config.catalogSystemId))
     }
   var presenceState by remember { mutableStateOf(UiBuilderPresenceState()) }
+  var agentPreferences by
+    remember(config.designId) { mutableStateOf(readAgentPreferences(config.designId)) }
+  var activeAgents by
+    remember(config.designId) { mutableStateOf<List<UiBuilderCollaborator>?>(null) }
+  LaunchedEffect(config.designId, localSession, config.selectors.revision) {
+    if (localSession != null || config.startWithNewDesign || config.selectors.revision != null)
+      return@LaunchedEffect
+    while (true) {
+      try {
+        activeAgents = fetchAgentPresence(config.designId)
+        if (activeAgents?.isNotEmpty() == true && !agentPreferences.connectedBefore) {
+          val updated = agentPreferences.copy(connectedBefore = true)
+          if (saveAgentPreferences(config.designId, updated) == null) agentPreferences = updated
+        }
+      } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        throw cancelled
+      } catch (_: Exception) {
+        activeAgents = null
+      }
+      delay(UI_BUILDER_PRESENCE_HEARTBEAT_MILLIS)
+    }
+  }
   var socketState by remember { mutableStateOf(BrowserUiBuilderSocketState.CONNECTING) }
   // Which snapshot may be shown, and which revision the next command claims as its base. See
   // [UiBuilderLiveSessionSync]: without it a burst of edits raced its own round trips and the
@@ -1461,8 +1485,48 @@ private fun LiveSessionApp(
     LaunchedEffect(loadedCatalog) {
       catalogRecord = fetchCatalogRecord(loadedCatalog.benchmark.catalogSystemId)
     }
+    val agentHost =
+      if (localSession != null || !isDesignUrlPathSafe(config.designId)) null
+      else
+        object : UiBuilderAgentHost {
+          override val preferences = agentPreferences
+          override val agents = activeAgents
+          override val viewers = collaborators
+
+          override fun prompt(includeSetup: Boolean, instructions: String) =
+            agentUiBuilderPrompt(
+              "${pageOrigin().trimEnd('/')}/mcp",
+              shareableUrl(designUrlPath(config.designId)),
+              config.designId,
+              includeSetup,
+              instructions,
+            )
+
+          override fun save(preferences: UiBuilderAgentPreferences): String? {
+            val failure = saveAgentPreferences(config.designId, preferences)
+            if (failure == null) agentPreferences = preferences
+            return failure
+          }
+
+          override suspend fun copy(text: String) = copyAiPrompt(text)
+
+          override fun openSetup() = openAgentSetup(AGENT_SETUP_URL)
+
+          override fun connectVsCode() =
+            connectAgentVsCode("${pageOrigin().trimEnd('/')}/mcp", UI_BUILDER_MCP_SERVER_NAME)
+        }
+    LaunchedEffect(config.designId, agentPreferences) {
+      if (agentHost != null)
+        publishAgentHandoff(
+          config.designId,
+          "${pageOrigin().trimEnd('/')}/mcp",
+          AGENT_SETUP_URL,
+          agentHost.prompt(false, ""),
+        )
+    }
     UiBuilderEditor(
       document = loadedDocument,
+      agentHost = agentHost,
       catalog = loadedCatalog,
       catalogRecord = catalogRecord,
       pageDestinations = pageDestinations,
@@ -1592,7 +1656,7 @@ private fun LiveSessionApp(
       initialCatalogQuery = catalogQuery,
       initialEnabledPacks = enabledPacks,
       initialPinnedComponents = pinnedComponents,
-      collaborators = collaborators,
+      collaborators = collaborators + activeAgents.orEmpty(),
       componentDrift = componentDrift,
       componentLibrary = componentLibrary,
       loadLibrarySymbol = if (localSession == null) ::loadLibrarySymbol else null,

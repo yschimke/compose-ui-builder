@@ -67,7 +67,6 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.selected
@@ -117,6 +116,8 @@ internal fun MobileEditorToolbar(
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
   onCopyAiPrompt: (suspend () -> String)?,
+  agentHost: UiBuilderAgentHost? = null,
+  onOpenAgentPrompt: () -> Unit = {},
   onNotice: (String) -> Unit,
   onTakeOffline: (() -> Unit)?,
   onSyncToServer: (() -> Unit)?,
@@ -144,6 +145,7 @@ internal fun MobileEditorToolbar(
       EditorAction("Redo", "$COMMAND_MODIFIER+Shift+Z", canRedo) {
         dispatch(UiBuilderEditorEvent.Redo)
       }
+      if (agentHost != null) AgentToolbarAction(agentHost, onOpenAgentPrompt)
       if (exportHost != null) ExportMenu(exportHost, showStatus = false)
       Box {
         TextButton(
@@ -395,6 +397,8 @@ internal fun EditorToolbar(
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
   onCopyAiPrompt: (suspend () -> String)?,
+  agentHost: UiBuilderAgentHost? = null,
+  onOpenAgentPrompt: () -> Unit = {},
   onNotice: (String) -> Unit,
   onTakeOffline: (() -> Unit)? = null,
   onSyncToServer: (() -> Unit)? = null,
@@ -472,7 +476,7 @@ internal fun EditorToolbar(
           WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
         }
       }
-      if (collaborators.isNotEmpty()) {
+      if (collaborators.isNotEmpty() || agentHost != null) {
         Spacer(Modifier.width(6.dp))
         PresenceRow(collaborators)
         Spacer(Modifier.width(6.dp))
@@ -483,7 +487,9 @@ internal fun EditorToolbar(
       if (onForkDesign != null) {
         ToolbarIconAction("Fork this design", "", UiBuilderChromeIcon.Copy, true, onForkDesign)
       }
-      if (onCopyAiPrompt != null) {
+      if (agentHost != null) {
+        AgentToolbarAction(agentHost, onOpenAgentPrompt)
+      } else if (onCopyAiPrompt != null) {
         ToolbarIconAction("Copy prompt for your agent", "", UiBuilderChromeIcon.Copy, true) {
           scope.launch { onNotice(onCopyAiPrompt()) }
         }
@@ -958,21 +964,27 @@ private fun WorkspacePanesMenu(
 /** Who else is in the document, as the avatar stack every collaborative tool puts here. */
 @Composable
 private fun PresenceRow(collaborators: List<UiBuilderCollaborator>) {
-  Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-    collaborators.take(4).forEach { collaborator ->
-      Surface(
-        Modifier.size(28.dp).clearAndSetSemantics {},
-        shape = RoundedCornerShape(14.dp),
-        color = collaborator.colorArgbHex.toPresenceColor(),
-      ) {
-        Box(contentAlignment = Alignment.Center) {
-          Text(
-            collaborator.displayName.firstOrNull()?.uppercase().orEmpty(),
-            color = Color.White,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-          )
-        }
+  var expanded by remember { mutableStateOf(false) }
+  Box {
+    TextButton(onClick = { expanded = true }) { Text("Viewers · ${collaborators.size + 1}") }
+    androidx.compose.material3.DropdownMenu(
+      expanded = expanded,
+      onDismissRequest = { expanded = false },
+    ) {
+      DropdownMenuItem(text = { Text("You · browser") }, onClick = { expanded = false })
+      collaborators.forEach { collaborator ->
+        DropdownMenuItem(
+          text = {
+            Text(
+              "${collaborator.displayName} · ${when (collaborator.kind) {
+          UiBuilderParticipantKind.Browser -> "browser"
+          UiBuilderParticipantKind.Agent -> "agent"
+          UiBuilderParticipantKind.Unknown -> "participant"
+        }}${collaborator.modelName?.let { " · $it (reported)" }.orEmpty()}"
+            )
+          },
+          onClick = { expanded = false },
+        )
       }
     }
   }

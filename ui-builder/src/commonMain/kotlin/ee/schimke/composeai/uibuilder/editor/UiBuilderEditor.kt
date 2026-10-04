@@ -617,6 +617,7 @@ fun UiBuilderEditor(
    * knows its origin; the editor only makes the workflow discoverable.
    */
   onCopyAiPrompt: (suspend () -> String)? = null,
+  agentHost: UiBuilderAgentHost? = null,
   /**
    * Leaves the editor for the host's index of every design this account may open, or null where the
    * host has no such page.
@@ -902,6 +903,7 @@ fun UiBuilderEditor(
     }
   var inspectorOpen by remember(document.id) { mutableStateOf(initialInspectorOpen) }
   var showNewDesign by remember(document.id) { mutableStateOf(false) }
+  var showAgentPrompt by remember(document.id) { mutableStateOf(false) }
   var showPacks by remember(document.id) { mutableStateOf(false) }
   // Offered only where there is something to switch: a settings entry over an empty list is a
   // control that teaches nothing.
@@ -960,6 +962,9 @@ fun UiBuilderEditor(
   fun say(sentence: String) {
     transientNotice = sentence
     transientNoticeGeneration += 1
+  }
+  if (showAgentPrompt && agentHost != null) {
+    AgentPromptDialog(agentHost, { showAgentPrompt = false }, ::say)
   }
   val editorScope = rememberCoroutineScope()
   val systemClipboard = LocalClipboard.current
@@ -2649,6 +2654,8 @@ fun UiBuilderEditor(
                 onReconnect = onReconnect,
                 onHelp = onHelp,
                 onCopyAiPrompt = onCopyAiPrompt,
+                agentHost = agentHost,
+                onOpenAgentPrompt = { showAgentPrompt = true },
                 onNotice = ::say,
                 onTakeOffline = onTakeOffline,
                 onSyncToServer = onSyncToServer,
@@ -2672,6 +2679,8 @@ fun UiBuilderEditor(
                 onReconnect = onReconnect,
                 onHelp = onHelp,
                 onCopyAiPrompt = onCopyAiPrompt,
+                agentHost = agentHost,
+                onOpenAgentPrompt = { showAgentPrompt = true },
                 onNotice = ::say,
                 onTakeOffline = onTakeOffline,
                 onSyncToServer = onSyncToServer,
@@ -2695,6 +2704,9 @@ fun UiBuilderEditor(
                 dispatch = ::dispatch,
               )
             }
+          }
+          if (agentHost != null && !focusedCanvas && !dedicatedOutput && hostChrome == null) {
+            AgentInvitation(agentHost, { showAgentPrompt = true }, ::say)
           }
           // Under the toolbar and over everything else, on both layouts: what a link asked for is
           // the first thing to know about this page, and a strip inside one of the docks would be
