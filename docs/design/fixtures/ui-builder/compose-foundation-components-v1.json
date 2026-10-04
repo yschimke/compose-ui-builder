@@ -577,40 +577,117 @@
         "jvmOwner": "androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldKt",
         "callable": "androidx.compose.material3.adaptive.layout.SupportingPaneScaffold",
         "name": "SupportingPaneScaffold",
-        "origin": "LIBRARY"
+        "origin": "LIBRARY",
+        "jvmName": "SupportingPaneScaffold",
+        "descriptor": "(Landroidx/compose/material3/adaptive/layout/PaneScaffoldDirective;Landroidx/compose/material3/adaptive/layout/ThreePaneScaffoldValue;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function3;Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function4;Landroidx/compose/material3/adaptive/layout/PaneExpansionState;Landroidx/compose/runtime/Composer;II)V",
+        "sourceFile": null,
+        "docs": "unavailable",
+        "receiver": null
       },
       "parameters": [
         {
           "name": "directive",
           "type": "PaneScaffoldDirective",
+          "typeFqn": "androidx.compose.material3.adaptive.layout.PaneScaffoldDirective",
           "hasDefault": false,
-          "typeFqn": "androidx.compose.material3.adaptive.layout.PaneScaffoldDirective"
+          "composableSlot": false,
+          "composableSlotReceiver": null,
+          "nullable": false,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": null
         },
         {
           "name": "value",
           "type": "ThreePaneScaffoldValue",
+          "typeFqn": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue",
           "hasDefault": false,
-          "typeFqn": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue"
+          "composableSlot": false,
+          "composableSlotReceiver": null,
+          "nullable": false,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": null
         },
         {
           "name": "mainPane",
-          "type": "@Composable ThreePaneScaffoldPaneScope.() -> Unit",
+          "type": "ThreePaneScaffoldPaneScope.() -> Unit",
+          "typeFqn": "kotlin.Function1",
           "hasDefault": false,
           "composableSlot": true,
-          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope"
+          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope",
+          "nullable": false,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": "kotlin.Unit"
         },
         {
           "name": "supportingPane",
-          "type": "@Composable ThreePaneScaffoldPaneScope.() -> Unit",
+          "type": "ThreePaneScaffoldPaneScope.() -> Unit",
+          "typeFqn": "kotlin.Function1",
           "hasDefault": false,
           "composableSlot": true,
-          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope"
+          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope",
+          "nullable": false,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": "kotlin.Unit"
         },
         {
           "name": "modifier",
           "type": "Modifier",
+          "typeFqn": "androidx.compose.ui.Modifier",
           "hasDefault": true,
-          "typeFqn": "androidx.compose.ui.Modifier"
+          "composableSlot": false,
+          "composableSlotReceiver": null,
+          "nullable": false,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": null
+        },
+        {
+          "name": "extraPane",
+          "type": "(ThreePaneScaffoldPaneScope.() -> Unit)?",
+          "typeFqn": "kotlin.Function1",
+          "hasDefault": true,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope",
+          "nullable": true,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": "kotlin.Unit"
+        },
+        {
+          "name": "paneExpansionDragHandle",
+          "type": "(ThreePaneScaffoldScope.(PaneExpansionState) -> Unit)?",
+          "typeFqn": "kotlin.Function2",
+          "hasDefault": true,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldScope",
+          "nullable": true,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": "kotlin.Unit"
+        },
+        {
+          "name": "paneExpansionState",
+          "type": "PaneExpansionState?",
+          "typeFqn": "androidx.compose.material3.adaptive.layout.PaneExpansionState",
+          "hasDefault": true,
+          "composableSlot": false,
+          "composableSlotReceiver": null,
+          "nullable": true,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": null
         }
       ],
       "slots": [
@@ -623,12 +700,180 @@
           "name": "supportingPane",
           "required": true,
           "receiverScope": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope"
+        },
+        {
+          "name": "extraPane",
+          "required": false,
+          "receiverScope": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope"
+        },
+        {
+          "name": "paneExpansionDragHandle",
+          "required": false,
+          "receiverScope": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldScope"
         }
       ],
       "code": {
         "call": "SupportingPaneScaffold(directive = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo()), value = calculateThreePaneScaffoldValue(1), mainPane = {}, supportingPane = {})",
         "imports": [
           "androidx.compose.material3.adaptive.layout.SupportingPaneScaffold"
+        ],
+        "requiredOptIns": [
+          "androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi"
+        ]
+      },
+      "signatureKnown": true,
+      "requiredOptIns": [
+        "androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi"
+      ]
+    },
+    {
+      "canonicalId": "compose-foundation/androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldKt.ListDetailPaneScaffold",
+      "componentIds": [
+        "layout/list-detail-pane-scaffold"
+      ],
+      "symbol": {
+        "jvmOwner": "androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldKt",
+        "callable": "androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold",
+        "name": "ListDetailPaneScaffold",
+        "origin": "LIBRARY",
+        "jvmName": "ListDetailPaneScaffold",
+        "descriptor": "(Landroidx/compose/material3/adaptive/layout/PaneScaffoldDirective;Landroidx/compose/material3/adaptive/layout/ThreePaneScaffoldValue;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function3;Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function4;Landroidx/compose/material3/adaptive/layout/PaneExpansionState;Landroidx/compose/runtime/Composer;II)V",
+        "sourceFile": null,
+        "docs": "unavailable",
+        "receiver": null
+      },
+      "parameters": [
+        {
+          "name": "directive",
+          "type": "PaneScaffoldDirective",
+          "typeFqn": "androidx.compose.material3.adaptive.layout.PaneScaffoldDirective",
+          "hasDefault": false,
+          "composableSlot": false,
+          "composableSlotReceiver": null,
+          "nullable": false,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": null
+        },
+        {
+          "name": "value",
+          "type": "ThreePaneScaffoldValue",
+          "typeFqn": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue",
+          "hasDefault": false,
+          "composableSlot": false,
+          "composableSlotReceiver": null,
+          "nullable": false,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": null
+        },
+        {
+          "name": "listPane",
+          "type": "ThreePaneScaffoldPaneScope.() -> Unit",
+          "typeFqn": "kotlin.Function1",
+          "hasDefault": false,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope",
+          "nullable": false,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": "kotlin.Unit"
+        },
+        {
+          "name": "detailPane",
+          "type": "ThreePaneScaffoldPaneScope.() -> Unit",
+          "typeFqn": "kotlin.Function1",
+          "hasDefault": false,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope",
+          "nullable": false,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": "kotlin.Unit"
+        },
+        {
+          "name": "modifier",
+          "type": "Modifier",
+          "typeFqn": "androidx.compose.ui.Modifier",
+          "hasDefault": true,
+          "composableSlot": false,
+          "composableSlotReceiver": null,
+          "nullable": false,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": null
+        },
+        {
+          "name": "extraPane",
+          "type": "(ThreePaneScaffoldPaneScope.() -> Unit)?",
+          "typeFqn": "kotlin.Function1",
+          "hasDefault": true,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope",
+          "nullable": true,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": "kotlin.Unit"
+        },
+        {
+          "name": "paneExpansionDragHandle",
+          "type": "(ThreePaneScaffoldScope.(PaneExpansionState) -> Unit)?",
+          "typeFqn": "kotlin.Function2",
+          "hasDefault": true,
+          "composableSlot": true,
+          "composableSlotReceiver": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldScope",
+          "nullable": true,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": "kotlin.Unit"
+        },
+        {
+          "name": "paneExpansionState",
+          "type": "PaneExpansionState?",
+          "typeFqn": "androidx.compose.material3.adaptive.layout.PaneExpansionState",
+          "hasDefault": true,
+          "composableSlot": false,
+          "composableSlotReceiver": null,
+          "nullable": true,
+          "noArgConstructible": false,
+          "noArgFactory": null,
+          "scopeDslReceiver": null,
+          "lambdaReturnTypeFqn": null
+        }
+      ],
+      "slots": [
+        {
+          "name": "listPane",
+          "required": true,
+          "receiverScope": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope"
+        },
+        {
+          "name": "detailPane",
+          "required": true,
+          "receiverScope": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope"
+        },
+        {
+          "name": "extraPane",
+          "required": false,
+          "receiverScope": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldPaneScope"
+        },
+        {
+          "name": "paneExpansionDragHandle",
+          "required": false,
+          "receiverScope": "androidx.compose.material3.adaptive.layout.ThreePaneScaffoldScope"
+        }
+      ],
+      "code": {
+        "call": "ListDetailPaneScaffold(directive = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo()), value = calculateThreePaneScaffoldValue(1), listPane = {}, detailPane = {})",
+        "imports": [
+          "androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold"
         ],
         "requiredOptIns": [
           "androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi"

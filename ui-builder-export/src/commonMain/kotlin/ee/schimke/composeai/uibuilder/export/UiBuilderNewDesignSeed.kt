@@ -54,7 +54,7 @@ object UiBuilderNewDesignSeed {
           WearWidgetSample.entries.map(WearWidgetSample::templateId)
       "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
       A2uiDocumentExporter.CATALOG_SYSTEM_ID -> setOf(A2UI_TEMPLATE)
-      "m3-catalog" -> setOf("blank", HELLO_TEMPLATE, DEFAULT_TEMPLATE)
+      "m3-catalog" -> setOf("blank", HELLO_TEMPLATE, DEFAULT_TEMPLATE) + AdaptiveScreenTemplates.ids
       else -> setOf("blank", DEFAULT_TEMPLATE)
     }
 
@@ -133,6 +133,8 @@ object UiBuilderNewDesignSeed {
             if (templateId == "wear-widget-large") WearWidgetScaffoldSize.Large
             else WearWidgetScaffoldSize.Small,
         )
+      catalogSystemId == "m3-catalog" && templateId in AdaptiveScreenTemplates.ids ->
+        AdaptiveScreenTemplates.document(templateId, designId, catalogPin, environment)
       templateId == HELLO_TEMPLATE ->
         helloUiBuilderDocument(
           designId = designId,

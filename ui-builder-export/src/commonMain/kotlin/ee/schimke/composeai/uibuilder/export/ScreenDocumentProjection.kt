@@ -945,7 +945,7 @@ object ScreenDocumentProjection {
           slots =
             node.slots.entries.associate { (slot, children) ->
               val childScope = slotScope(node.componentId, variant, slot)
-              if (node.componentId == SUPPORTING_PANE_SCAFFOLD) {
+              if (node.componentId in setOf(SUPPORTING_PANE_SCAFFOLD, LIST_DETAIL_PANE_SCAFFOLD)) {
                 paneWidthLink(node, slot)?.let { link ->
                   children.forEach { paneWidths[it] = link }
                 }
@@ -1361,7 +1361,8 @@ object ScreenDocumentProjection {
       }
       if (node.componentId == COLOUR_DOT) spent += colourDot(node, fromProperties)
       if (node.componentId == LINEAR_GRADIENT) spent += linearGradient(node, fromProperties)
-      if (node.componentId == SUPPORTING_PANE_SCAFFOLD) spent += supportingPanes(node, arguments)
+      if (node.componentId in setOf(SUPPORTING_PANE_SCAFFOLD, LIST_DETAIL_PANE_SCAFFOLD))
+        spent += supportingPanes(node, arguments)
       paneWidths.remove(node.id)?.let { fromProperties += it }
       return spent
     }
@@ -1539,6 +1540,7 @@ object ScreenDocumentProjection {
       node: DesignNodeV1,
       arguments: MutableMap<String, ScreenValue>,
     ): Set<String> {
+      val listDetail = node.componentId == LIST_DETAIL_PANE_SCAFFOLD
       val where = "node `${node.id}`"
       val mode =
         when (val value = node.properties[PANE_LAYOUT_MODE]) {
@@ -1548,7 +1550,9 @@ object ScreenDocumentProjection {
         }
       val adjustments = mutableMapOf<String, ScreenValue>()
       if (mode == "singlePane") adjustments["maxHorizontalPartitions"] = ScreenValue.Whole(1)
-      for (flag in listOf(MAIN_PANE_VISIBLE, SUPPORTING_PANE_VISIBLE)) {
+      for (flag in
+        if (listDetail) listOf("listPaneVisible", "detailPaneVisible")
+        else listOf(MAIN_PANE_VISIBLE, SUPPORTING_PANE_VISIBLE)) {
         val visible = (node.properties[flag] as? BooleanValueV1)?.value ?: true
         if (!visible) {
           refuse(
@@ -1568,6 +1572,11 @@ object ScreenDocumentProjection {
         dp(spacing)?.let { adjustments["horizontalPartitionSpacerSize"] = it }
           ?: refuse("$where.`$PANE_SPACING_DP` is $spacing, which does not survive `Dp`")
       }
+      val sizingPolicy =
+        (node.properties["paneSizing"] as? EnumValueV1)?.value
+          ?: (node.properties["paneSizing"] as? StringValueV1)?.value
+      if (spacing == null && sizingPolicy in setOf("fixedStart", "fixedEnd"))
+        adjustments["horizontalPartitionSpacerSize"] = dp(24.0)!!
       val computed =
         ScreenValue.Construct(
           callableFqn = "$ADAPTIVE_LAYOUT.calculatePaneScaffoldDirective",
@@ -1596,6 +1605,90 @@ object ScreenDocumentProjection {
             typeFqn = "$ADAPTIVE_LAYOUT.PaneScaffoldDirective",
           )
       arguments["directive"] = directive
+      fun destinationRole(): ScreenValue {
+        val index = node.properties["activePaneIndex"]
+        if (index is IntegerValueV1)
+          return ScreenValue.Reference(
+            "$ADAPTIVE_LAYOUT.ListDetailPaneScaffoldRole",
+            listOf(
+              when (index.value.toInt().coerceIn(0, 2)) {
+                1 -> "Detail"
+                2 -> "Extra"
+                else -> "List"
+              }
+            ),
+            typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldRole",
+          )
+        if (index != null) {
+          val raw =
+            when (index) {
+              is IntegerValueV1 -> ScreenValue.Whole(index.value.toLong().coerceIn(0, 2))
+              is StateValueV1 ->
+                if (state[index.variable]?.typeFqn == "kotlin.Int")
+                  stateRead(index.variable, "$where.activePaneIndex") ?: ScreenValue.Whole(0)
+                else {
+                  refuse("$where.activePaneIndex requires integer state")
+                  ScreenValue.Whole(0)
+                }
+              else -> {
+                refuse("$where.activePaneIndex needs an integer or integer state")
+                ScreenValue.Whole(0)
+              }
+            }
+          val clamped =
+            ScreenValue.Chain(
+              raw,
+              listOf(
+                ChainLink(
+                  "kotlin.ranges.coerceIn",
+                  positional = listOf(ScreenValue.Whole(0), ScreenValue.Whole(2)),
+                )
+              ),
+              typeFqn = "kotlin.Int",
+            )
+          // A closed mapping of the three destinations. Keeping the intermediate value a String
+          // avoids a raw generic List receiver in the screen-model's typed chain locals.
+          val name =
+            ScreenValue.Chain(
+              clamped,
+              listOf(
+                ChainLink("kotlin.Int.toString", member = true),
+                ChainLink(
+                  "kotlin.text.replace",
+                  positional = listOf(ScreenValue.Text("0"), ScreenValue.Text("Secondary")),
+                ),
+                ChainLink(
+                  "kotlin.text.replace",
+                  positional = listOf(ScreenValue.Text("1"), ScreenValue.Text("Primary")),
+                ),
+                ChainLink(
+                  "kotlin.text.replace",
+                  positional = listOf(ScreenValue.Text("2"), ScreenValue.Text("Tertiary")),
+                ),
+              ),
+              typeFqn = "kotlin.String",
+            )
+          return ScreenValue.Construct(
+            "$ADAPTIVE_LAYOUT.ThreePaneScaffoldRole.valueOf",
+            positional = listOf(name),
+            typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldRole",
+          )
+        }
+        return ScreenValue.Reference(
+          "$ADAPTIVE_LAYOUT.ListDetailPaneScaffoldRole",
+          listOf(
+            when (
+              (node.properties["activePane"] as? EnumValueV1)?.value
+                ?: (node.properties["activePane"] as? StringValueV1)?.value
+            ) {
+              "detail" -> "Detail"
+              "extra" -> "Extra"
+              else -> "List"
+            }
+          ),
+          typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldRole",
+        )
+      }
       arguments["value"] =
         ScreenValue.Construct(
           callableFqn = "$ADAPTIVE_LAYOUT.calculateThreePaneScaffoldValue",
@@ -1619,38 +1712,125 @@ object ScreenDocumentProjection {
           // Both named, although adaptive-layout 1.2 defaults them: 1.3 drops those defaults and
           // offers two overloads, one taking a `currentDestination` and one a `destinationHistory`,
           // so a call that leaves them out does not compile against a catalog built on 1.3 — which
-          // is what m3-catalog's native lane compiles the export against. An empty history is the
-          // same "no destination yet" the 1.2 default meant, and names the overload both versions
-          // have.
+          // is what m3-catalog's native lane compiles the export against. An explicit destination
+          // names the overload both versions have; a String content key also lets Kotlin infer
+          // the destination item's generic parameter.
           named =
             mapOf(
               "adaptStrategies" to
                 ScreenValue.Construct(
-                  callableFqn = "$ADAPTIVE_LAYOUT.SupportingPaneScaffoldDefaults.adaptStrategies",
+                  callableFqn =
+                    "$ADAPTIVE_LAYOUT.${if (listDetail) "ListDetailPaneScaffoldDefaults" else "SupportingPaneScaffoldDefaults"}.adaptStrategies",
                   typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldAdaptStrategies",
                 ),
-              "destinationHistory" to
-                ScreenValue.Construct(
-                  callableFqn = "kotlin.collections.emptyList",
-                  typeFqn = "kotlin.collections.List",
-                ),
+              "currentDestination" to
+                if (listDetail)
+                  ScreenValue.Construct(
+                    callableFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldDestinationItem",
+                    positional = listOf(destinationRole(), ScreenValue.Text("")),
+                    typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldDestinationItem",
+                  )
+                else
+                  ScreenValue.Construct(
+                    callableFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldDestinationItem",
+                    positional =
+                      listOf(
+                        ScreenValue.Reference(
+                          "$ADAPTIVE_LAYOUT.SupportingPaneScaffoldRole",
+                          listOf("Main"),
+                          typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldRole",
+                        ),
+                        ScreenValue.Text(""),
+                      ),
+                    typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldDestinationItem",
+                  ),
             ),
           typeFqn = "$ADAPTIVE_LAYOUT.ThreePaneScaffoldValue",
         )
+      val sizing =
+        (node.properties["paneSizing"] as? EnumValueV1)?.value
+          ?: (node.properties["paneSizing"] as? StringValueV1)?.value
+      fun number(property: String, fallback: Double): Double =
+        when (val v = node.properties[property]) {
+          is DecimalValueV1 -> v.value
+          is IntegerValueV1 -> v.value.toDouble()
+          null -> fallback
+          else -> {
+            refuse("$where.`$property` needs a literal number")
+            fallback
+          }
+        }
+      val anchor =
+        when (sizing) {
+          "fixedStart",
+          "fixedEnd" ->
+            ScreenValue.Construct(
+              callableFqn =
+                "$ADAPTIVE_LAYOUT.PaneExpansionAnchor.Offset.${if (sizing == "fixedStart") "fromStart" else "fromEnd"}",
+              // Offset anchors describe the gutter centre. The authored gutter, or Material's
+              // 24dp default, is pinned on the directive below so both lanes measure this width.
+              positional =
+                listOf(
+                  dp(number("fixedPaneWidthDp", 360.0).coerceAtLeast(0.0) + (spacing ?: 24.0) / 2)!!
+                ),
+              typeFqn = "$ADAPTIVE_LAYOUT.PaneExpansionAnchor",
+            )
+          "split" ->
+            ScreenValue.Construct(
+              callableFqn = "$ADAPTIVE_LAYOUT.PaneExpansionAnchor.Proportion",
+              positional =
+                listOf(
+                  ScreenValue.Fractional32(number("splitFraction", .5).coerceIn(.1, .9).toFloat())
+                ),
+              typeFqn = "$ADAPTIVE_LAYOUT.PaneExpansionAnchor",
+            )
+          else -> null
+        }
+      if (anchor != null)
+        arguments["paneExpansionState"] =
+          ScreenValue.Construct(
+            callableFqn = "$ADAPTIVE_LAYOUT.rememberPaneExpansionState",
+            named =
+              mapOf(
+                "anchors" to
+                  ScreenValue.Construct(
+                    callableFqn = "kotlin.collections.listOf",
+                    positional = listOf(anchor),
+                    typeFqn = "kotlin.collections.List",
+                  ),
+                "initialAnchoredIndex" to ScreenValue.Whole(0),
+              ),
+            typeFqn = "$ADAPTIVE_LAYOUT.PaneExpansionState",
+          )
       return setOf(
-        PANE_LAYOUT_MODE,
-        MAIN_PANE_VISIBLE,
-        SUPPORTING_PANE_VISIBLE,
-        PANE_SPACING_DP,
-        MAIN_PANE_WIDTH_DP,
-        SUPPORTING_PANE_WIDTH_DP,
-      )
+        "paneSizing",
+        "fixedPaneWidthDp",
+        "splitFraction",
+        "activePane",
+        "activePaneIndex",
+        "listPaneVisible",
+        "detailPaneVisible",
+        "listPanePreferredWidthDp",
+        "detailPanePreferredWidthDp",
+        "extraPanePreferredWidthDp",
+      ) +
+        setOf(
+          PANE_LAYOUT_MODE,
+          MAIN_PANE_VISIBLE,
+          SUPPORTING_PANE_VISIBLE,
+          PANE_SPACING_DP,
+          MAIN_PANE_WIDTH_DP,
+          SUPPORTING_PANE_WIDTH_DP,
+        )
     }
 
     /** `Modifier.preferredWidth(…)` for the content of one pane slot, or null where none is set. */
     private fun paneWidthLink(node: DesignNodeV1, slot: String): ChainLink? {
       val property =
         when (slot) {
+          "listPane" -> "listPanePreferredWidthDp"
+          "detailPane" -> "detailPanePreferredWidthDp"
+          "extraPane" -> "extraPanePreferredWidthDp"
           "mainPane" -> MAIN_PANE_WIDTH_DP
           "supportingPane" -> SUPPORTING_PANE_WIDTH_DP
           else -> return null
@@ -3974,6 +4154,7 @@ object ScreenDocumentProjection {
   private const val DIAMETER_DP = "diameterDp"
   private const val DOT_COLOR = "color"
 
+  private const val LIST_DETAIL_PANE_SCAFFOLD = "layout/list-detail-pane-scaffold"
   private const val SUPPORTING_PANE_SCAFFOLD = "layout/supporting-pane-scaffold"
   private const val SCAFFOLD = "layout/scaffold"
   private const val SCAFFOLD_CONTENT = "content"
@@ -4348,6 +4529,12 @@ object ScreenDocumentProjection {
       "m3/card" to mapOf("content" to COLUMN_SCOPE),
       "m3/button" to mapOf("content" to ROW_SCOPE),
       "m3/horizontal-floating-toolbar" to mapOf("content" to ROW_SCOPE),
+      LIST_DETAIL_PANE_SCAFFOLD to
+        mapOf(
+          "listPane" to THREE_PANE_SCOPE,
+          "detailPane" to THREE_PANE_SCOPE,
+          "extraPane" to THREE_PANE_SCOPE,
+        ),
       SUPPORTING_PANE_SCAFFOLD to
         mapOf("mainPane" to THREE_PANE_SCOPE, "supportingPane" to THREE_PANE_SCOPE),
       // Keyed by the parameter, like the colour dot's: the catalog's slot is `expandedContent`, and

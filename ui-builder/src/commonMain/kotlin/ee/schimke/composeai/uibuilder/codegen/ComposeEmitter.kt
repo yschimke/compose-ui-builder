@@ -395,7 +395,8 @@ internal class ComposeEmitter(
     )
     line(bodyLevel, "// typed-properties:${canonicalJson(node.properties).escapeComment()}")
     when (node.componentId) {
-      "layout/supporting-pane-scaffold" -> emitSupportingPane(node, bodyLevel)
+      "layout/supporting-pane-scaffold",
+      "layout/list-detail-pane-scaffold" -> emitSupportingPane(node, bodyLevel)
       "layout/scaffold" -> emitScaffold(node, bodyLevel)
       "layout/box" ->
         emitSimpleContainer(node, bodyLevel, "Box", "children", node.boxContentAlignmentArgument())
@@ -663,20 +664,54 @@ internal class ComposeEmitter(
    */
   private fun emitSupportingPane(node: UiBuilderNode, level: Int) {
     emittedSupportingPaneScaffold = true
+    val listDetail = node.componentId == "layout/list-detail-pane-scaffold"
     line(level, "BuilderSupportingPaneScaffold(")
+    line(level + 1, "listDetail = $listDetail,")
+    line(
+      level + 1,
+      "activePaneIndex = ${if ("activePaneIndex" in node.properties) node.integerExpression("activePaneIndex", stateKotlinTypes) else "null"},",
+    )
+    line(
+      level + 1,
+      "activePane = ${node.string("activePane").ifBlank { "list" }.nullableStringLiteral()},",
+    )
+    line(
+      level + 1,
+      "paneSizing = ${node.string("paneSizing").ifBlank { "preferred" }.nullableStringLiteral()},",
+    )
+    line(level + 1, "fixedPaneWidth = ${node.dpArgument("fixedPaneWidthDp")},")
+    line(level + 1, "splitFraction = ${node.number("splitFraction", .5f)}f,")
     line(level + 1, "modifier = ${node.modifierExpression()},")
     line(level + 1, "singlePane = ${node.string("layoutMode") == "singlePane"},")
-    line(level + 1, "mainPaneVisible = ${node.boolValue("mainPaneVisible", true)},")
-    line(level + 1, "supportingPaneVisible = ${node.boolValue("supportingPaneVisible", true)},")
-    line(level + 1, "mainPaneWidth = ${node.dpArgument("mainPanePreferredWidthDp")},")
-    line(level + 1, "supportingPaneWidth = ${node.dpArgument("supportingPanePreferredWidthDp")},")
+    line(
+      level + 1,
+      "mainPaneVisible = ${node.boolValue(if (listDetail) "listPaneVisible" else "mainPaneVisible", true)},",
+    )
+    line(
+      level + 1,
+      "supportingPaneVisible = ${node.boolValue(if (listDetail) "detailPaneVisible" else "supportingPaneVisible", true)},",
+    )
+    line(
+      level + 1,
+      "mainPaneWidth = ${node.dpArgument(if (listDetail) "listPanePreferredWidthDp" else "mainPanePreferredWidthDp")},",
+    )
+    line(
+      level + 1,
+      "supportingPaneWidth = ${node.dpArgument(if (listDetail) "detailPanePreferredWidthDp" else "supportingPanePreferredWidthDp")},",
+    )
     line(level + 1, "paneSpacing = ${node.dpArgument("paneSpacingDp")},")
     line(level + 1, "mainPane = {")
-    emitChildren(node.slot("mainPane"), level + 2)
+    emitChildren(node.slot(if (listDetail) "listPane" else "mainPane"), level + 2)
     line(level + 1, "},")
     line(level + 1, "supportingPane = {")
-    emitChildren(node.slot("supportingPane"), level + 2)
+    emitChildren(node.slot(if (listDetail) "detailPane" else "supportingPane"), level + 2)
     line(level + 1, "},")
+    if (listDetail && node.slot("extraPane").isNotEmpty()) {
+      line(level + 1, "extraPaneWidth = ${node.dpArgument("extraPanePreferredWidthDp")},")
+      line(level + 1, "extraPane = {")
+      emitChildren(node.slot("extraPane"), level + 2)
+      line(level + 1, "},")
+    }
     line(level, ")")
   }
 
@@ -979,6 +1014,11 @@ internal class ComposeEmitter(
         "androidx.compose.material3.adaptive.currentWindowAdaptiveInfo",
         "androidx.compose.material3.adaptive.layout.PaneAdaptedValue",
         "androidx.compose.material3.adaptive.layout.PaneScaffoldScope",
+        "androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold",
+        "androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldDefaults",
+        "androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole",
+        "androidx.compose.material3.adaptive.layout.PaneExpansionAnchor",
+        "androidx.compose.material3.adaptive.layout.rememberPaneExpansionState",
         "androidx.compose.material3.adaptive.layout.SupportingPaneScaffold",
         "androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults",
         "androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldRole",
@@ -1367,21 +1407,39 @@ internal class ComposeEmitter(
   private fun emitAdaptiveHelper() {
     if (!emittedSupportingPaneScaffold) return
     appendLine(
-      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, singlePane: Boolean, mainPaneVisible: Boolean, supportingPaneVisible: Boolean, mainPaneWidth: Dp?, supportingPaneWidth: Dp?, paneSpacing: Dp?, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit) {"
+      "@OptIn(ExperimentalMaterial3AdaptiveApi::class) @Composable private fun BuilderSupportingPaneScaffold(modifier: Modifier, listDetail: Boolean, activePane: String, activePaneIndex: Int?, paneSizing: String, fixedPaneWidth: Dp?, splitFraction: Float, singlePane: Boolean, mainPaneVisible: Boolean, supportingPaneVisible: Boolean, mainPaneWidth: Dp?, supportingPaneWidth: Dp?, paneSpacing: Dp?, mainPane: @Composable () -> Unit, supportingPane: @Composable () -> Unit, extraPaneWidth: Dp? = null, extraPane: (@Composable () -> Unit)? = null) {"
     )
     appendLine("  val posture = currentWindowAdaptiveInfo().windowPosture")
     appendLine("  BoxWithConstraints(modifier) {")
     appendLine(
       "    val frameDirective = calculatePaneScaffoldDirective(WindowAdaptiveInfo(WindowSizeClass.compute(maxWidth.value, maxHeight.value), posture)); val partitioned = if (singlePane) frameDirective.copy(maxHorizontalPartitions = 1) else frameDirective; val directive = if (paneSpacing != null) partitioned.copy(horizontalPartitionSpacerSize = paneSpacing) else partitioned"
     )
+    appendLine(
+      "    val anchor = when (paneSizing) { \"fixedStart\" -> PaneExpansionAnchor.Offset.fromStart((fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2); \"fixedEnd\" -> PaneExpansionAnchor.Offset.fromEnd((fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2); \"split\" -> PaneExpansionAnchor.Proportion(splitFraction.coerceIn(.1f, .9f)); else -> null }"
+    )
+    appendLine(
+      "    val expansion = rememberPaneExpansionState(anchors = listOfNotNull(anchor), initialAnchoredIndex = if (anchor == null) -1 else 0)"
+    )
+    appendLine("    if (listDetail) {")
+    appendLine(
+      "      val role = if (activePaneIndex != null) listOf(ListDetailPaneScaffoldRole.List, ListDetailPaneScaffoldRole.Detail, ListDetailPaneScaffoldRole.Extra)[activePaneIndex.coerceIn(0, 2)] else when (activePane) { \"detail\" -> ListDetailPaneScaffoldRole.Detail; \"extra\" -> ListDetailPaneScaffoldRole.Extra; else -> ListDetailPaneScaffoldRole.List }"
+    )
+    appendLine(
+      "      val value = calculateThreePaneScaffoldValue(directive.maxHorizontalPartitions, ListDetailPaneScaffoldDefaults.adaptStrategies(), currentDestination = ThreePaneScaffoldDestinationItem<Nothing>(role))"
+    )
+    appendLine(
+      "      ListDetailPaneScaffold(directive = directive, value = value, listPane = { BuilderPane(mainPaneWidth, mainPane) }, detailPane = { BuilderPane(supportingPaneWidth, supportingPane) }, extraPane = extraPane?.let { content -> { BuilderPane(extraPaneWidth, content) } }, paneExpansionState = expansion, modifier = Modifier.fillMaxSize())"
+    )
+    appendLine("    } else {")
     // A supporting-only design must name the supporting pane as the destination, or the sole
     // partition goes to the primary and masking it afterwards leaves a blank frame.
     appendLine(
       "    val computed = calculateThreePaneScaffoldValue(maxHorizontalPartitions = directive.maxHorizontalPartitions, adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(), currentDestination = if (!mainPaneVisible && supportingPaneVisible) ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting) else null)"
     )
     appendLine(
-      "    SupportingPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = PaneAdaptedValue.Hidden), mainPane = { BuilderPane(mainPaneWidth, mainPane) }, supportingPane = { BuilderPane(supportingPaneWidth, supportingPane) }, modifier = Modifier.fillMaxSize())"
+      "    SupportingPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = PaneAdaptedValue.Hidden), mainPane = { BuilderPane(mainPaneWidth, mainPane) }, supportingPane = { BuilderPane(supportingPaneWidth, supportingPane) }, paneExpansionState = expansion, modifier = Modifier.fillMaxSize())"
     )
+    appendLine("    }")
     appendLine("  }")
     appendLine("}")
     // A pane whose width the design did not state is composed exactly as it was before this
@@ -2697,7 +2755,8 @@ internal data class ExportRefusal(val code: String, val message: String, val nod
 private val COMPONENT_STATE_VALUE_TYPES = setOf("state", "stateEquals")
 
 /** A screen, laid out. Refused inside a component body — see the design record. */
-private val SCAFFOLD_COMPONENT_IDS = setOf("layout/scaffold", "layout/supporting-pane-scaffold")
+private val SCAFFOLD_COMPONENT_IDS =
+  setOf("layout/scaffold", "layout/supporting-pane-scaffold", "layout/list-detail-pane-scaffold")
 
 /** The parameter every generated component function already has. */
 private const val RESERVED_COMPONENT_PARAMETER = "modifier"
@@ -3080,6 +3139,7 @@ internal val EMITTER_IDS =
     "layout/row",
     "layout/scaffold",
     "layout/supporting-pane-scaffold",
+    "layout/list-detail-pane-scaffold",
     "m3/button",
     "m3/card",
     "m3/center-aligned-top-app-bar",
@@ -3250,10 +3310,31 @@ private val HANDLED_FIELDS =
         setOf("containerColor", "loading", "scrollStateKey"),
         setOf("topBar", "snackbarHost", "content"),
       ),
+    "layout/list-detail-pane-scaffold" to
+      HandledFields(
+        setOf(
+          "layoutMode",
+          "paneSizing",
+          "fixedPaneWidthDp",
+          "splitFraction",
+          "activePane",
+          "activePaneIndex",
+          "listPanePreferredWidthDp",
+          "detailPanePreferredWidthDp",
+          "extraPanePreferredWidthDp",
+          "listPaneVisible",
+          "detailPaneVisible",
+          "paneSpacingDp",
+        ),
+        setOf("listPane", "detailPane", "extraPane"),
+      ),
     "layout/supporting-pane-scaffold" to
       HandledFields(
         setOf(
           "layoutMode",
+          "paneSizing",
+          "fixedPaneWidthDp",
+          "splitFraction",
           "mainPanePreferredWidthDp",
           "mainPaneVisible",
           "paneSpacingDp",

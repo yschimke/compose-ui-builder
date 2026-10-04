@@ -39,7 +39,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldDefaults
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
+import androidx.compose.material3.adaptive.layout.PaneExpansionAnchor
 import androidx.compose.material3.adaptive.layout.PaneScaffoldScope
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults
@@ -48,6 +52,7 @@ import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationIt
 import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
+import androidx.compose.material3.adaptive.layout.rememberPaneExpansionState
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuite
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
@@ -254,19 +259,28 @@ internal fun AdaptiveSupportingPaneScaffold(
   modifier: Modifier,
   mainPane: @Composable (Modifier) -> Unit,
   supportingPane: @Composable (Modifier) -> Unit,
+  extraPane: (@Composable (Modifier) -> Unit)? = null,
 ) {
+  val listDetail = node.componentId == "layout/list-detail-pane-scaffold"
   if (LocalUiBuilderUnrolled.current) {
-    UnfoldedSupportingPaneScaffold(node, modifier, mainPane, supportingPane)
+    UnfoldedSupportingPaneScaffold(node, modifier, mainPane, supportingPane, extraPane)
     return
   }
-  val mainVisible = node.bool("mainPaneVisible", true)
-  val supportingVisible = node.bool("supportingPaneVisible", true)
+  val mainVisible = node.bool(if (listDetail) "listPaneVisible" else "mainPaneVisible", true)
+  val supportingVisible =
+    node.bool(if (listDetail) "detailPaneVisible" else "supportingPaneVisible", true)
   // The three widths the catalog declares. Absent is not zero: an unstated width means "whatever
   // the library would have chosen", which is what every design authored before these were read
   // has been getting.
-  val mainWidth = node.dimension("mainPanePreferredWidthDp")
-  val supportingWidth = node.dimension("supportingPanePreferredWidthDp")
-  val paneSpacing = node.dimension("paneSpacingDp")
+  val mainWidth =
+    node.dimension(if (listDetail) "listPanePreferredWidthDp" else "mainPanePreferredWidthDp")
+  val supportingWidth =
+    node.dimension(
+      if (listDetail) "detailPanePreferredWidthDp" else "supportingPanePreferredWidthDp"
+    )
+  val paneSpacing =
+    node.dimension("paneSpacingDp")
+      ?: if (node.string("paneSizing") in setOf("fixedStart", "fixedEnd")) 24.dp else null
   val posture = currentWindowAdaptiveInfo().windowPosture
   BoxWithConstraints(modifier) {
     val frameInfo =
@@ -284,42 +298,100 @@ internal fun AdaptiveSupportingPaneScaffold(
         .let {
           if (paneSpacing != null) it.copy(horizontalPartitionSpacerSize = paneSpacing) else it
         }
-    // The library's own computation, so "two panes or one" is its answer rather than ours.
-    //
-    // The destination decides which pane wins a sole partition, and it is the supporting pane
-    // exactly when the design declares no main pane. Masking afterwards is not enough there: the
-    // one partition goes to the primary by default, so hiding the primary for a supporting-only
-    // design would leave a value with everything hidden and draw a blank frame.
-    val computed =
-      calculateThreePaneScaffoldValue(
-        maxHorizontalPartitions = directive.maxHorizontalPartitions,
-        adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(),
-        currentDestination =
-          if (!mainVisible && supportingVisible)
-            ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting)
-          else null,
-      )
-    val value =
-      ThreePaneScaffoldValue(
-        primary = if (mainVisible) computed.primary else PaneAdaptedValue.Hidden,
-        secondary = if (supportingVisible) computed.secondary else PaneAdaptedValue.Hidden,
-        tertiary = PaneAdaptedValue.Hidden,
-      )
-    SupportingPaneScaffold(
-      directive = directive,
-      value = value,
-      // `preferredWidth` is parent data the scaffold's measure policy reads, not a size modifier,
-      // so it decides the partition and `fillMaxSize` still fills whatever partition it got. This
-      // is how the authored widths reach a REAL scaffold: they were declared, stored, carried on
-      // the wire and echoed into provenance, and then read by nobody, so Gmail's 400-beside-760
-      // drew as roughly 810/360 — close to the opposite of what it asked for, with no diagnostic
-      // saying so (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 2).
-      mainPane = { mainPane(preferredPaneWidth(Modifier, mainWidth).fillMaxSize()) },
-      supportingPane = {
-        supportingPane(preferredPaneWidth(Modifier, supportingWidth).fillMaxSize())
-      },
-      modifier = Modifier.fillMaxSize(),
-    )
+    val anchor =
+      when (node.string("paneSizing")) {
+        "fixedStart" ->
+          PaneExpansionAnchor.Offset.fromStart(
+            node.float("fixedPaneWidthDp", 360f).coerceAtLeast(0f).dp +
+              directive.horizontalPartitionSpacerSize / 2
+          )
+        "fixedEnd" ->
+          PaneExpansionAnchor.Offset.fromEnd(
+            node.float("fixedPaneWidthDp", 360f).coerceAtLeast(0f).dp +
+              directive.horizontalPartitionSpacerSize / 2
+          )
+        "split" ->
+          PaneExpansionAnchor.Proportion(node.float("splitFraction", .5f).coerceIn(.1f, .9f))
+        else -> null
+      }
+    // Key the policy so editing it replaces the remembered initial expansion anchor.
+    key(anchor) {
+      val expansion =
+        rememberPaneExpansionState(
+          anchors = listOfNotNull(anchor),
+          initialAnchoredIndex = if (anchor == null) -1 else 0,
+        )
+      if (listDetail) {
+        val role =
+          if ("activePaneIndex" in node.properties)
+            when (node.float("activePaneIndex").toInt().coerceIn(0, 2)) {
+              1 -> ListDetailPaneScaffoldRole.Detail
+              2 -> ListDetailPaneScaffoldRole.Extra
+              else -> ListDetailPaneScaffoldRole.List
+            }
+          else
+            when (node.string("activePane")) {
+              "detail" -> ListDetailPaneScaffoldRole.Detail
+              "extra" -> ListDetailPaneScaffoldRole.Extra
+              else -> ListDetailPaneScaffoldRole.List
+            }
+        val computed =
+          calculateThreePaneScaffoldValue(
+            maxHorizontalPartitions = directive.maxHorizontalPartitions,
+            adaptStrategies = ListDetailPaneScaffoldDefaults.adaptStrategies(),
+            currentDestination = ThreePaneScaffoldDestinationItem<Nothing>(role),
+          )
+        ListDetailPaneScaffold(
+          directive = directive,
+          value =
+            ThreePaneScaffoldValue(
+              primary = if (supportingVisible) computed.primary else PaneAdaptedValue.Hidden,
+              secondary = if (mainVisible) computed.secondary else PaneAdaptedValue.Hidden,
+              tertiary = if (extraPane != null) computed.tertiary else PaneAdaptedValue.Hidden,
+            ),
+          listPane = { mainPane(preferredPaneWidth(Modifier, mainWidth).fillMaxSize()) },
+          detailPane = {
+            supportingPane(preferredPaneWidth(Modifier, supportingWidth).fillMaxSize())
+          },
+          extraPane =
+            extraPane?.let { content ->
+              {
+                content(
+                  preferredPaneWidth(Modifier, node.dimension("extraPanePreferredWidthDp"))
+                    .fillMaxSize()
+                )
+              }
+            },
+          paneExpansionState = expansion,
+          modifier = Modifier.fillMaxSize(),
+        )
+      } else {
+        val computed =
+          calculateThreePaneScaffoldValue(
+            maxHorizontalPartitions = directive.maxHorizontalPartitions,
+            adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(),
+            currentDestination =
+              if (!mainVisible && supportingVisible)
+                ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting)
+              else null,
+          )
+        SupportingPaneScaffold(
+          directive = directive,
+          value =
+            ThreePaneScaffoldValue(
+              primary = if (mainVisible) computed.primary else PaneAdaptedValue.Hidden,
+              secondary = if (supportingVisible) computed.secondary else PaneAdaptedValue.Hidden,
+              tertiary = PaneAdaptedValue.Hidden,
+            ),
+          mainPane = { mainPane(preferredPaneWidth(Modifier, mainWidth).fillMaxSize()) },
+          supportingPane = {
+            supportingPane(preferredPaneWidth(Modifier, supportingWidth).fillMaxSize())
+          },
+          paneExpansionState = expansion,
+          modifier = Modifier.fillMaxSize(),
+        )
+      }
+    }
   }
 }
 
@@ -358,16 +430,29 @@ private fun UnfoldedSupportingPaneScaffold(
   modifier: Modifier,
   mainPane: @Composable (Modifier) -> Unit,
   supportingPane: @Composable (Modifier) -> Unit,
+  extraPane: (@Composable (Modifier) -> Unit)?,
 ) {
-  val mainVisible = node.bool("mainPaneVisible", true)
-  val supportingVisible = node.bool("supportingPaneVisible", true)
-  val mainWidth = node.float("mainPanePreferredWidthDp", 744f).coerceAtLeast(1f)
-  val supportWidth = node.float("supportingPanePreferredWidthDp", 512f).coerceAtLeast(1f)
+  val listDetail = node.componentId == "layout/list-detail-pane-scaffold"
+  val mainVisible = node.bool(if (listDetail) "listPaneVisible" else "mainPaneVisible", true)
+  val supportingVisible =
+    node.bool(if (listDetail) "detailPaneVisible" else "supportingPaneVisible", true)
+  val mainWidth =
+    node
+      .float(if (listDetail) "listPanePreferredWidthDp" else "mainPanePreferredWidthDp", 744f)
+      .coerceAtLeast(1f)
+  val supportWidth =
+    node
+      .float(
+        if (listDetail) "detailPanePreferredWidthDp" else "supportingPanePreferredWidthDp",
+        512f,
+      )
+      .coerceAtLeast(1f)
   val spacing = node.float("paneSpacingDp").coerceAtLeast(0f)
   Row(modifier) {
     if (mainVisible) mainPane(Modifier.weight(mainWidth).fillMaxSize())
     if (mainVisible && supportingVisible) Spacer(Modifier.width(spacing.dp))
     if (supportingVisible) supportingPane(Modifier.weight(supportWidth).fillMaxSize())
+    extraPane?.invoke(Modifier.weight(360f).fillMaxSize())
     if (!mainVisible && !supportingVisible) Box(Modifier.fillMaxSize())
   }
 }

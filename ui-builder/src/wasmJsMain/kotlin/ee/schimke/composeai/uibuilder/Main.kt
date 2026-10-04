@@ -1822,6 +1822,26 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
               label = "Hello sample",
               supportingText = "The same scaffold with a headline and a line of text to edit.",
             ),
+            UiBuilderNewDesignTemplate(
+              "list-detail",
+              "List-detail",
+              "A fixed list beside flexible details; one pane at compact widths.",
+            ),
+            UiBuilderNewDesignTemplate(
+              "supporting-pane",
+              "Supporting pane",
+              "Main content with a contextual supporting pane.",
+            ),
+            UiBuilderNewDesignTemplate(
+              "adaptive-feed",
+              "Adaptive feed",
+              "Cards in a grid that changes column count with available width.",
+            ),
+            UiBuilderNewDesignTemplate(
+              "adaptive-navigation",
+              "Adaptive navigation",
+              "A navigation bar on phones and a rail on larger windows.",
+            ),
           ),
       )
     "remote-m3" ->

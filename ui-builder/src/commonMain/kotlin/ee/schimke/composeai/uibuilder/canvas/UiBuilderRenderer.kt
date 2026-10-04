@@ -1173,6 +1173,15 @@ private fun RenderNode(
           }
         }
       }
+      "layout/list-detail-pane-scaffold" ->
+        AdaptiveSupportingPaneScaffold(
+          node,
+          measured,
+          { next -> slot("listPane").forEach { child(it, next) } },
+          { next -> slot("detailPane").forEach { child(it, next) } },
+          if (slot("extraPane").isEmpty()) null
+          else { next -> slot("extraPane").forEach { child(it, next) } },
+        )
       "layout/supporting-pane-scaffold" ->
         AdaptiveSupportingPaneScaffold(
           node,

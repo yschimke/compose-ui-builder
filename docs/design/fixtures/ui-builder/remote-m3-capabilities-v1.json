@@ -4566,6 +4566,9 @@
                 "layout/lazy-row": {
                     "group": "Layout"
                 },
+                "layout/list-detail-pane-scaffold": {
+                    "group": "Scaffolds"
+                },
                 "layout/row": {
                     "group": "Layout"
                 },

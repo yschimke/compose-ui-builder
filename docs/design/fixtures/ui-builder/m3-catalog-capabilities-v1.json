@@ -55,6 +55,7 @@
         "layout/row": { "group": "Layout" },
         "layout/scaffold": { "group": "Scaffolds" },
         "layout/supporting-pane-scaffold": { "group": "Scaffolds" },
+        "layout/list-detail-pane-scaffold": { "group": "Scaffolds" },
         "m3/button": { "group": "Actions", "variantProperty": "style" },
         "m3/card": { "group": "Containment", "variantProperty": "variant" },
         "m3/center-aligned-top-app-bar": { "group": "Navigation" },
@@ -280,6 +281,179 @@
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
     },
     {
+      "componentId": "layout/list-detail-pane-scaffold",
+      "displayName": "List-detail pane scaffold",
+      "role": "Scaffold",
+      "traits": [
+        "ScreenContent",
+        "AdaptivePaneLayout"
+      ],
+      "slots": [
+        {
+          "name": "listPane",
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "ordered": false,
+          "acceptedRoles": [
+            "Scaffold",
+            "Container"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        },
+        {
+          "name": "detailPane",
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "ordered": false,
+          "acceptedRoles": [
+            "Scaffold",
+            "Container"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        },
+        {
+          "name": "extraPane",
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "ordered": false,
+          "acceptedRoles": [
+            "Scaffold",
+            "Container"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        }
+      ],
+      "properties": [
+        {"name": "activePaneIndex", "jsonType": "integer", "required": false},
+        {
+          "name": "layoutMode",
+          "jsonType": "string",
+          "required": true,
+          "allowedValues": [
+            "adaptive",
+            "expandedTwoPane",
+            "singlePane",
+            "twoPane"
+          ]
+        },
+        {
+          "name": "listPanePreferredWidthDp",
+          "jsonType": "number",
+          "required": false
+        },
+        {
+          "name": "detailPanePreferredWidthDp",
+          "jsonType": "number",
+          "required": false
+        },
+        {
+          "name": "paneSpacingDp",
+          "jsonType": "number",
+          "required": false
+        },
+        {
+          "name": "listPaneVisible",
+          "jsonType": "boolean",
+          "required": true
+        },
+        {
+          "name": "detailPaneVisible",
+          "jsonType": "boolean",
+          "required": true
+        },
+        {
+          "name": "paneSizing",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "preferred",
+            "fixedStart",
+            "fixedEnd",
+            "split"
+          ]
+        },
+        {
+          "name": "fixedPaneWidthDp",
+          "jsonType": "number",
+          "required": false
+        },
+        {
+          "name": "splitFraction",
+          "jsonType": "number",
+          "required": false
+        },
+        {
+          "name": "extraPanePreferredWidthDp",
+          "jsonType": "number",
+          "required": false
+        },
+        {
+          "name": "activePane",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "list",
+            "detail",
+            "extra"
+          ]
+        }
+      ],
+      "modifierCapabilities": [
+        "size",
+        "fillMaxSize",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "testTag",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "aspectRatio",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "shadow",
+        "wrapContentSize",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": true,
+        "adapterStatus": "supported",
+        "notes": "Uses the real adaptive scaffold in constrained frames; the authoring canvas unrolls all declared panes."
+      },
+      "code": {
+        "symbol": "ListDetailPaneScaffold",
+        "imports": [
+          "androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold"
+        ]
+      },
+      "svg": {
+        "status": "unsupported",
+        "fallback": "none",
+        "blocksExport": true,
+        "notes": "Use PNG or native rendering to inspect adaptive layout."
+      }
+    },
+    {
       "componentId": "layout/row",
       "displayName": "Row",
       "role": "Container",
@@ -322,23 +496,143 @@
       "componentId": "layout/supporting-pane-scaffold",
       "displayName": "Supporting pane scaffold",
       "role": "Scaffold",
-      "traits": ["ScreenContent", "AdaptivePaneLayout"],
+      "traits": [
+        "ScreenContent",
+        "AdaptivePaneLayout"
+      ],
       "slots": [
-        { "name": "mainPane", "cardinality": { "min": 1, "max": 1 }, "ordered": false, "acceptedRoles": ["Scaffold", "Container"], "acceptedTraits": ["AnyContent"] },
-        { "name": "supportingPane", "cardinality": { "min": 0, "max": 1 }, "ordered": false, "acceptedRoles": ["Scaffold", "Container"], "acceptedTraits": ["AnyContent"] }
+        {
+          "name": "mainPane",
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "ordered": false,
+          "acceptedRoles": [
+            "Scaffold",
+            "Container"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        },
+        {
+          "name": "supportingPane",
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "ordered": false,
+          "acceptedRoles": [
+            "Scaffold",
+            "Container"
+          ],
+          "acceptedTraits": [
+            "AnyContent"
+          ]
+        }
       ],
       "properties": [
-        { "name": "layoutMode", "jsonType": "string", "required": true, "allowedValues": ["adaptive", "expandedTwoPane", "singlePane", "twoPane"] },
-        { "name": "mainPanePreferredWidthDp", "jsonType": "number", "required": false },
-        { "name": "supportingPanePreferredWidthDp", "jsonType": "number", "required": false },
-        { "name": "paneSpacingDp", "jsonType": "number", "required": false },
-        { "name": "mainPaneVisible", "jsonType": "boolean", "required": true },
-        { "name": "supportingPaneVisible", "jsonType": "boolean", "required": true }
+        {
+          "name": "layoutMode",
+          "jsonType": "string",
+          "required": true,
+          "allowedValues": [
+            "adaptive",
+            "expandedTwoPane",
+            "singlePane",
+            "twoPane"
+          ]
+        },
+        {
+          "name": "mainPanePreferredWidthDp",
+          "jsonType": "number",
+          "required": false
+        },
+        {
+          "name": "supportingPanePreferredWidthDp",
+          "jsonType": "number",
+          "required": false
+        },
+        {
+          "name": "paneSpacingDp",
+          "jsonType": "number",
+          "required": false
+        },
+        {
+          "name": "mainPaneVisible",
+          "jsonType": "boolean",
+          "required": true
+        },
+        {
+          "name": "supportingPaneVisible",
+          "jsonType": "boolean",
+          "required": true
+        },
+        {
+          "name": "paneSizing",
+          "jsonType": "string",
+          "required": false,
+          "allowedValues": [
+            "preferred",
+            "fixedStart",
+            "fixedEnd",
+            "split"
+          ]
+        },
+        {
+          "name": "fixedPaneWidthDp",
+          "jsonType": "number",
+          "required": false
+        },
+        {
+          "name": "splitFraction",
+          "jsonType": "number",
+          "required": false
+        }
       ],
-      "modifierCapabilities": ["size", "fillMaxSize", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "fillMaxHeight", "background", "border", "shadow", "wrapContentSize", "align", "alignHorizontal", "alignVertical", "weight"],
-      "wasm": { "platformSupported": "unverified", "adapterStatus": "unsupported", "notes": "The repository has no Material 3 adaptive dependency or verified Wasm adapter yet; this blocks the expanded benchmark." },
-      "code": { "symbol": "SupportingPaneScaffold", "imports": ["androidx.compose.material3.adaptive.layout.SupportingPaneScaffold"] },
-      "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "Verified for the deterministic expanded two-pane adapter used by this frozen benchmark, not the unavailable general adaptive Material API." }
+      "modifierCapabilities": [
+        "size",
+        "fillMaxSize",
+        "padding",
+        "alpha",
+        "offset",
+        "rotate",
+        "scale",
+        "zIndex",
+        "testTag",
+        "width",
+        "height",
+        "widthIn",
+        "heightIn",
+        "aspectRatio",
+        "fillMaxHeight",
+        "background",
+        "border",
+        "shadow",
+        "wrapContentSize",
+        "align",
+        "alignHorizontal",
+        "alignVertical",
+        "weight"
+      ],
+      "wasm": {
+        "platformSupported": "unverified",
+        "adapterStatus": "unsupported",
+        "notes": "The repository has no Material 3 adaptive dependency or verified Wasm adapter yet; this blocks the expanded benchmark."
+      },
+      "code": {
+        "symbol": "SupportingPaneScaffold",
+        "imports": [
+          "androidx.compose.material3.adaptive.layout.SupportingPaneScaffold"
+        ]
+      },
+      "svg": {
+        "status": "verified",
+        "fallback": "none",
+        "blocksExport": false,
+        "notes": "Verified for the deterministic expanded two-pane adapter used by this frozen benchmark, not the unavailable general adaptive Material API."
+      }
     },
     {
       "componentId": "m3/button",
