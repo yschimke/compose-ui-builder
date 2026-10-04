@@ -1,7 +1,10 @@
 # Build generation from project owned designs
 
-**Status: proposed, 2026-10-04.** This document plans a production generation lane for checked-in
-`.uid` files. It does not describe an implemented Gradle plugin or extend the current wire schema.
+**Status: contract foundation implemented, 2026-10-04; build integration remains proposed.** The
+export module now has an experimental strict file codec, declaration validation, tracked project
+input resolution and data-model generation. Compose emission, editor integration and a consumer
+Gradle plugin are not implemented. The experimental file schema does not extend the current
+design-service wire schema.
 
 The project owns the design and its declared Kotlin API. A build turns those inputs into stateless
 Compose source that can be deleted and regenerated at any time. Application code depends on the
@@ -285,3 +288,66 @@ fixture does not claim Android or Wasm compatibility.
 
 These decisions change the format and build API. They should be reviewed before declaring the
 first generation contract stable.
+
+## Implemented contract foundation
+
+The experimental schema is `compose-ui-builder-production/v1-candidate`, implemented by
+[`ProductionUidFile`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/production/ProductionUidFile.kt).
+It deliberately has a different schema and shape from an editor document. Existing editors cannot
+open it as a v1 design and silently drop its API. `ProductionUidFiles` is its strict codec; unknown
+versions, fields and type variants fail decoding. A model-only file declares `models` without an
+entry point or a fabricated design. A screen or component file declares an `entryPoint` and embeds
+its `design`. This is a builder-owned experiment, awaiting promotion to the shared contracts
+protocol before editor integration.
+
+Each file declares project-root-relative `imports`. Model types use stable model ids; generated
+classes and entry points have explicit qualified Kotlin names. Field declaration order fixes the
+generated constructor order. `ProductionType` distinguishes scalar, model and list types, with
+nullability explicit on each. External fields optionally map a design-facing name to one actual
+Kotlin property; otherwise the same name is used. Property paths are lists of field names, not
+Kotlin expression strings. Cross-file component uses declare their data path and forwarded events.
+
+[`ProductionContractValidator`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/production/ProductionContractValidation.kt)
+checks symbol and model ownership, imports, declaration cycles, typed data paths, nullability,
+component inputs and event signatures. It also rejects owned application state and preview event
+actions in embedded designs. Validation reports the input file, declaration, node and field where
+applicable. A valid contract is **not** an assertion of catalog exportability: checking catalog
+parameter types, resources, full layout graphs and executable event bindings belongs to the later
+production projection and generator gate. Nullable leaf values can be declared, but this first
+contract version cannot traverse nullable objects; explicit branch and fallback shapes are still
+to be added. Loop item scopes and stable-key declarations are also follow-up work.
+
+The JVM
+[`ProductionProjectFiles`](../../ui-builder-export/src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/export/production/ProductionProjectFiles.kt)
+loader follows only registered files and their imports. It requires each input to be in the Git
+index, allows local edits and staged additions, and refuses URLs, traversal and symbolic-link
+inputs. It does not scan unrelated files or resolve remote designs. Source-archive manifests are
+not supported yet.
+
+[`ProductionModelGenerator`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/production/ProductionModelGenerator.kt)
+returns one named Kotlin file per generated data class. It emits no copies of external models,
+constructor defaults, Compose stability annotations, timestamps or absolute paths. Its pure
+generation API expects a validated contract; build callers should obtain that contract through the
+tracked project loader. The caller currently owns writing these files and wiring them into a
+source set. This API is model generation only; it does not emit composable bodies.
+
+Example of the current JVM API, with exhaustive failure handling:
+
+```kotlin
+when (val result = ProductionProjectFiles.load(projectRoot, listOf("Library.uid"))) {
+  is ProductionContractResult.Invalid -> error(result.issues.joinToString("\n"))
+  is ProductionContractResult.Valid -> {
+    val files = ProductionModelGenerator.generate(result.contract)
+    // Each file has a project-independent relative path and Kotlin source.
+  }
+}
+```
+
+The checked-in
+[`model fixture`](../../ui-builder-export/src/jvmTest/resources/production/library-models.uid)
+declares nested and shared generated models plus a mapped project-owned external model. Tests
+resolve a tracked three-file project, generate its models, compile them with a handwritten Kotlin
+consumer and execute that consumer. Other tests cover strict decoding, located contract failures,
+regeneration independent of input ordering, and preservation of model APIs after removing visual
+bindings. These checks establish the contract foundation; they do not claim a complete Compose
+build-generation lane.

@@ -133,7 +133,12 @@ kotlin {
       implementation(libs.kotlinx.serialization.json)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
-    jvmTest.dependencies { implementation(libs.json.schema.validator) }
+    jvmTest.dependencies {
+      implementation(libs.json.schema.validator)
+      // Compile generated model files with a real handwritten consumer, without requiring a
+      // globally installed kotlinc or leaking compiler libraries into the export publication.
+      implementation(libs.kotlin.compiler.embeddable)
+    }
   }
 }
 
