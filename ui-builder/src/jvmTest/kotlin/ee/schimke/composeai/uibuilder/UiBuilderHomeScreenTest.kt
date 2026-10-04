@@ -378,6 +378,11 @@ class UiBuilderHomeScreenTest {
       onNodeWithText("Column").assertIsDisplayed()
       onNodeWithContentDescription("Create design").performScrollTo().performClick()
       assertEquals("a2ui" to "column", created)
+      onNodeWithText("Hide other design types").performScrollTo().performClick()
+      onNodeWithText("A2UI surface").assertDoesNotExist()
+      onNodeWithText("Column").performScrollTo().assertIsDisplayed()
+      onNodeWithText("Other design types…").performScrollTo().performClick()
+      onNodeWithText("A2UI surface").assertIsSelected()
     }
 
   @Test
