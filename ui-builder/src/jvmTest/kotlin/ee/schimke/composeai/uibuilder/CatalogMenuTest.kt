@@ -280,7 +280,13 @@ class CatalogMenuTest {
         .catalogRows(emptyDesign)
 
     assertEquals(
-      listOf("Navigation suite", "Scaffold", "Supporting pane scaffold", "Wear widget · Small"),
+      listOf(
+        "List-detail pane scaffold",
+        "Navigation suite",
+        "Scaffold",
+        "Supporting pane scaffold",
+        "Wear widget · Small",
+      ),
       componentsUnder(rows, "Scaffolds").map { it.item.displayName },
     )
     assertEquals(

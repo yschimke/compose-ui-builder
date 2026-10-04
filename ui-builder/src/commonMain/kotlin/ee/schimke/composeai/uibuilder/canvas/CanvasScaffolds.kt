@@ -322,7 +322,7 @@ internal fun AdaptiveSupportingPaneScaffold(
           initialAnchoredIndex = if (anchor == null) -1 else 0,
         )
       if (listDetail) {
-        val role =
+        val requestedRole =
           if ("activePaneIndex" in node.properties)
             when (node.float("activePaneIndex").toInt().coerceIn(0, 2)) {
               1 -> ListDetailPaneScaffoldRole.Detail
@@ -335,11 +335,17 @@ internal fun AdaptiveSupportingPaneScaffold(
               "extra" -> ListDetailPaneScaffoldRole.Extra
               else -> ListDetailPaneScaffoldRole.List
             }
+        val available = buildList {
+          if (mainVisible) add(ListDetailPaneScaffoldRole.List)
+          if (supportingVisible) add(ListDetailPaneScaffoldRole.Detail)
+          if (extraPane != null) add(ListDetailPaneScaffoldRole.Extra)
+        }
+        val role = requestedRole.takeIf { it in available } ?: available.firstOrNull()
         val computed =
           calculateThreePaneScaffoldValue(
             maxHorizontalPartitions = directive.maxHorizontalPartitions,
             adaptStrategies = ListDetailPaneScaffoldDefaults.adaptStrategies(),
-            currentDestination = ThreePaneScaffoldDestinationItem<Nothing>(role),
+            currentDestination = role?.let { ThreePaneScaffoldDestinationItem<Nothing>(it) },
           )
         ListDetailPaneScaffold(
           directive = directive,
@@ -452,7 +458,10 @@ private fun UnfoldedSupportingPaneScaffold(
     if (mainVisible) mainPane(Modifier.weight(mainWidth).fillMaxSize())
     if (mainVisible && supportingVisible) Spacer(Modifier.width(spacing.dp))
     if (supportingVisible) supportingPane(Modifier.weight(supportWidth).fillMaxSize())
-    extraPane?.invoke(Modifier.weight(360f).fillMaxSize())
+    if (extraPane != null && (mainVisible || supportingVisible)) Spacer(Modifier.width(spacing.dp))
+    extraPane?.invoke(
+      Modifier.weight(node.float("extraPanePreferredWidthDp", 360f).coerceAtLeast(1f)).fillMaxSize()
+    )
     if (!mainVisible && !supportingVisible) Box(Modifier.fillMaxSize())
   }
 }

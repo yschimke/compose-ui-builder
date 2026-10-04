@@ -1613,7 +1613,7 @@ object ScreenDocumentProjection {
             listOf(
               when (index.value.toInt().coerceIn(0, 2)) {
                 1 -> "Detail"
-                2 -> "Extra"
+                2 -> if (node.slots["extraPane"].isNullOrEmpty()) "List" else "Extra"
                 else -> "List"
               }
             ),
@@ -1663,7 +1663,13 @@ object ScreenDocumentProjection {
                 ),
                 ChainLink(
                   "kotlin.text.replace",
-                  positional = listOf(ScreenValue.Text("2"), ScreenValue.Text("Tertiary")),
+                  positional =
+                    listOf(
+                      ScreenValue.Text("2"),
+                      ScreenValue.Text(
+                        if (node.slots["extraPane"].isNullOrEmpty()) "Secondary" else "Tertiary"
+                      ),
+                    ),
                 ),
               ),
               typeFqn = "kotlin.String",
@@ -1682,7 +1688,7 @@ object ScreenDocumentProjection {
                 ?: (node.properties["activePane"] as? StringValueV1)?.value
             ) {
               "detail" -> "Detail"
-              "extra" -> "Extra"
+              "extra" -> if (node.slots["extraPane"].isNullOrEmpty()) "List" else "Extra"
               else -> "List"
             }
           ),
@@ -4534,9 +4540,15 @@ object ScreenDocumentProjection {
           "listPane" to THREE_PANE_SCOPE,
           "detailPane" to THREE_PANE_SCOPE,
           "extraPane" to THREE_PANE_SCOPE,
+          "paneExpansionDragHandle" to "$ADAPTIVE_LAYOUT.ThreePaneScaffoldScope",
         ),
       SUPPORTING_PANE_SCAFFOLD to
-        mapOf("mainPane" to THREE_PANE_SCOPE, "supportingPane" to THREE_PANE_SCOPE),
+        mapOf(
+          "mainPane" to THREE_PANE_SCOPE,
+          "supportingPane" to THREE_PANE_SCOPE,
+          "extraPane" to THREE_PANE_SCOPE,
+          "paneExpansionDragHandle" to "$ADAPTIVE_LAYOUT.ThreePaneScaffoldScope",
+        ),
       // Keyed by the parameter, like the colour dot's: the catalog's slot is `expandedContent`, and
       // SLOT_PARAMETERS renames it to `content` before anything reads this.
       "m3/search-bar" to mapOf("content" to COLUMN_SCOPE),

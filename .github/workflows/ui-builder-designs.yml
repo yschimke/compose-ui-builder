@@ -51,6 +51,9 @@ jobs:
       # The Material 3 designs, against m3-catalog's own bundle off its delivery branch in the
       # m3-catalog-out output repository. No `lane`: this call keeps the comment and branches it
       # has always had.
+      # A full result avoids reporting unchanged designs as removed against the full baseline.
+      # It also reviews projection changes, which can affect designs without changing their JSON.
+      changed-only: false
       catalog-id: m3-catalog
       catalog-bundle: https://raw.githubusercontent.com/yschimke/m3-catalog-out/design-artifacts/m3-catalog/bundle/bundle.png
       # The record the generator proves each call site against. `m3-catalog` is record-driven, so

@@ -1,15 +1,23 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toAwtImage
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runDesktopComposeUiTest
+import ee.schimke.composeai.uibuilder.canvas.AdaptiveSupportingPaneScaffold
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderUnrolled
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.export.AdaptiveScreenTemplates
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
@@ -157,6 +165,84 @@ class AdaptiveListDetailTest {
       }
     }
   }
+
+  @Test
+  fun `unavailable compact destination falls back to a visible pane`() {
+    for ((index, listVisible, detailVisible, expected) in
+      listOf(
+        listOf(1, true, false, "List"),
+        listOf(0, false, true, "Detail"),
+        listOf(2, true, true, "List"),
+      )) {
+      runDesktopComposeUiTest(width = 412, height = 915) {
+        val seed = document()
+        fun value(type: String, value: Any) =
+          JsonObject(
+            mapOf(
+              "type" to JsonPrimitive(type),
+              "value" to
+                when (value) {
+                  is Boolean -> JsonPrimitive(value)
+                  is Int -> JsonPrimitive(value)
+                  else -> error("unexpected value")
+                },
+            )
+          )
+        val pane = seed.nodes.getValue("panes")
+        val changed =
+          seed.copy(
+            nodes =
+              seed.nodes +
+                ("panes" to
+                  pane.copy(
+                    properties =
+                      JsonObject(
+                        pane.properties +
+                          mapOf(
+                            "activePaneIndex" to value("int", index),
+                            "listPaneVisible" to value("bool", listVisible),
+                            "detailPaneVisible" to value("bool", detailVisible),
+                          )
+                      )
+                  ))
+          )
+        setContent { MaterialTheme { UiBuilderSurface(changed) } }
+        onNodeWithText(expected as String).assertIsDisplayed()
+      }
+    }
+  }
+
+  @Test
+  fun `unrolled extra pane uses its authored preferred width`() =
+    runDesktopComposeUiTest(width = 1000, height = 800) {
+      val pane = document().nodes.getValue("panes")
+      fun width(value: Int) =
+        JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(value)))
+      val changed =
+        pane.copy(
+          properties =
+            JsonObject(
+              pane.properties +
+                mapOf(
+                  "listPanePreferredWidthDp" to width(200),
+                  "detailPanePreferredWidthDp" to width(300),
+                  "extraPanePreferredWidthDp" to width(500),
+                )
+            )
+        )
+      setContent {
+        CompositionLocalProvider(LocalUiBuilderUnrolled provides true) {
+          AdaptiveSupportingPaneScaffold(
+            changed,
+            Modifier.fillMaxSize(),
+            mainPane = { Box(it.testTag("list")) },
+            supportingPane = { Box(it.testTag("detail")) },
+            extraPane = { Box(it.testTag("extra")) },
+          )
+        }
+      }
+      assertTrue(abs(onNodeWithTag("extra").fetchSemanticsNode().boundsInRoot.width - 500f) < 2)
+    }
 
   private fun detailLeft(policy: String, width: Int, frame: Int, fraction: Float = .5f): Float {
     var left = 0f

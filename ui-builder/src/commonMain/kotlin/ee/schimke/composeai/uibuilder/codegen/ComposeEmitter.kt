@@ -1422,13 +1422,19 @@ internal class ComposeEmitter(
     )
     appendLine("    if (listDetail) {")
     appendLine(
-      "      val role = if (activePaneIndex != null) listOf(ListDetailPaneScaffoldRole.List, ListDetailPaneScaffoldRole.Detail, ListDetailPaneScaffoldRole.Extra)[activePaneIndex.coerceIn(0, 2)] else when (activePane) { \"detail\" -> ListDetailPaneScaffoldRole.Detail; \"extra\" -> ListDetailPaneScaffoldRole.Extra; else -> ListDetailPaneScaffoldRole.List }"
+      "      val requestedRole = if (activePaneIndex != null) listOf(ListDetailPaneScaffoldRole.List, ListDetailPaneScaffoldRole.Detail, ListDetailPaneScaffoldRole.Extra)[activePaneIndex.coerceIn(0, 2)] else when (activePane) { \"detail\" -> ListDetailPaneScaffoldRole.Detail; \"extra\" -> ListDetailPaneScaffoldRole.Extra; else -> ListDetailPaneScaffoldRole.List }"
     )
     appendLine(
-      "      val value = calculateThreePaneScaffoldValue(directive.maxHorizontalPartitions, ListDetailPaneScaffoldDefaults.adaptStrategies(), currentDestination = ThreePaneScaffoldDestinationItem<Nothing>(role))"
+      "      val available = buildList { if (mainPaneVisible) add(ListDetailPaneScaffoldRole.List); if (supportingPaneVisible) add(ListDetailPaneScaffoldRole.Detail); if (extraPane != null) add(ListDetailPaneScaffoldRole.Extra) }"
     )
     appendLine(
-      "      ListDetailPaneScaffold(directive = directive, value = value, listPane = { BuilderPane(mainPaneWidth, mainPane) }, detailPane = { BuilderPane(supportingPaneWidth, supportingPane) }, extraPane = extraPane?.let { content -> { BuilderPane(extraPaneWidth, content) } }, paneExpansionState = expansion, modifier = Modifier.fillMaxSize())"
+      "      val role = requestedRole.takeIf { it in available } ?: available.firstOrNull()"
+    )
+    appendLine(
+      "      val computed = calculateThreePaneScaffoldValue(directive.maxHorizontalPartitions, ListDetailPaneScaffoldDefaults.adaptStrategies(), currentDestination = role?.let { ThreePaneScaffoldDestinationItem<Nothing>(it) })"
+    )
+    appendLine(
+      "      ListDetailPaneScaffold(directive = directive, value = ThreePaneScaffoldValue(primary = if (supportingPaneVisible) computed.primary else PaneAdaptedValue.Hidden, secondary = if (mainPaneVisible) computed.secondary else PaneAdaptedValue.Hidden, tertiary = if (extraPane != null) computed.tertiary else PaneAdaptedValue.Hidden), listPane = { BuilderPane(mainPaneWidth, mainPane) }, detailPane = { BuilderPane(supportingPaneWidth, supportingPane) }, extraPane = extraPane?.let { content -> { BuilderPane(extraPaneWidth, content) } }, paneExpansionState = expansion, modifier = Modifier.fillMaxSize())"
     )
     appendLine("    } else {")
     // A supporting-only design must name the supporting pane as the destination, or the sole
