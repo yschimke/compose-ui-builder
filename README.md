@@ -26,6 +26,8 @@ The proposed contract for regenerating stateless Compose source from checked-in 
 | `:ui-builder-host-jvm` | JVM | `ee.schimke.composeai.uibuilder.host` | the hosting layer the desktop app and the IntelliJ plugin share: sessions, catalogs, design files, export |
 | `:ui-builder-intellij-plugin` | IntelliJ Platform | `ee.schimke.composeai.uibuilder.intellij` | proof-of-concept Jewel tool-window host for the native editor |
 | `:ui-builder-runtime` | JVM | `ee.schimke.composeai.uibuilder.service` | the design service: state, catalog validation, revision-pinned export |
+| `:ui-builder-codegen-jvm` | JVM | `ee.schimke.composeai.uibuilder.codegen` | opt-in build generation from tracked production `.uid` contracts |
+| `:ui-builder-production-consumer` | JVM Compose | `example` | executable durable-generation consumer fixture |
 | `:ui-builder-export` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.export` | design → screen-model projection |
 | `:ui-builder-renderer` | `wasmJs` | `ee.schimke.composeai.uibuilder.renderer` | the sandboxed renderer-only runtime |
 | `:ui-builder-renderer-sdk` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.renderer.sdk` | catalog-facing renderer protocol, inspection model and sandbox host |
@@ -52,13 +54,14 @@ and nothing here may depend on it.
 
 A release goes out in two halves, because the four seams are not the same kind of thing.
 
-**Maven Central — three jars and a BOM.** What a consumer compiles or resolves against:
+**Maven Central — libraries, an optional build tool and a BOM.** What a consumer compiles or resolves against:
 
 | Coordinate | |
 | --- | --- |
-| `ee.schimke.composeai:compose-preview-ui-builder-bom` | version constraints for the three below |
+| `ee.schimke.composeai:compose-preview-ui-builder-bom` | version constraints for the artifacts below |
 | `…:compose-preview-ui-builder-runtime` | the design service |
 | `…:compose-preview-ui-builder-export` | the design → screen-model projection |
+| `…:compose-preview-ui-builder-codegen-jvm` | opt-in durable build generation |
 | `…:compose-preview-ui-builder-render-bundle` | the packaged preview a design renders through |
 
 `-render-bundle` is on that list even though nobody names it directly: it is an `api` dependency of
@@ -171,3 +174,7 @@ fallback to Maven. `settings.gradle.kts` holds the mechanism and the reasoning.
 The older `scripts/stage-local-dependency.py` route — compile an upstream module into a
 workspace-local Maven repository and pin it through a manifest — still works and is the right tool
 when you want one *fixed* upstream build rather than a live one.
+
+Single-file Kotlin export remains the default. Projects can explicitly opt into
+[durable build generation](ui-builder-production-consumer/README.md) from tracked production `.uid`
+contracts, with separate component and owned-model files.

@@ -6,8 +6,8 @@ import java.nio.file.Path
 /**
  * Resolves registered project files and their imports, requiring every input to be in the Git
  * index. Local edits to tracked files and staged new files are accepted. There is no directory scan
- * or network resolution. Source-archive manifests and Gradle wiring are separate future
- * integrations.
+ * or network resolution. Source-archive manifests are a future integration; the optional JVM build
+ * runner uses this loader.
  */
 object ProductionProjectFiles {
   fun load(projectRoot: Path, entryPaths: List<String>): ProductionContractResult {
@@ -30,7 +30,16 @@ object ProductionProjectFiles {
       val file = root.resolve(path)
       try {
         val tracked =
-          ProcessBuilder("git", "-C", root.toString(), "ls-files", "--error-unmatch", "--", path)
+          ProcessBuilder(
+              "git",
+              "--literal-pathspecs",
+              "-C",
+              root.toString(),
+              "ls-files",
+              "--error-unmatch",
+              "--",
+              path,
+            )
             .redirectErrorStream(true)
             .start()
         val output = tracked.inputStream.bufferedReader().use { it.readText() }
@@ -43,7 +52,13 @@ object ProductionProjectFiles {
             )
           return
         }
-        if (!file.toRealPath().startsWith(root) || Files.isSymbolicLink(file)) {
+        var ancestor: Path? = file
+        var symbolicLink = false
+        while (ancestor != null && ancestor != root) {
+          if (Files.isSymbolicLink(ancestor)) symbolicLink = true
+          ancestor = ancestor.parent
+        }
+        if (!Files.isRegularFile(file) || !file.toRealPath().startsWith(root) || symbolicLink) {
           issues +=
             ProductionContractIssue(
               "INPUT_OUTSIDE_PROJECT",

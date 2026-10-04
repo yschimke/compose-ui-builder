@@ -1,15 +1,22 @@
 # Build generation from project owned designs
 
-**Status: contract foundation implemented, 2026-10-04; build integration remains proposed.** The
-export module now has an experimental strict file codec, declaration validation, tracked project
-input resolution and data-model generation. Compose emission, editor integration and a consumer
-Gradle plugin are not implemented. The experimental file schema does not extend the current
-design-service wire schema.
+**Status: experimental opt-in build lane implemented, 2026-10-04.** Strict project-file contracts,
+tracked input resolution, owned model generation, stateless Compose generation and a JVM consumer
+build are implemented. Single-file export remains the default. Editor round-trip support, event
+lowering, dynamic lists, nullable binding fallbacks and a packaged Gradle plugin remain proposed.
+The experimental file schema does not extend the current design-service wire schema.
 
 The project owns the design and its declared Kotlin API. A build turns those inputs into stateless
 Compose source that can be deleted and regenerated at any time. Application code depends on the
 declared API; editing a layout changes its implementation. Generated files are never an editing
 surface.
+
+## Opt-in mode
+
+Single-file export remains the default in the editor and existing export APIs. Durable generation
+is a separately selected build mode: the project explicitly registers production `.uid` files
+and accepts their declared application API. Merely saving or checking in a normal design does not
+enable this mode. Separate component and model files are a rule of the durable mode only.
 
 ## Requirements
 
@@ -22,7 +29,7 @@ surface.
 4. Reusable components are generated into separate files. A screen calls them rather than
    receiving an expanded copy of their implementation.
 
-The additional choices below are proposed defaults. In particular, explicit event callbacks are
+The additional choices below are proposed defaults within the opt-in durable mode. In particular, explicit event callbacks are
 an extension of the data-input requirement, and need agreement before implementing interactive
 controls.
 
@@ -46,10 +53,11 @@ projects designs onto the shared screen model, including scoped bindings and sup
 where the pinned generator supports them.
 [`ScreenExportGate`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/ScreenExportGate.kt)
 then invokes `ScreenGenerator` from the pinned `compose-ai-tools` publication. The generator owns
-Kotlin emission. Its current entry point returns one source file; root screen parameters and
-separate public component files require shared-model and generator work upstream. Production
-generation must not split emitted source with regular expressions or introduce another Compose
-emitter in the editor.
+Kotlin emission. Its current entry point returns one source file. The JVM build runner uses its typed supporting
+functions and Kotlin PSI to select a generated body structurally, then emits the declared data
+wrapper around it. Component bodies live in separate files and are called through records derived
+from their generated signatures. Production generation never splits emitted source with regular
+expressions or introduces another Compose body emitter in the editor.
 
 The existing export lane can also emit asset placeholders. The
 [`Jetcaster fixture`](../../ui-builder-generated-jetcaster/README.md) demonstrates generation and
@@ -211,19 +219,20 @@ registered project inputs and pinned records
 Implement the production projection and validation in the builder's export layer, independent of
 Compose rendering and editor classes. Canonical production metadata belongs in the versioned
 `compose-preview-contracts` protocol; the editor must round-trip it before a project relies on it.
-Add typed entry points and multiple-file emission to the generator in `compose-ai-tools`. Preserve
-the current single-file export API for existing consumers.
+A future typed entry-point and multi-file API in `compose-ai-tools` can replace the JVM PSI
+adapter. The current implementation uses the pinned released generator and preserves the existing
+single-file export API and JVM signature for consumers.
 
 Add a thin JVM generator runner and Gradle plugin in this repository. Their published coordinates
 are new consumer surfaces and need a boundary-document update and external-consumer verification.
 They do not add a dependency on `compose-preview-server` or require changing its four existing
 seams. Keep Gradle APIs out of the projection module.
 
-The generation task declares every document, referenced resource, catalog record, source-set
-setting and generation option as an input. The pinned generator classpath is also an input. Task
-outputs are a dedicated generated directory wired into compilation through task providers.
-Generation is part of every build graph, while unchanged inputs can remain up-to-date or come
-from the build cache. Cache keys do not include absolute checkout paths or incidental Git state.
+The initial consumer runs verification and generation on every compilation build graph. Neither
+task reuses a cached Git eligibility result or generated output. Outputs occupy a dedicated build
+directory. A future cacheable plugin must declare every document, catalog record, source-set option
+and the generator classpath as inputs, and retain an always-run Git eligibility check. Cache keys
+must exclude absolute checkout paths.
 
 Generate and validate the full file set before replacing output. If validation fails, compilation
 must not use leftover successful output. On success, remove files for deleted or renamed inputs,
@@ -349,5 +358,48 @@ declares nested and shared generated models plus a mapped project-owned external
 resolve a tracked three-file project, generate its models, compile them with a handwritten Kotlin
 consumer and execute that consumer. Other tests cover strict decoding, located contract failures,
 regeneration independent of input ordering, and preservation of model APIs after removing visual
-bindings. These checks establish the contract foundation; they do not claim a complete Compose
-build-generation lane.
+bindings. These checks establish the contract foundation. The JVM lane below also compiles real generated
+Compose source from those kinds of declarations.
+
+
+## Implemented opt-in JVM lane
+
+[`ProductionComposeGenerator`](../../ui-builder-codegen-jvm/src/main/kotlin/ee/schimke/composeai/uibuilder/codegen/ProductionComposeGenerator.kt)
+lives in the new JVM-only build tool, separate from the Compose-free JVM/Wasm projection seam.
+It accepts a validated contract and pinned component records. Supported bindings read non-null
+scalars from nested generated or mapped external data classes. Models can contain nullable fields
+and lists, including unused fields: their complete declared constructor remains stable when a
+layout removes a binding. Rendering nullable reads or iterating lists is not supported yet.
+
+Each entry emits one named Kotlin file containing an internal generated body and the explicitly
+declared public or internal composable with `data` and `modifier` parameters. Components emit their
+body once in their own file; screen bodies call that implementation. The generated body takes typed
+scalar parameters, while the wrapper reads the declared data paths, including external property
+names. The shared generator proves those scalar types against the actual catalog parameters.
+Kotlin PSI verifies and selects the supporting declaration; no regular-expression source splitting
+is used. Explicit event declarations, implicit supporting functions, application state, generated
+`remember` calls, assets, incomplete bindings and unreachable design nodes refuse output. Component
+placements currently accept only their declared data mapping; placement modifiers and slots refuse.
+
+Each screen/component file must declare `catalogDigest`, the SHA-256 of the ordered build record
+contents. Hashing prefixes each byte array with its 8-byte big-endian length and excludes paths.
+The CLI's `digest` command computes the value. A changed record must be explicitly accepted in the
+checked-in design; placeholder catalog revisions cannot bypass the digest check.
+
+[`ProductionGenerationCli`](../../ui-builder-codegen-jvm/src/main/kotlin/ee/schimke/composeai/uibuilder/codegen/ProductionGenerationCli.kt)
+has `validate`, `digest` and `generate` modes. Generation loads only tracked registered/imported
+files, validates and generates the full set before writing, then replaces its owned output under
+project `build/`. A marker prevents replacing an unrelated existing directory. Successful rebuilds
+remove stale files. A failed generation task blocks compilation even if earlier output exists.
+The CLI does not touch editor export settings or scan normal `.uid` files to opt them in.
+
+The executable integration is
+[`ui-builder-production-consumer`](../../ui-builder-production-consumer/README.md). Its Gradle
+build explicitly registers two screens sharing a separately generated component and a generated
+model with a nested external mapping and list. Handwritten callers compile against real Compose.
+The build runs without an editor/server and uses offline pinned records. Tests verify deterministic
+output, stable model APIs, catalog drift and unsupported input refusals, stale output removal and
+protection of handwritten directories. The CI gate also stages the published artifacts into a
+throwaway Maven repository, compiles from a different checkout path, deletes and regenerates output
+offline, and proves untracking an unchanged import blocks compilation. A packaged Gradle plugin and source-archive manifests are
+follow-up distribution work; the fixture documents the reusable `JavaExec` build wiring today.

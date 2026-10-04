@@ -17,6 +17,8 @@ import kotlinx.serialization.json.JsonPrimitive
 data class ProductionUidFile(
   val schema: String,
   val imports: List<String> = emptyList(),
+  /** SHA-256 of the build's ordered component-record contents; required for Compose generation. */
+  val catalogDigest: String? = null,
   val models: List<ProductionModel> = emptyList(),
   val entryPoint: ProductionEntryPoint? = null,
   val design: UiBuilderDocument? = null,

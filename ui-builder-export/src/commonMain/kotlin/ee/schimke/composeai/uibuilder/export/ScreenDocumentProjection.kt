@@ -249,12 +249,28 @@ object ScreenDocumentProjection {
      * lets a streamed Android or desktop frame carry selectable regions instead of being a picture.
      */
     tagNodes: Boolean = false,
+  ): Outcome = projectInternal(document, screenName, tagNodes, false, emptyMap())
+
+  /**
+   * Opt-in projection for build generation, with declared input reads and checked component calls.
+   */
+  fun projectProduction(
+    document: DesignDocumentV1,
+    nodeOverrides: Map<String, ScreenNode> = emptyMap(),
+  ): Outcome = projectInternal(document, screenNameFor(document), false, true, nodeOverrides)
+
+  private fun projectInternal(
+    document: DesignDocumentV1,
+    screenName: String,
+    tagNodes: Boolean,
+    rootBindings: Boolean,
+    nodeOverrides: Map<String, ScreenNode>,
   ): Outcome {
     // No component record parameter. It was here only so an enum value could be qualified with
     // its parameter's recorded type, and `enum` refuses instead — see its KDoc. A parameter kept
     // "in case" is how a reader starts believing this projection type-checks against the record,
     // which it does not: `ScreenGenerator` does that, once, with the record it is handed.
-    val pass = Pass(document, tagNodes)
+    val pass = Pass(document, tagNodes, rootBindings, nodeOverrides)
     val roots = document.roots
     if (roots.size != 1) {
       // One root is not a limitation of the generator; it is what a `@Composable fun Screen()`
@@ -359,7 +375,12 @@ object ScreenDocumentProjection {
     }
   }
 
-  private class Pass(val document: DesignDocumentV1, val tagNodes: Boolean = false) {
+  private class Pass(
+    val document: DesignDocumentV1,
+    val tagNodes: Boolean = false,
+    rootBindings: Boolean = false,
+    val nodeOverrides: Map<String, ScreenNode> = emptyMap(),
+  ) {
     val reasons = mutableListOf<String>()
     val assetPlaceholders = mutableListOf<AssetPlaceholder>()
     val state: Map<String, ScreenState> =
@@ -538,7 +559,7 @@ object ScreenDocumentProjection {
       val fields = linkedMapOf<String, BoundField>()
     }
 
-    private var bindingScope: BindingScope? = null
+    private var bindingScope: BindingScope? = if (rootBindings) BindingScope(row = false) else null
     private var functionScope: FunctionBody? = null
 
     /**
@@ -916,6 +937,9 @@ object ScreenDocumentProjection {
      * nowhere else.
      */
     fun node(id: String, scope: String? = null): ScreenNode? {
+      nodeOverrides[id]?.let {
+        return it
+      }
       val node = document.nodes[id]
       if (node == null) {
         reasons += "the document references node `$id`, which it does not define"

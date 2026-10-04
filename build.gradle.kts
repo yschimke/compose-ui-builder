@@ -96,6 +96,8 @@ tasks.named("check") {
     ":ui-builder-intellij-plugin:check",
     ":ui-builder-artwork:check",
     ":ui-builder-export:check",
+    ":ui-builder-codegen-jvm:check",
+    ":ui-builder-production-consumer:check",
     ":ui-builder-generated-jetcaster:check",
     ":ui-builder-reference-jetcaster:check",
     ":ui-builder-render-bundle:check",

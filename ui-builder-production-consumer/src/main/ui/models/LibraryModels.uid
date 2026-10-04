@@ -1,0 +1,51 @@
+{
+  "schema": "compose-ui-builder-production/v1-candidate",
+  "models": [
+    {
+      "id": "library",
+      "kotlinType": "example.ui.LibraryData",
+      "ownership": "generated",
+      "fields": [
+        {
+          "name": "title",
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        },
+        {
+          "name": "featured",
+          "type": {
+            "kind": "model",
+            "modelId": "external"
+          }
+        },
+        {
+          "name": "episodes",
+          "type": {
+            "kind": "list",
+            "element": {
+              "kind": "model",
+              "modelId": "external"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "external",
+      "kotlinType": "example.domain.ProjectEpisode",
+      "ownership": "external",
+      "fields": [
+        {
+          "name": "title",
+          "property": "displayTitle",
+          "type": {
+            "kind": "scalar",
+            "scalar": "string"
+          }
+        }
+      ]
+    }
+  ]
+}

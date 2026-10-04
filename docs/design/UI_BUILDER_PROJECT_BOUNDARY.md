@@ -125,3 +125,14 @@ Moving a module between projects, or adding a seam, is a change to this document
 the script — in the same pull request as the code, so the reviewer sees the boundary move rather
 than discovering it later. The table above is a list of reviewed internal contracts and packaged
 artifacts, not a list of conveniences or Maven coordinates.
+
+
+## Opt-in build generator
+
+`:ui-builder-codegen-jvm` is a builder-owned JVM build tool published as
+`ee.schimke.composeai:compose-preview-ui-builder-codegen-jvm`. It depends on the export projection
+and the pinned Kotlin compiler for structural declaration extraction. Gradle APIs and compiler
+libraries do not enter the JVM/Wasm export seam or the application compile classpath. This is an
+explicit project-build consumer surface; it does not change the four server seams.
+`:ui-builder-production-consumer` is the in-repository JVM Compose consumer of this build tool.
+Ordinary editor/service export stays single-file and does not invoke the build generator.
