@@ -430,20 +430,7 @@ tasks.register<Sync>("wasmFrontendDist") {
   from(layout.projectDirectory.dir("src/wasmJsMain/resources")) {
     include("index.html", "ui-builder-sw.js")
   }
-  // The boot screen's progress bar counts decoded Wasm bytes, which only the build knows ahead of
-  // time: behind a compressing proxy `Content-Length` is the compressed size, or absent.
-  val wasmFiles =
-    listOf(
-      wasmExecutableDir.get().file("uiBuilder.wasm").asFile,
-      skikoRuntimeDir.get().file("skiko.wasm").asFile,
-    )
-  from(layout.projectDirectory.dir("src/wasmJsMain/resources")) {
-    include("ui-builder-boot.js")
-    filter { line ->
-      if ("@UI_BUILDER_WASM_BYTES@" !in line) line
-      else line.replace("@UI_BUILDER_WASM_BYTES@", wasmFiles.sumOf { it.length() }.toString())
-    }
-  }
+  from(layout.projectDirectory.dir("src/wasmJsMain/resources")) { include("ui-builder-boot.js") }
   from(rootProject.layout.projectDirectory.dir("assets/js-joda")) { include("js-joda.esm.js") }
   from(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder")) {
     include(

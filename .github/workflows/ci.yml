@@ -118,6 +118,8 @@ jobs:
           node-version: 24.21.0
       - run: npm ci
         working-directory: scripts/ui-builder-web-smoke
+      - run: npm test
+        working-directory: scripts/ui-builder-web-smoke
       - run: npx playwright install --with-deps chromium
         working-directory: scripts/ui-builder-web-smoke
       - run: node smoke.mjs ../../ui-builder/build/wasmDist ../../build/web-smoke

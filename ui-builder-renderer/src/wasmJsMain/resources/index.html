@@ -12,6 +12,11 @@
     <script type="importmap">
       { "imports": { "@js-joda/core": "./js-joda.esm.js" } }
     </script>
+    <!-- Keep the import map first, including when modules come straight from the cache. -->
+    <link rel="modulepreload" href="uiBuilderRenderer.mjs" />
+    <link rel="modulepreload" href="uiBuilderRenderer.import-object.mjs" />
+    <link rel="modulepreload" href="skiko.mjs" />
+    <link rel="modulepreload" href="js-joda.esm.js" />
   </head>
   <body>
     <div id="composeApp"></div>
