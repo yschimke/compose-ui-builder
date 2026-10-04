@@ -42,7 +42,9 @@ git -C "${consumer}" init -q
 git -C "${consumer}" add ui-builder-production-consumer/src/main/ui
 (
   cd "${consumer}"
-  ./gradlew --offline --no-daemon --max-workers=2 \
+  # Resolve published POM/BOM dependencies before testing offline regeneration. The producer
+  # can use Gradle module metadata without populating the consumer's Maven POM cache.
+  ./gradlew --no-daemon --max-workers=2 \
     -PgateRepository="${repository}" -PuiBuilderGeneratorVersion="${version}" \
     :ui-builder-production-consumer:compileKotlin
   # Rebuild after deleting output and verify byte-for-byte reproducibility across builds.

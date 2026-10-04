@@ -61,6 +61,7 @@ The publication and regeneration gate runs a second checkout outside the produce
 ./scripts/check-ui-builder-production-consumer.sh
 ```
 
-It stages local Maven artifacts, compiles the real consumer offline, verifies identical source after
-deleting generated output, and proves an untracked imported file blocks an otherwise unchanged
-build. CI runs this gate as well as the regular generator/default-export tests.
+It stages local Maven artifacts and lets the first consumer build resolve dependencies. It then
+rebuilds offline after deleting generated output, verifies identical source, and proves an
+untracked imported file blocks an otherwise unchanged build. CI runs this gate as well as the
+regular generator/default-export tests.
