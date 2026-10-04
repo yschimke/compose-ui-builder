@@ -1390,7 +1390,7 @@ host's MCP endpoint, and the link to the maintained
 [`compose-ui-builder` skill](https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder).
 Paste it into any MCP-capable agent to hand the design over without sharing the browser's
 credential. The prompt names the server `compose-preview-catalog`, as the landing page, this
-compose-preview-server's `.mcp.json` and the compose-ag-plugin's `compose-catalogs` plugin do, and asks
+compose-preview-server's `.mcp.json` and the compose-agent-plugins' `compose-catalogs` plugin do, and asks
 the agent to stop and request the one-line setup if that server is missing, for example:
 
 ```sh

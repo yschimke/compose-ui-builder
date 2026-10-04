@@ -129,7 +129,7 @@ changing a design, an agent renders its device previews in the chat with `render
 `render_matrix`** rather than asking the person to look at the editor panel. The comment's
 assistant-only block says so, and so does the guide the editor's help opens
 (`UI_BUILDER_GETTING_STARTED.md` → *In ChatGPT or Codex desktop*). The same line belongs in
-compose-ag-plugin's `harness-notes` for the MCP App tools.
+compose-agent-plugins' `harness-notes` for the MCP App tools.
 
 ## Catalogs, and what happens offline
 

@@ -325,5 +325,5 @@ need, after the release carrying phase 4:
   The decider is the credential, as for review decisions; `proposerKind` comes from the owner's
   principal kind.
 - Grant scoping already maps a branch id to its parent; a suggestion is a branch, so nothing new.
-- The collaboration rule for compose-ag-plugin's `docs/agent-rules.md`: when a person is present on
+- The collaboration rule for compose-agent-plugins' `docs/agent-rules.md`: when a person is present on
   a design, an agent proposes with `ui_builder_suggest` rather than applying to it directly.
