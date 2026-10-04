@@ -14,6 +14,9 @@ Start with [`docs/design/UI_BUILDER_PRODUCT_SPEC.md`](docs/design/UI_BUILDER_PRO
 what the product is, and [`docs/UI_BUILDER_GETTING_STARTED.md`](docs/UI_BUILDER_GETTING_STARTED.md)
 for running it.
 
+The proposed contract for regenerating stateless Compose source from checked-in `.uid` files is in
+[`Build generation from project owned designs`](docs/design/UI_BUILDER_BUILD_GENERATION.md).
+
 ## The modules
 
 | Module | Targets | Package | What it is |
