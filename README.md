@@ -152,3 +152,9 @@ Auto-generated from `main`. Browse inline or compare against PR branches.
 | `WearWidgetHostShapesPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/WearWidgetHostShapesPreview-ff47d71a.png" width="150" /> |
 | `WeatherWearWidgetSamplePreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/WeatherWearWidgetSamplePreview-3ba430aa.png" width="150" /> |
 
+## ui-builder-production-consumer
+
+| Preview | Image |
+|---------|-------|
+| `DurableLibraryPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png" width="150" /> |
+
