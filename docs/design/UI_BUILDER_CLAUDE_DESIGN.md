@@ -74,6 +74,8 @@ There are three hard constraints for Compose:
 | Code out | `export_compose` (Compose, Remote Compose, Wear), SVG, RC, BUNDLE | `:ui-builder-export` |
 | An agent handoff from a visual surface | The Connect agent panel, `window.__uiBuilderAgent`, and presence at `/api/ui-builder/v1/designs/<id>/agents` | [`UI_BUILDER_AGENT_HANDOFF.md`](UI_BUILDER_AGENT_HANDOFF.md) |
 | Inline UI in chat | MCP Apps: preview viewer, library (with the Designs tab), RC viewer, the editor at `ui://compose-ui-builder/editor` | compose-preview-server `mcp-app/` |
+| Plugins for Claude Code, Codex, Cursor, Gemini CLI and Antigravity | `compose-preview` (local MCP, `SessionStart`/`PostToolUse`/`Stop` hooks, `design-reviewer` agent) and `compose-catalogs` (hosted MCP), generated from one `src/plugins.json`; listed in the MCP Registry; Claude plugin directory submission pending | yschimke/compose-ag-plugin |
+| Skills that already target Claude Design | `compose-preview-design-board` (an HTML design board for import) and `compose-design-catalog` (a sticker sheet with `tokens.dtcg.json`) | yschimke/skills |
 
 ## The integrations, in the order worth doing them
 
@@ -81,9 +83,9 @@ There are three hard constraints for Compose:
 
 This is the highest value for the least risk, and nothing else on this list works well without it.
 
-Add an emitter next to the sticker-sheet one, provisionally `compose-preview design-system emit
---catalog m3-catalog`. It writes the `project/` tree, which `/design-sync` or a plain Artifact
-publish then uploads:
+Extend what `compose-design-catalog` already emits, not a new tool: today it writes
+`tokens.dtcg.json`, which a Claude Design system reads as empty (see the constraints above). Add
+the `project/` tree, which `/design-sync` or a plain Artifact publish then uploads:
 
 - **`tokens.json`.** Two themes, `light` and `dark`, from the catalog theme's `ColorScheme` roles
   (`primary`, `on-primary`, `surface-container`, and so on), with values and a `usage` line per
@@ -99,7 +101,8 @@ publish then uploads:
   `render_matrix` PNGs (light and dark, key variants) uploaded as assets and shown with `<img>`.
   These are pixels from the real renderer, so the preview never drifts from Compose.
 
-The directory naming should use the catalog's component ids. Point 2 depends on that.
+The directory naming should use the catalog's component ids, so a canvas that cites a component
+by name points at a catalog entry.
 
 There are two ways to deliver it:
 
@@ -110,22 +113,17 @@ There are two ways to deliver it:
   imported app, but those are other people's brands, so limit it to the M3 and Wear catalogs and
   apps whose owners opt in.
 
-### 2. A thin HTML bundle with the catalog's names, so canvases name real components
+### 2. No HTML look-alike bundle
 
-Without `components/bundle.js`, a Claude Design canvas draws look-alike markup. That markup can only
-come back as screenshots plus guessing. With a bundle, a `.dc.html` mounts `window.<Ns>.<Component>`
-by name, with props. Name the bundle components after catalog ids and the props after catalog
-parameters, and a canvas becomes a tree we can translate almost mechanically.
+An earlier draft proposed a thin `components/bundle.js` of look-alike components, so a canvas
+could mount catalog components by name. That breaks rule R1 in compose-ag-plugin's
+[`docs/agent-rules.md`](https://github.com/yschimke/compose-ag-plugin/blob/main/docs/agent-rules.md):
+an agent never hand-builds an HTML, CSS or SVG mock of a preview and shows it as the UI. The design
+system therefore ships no bundle. Its previews are real renders, and a canvas built on it is a
+sketch that comes back through point 3, never something presented as the Compose result.
 
-The bundle only has to be close enough to look right on the canvas. It is not a second
-implementation of Material: Compose stays the source of truth, and the PNG previews in point 1
-show the real thing. Fidelity is measurable with what already exists. Rasterise each bundle
-component with the `emit-design-references.mjs` path, compare it against `render_preview` in the
-`/compare` lane, and gate the published bundle on a threshold. `report_validate`'s `bad`, `thin`
-and `variantsIdentical` counts are the same idea on Anthropic's side.
-
-Generate `index.d.ts` from the catalog contract so that Claude, which reads the types as docs, sees
-the same parameter set the builder validates.
+Generating `index.d.ts` from the catalog contract is still worth doing: it is documentation, not a
+render, and Claude reads the types to learn the parameter set the builder validates.
 
 ### 3. Bring a canvas back as a `.uid`
 
@@ -133,7 +131,8 @@ Add a builder operation source, provisionally an MCP tool `ui_builder_import_dc_
 compose-preview-server. It reads a `.dc.html` (or a standalone HTML export) and returns
 `apply_design_operations` batches. The tool handles two cases:
 
-- **Mounted bundle components** map one to one onto catalog nodes, because of point 2.
+- **Components named by catalog id** (in text, `data-` attributes or artboard titles) map onto
+  catalog nodes.
 - **Free markup** (headings, flex boxes, images) maps to layout primitives, and a warning lists
   anything it could not place. This is the same approach as the Stitch lane in the Figma document.
 
@@ -148,29 +147,37 @@ update a `.uid` (or edit Compose directly in an existing app), render, compare a
 screens, then `export_compose`. Until the bundle's format is public, the skill should treat it as
 HTML plus screenshots and route it through the importer above.
 
-### 4. Make Claude Code a first-class host, like Claude Design inside it
+### 4. Claude Code and Codex as hosts
 
-Claude Design now runs inside Claude Code as artifacts. The equivalent for this toolchain is:
+Most of this exists. compose-ag-plugin already ships `compose-preview` and `compose-catalogs` for
+Claude Code and Codex from one `src/plugins.json`. Their hooks are a `SessionStart` summary, a
+`PostToolUse` edit reminder and a `Stop` gate, plus a `design-reviewer` agent. Since
+[compose-ag-plugin#117](https://github.com/yschimke/compose-ag-plugin/pull/117), the same
+marketplace also lists the skill bundles from yschimke/skills. What is left:
 
-- **Ship a Claude Code plugin.** compose-ag-plugin has the Codex manifest and the hosted MCP
-  wiring, and yschimke/skills has the skills. Add `.claude-plugin/plugin.json` with the same MCP
-  servers (the local `compose-preview mcp serve` over stdio, and the hosted `preview.coo.ee/mcp`),
-  the `compose-preview` and UI builder skills, and hooks. Then submit it through the September 2026
-  directory portal. The setup guide's Claude Code tab can become a single
-  `/plugin install` line.
-- **Add hooks, which Claude Design cannot offer.** Add a `PostToolUse` hook on edits to `*.kt` that
-  calls `notify_file_changed` (or the CLI) for files containing `@Preview`. The agent then always
-  has the latest renders and diffs, without having to remember to ask.
+- **Finish the Claude plugin directory submission** (compose-ag-plugin #53 and #80).
 - **Use Artifacts for anything visual that Claude Code's terminal cannot show.** The terminal does
   not render MCP Apps. Teach the skill to publish its output as a private Artifact page, such as a
-  `render_matrix` grid, a before/after `history_diff`, or a `compare_reference` overlay. The user
-  can open that page from the CLI, the desktop app or a phone. It also gives a Claude Code session
-  a shareable review surface without the hosted server.
-- **Make the MCP Apps work in Claude, not only ChatGPT.** Claude renders MCP Apps on web, desktop
-  and mobile (a WebView on mobile, remote MCP only). The library already falls back from
+  `render_matrix` grid, a before/after `history_diff`, or a `compare_reference` overlay. Only real
+  renders go on it (R1). The user can open that page from the CLI, the desktop app or a phone.
+- **Make the MCP Apps work in Claude, not only ChatGPT and Codex.** Claude renders MCP Apps on web,
+  desktop and mobile (a WebView on mobile, remote MCP only). The library already falls back from
   `openai/files/open` to `ui/open-link`. Check every app against Claude's MCP Apps design
-  guidelines (display modes, host style variables, mobile layout), and keep OpenAI-only extensions
-  behind feature detection.
+  guidelines (display modes, host style variables, mobile layout). Keep the `openai/` extensions
+  in compose-preview-server's `OpenAi*.kt` behind feature detection, the way this repository's
+  `McpAppBridge` already separates them.
+
+**Codex** reaches the same tools, and may also show the editor inside the conversation. Codex
+desktop has shown the preview viewer MCP App (compose-ag-plugin's harness matrix). Opening a `.uid`
+as a file entrypoint is built on the editor side
+([`UI_BUILDER_MCP_APP_HOST.md`](UI_BUILDER_MCP_APP_HOST.md)) but unverified: the server's
+`design_open` waits on the probe in compose-preview-server#1236. Every Codex path therefore keeps a
+tool-only fallback that does not depend on rendered UI: the `ui_builder_*` tools, PNG renders and a
+link to the hosted editor. OpenAI has no design-system import like Claude Design's. Its Product
+Design plugin carries work into Figma and Canva, so for Codex users the route to a design tool is
+the existing Figma path (design-parity, Code Connect), not anything built for Claude Design. Keep
+the export neutral, with real renders, tokens and component docs, and keep thin destination
+adapters in the skills.
 
 ### 5. Spikes worth one afternoon each
 
@@ -180,9 +187,11 @@ Claude Design now runs inside Claude Code as artifacts. The equivalent for this 
   things are unverified: whether an Artifact serves `.wasm` with the right media type, and whether
   its content security policy allows `WebAssembly.instantiateStreaming`. Try it before designing
   anything around it.
-- **Remote Compose as a preview runtime.** RC documents render with a small player, not the full
-  Compose/Wasm stack. If a JS RC player existed, a design system's `preview.html` could be live and
-  exact, not a PNG. That is not possible today because the player is Kotlin.
+- **Remote Compose as a preview runtime.** rc-players already publishes a browser player,
+  `@yschimke/remote-compose-player-cmp` (`rc-player/wasm`). It is Compose/Wasm and driven inside an
+  iframe, and jsDelivr, which artifacts allow, can serve it. Whether a design system's
+  `preview.html` may load Wasm at all is the same unverified question as the spike above. The
+  Design canvas forbids `<iframe>`, so this is for design-system previews only.
 
 ## What not to do
 
@@ -191,8 +200,10 @@ Claude Design now runs inside Claude Code as artifacts. The equivalent for this 
   multi-user editing is "basic", and its trees have no ids. The `.uid` and its revision log stay the
   source of truth, and Claude Design is a place to explore and present.
 - Don't publish third-party apps' brands from the imports pipeline as design systems.
-- Don't put Compose/Wasm into design-system previews. The loader rules exclude it, and PNGs from the
-  real renderer are better ground truth anyway.
+- Don't put Compose/Wasm into design-system previews before the spike shows the loader allows it.
+  PNGs from the real renderer are the safe default.
+- Don't hand-build HTML look-alikes of Compose components for a canvas, a Codex Site or anything
+  else (R1).
 
 ## Open questions
 
