@@ -365,25 +365,33 @@
     },
     "panes": {
       "id": "panes",
-      "componentId": "layout/supporting-pane-scaffold",
+      "componentId": "layout/list-detail-pane-scaffold",
       "properties": {
+        "paneSizing": {
+          "type": "enum",
+          "value": "fixedStart"
+        },
+        "fixedPaneWidthDp": {
+          "type": "float",
+          "value": 400
+        },
         "layoutMode": {
           "type": "enum",
           "value": "expandedTwoPane"
         },
-        "mainPanePreferredWidthDp": {
+        "listPanePreferredWidthDp": {
           "type": "float",
           "value": 400
         },
-        "supportingPanePreferredWidthDp": {
+        "detailPanePreferredWidthDp": {
           "type": "float",
           "value": 760
         },
-        "mainPaneVisible": {
+        "listPaneVisible": {
           "type": "bool",
           "value": true
         },
-        "supportingPaneVisible": {
+        "detailPaneVisible": {
           "type": "bool",
           "value": true
         }
@@ -394,10 +402,10 @@
         }
       ],
       "slots": {
-        "mainPane": [
+        "listPane": [
           "list-pane"
         ],
-        "supportingPane": [
+        "detailPane": [
           "read-pane"
         ]
       },
