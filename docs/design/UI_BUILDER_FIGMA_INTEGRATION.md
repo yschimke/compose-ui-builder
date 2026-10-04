@@ -296,6 +296,8 @@ Neither produces a component tree with stable identity, so neither can round-tri
   catalog in (component names and tokens) makes what it generates use this editor's vocabulary; its
   output returns through an agent the same way as Stitch's. Because both ends are agents, the
   integration is the builder's MCP operations, not a file exchange.
+  [`UI_BUILDER_CLAUDE_DESIGN.md`](UI_BUILDER_CLAUDE_DESIGN.md) works out what to push in, what
+  comes back, and where Claude Code fits.
 
 In both cases the snapshot contract is the landing point if a tool ever exposes a tree with ids:
 whatever produces a `compose-ui-builder-figma-snapshot/v1` imports, whichever tool it came from.
