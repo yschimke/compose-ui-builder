@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -111,10 +112,11 @@ private class NewDesignFormState(
   val allowPublic: Boolean,
 ) {
   var publicRead by mutableStateOf(false)
-  var otherTypesExpanded by mutableStateOf(false)
   private val initialCatalog =
     catalogs.firstOrNull { it.systemId == initialCatalogSystemId } ?: catalogs.first()
 
+  var otherTypesExpanded by
+    mutableStateOf(initialCatalog.systemId !in listOf("m3-catalog", "wear-m3", "remote-m3"))
   var selectedCatalogId by mutableStateOf(initialCatalog.systemId)
   var selectedTemplateId by mutableStateOf(initialCatalog.templates.firstOrNull()?.id.orEmpty())
   // Pre-filled, so a design can be created in one click; a person who wants their own name
@@ -208,7 +210,7 @@ private fun NewDesignTypePicker(form: NewDesignFormState) {
     TextButton(onClick = { form.otherTypesExpanded = !form.otherTypesExpanded }) {
       Text(if (form.otherTypesExpanded) "Hide other design types" else "Other design types…")
     }
-    if (form.otherTypesExpanded || form.selectedCatalogId !in primaryIds) {
+    if (form.otherTypesExpanded) {
       FlowRow(
         modifier = Modifier.selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -479,7 +481,11 @@ internal fun NewDesignDialog(
   AlertDialog(
     onDismissRequest = { onDismiss?.invoke() },
     title = { Text("Create a new design") },
-    text = { NewDesignFormFields(form, submit) },
+    text = {
+      Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState())) {
+        NewDesignFormFields(form, submit)
+      }
+    },
     confirmButton = { Button(onClick = submit, enabled = form.designIdValid) { Text("Create") } },
     dismissButton = { if (onDismiss != null) TextButton(onClick = onDismiss) { Text("Cancel") } },
   )

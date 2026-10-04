@@ -8,6 +8,7 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.runDesktopComposeUiTest
+import ee.schimke.composeai.uibuilder.editor.NewDesignDialog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
@@ -80,6 +81,50 @@ class NewDesignKeyboardTest {
       onNodeWithText("Private").performScrollTo().performClick()
       onNodeWithContentDescription("Create design").performScrollTo().performClick()
       assertEquals(listOf("private", "public", "public", "private"), creations)
+    }
+
+  @Test
+  fun `short new design dialog scrolls to lower templates and state controls`() =
+    runDesktopComposeUiTest(width = 600, height = 480) {
+      var createdTemplate: String? = null
+      var createdState = emptyList<NewDesignState>()
+      setContent {
+        NewDesignDialog(
+          catalogs =
+            listOf(
+              catalog.copy(
+                systemId = "remote-m3",
+                templates =
+                  (1..5).map {
+                    UiBuilderNewDesignTemplate("starter-$it", "Starter $it", "Widget template $it")
+                  },
+              )
+            ),
+          initialCatalogSystemId = "remote-m3",
+          initialDesignId = "short-dialog",
+          onDismiss = {},
+          onCreate = { _, _, template, state ->
+            createdTemplate = template
+            createdState = state
+          },
+        )
+      }
+      onNodeWithText("Starter 5").performScrollTo().performClick()
+      onNodeWithContentDescription("Design ID").performScrollTo()
+      onNodeWithContentDescription("Add state variables").performScrollTo().performClick()
+      onNodeWithContentDescription("State name")
+        .performScrollTo()
+        .performTextReplacement("expanded")
+      onNodeWithContentDescription("State initial value")
+        .performScrollTo()
+        .performTextReplacement("true")
+      onNodeWithContentDescription("State initial value").performImeAction()
+      onNodeWithText("Create").performClick()
+      assertEquals("starter-5", createdTemplate)
+      assertEquals(
+        listOf(NewDesignState("expanded", NewDesignStateType.Flag, JsonPrimitive(true))),
+        createdState,
+      )
     }
 
   private companion object {
