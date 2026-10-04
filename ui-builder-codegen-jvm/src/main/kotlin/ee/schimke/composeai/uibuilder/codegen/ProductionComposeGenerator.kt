@@ -71,6 +71,30 @@ object ProductionComposeGenerator {
       }
       visit(entry.root)
       check(reachable == design.nodes.keys, "all design nodes must belong to the declared root")
+      // Declared reads are rewritten to generated `pN` names, which the projection merges by
+      // name; any other design-level binding would silently alias one of them.
+      fun bindings(element: JsonElement): List<String> =
+        when (element) {
+          is JsonObject ->
+            listOfNotNull(
+              (element["value"] as? JsonPrimitive)
+                ?.takeIf { (element["type"] as? JsonPrimitive)?.contentOrNull == "binding" }
+                ?.content
+            ) + element.values.flatMap(::bindings)
+          is JsonArray -> element.flatMap(::bindings)
+          else -> emptyList()
+        }
+      val stray =
+        design.nodes.flatMap { (nodeId, node) ->
+          val declared = entry.bindings.filter { it.nodeId == nodeId }.map { it.property }.toSet()
+          node.properties
+            .filterKeys { it !in declared }
+            .flatMap { (property, value) -> bindings(value).map { "$nodeId.$property" to it } } +
+            bindings(node.modifiers).map { "$nodeId modifiers" to it }
+        }
+      stray.firstOrNull()?.let { (where, name) ->
+        check(false, "$where: design binding `$name` is not a declared entry-point binding")
+      }
       val reads = mutableListOf<Read>()
       val nodes = design.nodes.toMutableMap()
       entry.bindings.forEach { binding ->

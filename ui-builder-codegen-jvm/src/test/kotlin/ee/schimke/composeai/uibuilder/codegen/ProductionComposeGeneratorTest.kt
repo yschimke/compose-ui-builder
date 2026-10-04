@@ -141,6 +141,43 @@ class ProductionComposeGeneratorTest {
   }
 
   @Test
+  fun `design bindings that are not declared reads are refused`() {
+    val collision = editScreen { file ->
+      val design = file.design!!
+      val root = design.nodes.getValue("root")
+      file.copy(
+        design =
+          design.copy(
+            nodes =
+              design.nodes +
+                ("root" to
+                  root.copy(
+                    slots =
+                      root.slots + ("children" to root.slots.getValue("children") + "subtitle")
+                  )) +
+                ("subtitle" to
+                  design.nodes
+                    .getValue("title")
+                    .copy(
+                      id = "subtitle",
+                      properties =
+                        buildJsonObject {
+                          putJsonObject("text") {
+                            put("type", "binding")
+                            put("value", "p0")
+                          }
+                        },
+                    ))
+          )
+      )
+    }
+    assertContains(
+      assertFailsWith<IllegalArgumentException> { generate(collision) }.message!!,
+      "subtitle.text: design binding `p0` is not a declared entry-point binding",
+    )
+  }
+
+  @Test
   fun `ordinary export remains one file without production data parameters`() {
     val design = inputs.single { it.path.endsWith("EpisodeCard.uid") }.file.design!!
     val literal =
