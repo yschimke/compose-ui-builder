@@ -387,8 +387,9 @@ private fun LiveSessionApp(
       mutableStateOf(readPinnedComponents(config.catalogSystemId))
     }
   var presenceState by remember { mutableStateOf(UiBuilderPresenceState()) }
-  var agentPreferences by
+  val agentPreferencesState =
     remember(config.designId) { mutableStateOf(readAgentPreferences(config.designId)) }
+  var agentPreferences by agentPreferencesState
   var activeAgents by
     remember(config.designId) { mutableStateOf<List<UiBuilderCollaborator>?>(null) }
   LaunchedEffect(config.designId, localSession, config.selectors.revision) {
@@ -397,8 +398,11 @@ private fun LiveSessionApp(
     while (true) {
       try {
         activeAgents = fetchAgentPresence(config.designId)
-        if (activeAgents?.isNotEmpty() == true && !agentPreferences.connectedBefore) {
-          val updated = agentPreferences.copy(connectedBefore = true)
+        // Read the shared state after the network suspension, including edits saved before
+        // the next recomposition. Capturing a preference value here would erase those edits.
+        val latestPreferences = agentPreferencesState.value
+        if (activeAgents?.isNotEmpty() == true && !latestPreferences.connectedBefore) {
+          val updated = latestPreferences.copy(connectedBefore = true)
           if (saveAgentPreferences(config.designId, updated) == null) agentPreferences = updated
         }
       } catch (cancelled: kotlinx.coroutines.CancellationException) {
