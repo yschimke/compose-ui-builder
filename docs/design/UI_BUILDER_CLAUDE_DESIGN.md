@@ -74,7 +74,7 @@ There are three hard constraints for Compose:
 | Code out | `export_compose` (Compose, Remote Compose, Wear), SVG, RC, BUNDLE | `:ui-builder-export` |
 | An agent handoff from a visual surface | The Connect agent panel, `window.__uiBuilderAgent`, and presence at `/api/ui-builder/v1/designs/<id>/agents` | [`UI_BUILDER_AGENT_HANDOFF.md`](UI_BUILDER_AGENT_HANDOFF.md) |
 | Inline UI in chat | MCP Apps: preview viewer, library (with the Designs tab), RC viewer, the editor at `ui://compose-ui-builder/editor` | compose-preview-server `mcp-app/` |
-| Plugins for Claude Code, Codex, Cursor, Gemini CLI and Antigravity | `compose-preview` (local MCP, `SessionStart`/`PostToolUse`/`Stop` hooks, `design-reviewer` agent) and `compose-catalogs` (hosted MCP), generated from one `src/plugins.json`; listed in the MCP Registry; Claude plugin directory submission pending | yschimke/compose-ag-plugin |
+| Plugins for Claude Code, Codex, Cursor, Gemini CLI and Antigravity | `compose-preview` (local MCP, `SessionStart`/`PostToolUse`/`Stop` hooks, `design-reviewer` agent) and `compose-catalogs` (hosted MCP), generated from one `src/plugins.json`; listed in the MCP Registry; Claude plugin directory submission pending | yschimke/compose-agent-plugins |
 | Skills that already target Claude Design | `compose-preview-design-board` (an HTML design board for import) and `compose-design-catalog` (a sticker sheet with `tokens.dtcg.json`) | yschimke/skills |
 
 ## The integrations, in the order worth doing them
@@ -116,8 +116,8 @@ There are two ways to deliver it:
 ### 2. No HTML look-alike bundle
 
 An earlier draft proposed a thin `components/bundle.js` of look-alike components, so a canvas
-could mount catalog components by name. That breaks rule R1 in compose-ag-plugin's
-[`docs/agent-rules.md`](https://github.com/yschimke/compose-ag-plugin/blob/main/docs/agent-rules.md):
+could mount catalog components by name. That breaks rule R1 in compose-agent-plugins'
+[`docs/agent-rules.md`](https://github.com/yschimke/compose-agent-plugins/blob/main/docs/agent-rules.md):
 an agent never hand-builds an HTML, CSS or SVG mock of a preview and shows it as the UI. The design
 system therefore ships no bundle. Its previews are real renders, and a canvas built on it is a
 sketch that comes back through point 3, never something presented as the Compose result.
@@ -149,13 +149,13 @@ HTML plus screenshots and route it through the importer above.
 
 ### 4. Claude Code and Codex as hosts
 
-Most of this exists. compose-ag-plugin already ships `compose-preview` and `compose-catalogs` for
+Most of this exists. compose-agent-plugins already ships `compose-preview` and `compose-catalogs` for
 Claude Code and Codex from one `src/plugins.json`. Their hooks are a `SessionStart` summary, a
 `PostToolUse` edit reminder and a `Stop` gate, plus a `design-reviewer` agent. Since
-[compose-ag-plugin#117](https://github.com/yschimke/compose-ag-plugin/pull/117), the same
+[compose-agent-plugins#117](https://github.com/yschimke/compose-agent-plugins/pull/117), the same
 marketplace also lists the skill bundles from yschimke/skills. What is left:
 
-- **Finish the Claude plugin directory submission** (compose-ag-plugin #53 and #80).
+- **Finish the Claude plugin directory submission** (compose-agent-plugins #53 and #80).
 - **Use Artifacts for anything visual that Claude Code's terminal cannot show.** The terminal does
   not render MCP Apps. Teach the skill to publish its output as a private Artifact page, such as a
   `render_matrix` grid, a before/after `history_diff`, or a `compare_reference` overlay. Only real
@@ -168,7 +168,7 @@ marketplace also lists the skill bundles from yschimke/skills. What is left:
   `McpAppBridge` already separates them.
 
 **Codex** reaches the same tools, and may also show the editor inside the conversation. Codex
-desktop has shown the preview viewer MCP App (compose-ag-plugin's harness matrix). Opening a `.uid`
+desktop has shown the preview viewer MCP App (compose-agent-plugins' harness matrix). Opening a `.uid`
 as a file entrypoint is built on the editor side
 ([`UI_BUILDER_MCP_APP_HOST.md`](UI_BUILDER_MCP_APP_HOST.md)) but unverified: the server's
 `design_open` waits on the probe in compose-preview-server#1236. Every Codex path therefore keeps a

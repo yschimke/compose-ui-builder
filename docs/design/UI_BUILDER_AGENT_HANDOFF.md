@@ -36,5 +36,5 @@ Browser presence continues using the existing WebSocket protocol and its expiry 
 The VS Code action opens its documented `vscode:mcp/install` URL with a public HTTP MCP endpoint.
 It installs connection configuration after VS Code's review. It does not start a task or paste the
 prompt. Other clients use the combined setup guide, which links canonical skills from
-yschimke/skills and hosted MCP wiring from yschimke/compose-ag-plugin, with separate Claude Code,
+yschimke/skills and hosted MCP wiring from yschimke/compose-agent-plugins, with separate Claude Code,
 Codex, Antigravity and Other paths. A local host's prompt and install link use that host's endpoint.

@@ -101,7 +101,7 @@
         <div>
           <h3>Connect your agent, once</h3>
           <p>Install the <a href="https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder"><code>compose-ui-builder</code> skill</a>
-            and the <a href="https://github.com/yschimke/compose-ag-plugin/tree/main/plugins/compose-catalogs"><code>compose-catalogs</code> plugin</a>.
+            and the <a href="https://github.com/yschimke/compose-agent-plugins/tree/main/plugins/compose-catalogs"><code>compose-catalogs</code> plugin</a>.
             The skill teaches your agent how to work with your design; the plugin connects it to the hosted MCP server. No local Compose project or Java installation is needed.</p>
           <div class="tabs" role="tablist" aria-label="Choose your agent">
             <button role="tab" aria-selected="true" aria-controls="tab-claude" id="t-claude" data-agent="claude">Claude</button>
@@ -113,18 +113,18 @@
             <p>In Claude Code:</p>
             <pre><code>/plugin marketplace add yschimke/skills
 /plugin install compose-skills@yschimke-skills
-/plugin marketplace add yschimke/compose-ag-plugin
-/plugin install compose-catalogs@compose-ag-plugin</code></pre>
+/plugin marketplace add yschimke/compose-agent-plugins
+/plugin install compose-catalogs@compose-agent-plugins</code></pre>
             <p>Leave the optional token blank and approve access in the browser. Restart, then check <code>/mcp</code>.</p>
           </div>
           <div class="tab-panel" role="tabpanel" id="tab-codex" aria-labelledby="t-codex" hidden>
             <pre><code>codex plugin marketplace add yschimke/skills
-codex plugin marketplace add yschimke/compose-ag-plugin</code></pre>
+codex plugin marketplace add yschimke/compose-agent-plugins</code></pre>
             <p>Enable <code>compose-skills</code> and <code>compose-catalogs</code> from <code>/plugins</code>, then start a new session. Check <code>codex mcp list</code> for <code>compose-preview-catalog</code>.</p>
           </div>
           <div class="tab-panel" role="tabpanel" id="tab-antigravity" aria-labelledby="t-antigravity" hidden>
             <pre><code>agy plugin install https://github.com/yschimke/skills/tree/main/plugins/compose-skills
-agy plugin install https://github.com/yschimke/compose-ag-plugin/tree/main/plugins/compose-catalogs
+agy plugin install https://github.com/yschimke/compose-agent-plugins/tree/main/plugins/compose-catalogs
 agy plugin enable compose-skills
 agy plugin enable compose-catalogs</code></pre>
             <p>Restart Antigravity and check <code>agy plugin list</code>. Install the skills as a plugin: Antigravity does not load the skills CLI's shared skills directory.</p>
