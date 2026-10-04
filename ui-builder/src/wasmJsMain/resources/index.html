@@ -20,6 +20,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Compose UI Builder Preview</title>
+    <meta name="ui-builder-mcp-server" content="compose-preview-catalog" />
+    <meta name="ui-builder-mcp-endpoint" content="/mcp" />
+    <link rel="help" href="https://yschimke.github.io/compose-ui-builder/#get-started" />
+    <!-- Agent handoff: use compose-preview-catalog at this host's /mcp. Install/load the
+         compose-ui-builder skill from https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder.
+         Request your own ui-builder-read/write/export grant; read the design and comments before
+         edits with baseRevision; verify ui_builder_export. Never reuse browser credentials.
+         MCP tools accept optional agentName and agentModel for the participant toolbar. -->
     <!--
       The import map comes before every module preload below, not after them. Chrome fixes a
       page's import map the moment it starts resolving a module's imports, and a modulepreload

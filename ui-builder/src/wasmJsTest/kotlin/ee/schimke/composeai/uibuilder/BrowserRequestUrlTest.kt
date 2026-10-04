@@ -77,6 +77,23 @@ class BrowserRequestUrlTest {
   }
 
   @Test
+  fun `minimal handoff keeps recovery clues and custom instructions without first time setup`() {
+    val prompt =
+      agentUiBuilderPrompt(
+        "https://example.test/mcp",
+        "https://example.test/ui-builder/sample",
+        "sample",
+        includeSetup = false,
+        instructions = "Use brand colors",
+      )
+    assertTrue(prompt.contains("https://example.test/mcp"))
+    assertTrue(prompt.contains("https://example.test/ui-builder/sample"))
+    assertTrue(prompt.contains(AGENT_SETUP_URL))
+    assertTrue(prompt.endsWith("Use brand colors"))
+    assertFalse(prompt.contains("claude mcp add"))
+  }
+
+  @Test
   fun `request URLs never copy the page token`() {
     withPageQuery("?token=operator-secret&actor=github%3Aa") {
       val request = sameOriginRequestUrl("/api/ui-builder/v1/identity")

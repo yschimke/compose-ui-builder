@@ -66,7 +66,7 @@ for (const pre of document.querySelectorAll('pre')) {
 }
 
 // The agent prompt: collapsed to its first lines until asked for, so Get started stays readable.
-for (const pre of document.querySelectorAll('pre.prompt')) {
+for (const pre of document.querySelectorAll('pre.prompt.collapsed')) {
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'prompt-toggle';

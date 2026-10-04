@@ -13,7 +13,15 @@ data class UiBuilderCollaborator(
   val displayName: String,
   val colorArgbHex: String,
   val selectedNodeIds: List<String>,
+  val kind: UiBuilderParticipantKind = UiBuilderParticipantKind.Unknown,
+  val modelName: String? = null,
 )
+
+enum class UiBuilderParticipantKind {
+  Browser,
+  Agent,
+  Unknown,
+}
 
 internal data class UiBuilderPresenceEntry(
   val value: PresenceV1,
@@ -55,6 +63,9 @@ internal data class UiBuilderPresenceState(
           displayName = it.displayName,
           colorArgbHex = it.colorArgbHex,
           selectedNodeIds = it.selectedNodeIds,
+          kind =
+            if (it.clientId.startsWith("browser")) UiBuilderParticipantKind.Browser
+            else UiBuilderParticipantKind.Unknown,
         )
       }
       .toList()

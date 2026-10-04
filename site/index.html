@@ -99,91 +99,77 @@
       <li>
         <span class="step-num">1</span>
         <div>
-          <h3>Install the skill</h3>
-          <p>The <a href="https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder"><code>compose-ui-builder</code>
-            skill</a> teaches your agent how to work on a design: which tools to call, how to pick
-            components from the catalog, how to answer comments and when to show you a render.</p>
+          <h3>Connect your agent, once</h3>
+          <p>Install the <a href="https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder"><code>compose-ui-builder</code> skill</a>
+            and the <a href="https://github.com/yschimke/compose-ag-plugin/tree/main/plugins/compose-catalogs"><code>compose-catalogs</code> plugin</a>.
+            The skill teaches your agent how to work with your design; the plugin connects it to the hosted MCP server. No local Compose project or Java installation is needed.</p>
           <div class="tabs" role="tablist" aria-label="Choose your agent">
-            <button role="tab" aria-selected="true" aria-controls="tab-skill-claude" id="ts-claude" data-agent="claude">Claude Code</button>
-            <button role="tab" aria-selected="false" aria-controls="tab-skill-codex" id="ts-codex" data-agent="codex" tabindex="-1">Codex</button>
-            <button role="tab" aria-selected="false" aria-controls="tab-skill-other" id="ts-other" data-agent="other" tabindex="-1">Cursor &amp; others</button>
+            <button role="tab" aria-selected="true" aria-controls="tab-claude" id="t-claude" data-agent="claude">Claude</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-codex" id="t-codex" data-agent="codex" tabindex="-1">Codex</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-antigravity" id="t-antigravity" data-agent="antigravity" tabindex="-1">Antigravity</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-other" id="t-other" data-agent="other" tabindex="-1">Other</button>
           </div>
-          <div class="tab-panel" role="tabpanel" id="tab-skill-claude" aria-labelledby="ts-claude">
+          <div class="tab-panel" role="tabpanel" id="tab-claude" aria-labelledby="t-claude">
+            <p>In Claude Code:</p>
             <pre><code>/plugin marketplace add yschimke/skills
-/plugin install compose-skills@yschimke-skills</code></pre>
+/plugin install compose-skills@yschimke-skills
+/plugin marketplace add yschimke/compose-ag-plugin
+/plugin install compose-catalogs@compose-ag-plugin</code></pre>
+            <p>Leave the optional token blank and approve access in the browser. Restart, then check <code>/mcp</code>.</p>
           </div>
-          <div class="tab-panel" role="tabpanel" id="tab-skill-codex" aria-labelledby="ts-codex" hidden>
-            <pre><code>codex plugin marketplace add yschimke/skills</code></pre>
-            <p>Then enable <code>compose-skills</code> from <code>/plugins</code>.</p>
+          <div class="tab-panel" role="tabpanel" id="tab-codex" aria-labelledby="t-codex" hidden>
+            <pre><code>codex plugin marketplace add yschimke/skills
+codex plugin marketplace add yschimke/compose-ag-plugin</code></pre>
+            <p>Enable <code>compose-skills</code> and <code>compose-catalogs</code> from <code>/plugins</code>, then start a new session. Check <code>codex mcp list</code> for <code>compose-preview-catalog</code>.</p>
           </div>
-          <div class="tab-panel" role="tabpanel" id="tab-skill-other" aria-labelledby="ts-other" hidden>
-            <p>Any agent that reads skills, with the <a href="https://github.com/vercel-labs/skills">skills CLI</a>:</p>
+          <div class="tab-panel" role="tabpanel" id="tab-antigravity" aria-labelledby="t-antigravity" hidden>
+            <pre><code>agy plugin install https://github.com/yschimke/skills/tree/main/plugins/compose-skills
+agy plugin install https://github.com/yschimke/compose-ag-plugin/tree/main/plugins/compose-catalogs
+agy plugin enable compose-skills
+agy plugin enable compose-catalogs</code></pre>
+            <p>Restart Antigravity and check <code>agy plugin list</code>. Install the skills as a plugin: Antigravity does not load the skills CLI's shared skills directory.</p>
+          </div>
+          <div class="tab-panel" role="tabpanel" id="tab-other" aria-labelledby="t-other" hidden>
+            <p>For an agent that supports skills and Streamable HTTP MCP:</p>
             <pre><code>npx skills add yschimke/skills --global --yes --skill compose-ui-builder</code></pre>
+            <p>Add <code>https://preview.coo.ee/mcp</code> as <code>compose-preview-catalog</code> in your client's MCP settings. For clients using <code>mcpServers</code>, such as Cursor:</p>
+            <pre><code>{
+  "mcpServers": {
+    "compose-preview-catalog": { "url": "https://preview.coo.ee/mcp" }
+  }
+}</code></pre>
+            <p><a class="btn btn-small" href="vscode:mcp/install?%7B%22name%22%3A%22compose-preview-catalog%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fpreview.coo.ee%2Fmcp%22%7D">Add MCP to VS Code</a></p>
+            <p>The link opens VS Code's connection review. It installs the MCP configuration; paste the design prompt into your agent afterward. Other clients can add the endpoint manually.</p>
           </div>
+          <p>When your agent requests access, approve its request in the browser. It uses its own grant; you do not need to copy your browser's credentials.</p>
         </div>
       </li>
       <li>
         <span class="step-num">2</span>
         <div>
-          <h3>Connect your agent, once</h3>
-          <p>The <a href="https://github.com/yschimke/compose-ag-plugin/tree/main/plugins/compose-catalogs"><code>compose-catalogs</code>
-            plugin</a> connects your agent to the hosted MCP server, <code>preview.coo.ee/mcp</code>.</p>
-          <div class="tabs" role="tablist" aria-label="Choose your agent">
-            <button role="tab" aria-selected="true" aria-controls="tab-claude" id="t-claude" data-agent="claude">Claude Code</button>
-            <button role="tab" aria-selected="false" aria-controls="tab-codex" id="t-codex" data-agent="codex" tabindex="-1">Codex</button>
-            <button role="tab" aria-selected="false" aria-controls="tab-other" id="t-other" data-agent="other" tabindex="-1">Cursor &amp; others</button>
+          <h3>Create a design</h3>
+          <p>Choose what to create, sign in with GitHub, and pick a starting template. Each link opens the create screen with its catalog selected:</p>
+          <div class="cta-row">
+            <a class="btn btn-small" href="https://preview.coo.ee/ui-builder/?catalog=m3-catalog">Adaptive Mobile App</a>
+            <a class="btn btn-small" href="https://preview.coo.ee/ui-builder/?catalog=wear-m3">Wear App</a>
+            <a class="btn btn-small" href="https://preview.coo.ee/ui-builder/?catalog=remote-m3">Wear Widget</a>
           </div>
-          <div class="tab-panel" role="tabpanel" id="tab-claude" aria-labelledby="t-claude">
-            <pre><code>/plugin marketplace add yschimke/compose-ag-plugin
-/plugin install compose-catalogs@compose-ag-plugin</code></pre>
-            <p>It asks for an optional token: leave it blank and approve access in the browser instead.</p>
-          </div>
-          <div class="tab-panel" role="tabpanel" id="tab-codex" aria-labelledby="t-codex" hidden>
-            <pre><code>codex plugin marketplace add yschimke/compose-ag-plugin</code></pre>
-            <p>Then enable <code>compose-catalogs</code> from <code>/plugins</code>.</p>
-          </div>
-          <div class="tab-panel" role="tabpanel" id="tab-other" aria-labelledby="t-other" hidden>
-            <p>Without plugins, add the server to any Streamable HTTP MCP client. For Cursor,
-              <code>.cursor/mcp.json</code>:</p>
-            <pre><code>{
-  "mcpServers": {
-    "compose-preview-catalog": { "type": "http", "url": "https://preview.coo.ee/mcp" }
-  }
-}</code></pre>
-          </div>
-          <p>Restart your agent so it picks the server up.</p>
         </div>
       </li>
       <li>
         <span class="step-num">3</span>
         <div>
-          <h3>Create a design</h3>
-          <p>Open <a href="https://preview.coo.ee/ui-builder/">preview.coo.ee/ui-builder</a>, sign in
-            with GitHub, choose <strong>New design</strong> and pick a template, such as the Wear list
-            screen.</p>
-        </div>
-      </li>
-      <li>
-        <span class="step-num">4</span>
-        <div>
           <h3>Hand it to your agent</h3>
-          <p>Press <strong>Copy prompt for your agent</strong> in the editor's toolbar, paste it into
+          <p>Open <strong>Connect agent</strong> and press <strong>Save and copy prompt</strong> in the editor's toolbar, paste it into
             your agent, and add what you want after it. The prompt names your design in place of
             <code>&lt;design&gt;</code>:</p>
-          <pre class="prompt collapsed"><code>Work with the Compose UI Builder design `<span class="placeholder">&lt;design&gt;</span>`:
+          <pre class="prompt"><code>Work with the Compose UI Builder design `<span class="placeholder">&lt;design&gt;</span>`:
 https://preview.coo.ee/ui-builder/<span class="placeholder">&lt;design&gt;</span>
 
-Use the `compose-preview-catalog` MCP server, https://preview.coo.ee/mcp. If your tools do not include it, stop and ask me to add it and restart this session, for example:
-claude mcp add --transport http compose-preview-catalog https://preview.coo.ee/mcp
-
-If you can, load the `compose-ui-builder` skill from https://github.com/yschimke/skills/tree/main/skills/compose-ui-builder and follow its collaboration and MCP guidance.
-
-Request `ui-builder-read`, `ui-builder-write`, and `ui-builder-export` through the server's agent-access flow. Do not put a bearer token in a URL, command line, repository, or chat. Once approved, read the design and its comments before editing; use its current revision as `baseRevision`, make edits with `ui_builder_apply`, then check the Compose export with `ui_builder_export`. Report the design URL and revision after each visible step.
+Use `compose-preview-catalog` at https://preview.coo.ee/mcp and follow the `compose-ui-builder` skill. If setup is missing, see https://yschimke.github.io/compose-ui-builder/#get-started. Read the design and comments before editing, then verify the Compose export.
 
 Turn it into a podcast library with "Latest episodes" and "Podcasts" buttons, then a Queue section with Up Next.</code></pre>
-          <p>The prompt names the design and the server and tells the agent to ask for its own access,
-            which you approve in the browser. No token is ever pasted. Keep the editor open beside
-            the chat: the agent's edits appear as it makes them.</p>
+          <p>This minimal prompt assumes you completed the setup above. The editor also offers a full setup prompt for first-time use, plus your own general or per-design instructions. Keep the editor open beside the chat: your agent's edits appear as it makes them.</p>
         </div>
       </li>
     </ol>
