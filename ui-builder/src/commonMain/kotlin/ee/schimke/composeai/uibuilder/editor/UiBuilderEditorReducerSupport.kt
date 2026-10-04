@@ -331,6 +331,8 @@ private fun PropertyCapability.defaultEncodedValue(
     "assetKey" -> literal("assetKey", JsonPrimitive("editor.placeholder"))
     "iconKey" -> literal("enum", JsonPrimitive("addCircle"))
     "layoutMode" -> literal("enum", JsonPrimitive("adaptive"))
+    "listPaneVisible",
+    "detailPaneVisible",
     "mainPaneVisible",
     "supportingPaneVisible" -> literal("bool", JsonPrimitive(true))
     "columns" ->

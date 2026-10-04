@@ -584,6 +584,18 @@ object CapabilityCatalogParser {
 
   private val EDITOR_OVERRIDES =
     mapOf(
+      ("layout/list-detail-pane-scaffold" to "activePaneIndex") to numberEditor(0.0, 2.0, 1.0),
+      ("layout/supporting-pane-scaffold" to "fixedPaneWidthDp") to numberEditor(0.0, 4096.0, 1.0),
+      ("layout/supporting-pane-scaffold" to "splitFraction") to numberEditor(0.1, 0.9, 0.05),
+      ("layout/list-detail-pane-scaffold" to "fixedPaneWidthDp") to numberEditor(0.0, 4096.0, 1.0),
+      ("layout/list-detail-pane-scaffold" to "splitFraction") to numberEditor(0.1, 0.9, 0.05),
+      ("layout/list-detail-pane-scaffold" to "listPanePreferredWidthDp") to
+        numberEditor(0.0, 4096.0, 1.0),
+      ("layout/list-detail-pane-scaffold" to "detailPanePreferredWidthDp") to
+        numberEditor(0.0, 4096.0, 1.0),
+      ("layout/list-detail-pane-scaffold" to "extraPanePreferredWidthDp") to
+        numberEditor(0.0, 4096.0, 1.0),
+      ("layout/list-detail-pane-scaffold" to "paneSpacingDp") to numberEditor(0.0, 512.0, 1.0),
       ("layout/supporting-pane-scaffold" to "mainPanePreferredWidthDp") to
         numberEditor(0.0, 4096.0, 1.0),
       ("layout/supporting-pane-scaffold" to "supportingPanePreferredWidthDp") to

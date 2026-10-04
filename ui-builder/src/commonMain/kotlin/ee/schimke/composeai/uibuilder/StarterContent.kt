@@ -382,6 +382,11 @@ internal object StarterContent {
         ),
       // Both panes, including the optional one: a supporting-pane scaffold showing one pane is
       // indistinguishable from the plain scaffold above it in the palette.
+      "layout/list-detail-pane-scaffold" to
+        mapOf(
+          "listPane" to listOf(column(text("List", "titleMedium"))),
+          "detailPane" to listOf(column(text("Detail", "titleMedium"))),
+        ),
       "layout/supporting-pane-scaffold" to
         mapOf(
           "mainPane" to listOf(column(text("Main pane", "titleMedium"))),

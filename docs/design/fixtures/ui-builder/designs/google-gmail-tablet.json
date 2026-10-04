@@ -412,25 +412,27 @@
       },
       "node": {
         "id": "panes",
-        "componentId": "layout/supporting-pane-scaffold",
+        "componentId": "layout/list-detail-pane-scaffold",
         "properties": {
+          "paneSizing": {"type": "enum", "value": "fixedStart"},
+          "fixedPaneWidthDp": {"type": "float", "value": 400.0},
           "layoutMode": {
             "type": "enum",
             "value": "expandedTwoPane"
           },
-          "mainPanePreferredWidthDp": {
+          "listPanePreferredWidthDp": {
             "type": "float",
             "value": 400.0
           },
-          "supportingPanePreferredWidthDp": {
+          "detailPanePreferredWidthDp": {
             "type": "float",
             "value": 760.0
           },
-          "mainPaneVisible": {
+          "listPaneVisible": {
             "type": "bool",
             "value": true
           },
-          "supportingPaneVisible": {
+          "detailPaneVisible": {
             "type": "bool",
             "value": true
           }
@@ -447,7 +449,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "panes",
-        "slot": "mainPane"
+        "slot": "listPane"
       },
       "node": {
         "id": "list-pane",
@@ -3434,7 +3436,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "panes",
-        "slot": "supportingPane"
+        "slot": "detailPane"
       },
       "node": {
         "id": "read-pane",
@@ -4415,5 +4417,5 @@
       "afterNodeId": "icon-83"
     }
   ],
-  "expectedDocumentHash": "897ff6bf96c4884835ac9fddacef8ad9181b4e8ad55bb92e6a04fb419b6b9226"
+  "expectedDocumentHash": "5b8a3cbb021e557a7ca16d97b6877aa3460a25dd2fec6801d7e739a883da0932"
 }

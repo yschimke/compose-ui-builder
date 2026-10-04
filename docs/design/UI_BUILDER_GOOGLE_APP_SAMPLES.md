@@ -1,5 +1,12 @@
 # Building real app UIs against the real composables: what worked, what is missing
 
+Current adaptive support: Gmail and Calendar now use `layout/list-detail-pane-scaffold`,
+with list/detail slots and fixed-start (400dp) / fixed-end (380dp) policies respectively.
+The original gap analysis below describes the supporting-pane workaround before this migration.
+The New design chooser offers list-detail, supporting pane, adaptive feed and adaptive navigation
+as reusable starting points; builds enabling stateful authoring include a controlled compact
+Open/Back flow, while stable builds start with a literal list destination.
+
 Five Google app screens — Gmail, Photos, Calendar, Keep and Play — were authored as
 [UI builder designs](fixtures/ui-builder/designs/README.md) in `m3-catalog`, framed for a tablet,
 and looked at again on a foldable and a phone. The renders are in

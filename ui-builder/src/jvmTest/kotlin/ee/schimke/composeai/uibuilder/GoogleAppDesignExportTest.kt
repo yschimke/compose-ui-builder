@@ -70,7 +70,7 @@ class GoogleAppDesignExportTest {
   fun `singlePane and a pane spacing export through the directive's copy`() {
     val document = designFixtureDocument("google-gmail-tablet").toProtocolDocument()
     val scaffold =
-      document.nodes.values.single { it.componentId == "layout/supporting-pane-scaffold" }
+      document.nodes.values.single { it.componentId == "layout/list-detail-pane-scaffold" }
     val adjusted =
       document.copy(
         nodes =

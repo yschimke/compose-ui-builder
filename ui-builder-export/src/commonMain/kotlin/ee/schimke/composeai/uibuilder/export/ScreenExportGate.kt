@@ -37,8 +37,18 @@ object ScreenExportGate {
   // `kotlin.io.encoding.Base64`: that package is the codec alone, and `kotlin.io` beside it — files
   // —
   // stays out, because a package is matched with its subpackages and not its parent.
+  // List-detail destinations clamp an integer state, then map it to a closed role name using
+  // Int.toString and String.replace. Only those generated expressions need ranges, text and Int.
   val EXPRESSION_PACKAGES: Set<String> =
-    setOf("androidx.compose", "kotlin.math", "kotlin.collections", "kotlin.io.encoding")
+    setOf(
+      "androidx.compose",
+      "kotlin.math",
+      "kotlin.ranges",
+      "kotlin.text",
+      "kotlin.Int",
+      "kotlin.collections",
+      "kotlin.io.encoding",
+    )
 
   /** The package a generated screen is emitted into. */
   const val PACKAGE_NAME: String = "generated.uibuilder"

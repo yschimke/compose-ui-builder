@@ -1,4 +1,4 @@
-// Generator content SHA-256: 39e8d7021451da21eafa9bd91c7a07c6f2a9d9722d8fabfbf5d49decfd6838f4
+// Generator content SHA-256: ca05c0ea1ee6aab0dd58e4a3d803cebc77965d287ba90008563d02caaa2143b4
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package generated.uibuilder
@@ -24,7 +24,11 @@ import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldDefaults
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
+import androidx.compose.material3.adaptive.layout.PaneExpansionAnchor
 import androidx.compose.material3.adaptive.layout.PaneScaffoldScope
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
 import androidx.compose.material3.adaptive.layout.SupportingPaneScaffoldDefaults
@@ -33,6 +37,7 @@ import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldDestinationIt
 import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.layout.calculateThreePaneScaffoldValue
+import androidx.compose.material3.adaptive.layout.rememberPaneExpansionState
 import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.*
@@ -79,6 +84,12 @@ fun JetcasterDiscoverExpandedSupportingPane() {
     // node:pane-scaffold component:layout/supporting-pane-scaffold symbol:SupportingPaneScaffold
     // typed-properties:{"layoutMode":{"type":"enum","value":"expandedTwoPane"},"mainPanePreferredWidthDp":{"type":"float","value":744},"mainPaneVisible":{"type":"bool","value":true},"paneSpacingDp":{"type":"float","value":24},"supportingPanePreferredWidthDp":{"type":"float","value":512},"supportingPaneVisible":{"type":"bool","value":true}}
     BuilderSupportingPaneScaffold(
+      listDetail = false,
+      activePaneIndex = null,
+      activePane = "list",
+      paneSizing = "preferred",
+      fixedPaneWidth = null,
+      splitFraction = 0.5f,
       modifier = Modifier.fillMaxSize(),
       singlePane = false,
       mainPaneVisible = true,
@@ -1262,6 +1273,12 @@ private fun builderCardColors(containerColor: Color) =
 @Composable
 private fun BuilderSupportingPaneScaffold(
   modifier: Modifier,
+  listDetail: Boolean,
+  activePane: String,
+  activePaneIndex: Int?,
+  paneSizing: String,
+  fixedPaneWidth: Dp?,
+  splitFraction: Float,
   singlePane: Boolean,
   mainPaneVisible: Boolean,
   supportingPaneVisible: Boolean,
@@ -1270,6 +1287,8 @@ private fun BuilderSupportingPaneScaffold(
   paneSpacing: Dp?,
   mainPane: @Composable () -> Unit,
   supportingPane: @Composable () -> Unit,
+  extraPaneWidth: Dp? = null,
+  extraPane: (@Composable () -> Unit)? = null,
 ) {
   val posture = currentWindowAdaptiveInfo().windowPosture
   BoxWithConstraints(modifier) {
@@ -1282,27 +1301,88 @@ private fun BuilderSupportingPaneScaffold(
     val directive =
       if (paneSpacing != null) partitioned.copy(horizontalPartitionSpacerSize = paneSpacing)
       else partitioned
-    val computed =
-      calculateThreePaneScaffoldValue(
-        maxHorizontalPartitions = directive.maxHorizontalPartitions,
-        adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(),
-        currentDestination =
-          if (!mainPaneVisible && supportingPaneVisible)
-            ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting)
-          else null,
+    val anchor =
+      when (paneSizing) {
+        "fixedStart" ->
+          PaneExpansionAnchor.Offset.fromStart(
+            (fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2
+          )
+        "fixedEnd" ->
+          PaneExpansionAnchor.Offset.fromEnd(
+            (fixedPaneWidth ?: 360.dp) + directive.horizontalPartitionSpacerSize / 2
+          )
+        "split" -> PaneExpansionAnchor.Proportion(splitFraction.coerceIn(.1f, .9f))
+        else -> null
+      }
+    val expansion =
+      rememberPaneExpansionState(
+        anchors = listOfNotNull(anchor),
+        initialAnchoredIndex = if (anchor == null) -1 else 0,
       )
-    SupportingPaneScaffold(
-      directive = directive,
-      value =
-        ThreePaneScaffoldValue(
-          primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden,
-          secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden,
-          tertiary = PaneAdaptedValue.Hidden,
-        ),
-      mainPane = { BuilderPane(mainPaneWidth, mainPane) },
-      supportingPane = { BuilderPane(supportingPaneWidth, supportingPane) },
-      modifier = Modifier.fillMaxSize(),
-    )
+    if (listDetail) {
+      val requestedRole =
+        if (activePaneIndex != null)
+          listOf(
+            ListDetailPaneScaffoldRole.List,
+            ListDetailPaneScaffoldRole.Detail,
+            ListDetailPaneScaffoldRole.Extra,
+          )[activePaneIndex.coerceIn(0, 2)]
+        else
+          when (activePane) {
+            "detail" -> ListDetailPaneScaffoldRole.Detail
+            "extra" -> ListDetailPaneScaffoldRole.Extra
+            else -> ListDetailPaneScaffoldRole.List
+          }
+      val available = buildList {
+        if (mainPaneVisible) add(ListDetailPaneScaffoldRole.List)
+        if (supportingPaneVisible) add(ListDetailPaneScaffoldRole.Detail)
+        if (extraPane != null) add(ListDetailPaneScaffoldRole.Extra)
+      }
+      val role = requestedRole.takeIf { it in available } ?: available.firstOrNull()
+      val computed =
+        calculateThreePaneScaffoldValue(
+          directive.maxHorizontalPartitions,
+          ListDetailPaneScaffoldDefaults.adaptStrategies(),
+          currentDestination = role?.let { ThreePaneScaffoldDestinationItem<Nothing>(it) },
+        )
+      ListDetailPaneScaffold(
+        directive = directive,
+        value =
+          ThreePaneScaffoldValue(
+            primary = if (supportingPaneVisible) computed.primary else PaneAdaptedValue.Hidden,
+            secondary = if (mainPaneVisible) computed.secondary else PaneAdaptedValue.Hidden,
+            tertiary = if (extraPane != null) computed.tertiary else PaneAdaptedValue.Hidden,
+          ),
+        listPane = { BuilderPane(mainPaneWidth, mainPane) },
+        detailPane = { BuilderPane(supportingPaneWidth, supportingPane) },
+        extraPane = extraPane?.let { content -> { BuilderPane(extraPaneWidth, content) } },
+        paneExpansionState = expansion,
+        modifier = Modifier.fillMaxSize(),
+      )
+    } else {
+      val computed =
+        calculateThreePaneScaffoldValue(
+          maxHorizontalPartitions = directive.maxHorizontalPartitions,
+          adaptStrategies = SupportingPaneScaffoldDefaults.adaptStrategies(),
+          currentDestination =
+            if (!mainPaneVisible && supportingPaneVisible)
+              ThreePaneScaffoldDestinationItem<Nothing>(SupportingPaneScaffoldRole.Supporting)
+            else null,
+        )
+      SupportingPaneScaffold(
+        directive = directive,
+        value =
+          ThreePaneScaffoldValue(
+            primary = if (mainPaneVisible) computed.primary else PaneAdaptedValue.Hidden,
+            secondary = if (supportingPaneVisible) computed.secondary else PaneAdaptedValue.Hidden,
+            tertiary = PaneAdaptedValue.Hidden,
+          ),
+        mainPane = { BuilderPane(mainPaneWidth, mainPane) },
+        supportingPane = { BuilderPane(supportingPaneWidth, supportingPane) },
+        paneExpansionState = expansion,
+        modifier = Modifier.fillMaxSize(),
+      )
+    }
   }
 }
 
