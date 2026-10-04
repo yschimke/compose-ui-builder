@@ -1,20 +1,34 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asSkiaBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.test.*
+import androidx.compose.ui.unit.Density
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
+import ee.schimke.composeai.uibuilder.editor.EditorColors
+import ee.schimke.composeai.uibuilder.editor.ExistingDesignsPanel
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.UiBuilderReleaseNote
+import ee.schimke.composeai.uibuilder.editor.canvasFrameDp
 import ee.schimke.composeai.uibuilder.editor.homeDesignFolders
 import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
+import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
+import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,6 +37,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
@@ -78,7 +94,7 @@ class UiBuilderHomeScreenTest {
     onNodeWithText("List-detail screen").assertDoesNotExist()
     onNodeWithText("Recent designs").assertIsDisplayed()
     onNodeWithText("Morning player").assertIsDisplayed()
-    onNodeWithText("morning-player · m3-catalog · updated yesterday").assertIsDisplayed()
+    onNodeWithText("Mobile app · updated yesterday").assertIsDisplayed()
     onNodeWithContentDescription("All designs").assertIsDisplayed()
   }
 
@@ -151,7 +167,7 @@ class UiBuilderHomeScreenTest {
     }
 
     onNodeWithText("Folder ·").assertDoesNotExist()
-    onNodeWithContentDescription("Move morning-player").performClick()
+    onNodeWithContentDescription("More actions for morning-player").performClick()
     onNodeWithContentDescription("New folder").performTextInput("Music")
     onNodeWithText("Create folder and move").performClick()
     assertEquals("morning-player" to "Music", moved)
@@ -377,6 +393,100 @@ class UiBuilderHomeScreenTest {
     onNodeWithText("New design").assertIsDisplayed()
     onNodeWithText("Recent designs").assertDoesNotExist()
   }
+
+  @OptIn(ExperimentalComposeUiApi::class)
+  @Test
+  fun `recent designs lead with large previews and retain open duplicate and folder actions`() =
+    runDesktopComposeUiTest(width = 1000, height = 900) {
+      val fixture =
+        Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject
+      val samples = listOf("wear-m3" to "wear-list", "remote-m3" to "weather-widget")
+      val images = samples.associate { (catalog, template) ->
+        val document =
+          UiBuilderNewDesignSeed.document(
+            template,
+            catalog,
+            template,
+            "candidate",
+            "candidate",
+            fixture,
+          )
+        val normalized =
+          document.copy(
+            environment = JsonObject(document.environment + ("density" to JsonPrimitive(1)))
+          )
+        val (width, height) = document.canvasFrameDp(WearWidgetHostShape.Default)
+        template to
+          renderComposeScene(width.toInt(), height.toInt(), Density(1f)) {
+              ProductionUiBuilderSurface(normalized)
+            }
+            .toComposeImageBitmap()
+      }
+      val recent =
+        listOf(
+          UiBuilderHomeDesign(
+            "wear-list",
+            "Activity",
+            "wear-m3",
+            folder = "Watch",
+            updatedLabel = "updated today",
+            revision = 7,
+          ),
+          UiBuilderHomeDesign(
+            "weather-widget",
+            "Weather",
+            "remote-m3",
+            folder = "Watch",
+            updatedLabel = "updated yesterday",
+            revision = 3,
+          ),
+        )
+      val requested = mutableListOf<Pair<String, Long>>()
+      var opened: String? = null
+      var copied: String? = null
+      setContent {
+        MaterialTheme(colorScheme = EditorColors) {
+          ExistingDesignsPanel(
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+            designs = recent,
+            onOpenDesign = { opened = it },
+            onCopyDesign = { copied = it },
+            onBrowseDesigns = {},
+            onMoveDesign = { _, _ -> },
+            loadThumbnail = { id, revision ->
+              requested += id to revision
+              images[id]
+            },
+          )
+        }
+      }
+      waitForIdle()
+      assertEquals(setOf("wear-list" to 7L, "weather-widget" to 3L), requested.toSet())
+      val preview =
+        onNodeWithContentDescription("Preview of Activity").fetchSemanticsNode().boundsInRoot
+      assertTrue(
+        preview.width > 300f && preview.height >= 180f,
+        "Preview should dominate its card: $preview",
+      )
+      onNodeWithContentDescription("Preview of Activity").performClick()
+      assertEquals("wear-list", opened)
+      onNodeWithContentDescription("Start from weather-widget").performClick()
+      assertEquals("weather-widget", copied)
+      val folder =
+        File(System.getProperty("uiBuilderProjectDir"), "build/new-design-evidence").apply {
+          mkdirs()
+        }
+      File(folder, "recent-designs.png")
+        .writeBytes(
+          requireNotNull(
+              Image.makeFromBitmap(onRoot().captureToImage().asSkiaBitmap())
+                .encodeToData(EncodedImageFormat.PNG)
+            )
+            .bytes
+        )
+      onNodeWithContentDescription("More actions for wear-list").performClick()
+      onNodeWithText("Move to folder").assertIsDisplayed()
+    }
 
   private fun resource(path: String): String =
     requireNotNull(javaClass.getResource(path)).readText()

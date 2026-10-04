@@ -8,6 +8,7 @@ package ee.schimke.composeai.uibuilder.editor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -35,6 +36,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -42,6 +44,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -940,7 +943,7 @@ private fun NewDesignHomePanel(
 
 /** **Open a file**: what is already on this host, and the things to do with one from here. */
 @Composable
-private fun ExistingDesignsPanel(
+internal fun ExistingDesignsPanel(
   modifier: Modifier,
   designs: List<UiBuilderHomeDesign>,
   onOpenDesign: ((designId: String) -> Unit)?,
@@ -987,58 +990,28 @@ private fun ExistingDesignsPanel(
               modifier = Modifier.semantics { heading() },
             )
           }
-          group.forEach { design ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-              if (loadThumbnail != null) DesignThumbnail(design, loadThumbnail)
-              Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                  design.title.ifBlank { design.designId },
-                  style = MaterialTheme.typography.bodyLarge,
-                )
-                Text(
-                  listOf(design.designId, design.catalogSystemId, design.updatedLabel)
-                    .filter { it.isNotBlank() }
-                    .joinToString(" · "),
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (design.folder != null && !grouped) {
-                  Text(
-                    "Folder · ${design.folder}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                  if (onOpenDesign != null) {
-                    TextButton(
-                      onClick = { onOpenDesign(design.designId) },
-                      modifier =
-                        Modifier.semantics { contentDescription = "Open ${design.designId}" },
-                    ) {
-                      Text("Open")
+          BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val columns = if (maxWidth >= 480.dp) 2 else 1
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+              group.chunked(columns).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                  row.forEach { design ->
+                    key(design.designId) {
+                      ExistingDesignCard(
+                        modifier = Modifier.weight(1f),
+                        design = design,
+                        folders = folders,
+                        onOpenDesign = onOpenDesign,
+                        onCopyDesign = onCopyDesign,
+                        onMoveDesign = onMoveDesign,
+                        loadThumbnail = loadThumbnail,
+                      )
                     }
                   }
-                  if (onCopyDesign != null) {
-                    TextButton(
-                      onClick = { onCopyDesign(design.designId) },
-                      modifier =
-                        Modifier.semantics { contentDescription = "Start from ${design.designId}" },
-                    ) {
-                      Text("Start from this")
-                    }
-                  }
-                  if (onMoveDesign != null) {
-                    FolderMoveMenu(
-                      design = design,
-                      folders = folders,
-                      onMove = onMoveDesign,
-                    )
-                  }
+                  if (row.size < columns) Spacer(Modifier.weight(1f))
                 }
               }
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
           }
         }
       }
@@ -1057,6 +1030,69 @@ private fun ExistingDesignsPanel(
     }
   }
 }
+
+@Composable
+private fun ExistingDesignCard(
+  modifier: Modifier,
+  design: UiBuilderHomeDesign,
+  folders: List<String>,
+  onOpenDesign: ((String) -> Unit)?,
+  onCopyDesign: ((String) -> Unit)?,
+  onMoveDesign: ((String, String?) -> Unit)?,
+  loadThumbnail: (suspend (String, Long) -> ImageBitmap?)?,
+) {
+  Surface(
+    modifier = modifier,
+    shape = RoundedCornerShape(12.dp),
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    color = MaterialTheme.colorScheme.surface,
+  ) {
+    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      if (loadThumbnail != null) DesignThumbnail(design, loadThumbnail, onOpenDesign)
+      Text(design.title.ifBlank { design.designId }, style = MaterialTheme.typography.titleMedium)
+      Text(
+        listOf(homeDesignKindLabel(design.catalogSystemId), design.updatedLabel)
+          .filter { it.isNotBlank() }
+          .joinToString(" · "),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      Text(
+        design.designId,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (onOpenDesign != null) {
+          Button(
+            onClick = { onOpenDesign(design.designId) },
+            modifier = Modifier.semantics { contentDescription = "Open ${design.designId}" },
+          ) {
+            Text("Open")
+          }
+        }
+        if (onCopyDesign != null) {
+          TextButton(
+            onClick = { onCopyDesign(design.designId) },
+            modifier = Modifier.semantics { contentDescription = "Start from ${design.designId}" },
+          ) {
+            Text("Duplicate")
+          }
+        }
+        if (onMoveDesign != null) FolderMoveMenu(design, folders, onMoveDesign)
+      }
+    }
+  }
+}
+
+private fun homeDesignKindLabel(systemId: String): String =
+  when (systemId) {
+    "m3-catalog" -> "Mobile app"
+    "wear-m3" -> "Wear app"
+    "remote-m3" -> "Wear widget"
+    "a2ui-catalog" -> "A2UI surface"
+    else -> systemId
+  }
 
 /** A sentence about who this page is signed in as, and the one thing to do about it. */
 @Composable
@@ -1211,15 +1247,42 @@ private fun BrowserDesignsPanel(
 private fun DesignThumbnail(
   design: UiBuilderHomeDesign,
   loadThumbnail: suspend (designId: String, revision: Long) -> ImageBitmap?,
+  onOpenDesign: ((String) -> Unit)?,
 ) {
   val revision = design.revision
   var picture by remember(design.designId, revision) { mutableStateOf<ImageBitmap?>(null) }
+  var loading by remember(design.designId, revision) { mutableStateOf(revision != null) }
   LaunchedEffect(design.designId, revision) {
     if (revision != null)
       picture = runCatching { loadThumbnail(design.designId, revision) }.getOrNull()
+    loading = false
   }
-  DesignThumbnailFrame(Modifier.size(width = 64.dp, height = 96.dp)) {
-    picture?.let { Image(it, contentDescription = null, contentScale = ContentScale.Fit) }
+  val previewModifier =
+    Modifier.fillMaxWidth()
+      .height(200.dp)
+      .then(
+        if (onOpenDesign == null) Modifier
+        else
+          Modifier.clickable(
+            onClickLabel = "Open ${design.title.ifBlank { design.designId }}",
+            onClick = { onOpenDesign(design.designId) },
+          )
+      )
+  DesignThumbnailFrame(previewModifier) {
+    val image = picture
+    if (image != null)
+      Image(
+        image,
+        contentDescription = "Preview of ${design.title.ifBlank { design.designId }}",
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.fillMaxSize().padding(8.dp),
+      )
+    else
+      Text(
+        if (loading) "Loading preview…" else "Preview unavailable",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
   }
 }
 
@@ -1272,14 +1335,19 @@ private fun FolderMoveMenu(
   var expanded by remember(design.designId, design.folder) { mutableStateOf(false) }
   var newFolder by remember(design.designId) { mutableStateOf("") }
   Box {
-    TextButton(
+    IconButton(
       onClick = { expanded = true },
-      modifier = Modifier.semantics { contentDescription = "Move ${design.designId}" },
+      modifier = Modifier.semantics { contentDescription = "More actions for ${design.designId}" },
     ) {
-      Text("Move")
+      Icon(Icons.Filled.MoreVert, contentDescription = null)
     }
     TrackEditorOverlay(expanded)
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+      Text(
+        "Move to folder",
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier.padding(12.dp),
+      )
       DropdownMenuItem(
         text = { Text("No folder") },
         onClick = {
