@@ -167,10 +167,13 @@ marketplace also lists the skill bundles from yschimke/skills. What is left:
   in compose-preview-server's `OpenAi*.kt` behind feature detection, the way this repository's
   `McpAppBridge` already separates them.
 
-**Codex** reaches the same tools the other way round. Codex desktop renders MCP Apps, so the
-editor opens inside the conversation as the `.uid` file entrypoint
-([`UI_BUILDER_MCP_APP_HOST.md`](UI_BUILDER_MCP_APP_HOST.md); the server's `design_open` waits on
-compose-preview-server#1236). OpenAI has no design-system import like Claude Design's. Its Product
+**Codex** reaches the same tools, and may also show the editor inside the conversation. Codex
+desktop has shown the preview viewer MCP App (compose-ag-plugin's harness matrix). Opening a `.uid`
+as a file entrypoint is built on the editor side
+([`UI_BUILDER_MCP_APP_HOST.md`](UI_BUILDER_MCP_APP_HOST.md)) but unverified: the server's
+`design_open` waits on the probe in compose-preview-server#1236. Every Codex path therefore keeps a
+tool-only fallback that does not depend on rendered UI: the `ui_builder_*` tools, PNG renders and a
+link to the hosted editor. OpenAI has no design-system import like Claude Design's. Its Product
 Design plugin carries work into Figma and Canva, so for Codex users the route to a design tool is
 the existing Figma path (design-parity, Code Connect), not anything built for Claude Design. Keep
 the export neutral, with real renders, tokens and component docs, and keep thin destination
