@@ -57,7 +57,8 @@ jobs:
       # Review the exporter in this checkout, including adapters that have not shipped yet.
       builder-repository: ${{ github.repository }}
       builder-ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      server-ref: f6e45c6dd8310d03aca5303560992f03be790a43
+      # Must name the same commit as the `uses:` above; Renovate bumps both as one update.
+      server-ref: f6e45c6dd8310d03aca5303560992f03be790a43 # main
       fail-on-refusal: true
       catalog-id: m3-catalog
       catalog-bundle: https://raw.githubusercontent.com/yschimke/m3-catalog-out/design-artifacts/m3-catalog/bundle/bundle.png
