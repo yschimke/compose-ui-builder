@@ -46,7 +46,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@c62f9c2349b5cc7a512bd00354592e0694f0cf0a # main
+    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@f6e45c6dd8310d03aca5303560992f03be790a43 # main
     with:
       # The Material 3 designs, against m3-catalog's own bundle off its delivery branch in the
       # m3-catalog-out output repository. No `lane`: this call keeps the comment and branches it
@@ -54,6 +54,11 @@ jobs:
       # A full result avoids reporting unchanged designs as removed against the full baseline.
       # It also reviews projection changes, which can affect designs without changing their JSON.
       changed-only: false
+      # Review the exporter in this checkout, including adapters that have not shipped yet.
+      builder-repository: ${{ github.repository }}
+      builder-ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      server-ref: f6e45c6dd8310d03aca5303560992f03be790a43
+      fail-on-refusal: true
       catalog-id: m3-catalog
       catalog-bundle: https://raw.githubusercontent.com/yschimke/m3-catalog-out/design-artifacts/m3-catalog/bundle/bundle.png
       # The record the generator proves each call site against. `m3-catalog` is record-driven, so
@@ -66,7 +71,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@c62f9c2349b5cc7a512bd00354592e0694f0cf0a # main
+    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@f6e45c6dd8310d03aca5303560992f03be790a43 # main
     with:
       # The Wear designs, against wear-m3-catalog's bundle. Compiled against the m3 bundle they fail
       # at `Unresolved reference 'wear'`. `wear-m3` is record-free, so there is no `components`.
