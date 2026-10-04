@@ -62,7 +62,7 @@ class NewDesignKeyboardTest {
     }
 
   @Test
-  fun `creation defaults to private and uses the selected visibility for submit and quick start`() =
+  fun `creation defaults to private and uses the selected visibility for keyboard and button submit`() =
     runDesktopComposeUiTest(width = 900, height = 1100) {
       val creations = mutableListOf<String>()
       setContent {
@@ -76,7 +76,7 @@ class NewDesignKeyboardTest {
       onNodeWithContentDescription("Design ID").performImeAction()
       onNodeWithText("Public (read only)").performScrollTo().performClick()
       onNodeWithContentDescription("Design ID").performImeAction()
-      onNodeWithContentDescription("New from blank").performScrollTo().performClick()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
       onNodeWithText("Private").performScrollTo().performClick()
       onNodeWithContentDescription("Create design").performScrollTo().performClick()
       assertEquals(listOf("private", "public", "public", "private"), creations)

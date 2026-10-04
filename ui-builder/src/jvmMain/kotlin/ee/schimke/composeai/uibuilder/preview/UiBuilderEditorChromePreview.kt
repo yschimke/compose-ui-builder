@@ -373,37 +373,41 @@ fun UiBuilderNewDesignPreview() {
       listOf(
         UiBuilderNewDesignCatalog(
           systemId = "m3-catalog",
-          label = "Mobile",
+          label = "Mobile app",
           templates =
             listOf(
-              UiBuilderNewDesignTemplate("blank", "Blank", "A scaffold and an empty container."),
               UiBuilderNewDesignTemplate(
-                "jetcaster",
-                "Jetcaster",
-                "The frozen discover screen, as a starting point.",
+                "blank",
+                "Blank screen",
+                "A scaffold and an empty container.",
+              ),
+              UiBuilderNewDesignTemplate(
+                "hello",
+                "Hello sample",
+                "A headline and a line of text to edit.",
               ),
             ),
         ),
         UiBuilderNewDesignCatalog(
           systemId = "wear-m3",
-          label = "Wear",
+          label = "Wear app",
           templates =
             listOf(
               UiBuilderNewDesignTemplate(
                 "wear-screen",
-                "Wear screen",
+                "Blank screen",
                 "A ScreenScaffold with its clock and scroll indicator, over an empty list.",
               )
             ),
         ),
         UiBuilderNewDesignCatalog(
           systemId = "remote-m3",
-          label = "RemoteCompose",
+          label = "Wear widget",
           templates =
             listOf(
               UiBuilderNewDesignTemplate(
                 "wear-widget-small",
-                "Small widget",
+                "Blank small widget",
                 "216×76dp host with a single content slot.",
               )
             ),

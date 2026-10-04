@@ -5,6 +5,7 @@
 
 package ee.schimke.composeai.uibuilder.editor
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -12,8 +13,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +25,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,28 +38,27 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
@@ -100,6 +104,7 @@ private class NewDesignFormState(
   val allowPublic: Boolean,
 ) {
   var publicRead by mutableStateOf(false)
+  var otherTypesExpanded by mutableStateOf(false)
   private val initialCatalog =
     catalogs.firstOrNull { it.systemId == initialCatalogSystemId } ?: catalogs.first()
 
@@ -130,6 +135,12 @@ private class NewDesignFormState(
   val variableNameValid: Boolean
     get() = NEW_DESIGN_STATE_NAME.matches(variableName) && declared.none { it.name == variableName }
 
+  fun selectCatalog(catalog: UiBuilderNewDesignCatalog) {
+    if (selectedCatalogId == catalog.systemId) return
+    selectedCatalogId = catalog.systemId
+    selectedTemplateId = catalog.templates.first().id
+  }
+
   fun addVariable(): Boolean {
     if (!variableNameValid || !newDesignInitialValueValid(variableKind, variableInitial))
       return false
@@ -140,79 +151,129 @@ private class NewDesignFormState(
   }
 }
 
-/** The New design form itself: catalog, starting point, id, and the optional state variables. */
+/** The primary types have one entry each; additional host catalogs remain available on demand. */
 @Composable
-private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) {
-
-  Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-    Text("Visibility", style = MaterialTheme.typography.labelLarge)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-      FilterChip(
-        selected = !form.publicRead,
-        onClick = { form.publicRead = false },
-        label = { Text("Private") },
-      )
-      if (form.allowPublic)
-        FilterChip(
-          selected = form.publicRead,
-          onClick = { form.publicRead = true },
-          label = { Text("Public (read only)") },
-        )
-    }
-    Text(
-      if (form.publicRead) "Anyone with the link can view. Only authorized editors can change it."
-      else if (form.allowPublic) "Only you and invited collaborators. Change this later in Sharing."
-      else "Public sharing isn't available here.",
-      style = MaterialTheme.typography.bodySmall,
-    )
-    Text("Catalog", style = MaterialTheme.typography.labelLarge)
-    // In platform order — phone, watch, Remote Compose widget — and grouped under a platform
-    // heading only where a platform has more than one catalog to choose between. With one
-    // catalog per platform the chip already says which platform it is, and a heading over a
-    // single chip would say it twice.
-    val byPlatform = form.catalogs.groupBy { it.platform }.entries.sortedBy { it.key.ordinal }
-    byPlatform.forEach { (platform, platformCatalogs) ->
-      if (platformCatalogs.size > 1) {
-        Text(
-          platform.label,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          style = MaterialTheme.typography.labelMedium,
-        )
-      }
-      FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+private fun NewDesignTypePicker(form: NewDesignFormState) {
+  val primaryIds = listOf("m3-catalog", "wear-m3", "remote-m3")
+  val primary = primaryIds.mapNotNull { id -> form.catalogs.firstOrNull { it.systemId == id } }
+  val other = form.catalogs.filter { it.systemId !in primaryIds }
+  Text("1. What are you designing?", style = MaterialTheme.typography.titleSmall)
+  Row(
+    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).selectableGroup(),
+    horizontalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+    primary.forEach { catalog ->
+      val (label, description) =
+        when (catalog.systemId) {
+          "m3-catalog" -> "Mobile app" to "Phone & tablet"
+          "wear-m3" -> "Wear app" to "Watch screens"
+          else -> "Wear widget" to "Watch widgets"
+        }
+      val isSelected = form.selectedCatalogId == catalog.systemId
+      Surface(
+        modifier =
+          Modifier.weight(1f)
+            .fillMaxHeight()
+            .selectable(
+              selected = isSelected,
+              role = Role.RadioButton,
+              onClick = { form.selectCatalog(catalog) },
+            ),
+        shape = RoundedCornerShape(12.dp),
+        color =
+          if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+          else MaterialTheme.colorScheme.surface,
+        border =
+          BorderStroke(
+            1.dp,
+            if (isSelected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outlineVariant,
+          ),
       ) {
-        platformCatalogs.forEach { catalog ->
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+          Text(label, style = MaterialTheme.typography.titleSmall)
+          Text(description, style = MaterialTheme.typography.bodySmall)
+        }
+      }
+    }
+  }
+  if (other.isNotEmpty()) {
+    TextButton(onClick = { form.otherTypesExpanded = !form.otherTypesExpanded }) {
+      Text(if (form.otherTypesExpanded) "Hide other design types" else "Other design types…")
+    }
+    if (form.otherTypesExpanded || form.selectedCatalogId !in primaryIds) {
+      FlowRow(
+        modifier = Modifier.selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+      ) {
+        other.forEach { catalog ->
           FilterChip(
-            selected = catalog.systemId == form.selectedCatalogId,
-            onClick = {
-              form.selectedCatalogId = catalog.systemId
-              form.selectedTemplateId = catalog.templates.first().id
-            },
+            selected = form.selectedCatalogId == catalog.systemId,
+            onClick = { form.selectCatalog(catalog) },
             label = { Text(catalog.label) },
           )
         }
       }
     }
-    Text("Starting point", style = MaterialTheme.typography.labelLarge)
-    FlowRow(
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
+  }
+}
+
+@Composable
+private fun NewDesignChoice(
+  selected: Boolean,
+  label: String,
+  supportingText: String,
+  onClick: () -> Unit,
+) {
+  Surface(
+    modifier =
+      Modifier.fillMaxWidth().selectable(selected, role = Role.RadioButton, onClick = onClick),
+    shape = RoundedCornerShape(12.dp),
+    color =
+      if (selected) MaterialTheme.colorScheme.secondaryContainer
+      else MaterialTheme.colorScheme.surface,
+    border =
+      BorderStroke(
+        1.dp,
+        if (selected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.outlineVariant,
+      ),
+  ) {
+    Row(
+      Modifier.padding(12.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+      RadioButton(selected = selected, onClick = null)
+      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = MaterialTheme.typography.titleSmall)
+        if (supportingText.isNotBlank())
+          Text(supportingText, style = MaterialTheme.typography.bodySmall)
+      }
+    }
+  }
+}
+
+/** The New design form itself: catalog, starting point, id, and the optional state variables. */
+@Composable
+private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) {
+
+  Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    NewDesignTypePicker(form)
+    Text("2. Choose a starting point", style = MaterialTheme.typography.titleSmall)
+    Column(
+      modifier = Modifier.selectableGroup(),
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
       form.selectedCatalog.templates.forEach { template ->
-        FilterChip(
+        NewDesignChoice(
           selected = template.id == form.selectedTemplate.id,
+          label = template.label,
+          supportingText = template.supportingText,
           onClick = { form.selectedTemplateId = template.id },
-          label = { Text(template.label) },
         )
       }
     }
-    Text(
-      form.selectedTemplate.supportingText,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.bodySmall,
-    )
     Text("Design ID", style = MaterialTheme.typography.labelLarge)
     OutlinedTextField(
       value = form.designId,
@@ -241,6 +302,26 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
       keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
       keyboardActions = KeyboardActions(onDone = { if (form.designIdValid) onSubmit() }),
     )
+    if (form.allowPublic) {
+      Text("Visibility", style = MaterialTheme.typography.labelLarge)
+      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(
+          selected = !form.publicRead,
+          onClick = { form.publicRead = false },
+          label = { Text("Private") },
+        )
+        FilterChip(
+          selected = form.publicRead,
+          onClick = { form.publicRead = true },
+          label = { Text("Public (read only)") },
+        )
+      }
+      Text(
+        if (form.publicRead) "Anyone with the link can view. Only authorized editors can change it."
+        else "Only you and invited collaborators. Change this later in Sharing.",
+        style = MaterialTheme.typography.bodySmall,
+      )
+    }
     // Optional starting state. The Screen inspector can add and edit declarations later.
     if (!form.stateExpanded && form.declared.isEmpty()) {
       TextButton(
@@ -733,10 +814,7 @@ fun UiBuilderNewDesignScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
             }
-            // The one-press way in, first: most people arriving here want a blank screen or the
-            // smallest sample, and the full form below is for choosing a kind and a name.
             if (accountNotice != null) AccountNotice(accountNotice, accountNoticeAction)
-            QuickStartStrip(form, create)
             val newPanel: @Composable (Modifier) -> Unit = { modifier ->
               NewDesignHomePanel(modifier, form, create)
             }
@@ -830,43 +908,12 @@ private fun NewDesignHomePanel(
       modifier = Modifier.padding(20.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-      Text("Create from a template", style = MaterialTheme.typography.titleMedium)
+      Text("New design", style = MaterialTheme.typography.titleMedium)
       Text(
-        "Choose a kind of design, then give it a name.",
+        "Choose a design type, then start blank or use a template.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
-      Text("Available kinds", style = MaterialTheme.typography.labelLarge)
-      FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-      ) {
-        form.catalogs.forEach { catalog ->
-          FilterChip(
-            selected = form.selectedCatalogId == catalog.systemId,
-            onClick = {
-              form.selectedCatalogId = catalog.systemId
-              form.selectedTemplateId = catalog.templates.first().id
-            },
-            label = { Text(catalog.label) },
-          )
-        }
-        // These are intentionally named now, rather than hidden behind a generic blank Android
-        // screen. They are the next Android template shapes, so a person knows what the chooser is
-        // growing toward without being offered a button that cannot create the promised layout.
-        FilterChip(
-          selected = false,
-          onClick = {},
-          enabled = false,
-          label = { Text("Adaptive app") },
-        )
-        FilterChip(
-          selected = false,
-          onClick = {},
-          enabled = false,
-          label = { Text("List-detail screen") },
-        )
-      }
       NewDesignFormFields(form, submit)
       Button(
         onClick = submit,
@@ -1146,59 +1193,6 @@ private fun BrowserDesignsPanel(
 }
 
 /**
- * One press to a new design: a button per starting point of the kind already selected — for an
- * Android app, the blank screen and the hello sample — named with the id the form generated.
- */
-@Composable
-private fun QuickStartStrip(
-  form: NewDesignFormState,
-  onCreate:
-    (
-      catalogSystemId: String,
-      designId: String,
-      templateId: String,
-      state: List<NewDesignState>,
-    ) -> Unit,
-) {
-  Surface(
-    shape = RoundedCornerShape(16.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-  ) {
-    FlowRow(
-      modifier = Modifier.fillMaxWidth().padding(16.dp),
-      horizontalArrangement = Arrangement.spacedBy(12.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp),
-      itemVerticalAlignment = Alignment.CenterVertically,
-    ) {
-      Text(
-        "New ${form.selectedCatalog.label.lowercase()}",
-        style = MaterialTheme.typography.titleSmall,
-      )
-      form.selectedCatalog.templates.take(QUICK_START_LIMIT).forEachIndexed { index, template ->
-        val create = {
-          onCreate(form.selectedCatalog.systemId, form.designId, template.id, emptyList())
-        }
-        val description = Modifier.semantics { contentDescription = "New from ${template.id}" }
-        if (index == 0) {
-          Button(onClick = create, enabled = form.designIdValid, modifier = description) {
-            Text(template.label)
-          }
-        } else {
-          FilledTonalButton(
-            onClick = create,
-            enabled = form.designIdValid,
-            modifier = description,
-          ) {
-            Text(template.label)
-          }
-        }
-      }
-    }
-  }
-}
-
-/**
  * The design as it looks now, from the same cached thumbnail its card on the designs page shows.
  */
 @Composable
@@ -1315,9 +1309,6 @@ private fun FolderMoveMenu(
 
 /** How many designs the home screen lists before deferring to the full index. */
 private const val HOME_DESIGN_LIMIT = 6
-
-/** Starting points offered as buttons above the form; the rest are one step further in. */
-private const val QUICK_START_LIMIT = 3
 
 /**
  * [designs] under their folders: folders in name order, ignoring case, and the unfiled last. Within

@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.test.*
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHomeDesign
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
@@ -12,12 +13,15 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignTemplate
 import ee.schimke.composeai.uibuilder.editor.UiBuilderReleaseNote
 import ee.schimke.composeai.uibuilder.editor.homeDesignFolders
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.jetbrains.skia.EncodedImageFormat
+import org.jetbrains.skia.Image
 
 /**
  * The builder's home page: the screen `/ui-builder/` draws when no design is named.
@@ -62,10 +66,12 @@ class UiBuilderHomeScreenTest {
       )
     }
 
-    onNodeWithText("Create from a template").assertIsDisplayed()
-    onAllNodesWithText("Mobile").assertCountEquals(2)
-    onNodeWithText("Adaptive app").assertIsDisplayed()
-    onNodeWithText("List-detail screen").assertIsDisplayed()
+    onNodeWithText("New design").assertIsDisplayed()
+    onNodeWithText("Mobile app").assertIsDisplayed()
+    onNodeWithText("Available kinds").assertDoesNotExist()
+    onNodeWithText("Catalog").assertDoesNotExist()
+    onNodeWithText("Adaptive app").assertDoesNotExist()
+    onNodeWithText("List-detail screen").assertDoesNotExist()
     onNodeWithText("Recent designs").assertIsDisplayed()
     onNodeWithText("Morning player").assertIsDisplayed()
     onNodeWithText("morning-player · m3-catalog · updated yesterday").assertIsDisplayed()
@@ -222,7 +228,7 @@ class UiBuilderHomeScreenTest {
 
   /** A host with no index and nothing to copy shows the create panel alone, as it always did. */
   @Test
-  fun `the quick start creates a blank screen or the hello sample in one press`() =
+  fun `the chosen starting point is submitted and release notes remain available`() =
     runComposeUiTest {
       val submitted = mutableListOf<String>()
       setContent {
@@ -245,9 +251,97 @@ class UiBuilderHomeScreenTest {
       }
       onNodeWithText("What's new").performScrollTo().assertIsDisplayed()
       onNodeWithText("• A new thing").performScrollTo().assertIsDisplayed()
-      onNodeWithContentDescription("New from hello").performScrollTo().performClick()
-      onNodeWithContentDescription("New from blank").performScrollTo().performClick()
+      onNodeWithText("Hello sample").performScrollTo().performClick()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
+      onNodeWithText("Blank screen").performScrollTo().performClick()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
       assertEquals(listOf("m3-catalog/hello", "m3-catalog/blank"), submitted)
+    }
+
+  @Test
+  fun `switching design types shows only their templates and resets the selection`() =
+    runDesktopComposeUiTest(width = 400, height = 900) {
+      var created: Pair<String, String>? = null
+      val types =
+        listOf(
+          UiBuilderNewDesignCatalog(
+            "m3-catalog",
+            "Android app",
+            listOf(
+              UiBuilderNewDesignTemplate("blank", "Blank screen", "Empty phone screen"),
+              UiBuilderNewDesignTemplate("hello", "Hello sample", "Phone starter"),
+            ),
+          ),
+          UiBuilderNewDesignCatalog(
+            "wear-m3",
+            "Wear",
+            listOf(
+              UiBuilderNewDesignTemplate("wear-screen", "Blank screen", "Empty watch screen"),
+              UiBuilderNewDesignTemplate("wear-list", "Activity list", "Watch starter"),
+            ),
+          ),
+          UiBuilderNewDesignCatalog(
+            "remote-m3",
+            "RemoteCompose",
+            listOf(
+              UiBuilderNewDesignTemplate("wear-widget-small", "Blank small widget", "Empty widget"),
+              UiBuilderNewDesignTemplate("weather-widget", "Weather", "Widget starter"),
+            ),
+          ),
+          UiBuilderNewDesignCatalog(
+            "a2ui",
+            "A2UI surface",
+            listOf(UiBuilderNewDesignTemplate("column", "Column", "A2UI starter")),
+          ),
+        )
+      setContent {
+        UiBuilderNewDesignScreen(
+          catalogs = types,
+          initialDesignId = "sunny-otter",
+          initialCatalogSystemId = "m3-catalog",
+          onCreate = { catalog, _, template, _ -> created = catalog to template },
+        )
+      }
+      fun capture(name: String) {
+        val folder =
+          File(System.getProperty("uiBuilderProjectDir"), "build/new-design-evidence").apply {
+            mkdirs()
+          }
+        File(folder, "$name.png")
+          .writeBytes(
+            requireNotNull(
+                Image.makeFromBitmap(onRoot().captureToImage().asSkiaBitmap())
+                  .encodeToData(EncodedImageFormat.PNG)
+              )
+              .bytes
+          )
+      }
+      capture("mobile-app")
+      onNodeWithText("Hello sample").performClick()
+      onNodeWithText("Wear app").performClick()
+      onNodeWithText("Hello sample").assertDoesNotExist()
+      onNodeWithText("Activity list").assertIsDisplayed()
+      capture("wear-app")
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
+      assertEquals("wear-m3" to "wear-screen", created)
+      onNodeWithText("Activity list").performScrollTo().performClick()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
+      assertEquals("wear-m3" to "wear-list", created)
+      onNodeWithText("Wear widget").performScrollTo().performClick()
+      onNodeWithText("Activity list").assertDoesNotExist()
+      capture("wear-widget")
+      onNodeWithText("Weather").performScrollTo().performClick()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
+      assertEquals("remote-m3" to "weather-widget", created)
+      onNodeWithText("Mobile app").performScrollTo().performClick()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
+      assertEquals("m3-catalog" to "blank", created)
+      onNodeWithText("A2UI surface").assertDoesNotExist()
+      onNodeWithText("Other design types…").performScrollTo().performClick()
+      onNodeWithText("A2UI surface").performClick()
+      onNodeWithText("Column").assertIsDisplayed()
+      onNodeWithContentDescription("Create design").performScrollTo().performClick()
+      assertEquals("a2ui" to "column", created)
     }
 
   @Test
@@ -260,7 +354,7 @@ class UiBuilderHomeScreenTest {
       )
     }
 
-    onNodeWithText("Create from a template").assertIsDisplayed()
+    onNodeWithText("New design").assertIsDisplayed()
     onNodeWithText("Recent designs").assertDoesNotExist()
   }
 }
