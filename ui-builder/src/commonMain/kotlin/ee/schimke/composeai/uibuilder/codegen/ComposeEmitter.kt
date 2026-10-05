@@ -87,20 +87,10 @@ internal class ComposeEmitter(
   private var emittingRow: Pair<String, LoopSignature>? = null
 
   /**
-   * The body first, then the header in front of it.
-   *
-   * The import list has to be a fact about what was emitted rather than a prediction about what
-   * will be. A document can *define* a reusable component whose body holds a
-   * `layout/supporting-pane-scaffold` and never place it: `validateGraph()` treats component roots
-   * as reachable, while [emitComponentFunctions] emits only the keys a placement names, so a
-   * document-wide "does any node use it?" says yes and the emitted screen contains no call. An
-   * import of Material 3 Adaptive with nothing using it does not compile in a project that never
-   * added the dependency, so predicting wrongly is a broken export rather than a stray line.
-   *
-   * Emitting first removes the prediction: [emittedSupportingPaneScaffold] is set by
-   * [emitSupportingPane] itself, so the only thing that can turn the imports on is the call being
-   * written. The diagnostics the header quotes are complete before this class is constructed, so
-   * nothing in the header depends on the body beyond that flag.
+   * The body first, then the header, so imports reflect what was actually emitted: a
+   * defined-but-unplaced component holding a supporting pane scaffold must not add an Adaptive
+   * import the project may not have ([emittedSupportingPaneScaffold] is set by
+   * [emitSupportingPane]).
    */
   fun emit(): String {
     val functionName = document.exportFunctionName()
@@ -489,22 +479,9 @@ internal class ComposeEmitter(
   }
 
   /**
-   * Whether the `kotlin` a folded run qualifies through still means the package.
-   *
-   * A folded run is written `kotlin.repeat(n) { _ -> … }`, and both halves of that are the point:
-   * `repeat` is a name like any other and so is the `it` it would otherwise bind.
-   * `exportedStateIdentifier` leaves both alone, so a design declaring state called either gets a
-   * local of that name — and an unqualified call would resolve to it, while the lambda's implicit
-   * parameter would shadow a read of it. Qualifying and binding nothing settles both without asking
-   * what else is in scope, which is the honest position for an exporter whose imports include one
-   * the caller supplies (`ComposeAssetAdapter.renderer`).
-   *
-   * That leaves one name to protect rather than two, and both ways it can be taken are: a design
-   * whose state is called `kotlin` gets a local that captures the qualifier, and an adapter whose
-   * renderer *binds* that name captures it too — by its last segment, or by an `as` alias, which is
-   * what the import statement actually puts in scope. Either has its cells printed the long way.
-   * Spent on the fold rather than on a refusal — the design is legal, the canvas draws it, and the
-   * adapter is the caller's to supply.
+   * Whether the `kotlin` that a folded run (`kotlin.repeat(n) { _ -> … }`) qualifies through still
+   * means the package. A design state named `kotlin`, or an adapter renderer import bound to that
+   * name, would capture it; such designs print their cells the long way.
    */
   private val foldsRepeatedSiblings: Boolean by lazy {
     document.stateVariables.keys.none { it.identifier() == "kotlin" } &&
@@ -512,31 +489,12 @@ internal class ComposeEmitter(
   }
 
   /**
-   * A slot's children, with runs of identical siblings written as one `repeat`.
+   * A slot's children, with runs of identical siblings written as one `repeat` — the same calls in
+   * the same order, just spelled readably. [foldSignature] decides what is interchangeable; the
+   * run's comment names the folded siblings.
    *
-   * A design says a twelve-cell contribution row by holding twelve nodes, because that is the only
-   * thing the document can say: there is no loop in the format, and the canvas draws what is there.
-   * Printing it back as twelve identical `Surface` calls is faithful and unreadable, and the person
-   * reading the generated screen is the one this export exists for.
-   *
-   * The fold is purely how the same composition is *spelled*. The run emits the calls it replaced,
-   * in the same order, in the same parent scope; nothing about what is drawn moves. So the rule for
-   * what may fold is the rule for what is genuinely interchangeable — see [foldSignature], which
-   * refuses a subtree asserting an identity the fold would erase.
-   *
-   * The comment above a run names the folded **siblings**; the body carries the located node
-   * comments of the first of them, and a copy's descendants are found through the sibling id that
-   * stands for them. Naming every descendant of every copy would put back, as comments, the text
-   * the fold just removed — and the copies are identical, which is the whole premise.
-   *
-   * Only in the non-lazy containers — the carousel included, whose helper is a `Row` and whose
-   * items carry no key. `LazyColumn` and the grid wrap each child in `item(key = …)`, and a folded
-   * run would have to invent one key for what were separate keys — laziness is where item identity
-   * has consequences, so the readability trade is not obviously worth it there and is not taken.
-   *
-   * [emitOne] is how a container that wraps each child — the carousel's `Box` — folds without the
-   * wrapper being written n times: the run emits the wrapper too, because it is the same expression
-   * for every child it stands for.
+   * Only in non-lazy containers (the carousel included): lazy children carry per-item keys a fold
+   * would have to invent. [emitOne] lets a per-child wrapper fold with its child.
    */
   private fun emitChildren(
     children: List<String>,
@@ -573,30 +531,16 @@ internal class ComposeEmitter(
   }
 
   /**
-   * What makes two sibling subtrees the same drawing, or `null` for one that may not be folded.
-   *
-   * Everything the emitters read is in it — the component, its properties, its modifiers, its event
-   * bindings, and the same question asked of every child, per slot — so two subtrees with equal
-   * signatures generate byte-identical Kotlin. Node ids are the one thing left out, since being
-   * different nodes is exactly what a run of identical siblings is.
-   *
-   * `null` for a subtree carrying `stableKey` or `scrollStateKey`, at any depth. Those are the
-   * design's own claim that this node is a particular one — [emitNode] spends them on a `key(…)`
-   * wrapper — and a `repeat` would emit that claim n times over. A design that wants its cells
-   * distinguishable says so, and is then printed the long way.
-   */
-  /**
-   * One answer per node for the life of an export.
-   *
-   * A signature contains its children's signatures, so an unmemoised walk costs the subtree once
-   * per level of nesting above it — and the emitter descends every level. Nothing in a document
-   * changes while it is being emitted, so the second answer is always the first.
-   *
-   * Holds nulls too: "this subtree may not fold" is as reusable as any other answer, and the
-   * refusals ([stableKey], a missing node) are what a deep design hits most.
+   * Memoised [foldSignature] answers, nulls included; a signature contains its children's, so an
+   * unmemoised walk is quadratic in depth.
    */
   private val foldSignatures = mutableMapOf<String, String?>()
 
+  /**
+   * What makes two sibling subtrees the same drawing (equal signatures generate identical Kotlin),
+   * or null for one that may not fold: a subtree carrying `stableKey` or `scrollStateKey` at any
+   * depth, since [emitNode] spends those on a `key(…)` wrapper.
+   */
   private fun foldSignature(nodeId: String, ancestors: Set<String> = emptySet()): String? {
     if (nodeId in foldSignatures) return foldSignatures.getValue(nodeId)
     val signature = computeFoldSignature(nodeId, ancestors)
@@ -641,26 +585,11 @@ internal class ComposeEmitter(
   }
 
   /**
-   * The real `SupportingPaneScaffold`, through the same directive the canvas uses.
-   *
-   * `layoutMode` is not a parameter of the real component and never could be — it derives its panes
-   * from a [PaneScaffoldDirective] and the window — so it is written as the directive instead,
-   * which is what the canvas's `AdaptiveSupportingPaneScaffold` does with the identical rule. That
-   * is the point of emitting the real symbol: the preview and the app can no longer disagree about
-   * the width a design expands at, because neither of them owns a threshold any more.
-   *
-   * The three widths ARE written, and for a while were not. `mainPanePreferredWidthDp`,
-   * `supportingPanePreferredWidthDp` and `paneSpacingDp` were declared by the catalog, stored in
-   * the document, carried on the wire and echoed into the provenance comment — and read by nobody,
-   * with no diagnostic to say so, because "the scaffold partitions the window itself" was taken to
-   * mean it could not be told otherwise. It can: a pane's preferred width is
-   * `PaneScaffoldScope.preferredWidth`, parent data its measure policy reads, and the gap between
-   * partitions is the directive's `horizontalPartitionSpacerSize`. Gmail asked for a 400dp list
-   * beside a 760dp conversation and got roughly 810/360 — close to the opposite
-   * (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 2).
-   *
-   * An unstated width is written as `null` and changes nothing, so a design that never touched
-   * these exports exactly the source it did before.
+   * The real `SupportingPaneScaffold`, through the same directive the canvas uses, so preview and
+   * app cannot disagree about when a design expands. `layoutMode` becomes the
+   * [PaneScaffoldDirective]; the preferred widths become `PaneScaffoldScope.preferredWidth` and the
+   * spacing `horizontalPartitionSpacerSize` (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 2).
+   * Unstated widths are `null` and change nothing.
    */
   private fun emitSupportingPane(node: UiBuilderNode, level: Int) {
     emittedSupportingPaneScaffold = true
@@ -1271,15 +1200,9 @@ internal class ComposeEmitter(
   }
 
   /**
-   * `TextField` or `OutlinedTextField`, with the state variable the design binds it to.
-   *
-   * The two Material composables take the same arguments and differ in nothing a design authors,
-   * which is why one component id carries both behind a `variant` — the same choice `m3/card`
-   * already makes for its three.
-   *
-   * `onValueChange` writes the bound variable and nothing else. A field bound to no variable emits
-   * an empty lambda rather than a local `remember`: a generated screen whose field silently kept
-   * its own state would look like it worked and would not be the design anybody drew.
+   * `TextField` or `OutlinedTextField` (by `variant`) with its bound state variable.
+   * `onValueChange` writes only that variable; an unbound field gets an empty lambda rather than
+   * hidden local state.
    */
   private fun emitTextField(node: UiBuilderNode, level: Int) {
     val symbol = if (node.string("variant") == "outlined") "OutlinedTextField" else "TextField"
@@ -1392,17 +1315,10 @@ internal class ComposeEmitter(
   }
 
   /**
-   * The real `SupportingPaneScaffold`, wrapped only enough to take this design's two booleans.
-   *
-   * Emitted **only** for a design that has the component — see [adaptiveImports] for why an unused
-   * adaptive import is not free.
-   *
-   * The directive comes from the scaffold's own `BoxWithConstraints`, not from
-   * `currentWindowAdaptiveInfo()`, which is the same rule `AdaptiveSupportingPaneScaffold` follows
-   * in the renderer and is load-bearing for the reason this export exists: a scaffold under a
-   * `width`, a `widthIn` or any narrower parent inside a wide window would otherwise be told about
-   * the window, request two partitions, and disagree with the preview pane that measured its real
-   * bounds. Only the posture is still the window's, because a hinge is hardware.
+   * The real `SupportingPaneScaffold`, wrapped to take this design's two booleans; emitted only
+   * when used (see [adaptiveImports]). The directive comes from the scaffold's own
+   * `BoxWithConstraints`, as in the renderer, so a constrained scaffold in a wide window matches
+   * the preview; only posture comes from the window.
    */
   private fun emitAdaptiveHelper() {
     if (!emittedSupportingPaneScaffold) return
@@ -1575,16 +1491,9 @@ private fun UiBuilderNode.actionLambda(event: String, stateTypes: Map<String, St
   actionExpression(event, stateTypes).let { if (it.isEmpty()) "{}" else "{ $it }" }
 
 /**
- * The body of one event handler.
- *
- * Every action, not the first: `eventBindings` is a list because a handler runs its actions in
- * order and as a unit, which is how the renderer dispatches it. Emitting only the head exported a
- * handler that did less than the preview showed.
- *
- * [stateTypes] is what `emitState` writes for each variable, and every refusal here reads it. A
- * `toggle` is `!x` only for a `Boolean`; a `selectOrClear` writes `null` only into a nullable; an
- * assignment may only carry a value the declared type can hold. Against anything else those would
- * not compile, so each stays a refusal rather than becoming broken source.
+ * The body of one event handler: every action in order, as the renderer dispatches them. Checked
+ * against [stateTypes] — `toggle` needs a `Boolean`, `selectOrClear` a nullable, and assignments a
+ * value the type holds — refusing what would not compile.
  */
 private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String, String>): String {
   val actions = (eventBindings[event] as? JsonArray).orEmpty()
@@ -2032,17 +1941,10 @@ internal fun UiBuilderNode.warning(code: String, message: String) =
   ComposeExportDiagnostic(code, ComposeExportSeverity.WARNING, message, id, componentId)
 
 /**
- * Which property of which component this exporter can print as an **expression** rather than as a
- * literal — the whole of what a generated component function can take as a parameter.
- *
- * A component body reads its arguments by key, and turning one into a parameter means the emitter
- * for that property must write `shade` where it would write `Color(0xFF39D353)`. Every emitter here
- * does; the rest still print constants, and a binding they would have swallowed is refused by name
- * instead of silently exported as the component's default. That refusal is the reason this table is
- * read by [CapabilityComposeCodeExporter.diagnose] as well as by the emitter: one statement of what
- * is supported, checked before a line is generated.
- *
- * It grows a row at a time, each row paid for by an emitter that prints an expression.
+ * Which component properties this exporter can print as an expression rather than a literal, i.e.
+ * what a generated component function can take as a parameter. Also read by
+ * [CapabilityComposeCodeExporter.diagnose], so unsupported bindings are refused by name before
+ * generation.
  */
 private val BINDABLE_PROPERTIES: Map<String, Map<String, BindingKind>> =
   mapOf(
@@ -2712,17 +2614,9 @@ private fun UiBuilderDocument.subtreeNodes(root: String): List<UiBuilderNode> {
 }
 
 /**
- * Every node one repetition of [root] draws: its own scope, and the body of every component
- * reachable through a placement, at any depth.
- *
- * A placed body is reached through `component.componentKey` rather than through a slot, so a walk
- * following slot edges alone stops at the placement node. One level of expansion was not enough: a
- * template placing A, where A places B, drew B's body once per row too. [seen] guards the recursion
- * — a cycle is refused elsewhere as `COMPONENT_CYCLE`, and this must not hang before it gets the
- * chance.
- *
- * Nested loops are left to their own check: expansion uses [ownNodes] at each level, so an identity
- * inside an inner loop's template is reported once, by that loop.
+ * Every node one repetition of [root] draws: its own scope plus every component body reachable
+ * through placements, at any depth. [seen] guards cycles (refused elsewhere as `COMPONENT_CYCLE`);
+ * nested loops are checked by their own level via [ownNodes].
  */
 private fun UiBuilderDocument.drawnNodes(
   root: String,
@@ -3230,16 +3124,9 @@ internal val COMPOSE_EMITTED_CLICK_COMPONENTS: Set<String> by lazy {
 }
 
 /**
- * The dimensions this exporter emits, as `componentId.property`.
- *
- * The catalog gives every `…Dp` a number editor from its name alone, which is the right default and
- * was the wrong rule on its own: a dimension no emitter reads is a control whose every value is
- * discarded, and `layout/lazy-grid.verticalSpacingDp` was exactly that — authored, stored, offered,
- * and drawn as zero by both projections.
- *
- * Derived rather than listed for the same reason [COMPOSE_EMITTED_CLICK_COMPONENTS] is: adding a
- * dimension to an emitter is what should make it editable, and two places holding one rule is how
- * it came to disagree in the first place.
+ * The dimensions this exporter emits, as `componentId.property`, so only `…Dp` properties some
+ * emitter reads get a number editor. Derived, like [COMPOSE_EMITTED_CLICK_COMPONENTS], so adding a
+ * dimension to an emitter makes it editable.
  */
 internal val COMPOSE_EMITTED_DP_PROPERTIES: Set<String> by lazy {
   HANDLED_FIELDS.flatMap { (componentId, fields) ->

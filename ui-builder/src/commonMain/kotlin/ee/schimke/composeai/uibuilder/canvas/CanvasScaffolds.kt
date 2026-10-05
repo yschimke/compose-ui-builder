@@ -89,89 +89,12 @@ import androidx.window.core.layout.WindowSizeClass
 import ee.schimke.composeai.uibuilder.LocalUiBuilderAssetBitmaps
 import ee.schimke.composeai.uibuilder.ResolvedUiBuilderAsset
 import ee.schimke.composeai.uibuilder.artwork.ProjectOwnedJetcasterArtwork
-import ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter
 import ee.schimke.composeai.uibuilder.decodeUiBuilderAssetBitmap
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.resolveAsset
 import kotlinx.serialization.json.JsonObject
 
-/**
- * The real `SupportingPaneScaffold`, not an imitation of one.
- *
- * ## Why this is the whole point of the pane it draws in
- *
- * This component used to be a `BoxWithConstraints` here that expanded past a width it computed
- * itself, and the Kotlin export emitted a *second* hand-rolled helper with a different threshold
- * again — so a design could expand at one width on the canvas and another in the app, and the
- * preview pane could not answer the question it exists for. Both are gone: the canvas, the preview
- * pane and the generated source now go through `androidx.compose.material3.adaptive`, so "does it
- * adapt" is answered by the library that will answer it in production.
- *
- * ## How `layoutMode` reaches a component that has no such parameter
- *
- * It does not, and it never could — the scaffold takes a `PaneScaffoldDirective` and derives its
- * panes from the window, which is why the record-driven export gate refuses the property and still
- * does: mapping a mode onto a directive is a computation, and a record can only write a value as an
- * argument to a member. A hand-written emitter can compute, so here and in
- * [CapabilityComposeCodeExporter] the property maps onto the directive:
- *
- * - `adaptive`, `twoPane` and `expandedTwoPane` leave the directive as the window computed it, so
- *   the library decides and a tablet design collapses to one pane on a phone. The two-pane
- *   spellings behaved that way under the old stand-in too — it required the frame to be wide enough
- *   — so nothing observable changes for a design that uses them.
- * - `singlePane` pins `maxHorizontalPartitions` to 1: one pane at every width, on purpose.
- *
- * `adaptive` is the one spelling whose behaviour changes, and it changes to what its name says. The
- * stand-in's expansion test required the mode to be one of the two-pane spellings, so a design
- * asking for `adaptive` was the one design that never adapted.
- *
- * ## The frame is the window, not the browser
- *
- * `currentWindowAdaptiveInfo()` reports the window the *workspace* is in, and in the preview pane
- * that is one browser holding a row of device frames. Asked directly it gives every frame the same
- * answer, so a phone frame and a tablet frame beside it would expand or collapse together — which
- * is the one thing the multi-frame rung exists to disprove.
- *
- * So the size class is computed from this scaffold's **own** constraints
- * ([`WindowSizeClass.compute`]), which inside [ConstrainedFramePane] are the device's width and
- * height in the device's own density. Each frame is its own window, which is what it is standing in
- * for. The posture is still the real one — a hinge is a property of hardware, not of a frame, and
- * on the native lane the window really is the window.
- *
- * ## The visibility flags are the scaffold's value, not its directive
- *
- * `mainPaneVisible` / `supportingPaneVisible` say which panes this design has at all, which is a
- * different question from how many the window can show. They go to the [ThreePaneScaffoldValue];
- * the directive decides the rest, and `calculateThreePaneScaffoldValue` hides the supporting pane
- * when the partitions do not reach it.
- *
- * ## The unrolled editor gets the stand-in; every constrained frame gets this
- *
- * The switch is [LocalUiBuilderUnrolled] — the same one that already turns `layout/lazy-column`
- * into a `Column`, `layout/lazy-grid` into a non-lazy grid and drops a `verticalScroll`. One signal
- * decides all of it, so "unrolled" and "constrained" cannot each answer for a different component:
- * the visual editor gets [UnfoldedSupportingPaneScaffold] and the preview pane gets this.
- *
- * There is a second reason it has to be this way round, and it is not a preference. The real
- * scaffold cannot be measured against an unbounded height — `ThreePaneContentMeasurePolicy` lays
- * out at the height it is given, and `Constraints.Infinity` is not a size: `Size(1280 x 2147483647)
- * is out of range`. The editor's canvas measures exactly that way on purpose, because unrolling a
- * `LazyColumn` so its ninth row can be edited is what [CanvasExtentLayout] is for, and `unrolled =
- * true` is set at the same call site.
- *
- * Reading the incoming constraints here instead would answer differently in that layout's probe
- * pass than in its placement pass, and the extent reported would then belong to a layout nobody
- * drew. A composition local set once by the pane is stable across both.
- *
- * So this is the fidelity ladder meeting a real component, and it resolves the way the ladder says:
- * the editing surface is the one allowed to lie, and it draws every pane the design declares at
- * every canvas width — the full expanded experience, always. Every constrained frame — the preview
- * pane, each device and axis, the native lane — gets the real one, and that is where a design
- * collapses to a phone. A 1-vs-2 disagreement about pane count is therefore expected and is the
- * documented meaning of that row
- * ([`UI_BUILDER_PREVIEW_FIDELITY.md`](../../../../../../docs/design/UI_BUILDER_PREVIEW_FIDELITY.md)).
- */
 /**
  * The navigation suite type the enclosing [AdaptiveNavigationSuiteScaffold] chose for its frame.
  *
@@ -185,15 +108,9 @@ internal val LocalFrameNavigationSuiteType = compositionLocalOf {
 }
 
 /**
- * `m3/navigation-suite-scaffold`: `NavigationSuiteScaffold` itself, deciding rail or bar from the
- * frame it is drawn in — the same rule, and for the same reason, as
- * [AdaptiveSupportingPaneScaffold]: each device frame is its own window, so a phone frame gets a
- * bar and a tablet frame beside it a rail.
- *
- * The unrolled editor gets the rail at every width, with the design's content beside it, which is
- * the full tablet experience the editing surface always draws. The scaffold proper cannot be
- * measured against the unbounded height that surface lays out with, so it is `NavigationSuite` —
- * the library's own navigation component, without the scaffold — in a `Row`.
+ * `m3/navigation-suite-scaffold`: the real `NavigationSuiteScaffold`, choosing rail or bar from its
+ * own frame like [AdaptiveSupportingPaneScaffold]. The unrolled editor gets `NavigationSuite` in a
+ * `Row` at every width, since the scaffold cannot measure an unbounded height.
  */
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -252,6 +169,23 @@ internal fun AdaptiveNavigationSuiteScaffold(
   }
 }
 
+/**
+ * The real `SupportingPaneScaffold`, so the canvas, preview pane and generated source all adapt
+ * through `androidx.compose.material3.adaptive`.
+ *
+ * `layoutMode` maps onto the directive: `adaptive`, `twoPane` and `expandedTwoPane` leave it as
+ * computed, `singlePane` pins `maxHorizontalPartitions` to 1. The pane visibility flags go to the
+ * [ThreePaneScaffoldValue].
+ *
+ * The size class is computed from this scaffold's own constraints ([`WindowSizeClass.compute`]),
+ * not `currentWindowAdaptiveInfo()`, so each device frame in the preview pane is its own window;
+ * posture still comes from the real window.
+ *
+ * The unrolled editor ([LocalUiBuilderUnrolled]) gets [UnfoldedSupportingPaneScaffold] instead: the
+ * real scaffold cannot be measured against an unbounded height, and the editing surface always
+ * shows every pane. A pane-count disagreement between editor and preview is therefore expected
+ * ([`UI_BUILDER_PREVIEW_FIDELITY.md`](../../../../../../docs/design/UI_BUILDER_PREVIEW_FIDELITY.md)).
+ */
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 internal fun AdaptiveSupportingPaneScaffold(
@@ -407,28 +341,9 @@ private fun PaneScaffoldScope.preferredPaneWidth(modifier: Modifier, width: Dp?)
   if (width == null) modifier else modifier.preferredWidth(width)
 
 /**
- * The unrolled canvas's stand-in for the adaptive scaffold, and only its stand-in.
- *
- * Reached through [LocalUiBuilderUnrolled], which is the visual editor and nothing else — the
- * preview pane, the device and axis frames, the native lane and every export are constrained and
- * get the real component. See [AdaptiveSupportingPaneScaffold] for why the split runs on that one
- * signal rather than on two.
- *
- * **It always draws the expanded experience.** Every pane the design declares is on screen at every
- * canvas width, and `layoutMode` is not consulted at all — that property is now the real scaffold's
- * directive, and the question it answers ("how many panes fits here?") is a device question the
- * preview pane exists to answer. Collapsing here would answer it with the canvas's own width, which
- * is a window nobody ships, and the cost of being wrong is not a mis-drawn picture: a hidden pane
- * is a subtree that cannot be selected, dropped into or edited.
- *
- * That is the same licence as the unrolled column above it. The canvas shows you the thing you are
- * editing, including the parts a device would not show; the preview pane beside it is what says
- * which parts those are.
- *
- * The widths are proportional rather than absolute for that reason too — a tablet's 744 + 512 dp
- * pair at its authored size would overflow a narrow canvas and push the supporting pane off the
- * edge, so they become weights and the pair fills whatever frame it is given in the ratio the
- * design asked for.
+ * The unrolled editor's stand-in for [AdaptiveSupportingPaneScaffold]: every declared pane at every
+ * width, with `layoutMode` ignored, so no pane becomes unselectable. Widths become weights so the
+ * pair fits any canvas.
  */
 @Composable
 private fun UnfoldedSupportingPaneScaffold(
@@ -604,16 +519,9 @@ internal fun LegacyListItem(
 }
 
 /**
- * An `asset/image` node: the picture its `assetKey` names, or a placeholder that says which key it
- * could not draw.
- *
- * Resolution is [UiBuilderDocument.resolveAsset]'s, shared with the SVG lanes; this composable only
- * decides what each answer looks like. The one rule here is that **no key fails the frame**. This
- * used to `error()` on a key it did not know, and because the design is one composition, a single
- * inserted node took a whole screen down — in the editor, in the daemon render behind
- * `ui_builder_export`, and for every collaborator with the design open. A key with nothing behind
- * it is now an ordinary picture-shaped placeholder carrying the key, which is what a designer needs
- * to see to fix it and what an agent's next render shows it has not.
+ * An `asset/image` node: the picture its `assetKey` resolves to via
+ * [UiBuilderDocument.resolveAsset], or a placeholder naming the key. An unknown key must never fail
+ * the whole frame.
  */
 @Composable
 internal fun AssetImage(document: UiBuilderDocument, node: UiBuilderNode, modifier: Modifier) {
@@ -795,25 +703,10 @@ private fun GeneratedCoverPlaceholder(modifier: Modifier) {
 }
 
 /**
- * A component the canvas names instead of drawing: a pack's, whose classes the browser cannot link.
- *
- * ## Why this is the honest shape, and not a gap
- *
- * `docs/design/UI_BUILDER_WEAR_SCREEN.md` rules out one thing exactly: *do not fabricate a
- * component in the canvas to stand in for a library the canvas cannot link*. A lookalike would be
- * an impression of upstream with nothing in this build to check it against, and wrong silently.
- *
- * So it is not drawn. What is drawn is the node's *identity and place*: a dashed outline carrying
- * the component's name, sized by whatever the layout gives it, with its children inside. That is
- * enough to author with, and it claims nothing about size, colour or shape. The picture comes from
- * the native lane, which compiles the design's generated Kotlin against the real library.
- *
- * Wear Material 3 used to be drawn this way too, when the canvas had no Wear library to link. It
- * has the Compose Multiplatform port now, and every Wear component is drawn by it — which is the
- * rule above applied, not relaxed: where the real library can be linked, it is the one that draws.
- *
- * A dashed outline rather than [UnsupportedComponentDiagnostic]'s error container, because nothing
- * is wrong. The component is in the catalog, it exports, and it renders — just not here.
+ * A component the canvas names instead of drawing, for a pack whose classes the browser cannot
+ * link: a dashed outline with the name, children inside. Never a lookalike
+ * (`docs/design/UI_BUILDER_WEAR_SCREEN.md`); the native lane draws the real thing. Not
+ * [UnsupportedComponentDiagnostic], because nothing is wrong.
  */
 @Composable
 internal fun NativeOnlyPlaceholder(
