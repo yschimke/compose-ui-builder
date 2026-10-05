@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.86.0](https://github.com/yschimke/compose-ui-builder/compare/v3.85.0...v3.86.0) (2026-10-05)
+
+
+### Features
+
+* add opt-in Gradle plugin for durable UID generation ([#484](https://github.com/yschimke/compose-ui-builder/issues/484)) ([9721595](https://github.com/yschimke/compose-ui-builder/commit/972159507dc6c1310c01edb9bf19b9d4b2bc3d1d))
+
 ## [3.85.0](https://github.com/yschimke/compose-ui-builder/compare/v3.84.0...v3.85.0) (2026-10-05)
 
 
