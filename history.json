@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "d4d31d48fffd30fc4c7fa6f42bc0eea5397db45d",
+    "generatedFrom": "9ac4600f3e934e4e59d9a28ec9cb8454eb0cb812",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -21,6 +21,96 @@
                 }
             ],
             "observations": 2,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.CalendarItemsPreview": {
+            "path": "renders/ui-builder-production-consumer/CalendarItemsPreview-95b3268e.png",
+            "versions": [
+                {
+                    "blob": "6d128b85fe37ed1777d680ff9e8d0a99aedb7166",
+                    "commit": "9ac4600f3e934e4e59d9a28ec9cb8454eb0cb812",
+                    "date": "2026-10-05T14:58:53Z",
+                    "sourceSha": "4e490029",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.DocsItemsPreview": {
+            "path": "renders/ui-builder-production-consumer/DocsItemsPreview-b1cbcef6.png",
+            "versions": [
+                {
+                    "blob": "de5119106ca346bf243c15f1689bebd67fa73e09",
+                    "commit": "9ac4600f3e934e4e59d9a28ec9cb8454eb0cb812",
+                    "date": "2026-10-05T14:58:53Z",
+                    "sourceSha": "4e490029",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.GmailItemsPreview": {
+            "path": "renders/ui-builder-production-consumer/GmailItemsPreview-38ee94e5.png",
+            "versions": [
+                {
+                    "blob": "669a8b184d70be8aa5195968c5c7e187defcef12",
+                    "commit": "9ac4600f3e934e4e59d9a28ec9cb8454eb0cb812",
+                    "date": "2026-10-05T14:58:53Z",
+                    "sourceSha": "4e490029",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.KeepItemsPreview": {
+            "path": "renders/ui-builder-production-consumer/KeepItemsPreview-37fe3042.png",
+            "versions": [
+                {
+                    "blob": "e97a4afd97f6d4c6bbb047fcc4cc18ff6c46c6df",
+                    "commit": "9ac4600f3e934e4e59d9a28ec9cb8454eb0cb812",
+                    "date": "2026-10-05T14:58:53Z",
+                    "sourceSha": "4e490029",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.PhotosItemPreview": {
+            "path": "renders/ui-builder-production-consumer/PhotosItemPreview-2b991ba5.png",
+            "versions": [
+                {
+                    "blob": "04f0048efcfaba3dac256db04a6aa915a91316f3",
+                    "commit": "9ac4600f3e934e4e59d9a28ec9cb8454eb0cb812",
+                    "date": "2026-10-05T14:58:53Z",
+                    "sourceSha": "4e490029",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.PlayItemPreview": {
+            "path": "renders/ui-builder-production-consumer/PlayItemPreview-5ab805dc.png",
+            "versions": [
+                {
+                    "blob": "2712f4fa49fe67dc4edab3d33c76949bd4f3da0a",
+                    "commit": "9ac4600f3e934e4e59d9a28ec9cb8454eb0cb812",
+                    "date": "2026-10-05T14:58:53Z",
+                    "sourceSha": "4e490029",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
             "unstable": false,
             "flapCount": 0
         },
