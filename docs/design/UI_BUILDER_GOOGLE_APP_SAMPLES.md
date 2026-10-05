@@ -1,11 +1,46 @@
 # Building real app UIs against the real composables: what worked, what is missing
 
-Current adaptive support: Gmail and Calendar now use `layout/list-detail-pane-scaffold`,
-with list/detail slots and fixed-start (400dp) / fixed-end (380dp) policies respectively.
-The original gap analysis below describes the supporting-pane workaround before this migration.
-The New design chooser offers list-detail, supporting pane, adaptive feed and adaptive navigation
-as reusable starting points; builds enabling stateful authoring include a controlled compact
-Open/Back flow, while stable builds start with a literal list destination.
+## Current samples
+
+Choose the scaffold by the relationship between the content, following
+[Android canonical layouts](https://developer.android.com/develop/adaptive-apps/guides/canonical-layouts).
+All six phone/tablet fixtures use adaptive navigation: a rail on expanded windows and a bottom bar
+on compact windows. Google Home Wear is a separate round-screen example.
+
+| App | Layout | Sizing and content |
+| --- | --- | --- |
+| Gmail | List-detail | Fixed 400 dp inbox and flexible reading pane. |
+| Calendar | Supporting pane | Flexible day view and fixed 380 dp contextual month / Up next pane. |
+| Photos | Adaptive feed | Grid cells have a 90 dp minimum width. |
+| Keep | Adaptive feed | Grid cells have a 240 dp minimum width; chips and varied note lengths. |
+| Play | Discovery feed | Vertical sections with horizontally scrolling content rows. |
+| Docs | Supporting pane | Document and reviewer comments, a 70/30 split with a 24 dp gutter; both scroll independently. |
+
+Calendar's earlier list-detail migration misclassified contextual information as independently
+selected detail. Its fixture now uses main/supporting slots and adaptive mode. Calendar and Docs
+keep their main content on phones, with supporting content hidden. Neither static sample currently
+provides a control to reveal that hidden pane.
+
+Gmail's fixture has no event bindings: it demonstrates the compact inbox, not message selection,
+selection history, system back or predictive back. The list-detail template's Open/Back controls
+are separately tested when stateful authoring is enabled; that does not prove Gmail interactions.
+Automatic three-pane policy, drag handles and persisted resizing are outside these examples.
+Docs demonstrates a two-pane proportional split only.
+
+`GoogleAppSizePreviews.kt` draws each document at 1280 × 800, 841 × 701 and 411 × 914 dp,
+density 1. `AdaptiveListDetailTest` checks primary content at each size and captures the native
+Compose canvas without editor overlays. `DesignFixturesTest` validates/replays every fixture and
+checks the capability exporter; `GoogleAppDesignExportTest` checks the screen-model exporter.
+Repository renders describe proposed or committed fixtures, never the saved deployed revision.
+
+The New design chooser offers Blank, Adaptive navigation, List-detail, Supporting pane and
+Adaptive feed. Deployed availability and saved-design migrations require separate server checks.
+
+## Historical gap analysis
+
+The following records the original five-app exercise before navigation and list-detail support
+landed. References to missing components and old supporting-pane exports below describe that
+historical state, not the current catalog. Calendar is a supporting-pane example, not list-detail.
 
 Five Google app screens — Gmail, Photos, Calendar, Keep and Play — were authored as
 [UI builder designs](fixtures/ui-builder/designs/README.md) in `m3-catalog`, framed for a tablet,
@@ -58,8 +93,8 @@ hand-rolled rail is still an 88 dp rail, where the real `NavigationSuiteScaffold
 bottom bar. The one place these designs stop being responsive is the one place the catalog has no
 component.
 
-`ListDetailPaneScaffold` is missing too, and it is the more common of the two pane scaffolds. Gmail
-and Calendar are both list-detail screens wearing `SupportingPaneScaffold`.
+`ListDetailPaneScaffold` is missing too, and it is the more common of the two pane scaffolds. Gmail used `SupportingPaneScaffold` as a list-detail stand-in. Calendar correctly uses supporting
+content alongside its day view.
 
 ### 2. The pane scaffold's width properties are accepted and ignored — **fixed**
 

@@ -13,7 +13,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * The five Google-app sample designs, through the same gate the editor's Code pane and the server's
+ * The six Google-app sample designs, through the same gate the editor's Code pane and the server's
  * Compose export ask: each one has to come out as Kotlin.
  *
  * The samples exist to show that a real tablet screen can be built against the real composables and
@@ -105,6 +105,7 @@ class GoogleAppDesignExportTest {
       listOf(
         "google-gmail-tablet",
         "google-calendar-tablet",
+        "google-docs-tablet",
         "google-photos-tablet",
         "google-keep-tablet",
         "google-play-tablet",

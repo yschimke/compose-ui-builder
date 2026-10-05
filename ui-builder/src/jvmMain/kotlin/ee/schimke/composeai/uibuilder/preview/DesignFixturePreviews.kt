@@ -195,3 +195,7 @@ internal fun designFixtureDocument(designId: String): UiBuilderDocument =
   }
 
 private val designFixtureDocuments = HashMap<String, UiBuilderDocument>()
+
+@Preview(device = "spec:width=1280dp,height=800dp,dpi=160")
+@Composable
+fun DesignDocsTabletPreview() = DesignFixture("google-docs-tablet")
