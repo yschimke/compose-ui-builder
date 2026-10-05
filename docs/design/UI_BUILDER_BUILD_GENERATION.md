@@ -3,7 +3,7 @@
 **Status: experimental opt-in build lane implemented, 2026-10-05.** Strict project-file contracts,
 tracked input resolution, owned model generation, stateless Compose generation and a JVM consumer
 build are implemented. Versioned production metadata and explicit editor file round trips are
-implemented against the companion contracts change (release pin pending). Single-file export remains
+implemented against the published contracts 3.18.0 release. Single-file export remains
 the default. UI-value callback lowering, dynamic lists, nullable binding fallbacks and a packaged Gradle plugin remain proposed.
 The experimental file schema does not extend the current design-service wire schema.
 
@@ -288,8 +288,8 @@ fixture does not claim Android or Wasm compatibility.
 
 - Extend callback lowering to UI-provided values, such as text edits, with explicit typed payload
   scopes. The current lane reports payloads read from the input model.
-- Release and pin the companion `compose-preview-contracts` production protocol before merging
-  the editor integration. Model-only files remain source documents without fabricated visual roots.
+- Model-only files remain source documents without fabricated visual roots; a declaration editor
+  and imported component previews remain future authoring work.
 - Choose the published Gradle plugin identity and generator coordinates, and document those new
   consumer surfaces alongside the existing seams.
 - Specify preview samples for external model mappings without requiring the editor to load or
@@ -467,6 +467,6 @@ Development of this change uses the existing contracts composite override:
 ```
 
 Use a JDK 17 Gradle runtime for the composite's unpinned modules; the editor selects its own JDK 21
-toolchain. The builder PR stays draft until the companion protocol is released and
-`composeai-contracts` is bumped to that published version. No unpublished version is advertised as
-resolvable, and the normal publication/consumer gate must pass after that pin lands.
+toolchain. Normal builds use published contracts 3.18.0 and require no composite override.
+The publication/consumer gate verifies generation from staged builder artifacts and published
+contracts dependencies in an independent checkout.
