@@ -96,6 +96,7 @@ import kotlin.js.Promise
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -173,16 +174,31 @@ fun main() {
   // `roboto-flex` once, so a Wear screen composed before it was registered would keep the fallback
   // sans for the life of the page. The file is the bundle's own, cached for good.
   MainScope().launch {
+    val liveSession = liveSessionEnabled() && !mcpAppEnabled() && !hostBridgeEnabled()
+    // Independent I/O: neither identity nor the local-store mirror needs Compose or font metrics.
+    // Start both while the font fetch/registration runs, then preserve their existing consumers.
+    val identity =
+      if (liveSession)
+        async {
+          recordStartupMark("identity-start")
+          resolveServerIdentity().also { recordStartupMark("identity-ready") }
+        }
+      else null
+    val storage =
+      if (liveSession)
+        async {
+          BrowserLocalStorageBackend.hydrate()
+          recordStartupMark("storage-ready")
+        }
+      else null
     bootPhase("Preparing fonts")
     fonts.registerWearDeviceFonts()
     recordStartupMark("fonts-ready")
     // Designs kept in this browser live in IndexedDB, which only answers asynchronously: read it
     // into memory once, here, so every read after this is as synchronous as `localStorage` was.
     // Only the live session keeps designs; an IDE host or an MCP App owns its document.
-    if (liveSessionEnabled() && !mcpAppEnabled() && !hostBridgeEnabled()) {
-      BrowserLocalStorageBackend.hydrate()
-    }
-    recordStartupMark("storage-ready")
+    storage?.await()
+    if (!liveSession) recordStartupMark("storage-ready")
     bootPhase("Starting the editor")
     recordStartupMark("compose-start")
     ComposeViewport(viewportContainerId = "composeApp") {
@@ -191,7 +207,7 @@ fun main() {
           when {
             mcpAppEnabled() -> McpAppHostApp()
             hostBridgeEnabled() -> HostBridgeApp()
-            liveSessionEnabled() -> LiveSessionApp()
+            liveSession -> LiveSessionApp(checkNotNull(identity))
             else -> VisualFixtureApp(captureMode())
           }
         }
