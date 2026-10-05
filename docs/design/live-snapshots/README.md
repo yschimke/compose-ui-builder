@@ -12,15 +12,18 @@ access grants and comment conversations are excluded. Discussion remains at the 
 
 | Design | Captured revision | Change made on the canonical server |
 | --- | --- | --- |
-| Gmail | 14 | Recorded server home; migrated only the scaffold to list-detail, fixed 400 dp inbox, adaptive mode. All existing content nodes retained. |
-| Calendar | 2 | Recorded server home; supporting pane uses adaptive mode and a fixed 380 dp supporting width. All content retained. |
-| Photos | 1 | Recorded server home; content unchanged. |
-| Keep | 1 | Recorded server home; content unchanged. |
-| Play | 1 | Recorded server home; content unchanged. |
+| Gmail | 15 | 12 email summaries share read/unread components; sender, time, subject and snippet are arguments. |
+| Calendar | 3 | Five event cards share title, schedule and color arguments. |
+| Photos | 2 | 48 tiles use shared gradient and badge components. |
+| Keep | 2 | 17 note-content, checklist and bullet items use shared components. |
+| Play | 2 | Five featured app cards share their artwork, title and rating content. |
 
-The migration compared every unrelated node with the pre-migration snapshot for equality, including
-Gmail's user-added duplicate messages. Live revision history was preserved; no document was replaced
-with a repository fixture. Metadata-only home declarations also create a revision.
+The earlier adaptive scaffold migrations and user-added Gmail duplicates remain intact. These
+extractions used typed mutations against the live revisions, preserving history and item content.
+Keyed Keep/Play card hosts remain outside the reusable bodies. The bodies are stored once under
+`components`; placements supply `component.arguments`. See the
+[production consumer](../../../ui-builder-production-consumer/README.md#google-app-item-components)
+for corresponding Kotlin components and data classes, including the repository-only Docs example.
 
 ## Refreshing a snapshot
 
@@ -43,16 +46,28 @@ currently exists only as a repository fixture; it is not included in this live s
 
 ## Verification of this capture
 
-On server 3.103.0, all five saved designs passed document validation and Compose export. Gmail r14
-and Calendar r2 also passed deployed native compilation/rendering with nonempty node bounds and no
-`UNEXPRESSIBLE_DOCUMENT` refusal. Their canvas PNG exports were visually inspected below; these are
-live saved revisions at their tablet environment, not editor viewport screenshots. All five had zero
-comment threads, and a final read confirmed the captured documents were unchanged.
+All five saved designs passed deployed document validation, Compose export and native
+compilation/rendering on server 3.103.0. All five had zero comment threads. Local editor renders of
+the pre-extraction and extracted documents had zero changed pixels at 1280×800.
 
-| Gmail r14 | Calendar r2 |
+**Known deployed export bug:** the PNG/SVG projection in 3.103.0 drops `components` and each node's
+`component` placement, so PNG export shows unsupported-component placeholders even though the
+editor and native Kotlin export support them. This change fixes that projection and adds both a
+wire-level regression test and a pixel comparison across these five snapshots. The fix needs a
+builder release and host deployment; successful native compilation alone does not prove the PNG
+endpoint is fixed.
+
+The images below are **local canvas renders of the saved live documents**, not deployed PNG exports
+or editor viewport screenshots. They show the corrected renderer projection and are reproduced by
+`GoogleItemSnapshotRenderingTest` under `ui-builder/build/reports/google-items/`.
+
+| Gmail r15 | Calendar r3 |
 | --- | --- |
-| ![Gmail r14 canvas export](google-gmail-tablet-r14.png) | ![Calendar r2 canvas export](google-calendar-tablet-r2.png) |
+| ![Gmail local canvas](google-gmail-tablet-r15-local.png) | ![Calendar local canvas](google-calendar-tablet-r3-local.png) |
 
-This migration does not implement Gmail message selection/back or a Calendar supporting-pane reveal
-control on phones. The live template chooser and compact native renders remain separate checks;
-these successful tablet renders do not prove them.
+| Photos r2 | Keep r2 | Play r2 |
+| --- | --- | --- |
+| ![Photos local canvas](google-photos-tablet-r2-local.png) | ![Keep local canvas](google-keep-tablet-r2-local.png) | ![Play local canvas](google-play-tablet-r2-local.png) |
+
+This extraction does not implement Gmail message selection/back or a Calendar supporting-pane
+reveal control on phones. These tablet checks do not prove those interactions.

@@ -2,7 +2,7 @@
   "schema": "compose-ui-builder-document/v1-candidate",
   "id": "google-photos-tablet",
   "title": "Google Photos — Library grid (tablet)",
-  "revision": 1,
+  "revision": 2,
   "catalogPin": {
     "systemId": "m3-catalog",
     "catalogRevision": "candidate",
@@ -883,54 +883,54 @@
       ],
       "slots": {
         "items": [
-          "photos-tile-0",
-          "photos-tile-1",
-          "photos-tile-2",
-          "photos-tile-3",
-          "photos-tile-4",
-          "photos-tile-5",
-          "photos-tile-6",
-          "photos-tile-7",
-          "photos-tile-8",
-          "photos-tile-9",
-          "photos-tile-10",
-          "photos-tile-11",
-          "photos-tile-12",
-          "photos-tile-13",
-          "photos-tile-14",
-          "photos-tile-15",
-          "photos-tile-16",
-          "photos-tile-17",
-          "photos-tile-18",
-          "photos-tile-19",
-          "photos-tile-20",
-          "photos-tile-21",
-          "photos-tile-22",
-          "photos-tile-23",
-          "photos-tile-24",
-          "photos-tile-25",
-          "photos-tile-26",
-          "photos-tile-27",
-          "photos-tile-28",
-          "photos-tile-29",
-          "photos-tile-30",
-          "photos-tile-31",
-          "photos-tile-32",
-          "photos-tile-33",
-          "photos-tile-34",
-          "photos-tile-35",
-          "photos-tile-36",
-          "photos-tile-37",
-          "photos-tile-38",
-          "photos-tile-39",
-          "photos-tile-40",
-          "photos-tile-41",
-          "photos-tile-42",
-          "photos-tile-43",
-          "photos-tile-44",
-          "photos-tile-45",
-          "photos-tile-46",
-          "photos-tile-47"
+          "photos-tile-0-item",
+          "photos-tile-1-item",
+          "photos-tile-2-item",
+          "photos-tile-3-item",
+          "photos-tile-4-item",
+          "photos-tile-5-item",
+          "photos-tile-6-item",
+          "photos-tile-7-item",
+          "photos-tile-8-item",
+          "photos-tile-9-item",
+          "photos-tile-10-item",
+          "photos-tile-11-item",
+          "photos-tile-12-item",
+          "photos-tile-13-item",
+          "photos-tile-14-item",
+          "photos-tile-15-item",
+          "photos-tile-16-item",
+          "photos-tile-17-item",
+          "photos-tile-18-item",
+          "photos-tile-19-item",
+          "photos-tile-20-item",
+          "photos-tile-21-item",
+          "photos-tile-22-item",
+          "photos-tile-23-item",
+          "photos-tile-24-item",
+          "photos-tile-25-item",
+          "photos-tile-26-item",
+          "photos-tile-27-item",
+          "photos-tile-28-item",
+          "photos-tile-29-item",
+          "photos-tile-30-item",
+          "photos-tile-31-item",
+          "photos-tile-32-item",
+          "photos-tile-33-item",
+          "photos-tile-34-item",
+          "photos-tile-35-item",
+          "photos-tile-36-item",
+          "photos-tile-37-item",
+          "photos-tile-38-item",
+          "photos-tile-39-item",
+          "photos-tile-40-item",
+          "photos-tile-41-item",
+          "photos-tile-42-item",
+          "photos-tile-43-item",
+          "photos-tile-44-item",
+          "photos-tile-45-item",
+          "photos-tile-46-item",
+          "photos-tile-47-item"
         ]
       },
       "eventBindings": {},
@@ -965,12 +965,12 @@
       "componentId": "shape/linear-gradient",
       "properties": {
         "startColor": {
-          "type": "color",
-          "value": "#FF4285F4"
+          "type": "binding",
+          "value": "startColor"
         },
         "endColor": {
-          "type": "color",
-          "value": "#FF34A853"
+          "type": "binding",
+          "value": "endColor"
         },
         "direction": {
           "type": "enum",
@@ -1016,12 +1016,12 @@
       "componentId": "shape/linear-gradient",
       "properties": {
         "startColor": {
-          "type": "color",
-          "value": "#FFEA4335"
+          "type": "binding",
+          "value": "startColor"
         },
         "endColor": {
-          "type": "color",
-          "value": "#FFFBBC04"
+          "type": "binding",
+          "value": "endColor"
         },
         "direction": {
           "type": "enum",
@@ -1047,8 +1047,8 @@
           "value": "filled/playCircle"
         },
         "contentDescription": {
-          "type": "string",
-          "value": "Video"
+          "type": "binding",
+          "value": "contentDescription"
         },
         "sizeDp": {
           "type": "float",
@@ -1070,106 +1070,6 @@
           "topDp": 0,
           "endDp": 8,
           "bottomDp": 8
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-2": {
-      "id": "photos-tile-2",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-2-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-2-fill": {
-      "id": "photos-tile-2-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF9334E6"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF4285F4"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-3": {
-      "id": "photos-tile-3",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-3-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-3-fill": {
-      "id": "photos-tile-3-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF0F9D58"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFB4E197"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
         }
       ],
       "slots": {},
@@ -1206,12 +1106,12 @@
       "componentId": "shape/linear-gradient",
       "properties": {
         "startColor": {
-          "type": "color",
-          "value": "#FFE37400"
+          "type": "binding",
+          "value": "startColor"
         },
         "endColor": {
-          "type": "color",
-          "value": "#FFEA4335"
+          "type": "binding",
+          "value": "endColor"
         },
         "direction": {
           "type": "enum",
@@ -1237,488 +1137,8 @@
           "value": "filled/favorite"
         },
         "contentDescription": {
-          "type": "string",
-          "value": "Video"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 28.0
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "align",
-          "alignment": "bottomEnd"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 0,
-          "endDp": 8,
-          "bottomDp": 8
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-5": {
-      "id": "photos-tile-5",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-5-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-5-fill": {
-      "id": "photos-tile-5-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF3C4043"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF80868B"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-6": {
-      "id": "photos-tile-6",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-6-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-6-fill": {
-      "id": "photos-tile-6-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF1A73E8"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF9334E6"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-7": {
-      "id": "photos-tile-7",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-7-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-7-fill": {
-      "id": "photos-tile-7-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFFBBC04"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFE37400"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-8": {
-      "id": "photos-tile-8",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-8-fill",
-          "photos-tile-8-badge"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-8-fill": {
-      "id": "photos-tile-8-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF34A853"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF1A73E8"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-8-badge": {
-      "id": "photos-tile-8-badge",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/playCircle"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Video"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 28.0
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "align",
-          "alignment": "bottomEnd"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 0,
-          "endDp": 8,
-          "bottomDp": 8
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-9": {
-      "id": "photos-tile-9",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-9-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-9-fill": {
-      "id": "photos-tile-9-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF80868B"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF3C4043"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-10": {
-      "id": "photos-tile-10",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-10-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-10-fill": {
-      "id": "photos-tile-10-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFB4E197"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF0F9D58"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-11": {
-      "id": "photos-tile-11",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-11-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-11-fill": {
-      "id": "photos-tile-11-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF4285F4"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFEA4335"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-12": {
-      "id": "photos-tile-12",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-12-fill",
-          "photos-tile-12-badge"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-12-fill": {
-      "id": "photos-tile-12-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFEA4335"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFB4E197"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-12-badge": {
-      "id": "photos-tile-12-badge",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/playCircle"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Video"
+          "type": "binding",
+          "value": "contentDescription"
         },
         "sizeDp": {
           "type": "float",
@@ -1776,12 +1196,12 @@
       "componentId": "shape/linear-gradient",
       "properties": {
         "startColor": {
-          "type": "color",
-          "value": "#FF34A853"
+          "type": "binding",
+          "value": "startColor"
         },
         "endColor": {
-          "type": "color",
-          "value": "#FF1A73E8"
+          "type": "binding",
+          "value": "endColor"
         },
         "direction": {
           "type": "enum",
@@ -1807,8 +1227,8 @@
           "value": "filled/playCircle"
         },
         "contentDescription": {
-          "type": "string",
-          "value": "Video"
+          "type": "binding",
+          "value": "contentDescription"
         },
         "sizeDp": {
           "type": "float",
@@ -1830,56 +1250,6 @@
           "topDp": 0,
           "endDp": 8,
           "bottomDp": 8
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-14": {
-      "id": "photos-tile-14",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-14-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-14-fill": {
-      "id": "photos-tile-14-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF0F9D58"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFFBBC04"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
         }
       ],
       "slots": {},
@@ -1915,266 +1285,16 @@
       "componentId": "shape/linear-gradient",
       "properties": {
         "startColor": {
-          "type": "color",
-          "value": "#FFB4E197"
+          "type": "binding",
+          "value": "startColor"
         },
         "endColor": {
-          "type": "color",
-          "value": "#FF9334E6"
+          "type": "binding",
+          "value": "endColor"
         },
         "direction": {
           "type": "enum",
           "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-16": {
-      "id": "photos-tile-16",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-16-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-16-fill": {
-      "id": "photos-tile-16-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF3C4043"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFEA4335"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-17": {
-      "id": "photos-tile-17",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-17-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-17-fill": {
-      "id": "photos-tile-17-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF4285F4"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFEA4335"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-18": {
-      "id": "photos-tile-18",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-18-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-18-fill": {
-      "id": "photos-tile-18-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFFBBC04"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF3C4043"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-19": {
-      "id": "photos-tile-19",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-19-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-19-fill": {
-      "id": "photos-tile-19-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF9334E6"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF4285F4"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-20": {
-      "id": "photos-tile-20",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-20-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-20-fill": {
-      "id": "photos-tile-20-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF80868B"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFE37400"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
         }
       },
       "modifiers": [
@@ -2216,12 +1336,12 @@
       "componentId": "shape/linear-gradient",
       "properties": {
         "startColor": {
-          "type": "color",
-          "value": "#FFE37400"
+          "type": "binding",
+          "value": "startColor"
         },
         "endColor": {
-          "type": "color",
-          "value": "#FF34A853"
+          "type": "binding",
+          "value": "endColor"
         },
         "direction": {
           "type": "enum",
@@ -2247,8 +1367,8 @@
           "value": "filled/favorite"
         },
         "contentDescription": {
-          "type": "string",
-          "value": "Video"
+          "type": "binding",
+          "value": "contentDescription"
         },
         "sizeDp": {
           "type": "float",
@@ -2277,1552 +1397,1195 @@
       "assetBindings": {},
       "tokenBindings": {}
     },
-    "photos-tile-22": {
-      "id": "photos-tile-22",
-      "componentId": "layout/box",
+    "photos-tile-0-item": {
+      "id": "photos-tile-0-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-22-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-22-fill": {
-      "id": "photos-tile-22-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF4285F4"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF80868B"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF34A853"
+          }
+        }
+      }
     },
-    "photos-tile-23": {
-      "id": "photos-tile-23",
-      "componentId": "layout/box",
+    "photos-tile-2-item": {
+      "id": "photos-tile-2-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-23-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-23-fill": {
-      "id": "photos-tile-23-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF1A73E8"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF0F9D58"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          }
+        }
+      }
     },
-    "photos-tile-24": {
-      "id": "photos-tile-24",
-      "componentId": "layout/box",
+    "photos-tile-3-item": {
+      "id": "photos-tile-3-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-24-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-24-fill": {
-      "id": "photos-tile-24-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF9334E6"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFB4E197"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFB4E197"
+          }
+        }
+      }
     },
-    "photos-tile-25": {
-      "id": "photos-tile-25",
-      "componentId": "layout/box",
+    "photos-tile-5-item": {
+      "id": "photos-tile-5-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-25-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-25-fill": {
-      "id": "photos-tile-25-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF80868B"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF1A73E8"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF3C4043"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          }
+        }
+      }
     },
-    "photos-tile-26": {
-      "id": "photos-tile-26",
-      "componentId": "layout/box",
+    "photos-tile-6-item": {
+      "id": "photos-tile-6-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-26-fill",
-          "photos-tile-26-badge"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-26-fill": {
-      "id": "photos-tile-26-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFE37400"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFFBBC04"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-26-badge": {
-      "id": "photos-tile-26-badge",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/favorite"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Video"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 28.0
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          }
         }
-      },
-      "modifiers": [
-        {
-          "type": "align",
-          "alignment": "bottomEnd"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 0,
-          "endDp": 8,
-          "bottomDp": 8
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
+      }
     },
-    "photos-tile-27": {
-      "id": "photos-tile-27",
-      "componentId": "layout/box",
+    "photos-tile-7-item": {
+      "id": "photos-tile-7-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-27-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-27-fill": {
-      "id": "photos-tile-27-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF4285F4"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF9334E6"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          }
+        }
+      }
     },
-    "photos-tile-28": {
-      "id": "photos-tile-28",
-      "componentId": "layout/box",
+    "photos-tile-9-item": {
+      "id": "photos-tile-9-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-28-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-28-fill": {
-      "id": "photos-tile-28-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF1A73E8"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFEA4335"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF3C4043"
+          }
+        }
+      }
     },
-    "photos-tile-29": {
-      "id": "photos-tile-29",
-      "componentId": "layout/box",
+    "photos-tile-10-item": {
+      "id": "photos-tile-10-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-29-fill",
-          "photos-tile-29-badge"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-29-fill": {
-      "id": "photos-tile-29-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFEA4335"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF80868B"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-29-badge": {
-      "id": "photos-tile-29-badge",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/playCircle"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Video"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 28.0
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFB4E197"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          }
         }
-      },
-      "modifiers": [
-        {
-          "type": "align",
-          "alignment": "bottomEnd"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 0,
-          "endDp": 8,
-          "bottomDp": 8
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
+      }
     },
-    "photos-tile-30": {
-      "id": "photos-tile-30",
-      "componentId": "layout/box",
+    "photos-tile-11-item": {
+      "id": "photos-tile-11-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-30-fill",
-          "photos-tile-30-badge"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-30-fill": {
-      "id": "photos-tile-30-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF34A853"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF3C4043"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-30-badge": {
-      "id": "photos-tile-30-badge",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/playCircle"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Video"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 28.0
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          }
         }
-      },
-      "modifiers": [
-        {
-          "type": "align",
-          "alignment": "bottomEnd"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 0,
-          "endDp": 8,
-          "bottomDp": 8
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
+      }
     },
-    "photos-tile-31": {
-      "id": "photos-tile-31",
-      "componentId": "layout/box",
+    "photos-tile-14-item": {
+      "id": "photos-tile-14-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-31-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-31-fill": {
-      "id": "photos-tile-31-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF0F9D58"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF4285F4"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          }
+        }
+      }
     },
-    "photos-tile-32": {
-      "id": "photos-tile-32",
-      "componentId": "layout/box",
+    "photos-tile-16-item": {
+      "id": "photos-tile-16-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-32-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-32-fill": {
-      "id": "photos-tile-32-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFB4E197"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFE37400"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF3C4043"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          }
+        }
+      }
     },
-    "photos-tile-33": {
-      "id": "photos-tile-33",
-      "componentId": "layout/box",
+    "photos-tile-18-item": {
+      "id": "photos-tile-18-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-33-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-33-fill": {
-      "id": "photos-tile-33-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF3C4043"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF34A853"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF3C4043"
+          }
+        }
+      }
     },
-    "photos-tile-34": {
-      "id": "photos-tile-34",
-      "componentId": "layout/box",
+    "photos-tile-20-item": {
+      "id": "photos-tile-20-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-34-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-34-fill": {
-      "id": "photos-tile-34-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF4285F4"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF80868B"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          }
+        }
+      }
     },
-    "photos-tile-35": {
-      "id": "photos-tile-35",
-      "componentId": "layout/box",
+    "photos-tile-22-item": {
+      "id": "photos-tile-22-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-35-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-35-fill": {
-      "id": "photos-tile-35-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFFBBC04"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF0F9D58"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          }
+        }
+      }
     },
-    "photos-tile-36": {
-      "id": "photos-tile-36",
-      "componentId": "layout/box",
+    "photos-tile-24-item": {
+      "id": "photos-tile-24-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-36-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-36-fill": {
-      "id": "photos-tile-36-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF0F9D58"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFB4E197"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFB4E197"
+          }
+        }
+      }
     },
-    "photos-tile-37": {
-      "id": "photos-tile-37",
-      "componentId": "layout/box",
+    "photos-tile-28-item": {
+      "id": "photos-tile-28-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-37-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-37-fill": {
-      "id": "photos-tile-37-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFB4E197"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF1A73E8"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          }
+        }
+      }
     },
-    "photos-tile-38": {
-      "id": "photos-tile-38",
-      "componentId": "layout/box",
+    "photos-tile-32-item": {
+      "id": "photos-tile-32-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-38-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-38-fill": {
-      "id": "photos-tile-38-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF3C4043"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFFBBC04"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFB4E197"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          }
+        }
+      }
     },
-    "photos-tile-39": {
-      "id": "photos-tile-39",
-      "componentId": "layout/box",
+    "photos-tile-34-item": {
+      "id": "photos-tile-34-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-39-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-39-fill": {
-      "id": "photos-tile-39-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF4285F4"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF9334E6"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          }
+        }
+      }
     },
-    "photos-tile-40": {
-      "id": "photos-tile-40",
-      "componentId": "layout/box",
+    "photos-tile-36-item": {
+      "id": "photos-tile-36-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-40-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-40-fill": {
-      "id": "photos-tile-40-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFFBBC04"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFEA4335"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFB4E197"
+          }
+        }
+      }
     },
-    "photos-tile-41": {
-      "id": "photos-tile-41",
-      "componentId": "layout/box",
+    "photos-tile-38-item": {
+      "id": "photos-tile-38-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-41-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-41-fill": {
-      "id": "photos-tile-41-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF9334E6"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFEA4335"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF3C4043"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          }
+        }
+      }
     },
-    "photos-tile-42": {
-      "id": "photos-tile-42",
-      "componentId": "layout/box",
+    "photos-tile-40-item": {
+      "id": "photos-tile-40-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-42-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-42-fill": {
-      "id": "photos-tile-42-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF80868B"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF3C4043"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          }
+        }
+      }
     },
-    "photos-tile-43": {
-      "id": "photos-tile-43",
-      "componentId": "layout/box",
+    "photos-tile-42-item": {
+      "id": "photos-tile-42-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-43-fill",
-          "photos-tile-43-badge"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-43-fill": {
-      "id": "photos-tile-43-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFE37400"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF4285F4"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-43-badge": {
-      "id": "photos-tile-43-badge",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/favorite"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Video"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 28.0
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF3C4043"
+          }
         }
-      },
-      "modifiers": [
-        {
-          "type": "align",
-          "alignment": "bottomEnd"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 0,
-          "endDp": 8,
-          "bottomDp": 8
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
+      }
     },
-    "photos-tile-44": {
-      "id": "photos-tile-44",
-      "componentId": "layout/box",
+    "photos-tile-44-item": {
+      "id": "photos-tile-44-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-44-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-44-fill": {
-      "id": "photos-tile-44-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF4285F4"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFE37400"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          }
+        }
+      }
     },
-    "photos-tile-45": {
-      "id": "photos-tile-45",
-      "componentId": "layout/box",
+    "photos-tile-1-item": {
+      "id": "photos-tile-1-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-45-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-45-fill": {
-      "id": "photos-tile-45-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF1A73E8"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF34A853"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile2",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
+        }
+      }
     },
-    "photos-tile-46": {
-      "id": "photos-tile-46",
-      "componentId": "layout/box",
+    "photos-tile-8-item": {
+      "id": "photos-tile-8-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-46-fill",
-          "photos-tile-46-badge"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-46-fill": {
-      "id": "photos-tile-46-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFEA4335"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF80868B"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-46-badge": {
-      "id": "photos-tile-46-badge",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/playCircle"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Video"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 28.0
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile2",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF34A853"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
         }
-      },
-      "modifiers": [
-        {
-          "type": "align",
-          "alignment": "bottomEnd"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 0,
-          "endDp": 8,
-          "bottomDp": 8
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
+      }
     },
-    "photos-tile-47": {
-      "id": "photos-tile-47",
-      "componentId": "layout/box",
+    "photos-tile-12-item": {
+      "id": "photos-tile-12-item",
+      "componentId": "design/component-instance",
       "properties": {},
-      "modifiers": [
-        {
-          "type": "aspectRatio",
-          "ratio": 1
-        },
-        {
-          "type": "clip",
-          "shape": "4"
-        }
-      ],
-      "slots": {
-        "children": [
-          "photos-tile-47-fill",
-          "photos-tile-47-badge"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "photos-tile-47-fill": {
-      "id": "photos-tile-47-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF34A853"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF0F9D58"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "topToBottom"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile2",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFB4E197"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
+        }
+      }
     },
-    "photos-tile-47-badge": {
-      "id": "photos-tile-47-badge",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/playCircle"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Video"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 28.0
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "align",
-          "alignment": "bottomEnd"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 0,
-          "endDp": 8,
-          "bottomDp": 8
-        }
-      ],
+    "photos-tile-30-item": {
+      "id": "photos-tile-30-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
-      "tokenBindings": {}
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile2",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF34A853"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF3C4043"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
+        }
+      }
+    },
+    "photos-tile-46-item": {
+      "id": "photos-tile-46-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile2",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
+        }
+      }
+    },
+    "photos-tile-4-item": {
+      "id": "photos-tile-4-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile3",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
+        }
+      }
+    },
+    "photos-tile-26-item": {
+      "id": "photos-tile-26-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile3",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
+        }
+      }
+    },
+    "photos-tile-13-item": {
+      "id": "photos-tile-13-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile4",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF34A853"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
+        }
+      }
+    },
+    "photos-tile-29-item": {
+      "id": "photos-tile-29-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile4",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
+        }
+      }
+    },
+    "photos-tile-47-item": {
+      "id": "photos-tile-47-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile4",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF34A853"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
+        }
+      }
+    },
+    "photos-tile-15-item": {
+      "id": "photos-tile-15-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFB4E197"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          }
+        }
+      }
+    },
+    "photos-tile-17-item": {
+      "id": "photos-tile-17-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          }
+        }
+      }
+    },
+    "photos-tile-19-item": {
+      "id": "photos-tile-19-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          }
+        }
+      }
+    },
+    "photos-tile-23-item": {
+      "id": "photos-tile-23-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          }
+        }
+      }
+    },
+    "photos-tile-25-item": {
+      "id": "photos-tile-25-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          }
+        }
+      }
+    },
+    "photos-tile-27-item": {
+      "id": "photos-tile-27-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          }
+        }
+      }
+    },
+    "photos-tile-31-item": {
+      "id": "photos-tile-31-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          }
+        }
+      }
+    },
+    "photos-tile-33-item": {
+      "id": "photos-tile-33-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF3C4043"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF34A853"
+          }
+        }
+      }
+    },
+    "photos-tile-35-item": {
+      "id": "photos-tile-35-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          }
+        }
+      }
+    },
+    "photos-tile-37-item": {
+      "id": "photos-tile-37-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFB4E197"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          }
+        }
+      }
+    },
+    "photos-tile-39-item": {
+      "id": "photos-tile-39-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          }
+        }
+      }
+    },
+    "photos-tile-41-item": {
+      "id": "photos-tile-41-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          }
+        }
+      }
+    },
+    "photos-tile-45-item": {
+      "id": "photos-tile-45-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile5",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF34A853"
+          }
+        }
+      }
+    },
+    "photos-tile-21-item": {
+      "id": "photos-tile-21-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile6",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF34A853"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
+        }
+      }
+    },
+    "photos-tile-43-item": {
+      "id": "photos-tile-43-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "photo-tile6",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF4285F4"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Video"
+          }
+        }
+      }
     }
   },
   "assets": {},
   "tokenBindings": {},
   "createdAtEpochMillis": 1790342572410,
-  "updatedAtEpochMillis": 1791204255240,
-  "components": {},
+  "updatedAtEpochMillis": 1791208734136,
+  "components": {
+    "photo-tile": {
+      "name": "PhotoTileLeftToRight",
+      "root": "photos-tile-0",
+      "description": "Reusable photos item. Typed Kotlin model: Photo."
+    },
+    "photo-tile2": {
+      "name": "PhotoTileLeftToRightVideo",
+      "root": "photos-tile-1",
+      "description": "Reusable photos item. Typed Kotlin model: Photo2."
+    },
+    "photo-tile3": {
+      "name": "PhotoTileLeftToRightFavorite",
+      "root": "photos-tile-4",
+      "description": "Reusable photos item. Typed Kotlin model: Photo3."
+    },
+    "photo-tile4": {
+      "name": "PhotoTileTopToBottomVideo",
+      "root": "photos-tile-13",
+      "description": "Reusable photos item. Typed Kotlin model: Photo4."
+    },
+    "photo-tile5": {
+      "name": "PhotoTileTopToBottom",
+      "root": "photos-tile-15",
+      "description": "Reusable photos item. Typed Kotlin model: Photo5."
+    },
+    "photo-tile6": {
+      "name": "PhotoTileTopToBottomFavorite",
+      "root": "photos-tile-21",
+      "description": "Reusable photos item. Typed Kotlin model: Photo6."
+    }
+  },
   "home": {
     "kind": "server",
     "url": "https://preview.coo.ee",

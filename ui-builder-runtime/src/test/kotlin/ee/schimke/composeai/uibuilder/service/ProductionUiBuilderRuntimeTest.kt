@@ -590,6 +590,75 @@ class ProductionUiBuilderRuntimeTest {
   }
 
   @Test
+  fun `renderer projection preserves component definitions placements and arguments`() {
+    val source =
+      document()
+        .copy(
+          roots = listOf("first", "second"),
+          components = mapOf("email" to DesignComponentV1("EmailSummary", "body")),
+          nodes =
+            mapOf(
+              "body" to
+                DesignNodeV1(
+                  "body",
+                  "m3/text",
+                  properties = mapOf("text" to BindingValueV1("subject")),
+                ),
+              "first" to
+                DesignNodeV1(
+                  "first",
+                  DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+                  component =
+                    DesignComponentInstanceV1("email", mapOf("subject" to StringValueV1("First"))),
+                ),
+              "second" to
+                DesignNodeV1(
+                  "second",
+                  DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+                  component =
+                    DesignComponentInstanceV1("email", mapOf("subject" to StringValueV1("Second"))),
+                ),
+            ),
+        )
+    val renderer =
+      kotlinx.serialization.json
+        .Json { ignoreUnknownKeys = true }
+        .decodeFromString<ee.schimke.composeai.uibuilder.export.UiBuilderDocument>(
+          projectRendererDocument(source)
+        )
+    assertEquals(
+      "body",
+      renderer.components.getValue("email").jsonObject.getValue("root").jsonPrimitive.content,
+    )
+    for ((id, subject) in listOf("first" to "First", "second" to "Second")) {
+      val placement = assertNotNull(renderer.nodes.getValue(id).component)
+      assertEquals("email", placement.getValue("componentKey").jsonPrimitive.content)
+      assertEquals(
+        subject,
+        placement
+          .getValue("arguments")
+          .jsonObject
+          .getValue("subject")
+          .jsonObject
+          .getValue("value")
+          .jsonPrimitive
+          .content,
+      )
+    }
+    assertEquals(
+      "binding",
+      renderer.nodes
+        .getValue("body")
+        .properties
+        .getValue("text")
+        .jsonObject
+        .getValue("type")
+        .jsonPrimitive
+        .content,
+    )
+  }
+
+  @Test
   fun `render port receives exact saved document and returns deterministic png and svg`() {
     val requests = mutableListOf<UiBuilderRenderRequest>()
     val renderer =

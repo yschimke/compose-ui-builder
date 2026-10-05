@@ -73,3 +73,49 @@ It stages local Maven artifacts and lets the first consumer build resolve depend
 rebuilds offline after deleting generated output, verifies identical source, and proves an
 untracked imported file blocks an otherwise unchanged build. CI runs this gate as well as the
 regular generator/default-export tests.
+
+## Google app item components
+
+`src/main/kotlin/example/google/` contains reusable Compose items and their data classes, derived
+from the canonical live Google app designs. Docs uses the repository example. These are ordinary
+Kotlin sources: `example.google.model` holds the data classes and `example.google.items` holds
+stateless components taking `data: <Model>` and an optional `Modifier`.
+
+| App | Data class | Reusable component |
+| --- | --- | --- |
+| Gmail | `Email` | `EmailSummary`, `UnreadEmailSummary` |
+| Calendar | `CalendarEvent` | `CalendarEventItem` |
+| Photos | `Photo` | `PhotoTileLeftToRight`, `PhotoTileTopToBottom`, plus Favorite/Video styles |
+| Keep | `Note`, `ChecklistEntry`, `NoteBullet` | Note content styles, checklist items, bullet item |
+| Play | `StoreApp` | `StoreAppCard` |
+| Docs | `ReviewerComment` | `ReviewerCommentItem` |
+
+`GoogleItemPreviews.kt` demonstrates all six apps, including repeated components with different
+data. `KeepChecklistItem` chooses the checked/unchecked text style from `ChecklistEntry.checked`.
+These are display components; application navigation, selection and editing callbacks remain the
+caller's responsibility. Gmail's avatar/star and keyed Keep/Play card hosts stay at the screen
+level. Photo data describes the existing gradient placeholders, not downloaded images.
+
+```kotlin
+val email = Email("Alex", "10:30", "Design review", "The latest mockups are ready.")
+UnreadEmailSummary(email)
+EmailSummary(email.copy(sender = "Sam", subject = "Lunch"))
+```
+
+Colors are typed `androidx.compose.ui.graphics.Color` values. The consumer includes Material Icons
+for photo badges and app ratings. Tests exercise independent instances, recomposition, checkbox
+pixels, color pixels, text and accessible icon descriptions.
+
+The live editor stores component declarations and scalar arguments; data-class wrappers are Kotlin
+application APIs. The source of each body is the component with the matching name in the
+[live snapshots](../docs/design/live-snapshots/README.md): Gmail r15, Calendar r3, Photos/Keep/Play r2.
+`ReviewerCommentItem` comes from `comment-author` and `comment-body` in the repository Docs fixture.
+Kotlin parameter reads replace the corresponding scalar bindings; outer layout weight stays with
+the caller. These sources preserve the exported Material layout, with no dependency on the builder
+at runtime and no changes to the production `.uid` protocol. The existing Library/Queue generation
+example remains independent.
+
+The live site remains canonical for design edits. Refresh the Kotlin bodies deliberately after a
+live component change and run `:ui-builder-production-consumer:test`; do not import these source
+examples over the saved screens. For canvas rendering, `GoogleItemSnapshotRenderingTest` compares
+the saved documents against the corrected export projection.
