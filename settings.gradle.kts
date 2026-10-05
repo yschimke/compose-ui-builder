@@ -191,6 +191,7 @@ include(":ui-builder-intellij-plugin")
 
 include(":ui-builder-export")
 include(":ui-builder-codegen-jvm")
+include(":ui-builder-gradle-plugin")
 include(":ui-builder-production-consumer")
 
 include(":ui-builder-runtime")

@@ -4,8 +4,11 @@
 tracked input resolution, owned model generation, stateless Compose generation and a JVM consumer
 build are implemented. Versioned production metadata and explicit editor file round trips are
 implemented against published contracts 3.19.0, including nullable fallbacks and keyed component
-lists. Single-file export remains the default. UI-value callbacks and a packaged Gradle plugin remain
-proposed.
+lists. The [Gradle plugin](../../ui-builder-gradle-plugin/README.md) registers explicit Kotlin JVM
+and Multiplatform source sets, runs the isolated generator, and rechecks Git eligibility on every
+invocation, including with configuration caching. An independent published-plugin consumer gate
+verifies the marker and default generator coordinates. Single-file export remains the default.
+UI-value callbacks remain proposed.
 The experimental file schema does not extend the current design-service wire schema.
 
 The project owns the design and its declared Kotlin API. A build turns those inputs into stateless

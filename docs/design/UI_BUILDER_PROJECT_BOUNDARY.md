@@ -136,3 +136,9 @@ libraries do not enter the JVM/Wasm export seam or the application compile class
 explicit project-build consumer surface; it does not change the four server seams.
 `:ui-builder-production-consumer` is the in-repository JVM Compose consumer of this build tool.
 Ordinary editor/service export stays single-file and does not invoke the build generator.
+
+`:ui-builder-gradle-plugin` is the builder-owned Gradle integration, published as
+`ee.schimke.composeai:compose-preview-ui-builder-gradle-plugin` with plugin ID
+`ee.schimke.compose-ui-builder`. It registers explicitly selected Kotlin source sets and runs the
+build generator in a separate JVM. Kotlin Gradle APIs are compile-only; compiler/PSI and generation
+libraries remain on the isolated tool configuration. This adds no server seam or server dependency.
