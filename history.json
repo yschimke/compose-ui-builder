@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "b908344f8d5f521cba3de728457a3f1a4be90ec6",
+    "generatedFrom": "67bab1d80c55918b280ac9a1893b6b4b38b47d63",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -163,6 +163,21 @@
                     "commit": "5a96a38cb67560849b5e5cb642c0fcd69b769534",
                     "date": "2026-09-26T06:38:28Z",
                     "sourceSha": "b884cd36",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.DesignFixturePreviewsKt.DesignDocsTabletPreview_width=1280dp,height=800dp,dpi=160": {
+            "path": "renders/ui-builder/DesignDocsTabletPreview_width_1280dp_height_800dp_dpi_160-e533184f.png",
+            "versions": [
+                {
+                    "blob": "8e37b703be2a0faf595c56ab306cf263713d963c",
+                    "commit": "67bab1d80c55918b280ac9a1893b6b4b38b47d63",
+                    "date": "2026-10-05T12:16:31Z",
+                    "sourceSha": "13276f6b",
                     "commits": 1
                 }
             ],
@@ -739,6 +754,51 @@
                 }
             ],
             "observations": 2,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.GoogleAppSizePreviewsKt.DocsCompactPreview_width=411dp,height=914dp,dpi=160": {
+            "path": "renders/ui-builder/DocsCompactPreview_width_411dp_height_914dp_dpi_160-e023e4e8.png",
+            "versions": [
+                {
+                    "blob": "de9a8eab329a80c8ece4adab8ff32883e39e2db9",
+                    "commit": "67bab1d80c55918b280ac9a1893b6b4b38b47d63",
+                    "date": "2026-10-05T12:16:31Z",
+                    "sourceSha": "13276f6b",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.GoogleAppSizePreviewsKt.DocsExpandedPreview_width=1280dp,height=800dp,dpi=160": {
+            "path": "renders/ui-builder/DocsExpandedPreview_width_1280dp_height_800dp_dpi_160-0f6a5770.png",
+            "versions": [
+                {
+                    "blob": "8e37b703be2a0faf595c56ab306cf263713d963c",
+                    "commit": "67bab1d80c55918b280ac9a1893b6b4b38b47d63",
+                    "date": "2026-10-05T12:16:31Z",
+                    "sourceSha": "13276f6b",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
+            "unstable": false,
+            "flapCount": 0
+        },
+        "ui-builder/ee.schimke.composeai.uibuilder.preview.GoogleAppSizePreviewsKt.DocsMediumPreview_width=841dp,height=701dp,dpi=160": {
+            "path": "renders/ui-builder/DocsMediumPreview_width_841dp_height_701dp_dpi_160-7ed0b0ce.png",
+            "versions": [
+                {
+                    "blob": "e5b89499c65fc3b4b75efb9ee0f2c3a99936bd93",
+                    "commit": "67bab1d80c55918b280ac9a1893b6b4b38b47d63",
+                    "date": "2026-10-05T12:16:31Z",
+                    "sourceSha": "13276f6b",
+                    "commits": 1
+                }
+            ],
+            "observations": 1,
             "unstable": false,
             "flapCount": 0
         },
