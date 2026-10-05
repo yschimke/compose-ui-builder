@@ -16,6 +16,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderCollaborator
 import ee.schimke.composeai.uibuilder.editor.UiBuilderParticipantKind
 
 @Preview(widthDp = 440, heightDp = 740)
+@Preview(name = "Mobile", widthDp = 320, heightDp = 680)
 @Composable
 fun UiBuilderAgentPromptPreview() {
   val host =
