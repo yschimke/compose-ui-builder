@@ -51,7 +51,9 @@ concurrency:
 #   - GitHub release assets: `compose-preview-ui-builder-web-<v>.zip`, the Wasm editor; the
 #     native Desktop host as a Linux `.deb` (built here) and a macOS `.dmg` and Windows `.msi`
 #     (built by `desktop-packages.yml`); and `compose-ui-builder-intellij-plugin-<v>.zip`,
-#     the installable IntelliJ plugin. Nothing compiles against them. compose-preview-server
+#     the installable IntelliJ plugin; and the visual harness's three Wasm fixtures,
+#     `compose-preview-ui-builder-renderer-<v>.zip` and `-reference-jetcaster-` /
+#     `-generated-jetcaster-<v>.zip` (`harness-dists`). Nothing compiles against them. compose-preview-server
 #     resolves the web archive through a group-fenced ivy repository over this release, which keeps
 #     it a normal versioned dependency without putting a 40 MB frontend distribution on Central
 #     forever.
@@ -362,9 +364,67 @@ jobs:
     with:
       tag: ${{ needs.release-please.outputs.publish_tag }}
 
+  # The three Wasm builds compose-preview-server's visual harness serves beside the editor: the
+  # renderer runtime and the two Jetcaster fixtures. Released so the harness downloads the set its
+  # pinned version names instead of linking all three from a checkout on every pull request (~11
+  # minutes for the renderer alone), and so it tests the builder it actually ships against.
+  # Nothing compiles against these. One runner per link, because `gradle.properties` sizes the
+  # Kotlin daemon for ONE ir2wasm pass; beside `desktop-packages`, so the release waits on
+  # whichever is slower rather than on both in turn. Needed by `finish-release`, like the
+  # installers, so a release never goes public without the assets the server asks for.
+  harness-dists:
+    needs: [release-please, publish]
+    if: ${{ needs.publish.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - module: ui-builder-renderer
+            task: wasmRendererDist
+            dist: wasmRendererDist
+          - module: ui-builder-reference-jetcaster
+            task: wasmFrontendDist
+            dist: wasmDist
+          - module: ui-builder-generated-jetcaster
+            task: wasmFrontendDist
+            dist: wasmDist
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.release-please.outputs.publish_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.publish_tag }}
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+      - run: ./gradlew ":${{ matrix.module }}:${{ matrix.task }}"
+      # `compose-preview-<module>-<version>.zip`, the editor archive's naming, holding the dist
+      # directory's CONTENTS at its root. The file name is the contract compose-preview-server's
+      # harness downloads by, so it is a coordinate, not a label.
+      - name: Attach the archive to the release
+        env:
+          MODULE: ${{ matrix.module }}
+          DIST: ${{ matrix.dist }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          archive="${RUNNER_TEMP}/compose-preview-${MODULE}-${version}.zip"
+          (cd "${MODULE}/build/${DIST}" && zip -qrX "${archive}" .)
+          gh release upload "${TAG}" "${archive}" --clobber
+
   finish-release:
-    needs: [release-please, publish, desktop-packages]
-    if: ${{ !cancelled() && needs.publish.result == 'success' && needs.desktop-packages.result == 'success' }}
+    needs: [release-please, publish, desktop-packages, harness-dists]
+    if: ${{ !cancelled() && needs.publish.result == 'success' && needs.desktop-packages.result == 'success' && needs.harness-dists.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
