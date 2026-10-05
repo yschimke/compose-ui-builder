@@ -26,6 +26,11 @@ export async function verifyDesignFirstStartup(base, root, launchOptions, shots)
   }
   const browser = await chromium.launch(launchOptions);
   const page = await browser.newPage({viewport: {width: 1400, height: 900}, locale: 'en-US'});
+  let releaseFont;
+  let releaseIdentity;
+  let closing = false;
+  const fontGate = new Promise(resolve => { releaseFont = resolve; });
+  const identityGate = new Promise(resolve => { releaseIdentity = resolve; });
   try {
     const errors = [];
     const calls = [];
@@ -33,7 +38,20 @@ export async function verifyDesignFirstStartup(base, root, launchOptions, shots)
     let catalogFailureHandled = false;
     page.on('console', message => { if (message.text().includes('could not load the New design catalogs')) catalogFailureHandled = true; });
     page.on('pageerror', error => { errors.push(String(error)); console.error('live page error:', String(error)); });
-    await page.route('**/identity', route => route.fulfill({json: {actorId: 'startup-test', canWrite: false}}));
+    let identityRequests = 0;
+    let identityStatus = 200;
+    let identityResponse = {actorId: 'startup-test', canWrite: false};
+    let fontRequests = 0;
+    await page.route('**/fonts/RobotoFlex.ttf', async route => {
+      fontRequests++;
+      await fontGate;
+      if (!closing) await route.continue();
+    });
+    await page.route('**/identity', async route => {
+      identityRequests++;
+      await identityGate;
+      if (!closing) await route.fulfill({status: identityStatus, json: identityResponse});
+    });
     await page.route('**/api/ui-builder/v1/requests', async route => {
       const {requestId, request} = route.request().postDataJSON();
       calls.push(request.type);
@@ -50,7 +68,21 @@ export async function verifyDesignFirstStartup(base, root, launchOptions, shots)
       } : {type: 'error', error: {code: 'notFound', message: 'not part of this fixture'}};
       await route.fulfill({json: {schemaVersion: 1, requestId, response}});
     });
-    await page.goto(`${base}/index.html?session=live&designId=${document.id}`);
+    await page.goto(`${base}/index.html?session=live&designId=${document.id}`, {waitUntil: 'commit'});
+    const overlapDeadline = Date.now() + 10000;
+    while ((!identityRequests || !fontRequests) && Date.now() < overlapDeadline) {
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    assert.equal(fontRequests, 1, 'the Wear font must start loading');
+    assert.equal(identityRequests, 1, 'identity lookup must start while the font response is held');
+    await page.waitForFunction(() => globalThis.__uiBuilderStartup?.marks['storage-ready'] !== undefined, null, {timeout: 10000});
+    assert.deepEqual(calls, [], 'design requests must wait for identity');
+    const beforeFont = await page.evaluate(() => globalThis.__uiBuilderStartup.marks);
+    assert.equal(beforeFont['compose-start'], undefined, 'composition must wait for font registration');
+    releaseFont();
+    await page.waitForFunction(() => globalThis.__uiBuilderStartup?.marks['fonts-ready'] !== undefined);
+    assert.deepEqual(calls, [], 'finishing fonts must not bypass identity');
+    releaseIdentity();
     await page.waitForFunction(() => globalThis.__uiBuilderStartup?.marks['editor-paint-opportunity'] !== undefined, null, {timeout: 30000});
     await page.waitForFunction(() => globalThis.__uiBuilderInspection?.generation?.completed, null, {timeout: 30000});
     await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => e.name.includes('/api/ui-builder/v1/requests')), null, {timeout: 10000});
@@ -63,12 +95,21 @@ export async function verifyDesignFirstStartup(base, root, launchOptions, shots)
     await page.waitForFunction(() => document.documentElement.dataset.uiBuilderReady === 'true');
     while (!catalogFailureHandled && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
     assert.ok(catalogFailureHandled, 'catalog failure was not handled independently');
+    assert.equal(identityRequests, 1, 'composition must reuse the startup identity lookup');
     assert.deepEqual(errors, []);
     if (shots) await page.screenshot({path: join(shots, 'live-startup.png')});
-    console.log('ok   live startup: paint precedes optional catalog work; catalog outage leaves the design open');
+    // A completed 401 must still stop the open, even though the request began during font loading.
+    identityStatus = 401;
+    identityResponse = {signInUrl: '/login'};
+    calls.length = 0;
+    await page.goto(`${base}/index.html?session=live&designId=${document.id}`);
+    await page.waitForFunction(() => globalThis.__uiBuilderStartup?.marks['identity-ready'] !== undefined && globalThis.__uiBuilderStartup?.marks['boot-hidden'] !== undefined);
+    assert.deepEqual(calls, [], 'a sign-in requirement must prevent design requests');
+    assert.deepEqual(errors, []);
+    console.log('ok   live startup: font/storage/identity overlap; auth/font gates preserved; catalogs follow paint');
   } catch (error) {
     if (shots) await page.screenshot({path: join(shots, 'live-startup-failed.png')});
     console.error(await page.evaluate(() => ({startup: globalThis.__uiBuilderStartup, status: document.documentElement.dataset})));
     throw error;
-  } finally { await browser.close(); }
+  } finally { closing = true; releaseFont(); releaseIdentity(); await browser.close(); }
 }

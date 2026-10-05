@@ -14,7 +14,7 @@
   // Keep these after the boot screen is gone: pinned renderer frames can finish later.
   const milestones = new Set([
     'script', 'kotlin-start', 'fonts-ready', 'storage-ready', 'compose-start',
-    'identity-start', 'design-start', 'design-loaded', 'editor-ready', 'editor-paint-opportunity',
+    'identity-start', 'identity-ready', 'design-start', 'design-loaded', 'editor-ready', 'editor-paint-opportunity',
     'renderer-requested', 'renderer-ready', 'preview-rendered', 'boot-hidden', 'failed',
   ]);
   const marks = Object.create(null);

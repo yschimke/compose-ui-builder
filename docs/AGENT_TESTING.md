@@ -77,6 +77,8 @@ some:
 
 - `live` — opens a saved Jetcaster snapshot through the HTTP protocol, checks the first paint
   precedes the optional catalog-list request, and verifies a catalog-list outage leaves the design open.
+  It holds font and identity responses independently to prove they overlap with IndexedDB startup,
+  while composition waits for fonts and design requests wait for identity. A 401 still blocks the open.
 - `cache` — starts Chromium three times with the same temporary disk profile and checks the second
   and third visits consume compiled-code cache entries for both Wasm modules. The profile is removed
   afterwards; `wasm-cache.json` and per-visit Wasm traces are kept beside the screenshots.
@@ -95,6 +97,9 @@ rather than running `npx playwright install`.
 The capture fixtures use the same coalesced inspection publisher as saved designs. Repeated
 whole-document encoding in each node-layout callback otherwise inflates the fixture timing.
 Font registration still precedes composition because Wear caches its first resolved typeface.
+The [startup-overlap comparison](evidence/overlapping-startup/comparison.json) exercises the saved-design
+path with local responses and with 500 ms delays on both identity and font responses. Its mock host
+does not serve the project artwork routes; the before/after scene is pixel-identical.
 
 The [font-transfer experiment](evidence/design-first-startup/font-experiment.json) records why
 a faster individual stage is not enough: direct binary transfer shortened the font gate but
@@ -122,8 +127,9 @@ appear as `ui-builder:*` User Timing marks in a browser performance trace. There
 actor ids or document contents in them, and they are not persisted or uploaded.
 
 - `kotlin-start`, `fonts-ready`, `storage-ready`, `compose-start` separate Wasm initialisation from
-  font registration, local storage hydration and starting the editor host.
-- `identity-start`, `design-start`, `design-loaded` describe a hosted design's opening path; fixture
+  font registration, local storage hydration and starting the editor host. For live sessions, storage hydration and
+  identity lookup begin alongside fonts; their completion marks need not follow the font mark.
+- `identity-start`, `identity-ready`, `design-start`, `design-loaded` describe a hosted design's opening path; fixture
   and embedded-host modes need not report them.
 - `editor-ready` is the editor host's readiness signal. `editor-paint-opportunity` is two animation
   frames later, giving it an opportunity to paint; it is not proof that a pinned preview has drawn.

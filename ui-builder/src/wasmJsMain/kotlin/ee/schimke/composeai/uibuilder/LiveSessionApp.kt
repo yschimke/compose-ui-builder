@@ -118,6 +118,7 @@ import ee.schimke.composeai.uibuilder.reference.RestoredReference
 import kotlin.io.encoding.Base64
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -139,16 +140,16 @@ import org.jetbrains.skia.Image
  * (an older server, or a static host with no live session behind it).
  */
 @Composable
-internal fun LiveSessionApp() {
+internal fun LiveSessionApp(startupIdentity: Deferred<ServerIdentity>) {
   var config by remember { mutableStateOf<LiveSessionConfig?>(null) }
   var failure by remember { mutableStateOf<String?>(null) }
   // A server that lets nobody look without signing in, and says where to: the page offers that
   // rather than an editor that cannot load anything.
   var signInRequired by remember { mutableStateOf<String?>(null) }
-  LaunchedEffect(Unit) {
+  LaunchedEffect(startupIdentity) {
     bootPhase("Checking who you are")
     try {
-      val identity = resolveServerIdentity()
+      val identity = startupIdentity.await()
       if (
         identity.authenticationRequired &&
           identity.signInUrl != null &&

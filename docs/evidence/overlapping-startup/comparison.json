@@ -1,0 +1,671 @@
+{
+  "method": "Alternating before/after production builds, Chromium 141 with SwiftShader, same isolated persistent profile per scenario. Saved 108-node Jetcaster snapshot served by a mock host. Four visits per build; first visit excluded from medians. Wasm/JS assets cacheable; font response no-store to apply the specified delay on every visit. Paint opportunity is not a fully-settled pinned renderer measurement.",
+  "scenarios": [
+    {
+      "fontAndIdentityDelayMs": 0,
+      "medianPaintOpportunityMs": {
+        "before": 1220.7,
+        "after": 1210.8
+      },
+      "samples": [
+        {
+          "round": 0,
+          "variant": "before",
+          "marks": {
+            "script": 18.200000047683716,
+            "kotlin-start": 228.80000007152557,
+            "fonts-ready": 351.2000000476837,
+            "storage-ready": 359.3000000715256,
+            "compose-start": 359.40000009536743,
+            "identity-start": 375.10000002384186,
+            "design-start": 453.3000000715256,
+            "design-loaded": 496,
+            "boot-hidden": 1389.9000000953674,
+            "editor-ready": 1390,
+            "editor-paint-opportunity": 1601.3000000715256
+          },
+          "requests": [
+            {
+              "type": "font",
+              "at": 0
+            },
+            {
+              "type": "identity",
+              "at": 130.202227
+            },
+            {
+              "type": "openDesign",
+              "at": 212.20968300000004
+            },
+            {
+              "type": "listDesigns",
+              "at": 215.23150800000008
+            },
+            {
+              "type": "listCatalogs",
+              "at": 1363.7972839999998
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 0,
+          "variant": "after",
+          "marks": {
+            "script": 14.5,
+            "kotlin-start": 213.30000007152557,
+            "identity-start": 221,
+            "identity-ready": 233.30000007152557,
+            "storage-ready": 234.20000004768372,
+            "fonts-ready": 338.5,
+            "compose-start": 338.5,
+            "design-start": 422.5,
+            "design-loaded": 463,
+            "boot-hidden": 1345.1000000238419,
+            "editor-ready": 1345.2000000476837,
+            "editor-paint-opportunity": 1543.7000000476837
+          },
+          "requests": [
+            {
+              "type": "identity",
+              "at": 0
+            },
+            {
+              "type": "font",
+              "at": 11.871592999999848
+            },
+            {
+              "type": "openDesign",
+              "at": 203.18758899999966
+            },
+            {
+              "type": "listDesigns",
+              "at": 207.53630499999963
+            },
+            {
+              "type": "listCatalogs",
+              "at": 1331.721892
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 1,
+          "variant": "after",
+          "marks": {
+            "script": 12.799999952316284,
+            "kotlin-start": 253.89999997615814,
+            "identity-start": 262.1999999284744,
+            "identity-ready": 270.39999997615814,
+            "storage-ready": 271.39999997615814,
+            "fonts-ready": 359.89999997615814,
+            "compose-start": 360.7999999523163,
+            "design-start": 402,
+            "design-loaded": 427.1999999284744,
+            "boot-hidden": 1023,
+            "editor-ready": 1023.1000000238419,
+            "editor-paint-opportunity": 1210.7999999523163
+          },
+          "requests": [
+            {
+              "type": "identity",
+              "at": 0
+            },
+            {
+              "type": "font",
+              "at": 5.156097000000045
+            },
+            {
+              "type": "openDesign",
+              "at": 140.11998800000038
+            },
+            {
+              "type": "listDesigns",
+              "at": 144.1685779999998
+            },
+            {
+              "type": "listCatalogs",
+              "at": 956.234426
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 1,
+          "variant": "before",
+          "marks": {
+            "script": 10.5,
+            "kotlin-start": 250.19999992847443,
+            "fonts-ready": 356,
+            "storage-ready": 358.6999999284744,
+            "compose-start": 358.6999999284744,
+            "identity-start": 361.5,
+            "design-start": 420.7999999523163,
+            "design-loaded": 447.6999999284744,
+            "boot-hidden": 1043.2999999523163,
+            "editor-ready": 1043.3999999761581,
+            "editor-paint-opportunity": 1229.7999999523163
+          },
+          "requests": [
+            {
+              "type": "font",
+              "at": 0
+            },
+            {
+              "type": "identity",
+              "at": 97.03540900000007
+            },
+            {
+              "type": "openDesign",
+              "at": 159.13292100000035
+            },
+            {
+              "type": "listDesigns",
+              "at": 161.5510290000002
+            },
+            {
+              "type": "listCatalogs",
+              "at": 972.4533540000002
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 2,
+          "variant": "before",
+          "marks": {
+            "script": 11,
+            "kotlin-start": 244.20000004768372,
+            "fonts-ready": 350.7000000476837,
+            "storage-ready": 353.7000000476837,
+            "compose-start": 353.7999999523163,
+            "identity-start": 356.60000002384186,
+            "design-start": 418.7999999523163,
+            "design-loaded": 444.60000002384186,
+            "boot-hidden": 1035.2999999523163,
+            "editor-ready": 1035.2999999523163,
+            "editor-paint-opportunity": 1220.7000000476837
+          },
+          "requests": [
+            {
+              "type": "font",
+              "at": 0
+            },
+            {
+              "type": "identity",
+              "at": 96.7627939999993
+            },
+            {
+              "type": "openDesign",
+              "at": 160.89434099999926
+            },
+            {
+              "type": "listDesigns",
+              "at": 162.98282699999982
+            },
+            {
+              "type": "listCatalogs",
+              "at": 977.7393659999998
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 2,
+          "variant": "after",
+          "marks": {
+            "script": 13.199999928474426,
+            "kotlin-start": 247.10000002384186,
+            "identity-start": 256.6999999284744,
+            "identity-ready": 263.60000002384186,
+            "storage-ready": 264.1999999284744,
+            "fonts-ready": 353.60000002384186,
+            "compose-start": 354.39999997615814,
+            "design-start": 396.39999997615814,
+            "design-loaded": 432.6999999284744,
+            "boot-hidden": 1030.7999999523163,
+            "editor-ready": 1031,
+            "editor-paint-opportunity": 1216.8999999761581
+          },
+          "requests": [
+            {
+              "type": "identity",
+              "at": 0
+            },
+            {
+              "type": "font",
+              "at": 5.088470000000598
+            },
+            {
+              "type": "openDesign",
+              "at": 140.6699750000007
+            },
+            {
+              "type": "listDesigns",
+              "at": 142.4363229999999
+            },
+            {
+              "type": "listCatalogs",
+              "at": 968.5007740000001
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 3,
+          "variant": "after",
+          "marks": {
+            "script": 10.100000023841858,
+            "kotlin-start": 241.5,
+            "identity-start": 251.10000002384186,
+            "identity-ready": 265.6999999284744,
+            "storage-ready": 266.5,
+            "fonts-ready": 354.7999999523163,
+            "compose-start": 355.6999999284744,
+            "design-start": 397.89999997615814,
+            "design-loaded": 422.39999997615814,
+            "boot-hidden": 1017.7999999523163,
+            "editor-ready": 1017.8999999761581,
+            "editor-paint-opportunity": 1207.7999999523163
+          },
+          "requests": [
+            {
+              "type": "identity",
+              "at": 0
+            },
+            {
+              "type": "font",
+              "at": 13.346765000000232
+            },
+            {
+              "type": "openDesign",
+              "at": 147.24047900000005
+            },
+            {
+              "type": "listDesigns",
+              "at": 149.28599399999985
+            },
+            {
+              "type": "listCatalogs",
+              "at": 963.2390780000005
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 3,
+          "variant": "before",
+          "marks": {
+            "script": 12.200000047683716,
+            "kotlin-start": 243.10000002384186,
+            "fonts-ready": 348.10000002384186,
+            "storage-ready": 350.89999997615814,
+            "compose-start": 351,
+            "identity-start": 353.8000000715256,
+            "design-start": 404.7000000476837,
+            "design-loaded": 430.5,
+            "boot-hidden": 1022.8000000715256,
+            "editor-ready": 1023,
+            "editor-paint-opportunity": 1209.6000000238419
+          },
+          "requests": [
+            {
+              "type": "font",
+              "at": 0
+            },
+            {
+              "type": "identity",
+              "at": 95.16024499999912
+            },
+            {
+              "type": "openDesign",
+              "at": 147.8802140000007
+            },
+            {
+              "type": "listDesigns",
+              "at": 149.85405399999945
+            },
+            {
+              "type": "listCatalogs",
+              "at": 962.4071000000004
+            }
+          ],
+          "errors": []
+        }
+      ]
+    },
+    {
+      "fontAndIdentityDelayMs": 500,
+      "medianPaintOpportunityMs": {
+        "before": 2189.9,
+        "after": 1706
+      },
+      "samples": [
+        {
+          "round": 0,
+          "variant": "before",
+          "marks": {
+            "script": 20.700000047683716,
+            "kotlin-start": 227.10000002384186,
+            "fonts-ready": 844.1000000238419,
+            "storage-ready": 852,
+            "compose-start": 852,
+            "identity-start": 867.3999999761581,
+            "design-start": 1404.7000000476837,
+            "design-loaded": 1446,
+            "boot-hidden": 2334.5,
+            "editor-ready": 2334.600000023842,
+            "editor-paint-opportunity": 2534.5
+          },
+          "requests": [
+            {
+              "type": "font",
+              "at": 0
+            },
+            {
+              "type": "identity",
+              "at": 626.359665
+            },
+            {
+              "type": "openDesign",
+              "at": 1165.41401
+            },
+            {
+              "type": "listDesigns",
+              "at": 1169.8163869999998
+            },
+            {
+              "type": "listCatalogs",
+              "at": 2301.1206009999996
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 0,
+          "variant": "after",
+          "marks": {
+            "script": 15.700000047683716,
+            "kotlin-start": 218.20000004768372,
+            "identity-start": 228.80000007152557,
+            "storage-ready": 236.60000002384186,
+            "identity-ready": 731.8000000715256,
+            "fonts-ready": 839.3000000715256,
+            "compose-start": 840.2000000476837,
+            "design-start": 918.1000000238419,
+            "design-loaded": 958.1000000238419,
+            "boot-hidden": 1826.8000000715256,
+            "editor-ready": 1827,
+            "editor-paint-opportunity": 2038.3999999761581
+          },
+          "requests": [
+            {
+              "type": "identity",
+              "at": 0
+            },
+            {
+              "type": "font",
+              "at": 6.201717999999801
+            },
+            {
+              "type": "openDesign",
+              "at": 691.9531850000003
+            },
+            {
+              "type": "listDesigns",
+              "at": 696.1426199999996
+            },
+            {
+              "type": "listCatalogs",
+              "at": 1818.0020439999998
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 1,
+          "variant": "after",
+          "marks": {
+            "script": 13.600000023841858,
+            "kotlin-start": 252.70000004768372,
+            "identity-start": 261.60000002384186,
+            "storage-ready": 269.8000000715256,
+            "identity-ready": 765.1000000238419,
+            "fonts-ready": 854.3000000715256,
+            "compose-start": 855.2000000476837,
+            "design-start": 898,
+            "design-loaded": 934.3999999761581,
+            "boot-hidden": 1527.8999999761581,
+            "editor-ready": 1528,
+            "editor-paint-opportunity": 1710.8000000715256
+          },
+          "requests": [
+            {
+              "type": "identity",
+              "at": 0
+            },
+            {
+              "type": "font",
+              "at": 5.678472000000511
+            },
+            {
+              "type": "openDesign",
+              "at": 637.6623449999997
+            },
+            {
+              "type": "listDesigns",
+              "at": 640.1110699999999
+            },
+            {
+              "type": "listCatalogs",
+              "at": 1456.3356460000005
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 1,
+          "variant": "before",
+          "marks": {
+            "script": 11.899999976158142,
+            "kotlin-start": 250.89999997615814,
+            "fonts-ready": 851.7000000476837,
+            "storage-ready": 854.6000000238419,
+            "compose-start": 854.6000000238419,
+            "identity-start": 857.3999999761581,
+            "design-start": 1385.2000000476837,
+            "design-loaded": 1410.8999999761581,
+            "boot-hidden": 2001,
+            "editor-ready": 2001.1000000238419,
+            "editor-paint-opportunity": 2187.600000023842
+          },
+          "requests": [
+            {
+              "type": "font",
+              "at": 0
+            },
+            {
+              "type": "identity",
+              "at": 592.376319
+            },
+            {
+              "type": "openDesign",
+              "at": 1120.9682060000005
+            },
+            {
+              "type": "listDesigns",
+              "at": 1125.493954999999
+            },
+            {
+              "type": "listCatalogs",
+              "at": 1938.687218
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 2,
+          "variant": "before",
+          "marks": {
+            "script": 13.299999952316284,
+            "kotlin-start": 246.89999997615814,
+            "fonts-ready": 849,
+            "storage-ready": 852,
+            "compose-start": 852,
+            "identity-start": 854.7999999523163,
+            "design-start": 1387.6000000238419,
+            "design-loaded": 1414,
+            "boot-hidden": 2007.2000000476837,
+            "editor-ready": 2007.3999999761581,
+            "editor-paint-opportunity": 2194.2999999523163
+          },
+          "requests": [
+            {
+              "type": "font",
+              "at": 0
+            },
+            {
+              "type": "identity",
+              "at": 592.9754950000006
+            },
+            {
+              "type": "openDesign",
+              "at": 1128.2766060000013
+            },
+            {
+              "type": "listDesigns",
+              "at": 1130.1030690000007
+            },
+            {
+              "type": "listCatalogs",
+              "at": 1944.1950049999996
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 2,
+          "variant": "after",
+          "marks": {
+            "script": 14.100000023841858,
+            "kotlin-start": 245.60000002384186,
+            "identity-start": 254.79999995231628,
+            "storage-ready": 262.2999999523163,
+            "identity-ready": 758.6999999284744,
+            "fonts-ready": 847.1000000238419,
+            "compose-start": 847.8999999761581,
+            "design-start": 888,
+            "design-loaded": 923.1000000238419,
+            "boot-hidden": 1519.2999999523163,
+            "editor-ready": 1519.3999999761581,
+            "editor-paint-opportunity": 1704.6999999284744
+          },
+          "requests": [
+            {
+              "type": "identity",
+              "at": 0
+            },
+            {
+              "type": "font",
+              "at": 4.926115000000209
+            },
+            {
+              "type": "openDesign",
+              "at": 634.1079239999999
+            },
+            {
+              "type": "listDesigns",
+              "at": 635.8702450000001
+            },
+            {
+              "type": "listCatalogs",
+              "at": 1458.1692390000007
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 3,
+          "variant": "after",
+          "marks": {
+            "script": 12.899999976158142,
+            "kotlin-start": 246.70000004768372,
+            "identity-start": 256.10000002384186,
+            "storage-ready": 263.5,
+            "identity-ready": 759.8000000715256,
+            "fonts-ready": 848.8999999761581,
+            "compose-start": 849.8000000715256,
+            "design-start": 889.5,
+            "design-loaded": 926.8000000715256,
+            "boot-hidden": 1521,
+            "editor-ready": 1521.2000000476837,
+            "editor-paint-opportunity": 1706
+          },
+          "requests": [
+            {
+              "type": "identity",
+              "at": 0
+            },
+            {
+              "type": "font",
+              "at": 5.088109000000259
+            },
+            {
+              "type": "openDesign",
+              "at": 635.3951720000005
+            },
+            {
+              "type": "listDesigns",
+              "at": 637.2587540000004
+            },
+            {
+              "type": "listCatalogs",
+              "at": 1457.0297840000003
+            }
+          ],
+          "errors": []
+        },
+        {
+          "round": 3,
+          "variant": "before",
+          "marks": {
+            "script": 16.300000071525574,
+            "kotlin-start": 251.20000004768372,
+            "fonts-ready": 853.3999999761581,
+            "storage-ready": 856.3000000715256,
+            "compose-start": 856.3999999761581,
+            "identity-start": 859.2000000476837,
+            "design-start": 1385.1000000238419,
+            "design-loaded": 1409.6000000238419,
+            "boot-hidden": 2004.7000000476837,
+            "editor-ready": 2004.8999999761581,
+            "editor-paint-opportunity": 2189.899999976158
+          },
+          "requests": [
+            {
+              "type": "font",
+              "at": 0
+            },
+            {
+              "type": "identity",
+              "at": 593.319104000002
+            },
+            {
+              "type": "openDesign",
+              "at": 1120.1553400000012
+            },
+            {
+              "type": "listDesigns",
+              "at": 1124.4802610000006
+            },
+            {
+              "type": "listCatalogs",
+              "at": 1934.9042550000013
+            }
+          ],
+          "errors": []
+        }
+      ]
+    }
+  ]
+}
