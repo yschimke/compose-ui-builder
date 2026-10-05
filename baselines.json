@@ -7,6 +7,54 @@
     "sha256": "547b35136902d589785d1398dbc36ce67c48ef89473df6ba5a13a1dbbd26e6c8",
     "sourceFile": "src/main/kotlin/example/Consumer.kt"
   },
+  "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.CalendarItemsPreview": {
+    "captureLabel": "",
+    "functionName": "CalendarItemsPreview",
+    "module": "ui-builder-production-consumer",
+    "renderBasename": "CalendarItemsPreview-95b3268e.png",
+    "sha256": "8dc47f3505e22212d3d3a6fd05aefbd5136604259b967bdd03dbbfde2cd91c00",
+    "sourceFile": "src/main/kotlin/example/google/GoogleItemPreviews.kt"
+  },
+  "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.DocsItemsPreview": {
+    "captureLabel": "",
+    "functionName": "DocsItemsPreview",
+    "module": "ui-builder-production-consumer",
+    "renderBasename": "DocsItemsPreview-b1cbcef6.png",
+    "sha256": "65a1793d46934e08d4754969687b01adcb3f33e97470e09ec4a21137a4d89938",
+    "sourceFile": "src/main/kotlin/example/google/GoogleItemPreviews.kt"
+  },
+  "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.GmailItemsPreview": {
+    "captureLabel": "",
+    "functionName": "GmailItemsPreview",
+    "module": "ui-builder-production-consumer",
+    "renderBasename": "GmailItemsPreview-38ee94e5.png",
+    "sha256": "0b52085e1011a66c13dffa65283638e50119a499c1cd520c4dcdfdbd46a67926",
+    "sourceFile": "src/main/kotlin/example/google/GoogleItemPreviews.kt"
+  },
+  "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.KeepItemsPreview": {
+    "captureLabel": "",
+    "functionName": "KeepItemsPreview",
+    "module": "ui-builder-production-consumer",
+    "renderBasename": "KeepItemsPreview-37fe3042.png",
+    "sha256": "01e09a52701a45009f403cd3859f3858e34c31f458e6671ad677e2b265453e37",
+    "sourceFile": "src/main/kotlin/example/google/GoogleItemPreviews.kt"
+  },
+  "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.PhotosItemPreview": {
+    "captureLabel": "",
+    "functionName": "PhotosItemPreview",
+    "module": "ui-builder-production-consumer",
+    "renderBasename": "PhotosItemPreview-2b991ba5.png",
+    "sha256": "5ab553dd3ca625102fe061b5ef4e0182a51a12a4c3a1a7a54fd61616e5ff1f89",
+    "sourceFile": "src/main/kotlin/example/google/GoogleItemPreviews.kt"
+  },
+  "ui-builder-production-consumer/example.google.GoogleItemPreviewsKt.PlayItemPreview": {
+    "captureLabel": "",
+    "functionName": "PlayItemPreview",
+    "module": "ui-builder-production-consumer",
+    "renderBasename": "PlayItemPreview-5ab805dc.png",
+    "sha256": "d24238905d224ddf69d23aa4694b753d86ab48a33897fb597c1cc3c779c06f2c",
+    "sourceFile": "src/main/kotlin/example/google/GoogleItemPreviews.kt"
+  },
   "ui-builder/ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview": {
     "captureLabel": "",
     "functionName": "ProductionUiBuilderPreview",

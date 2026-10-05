@@ -162,4 +162,10 @@ Auto-generated from `main`. Browse inline or compare against PR branches.
 | Preview | Image |
 |---------|-------|
 | `DurableLibraryPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png" width="150" /> |
+| `CalendarItemsPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder-production-consumer/CalendarItemsPreview-95b3268e.png" width="150" /> |
+| `DocsItemsPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder-production-consumer/DocsItemsPreview-b1cbcef6.png" width="150" /> |
+| `GmailItemsPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder-production-consumer/GmailItemsPreview-38ee94e5.png" width="150" /> |
+| `KeepItemsPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder-production-consumer/KeepItemsPreview-37fe3042.png" width="150" /> |
+| `PhotosItemPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder-production-consumer/PhotosItemPreview-2b991ba5.png" width="150" /> |
+| `PlayItemPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder-production-consumer/PlayItemPreview-5ab805dc.png" width="150" /> |
 
