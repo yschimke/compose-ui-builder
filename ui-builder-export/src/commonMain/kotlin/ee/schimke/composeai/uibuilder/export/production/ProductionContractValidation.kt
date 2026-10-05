@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder.export.production
 
+import kotlinx.serialization.json.*
+
 data class ProductionInput(val path: String, val file: ProductionUidFile)
 
 data class ProductionContractIssue(
@@ -390,8 +392,43 @@ object ProductionContractValidator {
           )
         }
         validateType(input, entry.id, binding.property, binding.expectedType)
-        val actual = readPath(input, entry, binding.nodeId, binding.property, binding.path)
-        if (actual != null && actual != binding.expectedType) {
+        val actual =
+          readPath(
+            input,
+            entry,
+            binding.nodeId,
+            binding.property,
+            binding.path,
+            allowNullable = true,
+          )
+        val expected = binding.expectedType
+        if (actual?.nullable == true && binding.fallback == null) {
+          issue(
+            "MISSING_NULL_FALLBACK",
+            input,
+            entry.id,
+            binding.nodeId,
+            binding.property,
+            "nullable reads require an explicit non-null literal fallback",
+          )
+        }
+        if (
+          binding.fallback != null &&
+            (expected !is ProductionType.Scalar ||
+              expected.nullable ||
+              !validFallback(binding.fallback, expected.scalar))
+        ) {
+          issue(
+            "INVALID_NULL_FALLBACK",
+            input,
+            entry.id,
+            binding.nodeId,
+            binding.property,
+            "fallback must be a literal of the declared non-null scalar type",
+          )
+        }
+        val resolved = if (binding.fallback != null) actual?.withNullable(false) else actual
+        if (resolved != null && resolved != binding.expectedType) {
           issue(
             "BINDING_TYPE_MISMATCH",
             input,
@@ -464,8 +501,53 @@ object ProductionContractValidator {
               message = "component requires an import of ${target.first.path}",
             )
           }
-          val actual = readPath(input, entry, use.nodeId, "data", use.dataPath)
-          if (actual != null && actual != ProductionType.Model(target.second.inputModel)) {
+          val actual =
+            readPath(input, entry, use.nodeId, "data", use.dataPath, allowNullable = true)
+          if (actual?.nullable == true && use.onNull == null) {
+            issue(
+              "MISSING_NULL_BRANCH",
+              input,
+              entry.id,
+              use.nodeId,
+              "data",
+              "nullable component or list inputs require onNull: skip",
+            )
+          }
+          if (actual is ProductionType.ListType && use.keyPath == null) {
+            issue(
+              "MISSING_LIST_KEY",
+              input,
+              entry.id,
+              use.nodeId,
+              "keyPath",
+              "list rendering requires an explicit item key path",
+            )
+          }
+          val item =
+            if (use.keyPath != null) (actual as? ProductionType.ListType)?.element
+            else actual?.withNullable(false)
+          if (use.keyPath != null) {
+            val key =
+              if (item is ProductionType.Model && !item.nullable) {
+                readPath(input, entry, use.nodeId, "keyPath", use.keyPath, modelId = item.modelId)
+              } else null
+            if (
+              use.keyPath.isEmpty() ||
+                key !is ProductionType.Scalar ||
+                key.nullable ||
+                key.scalar !in setOf(ScalarType.STRING, ScalarType.INT, ScalarType.LONG)
+            ) {
+              issue(
+                "INVALID_LIST_KEY",
+                input,
+                entry.id,
+                use.nodeId,
+                "keyPath",
+                "item keys require a non-null String, Int or Long field path on a non-null item model",
+              )
+            }
+          }
+          if (actual != null && item != ProductionType.Model(target.second.inputModel)) {
             issue(
               "COMPONENT_INPUT_MISMATCH",
               input,
@@ -522,10 +604,13 @@ object ProductionContractValidator {
       nodeId: String,
       field: String,
       path: List<String>,
+      allowNullable: Boolean = false,
+      modelId: String = entry.inputModel,
     ): ProductionType? {
-      var type: ProductionType = ProductionType.Model(entry.inputModel)
+      var type: ProductionType = ProductionType.Model(modelId)
+      var nullableParent = false
       path.forEach { segment ->
-        if (type.nullable) {
+        if (type.nullable && !allowNullable) {
           issue(
             "NULLABLE_PATH",
             input,
@@ -536,6 +621,7 @@ object ProductionContractValidator {
           )
           return null
         }
+        nullableParent = nullableParent || type.nullable
         val model = (type as? ProductionType.Model)?.let { models[it.modelId]?.second }
         if (model == null) {
           issue(
@@ -562,7 +648,7 @@ object ProductionContractValidator {
         }
         type = property.type
       }
-      return type
+      return type.withNullable(type.nullable || nullableParent)
     }
 
     private fun cycles(
@@ -643,3 +729,21 @@ private val KOTLIN_KEYWORDS =
     "when",
     "while",
   )
+
+internal fun ProductionType.withNullable(nullable: Boolean): ProductionType =
+  when (this) {
+    is ProductionType.Scalar -> copy(nullable = nullable)
+    is ProductionType.Model -> copy(nullable = nullable)
+    is ProductionType.ListType -> copy(nullable = nullable)
+  }
+
+private fun validFallback(value: JsonPrimitive, scalar: ScalarType): Boolean =
+  value !is JsonNull &&
+    when (scalar) {
+      ScalarType.STRING -> value.isString
+      ScalarType.BOOLEAN -> !value.isString && value.booleanOrNull != null
+      ScalarType.INT -> !value.isString && value.intOrNull != null
+      ScalarType.LONG -> !value.isString && value.longOrNull != null
+      ScalarType.FLOAT -> !value.isString && value.floatOrNull?.isFinite() == true
+      ScalarType.DOUBLE -> !value.isString && value.doubleOrNull?.isFinite() == true
+    }

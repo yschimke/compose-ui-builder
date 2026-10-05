@@ -126,7 +126,26 @@ data class ProductionBinding(
   val property: String,
   val path: List<String>,
   val expectedType: ProductionType,
-)
+  val fallback: JsonPrimitive? = null,
+) {
+  @Deprecated("Binary compatibility", level = DeprecationLevel.HIDDEN)
+  constructor(
+    nodeId: String,
+    property: String,
+    path: List<String>,
+    expectedType: ProductionType,
+  ) : this(nodeId, property, path, expectedType, null)
+
+  @kotlin.jvm.JvmName("copy")
+  @Deprecated("Binary compatibility", level = DeprecationLevel.HIDDEN)
+  fun legacyCopy(
+    nodeId: String = this.nodeId,
+    property: String = this.property,
+    path: List<String> = this.path,
+    expectedType: ProductionType = this.expectedType,
+  ): ProductionBinding =
+    copy(nodeId = nodeId, property = property, path = path, expectedType = expectedType)
+}
 
 @Serializable
 data class ProductionComponentUse(
@@ -136,7 +155,32 @@ data class ProductionComponentUse(
   val dataPath: List<String>,
   /** Child event name to parent event name; no implicit callback capture. */
   val events: Map<String, String> = emptyMap(),
-)
+  val onNull: ProductionNullPolicy? = null,
+  val keyPath: List<String>? = null,
+) {
+  @Deprecated("Binary compatibility", level = DeprecationLevel.HIDDEN)
+  constructor(
+    nodeId: String,
+    componentId: String,
+    dataPath: List<String>,
+    events: Map<String, String> = emptyMap(),
+  ) : this(nodeId, componentId, dataPath, events, null, null)
+
+  @kotlin.jvm.JvmName("copy")
+  @Deprecated("Binary compatibility", level = DeprecationLevel.HIDDEN)
+  fun legacyCopy(
+    nodeId: String = this.nodeId,
+    componentId: String = this.componentId,
+    dataPath: List<String> = this.dataPath,
+    events: Map<String, String> = this.events,
+  ): ProductionComponentUse =
+    copy(nodeId = nodeId, componentId = componentId, dataPath = dataPath, events = events)
+}
+
+@Serializable
+enum class ProductionNullPolicy {
+  @SerialName("skip") SKIP
+}
 
 object ProductionUidFiles {
   const val SCHEMA: String = "compose-ui-builder-production/v1-candidate"

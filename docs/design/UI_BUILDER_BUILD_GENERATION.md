@@ -3,8 +3,9 @@
 **Status: experimental opt-in build lane implemented, 2026-10-05.** Strict project-file contracts,
 tracked input resolution, owned model generation, stateless Compose generation and a JVM consumer
 build are implemented. Versioned production metadata and explicit editor file round trips are
-implemented against the published contracts 3.18.0 release. Single-file export remains
-the default. UI-value callback lowering, dynamic lists, nullable binding fallbacks and a packaged Gradle plugin remain proposed.
+implemented against published contracts 3.19.0, including nullable fallbacks and keyed component
+lists. Single-file export remains the default. UI-value callbacks and a packaged Gradle plugin remain
+proposed.
 The experimental file schema does not extend the current design-service wire schema.
 
 The project owns the design and its declared Kotlin API. A build turns those inputs into stateless
@@ -328,7 +329,7 @@ actions in embedded designs. Validation reports the input file, declaration, nod
 applicable. A valid contract is **not** an assertion of catalog exportability: checking catalog
 parameter types, resources, full layout graphs and executable event bindings belongs to the later
 production projection and generator gate. Nullable leaf values can be declared, but this first
-contract version cannot traverse nullable objects; explicit branch and fallback shapes are still
+contract supports nullable traversal only with an explicit scalar fallback or component null policy; further expression shapes are still
 to be added. Loop item scopes and stable-key declarations are also follow-up work.
 
 The JVM
@@ -374,7 +375,8 @@ lives in the new JVM-only build tool, separate from the Compose-free JVM/Wasm pr
 It accepts a validated contract and pinned component records. Supported bindings read non-null
 scalars from nested generated or mapped external data classes. Models can contain nullable fields
 and lists, including unused fields: their complete declared constructor remains stable when a
-layout removes a binding. Rendering nullable reads or iterating lists is not supported yet.
+layout removes a binding. Nullable reads require a declared literal fallback. Component placements can explicitly skip null inputs
+and repeat over a list using a declared item key path (see below).
 
 Each entry emits one named Kotlin file containing an internal generated body and the explicitly
 declared public or internal composable with `data` and `modifier` parameters. Components emit their
@@ -467,6 +469,40 @@ Development of this change uses the existing contracts composite override:
 ```
 
 Use a JDK 17 Gradle runtime for the composite's unpinned modules; the editor selects its own JDK 21
-toolchain. Normal builds use published contracts 3.18.0 and require no composite override.
+toolchain. Normal builds use published contracts 3.19.0 and require no composite override.
 The publication/consumer gate verifies generation from staged builder artifacts and published
 contracts dependencies in an independent checkout.
+
+
+## Nullable values and keyed component lists
+
+A scalar binding may declare `fallback`, a JSON string, Boolean or number of its non-null
+`expectedType`. The generator follows nullable model paths with safe access and uses the literal
+only if that read is null. It does not coerce types, infer empty strings or accept Kotlin expressions.
+Numbers must fit their declared Kotlin type and floating values must be finite.
+
+A component placement may declare `onNull: "skip"` to render only when its `dataPath` resolves to
+non-null data. Without that declaration, a nullable component or list input is an error. There is
+no implicit placeholder or alternate layout. A scalar fallback and an absent-content branch are
+separate, explicit choices.
+
+A placement with `keyPath` repeats its component over the list at `dataPath`. Each element must be
+a non-null instance of the component's declared input model. The non-empty key path resolves in
+that item model and must read a non-null String, Int or Long. The child component's bindings and
+callback payloads also resolve from that item; parent fields cannot be captured as item properties.
+The generator uses Compose `key` and refuses duplicate runtime keys before composing any item in
+that list. Stable identity is the caller's responsibility: do not use a mutable label as an ID.
+
+This is eager component repetition inside the authored parent layout, not a lazy collection DSL.
+Nullable items, scalar-item lists, arbitrary expressions and inline list template scopes remain
+unsupported. Nested lists can be expressed through separately declared item components. Immutable
+replacement data drives updates; the generated output owns no application state.
+
+`DynamicLibrary.uid` and the consumer's interaction tests demonstrate null-to-present transitions,
+nested nullable text, optional components, list reorder/update/removal, stable item semantics IDs,
+and current callback payloads. The visual body still comes from the pinned `ScreenGenerator`.
+Kotlin PSI identifies each synthetic placement and its parameter list; exact source ranges adapt
+those calls to composable slots, and the stateless wrapper supplies the typed null/list logic.
+
+The wire fields are published in `compose-preview-contracts` 3.19.0. Normal builds and the
+external-consumer gate resolve this release from Maven Central without a composite override.
