@@ -1,0 +1,3341 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "google-keep-tablet",
+  "title": "Google Keep — Notes grid (tablet)",
+  "revision": 1,
+  "catalogPin": {
+    "systemId": "m3-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 1280,
+    "heightDp": 800,
+    "density": 1.0,
+    "theme": "light",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1.0,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "browserZoomPercent": 100,
+    "fixedTime": "2024-05-16T12:00:00Z",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_tablet",
+      "id:pixel_fold",
+      "id:pixel_7"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "root"
+  ],
+  "nodes": {
+    "root": {
+      "id": "root",
+      "componentId": "m3/navigation-suite-scaffold",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "navigationItems": [
+          "keep-rail-notes",
+          "keep-rail-reminders",
+          "keep-rail-labels",
+          "keep-rail-archive",
+          "keep-rail-bin"
+        ],
+        "content": [
+          "keep-screen"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-notes": {
+      "id": "keep-rail-notes",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": true
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "keep-rail-notes-icon"
+        ],
+        "label": [
+          "keep-rail-notes-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-notes-icon": {
+      "id": "keep-rail-notes-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/lightbulb"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Notes"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-notes-label": {
+      "id": "keep-rail-notes-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Notes"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-reminders": {
+      "id": "keep-rail-reminders",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "keep-rail-reminders-icon"
+        ],
+        "label": [
+          "keep-rail-reminders-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-reminders-icon": {
+      "id": "keep-rail-reminders-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/notifications"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Reminders"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-reminders-label": {
+      "id": "keep-rail-reminders-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Reminders"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-labels": {
+      "id": "keep-rail-labels",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "keep-rail-labels-icon"
+        ],
+        "label": [
+          "keep-rail-labels-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-labels-icon": {
+      "id": "keep-rail-labels-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/label"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Labels"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-labels-label": {
+      "id": "keep-rail-labels-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Labels"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-archive": {
+      "id": "keep-rail-archive",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "keep-rail-archive-icon"
+        ],
+        "label": [
+          "keep-rail-archive-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-archive-icon": {
+      "id": "keep-rail-archive-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/archive"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Archive"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-archive-label": {
+      "id": "keep-rail-archive-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Archive"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-bin": {
+      "id": "keep-rail-bin",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "keep-rail-bin-icon"
+        ],
+        "label": [
+          "keep-rail-bin-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-bin-icon": {
+      "id": "keep-rail-bin-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/delete"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Bin"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-rail-bin-label": {
+      "id": "keep-rail-bin-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Bin"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-screen": {
+      "id": "keep-screen",
+      "componentId": "layout/scaffold",
+      "properties": {
+        "containerColor": {
+          "type": "colorToken",
+          "value": "background"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "topBar": [
+          "keep-search"
+        ],
+        "content": [
+          "keep-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-search": {
+      "id": "keep-search",
+      "componentId": "m3/search-bar",
+      "properties": {
+        "expanded": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 8,
+          "endDp": 12,
+          "bottomDp": 4
+        }
+      ],
+      "slots": {
+        "inputField": [
+          "keep-search-field"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-search-field": {
+      "id": "keep-search-field",
+      "componentId": "m3/search-input-field",
+      "properties": {
+        "value": {
+          "type": "string",
+          "value": ""
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "placeholder": [
+          "keep-search-placeholder"
+        ],
+        "leadingIcon": [
+          "keep-search-leading"
+        ],
+        "trailingIcon": [
+          "keep-search-trailing"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-search-placeholder": {
+      "id": "keep-search-placeholder",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Search your notes"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyLarge"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-search-leading": {
+      "id": "keep-search-leading",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/menu"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Open navigation drawer"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-search-trailing": {
+      "id": "keep-search-trailing",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/accountCircle"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Google Account"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-body": {
+      "id": "keep-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-heading-pinned",
+          "keep-grid",
+          "keep-create"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-heading-pinned": {
+      "id": "keep-heading-pinned",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Pinned"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "padding",
+          "startDp": 20,
+          "topDp": 8,
+          "endDp": 20,
+          "bottomDp": 4
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-grid": {
+      "id": "keep-grid",
+      "componentId": "layout/lazy-grid",
+      "properties": {
+        "columns": {
+          "type": "adaptiveGrid",
+          "minimumCellWidthDp": 240
+        },
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "contentPadding": {
+          "type": "padding",
+          "startDp": 20,
+          "topDp": 4,
+          "endDp": 20,
+          "bottomDp": 96
+        },
+        "scrollStateKey": {
+          "type": "string",
+          "value": "keep-notes-grid"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "items": [
+          "keep-note-shopping",
+          "keep-note-adaptive",
+          "keep-note-talk",
+          "keep-note-quote",
+          "keep-note-trip",
+          "keep-note-icons",
+          "keep-note-books",
+          "keep-note-ideas"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping": {
+      "id": "keep-note-shopping",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "outlined"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FFFFF8E1"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "keep-shopping"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "content": [
+          "keep-note-shopping-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-body": {
+      "id": "keep-note-shopping-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 14,
+          "endDp": 16,
+          "bottomDp": 14
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-shopping-title",
+          "keep-note-shopping-items",
+          "keep-note-shopping-labels"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-title": {
+      "id": "keep-note-shopping-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Shopping"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-items": {
+      "id": "keep-note-shopping-items",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-shopping-item-0",
+          "keep-note-shopping-item-1",
+          "keep-note-shopping-item-2",
+          "keep-note-shopping-item-3"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-0": {
+      "id": "keep-note-shopping-item-0",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-shopping-item-0-box",
+          "keep-note-shopping-item-0-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-0-box": {
+      "id": "keep-note-shopping-item-0-box",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "type": "bool",
+          "value": true
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-0-label": {
+      "id": "keep-note-shopping-item-0-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Oat milk"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "lineThrough"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-1": {
+      "id": "keep-note-shopping-item-1",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-shopping-item-1-box",
+          "keep-note-shopping-item-1-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-1-box": {
+      "id": "keep-note-shopping-item-1-box",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-1-label": {
+      "id": "keep-note-shopping-item-1-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Sourdough"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "none"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-2": {
+      "id": "keep-note-shopping-item-2",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-shopping-item-2-box",
+          "keep-note-shopping-item-2-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-2-box": {
+      "id": "keep-note-shopping-item-2-box",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-2-label": {
+      "id": "keep-note-shopping-item-2-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Coffee beans"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "none"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-3": {
+      "id": "keep-note-shopping-item-3",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-shopping-item-3-box",
+          "keep-note-shopping-item-3-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-3-box": {
+      "id": "keep-note-shopping-item-3-box",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-item-3-label": {
+      "id": "keep-note-shopping-item-3-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Chilli oil"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "none"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-labels": {
+      "id": "keep-note-shopping-labels",
+      "componentId": "layout/flow-row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        },
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-shopping-label-groceries"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-label-groceries": {
+      "id": "keep-note-shopping-label-groceries",
+      "componentId": "m3/filter-chip",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "small"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "label": [
+          "keep-note-shopping-label-groceries-text"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-shopping-label-groceries-text": {
+      "id": "keep-note-shopping-label-groceries-text",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Groceries"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-adaptive": {
+      "id": "keep-note-adaptive",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "outlined"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FFE8F0FE"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "keep-adaptive"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "content": [
+          "keep-note-adaptive-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-adaptive-body": {
+      "id": "keep-note-adaptive-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 14,
+          "endDp": 16,
+          "bottomDp": 14
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-adaptive-title",
+          "keep-note-adaptive-prose",
+          "keep-note-adaptive-labels"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-adaptive-title": {
+      "id": "keep-note-adaptive-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Adaptive checklist"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-adaptive-prose": {
+      "id": "keep-note-adaptive-prose",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Pane split, rail vs bar, list width, state across rotation."
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-adaptive-labels": {
+      "id": "keep-note-adaptive-labels",
+      "componentId": "layout/flow-row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        },
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-adaptive-label-work",
+          "keep-note-adaptive-label-compose"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-adaptive-label-work": {
+      "id": "keep-note-adaptive-label-work",
+      "componentId": "m3/filter-chip",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "small"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "label": [
+          "keep-note-adaptive-label-work-text"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-adaptive-label-work-text": {
+      "id": "keep-note-adaptive-label-work-text",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Work"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-adaptive-label-compose": {
+      "id": "keep-note-adaptive-label-compose",
+      "componentId": "m3/filter-chip",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "small"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "label": [
+          "keep-note-adaptive-label-compose-text"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-adaptive-label-compose-text": {
+      "id": "keep-note-adaptive-label-compose-text",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Compose"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk": {
+      "id": "keep-note-talk",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "outlined"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FFFCE8E6"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "keep-talk"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "content": [
+          "keep-note-talk-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-body": {
+      "id": "keep-note-talk-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 14,
+          "endDp": 16,
+          "bottomDp": 14
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-talk-title",
+          "keep-note-talk-items",
+          "keep-note-talk-labels"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-title": {
+      "id": "keep-note-talk-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Conference talk"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-items": {
+      "id": "keep-note-talk-items",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-talk-item-0",
+          "keep-note-talk-item-1",
+          "keep-note-talk-item-2",
+          "keep-note-talk-item-3"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-0": {
+      "id": "keep-note-talk-item-0",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-talk-item-0-box",
+          "keep-note-talk-item-0-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-0-box": {
+      "id": "keep-note-talk-item-0-box",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "type": "bool",
+          "value": true
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-0-label": {
+      "id": "keep-note-talk-item-0-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Draft outline"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "lineThrough"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-1": {
+      "id": "keep-note-talk-item-1",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-talk-item-1-box",
+          "keep-note-talk-item-1-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-1-box": {
+      "id": "keep-note-talk-item-1-box",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-1-label": {
+      "id": "keep-note-talk-item-1-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Record demo"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "none"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-2": {
+      "id": "keep-note-talk-item-2",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-talk-item-2-box",
+          "keep-note-talk-item-2-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-2-box": {
+      "id": "keep-note-talk-item-2-box",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-2-label": {
+      "id": "keep-note-talk-item-2-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Slides"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "none"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-3": {
+      "id": "keep-note-talk-item-3",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-talk-item-3-box",
+          "keep-note-talk-item-3-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-3-box": {
+      "id": "keep-note-talk-item-3-box",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-item-3-label": {
+      "id": "keep-note-talk-item-3-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Dry run"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "none"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-labels": {
+      "id": "keep-note-talk-labels",
+      "componentId": "layout/flow-row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        },
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-talk-label-talks"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-label-talks": {
+      "id": "keep-note-talk-label-talks",
+      "componentId": "m3/filter-chip",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "small"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "label": [
+          "keep-note-talk-label-talks-text"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-talk-label-talks-text": {
+      "id": "keep-note-talk-label-talks-text",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Talks"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-quote": {
+      "id": "keep-note-quote",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "outlined"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FFE6F4EA"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "keep-quote"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "content": [
+          "keep-note-quote-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-quote-body": {
+      "id": "keep-note-quote-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 14,
+          "endDp": 16,
+          "bottomDp": 14
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-quote-title",
+          "keep-note-quote-prose"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-quote-title": {
+      "id": "keep-note-quote-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Quote"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-quote-prose": {
+      "id": "keep-note-quote-prose",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "“Make the frame the window, and the rest follows.”"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-trip": {
+      "id": "keep-note-trip",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "outlined"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FFF3E8FD"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "keep-trip"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "content": [
+          "keep-note-trip-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-trip-body": {
+      "id": "keep-note-trip-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 14,
+          "endDp": 16,
+          "bottomDp": 14
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-trip-title",
+          "keep-note-trip-prose",
+          "keep-note-trip-labels"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-trip-title": {
+      "id": "keep-note-trip-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Trip — Tallinn"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-trip-prose": {
+      "id": "keep-note-trip-prose",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Ferry 08:30, old town walk, Telliskivi in the afternoon."
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-trip-labels": {
+      "id": "keep-note-trip-labels",
+      "componentId": "layout/flow-row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        },
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-trip-label-travel"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-trip-label-travel": {
+      "id": "keep-note-trip-label-travel",
+      "componentId": "m3/filter-chip",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "small"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "label": [
+          "keep-note-trip-label-travel-text"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-trip-label-travel-text": {
+      "id": "keep-note-trip-label-travel-text",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Travel"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons": {
+      "id": "keep-note-icons",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "outlined"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FFFFFFFF"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "keep-icons"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "content": [
+          "keep-note-icons-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-body": {
+      "id": "keep-note-icons-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 14,
+          "endDp": 16,
+          "bottomDp": 14
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-icons-title",
+          "keep-note-icons-items",
+          "keep-note-icons-labels"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-title": {
+      "id": "keep-note-icons-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Icon audit"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-items": {
+      "id": "keep-note-icons-items",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-icons-item-0",
+          "keep-note-icons-item-1",
+          "keep-note-icons-item-2"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-item-0": {
+      "id": "keep-note-icons-item-0",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-icons-item-0-box",
+          "keep-note-icons-item-0-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-item-0-box": {
+      "id": "keep-note-icons-item-0-box",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "type": "bool",
+          "value": true
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-item-0-label": {
+      "id": "keep-note-icons-item-0-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Rail glyphs"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "lineThrough"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-item-1": {
+      "id": "keep-note-icons-item-1",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-icons-item-1-box",
+          "keep-note-icons-item-1-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-item-1-box": {
+      "id": "keep-note-icons-item-1-box",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-item-1-label": {
+      "id": "keep-note-icons-item-1-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Filled vs outlined"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "none"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-item-2": {
+      "id": "keep-note-icons-item-2",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-icons-item-2-box",
+          "keep-note-icons-item-2-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-item-2-box": {
+      "id": "keep-note-icons-item-2-box",
+      "componentId": "m3/checkbox",
+      "properties": {
+        "checked": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-item-2-label": {
+      "id": "keep-note-icons-item-2-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Auto-mirrored set"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "none"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-labels": {
+      "id": "keep-note-icons-labels",
+      "componentId": "layout/flow-row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        },
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-icons-label-work"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-label-work": {
+      "id": "keep-note-icons-label-work",
+      "componentId": "m3/filter-chip",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "small"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "label": [
+          "keep-note-icons-label-work-text"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-icons-label-work-text": {
+      "id": "keep-note-icons-label-work-text",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Work"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-books": {
+      "id": "keep-note-books",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "outlined"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FFE0F7FA"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "keep-books"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "content": [
+          "keep-note-books-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-books-body": {
+      "id": "keep-note-books-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 14,
+          "endDp": 16,
+          "bottomDp": 14
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-books-title",
+          "keep-note-books-items"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-books-title": {
+      "id": "keep-note-books-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Reading"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-books-items": {
+      "id": "keep-note-books-items",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-books-item-0",
+          "keep-note-books-item-1"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-books-item-0": {
+      "id": "keep-note-books-item-0",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 10.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-books-item-0-dot",
+          "keep-note-books-item-0-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-books-item-0-dot": {
+      "id": "keep-note-books-item-0-dot",
+      "componentId": "shape/colour-dot",
+      "properties": {
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "diameterDp": {
+          "type": "float",
+          "value": 6.0
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-books-item-0-label": {
+      "id": "keep-note-books-item-0-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Designing Data-Intensive…"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "none"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-books-item-1": {
+      "id": "keep-note-books-item-1",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 10.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-books-item-1-dot",
+          "keep-note-books-item-1-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-books-item-1-dot": {
+      "id": "keep-note-books-item-1-dot",
+      "componentId": "shape/colour-dot",
+      "properties": {
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "diameterDp": {
+          "type": "float",
+          "value": 6.0
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-books-item-1-label": {
+      "id": "keep-note-books-item-1-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "The Art of Doing Science"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        },
+        "textDecoration": {
+          "type": "enum",
+          "value": "none"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-ideas": {
+      "id": "keep-note-ideas",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "outlined"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FFFFF0F0"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "keep-ideas"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "content": [
+          "keep-note-ideas-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-ideas-body": {
+      "id": "keep-note-ideas-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 14,
+          "endDp": 16,
+          "bottomDp": 14
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-ideas-title",
+          "keep-note-ideas-prose",
+          "keep-note-ideas-labels"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-ideas-title": {
+      "id": "keep-note-ideas-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Ideas"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-ideas-prose": {
+      "id": "keep-note-ideas-prose",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "A board of components, not a screen. Column with board defaults."
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-ideas-labels": {
+      "id": "keep-note-ideas-labels",
+      "componentId": "layout/flow-row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        },
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 6.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "keep-note-ideas-label-ideas"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-ideas-label-ideas": {
+      "id": "keep-note-ideas-label-ideas",
+      "componentId": "m3/filter-chip",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "small"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "label": [
+          "keep-note-ideas-label-ideas-text"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-note-ideas-label-ideas-text": {
+      "id": "keep-note-ideas-label-ideas-text",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Ideas"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-create": {
+      "id": "keep-create",
+      "componentId": "m3/horizontal-floating-toolbar",
+      "properties": {
+        "expanded": {
+          "type": "bool",
+          "value": true
+        },
+        "containerColor": {
+          "type": "colorToken",
+          "value": "surfaceContainerHigh"
+        },
+        "contentPadding": {
+          "type": "padding",
+          "startDp": 10,
+          "topDp": 6,
+          "endDp": 10,
+          "bottomDp": 6
+        }
+      },
+      "modifiers": [
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 8,
+          "endDp": 0,
+          "bottomDp": 20
+        }
+      ],
+      "slots": {
+        "content": [
+          "keep-create-new-list",
+          "keep-create-new-drawing",
+          "keep-create-new-recording",
+          "keep-create-new-note-with-image",
+          "keep-create-new-note"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-create-new-list": {
+      "id": "keep-create-new-list",
+      "componentId": "m3/icon-button",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "standard"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "keep-create-new-list-icon"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-create-new-list-icon": {
+      "id": "keep-create-new-list-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/checkBox"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "New list"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-create-new-drawing": {
+      "id": "keep-create-new-drawing",
+      "componentId": "m3/icon-button",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "standard"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "keep-create-new-drawing-icon"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-create-new-drawing-icon": {
+      "id": "keep-create-new-drawing-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/brush"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "New drawing"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-create-new-recording": {
+      "id": "keep-create-new-recording",
+      "componentId": "m3/icon-button",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "standard"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "keep-create-new-recording-icon"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-create-new-recording-icon": {
+      "id": "keep-create-new-recording-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/mic"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "New recording"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-create-new-note-with-image": {
+      "id": "keep-create-new-note-with-image",
+      "componentId": "m3/icon-button",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "standard"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "keep-create-new-note-with-image-icon"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-create-new-note-with-image-icon": {
+      "id": "keep-create-new-note-with-image-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/image"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "New note with image"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-create-new-note": {
+      "id": "keep-create-new-note",
+      "componentId": "m3/icon-button",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "filled"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "keep-create-new-note-icon"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "keep-create-new-note-icon": {
+      "id": "keep-create-new-note-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/add"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "New note"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    }
+  },
+  "assets": {},
+  "tokenBindings": {},
+  "createdAtEpochMillis": 1790342568997,
+  "updatedAtEpochMillis": 1791204255784,
+  "components": {},
+  "home": {
+    "kind": "server",
+    "url": "https://preview.coo.ee",
+    "designId": "google-keep-tablet"
+  }
+}
