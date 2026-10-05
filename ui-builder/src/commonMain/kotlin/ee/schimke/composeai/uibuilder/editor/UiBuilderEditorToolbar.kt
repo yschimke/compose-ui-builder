@@ -40,8 +40,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -333,6 +335,40 @@ internal fun MobilePanelDock(
       MobilePanelButton("Layers", MobileEditorPanel.Layers, panel, onPanelChanged)
       MobilePanelButton("Properties", MobileEditorPanel.Properties, panel, onPanelChanged)
       MobilePanelButton("Code", MobileEditorPanel.Code, panel, onPanelChanged)
+    }
+  }
+}
+
+/**
+ * The compact layout's view switcher: the editing canvas first, then one tab per frame the wide
+ * layout's Preview pane draws side by side.
+ *
+ * A phone has no room for that pane beside the canvas, so before this the only device a phone could
+ * see was the design's own frame, through the canvas's device toggle. Each tab here is one frame
+ * drawn whole and live, at the width the screen has, rather than a row of thumbnails.
+ *
+ * Scrollable, because the tabs are the design's: a design that targets five devices has six, and
+ * squeezing them into one screen's width would break every name in it.
+ */
+@Composable
+internal fun MobileViewTabs(
+  /** The tab names, the editor's first. */
+  labels: List<String>,
+  selectedIndex: Int,
+  onSelected: (Int) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  SecondaryScrollableTabRow(
+    selectedTabIndex = selectedIndex,
+    modifier = modifier.fillMaxWidth(),
+    edgePadding = 8.dp,
+  ) {
+    labels.forEachIndexed { index, label ->
+      Tab(
+        selected = index == selectedIndex,
+        onClick = { onSelected(index) },
+        text = { Text(label, maxLines = 1, softWrap = false) },
+      )
     }
   }
 }

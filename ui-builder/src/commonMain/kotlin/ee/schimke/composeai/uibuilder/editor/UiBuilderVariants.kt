@@ -122,6 +122,21 @@ private fun wearWidgetPreviewPanes(
   }
 
 /**
+ * The design at its own frame, as a preview pane: the first frame of a view that has no authoring
+ * canvas beside it to show the design's own size.
+ */
+internal fun UiBuilderDocument.currentFramePane(label: String = "Current"): UiBuilderVariantPane {
+  val settings = screenEnvironmentSettings()
+  return UiBuilderVariantPane(
+    id = "preview-current",
+    label = "$label · ${settings.widthDp}×${settings.heightDp}dp",
+    widthDp = settings.widthDp.toFloat(),
+    heightDp = settings.heightDp.toFloat(),
+    document = this,
+  )
+}
+
+/**
  * The panes to draw beside the editing pane, in the order they are shown, or empty for none.
  *
  * Devices first and then the unstored axes, because the devices are the design's own claim and the

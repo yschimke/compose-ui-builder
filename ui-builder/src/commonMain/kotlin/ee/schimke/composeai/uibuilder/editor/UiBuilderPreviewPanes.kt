@@ -548,9 +548,16 @@ internal fun DesignPreviewPane(
   modifier: Modifier = Modifier,
   /** The catalog's pinned runtime, which draws each device pane when the catalog has one. */
   deviceRenderer: UiBuilderCanvasRenderer? = null,
+  /**
+   * Draw [variants] exactly as given. A Wear widget design otherwise swaps them for its host-shape
+   * panes; the compact layout's preview tab has already chosen the one pane it shows.
+   */
+  exactPanes: Boolean = false,
 ) {
   val hostDensity = LocalDensity.current
-  val panes = document.wearWidgetScaffoldSize()?.let(document::wearWidgetPreviewPanes) ?: variants
+  val panes =
+    if (exactPanes) variants
+    else document.wearWidgetScaffoldSize()?.let(document::wearWidgetPreviewPanes) ?: variants
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(Modifier.fillMaxSize().padding(12.dp)) {
       BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {

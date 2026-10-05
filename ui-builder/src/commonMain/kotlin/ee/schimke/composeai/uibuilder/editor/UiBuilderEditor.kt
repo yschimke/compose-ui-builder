@@ -877,6 +877,9 @@ fun UiBuilderEditor(
   LaunchedEffect(state.selectedNodeId) {
     if (commentNodeId != state.selectedNodeId) commentNodeId = null
   }
+  // Which compact tab is showing: a preview pane's id, or null for the editor. Per design, like the
+  // panel, and a pane that goes away — its device unticked — falls back to the editor.
+  var mobileView by remember(document.id) { mutableStateOf<String?>(null) }
   // Opened where the URL asked for a panel, on a narrow viewport as much as a wide one. The
   // compact layout draws its docks from this rather than from [inspectorOpen], so initialising only
   // that flag left `?node=` and `#thread=` selecting silently on a phone: the state was right and
@@ -1552,17 +1555,17 @@ fun UiBuilderEditor(
       if (EditorPane.Editor in availablePanes || state.document.wearWidgetScaffoldSize() != null) {
         variantPanes
       } else {
-        val settings = state.document.screenEnvironmentSettings()
-        listOf(
-          UiBuilderVariantPane(
-            id = "preview-current",
-            label = "Current · ${settings.widthDp}×${settings.heightDp}dp",
-            widthDp = settings.widthDp.toFloat(),
-            heightDp = settings.heightDp.toFloat(),
-            document = state.document,
-          )
-        ) + variantPanes
+        listOf(state.document.currentFramePane()) + variantPanes
       }
+    }
+  // The compact layout's preview tabs, one frame each (see [MobileViewTabs]). The design's own
+  // frame comes first: the canvas is a tab away rather than beside it, and a design that names no
+  // devices still has a frame to try. A Wear widget's frames are its host shapes, as in
+  // the Preview pane.
+  val mobilePreviewPanes =
+    remember(state.document, variantPanes) {
+      state.document.wearWidgetScaffoldSize()?.let(state.document::wearWidgetPreviewPanes)
+        ?: (listOf(state.document.currentFramePane("Preview")) + variantPanes)
     }
   // The read-only pane. The catalog decides whether this is the constrained canvas renderer or an
   // exported artifact played by a browser adapter. No catalog or platform id is interpreted here:
@@ -1588,6 +1591,28 @@ fun UiBuilderEditor(
         variants = previewPanes,
         modifier = modifier,
         deviceRenderer = canvasRenderer,
+      )
+    }
+  }
+  // One preview tab's frame, drawn alone and fitted to the screen, by whichever pane the catalog
+  // previews with.
+  val mobilePreview: @Composable (UiBuilderVariantPane, Modifier) -> Unit = { pane, modifier ->
+    if (documentBackedPreview != null) {
+      RemoteDocumentDesignPreviewPane(
+        document = state.document,
+        variants = listOf(pane),
+        authoritativeGeneration = authoritativeGeneration,
+        request = requireNotNull(onRequestDocumentPreview),
+        modifier = modifier,
+        exactPanes = true,
+      )
+    } else {
+      DesignPreviewPane(
+        document = state.document,
+        variants = listOf(pane),
+        modifier = modifier,
+        deviceRenderer = canvasRenderer,
+        exactPanes = true,
       )
     }
   }
@@ -2971,89 +2996,122 @@ fun UiBuilderEditor(
                 )
               }
             } else {
-              // The sheets that edit the selection leave the canvas above them, refitted to the
-              // space that is left, so the element being edited is still on screen. The Components
-              // and Layers sheets do not: they are for carrying something *to* the canvas, step
-              // aside while it is carried, and a canvas that had shrunk under them would be a
-              // smaller drop target than the one the drag started over.
-              val editingSheet =
-                mobilePanel == MobileEditorPanel.Properties ||
-                  (mobilePanel == MobileEditorPanel.Code && generatedCode != null)
-              // This box's height rather than the window's: the sheets are a fraction of this box,
-              // and
-              // an open keyboard has already been taken out of it.
-              val editingSheetHeight = maxHeight * MOBILE_EDITING_SHEET_FRACTION
-              // While the keyboard is up the dock is hidden: the sheet being typed into needs the
-              // room more than the tabs that would close it, and the keyboard covers the home
-              // indicator the dock would otherwise pad for.
-              val dockHeight =
-                if (viewportInsets.keyboardOpen) 0.dp
-                else MOBILE_DOCK_HEIGHT + viewportInsets.bottom
-              canvas(
-                Modifier.fillMaxSize()
-                  .background(LocalUiBuilderEditorPalette.current.workspace)
-                  .padding(
-                    start = 8.dp,
-                    top = 8.dp,
-                    end = 8.dp,
-                    bottom = (if (editingSheet) editingSheetHeight else 0.dp) + dockHeight + 8.dp,
-                  ),
-                Alignment.Center,
-              )
-              val mobileNavigatorTab =
-                when (mobilePanel) {
-                  MobileEditorPanel.Components -> NavigatorTab.Insert
-                  MobileEditorPanel.Layers -> NavigatorTab.Layers
-                  else -> null
+              val shownPreview = mobileView?.let { id ->
+                mobilePreviewPanes.firstOrNull { it.id == id }
+              }
+              Column(Modifier.fillMaxSize()) {
+                if (!viewportInsets.keyboardOpen) {
+                  MobileViewTabs(
+                    // The device's name alone: the pane's own label carries its size and density.
+                    labels =
+                      listOf("Editor") + mobilePreviewPanes.map { it.label.substringBefore(" · ") },
+                    selectedIndex = shownPreview?.let { mobilePreviewPanes.indexOf(it) + 1 } ?: 0,
+                    onSelected = { index ->
+                      mobileView = mobilePreviewPanes.getOrNull(index - 1)?.id
+                      // A sheet edits the canvas, which a preview tab is not showing.
+                      if (mobileView != null) mobilePanel = MobileEditorPanel.None
+                    },
+                  )
                 }
-              mobileNavigatorTab?.let { open ->
-                // Carrying a component, the sheet steps aside: it covers most of the canvas the
-                // component is being carried to. Faded rather than removed, because the drag lives
-                // in the tile that started it, and taking the tile out of the composition would
-                // cancel the gesture in the finger's hand.
-                val carrying = draggedComponentId != null
-                navigator(
-                  Modifier.align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.72f)
-                    .padding(bottom = dockHeight)
-                    .graphicsLayer { alpha = if (carrying) 0f else 1f },
-                  open,
-                  true,
-                ) {
-                  mobilePanel = MobileEditorPanel.None
+                BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+                  // The sheets that edit the selection leave the canvas above them, refitted to the
+                  // space that is left, so the element being edited is still on screen. The
+                  // Components and Layers sheets do not: they are for carrying something *to* the
+                  // canvas, step aside while it is carried, and a canvas that had shrunk under them
+                  // would be a smaller drop target than the one the drag started over.
+                  val editingSheet =
+                    mobilePanel == MobileEditorPanel.Properties ||
+                      (mobilePanel == MobileEditorPanel.Code && generatedCode != null)
+                  // This box's height rather than the window's: the sheets are a fraction of this
+                  // box, and an open keyboard has already been taken out of it.
+                  val editingSheetHeight = maxHeight * MOBILE_EDITING_SHEET_FRACTION
+                  // While the keyboard is up the dock is hidden: the sheet being typed into needs
+                  // the room more than the tabs that would close it, and the keyboard covers the
+                  // home indicator the dock would otherwise pad for.
+                  val dockHeight =
+                    if (viewportInsets.keyboardOpen) 0.dp
+                    else MOBILE_DOCK_HEIGHT + viewportInsets.bottom
+                  if (shownPreview == null) {
+                    canvas(
+                      Modifier.fillMaxSize()
+                        .background(LocalUiBuilderEditorPalette.current.workspace)
+                        .padding(
+                          start = 8.dp,
+                          top = 8.dp,
+                          end = 8.dp,
+                          bottom =
+                            (if (editingSheet) editingSheetHeight else 0.dp) + dockHeight + 8.dp,
+                        ),
+                      Alignment.Center,
+                    )
+                  } else {
+                    // Instead of the canvas, not over it: a catalog runtime draws the canvas in a
+                    // page layer above this one, which no Compose sibling can cover.
+                    mobilePreview(shownPreview, Modifier.fillMaxSize().padding(bottom = dockHeight))
+                  }
+                  val mobileNavigatorTab =
+                    when (mobilePanel) {
+                      MobileEditorPanel.Components -> NavigatorTab.Insert
+                      MobileEditorPanel.Layers -> NavigatorTab.Layers
+                      else -> null
+                    }
+                  mobileNavigatorTab?.let { open ->
+                    // Carrying a component, the sheet steps aside: it covers most of the canvas the
+                    // component is being carried to. Faded rather than removed, because the drag
+                    // lives in the tile that started it, and taking the tile out of the composition
+                    // would cancel the gesture in the finger's hand.
+                    val carrying = draggedComponentId != null
+                    navigator(
+                      Modifier.align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.72f)
+                        .padding(bottom = dockHeight)
+                        .graphicsLayer { alpha = if (carrying) 0f else 1f },
+                      open,
+                      true,
+                    ) {
+                      mobilePanel = MobileEditorPanel.None
+                    }
+                  }
+                  if (mobilePanel == MobileEditorPanel.Properties) {
+                    inspector(
+                      Modifier.align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
+                        .padding(bottom = dockHeight),
+                      // Never, here: the compact layout draws the authoring canvas and has no room
+                      // for a preview pane beside it, so nothing on this branch draws a device or
+                      // an axis.
+                      false,
+                    )
+                  }
+                  if (mobilePanel == MobileEditorPanel.Code && generatedCode != null) {
+                    GeneratedCodePane(
+                      generatedCode,
+                      generatedCodeCaption,
+                      Modifier.align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
+                        .padding(bottom = dockHeight),
+                    )
+                  }
+                  if (!viewportInsets.keyboardOpen) {
+                    MobilePanelDock(
+                      panel = mobilePanel,
+                      onPanelChanged = {
+                        // Every panel edits or feeds the canvas, so opening one goes back to it.
+                        if (shownPreview != null) {
+                          mobileView = null
+                          mobilePanel = it
+                        } else {
+                          mobilePanel = if (mobilePanel == it) MobileEditorPanel.None else it
+                        }
+                      },
+                      modifier = Modifier.align(Alignment.BottomCenter),
+                      bottomInset = viewportInsets.bottom,
+                    )
+                  }
                 }
-              }
-              if (mobilePanel == MobileEditorPanel.Properties) {
-                inspector(
-                  Modifier.align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
-                    .padding(bottom = dockHeight),
-                  // Never, here: the compact layout draws the authoring canvas and has no room for
-                  // a preview pane beside it, so nothing on this branch draws a device or an axis.
-                  false,
-                )
-              }
-              if (mobilePanel == MobileEditorPanel.Code && generatedCode != null) {
-                GeneratedCodePane(
-                  generatedCode,
-                  generatedCodeCaption,
-                  Modifier.align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
-                    .padding(bottom = dockHeight),
-                )
-              }
-              if (!viewportInsets.keyboardOpen) {
-                MobilePanelDock(
-                  panel = mobilePanel,
-                  onPanelChanged = {
-                    mobilePanel = if (mobilePanel == it) MobileEditorPanel.None else it
-                  },
-                  modifier = Modifier.align(Alignment.BottomCenter),
-                  bottomInset = viewportInsets.bottom,
-                )
               }
             }
           }
