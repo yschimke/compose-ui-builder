@@ -198,6 +198,7 @@ internal class HostOpenedDesign(
   val label: String,
   val generation: Int,
   val seeded: Boolean,
+  private val fileContext: OpenedUidDesign? = null,
 ) {
   private var published: UiBuilderDocument = document
   private var publishedSelection: String? = null
@@ -218,8 +219,14 @@ internal class HostOpenedDesign(
   fun publishIfChanged(current: UiBuilderDocument) {
     if (current === published) return
     val changed = current != published
-    published = current
-    if (changed) postHostChanged(encodeHostDesign(current))
+    if (changed) {
+      runCatching { fileContext?.encode(current) ?: encodeHostDesign(current) }
+        .onSuccess { text ->
+          published = current
+          postHostChanged(text)
+        }
+        .onFailure { postHostError("Not saved: ${it.message}") }
+    }
   }
 }
 
@@ -227,9 +234,10 @@ internal fun openHostDesign(messageJson: String, generation: Int): HostOpenedDes
   val message = hostMessageJson.decodeFromString(HostOpenMessage.serializer(), messageJson)
   val catalog = CapabilityCatalogParser.parse(message.capabilities)
   val seed = message.seed
+  val fileContext = message.document.takeIf { it.isNotBlank() }?.let(UidDesignFiles::open)
   val document =
     if (message.document.isNotBlank()) {
-      decodeHostDesign(message.document)
+      requireNotNull(fileContext).document
     } else {
       requireNotNull(seed) { "the design file is empty and the host sent no seed" }
       val systemId = catalog.benchmark.catalogSystemId
@@ -253,6 +261,7 @@ internal fun openHostDesign(messageJson: String, generation: Int): HostOpenedDes
     label = message.label.ifBlank { document.title.ifBlank { document.id } },
     generation = generation,
     seeded = message.document.isBlank(),
+    fileContext = fileContext,
   )
 }
 

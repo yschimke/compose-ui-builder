@@ -24,6 +24,44 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 
 class DesktopDesignFilesTest {
+  @Test
+  fun `production file survives an actual editor command and native session reload`() =
+    runBlocking {
+      val fixture =
+        checkNotNull(javaClass.classLoader.getResource("production-editor.uid")).readText()
+      val original =
+        ee.schimke.composeai.uibuilder.export.production.ProductionUidFiles.decode(fixture)
+      val path = Files.createTempDirectory("production-desktop").resolve("EpisodeCard.uid")
+      try {
+        Files.writeString(path, fixture)
+        openDesktopSession(DesktopDesign.File(path), path.parent, remoteServer = null).use { session
+          ->
+          val height = editHeight(session)
+          withTimeout(10.seconds) {
+            while (DesignFiles.read(path).revision == original.design!!.revision) delay(20)
+          }
+          val saved =
+            ee.schimke.composeai.uibuilder.export.production.ProductionUidFiles.decode(
+              Files.readString(path)
+            )
+          assertEquals(original.copy(design = saved.design), saved)
+          assertEquals(height, DesignFiles.read(path).screenEnvironmentSettings().heightDp)
+        }
+        openDesktopSession(DesktopDesign.File(path), path.parent, remoteServer = null).use { session
+          ->
+          val reloaded =
+            withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+              .snapshot
+              .state
+              .document
+          // The service stamps its snapshot on open; compare authored layout fields.
+          assertEquals(DesignFiles.read(path), reloaded.toUiBuilderDocument())
+        }
+      } finally {
+        path.parent.toFile().deleteRecursively()
+      }
+    }
+
   private val catalog = OfflineCatalog.WEAR_M3.capabilityCatalog()
   private val seed =
     OfflineCatalog.WEAR_M3.seed(
@@ -76,7 +114,12 @@ class DesktopDesignFilesTest {
           initial,
           UiBuilderEditorEvent.UpdateEnvironment(settings.copy(heightDp = settings.heightDp + 2)),
         )
-      session.submit(assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited)))
+      session.submit(
+        assertIs<EditorSubmission.Batch>(
+          reducer.acceptedSubmission(initial, edited),
+          edited.lastOutcome.toString(),
+        )
+      )
 
       withTimeout(10.seconds) {
         while (DesignFiles.read(path).revision == document.revision) delay(20)
@@ -106,7 +149,12 @@ class DesktopDesignFilesTest {
         initial,
         UiBuilderEditorEvent.UpdateEnvironment(settings.copy(heightDp = settings.heightDp + 2)),
       )
-    session.submit(assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, edited)))
+    session.submit(
+      assertIs<EditorSubmission.Batch>(
+        reducer.acceptedSubmission(initial, edited),
+        edited.lastOutcome.toString(),
+      )
+    )
     return settings.heightDp + 2
   }
 

@@ -27,8 +27,6 @@ import java.net.URI
 import java.nio.file.Path
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 internal class UiBuilderSessionSelection(
   initialSession: UiBuilderSession,
@@ -306,6 +304,17 @@ internal fun isUiBuilderDesignFile(file: VirtualFile): Boolean {
     cachedByStamp(file, designSchemaKey, ::readDesignSchema) in supportedProjectDesignSchemas
 }
 
+internal fun isProductionDesignFile(file: VirtualFile): Boolean =
+  isUiBuilderDesignFile(file) &&
+    cachedByStamp(file, productionSchemaKey) { candidate ->
+      // The embedded design has its own schema. Only the top-level declaration selects this format,
+      // even when an external formatter places it after the design body.
+      runCatching { isProductionDesignSource(candidate.inputStream.reader().use { it.readText() }) }
+        .getOrDefault(false)
+    } == true
+
+private val productionSchemaKey = Key.create<StampedValue<Boolean>>("uiBuilder.productionSchema")
+
 private class StampedValue<T : Any>(val modificationStamp: Long, val value: T?)
 
 private val designSchemaKey = Key.create<StampedValue<String>>("uiBuilder.schema")
@@ -346,7 +355,7 @@ private val supportedProjectDesignSchemas =
   setOf(
     "compose-ui-builder-document/v1",
     "compose-ui-builder-document/v1-candidate",
-  )
+  ) + ee.schimke.composeai.uibuilder.export.production.ProductionUidFiles.SCHEMAS
 
 private const val UI_BUILDER_DESIGN_EXTENSION = "uid"
 private val supportedProjectDesignExtensions = setOf("json", UI_BUILDER_DESIGN_EXTENSION)
@@ -431,7 +440,6 @@ private class ProjectDesignWriter(
     // Taken and cleared together: a commit landing between a read and a separate clear would
     // be erased, with nothing left scheduled to write it.
     val document = synchronized(lock) { pending.also { pending = null } } ?: return
-    val bytes = projectDesignJson.encodeToString(document).encodeToByteArray()
     isWriting = true
     val failure =
       try {
@@ -443,6 +451,8 @@ private class ProjectDesignWriter(
           check(file.modificationStamp == expectedModificationStamp) {
             "${file.name} changed outside the visual editor; reopen it before editing"
           }
+          val original = file.inputStream.reader().use { it.readText() }
+          val bytes = DesignFiles.encode(document, original).encodeToByteArray()
           file.setBinaryContent(bytes)
           expectedModificationStamp = file.modificationStamp
         }
@@ -457,15 +467,6 @@ private class ProjectDesignWriter(
 }
 
 private const val WRITE_DELAY_MS = 300
-
-private val projectDesignJson = Json {
-  classDiscriminator = "type"
-  encodeDefaults = true
-  explicitNulls = true
-  ignoreUnknownKeys = true
-  prettyPrint = true
-  prettyPrintIndent = "  "
-}
 
 internal const val PREVIEW_CONTENT = "Preview"
 

@@ -1,6 +1,8 @@
 package ee.schimke.composeai.uibuilder.host
 
+import ee.schimke.composeai.uibuilder.UidDesignFiles
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import java.nio.file.Files
@@ -31,6 +33,10 @@ object DesignFiles {
   fun decode(text: String): DesignDocumentV1 {
     val encoded = json.parseToJsonElement(text)
     val objectValue = encoded as? JsonObject
+    val schema = (objectValue?.get("schema") as? JsonPrimitive)?.contentOrNull
+    if (schema?.startsWith("compose-ui-builder-production/") == true) {
+      return UidDesignFiles.open(text).document.toDesignDocumentV1()
+    }
     val home = objectValue?.get("home") as? JsonObject
     val homeKind = (home?.get("kind") as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
     // The protocol's sealed serializer rejects a future home discriminator before the builder's
@@ -68,6 +74,23 @@ object DesignFiles {
   /** The exact text [write] puts in a file for [document]. */
   fun encode(document: DesignDocumentV1): String =
     json.encodeToString(DesignDocumentV1.serializer(), document)
+
+  /**
+   * A host saving an opened file must supply its original bytes so production metadata survives.
+   */
+  fun encode(document: DesignDocumentV1, original: String?): String {
+    val schema =
+      original
+        ?.let { (json.parseToJsonElement(it) as? JsonObject)?.get("schema") as? JsonPrimitive }
+        ?.contentOrNull
+    return if (schema?.startsWith("compose-ui-builder-production/") == true) {
+      UidDesignFiles.open(requireNotNull(original)).encode(document.toUiBuilderDocument())
+    } else encode(document)
+  }
+
+  fun write(path: Path, document: DesignDocumentV1, original: String?) {
+    writeText(path, encode(document, original))
+  }
 
   internal fun writeText(path: Path, text: String) {
     val absolute = path.toAbsolutePath()
@@ -118,7 +141,7 @@ class DesignFileGuard(private val path: Path) {
     check(current() == known) {
       "${path.fileName} changed on disk since it was opened; reopen it to pick up that change"
     }
-    val text = DesignFiles.encode(document)
+    val text = DesignFiles.encode(document, known)
     DesignFiles.writeText(path, text)
     // What was written, not what is there now: a save by another process landing just after this
     // one must read as a change at the next write, not be adopted as this editor's own.

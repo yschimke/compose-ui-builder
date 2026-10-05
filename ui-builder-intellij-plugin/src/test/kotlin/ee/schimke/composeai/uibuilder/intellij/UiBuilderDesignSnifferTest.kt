@@ -7,6 +7,18 @@ import kotlin.test.assertNull
 
 class UiBuilderDesignSnifferTest {
   @Test
+  fun productionSchemasAreRecognizedEvenAfterTheEmbeddedDesign() {
+    val text =
+      """{"design":{"schema":"compose-ui-builder-document/v1"},"schema":"compose-ui-builder-production/v1"}"""
+    assertEquals(true, isProductionDesignSource(text))
+    val late =
+      "{\"padding\":\"" +
+        "x".repeat(DESIGN_HEADER_SNIFF_BYTES * 3) +
+        "\",\"schema\":\"compose-ui-builder-production/v1\"}"
+    assertEquals("compose-ui-builder-production/v1", scanForDesignSchema(late.byteInputStream()))
+  }
+
+  @Test
   fun readsTheDeclaredSchema() {
     assertEquals(
       "compose-ui-builder-document/v1",

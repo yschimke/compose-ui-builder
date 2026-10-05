@@ -97,10 +97,18 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
     val opened =
       remember(design) {
         runCatching {
-          openDesktopSession(design, storageRoot, options.remoteServer, options.catalogOverride)
+          val original = (design as? DesktopDesign.File)?.path?.let(java.nio.file.Files::readString)
+          val session =
+            openDesktopSession(design, storageRoot, options.remoteServer, options.catalogOverride)
+          val path = (design as? DesktopDesign.File)?.path
+          if (path != null && java.nio.file.Files.readString(path) != original) {
+            session.close()
+            error("${path.fileName} changed while opening; reopen it before editing")
+          }
+          session to original
         }
       }
-    val session = opened.getOrNull()
+    val session = opened.getOrNull()?.first
     DisposableEffect(session) { onDispose { session?.close() } }
     // A file that no longer opens falls back to the scratch workspace rather than a blank window.
     opened.exceptionOrNull()?.let { failure ->
@@ -118,7 +126,7 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
           val current = session?.snapshot?.value?.snapshot?.state?.document ?: return@saveAs
           val target =
             chooseDesignFile(window, FileDialog.SAVE, "${current.id}.uid") ?: return@saveAs
-          runCatching { DesignFiles.write(target, current) }
+          runCatching { DesignFiles.write(target, current, opened.getOrNull()?.second) }
             .onSuccess { design = DesktopDesign.File(target) }
             .onFailure { showError("Cannot save ${target.fileName}", it) }
         },

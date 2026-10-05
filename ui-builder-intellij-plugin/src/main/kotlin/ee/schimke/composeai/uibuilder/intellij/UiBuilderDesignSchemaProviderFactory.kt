@@ -11,11 +11,12 @@ import com.jetbrains.jsonSchema.extension.SchemaType
  */
 class UiBuilderDesignSchemaProviderFactory : JsonSchemaProviderFactory {
   override fun getProviders(project: Project): List<JsonSchemaFileProvider> =
-    listOf(UiBuilderDesignSchemaProvider)
+    listOf(UiBuilderDesignSchemaProvider, UiBuilderProductionSchemaProvider)
 }
 
 private object UiBuilderDesignSchemaProvider : JsonSchemaFileProvider {
-  override fun isAvailable(file: VirtualFile): Boolean = isUiBuilderDesignFile(file)
+  override fun isAvailable(file: VirtualFile): Boolean =
+    isUiBuilderDesignFile(file) && !isProductionDesignFile(file)
 
   override fun getName(): String = "Compose UI Builder design"
 
@@ -24,6 +25,22 @@ private object UiBuilderDesignSchemaProvider : JsonSchemaFileProvider {
       JsonSchemaProviderFactory.getResourceFile(
         UiBuilderDesignSchemaProvider::class.java,
         "/schemas/compose-ui-builder-document-v1.schema.json",
+      )
+    )
+
+  override fun getSchemaType(): SchemaType = SchemaType.embeddedSchema
+}
+
+private object UiBuilderProductionSchemaProvider : JsonSchemaFileProvider {
+  override fun isAvailable(file: VirtualFile): Boolean = isProductionDesignFile(file)
+
+  override fun getName(): String = "Compose UI Builder production contract"
+
+  override fun getSchemaFile(): VirtualFile =
+    checkNotNull(
+      JsonSchemaProviderFactory.getResourceFile(
+        UiBuilderProductionSchemaProvider::class.java,
+        "/schemas/compose-ui-builder-production-v1.schema.json",
       )
     )
 

@@ -1,6 +1,8 @@
 package ee.schimke.composeai.uibuilder.export.production
 
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.protocol.production.PRODUCTION_UID_SCHEMA_V1
+import ee.schimke.composeai.uibuilder.protocol.production.ProductionUidFileV1
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -8,10 +10,12 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Experimental project-file contract, deliberately distinct from the editor's v1 document.
+ * Build-tool compatibility adapter for the canonical production protocol in
+ * compose-preview-contracts.
  *
- * An old editor must refuse this schema rather than discard an application API on save. These
- * declarations are not part of the released design-service protocol yet.
+ * Existing build callers retain these Kotlin types and signatures. ProductionUidFiles checks every
+ * declaration against ProductionUidFileV1 before adapting it to the generator's document model. The
+ * production wrapper remains distinct from the ordinary design-service document.
  */
 @Serializable
 data class ProductionUidFile(
@@ -137,6 +141,11 @@ data class ProductionComponentUse(
 object ProductionUidFiles {
   const val SCHEMA: String = "compose-ui-builder-production/v1-candidate"
 
+  const val VERSIONED_SCHEMA: String = PRODUCTION_UID_SCHEMA_V1
+  val SCHEMAS: Set<String> = setOf(SCHEMA, VERSIONED_SCHEMA)
+
+  private val wireJson = Json { classDiscriminator = "type" }
+
   private val json = Json {
     classDiscriminator = "kind"
     encodeDefaults = true
@@ -149,12 +158,20 @@ object ProductionUidFiles {
   fun decode(text: String): ProductionUidFile {
     val encoded = json.parseToJsonElement(text)
     val schema = ((encoded as? JsonObject)?.get("schema") as? JsonPrimitive)?.content
-    require(schema == SCHEMA) { "unsupported production schema '$schema'; expected '$SCHEMA'" }
+    require(schema in SCHEMAS) {
+      "unsupported production schema '$schema'; expected one of $SCHEMAS"
+    }
+    // The candidate admitted builder-only incomplete design fixtures. Keep that legacy behaviour;
+    // the versioned file also checks the embedded design against the shared document protocol.
+    val wire = if (schema == SCHEMA) JsonObject(encoded - "design") else encoded
+    wireJson.decodeFromJsonElement(ProductionUidFileV1.serializer(), wire)
     return json.decodeFromJsonElement(ProductionUidFile.serializer(), encoded)
   }
 
   fun encode(file: ProductionUidFile): String {
-    require(file.schema == SCHEMA) { "unsupported production schema '${file.schema}'" }
-    return json.encodeToString(ProductionUidFile.serializer(), file) + "\n"
+    require(file.schema in SCHEMAS) { "unsupported production schema '${file.schema}'" }
+    val text = json.encodeToString(ProductionUidFile.serializer(), file) + "\n"
+    decode(text)
+    return text
   }
 }
