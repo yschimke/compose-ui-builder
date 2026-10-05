@@ -79,6 +79,15 @@ like this pull request's branch and the job builds it instead of the server's `m
 branch then merges with the release that carries the break, bumping its pin in the same commit.
 Until it does, the job is red on `main` here, so cut that release promptly.
 
+Three more modules leave this repository, but as **test fixtures, not seams**:
+`:ui-builder-renderer`, `:ui-builder-reference-jetcaster` and `:ui-builder-generated-jetcaster`
+are attached to each release as `compose-preview-ui-builder-<module>-<v>.zip` (`harness-dists` in
+`release.yml`) for compose-preview-server's visual harness, which downloads them for the version it
+pins. Nothing in the server compiles against them, resolves them through Gradle, or ships them, so
+they carry no API promise: a change to them can only turn that harness red, on the server's next
+pin bump. The asset NAMES are the contract; renaming one, or a dist's layout, needs the matching
+change to the server's `preview-harness/fetch-ui-builder-dists.sh`.
+
 ## Assets whose writer is in the other repository
 
 `.github/scripts/decoder-shapes.json` is READ by `ui-builder-equivalence.sh` here and WRITTEN by
