@@ -2,7 +2,7 @@
   "schema": "compose-ui-builder-document/v1-candidate",
   "id": "google-calendar-tablet",
   "title": "Google Calendar — Day and month (tablet)",
-  "revision": 2,
+  "revision": 3,
   "catalogPin": {
     "systemId": "m3-catalog",
     "catalogRevision": "candidate",
@@ -874,7 +874,7 @@
       "slots": {
         "children": [
           "cal-slot-0900-rule",
-          "cal-event-0900"
+          "cal-event-0900-item"
         ]
       },
       "eventBindings": {},
@@ -917,8 +917,8 @@
           "value": "filled"
         },
         "containerColor": {
-          "type": "color",
-          "value": "#FF1A73E8"
+          "type": "binding",
+          "value": "containerColor"
         },
         "shape": {
           "type": "shapeToken",
@@ -986,8 +986,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Design review — adaptive panes"
+          "type": "binding",
+          "value": "title"
         },
         "style": {
           "type": "enum",
@@ -1017,8 +1017,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "09:00 – 10:00 · Meet"
+          "type": "binding",
+          "value": "schedule"
         },
         "style": {
           "type": "enum",
@@ -1125,7 +1125,7 @@
       "slots": {
         "children": [
           "cal-slot-1000-rule",
-          "cal-event-1000"
+          "cal-event-1000-item"
         ]
       },
       "eventBindings": {},
@@ -1154,133 +1154,6 @@
           "alignment": "topStart"
         }
       ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1000": {
-      "id": "cal-event-1000",
-      "componentId": "m3/card",
-      "properties": {
-        "variant": {
-          "type": "enum",
-          "value": "filled"
-        },
-        "containerColor": {
-          "type": "color",
-          "value": "#FF0F9D58"
-        },
-        "shape": {
-          "type": "shapeToken",
-          "value": "medium"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 4,
-          "endDp": 0,
-          "bottomDp": 4
-        }
-      ],
-      "slots": {
-        "content": [
-          "cal-event-1000-body"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1000-body": {
-      "id": "cal-event-1000-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 12,
-          "topDp": 8,
-          "endDp": 12,
-          "bottomDp": 8
-        }
-      ],
-      "slots": {
-        "children": [
-          "cal-event-1000-title",
-          "cal-event-1000-detail"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1000-title": {
-      "id": "cal-event-1000-title",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Catalog audit with Priya"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1000-detail": {
-      "id": "cal-event-1000-detail",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "10:00 – 10:45 · Room 4"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
-        }
-      },
-      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
@@ -1499,7 +1372,7 @@
       "slots": {
         "children": [
           "cal-slot-1200-rule",
-          "cal-event-1200"
+          "cal-event-1200-item"
         ]
       },
       "eventBindings": {},
@@ -1528,133 +1401,6 @@
           "alignment": "topStart"
         }
       ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1200": {
-      "id": "cal-event-1200",
-      "componentId": "m3/card",
-      "properties": {
-        "variant": {
-          "type": "enum",
-          "value": "filled"
-        },
-        "containerColor": {
-          "type": "color",
-          "value": "#FFE37400"
-        },
-        "shape": {
-          "type": "shapeToken",
-          "value": "medium"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 4,
-          "endDp": 0,
-          "bottomDp": 4
-        }
-      ],
-      "slots": {
-        "content": [
-          "cal-event-1200-body"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1200-body": {
-      "id": "cal-event-1200-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 12,
-          "topDp": 8,
-          "endDp": 12,
-          "bottomDp": 8
-        }
-      ],
-      "slots": {
-        "children": [
-          "cal-event-1200-title",
-          "cal-event-1200-detail"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1200-title": {
-      "id": "cal-event-1200-title",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Lunch"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1200-detail": {
-      "id": "cal-event-1200-detail",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "12:00 – 13:00"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
-        }
-      },
-      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
@@ -1873,7 +1619,7 @@
       "slots": {
         "children": [
           "cal-slot-1400-rule",
-          "cal-event-1400"
+          "cal-event-1400-item"
         ]
       },
       "eventBindings": {},
@@ -1902,133 +1648,6 @@
           "alignment": "topStart"
         }
       ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1400": {
-      "id": "cal-event-1400",
-      "componentId": "m3/card",
-      "properties": {
-        "variant": {
-          "type": "enum",
-          "value": "filled"
-        },
-        "containerColor": {
-          "type": "color",
-          "value": "#FF9334E6"
-        },
-        "shape": {
-          "type": "shapeToken",
-          "value": "medium"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 4,
-          "endDp": 0,
-          "bottomDp": 4
-        }
-      ],
-      "slots": {
-        "content": [
-          "cal-event-1400-body"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1400-body": {
-      "id": "cal-event-1400-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 12,
-          "topDp": 8,
-          "endDp": 12,
-          "bottomDp": 8
-        }
-      ],
-      "slots": {
-        "children": [
-          "cal-event-1400-title",
-          "cal-event-1400-detail"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1400-title": {
-      "id": "cal-event-1400-title",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Tablet layout spike"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1400-detail": {
-      "id": "cal-event-1400-detail",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "14:00 – 15:30 · Focus time"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
-        }
-      },
-      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
@@ -2247,7 +1866,7 @@
       "slots": {
         "children": [
           "cal-slot-1600-rule",
-          "cal-event-1600"
+          "cal-event-1600-item"
         ]
       },
       "eventBindings": {},
@@ -2276,133 +1895,6 @@
           "alignment": "topStart"
         }
       ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1600": {
-      "id": "cal-event-1600",
-      "componentId": "m3/card",
-      "properties": {
-        "variant": {
-          "type": "enum",
-          "value": "filled"
-        },
-        "containerColor": {
-          "type": "color",
-          "value": "#FFEA4335"
-        },
-        "shape": {
-          "type": "shapeToken",
-          "value": "medium"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 4,
-          "endDp": 0,
-          "bottomDp": 4
-        }
-      ],
-      "slots": {
-        "content": [
-          "cal-event-1600-body"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1600-body": {
-      "id": "cal-event-1600-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 12,
-          "topDp": 8,
-          "endDp": 12,
-          "bottomDp": 8
-        }
-      ],
-      "slots": {
-        "children": [
-          "cal-event-1600-title",
-          "cal-event-1600-detail"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1600-title": {
-      "id": "cal-event-1600-title",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Weekly sync"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "cal-event-1600-detail": {
-      "id": "cal-event-1600-detail",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "16:00 – 16:30 · Meet"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "color",
-          "value": "#FFFFFFFF"
-        }
-      },
-      "modifiers": [],
       "slots": {},
       "eventBindings": {},
       "assetBindings": {},
@@ -5277,13 +4769,154 @@
       "eventBindings": {},
       "assetBindings": {},
       "tokenBindings": {}
+    },
+    "cal-event-0900-item": {
+      "id": "cal-event-0900-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "calendar-event-item",
+        "arguments": {
+          "containerColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "title": {
+            "type": "string",
+            "value": "Design review — adaptive panes"
+          },
+          "schedule": {
+            "type": "string",
+            "value": "09:00 – 10:00 · Meet"
+          }
+        }
+      }
+    },
+    "cal-event-1000-item": {
+      "id": "cal-event-1000-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "calendar-event-item",
+        "arguments": {
+          "containerColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          },
+          "title": {
+            "type": "string",
+            "value": "Catalog audit with Priya"
+          },
+          "schedule": {
+            "type": "string",
+            "value": "10:00 – 10:45 · Room 4"
+          }
+        }
+      }
+    },
+    "cal-event-1200-item": {
+      "id": "cal-event-1200-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "calendar-event-item",
+        "arguments": {
+          "containerColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          },
+          "title": {
+            "type": "string",
+            "value": "Lunch"
+          },
+          "schedule": {
+            "type": "string",
+            "value": "12:00 – 13:00"
+          }
+        }
+      }
+    },
+    "cal-event-1400-item": {
+      "id": "cal-event-1400-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "calendar-event-item",
+        "arguments": {
+          "containerColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          },
+          "title": {
+            "type": "string",
+            "value": "Tablet layout spike"
+          },
+          "schedule": {
+            "type": "string",
+            "value": "14:00 – 15:30 · Focus time"
+          }
+        }
+      }
+    },
+    "cal-event-1600-item": {
+      "id": "cal-event-1600-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "calendar-event-item",
+        "arguments": {
+          "containerColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          },
+          "title": {
+            "type": "string",
+            "value": "Weekly sync"
+          },
+          "schedule": {
+            "type": "string",
+            "value": "16:00 – 16:30 · Meet"
+          }
+        }
+      }
     }
   },
   "assets": {},
   "tokenBindings": {},
   "createdAtEpochMillis": 1790342565459,
-  "updatedAtEpochMillis": 1791204282183,
-  "components": {},
+  "updatedAtEpochMillis": 1791208732824,
+  "components": {
+    "calendar-event-item": {
+      "name": "CalendarEventItem",
+      "root": "cal-event-0900",
+      "description": "Reusable calendar item. Typed Kotlin model: CalendarEvent."
+    }
+  },
   "home": {
     "kind": "server",
     "url": "https://preview.coo.ee",

@@ -1433,7 +1433,7 @@ public fun projectRendererDocument(
                 "modifiers" to (node["modifiers"] ?: JsonArray(emptyList())),
                 "slots" to (node["slots"] ?: JsonObject(emptyMap())),
                 "eventBindings" to (node["eventBindings"] ?: JsonObject(emptyMap())),
-              )
+              ) + node.filterKeys { it == "component" }
             )
         }
     )
@@ -1449,7 +1449,7 @@ public fun projectRendererDocument(
         "stateVariables" to (source["stateVariables"] ?: JsonObject(emptyMap())),
         "roots" to source.getValue("roots"),
         "nodes" to projectedNodes,
-      ) + projectedAssets(document, resolveAsset)
+      ) + source.filterKeys { it == "components" } + projectedAssets(document, resolveAsset)
     )
   return canonicalJson(projected)
 }

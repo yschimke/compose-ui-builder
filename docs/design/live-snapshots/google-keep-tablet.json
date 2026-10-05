@@ -2,7 +2,7 @@
   "schema": "compose-ui-builder-document/v1-candidate",
   "id": "google-keep-tablet",
   "title": "Google Keep — Notes grid (tablet)",
-  "revision": 1,
+  "revision": 2,
   "catalogPin": {
     "systemId": "m3-catalog",
     "catalogRevision": "candidate",
@@ -728,10 +728,10 @@
       ],
       "slots": {
         "children": [
-          "keep-note-shopping-item-0",
-          "keep-note-shopping-item-1",
-          "keep-note-shopping-item-2",
-          "keep-note-shopping-item-3"
+          "keep-note-shopping-item-0-item",
+          "keep-note-shopping-item-1-item",
+          "keep-note-shopping-item-2-item",
+          "keep-note-shopping-item-3-item"
         ]
       },
       "eventBindings": {},
@@ -771,8 +771,8 @@
       "componentId": "m3/checkbox",
       "properties": {
         "checked": {
-          "type": "bool",
-          "value": true
+          "type": "binding",
+          "value": "checked"
         }
       },
       "modifiers": [],
@@ -786,8 +786,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Oat milk"
+          "type": "binding",
+          "value": "title"
         },
         "style": {
           "type": "enum",
@@ -850,8 +850,8 @@
       "componentId": "m3/checkbox",
       "properties": {
         "checked": {
-          "type": "bool",
-          "value": false
+          "type": "binding",
+          "value": "checked"
         }
       },
       "modifiers": [],
@@ -865,166 +865,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Sourdough"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        },
-        "textDecoration": {
-          "type": "enum",
-          "value": "none"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-shopping-item-2": {
-      "id": "keep-note-shopping-item-2",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-shopping-item-2-box",
-          "keep-note-shopping-item-2-label"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-shopping-item-2-box": {
-      "id": "keep-note-shopping-item-2-box",
-      "componentId": "m3/checkbox",
-      "properties": {
-        "checked": {
-          "type": "bool",
-          "value": false
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-shopping-item-2-label": {
-      "id": "keep-note-shopping-item-2-label",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Coffee beans"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        },
-        "textDecoration": {
-          "type": "enum",
-          "value": "none"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-shopping-item-3": {
-      "id": "keep-note-shopping-item-3",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-shopping-item-3-box",
-          "keep-note-shopping-item-3-label"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-shopping-item-3-box": {
-      "id": "keep-note-shopping-item-3-box",
-      "componentId": "m3/checkbox",
-      "properties": {
-        "checked": {
-          "type": "bool",
-          "value": false
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-shopping-item-3-label": {
-      "id": "keep-note-shopping-item-3-label",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Chilli oil"
+          "type": "binding",
+          "value": "title"
         },
         "style": {
           "type": "enum",
@@ -1158,7 +1000,7 @@
       ],
       "slots": {
         "content": [
-          "keep-note-adaptive-body"
+          "keep-note-adaptive-body-item"
         ]
       },
       "eventBindings": {},
@@ -1206,8 +1048,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Adaptive checklist"
+          "type": "binding",
+          "value": "title"
         },
         "style": {
           "type": "enum",
@@ -1229,8 +1071,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Pane split, rail vs bar, list width, state across rotation."
+          "type": "binding",
+          "value": "body"
         },
         "style": {
           "type": "enum",
@@ -1310,8 +1152,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Work"
+          "type": "binding",
+          "value": "label"
         },
         "style": {
           "type": "enum",
@@ -1352,8 +1194,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Compose"
+          "type": "binding",
+          "value": "label2"
         },
         "style": {
           "type": "enum",
@@ -1476,328 +1318,12 @@
       ],
       "slots": {
         "children": [
-          "keep-note-talk-item-0",
-          "keep-note-talk-item-1",
-          "keep-note-talk-item-2",
-          "keep-note-talk-item-3"
+          "keep-note-talk-item-0-item",
+          "keep-note-talk-item-1-item",
+          "keep-note-talk-item-2-item",
+          "keep-note-talk-item-3-item"
         ]
       },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-0": {
-      "id": "keep-note-talk-item-0",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-talk-item-0-box",
-          "keep-note-talk-item-0-label"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-0-box": {
-      "id": "keep-note-talk-item-0-box",
-      "componentId": "m3/checkbox",
-      "properties": {
-        "checked": {
-          "type": "bool",
-          "value": true
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-0-label": {
-      "id": "keep-note-talk-item-0-label",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Draft outline"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        },
-        "textDecoration": {
-          "type": "enum",
-          "value": "lineThrough"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-1": {
-      "id": "keep-note-talk-item-1",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-talk-item-1-box",
-          "keep-note-talk-item-1-label"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-1-box": {
-      "id": "keep-note-talk-item-1-box",
-      "componentId": "m3/checkbox",
-      "properties": {
-        "checked": {
-          "type": "bool",
-          "value": false
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-1-label": {
-      "id": "keep-note-talk-item-1-label",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Record demo"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        },
-        "textDecoration": {
-          "type": "enum",
-          "value": "none"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-2": {
-      "id": "keep-note-talk-item-2",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-talk-item-2-box",
-          "keep-note-talk-item-2-label"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-2-box": {
-      "id": "keep-note-talk-item-2-box",
-      "componentId": "m3/checkbox",
-      "properties": {
-        "checked": {
-          "type": "bool",
-          "value": false
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-2-label": {
-      "id": "keep-note-talk-item-2-label",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Slides"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        },
-        "textDecoration": {
-          "type": "enum",
-          "value": "none"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-3": {
-      "id": "keep-note-talk-item-3",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-talk-item-3-box",
-          "keep-note-talk-item-3-label"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-3-box": {
-      "id": "keep-note-talk-item-3-box",
-      "componentId": "m3/checkbox",
-      "properties": {
-        "checked": {
-          "type": "bool",
-          "value": false
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-talk-item-3-label": {
-      "id": "keep-note-talk-item-3-label",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Dry run"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        },
-        "textDecoration": {
-          "type": "enum",
-          "value": "none"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {},
       "eventBindings": {},
       "assetBindings": {},
       "tokenBindings": {}
@@ -1906,7 +1432,7 @@
       ],
       "slots": {
         "content": [
-          "keep-note-quote-body"
+          "keep-note-quote-body-item"
         ]
       },
       "eventBindings": {},
@@ -1953,8 +1479,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Quote"
+          "type": "binding",
+          "value": "title"
         },
         "style": {
           "type": "enum",
@@ -1976,8 +1502,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "“Make the frame the window, and the rest follows.”"
+          "type": "binding",
+          "value": "body"
         },
         "style": {
           "type": "enum",
@@ -2022,7 +1548,7 @@
       ],
       "slots": {
         "content": [
-          "keep-note-trip-body"
+          "keep-note-trip-body-item"
         ]
       },
       "eventBindings": {},
@@ -2070,8 +1596,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Trip — Tallinn"
+          "type": "binding",
+          "value": "title"
         },
         "style": {
           "type": "enum",
@@ -2093,8 +1619,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Ferry 08:30, old town walk, Telliskivi in the afternoon."
+          "type": "binding",
+          "value": "body"
         },
         "style": {
           "type": "enum",
@@ -2173,8 +1699,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Travel"
+          "type": "binding",
+          "value": "label"
         },
         "style": {
           "type": "enum",
@@ -2297,248 +1823,11 @@
       ],
       "slots": {
         "children": [
-          "keep-note-icons-item-0",
-          "keep-note-icons-item-1",
-          "keep-note-icons-item-2"
+          "keep-note-icons-item-0-item",
+          "keep-note-icons-item-1-item",
+          "keep-note-icons-item-2-item"
         ]
       },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-icons-item-0": {
-      "id": "keep-note-icons-item-0",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-icons-item-0-box",
-          "keep-note-icons-item-0-label"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-icons-item-0-box": {
-      "id": "keep-note-icons-item-0-box",
-      "componentId": "m3/checkbox",
-      "properties": {
-        "checked": {
-          "type": "bool",
-          "value": true
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-icons-item-0-label": {
-      "id": "keep-note-icons-item-0-label",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Rail glyphs"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        },
-        "textDecoration": {
-          "type": "enum",
-          "value": "lineThrough"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-icons-item-1": {
-      "id": "keep-note-icons-item-1",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-icons-item-1-box",
-          "keep-note-icons-item-1-label"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-icons-item-1-box": {
-      "id": "keep-note-icons-item-1-box",
-      "componentId": "m3/checkbox",
-      "properties": {
-        "checked": {
-          "type": "bool",
-          "value": false
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-icons-item-1-label": {
-      "id": "keep-note-icons-item-1-label",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Filled vs outlined"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        },
-        "textDecoration": {
-          "type": "enum",
-          "value": "none"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-icons-item-2": {
-      "id": "keep-note-icons-item-2",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-icons-item-2-box",
-          "keep-note-icons-item-2-label"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-icons-item-2-box": {
-      "id": "keep-note-icons-item-2-box",
-      "componentId": "m3/checkbox",
-      "properties": {
-        "checked": {
-          "type": "bool",
-          "value": false
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-icons-item-2-label": {
-      "id": "keep-note-icons-item-2-label",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Auto-mirrored set"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        },
-        "textDecoration": {
-          "type": "enum",
-          "value": "none"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {},
       "eventBindings": {},
       "assetBindings": {},
       "tokenBindings": {}
@@ -2728,8 +2017,8 @@
       ],
       "slots": {
         "children": [
-          "keep-note-books-item-0",
-          "keep-note-books-item-1"
+          "keep-note-books-item-0-item",
+          "keep-note-books-item-1-item"
         ]
       },
       "eventBindings": {},
@@ -2788,91 +2077,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Designing Data-Intensive…"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        },
-        "textDecoration": {
-          "type": "enum",
-          "value": "none"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-books-item-1": {
-      "id": "keep-note-books-item-1",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 10.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-books-item-1-dot",
-          "keep-note-books-item-1-label"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-books-item-1-dot": {
-      "id": "keep-note-books-item-1-dot",
-      "componentId": "shape/colour-dot",
-      "properties": {
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "diameterDp": {
-          "type": "float",
-          "value": 6.0
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-books-item-1-label": {
-      "id": "keep-note-books-item-1-label",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "The Art of Doing Science"
+          "type": "binding",
+          "value": "title"
         },
         "style": {
           "type": "enum",
@@ -2930,167 +2136,9 @@
       ],
       "slots": {
         "content": [
-          "keep-note-ideas-body"
+          "keep-note-ideas-body-item"
         ]
       },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-ideas-body": {
-      "id": "keep-note-ideas-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 8.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 16,
-          "topDp": 14,
-          "endDp": 16,
-          "bottomDp": 14
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-ideas-title",
-          "keep-note-ideas-prose",
-          "keep-note-ideas-labels"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-ideas-title": {
-      "id": "keep-note-ideas-title",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Ideas"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "semiBold"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-ideas-prose": {
-      "id": "keep-note-ideas-prose",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "A board of components, not a screen. Column with board defaults."
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-ideas-labels": {
-      "id": "keep-note-ideas-labels",
-      "componentId": "layout/flow-row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 6.0
-        },
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 6.0
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 0,
-          "topDp": 4,
-          "endDp": 0,
-          "bottomDp": 0
-        }
-      ],
-      "slots": {
-        "children": [
-          "keep-note-ideas-label-ideas"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-ideas-label-ideas": {
-      "id": "keep-note-ideas-label-ideas",
-      "componentId": "m3/filter-chip",
-      "properties": {
-        "selected": {
-          "type": "bool",
-          "value": false
-        },
-        "shape": {
-          "type": "shapeToken",
-          "value": "small"
-        }
-      },
-      "modifiers": [],
-      "slots": {
-        "label": [
-          "keep-note-ideas-label-ideas-text"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "keep-note-ideas-label-ideas-text": {
-      "id": "keep-note-ideas-label-ideas-text",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Ideas"
-        },
-        "style": {
-          "type": "enum",
-          "value": "labelSmall"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
       "eventBindings": {},
       "assetBindings": {},
       "tokenBindings": {}
@@ -3326,13 +2374,443 @@
       "eventBindings": {},
       "assetBindings": {},
       "tokenBindings": {}
+    },
+    "keep-note-adaptive-body-item": {
+      "id": "keep-note-adaptive-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content",
+        "arguments": {
+          "title": {
+            "type": "string",
+            "value": "Adaptive checklist"
+          },
+          "body": {
+            "type": "string",
+            "value": "Pane split, rail vs bar, list width, state across rotation."
+          },
+          "label": {
+            "type": "string",
+            "value": "Work"
+          },
+          "label2": {
+            "type": "string",
+            "value": "Compose"
+          }
+        }
+      }
+    },
+    "keep-note-quote-body-item": {
+      "id": "keep-note-quote-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content2",
+        "arguments": {
+          "title": {
+            "type": "string",
+            "value": "Quote"
+          },
+          "body": {
+            "type": "string",
+            "value": "“Make the frame the window, and the rest follows.”"
+          }
+        }
+      }
+    },
+    "keep-note-trip-body-item": {
+      "id": "keep-note-trip-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content3",
+        "arguments": {
+          "title": {
+            "type": "string",
+            "value": "Trip — Tallinn"
+          },
+          "body": {
+            "type": "string",
+            "value": "Ferry 08:30, old town walk, Telliskivi in the afternoon."
+          },
+          "label": {
+            "type": "string",
+            "value": "Travel"
+          }
+        }
+      }
+    },
+    "keep-note-ideas-body-item": {
+      "id": "keep-note-ideas-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content3",
+        "arguments": {
+          "title": {
+            "type": "string",
+            "value": "Ideas"
+          },
+          "body": {
+            "type": "string",
+            "value": "A board of components, not a screen. Column with board defaults."
+          },
+          "label": {
+            "type": "string",
+            "value": "Ideas"
+          }
+        }
+      }
+    },
+    "keep-note-shopping-item-0-item": {
+      "id": "keep-note-shopping-item-0-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content4",
+        "arguments": {
+          "checked": {
+            "type": "bool",
+            "value": true
+          },
+          "title": {
+            "type": "string",
+            "value": "Oat milk"
+          }
+        }
+      }
+    },
+    "keep-note-talk-item-0-item": {
+      "id": "keep-note-talk-item-0-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content4",
+        "arguments": {
+          "checked": {
+            "type": "bool",
+            "value": true
+          },
+          "title": {
+            "type": "string",
+            "value": "Draft outline"
+          }
+        }
+      }
+    },
+    "keep-note-icons-item-0-item": {
+      "id": "keep-note-icons-item-0-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content4",
+        "arguments": {
+          "checked": {
+            "type": "bool",
+            "value": true
+          },
+          "title": {
+            "type": "string",
+            "value": "Rail glyphs"
+          }
+        }
+      }
+    },
+    "keep-note-shopping-item-1-item": {
+      "id": "keep-note-shopping-item-1-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content5",
+        "arguments": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          },
+          "title": {
+            "type": "string",
+            "value": "Sourdough"
+          }
+        }
+      }
+    },
+    "keep-note-shopping-item-2-item": {
+      "id": "keep-note-shopping-item-2-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content5",
+        "arguments": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          },
+          "title": {
+            "type": "string",
+            "value": "Coffee beans"
+          }
+        }
+      }
+    },
+    "keep-note-shopping-item-3-item": {
+      "id": "keep-note-shopping-item-3-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content5",
+        "arguments": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          },
+          "title": {
+            "type": "string",
+            "value": "Chilli oil"
+          }
+        }
+      }
+    },
+    "keep-note-talk-item-1-item": {
+      "id": "keep-note-talk-item-1-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content5",
+        "arguments": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          },
+          "title": {
+            "type": "string",
+            "value": "Record demo"
+          }
+        }
+      }
+    },
+    "keep-note-talk-item-2-item": {
+      "id": "keep-note-talk-item-2-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content5",
+        "arguments": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          },
+          "title": {
+            "type": "string",
+            "value": "Slides"
+          }
+        }
+      }
+    },
+    "keep-note-talk-item-3-item": {
+      "id": "keep-note-talk-item-3-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content5",
+        "arguments": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          },
+          "title": {
+            "type": "string",
+            "value": "Dry run"
+          }
+        }
+      }
+    },
+    "keep-note-icons-item-1-item": {
+      "id": "keep-note-icons-item-1-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content5",
+        "arguments": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          },
+          "title": {
+            "type": "string",
+            "value": "Filled vs outlined"
+          }
+        }
+      }
+    },
+    "keep-note-icons-item-2-item": {
+      "id": "keep-note-icons-item-2-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content5",
+        "arguments": {
+          "checked": {
+            "type": "bool",
+            "value": false
+          },
+          "title": {
+            "type": "string",
+            "value": "Auto-mirrored set"
+          }
+        }
+      }
+    },
+    "keep-note-books-item-0-item": {
+      "id": "keep-note-books-item-0-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content6",
+        "arguments": {
+          "title": {
+            "type": "string",
+            "value": "Designing Data-Intensive…"
+          }
+        }
+      }
+    },
+    "keep-note-books-item-1-item": {
+      "id": "keep-note-books-item-1-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "note-content6",
+        "arguments": {
+          "title": {
+            "type": "string",
+            "value": "The Art of Doing Science"
+          }
+        }
+      }
     }
   },
   "assets": {},
   "tokenBindings": {},
   "createdAtEpochMillis": 1790342568997,
-  "updatedAtEpochMillis": 1791204255784,
-  "components": {},
+  "updatedAtEpochMillis": 1791208735317,
+  "components": {
+    "note-content": {
+      "name": "TwoLabelNoteContent",
+      "root": "keep-note-adaptive-body",
+      "description": "Reusable keep item. Typed Kotlin model: Note."
+    },
+    "note-content2": {
+      "name": "PlainNoteContent",
+      "root": "keep-note-quote-body",
+      "description": "Reusable keep item. Typed Kotlin model: Note2."
+    },
+    "note-content3": {
+      "name": "LabeledNoteContent",
+      "root": "keep-note-trip-body",
+      "description": "Reusable keep item. Typed Kotlin model: Note3."
+    },
+    "note-content4": {
+      "name": "CompletedChecklistItem",
+      "root": "keep-note-shopping-item-0",
+      "description": "Reusable keep item. Typed Kotlin model: Note4."
+    },
+    "note-content5": {
+      "name": "ChecklistItem",
+      "root": "keep-note-shopping-item-1",
+      "description": "Reusable keep item. Typed Kotlin model: Note5."
+    },
+    "note-content6": {
+      "name": "BulletNoteItem",
+      "root": "keep-note-books-item-0",
+      "description": "Reusable keep item. Typed Kotlin model: Note6."
+    }
+  },
   "home": {
     "kind": "server",
     "url": "https://preview.coo.ee",

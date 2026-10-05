@@ -2,7 +2,7 @@
   "schema": "compose-ui-builder-document/v1-candidate",
   "id": "google-play-tablet",
   "title": "Google Play — Games and apps (tablet)",
-  "revision": 1,
+  "revision": 2,
   "catalogPin": {
     "systemId": "m3-catalog",
     "catalogRevision": "candidate",
@@ -832,7 +832,7 @@
       ],
       "slots": {
         "content": [
-          "play-feature-stellar-body"
+          "play-feature-stellar-body-item"
         ]
       },
       "eventBindings": {},
@@ -894,12 +894,12 @@
       "componentId": "shape/linear-gradient",
       "properties": {
         "startColor": {
-          "type": "color",
-          "value": "#FF1A73E8"
+          "type": "binding",
+          "value": "startColor"
         },
         "endColor": {
-          "type": "color",
-          "value": "#FF9334E6"
+          "type": "binding",
+          "value": "endColor"
         },
         "direction": {
           "type": "enum",
@@ -956,8 +956,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Stellar Drift"
+          "type": "binding",
+          "value": "title"
         },
         "style": {
           "type": "enum",
@@ -1007,8 +1007,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Racing · 4.7"
+          "type": "binding",
+          "value": "rating"
         },
         "style": {
           "type": "enum",
@@ -1042,8 +1042,8 @@
           "value": "filled/star"
         },
         "contentDescription": {
-          "type": "string",
-          "value": "Rating"
+          "type": "binding",
+          "value": "contentDescription"
         },
         "sizeDp": {
           "type": "float",
@@ -1089,230 +1089,9 @@
       ],
       "slots": {
         "content": [
-          "play-feature-bloom-body"
+          "play-feature-bloom-body-item"
         ]
       },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-bloom-body": {
-      "id": "play-feature-bloom-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 8.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-bloom-art",
-          "play-feature-bloom-meta"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-bloom-art": {
-      "id": "play-feature-bloom-art",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "height",
-          "heightDp": 124
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-bloom-art-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-bloom-art-fill": {
-      "id": "play-feature-bloom-art-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF0F9D58"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFB4E197"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-bloom-meta": {
-      "id": "play-feature-bloom-meta",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 12,
-          "topDp": 0,
-          "endDp": 12,
-          "bottomDp": 12
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-bloom-title",
-          "play-feature-bloom-rating"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-bloom-title": {
-      "id": "play-feature-bloom-title",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Bloom & Bramble"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-bloom-rating": {
-      "id": "play-feature-bloom-rating",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 4.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [],
-      "slots": {
-        "children": [
-          "play-feature-bloom-genre",
-          "play-feature-bloom-star"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-bloom-genre": {
-      "id": "play-feature-bloom-genre",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Puzzle · 4.9"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-bloom-star": {
-      "id": "play-feature-bloom-star",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/star"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Rating"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 12.0
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
       "eventBindings": {},
       "assetBindings": {},
       "tokenBindings": {}
@@ -1346,230 +1125,9 @@
       ],
       "slots": {
         "content": [
-          "play-feature-lantern-body"
+          "play-feature-lantern-body-item"
         ]
       },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-lantern-body": {
-      "id": "play-feature-lantern-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 8.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-lantern-art",
-          "play-feature-lantern-meta"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-lantern-art": {
-      "id": "play-feature-lantern-art",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "height",
-          "heightDp": 124
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-lantern-art-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-lantern-art-fill": {
-      "id": "play-feature-lantern-art-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFE37400"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFFBBC04"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-lantern-meta": {
-      "id": "play-feature-lantern-meta",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 12,
-          "topDp": 0,
-          "endDp": 12,
-          "bottomDp": 12
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-lantern-title",
-          "play-feature-lantern-rating"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-lantern-title": {
-      "id": "play-feature-lantern-title",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Lantern Keeper"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-lantern-rating": {
-      "id": "play-feature-lantern-rating",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 4.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [],
-      "slots": {
-        "children": [
-          "play-feature-lantern-genre",
-          "play-feature-lantern-star"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-lantern-genre": {
-      "id": "play-feature-lantern-genre",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Adventure · 4.5"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-lantern-star": {
-      "id": "play-feature-lantern-star",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/star"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Rating"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 12.0
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
       "eventBindings": {},
       "assetBindings": {},
       "tokenBindings": {}
@@ -1603,230 +1161,9 @@
       ],
       "slots": {
         "content": [
-          "play-feature-skyline-body"
+          "play-feature-skyline-body-item"
         ]
       },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-skyline-body": {
-      "id": "play-feature-skyline-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 8.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-skyline-art",
-          "play-feature-skyline-meta"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-skyline-art": {
-      "id": "play-feature-skyline-art",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "height",
-          "heightDp": 124
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-skyline-art-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-skyline-art-fill": {
-      "id": "play-feature-skyline-art-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FF3C4043"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FF80868B"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-skyline-meta": {
-      "id": "play-feature-skyline-meta",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 12,
-          "topDp": 0,
-          "endDp": 12,
-          "bottomDp": 12
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-skyline-title",
-          "play-feature-skyline-rating"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-skyline-title": {
-      "id": "play-feature-skyline-title",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Skyline Tactics"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-skyline-rating": {
-      "id": "play-feature-skyline-rating",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 4.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [],
-      "slots": {
-        "children": [
-          "play-feature-skyline-genre",
-          "play-feature-skyline-star"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-skyline-genre": {
-      "id": "play-feature-skyline-genre",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Strategy · 4.4"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-skyline-star": {
-      "id": "play-feature-skyline-star",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/star"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Rating"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 12.0
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
       "eventBindings": {},
       "assetBindings": {},
       "tokenBindings": {}
@@ -1860,230 +1197,9 @@
       ],
       "slots": {
         "content": [
-          "play-feature-nimbus-body"
+          "play-feature-nimbus-body-item"
         ]
       },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-nimbus-body": {
-      "id": "play-feature-nimbus-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 8.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-nimbus-art",
-          "play-feature-nimbus-meta"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-nimbus-art": {
-      "id": "play-feature-nimbus-art",
-      "componentId": "layout/box",
-      "properties": {},
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "height",
-          "heightDp": 124
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-nimbus-art-fill"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-nimbus-art-fill": {
-      "id": "play-feature-nimbus-art-fill",
-      "componentId": "shape/linear-gradient",
-      "properties": {
-        "startColor": {
-          "type": "color",
-          "value": "#FFEA4335"
-        },
-        "endColor": {
-          "type": "color",
-          "value": "#FFFBBC04"
-        },
-        "direction": {
-          "type": "enum",
-          "value": "leftToRight"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "matchParentSize"
-        }
-      ],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-nimbus-meta": {
-      "id": "play-feature-nimbus-meta",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        },
-        "horizontalAlignment": {
-          "type": "enum",
-          "value": "start"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        },
-        {
-          "type": "padding",
-          "startDp": 12,
-          "topDp": 0,
-          "endDp": 12,
-          "bottomDp": 12
-        }
-      ],
-      "slots": {
-        "children": [
-          "play-feature-nimbus-title",
-          "play-feature-nimbus-rating"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-nimbus-title": {
-      "id": "play-feature-nimbus-title",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Nimbus Racer"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-nimbus-rating": {
-      "id": "play-feature-nimbus-rating",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalSpacingDp": {
-          "type": "float",
-          "value": 4.0
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [],
-      "slots": {
-        "children": [
-          "play-feature-nimbus-genre",
-          "play-feature-nimbus-star"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-nimbus-genre": {
-      "id": "play-feature-nimbus-genre",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Arcade · 4.6"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "play-feature-nimbus-star": {
-      "id": "play-feature-nimbus-star",
-      "componentId": "m3/icon",
-      "properties": {
-        "iconKey": {
-          "type": "enum",
-          "value": "filled/star"
-        },
-        "contentDescription": {
-          "type": "string",
-          "value": "Rating"
-        },
-        "sizeDp": {
-          "type": "float",
-          "value": 12.0
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
       "eventBindings": {},
       "assetBindings": {},
       "tokenBindings": {}
@@ -3902,13 +3018,194 @@
       "eventBindings": {},
       "assetBindings": {},
       "tokenBindings": {}
+    },
+    "play-feature-stellar-body-item": {
+      "id": "play-feature-stellar-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "store-app-card",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF1A73E8"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF9334E6"
+          },
+          "title": {
+            "type": "string",
+            "value": "Stellar Drift"
+          },
+          "rating": {
+            "type": "string",
+            "value": "Racing · 4.7"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Rating"
+          }
+        }
+      }
+    },
+    "play-feature-bloom-body-item": {
+      "id": "play-feature-bloom-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "store-app-card",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF0F9D58"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFB4E197"
+          },
+          "title": {
+            "type": "string",
+            "value": "Bloom & Bramble"
+          },
+          "rating": {
+            "type": "string",
+            "value": "Puzzle · 4.9"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Rating"
+          }
+        }
+      }
+    },
+    "play-feature-lantern-body-item": {
+      "id": "play-feature-lantern-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "store-app-card",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFE37400"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          },
+          "title": {
+            "type": "string",
+            "value": "Lantern Keeper"
+          },
+          "rating": {
+            "type": "string",
+            "value": "Adventure · 4.5"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Rating"
+          }
+        }
+      }
+    },
+    "play-feature-skyline-body-item": {
+      "id": "play-feature-skyline-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "store-app-card",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FF3C4043"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FF80868B"
+          },
+          "title": {
+            "type": "string",
+            "value": "Skyline Tactics"
+          },
+          "rating": {
+            "type": "string",
+            "value": "Strategy · 4.4"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Rating"
+          }
+        }
+      }
+    },
+    "play-feature-nimbus-body-item": {
+      "id": "play-feature-nimbus-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "store-app-card",
+        "arguments": {
+          "startColor": {
+            "type": "color",
+            "value": "#FFEA4335"
+          },
+          "endColor": {
+            "type": "color",
+            "value": "#FFFBBC04"
+          },
+          "title": {
+            "type": "string",
+            "value": "Nimbus Racer"
+          },
+          "rating": {
+            "type": "string",
+            "value": "Arcade · 4.6"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Rating"
+          }
+        }
+      }
     }
   },
   "assets": {},
   "tokenBindings": {},
   "createdAtEpochMillis": 1790342575852,
-  "updatedAtEpochMillis": 1791204256974,
-  "components": {},
+  "updatedAtEpochMillis": 1791208736490,
+  "components": {
+    "store-app-card": {
+      "name": "StoreAppCard",
+      "root": "play-feature-stellar-body",
+      "description": "Reusable play item. Typed Kotlin model: StoreApp."
+    }
+  },
   "home": {
     "kind": "server",
     "url": "https://preview.coo.ee",

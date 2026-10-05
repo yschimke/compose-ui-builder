@@ -2,7 +2,7 @@
   "schema": "compose-ui-builder-document/v1-candidate",
   "id": "google-gmail-tablet",
   "title": "Gmail — Inbox and reading pane (tablet)",
-  "revision": 14,
+  "revision": 15,
   "catalogPin": {
     "systemId": "m3-catalog",
     "catalogRevision": "candidate",
@@ -855,7 +855,7 @@
       "slots": {
         "children": [
           "msg-android-avatar",
-          "msg-android-body",
+          "msg-android-body-item",
           "icon-25"
         ]
       },
@@ -940,12 +940,7 @@
           "value": 2.0
         }
       },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
+      "modifiers": [],
       "slots": {
         "children": [
           "msg-android-head",
@@ -990,8 +985,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Android Developers"
+          "type": "binding",
+          "value": "sender"
         },
         "style": {
           "type": "enum",
@@ -1021,8 +1016,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "9:41"
+          "type": "binding",
+          "value": "receivedAt"
         },
         "style": {
           "type": "enum",
@@ -1044,8 +1039,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Compose 1.9 is stable"
+          "type": "binding",
+          "value": "subject"
         },
         "style": {
           "type": "enum",
@@ -1075,8 +1070,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Adaptive layouts, shared element transitions and a…"
+          "type": "binding",
+          "value": "snippet"
         },
         "style": {
           "type": "enum",
@@ -1163,7 +1158,7 @@
       "slots": {
         "children": [
           "msg-figma-avatar",
-          "msg-figma-body",
+          "msg-figma-body-item",
           "icon-31"
         ]
       },
@@ -1239,176 +1234,6 @@
       "assetBindings": {},
       "tokenBindings": {}
     },
-    "msg-figma-body": {
-      "id": "msg-figma-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-figma-head",
-          "text-29",
-          "text-30"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-figma-head": {
-      "id": "msg-figma-head",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalArrangement": {
-          "type": "enum",
-          "value": "spaceBetween"
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "text-27",
-          "text-28"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-27": {
-      "id": "text-27",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Figma"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "bold"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-28": {
-      "id": "text-28",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "9:12"
-        },
-        "style": {
-          "type": "enum",
-          "value": "labelSmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "primary"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-29": {
-      "id": "text-29",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "3 new comments on Inbox / Tablet"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "semiBold"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-30": {
-      "id": "text-30",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Yuri replied: “the supporting pane should keep its…"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
     "icon-31": {
       "id": "icon-31",
       "componentId": "m3/icon",
@@ -1464,7 +1289,7 @@
       "slots": {
         "children": [
           "msg-play-avatar",
-          "msg-play-body",
+          "msg-play-body-item",
           "icon-37"
         ]
       },
@@ -1549,12 +1374,7 @@
           "value": 2.0
         }
       },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
+      "modifiers": [],
       "slots": {
         "children": [
           "msg-play-head",
@@ -1599,8 +1419,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Google Play Console"
+          "type": "binding",
+          "value": "sender"
         },
         "style": {
           "type": "enum",
@@ -1630,8 +1450,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "8:30"
+          "type": "binding",
+          "value": "receivedAt"
         },
         "style": {
           "type": "enum",
@@ -1653,8 +1473,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Your release is live on 2 tracks"
+          "type": "binding",
+          "value": "subject"
         },
         "style": {
           "type": "enum",
@@ -1684,8 +1504,8 @@
       "componentId": "m3/text",
       "properties": {
         "text": {
-          "type": "string",
-          "value": "Version 4.2.0 finished rolling out to production."
+          "type": "binding",
+          "value": "snippet"
         },
         "style": {
           "type": "enum",
@@ -1765,7 +1585,7 @@
       "slots": {
         "children": [
           "msg-stack-avatar",
-          "msg-stack-body",
+          "msg-stack-body-item",
           "icon-43"
         ]
       },
@@ -1841,176 +1661,6 @@
       "assetBindings": {},
       "tokenBindings": {}
     },
-    "msg-stack-body": {
-      "id": "msg-stack-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-stack-head",
-          "text-41",
-          "text-42"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-stack-head": {
-      "id": "msg-stack-head",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalArrangement": {
-          "type": "enum",
-          "value": "spaceBetween"
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "text-39",
-          "text-40"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-39": {
-      "id": "text-39",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Stack Overflow"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-40": {
-      "id": "text-40",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Tue"
-        },
-        "style": {
-          "type": "enum",
-          "value": "labelSmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-41": {
-      "id": "text-41",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Weekly digest: Jetpack Compose"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-42": {
-      "id": "text-42",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Top question: how do I keep pane state across a…"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
     "icon-43": {
       "id": "icon-43",
       "componentId": "m3/icon",
@@ -2066,7 +1716,7 @@
       "slots": {
         "children": [
           "msg-notion-avatar",
-          "msg-notion-body",
+          "msg-notion-body-item",
           "icon-49"
         ]
       },
@@ -2142,176 +1792,6 @@
       "assetBindings": {},
       "tokenBindings": {}
     },
-    "msg-notion-body": {
-      "id": "msg-notion-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-notion-head",
-          "text-47",
-          "text-48"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-notion-head": {
-      "id": "msg-notion-head",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalArrangement": {
-          "type": "enum",
-          "value": "spaceBetween"
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "text-45",
-          "text-46"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-45": {
-      "id": "text-45",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Notion"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-46": {
-      "id": "text-46",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Tue"
-        },
-        "style": {
-          "type": "enum",
-          "value": "labelSmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-47": {
-      "id": "text-47",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Design review notes — Q3"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-48": {
-      "id": "text-48",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Meeting notes are ready for your review."
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
     "icon-49": {
       "id": "icon-49",
       "componentId": "m3/icon",
@@ -2367,7 +1847,7 @@
       "slots": {
         "children": [
           "msg-docs-avatar",
-          "msg-docs-body",
+          "msg-docs-body-item",
           "icon-55"
         ]
       },
@@ -2443,176 +1923,6 @@
       "assetBindings": {},
       "tokenBindings": {}
     },
-    "msg-docs-body": {
-      "id": "msg-docs-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-docs-head",
-          "text-53",
-          "text-54"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-docs-head": {
-      "id": "msg-docs-head",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalArrangement": {
-          "type": "enum",
-          "value": "spaceBetween"
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "text-51",
-          "text-52"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-51": {
-      "id": "text-51",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Docs"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-52": {
-      "id": "text-52",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Mon"
-        },
-        "style": {
-          "type": "enum",
-          "value": "labelSmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-53": {
-      "id": "text-53",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "“Adaptive checklist” was shared with you"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-54": {
-      "id": "text-54",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Priya shared a document with you."
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
     "icon-55": {
       "id": "icon-55",
       "componentId": "m3/icon",
@@ -2668,7 +1978,7 @@
       "slots": {
         "children": [
           "msg-trello-avatar",
-          "msg-trello-body",
+          "msg-trello-body-item",
           "icon-61"
         ]
       },
@@ -2744,176 +2054,6 @@
       "assetBindings": {},
       "tokenBindings": {}
     },
-    "msg-trello-body": {
-      "id": "msg-trello-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-trello-head",
-          "text-59",
-          "text-60"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-trello-head": {
-      "id": "msg-trello-head",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalArrangement": {
-          "type": "enum",
-          "value": "spaceBetween"
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "text-57",
-          "text-58"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-57": {
-      "id": "text-57",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Trello"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-58": {
-      "id": "text-58",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Mon"
-        },
-        "style": {
-          "type": "enum",
-          "value": "labelSmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-59": {
-      "id": "text-59",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "3 cards due tomorrow"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-60": {
-      "id": "text-60",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Tablet layout spike, Icon audit, Export gate."
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
     "icon-61": {
       "id": "icon-61",
       "componentId": "m3/icon",
@@ -2969,7 +2109,7 @@
       "slots": {
         "children": [
           "msg-linkedin-avatar",
-          "msg-linkedin-body",
+          "msg-linkedin-body-item",
           "icon-67"
         ]
       },
@@ -3037,176 +2177,6 @@
         "textAlign": {
           "type": "enum",
           "value": "center"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-body": {
-      "id": "msg-linkedin-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-linkedin-head",
-          "text-65",
-          "text-66"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-head": {
-      "id": "msg-linkedin-head",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalArrangement": {
-          "type": "enum",
-          "value": "spaceBetween"
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "text-63",
-          "text-64"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-63": {
-      "id": "text-63",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "LinkedIn"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-64": {
-      "id": "text-64",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Sun"
-        },
-        "style": {
-          "type": "enum",
-          "value": "labelSmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-65": {
-      "id": "text-65",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "You appeared in 14 searches"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "text-66": {
-      "id": "text-66",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "See who has been looking at your profile."
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
         }
       },
       "modifiers": [],
@@ -4199,7 +3169,7 @@
       "slots": {
         "children": [
           "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-avatar",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body",
+          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-item",
           "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-icon-67"
         ]
       },
@@ -4275,176 +3245,6 @@
       "assetBindings": {},
       "tokenBindings": {}
     },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-65",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-66"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalArrangement": {
-          "type": "enum",
-          "value": "spaceBetween"
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-63",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-64"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-63": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-63",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "LinkedIn"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-64": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-64",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Sun"
-        },
-        "style": {
-          "type": "enum",
-          "value": "labelSmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-65": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-65",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "You appeared in 14 searches"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-66": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-66",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "See who has been looking at your profile."
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
     "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-icon-67": {
       "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-icon-67",
       "componentId": "m3/icon",
@@ -4500,7 +3300,7 @@
       "slots": {
         "children": [
           "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-avatar",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body",
+          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-item",
           "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-icon-67"
         ]
       },
@@ -4576,176 +3376,6 @@
       "assetBindings": {},
       "tokenBindings": {}
     },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-65",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-66"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalArrangement": {
-          "type": "enum",
-          "value": "spaceBetween"
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-63",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-64"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-63": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-63",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "LinkedIn"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-64": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-64",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Sun"
-        },
-        "style": {
-          "type": "enum",
-          "value": "labelSmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-65": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-65",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "You appeared in 14 searches"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-66": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-66",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "See who has been looking at your profile."
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
     "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-icon-67": {
       "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-icon-67",
       "componentId": "m3/icon",
@@ -4801,7 +3431,7 @@
       "slots": {
         "children": [
           "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-avatar",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body",
+          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-item",
           "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-icon-67"
         ]
       },
@@ -4877,176 +3507,6 @@
       "assetBindings": {},
       "tokenBindings": {}
     },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-65",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-66"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalArrangement": {
-          "type": "enum",
-          "value": "spaceBetween"
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-63",
-          "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-64"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-63": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-63",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "LinkedIn"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-64": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-head-text-64",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Sun"
-        },
-        "style": {
-          "type": "enum",
-          "value": "labelSmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-65": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-65",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "You appeared in 14 searches"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-66": {
-      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-text-66",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "See who has been looking at your profile."
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
     "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-icon-67": {
       "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-icon-67",
       "componentId": "m3/icon",
@@ -5102,7 +3562,7 @@
       "slots": {
         "children": [
           "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-avatar",
-          "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body",
+          "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-item",
           "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-icon-43"
         ]
       },
@@ -5170,176 +3630,6 @@
         "textAlign": {
           "type": "enum",
           "value": "center"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body": {
-      "id": "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body",
-      "componentId": "layout/column",
-      "properties": {
-        "verticalSpacingDp": {
-          "type": "float",
-          "value": 2.0
-        }
-      },
-      "modifiers": [
-        {
-          "type": "weight",
-          "weight": 1
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-msg-stack-head",
-          "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-text-41",
-          "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-text-42"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-msg-stack-head": {
-      "id": "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-msg-stack-head",
-      "componentId": "layout/row",
-      "properties": {
-        "horizontalArrangement": {
-          "type": "enum",
-          "value": "spaceBetween"
-        },
-        "verticalAlignment": {
-          "type": "enum",
-          "value": "center"
-        }
-      },
-      "modifiers": [
-        {
-          "type": "fillMaxWidth"
-        }
-      ],
-      "slots": {
-        "children": [
-          "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-msg-stack-head-text-39",
-          "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-msg-stack-head-text-40"
-        ]
-      },
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-msg-stack-head-text-39": {
-      "id": "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-msg-stack-head-text-39",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Stack Overflow"
-        },
-        "style": {
-          "type": "enum",
-          "value": "titleSmall"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-msg-stack-head-text-40": {
-      "id": "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-msg-stack-head-text-40",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Tue"
-        },
-        "style": {
-          "type": "enum",
-          "value": "labelSmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-text-41": {
-      "id": "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-text-41",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Weekly digest: Jetpack Compose"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodyMedium"
-        },
-        "fontWeight": {
-          "type": "enum",
-          "value": "normal"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
-        }
-      },
-      "modifiers": [],
-      "slots": {},
-      "eventBindings": {},
-      "assetBindings": {},
-      "tokenBindings": {}
-    },
-    "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-text-42": {
-      "id": "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-text-42",
-      "componentId": "m3/text",
-      "properties": {
-        "text": {
-          "type": "string",
-          "value": "Top question: how do I keep pane state across a…"
-        },
-        "style": {
-          "type": "enum",
-          "value": "bodySmall"
-        },
-        "color": {
-          "type": "colorToken",
-          "value": "onSurfaceVariant"
-        },
-        "maxLines": {
-          "type": "int",
-          "value": 1
-        },
-        "overflow": {
-          "type": "enum",
-          "value": "ellipsis"
         }
       },
       "modifiers": [],
@@ -5428,13 +3718,456 @@
       "eventBindings": {},
       "assetBindings": {},
       "tokenBindings": {}
+    },
+    "msg-android-body-item": {
+      "id": "msg-android-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "Android Developers"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "9:41"
+          },
+          "subject": {
+            "type": "string",
+            "value": "Compose 1.9 is stable"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "Adaptive layouts, shared element transitions and a…"
+          }
+        }
+      }
+    },
+    "msg-figma-body-item": {
+      "id": "msg-figma-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "Figma"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "9:12"
+          },
+          "subject": {
+            "type": "string",
+            "value": "3 new comments on Inbox / Tablet"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "Yuri replied: “the supporting pane should keep its…"
+          }
+        }
+      }
+    },
+    "msg-play-body-item": {
+      "id": "msg-play-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary2",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "Google Play Console"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "8:30"
+          },
+          "subject": {
+            "type": "string",
+            "value": "Your release is live on 2 tracks"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "Version 4.2.0 finished rolling out to production."
+          }
+        }
+      }
+    },
+    "msg-stack-body-item": {
+      "id": "msg-stack-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary2",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "Stack Overflow"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "Tue"
+          },
+          "subject": {
+            "type": "string",
+            "value": "Weekly digest: Jetpack Compose"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "Top question: how do I keep pane state across a…"
+          }
+        }
+      }
+    },
+    "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-item": {
+      "id": "msg-stack-copy-browser-editor-008b236f-7d59-4f3f-9f8e-e55e0089e953-003-msg-stack-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary2",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "Stack Overflow"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "Tue"
+          },
+          "subject": {
+            "type": "string",
+            "value": "Weekly digest: Jetpack Compose"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "Top question: how do I keep pane state across a…"
+          }
+        }
+      }
+    },
+    "msg-notion-body-item": {
+      "id": "msg-notion-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary2",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "Notion"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "Tue"
+          },
+          "subject": {
+            "type": "string",
+            "value": "Design review notes — Q3"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "Meeting notes are ready for your review."
+          }
+        }
+      }
+    },
+    "msg-docs-body-item": {
+      "id": "msg-docs-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary2",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "Docs"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "Mon"
+          },
+          "subject": {
+            "type": "string",
+            "value": "“Adaptive checklist” was shared with you"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "Priya shared a document with you."
+          }
+        }
+      }
+    },
+    "msg-trello-body-item": {
+      "id": "msg-trello-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary2",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "Trello"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "Mon"
+          },
+          "subject": {
+            "type": "string",
+            "value": "3 cards due tomorrow"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "Tablet layout spike, Icon audit, Export gate."
+          }
+        }
+      }
+    },
+    "msg-linkedin-body-item": {
+      "id": "msg-linkedin-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary2",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "LinkedIn"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "Sun"
+          },
+          "subject": {
+            "type": "string",
+            "value": "You appeared in 14 searches"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "See who has been looking at your profile."
+          }
+        }
+      }
+    },
+    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-item": {
+      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary2",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "LinkedIn"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "Sun"
+          },
+          "subject": {
+            "type": "string",
+            "value": "You appeared in 14 searches"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "See who has been looking at your profile."
+          }
+        }
+      }
+    },
+    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-item": {
+      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary2",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "LinkedIn"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "Sun"
+          },
+          "subject": {
+            "type": "string",
+            "value": "You appeared in 14 searches"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "See who has been looking at your profile."
+          }
+        }
+      }
+    },
+    "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-item": {
+      "id": "msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-003-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-002-msg-linkedin-copy-browser-editor-dd87bf66-de06-4786-8963-0222ae743347-001-msg-linkedin-body-item",
+      "componentId": "design/component-instance",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {},
+      "component": {
+        "componentKey": "email-summary2",
+        "arguments": {
+          "sender": {
+            "type": "string",
+            "value": "LinkedIn"
+          },
+          "receivedAt": {
+            "type": "string",
+            "value": "Sun"
+          },
+          "subject": {
+            "type": "string",
+            "value": "You appeared in 14 searches"
+          },
+          "snippet": {
+            "type": "string",
+            "value": "See who has been looking at your profile."
+          }
+        }
+      }
     }
   },
   "assets": {},
   "tokenBindings": {},
   "createdAtEpochMillis": 1790342521041,
-  "updatedAtEpochMillis": 1791204281080,
-  "components": {},
+  "updatedAtEpochMillis": 1791208731525,
+  "components": {
+    "email-summary": {
+      "name": "UnreadEmailSummary",
+      "root": "msg-android-body",
+      "description": "Reusable gmail item. Typed Kotlin model: Email."
+    },
+    "email-summary2": {
+      "name": "EmailSummary",
+      "root": "msg-play-body",
+      "description": "Reusable gmail item. Typed Kotlin model: Email2."
+    }
+  },
   "home": {
     "kind": "server",
     "url": "https://preview.coo.ee",
