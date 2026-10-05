@@ -12,13 +12,19 @@ export async function verifyCompiledWasmCache(base, launchOptions, waitForReady,
   try {
     for (let visit = 0; visit < 3; visit++) {
       const context = await chromium.launchPersistentContext(profile, {
-        ...launchOptions, locale: 'en-US', viewport: { width: 1400, height: 900 },
+        ...launchOptions,
+        // This lane tests cache transport, not V8's workload-dependent write debounce. Chrome 141
+        // can keep postponing Skiko's write as more functions tier up after first paint. Disable
+        // that debounce only here; normal desktop/mobile startup uses the browser defaults.
+        args: [...(launchOptions.args ?? []), '--js-flags=--wasm-caching-timeout-ms=0'],
+        locale: 'en-US', viewport: { width: 1400, height: 900 },
       });
       try {
         const page = context.pages()[0];
         const errors = [];
         page.on('pageerror', (error) => errors.push(String(error)));
         const cdp = await context.newCDPSession(page);
+        const { product, jsVersion } = await cdp.send('Browser.getVersion');
         const events = [];
         cdp.on('Tracing.dataCollected', ({ value }) => {
           events.push(...value.filter((event) => event.name.startsWith('v8.wasm.')));
@@ -45,7 +51,7 @@ export async function verifyCompiledWasmCache(base, launchOptions, waitForReady,
         await ended;
         const hits = events.filter((event) => event.name === 'v8.wasm.moduleCacheHit');
         const cachedFiles = hits.map((event) => new URL(event.args.url).pathname.split('/').pop());
-        samples.push({ visit, ...sample, cachedFiles, errors });
+        samples.push({ visit, browser: { product, jsVersion }, cacheWriteDebounceMs: 0, ...sample, cachedFiles, errors });
         if (output) {
           await writeFile(join(output, `wasm-cache-${visit}.json`), JSON.stringify(events, null, 2));
         }

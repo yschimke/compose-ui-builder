@@ -80,6 +80,11 @@ some:
 - `cache` — starts Chromium three times with the same temporary disk profile and checks the second
   and third visits consume compiled-code cache entries for both Wasm modules. The profile is removed
   afterwards; `wasm-cache.json` and per-visit Wasm traces are kept beside the screenshots.
+  This lane alone sets `--wasm-caching-timeout-ms=0`: it tests whether the asset/Response path
+  preserves compiled-code caching, independently of V8's workload-dependent write debounce.
+  Chromium 141 can postpone Skiko's cache write beyond the test's three-second settling window.
+  Both modules must still hit the real disk code cache on both warm browser restarts. Ordinary
+  startup lanes retain browser defaults; controlled cache-lane timings are not production benchmarks.
 
 In a sandbox, Playwright's Chromium may already be installed (for example under `/opt/pw-browsers`
 with a global `playwright` package); link that package into a `node_modules` above the script
