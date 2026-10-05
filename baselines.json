@@ -836,7 +836,7 @@
     "functionName": "UiBuilderCompactEditorPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderCompactEditorPreview-4c76a989.png",
-    "sha256": "a431cf173227ffac2f5b01342f32010ac27b233a942af0a548814e49ee5955ce",
+    "sha256": "6a2f0e5a2d73ddd682a5a0fb7b25598f6326224afe00e7c06289e4211946f059",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorScenarioPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorScenarioPreviewsKt.UiBuilderCompactPropertiesPreview": {
@@ -844,7 +844,7 @@
     "functionName": "UiBuilderCompactPropertiesPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderCompactPropertiesPreview-ade3cf08.png",
-    "sha256": "7857f489583a60036b62b7a5b5973ef9cfd0f1d3c6d6ae18913977db34729628",
+    "sha256": "db399c3e921fa680d15d32e7513455f00d15daf33d3b697d3fb6b5f0b56b79ac",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorScenarioPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorScenarioPreviewsKt.UiBuilderHostChromePreview": {
