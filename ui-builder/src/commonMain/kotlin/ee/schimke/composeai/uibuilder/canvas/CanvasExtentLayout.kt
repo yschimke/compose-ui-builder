@@ -14,6 +14,7 @@ import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.MultiMeasureLayout
 import androidx.compose.ui.unit.Constraints
+import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 
 internal data class CanvasExtentInputs(
@@ -57,7 +58,15 @@ internal fun CanvasExtentLayout(
   val updateInputs = remember { { value: CanvasExtentInputs -> inputs.value = value } }
   // A child constrained to the previous extent cannot resize its parent by itself. Re-probe when
   // the document or interaction state changes, including a branch switch without a saved revision.
-  val policy = remember(inputs.value, probeKey) { CanvasExtentMeasurePolicy() }
+  //
+  // And when a font arrives. A theme's typeface loads after the first frame, and text drawn in it
+  // can wrap to more lines than the platform face did, so the content outgrows the extent it was
+  // pinned to. Nothing in the document changed, so nothing re-probed: the overflow was clipped and
+  // whatever yields to its constraints gave way — a Wear screen's `EdgeButton`, which takes its
+  // height from what is left, drew collapsed to a pill at the end of the extent. The registry's
+  // map is one snapshot-state instance, so the key is the families in it, not the map.
+  val loadedFonts = LocalUiBuilderFontFamilies.current.keys.toSet()
+  val policy = remember(inputs.value, probeKey, loadedFonts) { CanvasExtentMeasurePolicy() }
   CompositionLocalProvider(LocalCanvasExtentInputs provides updateInputs) {
     MultiMeasureLayout(
       modifier = modifier,

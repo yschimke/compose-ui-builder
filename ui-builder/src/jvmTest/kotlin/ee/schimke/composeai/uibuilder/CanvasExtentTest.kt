@@ -1,21 +1,31 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.renderComposeScene
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.canvas.CanvasExtentLayout
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderUnrolled
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -99,6 +109,73 @@ class CanvasExtentTest {
       height in ITEMS * ITEM_DP until 100_000,
       "expected the Wear extent to hold all $ITEMS items at a finite height, measured $height",
     )
+  }
+
+  /**
+   * The extent is the end of the scroll, where `ScreenScaffold` has grown its edge button all the
+   * way in, so the button is drawn at its full `EdgeButtonSize`. `EdgeButton` takes its height from
+   * its constraints — that is how the scaffold shrinks it while the list scrolls — and the extent's
+   * column handed it what was left of the screenful, which at the end of a long list is nothing: it
+   * drew as the collapsed pill.
+   */
+  @Test
+  fun `an unrolled wear screen draws its edge button expanded`() {
+    val without = measureUnbounded {
+      WearCatalogAdapters { UiBuilderSurface(wearScreenDocument(), unrolled = true) }
+    }
+    val with = measureUnbounded {
+      WearCatalogAdapters {
+        UiBuilderSurface(wearScreenDocument(edgeButton = true), unrolled = true)
+      }
+    }
+
+    assertTrue(
+      with - without >= EDGE_BUTTON_SMALL_DP,
+      "expected the edge button to add its full $EDGE_BUTTON_SMALL_DP dp, added ${with - without}",
+    )
+  }
+
+  /**
+   * A theme's font loads after the first frame and can make text wrap taller. The extent is pinned
+   * to its first probe, and nothing in the document changes when a font arrives, so it used to stay
+   * at the pre-font height: the content overflowed, and a Wear screen's edge button — sized by what
+   * is left — collapsed to a pill.
+   */
+  @Test
+  fun `the extent re-probes when a font loads`() {
+    val fonts = mutableStateMapOf<String, FontFamily>()
+    var measured = 0
+    val scene = ImageComposeScene(FRAME_DP, FRAME_DP, Density(1f))
+    try {
+      scene.setContent {
+        CompositionLocalProvider(LocalUiBuilderFontFamilies provides fonts) {
+          Box(
+            Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
+              .requiredWidth(FRAME_DP.dp)
+              .requiredHeightIn(min = FRAME_DP.dp)
+          ) {
+            CanvasExtentLayout(Modifier.fillMaxSize().onSizeChanged { measured = it.height }) {
+              // Stands in for text that wraps to more lines in the loaded face.
+              val tall = LocalUiBuilderFontFamilies.current.isNotEmpty()
+              Box(Modifier.fillMaxWidth().height((if (tall) 3 * FRAME_DP else FRAME_DP).dp))
+            }
+          }
+        }
+      }
+      scene.render()
+      assertEquals(FRAME_DP, measured)
+
+      fonts["Space Mono"] = FontFamily.Monospace
+      scene.render()
+      scene.render()
+      assertEquals(
+        3 * FRAME_DP,
+        measured,
+        "expected the extent to follow the content the font grew",
+      )
+    } finally {
+      scene.close()
+    }
   }
 
   /** The frame pane is unchanged: the real composition still clips to the device it draws. */
@@ -221,7 +298,7 @@ class CanvasExtentTest {
    * A Wear screen over a `TransformingLazyColumn` of [ITEMS] dots — the shape a new `wear-m3`
    * design opens as, reduced to what the extent question needs.
    */
-  private fun wearScreenDocument(): UiBuilderDocument {
+  private fun wearScreenDocument(edgeButton: Boolean = false): UiBuilderDocument {
     val items = (0 until ITEMS).map { "item-$it" }
     return UiBuilderDocument(
       schema = "compose-ui-builder-document/v1-candidate",
@@ -262,7 +339,21 @@ class CanvasExtentTest {
                   )
                 ),
               modifiers = JsonArray(emptyList()),
-              slots = mapOf("content" to listOf("wear-list"), "edgeButton" to emptyList()),
+              slots =
+                mapOf(
+                  "content" to listOf("wear-list"),
+                  "edgeButton" to if (edgeButton) listOf("edge-button") else emptyList(),
+                ),
+            ),
+          )
+          put(
+            "edge-button",
+            UiBuilderNode(
+              id = "edge-button",
+              componentId = "wear-m3/edge-button",
+              properties = JsonObject(emptyMap()),
+              modifiers = JsonArray(emptyList()),
+              slots = mapOf("content" to emptyList()),
             ),
           )
           put(
@@ -296,5 +387,8 @@ class CanvasExtentTest {
     const val ITEMS = 20
     const val ITEM_DP = 40
     const val FRAME_DP = 200
+
+    /** `EdgeButtonSize.Small`'s height, the default size, before its vertical padding. */
+    const val EDGE_BUTTON_SMALL_DP = 56
   }
 }
