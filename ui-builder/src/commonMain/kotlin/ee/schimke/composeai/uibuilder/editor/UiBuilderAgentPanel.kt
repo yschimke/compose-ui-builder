@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder.editor
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -17,12 +19,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
@@ -81,9 +87,23 @@ internal fun AgentPromptDialog(
 @Composable
 internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) -> Unit) {
   var draft by remember(host.preferences) { mutableStateOf(host.preferences) }
-  var includeSetup by
-    remember(host.preferences.connectedBefore) { mutableStateOf(!host.preferences.connectedBefore) }
+  val includeSetup = !draft.connectedBefore
+  var customizePrompt by remember { mutableStateOf(false) }
+  val generatedPrompt = host.prompt(includeSetup, draft.instructions())
+  var prompt by remember(generatedPrompt) { mutableStateOf(generatedPrompt) }
+  val promptInteraction = remember { MutableInteractionSource() }
   val scope = rememberCoroutineScope()
+  val copyPrompt by
+    rememberUpdatedState<() -> Unit> {
+      val text = prompt
+      host.save(draft)?.let(onNotice)
+      scope.launch { onNotice(host.copy(text)) }
+    }
+  LaunchedEffect(promptInteraction) {
+    promptInteraction.interactions.collect { interaction ->
+      if (interaction is PressInteraction.Release) copyPrompt()
+    }
+  }
   Column(
     Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -115,65 +135,81 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
         )
       }
     }
-    Row {
-      Checkbox(checked = includeSetup, onCheckedChange = { includeSetup = it })
-      Text("Include setup instructions", Modifier.padding(top = 12.dp))
+    Row(
+      Modifier.fillMaxWidth()
+        .heightIn(min = 48.dp)
+        .toggleable(
+          value = includeSetup,
+          role = Role.Checkbox,
+          onValueChange = { draft = draft.copy(connectedBefore = !it) },
+        ),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      Checkbox(checked = includeSetup, onCheckedChange = null)
+      Text("Include setup instructions")
     }
-    Row {
-      Checkbox(
-        checked = draft.connectedBefore,
-        onCheckedChange = {
-          draft = draft.copy(connectedBefore = it)
-          includeSetup = !it
-        },
+    Row(
+      Modifier.fillMaxWidth()
+        .heightIn(min = 48.dp)
+        .toggleable(
+          value = customizePrompt,
+          role = Role.Checkbox,
+          onValueChange = { customizePrompt = it },
+        ),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      Checkbox(checked = customizePrompt, onCheckedChange = null)
+      Text("Customize prompt")
+    }
+    if (customizePrompt) {
+      OutlinedTextField(
+        value = draft.generalInstructions,
+        onValueChange = { draft = draft.copy(generalInstructions = it) },
+        label = { Text("Instructions for all designs") },
+        modifier = Modifier.fillMaxWidth(),
+        minLines = 2,
       )
-      Text("My agent is already set up", Modifier.padding(top = 12.dp))
-    }
-    OutlinedTextField(
-      value = draft.generalInstructions,
-      onValueChange = { draft = draft.copy(generalInstructions = it) },
-      label = { Text("Instructions for all designs") },
-      modifier = Modifier.fillMaxWidth(),
-      minLines = 2,
-    )
-    OutlinedTextField(
-      value = draft.documentInstructions,
-      onValueChange = { draft = draft.copy(documentInstructions = it) },
-      label = { Text("Instructions for this design") },
-      placeholder = { Text("Leave blank to use general instructions") },
-      modifier = Modifier.fillMaxWidth(),
-      minLines = 2,
-    )
-    Text(
-      "Saved in this browser. Design instructions override your general instructions.",
-      style = MaterialTheme.typography.bodySmall,
-    )
-    Text("Prompt", style = MaterialTheme.typography.titleSmall)
-    SelectionContainer {
+      OutlinedTextField(
+        value = draft.documentInstructions,
+        onValueChange = { draft = draft.copy(documentInstructions = it) },
+        label = { Text("Instructions for this design") },
+        placeholder = { Text("Leave blank to use general instructions") },
+        modifier = Modifier.fillMaxWidth(),
+        minLines = 2,
+      )
       Text(
-        host.prompt(includeSetup, draft.instructions()),
+        "Saved in this browser. Design instructions override your general instructions.",
         style = MaterialTheme.typography.bodySmall,
       )
     }
+    OutlinedTextField(
+      value = prompt,
+      onValueChange = { prompt = it },
+      label = { Text("Prompt") },
+      supportingText = { Text("Click to copy, or edit and use Copy prompt.") },
+      modifier = Modifier.fillMaxWidth(),
+      minLines = 5,
+      maxLines = 6,
+      textStyle = MaterialTheme.typography.bodySmall,
+      interactionSource = promptInteraction,
+    )
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-      TextButton(
-        onClick = {
-          val failure = host.save(draft)
-          if (failure != null) onNotice(failure)
-          else scope.launch { onNotice(host.copy(host.prompt(includeSetup, draft.instructions()))) }
+      TextButton(onClick = { copyPrompt() }) { Text("Copy prompt") }
+      if (customizePrompt) {
+        TextButton(onClick = { onNotice(host.save(draft) ?: "Prompt preferences saved") }) {
+          Text("Save preferences")
         }
-      ) {
-        Text("Save and copy prompt")
-      }
-      TextButton(onClick = { onNotice(host.save(draft) ?: "Prompt preferences saved") }) {
-        Text("Save")
       }
     }
-    TextButton(onClick = host::openSetup) { Text("Set up Claude, Codex, Antigravity or Other") }
-    TextButton(onClick = host::connectVsCode) { Text("Add MCP connection to VS Code") }
-    Text(
-      "VS Code will ask you to review the connection. Then paste the prompt into your agent.",
-      style = MaterialTheme.typography.bodySmall,
-    )
+    if (includeSetup) {
+      TextButton(onClick = host::openSetup) { Text("Set up Claude, Codex, Antigravity or Other") }
+      TextButton(onClick = host::connectVsCode) { Text("Add MCP connection to VS Code") }
+      Text(
+        "VS Code will ask you to review the connection. Then paste the prompt into your agent.",
+        style = MaterialTheme.typography.bodySmall,
+      )
+    }
   }
 }
