@@ -12,9 +12,13 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.editor.UiBuilderVariantPane
+import ee.schimke.composeai.uibuilder.editor.currentFramePane
+import ee.schimke.composeai.uibuilder.editor.mobileTabLabel
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
@@ -100,6 +104,30 @@ class MobileViewTabsTest {
       onNodeWithText("Pixel Tablet · 1280×800dp · 2×").assertDoesNotExist()
       onNodeWithContentDescription("Close layers panel").assertExists()
     }
+
+  /**
+   * A device is named alone, its size and density being on the frame's own label; a widget host's
+   * size is what tells two tabs apart, so it stays.
+   */
+  @Test
+  fun `tab labels keep what tells two panes apart`() {
+    val design = UiBuilderReducer.replay(fixture).document
+    fun pane(id: String, label: String) = UiBuilderVariantPane(id, label, 192f, 192f, design)
+
+    assertEquals("Preview", design.currentFramePane("Preview").mobileTabLabel())
+    assertEquals(
+      "Pixel 7",
+      pane("variant-device-id:pixel_7", "Pixel 7 · 411×914dp · 2.625×").mobileTabLabel(),
+    )
+    assertEquals(
+      listOf("Rectangular · Small", "Rectangular · Large"),
+      listOf(
+          pane("preview-widget-rectangular-small", "Rectangular · Small"),
+          pane("preview-widget-rectangular-large", "Rectangular · Large"),
+        )
+        .map { it.mobileTabLabel() },
+    )
+  }
 
   private fun resource(path: String): String = checkNotNull(javaClass.getResource(path)).readText()
 

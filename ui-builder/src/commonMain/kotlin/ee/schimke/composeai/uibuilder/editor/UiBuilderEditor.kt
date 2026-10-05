@@ -29,6 +29,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -1598,14 +1599,19 @@ fun UiBuilderEditor(
   // previews with.
   val mobilePreview: @Composable (UiBuilderVariantPane, Modifier) -> Unit = { pane, modifier ->
     if (documentBackedPreview != null) {
-      RemoteDocumentDesignPreviewPane(
-        document = state.document,
-        variants = listOf(pane),
-        authoritativeGeneration = authoritativeGeneration,
-        request = requireNotNull(onRequestDocumentPreview),
-        modifier = modifier,
-        exactPanes = true,
-      )
+      // Keyed by the tab: that pane keeps its results by pane id but requests by document, so two
+      // tabs sharing one document — a Wear widget's host shapes — would otherwise never ask again
+      // and the second would wait on a result it was never sent.
+      key(pane.id) {
+        RemoteDocumentDesignPreviewPane(
+          document = state.document,
+          variants = listOf(pane),
+          authoritativeGeneration = authoritativeGeneration,
+          request = requireNotNull(onRequestDocumentPreview),
+          modifier = modifier,
+          exactPanes = true,
+        )
+      }
     } else {
       DesignPreviewPane(
         document = state.document,
@@ -3002,9 +3008,9 @@ fun UiBuilderEditor(
               Column(Modifier.fillMaxSize()) {
                 if (!viewportInsets.keyboardOpen) {
                   MobileViewTabs(
-                    // The device's name alone: the pane's own label carries its size and density.
                     labels =
-                      listOf("Editor") + mobilePreviewPanes.map { it.label.substringBefore(" · ") },
+                      listOf("Editor") +
+                        mobilePreviewPanes.map(UiBuilderVariantPane::mobileTabLabel),
                     selectedIndex = shownPreview?.let { mobilePreviewPanes.indexOf(it) + 1 } ?: 0,
                     onSelected = { index ->
                       mobileView = mobilePreviewPanes.getOrNull(index - 1)?.id
