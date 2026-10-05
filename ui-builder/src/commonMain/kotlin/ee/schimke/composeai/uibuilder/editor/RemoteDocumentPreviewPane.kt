@@ -62,8 +62,12 @@ internal fun RemoteDocumentDesignPreviewPane(
   authoritativeGeneration: Int,
   request: suspend (UiBuilderDocument) -> UiBuilderDocumentPreview,
   modifier: Modifier = Modifier,
+  /** As [DesignPreviewPane]'s: draw [variants] as given rather than a widget's host shapes. */
+  exactPanes: Boolean = false,
 ) {
-  val panes = document.wearWidgetScaffoldSize()?.let(document::wearWidgetPreviewPanes) ?: variants
+  val panes =
+    if (exactPanes) variants
+    else document.wearWidgetScaffoldSize()?.let(document::wearWidgetPreviewPanes) ?: variants
   var results by
     remember(document.id) { mutableStateOf<Map<String, UiBuilderDocumentPreview>>(emptyMap()) }
   var pending by remember(document.id) { mutableStateOf(false) }

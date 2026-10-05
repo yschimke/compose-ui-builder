@@ -122,6 +122,36 @@ private fun wearWidgetPreviewPanes(
   }
 
 /**
+ * What a compact layout's tab calls this pane. A device or the design's own frame is named alone,
+ * since everything after its name is size and density that the pane's own label repeats over the
+ * frame. Every other label is kept whole: a widget host's or an axis's second part is what tells
+ * two tabs apart, and "Rectangular · Small" cut at its separator is "Rectangular · Large" too.
+ */
+internal fun UiBuilderVariantPane.mobileTabLabel(): String =
+  if (id == CURRENT_FRAME_PANE_ID || id.startsWith(DEVICE_PANE_ID_PREFIX))
+    label.substringBefore(" · ")
+  else label
+
+private const val CURRENT_FRAME_PANE_ID = "preview-current"
+
+private const val DEVICE_PANE_ID_PREFIX = "variant-device-"
+
+/**
+ * The design at its own frame, as a preview pane: the first frame of a view that has no authoring
+ * canvas beside it to show the design's own size.
+ */
+internal fun UiBuilderDocument.currentFramePane(label: String = "Current"): UiBuilderVariantPane {
+  val settings = screenEnvironmentSettings()
+  return UiBuilderVariantPane(
+    id = CURRENT_FRAME_PANE_ID,
+    label = "$label · ${settings.widthDp}×${settings.heightDp}dp",
+    widthDp = settings.widthDp.toFloat(),
+    heightDp = settings.heightDp.toFloat(),
+    document = this,
+  )
+}
+
+/**
  * The panes to draw beside the editing pane, in the order they are shown, or empty for none.
  *
  * Devices first and then the unstored axes, because the devices are the design's own claim and the
@@ -146,7 +176,7 @@ fun UiBuilderDocument.variantPanes(
     settings.exportDevices.distinct().mapNotNull { id ->
       val preset = presets.firstOrNull { it.id == id } ?: return@mapNotNull null
       UiBuilderVariantPane(
-        id = "variant-device-${preset.id}",
+        id = "$DEVICE_PANE_ID_PREFIX${preset.id}",
         label = deviceVariantLabel(preset),
         widthDp = preset.widthDp.toFloat(),
         heightDp = preset.heightDp.toFloat(),
