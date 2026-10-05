@@ -1,0 +1,220 @@
+{
+  "decision": "Rejected binary-font-transfer experiment: total startup regressed despite the shorter font gate. The final change retains the original Base64 font path.",
+  "method": "Two optimized builds with identical editor and coalesced inspection code, differing only in the font transfer implementation. Six alternating visits per build in one isolated persistent Chromium 153 profile; round 0 excluded from warm medians. SwiftShader; not hosted-design end-to-end timings.",
+  "warmMedians": {
+    "before": {
+      "fontGateMs": 100.1,
+      "paintMs": 970.1
+    },
+    "after": {
+      "fontGateMs": 67.4,
+      "paintMs": 1200.5
+    }
+  },
+  "samples": [
+    {
+      "round": 0,
+      "variant": "before",
+      "marks": {
+        "script": 26.899999976158142,
+        "kotlin-start": 222.5999999642372,
+        "fonts-ready": 343.89999997615814,
+        "storage-ready": 344,
+        "compose-start": 344,
+        "boot-hidden": 1271.2999999523163,
+        "editor-ready": 1271.3999999761581,
+        "editor-paint-opportunity": 1399.199999988079
+      },
+      "fontGateMs": 121.30000001192093,
+      "paintMs": 1399.199999988079,
+      "errors": []
+    },
+    {
+      "round": 0,
+      "variant": "after",
+      "marks": {
+        "script": 18.19999998807907,
+        "kotlin-start": 207.69999998807907,
+        "fonts-ready": 284,
+        "storage-ready": 284.10000002384186,
+        "compose-start": 284.19999998807907,
+        "boot-hidden": 1167.199999988079,
+        "editor-ready": 1167.199999988079,
+        "editor-paint-opportunity": 1291.1000000238419
+      },
+      "fontGateMs": 76.30000001192093,
+      "paintMs": 1291.1000000238419,
+      "errors": []
+    },
+    {
+      "round": 1,
+      "variant": "after",
+      "marks": {
+        "script": 15.899999976158142,
+        "kotlin-start": 211.60000002384186,
+        "fonts-ready": 279,
+        "storage-ready": 279.10000002384186,
+        "compose-start": 279.19999998807907,
+        "boot-hidden": 1081.699999988079,
+        "editor-ready": 1081.8999999761581,
+        "editor-paint-opportunity": 1204.300000011921
+      },
+      "fontGateMs": 67.39999997615814,
+      "paintMs": 1204.300000011921,
+      "errors": []
+    },
+    {
+      "round": 1,
+      "variant": "before",
+      "marks": {
+        "script": 14.399999976158142,
+        "kotlin-start": 240.19999998807907,
+        "fonts-ready": 340.30000001192093,
+        "storage-ready": 340.39999997615814,
+        "compose-start": 340.39999997615814,
+        "boot-hidden": 876.1000000238419,
+        "editor-ready": 876.3000000119209,
+        "editor-paint-opportunity": 996.3000000119209
+      },
+      "fontGateMs": 100.10000002384186,
+      "paintMs": 996.3000000119209,
+      "errors": []
+    },
+    {
+      "round": 2,
+      "variant": "before",
+      "marks": {
+        "script": 11.900000035762787,
+        "kotlin-start": 232.9000000357628,
+        "fonts-ready": 333.5,
+        "storage-ready": 333.5,
+        "compose-start": 333.60000002384186,
+        "boot-hidden": 857,
+        "editor-ready": 857,
+        "editor-paint-opportunity": 973.7000000476837
+      },
+      "fontGateMs": 100.59999996423721,
+      "paintMs": 973.7000000476837,
+      "errors": []
+    },
+    {
+      "round": 2,
+      "variant": "after",
+      "marks": {
+        "script": 18.30000001192093,
+        "kotlin-start": 205.69999998807907,
+        "fonts-ready": 275.80000001192093,
+        "storage-ready": 275.80000001192093,
+        "compose-start": 275.80000001192093,
+        "boot-hidden": 1080.699999988079,
+        "editor-ready": 1080.9000000357628,
+        "editor-paint-opportunity": 1206.300000011921
+      },
+      "fontGateMs": 70.10000002384186,
+      "paintMs": 1206.300000011921,
+      "errors": []
+    },
+    {
+      "round": 3,
+      "variant": "after",
+      "marks": {
+        "script": 17,
+        "kotlin-start": 204,
+        "fonts-ready": 270.69999998807907,
+        "storage-ready": 270.89999997615814,
+        "compose-start": 270.89999997615814,
+        "boot-hidden": 1075.300000011921,
+        "editor-ready": 1075.3999999761581,
+        "editor-paint-opportunity": 1198.8999999761581
+      },
+      "fontGateMs": 66.69999998807907,
+      "paintMs": 1198.8999999761581,
+      "errors": []
+    },
+    {
+      "round": 3,
+      "variant": "before",
+      "marks": {
+        "script": 18.19999998807907,
+        "kotlin-start": 225.19999998807907,
+        "fonts-ready": 322.5999999642372,
+        "storage-ready": 322.69999998807907,
+        "compose-start": 322.69999998807907,
+        "boot-hidden": 852.8999999761581,
+        "editor-ready": 853.0999999642372,
+        "editor-paint-opportunity": 970.0999999642372
+      },
+      "fontGateMs": 97.39999997615814,
+      "paintMs": 970.0999999642372,
+      "errors": []
+    },
+    {
+      "round": 4,
+      "variant": "before",
+      "marks": {
+        "script": 14.199999988079071,
+        "kotlin-start": 196.69999998807907,
+        "fonts-ready": 324.19999998807907,
+        "storage-ready": 324.19999998807907,
+        "compose-start": 324.2999999523163,
+        "boot-hidden": 845.8999999761581,
+        "editor-ready": 845.8999999761581,
+        "editor-paint-opportunity": 958.8999999761581
+      },
+      "fontGateMs": 127.5,
+      "paintMs": 958.8999999761581,
+      "errors": []
+    },
+    {
+      "round": 4,
+      "variant": "after",
+      "marks": {
+        "script": 17.600000023841858,
+        "kotlin-start": 208,
+        "fonts-ready": 275.2000000476837,
+        "storage-ready": 275.30000001192093,
+        "compose-start": 275.30000001192093,
+        "boot-hidden": 1076.800000011921,
+        "editor-ready": 1076.9000000357628,
+        "editor-paint-opportunity": 1200.5
+      },
+      "fontGateMs": 67.20000004768372,
+      "paintMs": 1200.5,
+      "errors": []
+    },
+    {
+      "round": 5,
+      "variant": "after",
+      "marks": {
+        "script": 13.099999964237213,
+        "kotlin-start": 201,
+        "fonts-ready": 268.5999999642372,
+        "storage-ready": 268.69999998807907,
+        "compose-start": 268.7999999523163,
+        "boot-hidden": 1071.5999999642372,
+        "editor-ready": 1071.7999999523163,
+        "editor-paint-opportunity": 1195.699999988079
+      },
+      "fontGateMs": 67.59999996423721,
+      "paintMs": 1195.699999988079,
+      "errors": []
+    },
+    {
+      "round": 5,
+      "variant": "before",
+      "marks": {
+        "script": 14.800000011920929,
+        "kotlin-start": 232.19999998807907,
+        "fonts-ready": 329.89999997615814,
+        "storage-ready": 330,
+        "compose-start": 330,
+        "boot-hidden": 850.8000000119209,
+        "editor-ready": 850.8000000119209,
+        "editor-paint-opportunity": 964.8999999761581
+      },
+      "fontGateMs": 97.69999998807907,
+      "paintMs": 964.8999999761581,
+      "errors": []
+    }
+  ]
+}

@@ -3036,3 +3036,20 @@ private fun Color.toCssColor(): String {
 }"""
 )
 internal external fun openDesignSharing(design: String)
+
+/** Yield through a browser paint before starting optional work after a design's first layout. */
+internal suspend fun awaitBrowserPaintOpportunity(): Unit =
+  suspendCancellableCoroutine { continuation ->
+    afterBrowserPaint { if (continuation.isActive) continuation.resume(Unit) }
+  }
+
+@JsFun(
+  """(ready) => {
+  let done = false;
+  const finish = () => { if (!done) { done = true; clearTimeout(timer); ready(); } };
+  // Hidden tabs can suspend animation frames. They must still finish background initialization.
+  const timer = setTimeout(finish, 250);
+  requestAnimationFrame(() => requestAnimationFrame(finish));
+}"""
+)
+private external fun afterBrowserPaint(ready: () -> Unit)

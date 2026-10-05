@@ -64,7 +64,7 @@ Traps:
 editor looks right. It needs the Wasm build, which is the heaviest thing in the repo to compile, so
 prefer CI for it.
 
-It runs four lanes, all by default; `SMOKE_LANES=mobile,offline node smoke.mjs <wasmDist>` picks
+It runs five lanes, all by default; `SMOKE_LANES=mobile,offline node smoke.mjs <wasmDist>` picks
 some:
 
 - `desktop` — the capture modes at 1400×900.
@@ -75,15 +75,32 @@ some:
   cuts the network, and opens the editor in a fresh tab, which must still come up ready. `127.0.0.1`
   is a secure context, so the worker registers over plain HTTP there.
 
+- `live` — opens a saved Jetcaster snapshot through the HTTP protocol, checks the first paint
+  precedes the optional catalog-list request, and verifies a catalog-list outage leaves the design open.
 - `cache` — starts Chromium three times with the same temporary disk profile and checks the second
   and third visits consume compiled-code cache entries for both Wasm modules. The profile is removed
   afterwards; `wasm-cache.json` and per-visit Wasm traces are kept beside the screenshots.
+  This lane alone sets `--wasm-caching-timeout-ms=0`: it tests whether the asset/Response path
+  preserves compiled-code caching, independently of V8's workload-dependent write debounce.
+  Chromium 141 can postpone Skiko's cache write beyond the test's three-second settling window.
+  Both modules must still hit the real disk code cache on both warm browser restarts. Ordinary
+  startup lanes retain browser defaults; controlled cache-lane timings are not production benchmarks.
 
 In a sandbox, Playwright's Chromium may already be installed (for example under `/opt/pw-browsers`
 with a global `playwright` package); link that package into a `node_modules` above the script
 rather than running `npx playwright install`.
 
 ### Cached startup measurements
+
+The capture fixtures use the same coalesced inspection publisher as saved designs. Repeated
+whole-document encoding in each node-layout callback otherwise inflates the fixture timing.
+Font registration still precedes composition because Wear caches its first resolved typeface.
+
+The [font-transfer experiment](evidence/design-first-startup/font-experiment.json) records why
+a faster individual stage is not enough: direct binary transfer shortened the font gate but
+regressed full warm startup, so it was not shipped. The accompanying `before.png` is the prior
+profile's coalesced-fixture render; `after.png` is the retained-font-path render. They are pixel-identical.
+
 
 The desktop and mobile smoke lanes also reopen the editor in a fresh tab in the same browser
 context, using an isolated temporary disk profile. Incognito memory caches may reject the large
