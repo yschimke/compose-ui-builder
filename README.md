@@ -12,7 +12,8 @@ statement of what may depend on what
 
 Start with [`docs/design/UI_BUILDER_PRODUCT_SPEC.md`](docs/design/UI_BUILDER_PRODUCT_SPEC.md) for
 what the product is, and [`docs/UI_BUILDER_GETTING_STARTED.md`](docs/UI_BUILDER_GETTING_STARTED.md)
-for running it.
+for running it. For agent integration, install `compose-catalogs` and `compose-skills` through
+the [Compose Agent Plugins quick start](https://github.com/yschimke/compose-agent-plugins#quick-start).
 
 The proposed contract for regenerating stateless Compose source from checked-in `.uid` files is in
 [`Build generation from project owned designs`](docs/design/UI_BUILDER_BUILD_GENERATION.md).

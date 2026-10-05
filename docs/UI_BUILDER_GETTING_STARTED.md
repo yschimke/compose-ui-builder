@@ -6,6 +6,15 @@ document URL. The builder does not replace the existing `/wasm/<catalog>/` previ
 Each design remains pinned to one catalog while the service can host a small operator-selected set.
 Publishing a preview catalog never enables authoring for it automatically.
 
+## Agent setup
+
+For the hosted UI Builder, install `compose-catalogs` and the `compose-skills` workflow bundle
+using the [Compose Agent Plugins quick start](https://github.com/yschimke/compose-agent-plugins#quick-start).
+Hosted authoring needs no local Java or Gradle installation; the Java requirement below applies
+when you run the server yourself. For local project previews, the same guide covers `compose-preview`.
+If you installed the former `compose-ag-plugin` marketplace, follow the
+[migration steps](https://github.com/yschimke/compose-agent-plugins#moving-from-compose-ag-plugin).
+
 ## Before you start: Java 21
 
 The UI builder's PNG and SVG export needs the server to be running on **Java 21 or newer**, even
