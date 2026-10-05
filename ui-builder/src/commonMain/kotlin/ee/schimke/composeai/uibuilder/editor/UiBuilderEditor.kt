@@ -118,6 +118,7 @@ import ee.schimke.composeai.uibuilder.reference.measureAgainstReference
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
+import ee.schimke.composeai.uibuilder.runCatchingCancellable
 import ee.schimke.composeai.uibuilder.uploadedAssets
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -1350,7 +1351,7 @@ fun UiBuilderEditor(
                 { component ->
                   focusEditor()
                   editorScope.launch {
-                    val symbol = runCatching { load(component) }.getOrNull()
+                    val symbol = runCatchingCancellable { load(component) }.getOrNull()
                     if (symbol == null) {
                       say("Could not fetch ${component.title} from the project library")
                       return@launch
@@ -2351,7 +2352,7 @@ fun UiBuilderEditor(
               editorScope.launch {
                 say("Publishing ${publication.title} to the project library")
                 when (
-                  val result = runCatching {
+                  val result = runCatchingCancellable {
                     publish(publication)
                   }
                     .getOrElse {
@@ -2397,7 +2398,7 @@ fun UiBuilderEditor(
                     title = finding.componentId,
                   )
               editorScope.launch {
-                val symbol = runCatching { load(listed) }.getOrNull()
+                val symbol = runCatchingCancellable { load(listed) }.getOrNull()
                 if (symbol == null) say("Could not fetch ${listed.title} from the project library")
                 else dispatch(UiBuilderEditorEvent.UpdateLibraryComponent(componentKey, symbol))
               }

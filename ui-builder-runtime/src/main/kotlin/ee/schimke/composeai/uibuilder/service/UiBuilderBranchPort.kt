@@ -3,29 +3,16 @@ package ee.schimke.composeai.uibuilder.service
 import ee.schimke.composeai.uibuilder.protocol.CommandConflictV1
 
 /**
- * Design branches: a design forked at a revision, edited on its own, and replayed back onto its
- * parent through the reducer. The model and its rules are in `docs/design/UI_BUILDER_BRANCHES.md`.
+ * Design branches: a design forked at a revision, edited on its own, and replayed onto its parent
+ * through the reducer. See `docs/design/UI_BUILDER_BRANCHES.md`.
  *
- * **A port beside [UiBuilderServicePort], not more variants of [UiBuilderServiceRequest].** That
- * hierarchy is sealed and the host matches it exhaustively — its grant scoping, its route table —
- * so a new variant is a compile break in every host the day it is released. A separate port is
- * additive: a host that has not wired branches yet keeps compiling, and wiring them is a choice it
- * makes (the MCP `branch_design` / `merge_branch` / `list_branches` tools).
+ * A separate port rather than new [UiBuilderServiceRequest] variants, because hosts match that
+ * sealed hierarchy exhaustively and a new variant would break them.
  *
- * **A branch IS a design.** It has its own design id ([UiBuilderBranch.branchId]), and every
- * ordinary request works on it: [UiBuilderServiceRequest.OpenDesign], a subscription,
- * [UiBuilderServiceRequest.ApplyOperation] (which is how a branch is edited), an export, a
- * thumbnail. What makes it a branch is the record this port reads and writes: its parent, its fork
- * point, its name, owner and status, and the log of commands accepted on it since the fork.
- *
- * **A suggestion is a branch** of [UiBuilderBranchKind.SUGGESTION]: a few proposed commands on the
- * design's head that a person accepts or rejects, like suggestion mode in a document. There is no
- * second mechanism. Propose it with [UiBuilderBranchRequest.CreateBranch] and `kind = SUGGESTION`,
- * fill it with ordinary applies on its id, list the open ones with
- * [UiBuilderBranchRequest.ListBranches] (`kind = SUGGESTION, includeClosed = false`), accept with
- * [UiBuilderBranchRequest.MergeBranch] (all of it, or the commands named in
- * [UiBuilderBranchRequest.MergeBranch.acceptOperationIds]) and reject with
- * [UiBuilderBranchRequest.ArchiveBranch].
+ * A branch is itself a design with its own id ([UiBuilderBranch.branchId]); it is opened, edited
+ * ([UiBuilderServiceRequest.ApplyOperation]) and exported like any other. A suggestion is a branch
+ * of [UiBuilderBranchKind.SUGGESTION], accepted with [UiBuilderBranchRequest.MergeBranch] and
+ * rejected with [UiBuilderBranchRequest.ArchiveBranch].
  */
 public interface UiBuilderBranchPort {
   public suspend fun executeBranch(call: UiBuilderBranchCall): UiBuilderBranchResponse
@@ -39,18 +26,12 @@ public data class UiBuilderBranchCall(
 
 public sealed interface UiBuilderBranchRequest {
   /**
-   * Fork [designId] at [revision] (its current revision when null) into a new branch.
+   * Fork [designId] at [revision] (the head when null). Needs write on the parent. The fork
+   * revision stays pinned in the parent while the branch is open, so retention cannot expire a
+   * merge's base.
    *
-   * Needs write on the parent: a branch is a place to change the parent from. The fork revision's
-   * document and position state are **pinned** in the parent for as long as the branch is open, so
-   * retention cannot expire the base a merge replays from.
-   *
-   * [branchId] is the new branch's design id; the service mints one when it is null. Supplying one
-   * makes a retried create idempotent for the same parent, fork revision, name and kind.
-   *
-   * [kind] is [UiBuilderBranchKind.SUGGESTION] for a proposed edit a person will accept or reject;
-   * [name] is then its summary ("Make the play button bigger"). A suggestion is normally forked at
-   * the head ([revision] null), so what it shows is what accepting it would change now.
+   * [branchId] is minted when null; supplying one makes a retried create idempotent. For a
+   * [UiBuilderBranchKind.SUGGESTION], [name] is its summary.
    */
   public data class CreateBranch(
     val designId: String,
@@ -61,10 +42,8 @@ public sealed interface UiBuilderBranchRequest {
   ) : UiBuilderBranchRequest
 
   /**
-   * The branches of [designId], newest first. Needs read on the parent.
-   *
-   * [kind] narrows the list to one kind — `SUGGESTION` with `includeClosed = false` is "the
-   * suggestions waiting on this design"; null lists both.
+   * The branches of [designId], newest first, optionally narrowed by [kind]. Needs read on the
+   * parent.
    */
   public data class ListBranches(
     val designId: String,
@@ -83,33 +62,16 @@ public sealed interface UiBuilderBranchRequest {
   public data class ArchiveBranch(val branchId: String) : UiBuilderBranchRequest
 
   /**
-   * Replay the branch's log onto its parent's current revision.
+   * Replay the branch's log onto its parent's current revision, all or nothing: one parent revision
+   * per command, attributed to its branch author. A refusal commits nothing and the report names
+   * the command. Needs write on the parent.
    *
-   * **All or nothing.** Every command is replayed through the reducer onto a working copy of the
-   * parent; only when every one lands is the result committed, as one revision per command,
-   * attributed to the actor that authored it on the branch. A refusal commits nothing and the
-   * report says which command stopped the run and why. Then the branch is marked merged and its
-   * open siblings — branches of the same parent forked at the same revision — are archived, linked
-   * to it.
+   * [dryRun] reports without writing. [skipOperationIds] leaves logged commands out (skipping a
+   * command an undo targets refuses the undo, so skip both); [acceptOperationIds] names the only
+   * ones to keep. Unknown ids are refused.
    *
-   * [dryRun] replays and reports without writing anything, to either design.
-   *
-   * [skipOperationIds] leaves those logged commands out of the replay — how a merge refused at a
-   * command is resolved when that command should not land (a stale delete nobody wants any more, an
-   * edit superseded on the parent). The log itself is history and is never rewritten; the skip is a
-   * decision made at merge time, and the report lists it. Skipping a command an undo targets
-   * refuses the undo (`UNKNOWN_OPERATION`), so skip both.
-   *
-   * [acceptOperationIds] is the same decision said the other way round — "accept only these" — for
-   * accepting part of a suggestion: every logged command it does not name is skipped, as if it were
-   * in [skipOperationIds]. Null accepts the whole log. Naming a command the log does not hold is
-   * refused, as it is for a skip.
-   *
-   * Merging a [UiBuilderBranchKind.BRANCH] archives its open sibling branches. Merging a
-   * [UiBuilderBranchKind.SUGGESTION] archives nothing: two suggestions made at the same revision
-   * are two proposals, not two alternatives, and accepting one says nothing about the other.
-   *
-   * Needs write on the parent.
+   * Merging a [UiBuilderBranchKind.BRANCH] archives its open siblings forked at the same revision;
+   * merging a suggestion archives nothing.
    */
   public data class MergeBranch(
     val branchId: String,
@@ -174,9 +136,8 @@ public data class UiBuilderBranch(
   val supersededByBranchId: String? = null,
   val kind: UiBuilderBranchKind = UiBuilderBranchKind.BRANCH,
   /**
-   * The logged commands' operation ids, in log order: what [UiBuilderBranchRequest.MergeBranch]'s
-   * `skipOperationIds` and `acceptOperationIds` name, so a partial accept can be asked for without
-   * reading the log some other way.
+   * The logged commands' operation ids, in log order, as `skipOperationIds` / `acceptOperationIds`
+   * name them.
    */
   val operationIds: List<String> = emptyList(),
 )

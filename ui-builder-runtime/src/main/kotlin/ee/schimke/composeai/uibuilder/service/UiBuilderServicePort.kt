@@ -22,15 +22,9 @@ import java.io.Closeable
 /**
  * Actor identity established by the host's authentication layer, never by a request payload.
  *
- * [onBehalfOfActorId] is the second half of that identity: the human an automated actor is acting
- * for. A host mints one when a credential is itself a delegation — this repository's server does it
- * for an agent grant, whose whole existence is a person clicking *approve* on an agent's request —
- * and leaves it null for a credential that speaks for itself, which is every browser session.
- *
- * The service reads it in exactly one place, [designs' access control][accessIdentities]: a
- * delegate may do what its principal may do, and nothing more. Everything an actor *writes* —
- * operations, presence, undo eligibility — stays under [actorId] alone, so the audit record still
- * says the agent did it and two identities never collide in one design's presence.
+ * [onBehalfOfActorId] is the human a delegated credential (e.g. an approved agent grant) acts for.
+ * It only widens access checks via [accessIdentities]; everything the actor writes stays under
+ * [actorId], so audit and presence still name the agent.
  */
 public data class AuthenticatedUiBuilderActor(
   public val actorId: String,
@@ -45,10 +39,8 @@ public data class AuthenticatedUiBuilderActor(
   }
 
   /**
-   * Every identity this actor's authority may be found under, its own first.
-   *
-   * The order matters where an answer is derived from the first match — a delegate that also holds
-   * a grant of its own is described by that grant rather than by its principal's.
+   * Every identity this actor's authority may be found under, its own first, so a delegate's own
+   * grant wins over its principal's.
    */
   public val accessIdentities: List<String>
     get() = listOfNotNull(actorId, onBehalfOfActorId)
@@ -72,20 +64,9 @@ public sealed interface UiBuilderServiceRequest {
   public data class GetDesignAccess(val designId: String) : UiBuilderServiceRequest
 
   /**
-   * What this actor may do to one design — the design's own answer, asked without doing anything.
-   *
-   * [GetDesignAccess] answers a neighbouring question and cannot serve this one: it is owner-only,
-   * because the whole access list names every collaborator, and a grantee has no business reading
-   * who else was shared in. A snapshot cannot either, since it carries `access` only for the owner.
-   * So an actor holding a grant had no way to learn its own actions short of attempting the write,
-   * and a caller outside the operation log — the sidecars beside a design, which are not the
-   * document and so never reach [ApplyOperation] — had no way at all.
-   *
-   * Answers only for a design this actor may read, and is otherwise indistinguishable from a design
-   * that does not exist: the point is to describe an actor's own reach, never to confirm an id.
-   *
-   * Has no `ui-builder-protocol` request shape, and deliberately so — this is a host asking its own
-   * service a question, not a wire message; see [RenameDesign] for the same argument.
+   * What this actor may do to one design, asked without doing anything. Unlike owner-only
+   * [GetDesignAccess], any reader may ask; a design it cannot read answers as missing.
+   * Host-internal, with no protocol shape (see [RenameDesign]).
    */
   public data class GetDesignActions(val designId: String) : UiBuilderServiceRequest
 
@@ -103,13 +84,10 @@ public sealed interface UiBuilderServiceRequest {
   ) : UiBuilderServiceRequest
 
   /**
-   * Preview moving an unusable design to the exact revision of its catalog served now.
-   *
-   * Unlike [PreviewCatalogUpgrade], the caller does not supply either pin. That is the recovery
-   * path for a pin this runtime can no longer resolve: the stored document remains the authority
-   * for the source pin, while [UiBuilderCatalogExecutor.reference] supplies the target without a
-   * browser guessing a digest. The result is still only a preview; committing it requires the
-   * hash-bound [ee.schimke.composeai.uibuilder.protocol.CatalogUpgradeMutationV1].
+   * Preview moving an unusable design to the catalog revision served now. The recovery path for a
+   * pin this runtime can no longer resolve: the source pin comes from the stored document and the
+   * target from [UiBuilderCatalogExecutor.reference]. Committing still needs the hash-bound
+   * [ee.schimke.composeai.uibuilder.protocol.CatalogUpgradeMutationV1].
    */
   public data class PreviewCurrentCatalogUpgrade(val designId: String) : UiBuilderServiceRequest
 
@@ -140,62 +118,38 @@ public sealed interface UiBuilderServiceRequest {
     UiBuilderServiceRequest
 
   /**
-   * Change a design's title, and nothing else about it.
+   * Change a design's title only. Outside the operation log: the title is metadata no node or
+   * export reads, so it takes no revision, delta or undo record. Anyone who may write may rename.
    *
-   * Outside the operation log on purpose. The title is document metadata rather than design
-   * content: no node reads it, no export emits it, and the revision — which is what an editor
-   * quotes as `baseRevision` and what an export pins — identifies the *design*, which a rename
-   * leaves untouched. Making it a mutation would give a rename a revision, a delta and an undo
-   * record, for something a concurrent edit cannot conflict with. Anybody who may write the design
-   * may name it. A listing shows the new title at once; an open editor shows it when it next opens
-   * the design.
-   *
-   * Has no `ui-builder-protocol` request shape yet, so it is answered outside the released
-   * envelope; see [UiBuilderProtocolMapper.toProtocolRequest].
+   * Has no `ui-builder-protocol` request shape yet; see
+   * [UiBuilderProtocolMapper.toProtocolRequest].
    */
   public data class RenameDesign(val designId: String, val title: String) : UiBuilderServiceRequest
 
   /**
-   * Remove a design, its history and its access list; every open stream on it is closed.
+   * Remove a design, its history and its access list, closing every open stream on it.
    *
-   * **Owner only** — not a grantee, however wide its grant, and not an actor that merely holds a
-   * write capability on the host. That is the guard `AGENT_ACCESS_GRANTS.md` argues for: an agent
-   * must not be able to wipe somebody else's work. A design an agent creates under an approved
-   * grant is owned by the person who approved it, and only that person's own session deletes it:
-   * acting on someone's behalf edits their designs but never deletes them. The operator's
-   * [UiBuilderAdminPort.adminDeleteDesign] remains the way to remove a design whose owner is gone.
+   * Owner only: not a grantee and not a delegate acting on the owner's behalf
+   * (`AGENT_ACCESS_GRANTS.md`); [UiBuilderAdminPort.adminDeleteDesign] covers designs whose owner
+   * is gone. Ownership is checked against the loaded or quarantined access record, so an unservable
+   * design can still be deleted.
    *
-   * The owner may delete a design the service refuses to *serve*: an unusable document is not an
-   * unknown access list, so ownership is checked against the record the design loaded with, and
-   * corruption does not turn the delete button into a dead end. A design the store could not read
-   * is answered from the access record its quarantine kept, when it kept one — only a header this
-   * build could not read leaves no record to check against, and that design stays the operator's to
-   * retire.
-   *
-   * Has no `ui-builder-protocol` request shape yet, so it is answered outside the released
-   * envelope; see [UiBuilderProtocolMapper.toProtocolRequest].
+   * Has no `ui-builder-protocol` request shape yet; see
+   * [UiBuilderProtocolMapper.toProtocolRequest].
    */
   public data class DeleteDesign(val designId: String) : UiBuilderServiceRequest
 
   /**
-   * The revisions of a design this service still retains a whole document for, newest first — what
-   * a history view can show, open and restore.
-   *
-   * Needs read. Has no `ui-builder-protocol` request shape; see [RenameDesign].
+   * The revisions this service retains a whole document for, newest first. Needs read; no protocol
+   * shape (see [RenameDesign]).
    */
   public data class ListRevisions(val designId: String) : UiBuilderServiceRequest
 
   /**
-   * Make a retained [revision]'s document the design's current one, as a new revision.
-   *
-   * Forward, never a rewind: everything after [revision] stays in the history and the restore is
-   * itself one operation, so restoring is undone by restoring again. It commits through the same
-   * whole-document replacement a catalog upgrade uses — hash-bound to the document it replaces, so
-   * a restore that raced another edit is refused rather than silently discarding it — and every
-   * open editor resyncs from a snapshot, as it does for an upgrade. Needs write, and [baseRevision]
-   * must be the current revision.
-   *
-   * Has no `ui-builder-protocol` request shape; see [RenameDesign].
+   * Make a retained [revision]'s document current again, as a new revision (so restoring is undone
+   * by restoring again). Commits through the hash-bound whole-document replacement a catalog
+   * upgrade uses, so a raced edit is refused. Needs write and [baseRevision] must be current; no
+   * protocol shape (see [RenameDesign]).
    */
   public data class RestoreRevision(
     val designId: String,
@@ -261,12 +215,9 @@ public sealed interface UiBuilderSubmission {
     override val baseRevision: Long,
     val operations: List<DesignMutationV1>,
     /**
-     * The revision the author had seen when these edits were made, when that is older than
-     * [baseRevision] — `DesignCommandV1.stalenessBaseRevision`. Null for a live edit, which saw
-     * [baseRevision]. A replayed offline run sends the revision it started from on every command
-     * after the first, so the service reads `STALE_*` from there while positions still resolve
-     * against [baseRevision]; see `UI_BUILDER_BRANCHES.md` → "How it relates to browser checkout
-     * and Sync".
+     * The revision the author had seen when older than [baseRevision]
+     * (`DesignCommandV1.stalenessBaseRevision`), as sent by replayed offline runs; `STALE_*` is
+     * judged from here while positions resolve against [baseRevision]. Null for a live edit.
      */
     val stalenessBaseRevision: Long? = null,
   ) : UiBuilderSubmission {
@@ -326,10 +277,8 @@ public data class UiBuilderPresence(
 
 public sealed interface UiBuilderServiceResponse {
   /**
-   * The catalogs a design may pin to. [pins], keyed by catalog system id, is the exact
-   * [CatalogReferenceV1] a document must carry to resolve to each — the thing a client used to have
-   * to guess, since the capability itself does not spell its digest. Empty where the executor
-   * cannot say.
+   * The catalogs a design may pin to; [pins] gives the exact [CatalogReferenceV1] for each system
+   * id, or is empty where the executor cannot say.
    */
   public data class Catalogs(
     val catalogs: List<CatalogCapabilityV1>,
@@ -340,11 +289,8 @@ public sealed interface UiBuilderServiceResponse {
     UiBuilderServiceResponse
 
   /**
-   * The actions [actor][UiBuilderServiceCall.actor] may take on one design, resolved through its
-   * principal where it has one, exactly as every other authorisation here is.
-   *
-   * An owner is reported as holding every action rather than as an owner: callers of this ask "may
-   * I write", and answering with a role would make each of them re-derive what a role permits.
+   * The actions the caller may take on one design, resolved through its principal. Owners are
+   * reported as holding every action rather than as a role.
    */
   public data class DesignActions(
     val designId: String,
@@ -445,45 +391,27 @@ public data class UiBuilderServiceDiagnostics(
   val activeMutationBuckets: Int,
   val persistenceMigrations: Long,
   /**
-   * Stored designs the current catalog or limits cannot serve, which are loaded but answer every
-   * request naming them with the reason. They do not stop the service starting, so this is how an
-   * operator learns they exist without opening one.
+   * Stored designs the current catalog or limits cannot serve. They are loaded but refuse every
+   * request, and do not stop startup.
    */
   val unusableDesigns: Int = 0,
   /** Stored, servable designs carrying properties their catalog no longer declares. */
   val degradedDesigns: Int = 0,
   /**
-   * Stored designs whose catalog pin was rewritten to the served reference as they loaded.
-   *
-   * Non-zero on the first start after `--ui-builder-published-catalogs` changes a catalog's source,
-   * and zero on every start after that, because the rewrite is written through. A count that stays
-   * non-zero across restarts means the write is not landing — see [rePinPersistenceFailure].
+   * Stored designs whose catalog pin was rewritten to the served reference as they loaded. A count
+   * that stays non-zero across restarts means the write-through is failing — see
+   * [rePinPersistenceFailure].
    */
   val rePinnedDesigns: Int = 0,
   /**
-   * The **class** of the exception that stopped those rewrites being written, or null when none did
-   * — never its message.
-   *
-   * That distinction is the whole field. This class is owner-free by contract, and `/status.json`
-   * is unauthenticated on a `--public` host, but the store's messages name the design and the
-   * volume: `cannot store UI-builder design <id> under <directory>`. Forwarding one would publish a
-   * design id and the absolute state path to anyone who can reach the host. A class name is bounded
-   * by the set of exception types this build contains, identifies nobody, and still separates the
-   * two cases worth separating — the store refusing the write from the filesystem refusing it.
-   * Whoever needs the message has the host.
-   *
-   * Deliberately not fatal: the rewrite has already been applied in memory, so this process serves
-   * correctly either way, and what a failure costs is that the stored files stay on the old pin
-   * until a later boot succeeds. It matters because a synthesised catalog cannot be retired until
-   * they have converged.
+   * The exception class (never its message) that stopped re-pin writes, or null. Messages name
+   * design ids and state paths, and this record is served unauthenticated on public hosts. Not
+   * fatal: the re-pin already applies in memory.
    */
   val rePinPersistenceFailure: String? = null,
   /**
-   * Bytes the durable state currently occupies, and the ceiling a write is refused at.
-   *
-   * Both 0 when the storage bounds nothing (in-memory, tests) or cannot be measured. This is the
-   * headroom an operator had no way to see: `preview.coo.ee` sat at 73% of its ceiling for weeks
-   * and the first signal would have been a refused save (yschimke/compose-preview-server#568).
+   * Bytes the durable state occupies and the ceiling writes are refused at; both 0 where unbounded
+   * or unmeasurable (yschimke/compose-preview-server#568).
    */
   val storageBytes: Long = 0,
   val storageMaximumBytes: Long = 0,

@@ -21,11 +21,8 @@ internal data class PersistedDesignV1(
   val operationOutcomes: Map<String, OperationOutcomeRecordV1> = emptyMap(),
   val acceptedOperations: Map<String, AcceptedOperationRecordV1> = emptyMap(),
   /**
-   * The conflict history [acceptedOperations] used to serve — see [ConflictTouchRecordV1].
-   *
-   * Defaulted empty, so a state file written before this existed loads. Such a design answers
-   * "nobody wrote this" until enough operations land to refill the window, which is the behaviour
-   * it already had; the coverage this field restores begins from the next commit.
+   * See [ConflictTouchRecordV1]. Defaulted empty so older state files load; coverage starts from
+   * the next commit.
    */
   val conflictTouches: List<ConflictTouchRecordV1> = emptyList(),
   val tombstones: Map<String, NodeTreeSnapshotV1> = emptyMap(),
@@ -35,14 +32,13 @@ internal data class PersistedDesignV1(
   val updatedAtEpochMillis: Long,
   val audit: List<AuditRecordV1> = emptyList(),
   /**
-   * Present when this design is a branch of another — see `UI_BUILDER_BRANCHES.md`. Never written
-   * for an ordinary design, so the bytes stored for one are what they were before branches existed.
+   * Present only for a branch (`UI_BUILDER_BRANCHES.md`); never written otherwise, keeping ordinary
+   * designs' bytes unchanged.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val branch: DesignBranchRecordV1? = null,
   /**
-   * A branch's accepted commands since its fork, in order and as submitted to the branch: what a
-   * merge replays onto the parent. Unbounded by the history window on purpose — a merge needs all
-   * of it — and bounded instead by `MAXIMUM_BRANCH_COMMANDS`.
+   * A branch's accepted commands since its fork, as submitted: what a merge replays. Not bounded by
+   * the history window (a merge needs all of it) but by `MAXIMUM_BRANCH_COMMANDS`.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val branchLog: List<DesignSubmissionV1> = emptyList(),
 )
@@ -75,8 +71,7 @@ internal data class DesignBranchRecordV1(
   val forkRevision: Long,
   val forkDocumentHash: String,
   /**
-   * The parent's own creation time, which tells this parent from a design later created under the
-   * same id after it was deleted — a fork point in another design's history is not a fork point.
+   * The parent's creation time, distinguishing it from a later design created under the same id.
    */
   val parentCreatedAtEpochMillis: Long,
   val createdAtEpochMillis: Long,
@@ -84,10 +79,7 @@ internal data class DesignBranchRecordV1(
   val closedByActorId: String? = null,
   val mergedAtParentRevision: Long? = null,
   val supersededByBranchId: String? = null,
-  /**
-   * Never written for an ordinary branch, so the bytes a branch stored before suggestions existed
-   * are the bytes it stores now.
-   */
+  /** Never written for an ordinary branch, so pre-suggestion bytes are unchanged. */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val kind: DesignBranchKindV1 = DesignBranchKindV1.BRANCH,
 )
 
@@ -152,44 +144,25 @@ internal data class AcceptedOperationRecordV1(
 )
 
 /**
- * What one accepted operation TOUCHED, with none of what it wrote.
+ * What one accepted operation touched, without what it wrote.
  *
- * Conflict detection asks one question of history — "did anyone write this same thing after the
- * revision my client last saw?" — and every check that asks it used to scan
- * [PersistedDesignV1.acceptedOperations]. That map is bounded by
- * [UiBuilderServiceLimits.retainedUndoBytes], because the records in it are enormous:
- * `StructureChangeV1` carries whole node subtrees on both sides, ~430 KB apiece on the design that
- * motivated the budget. A submission is accepted whenever its `baseRevision` still has a POSITION
- * snapshot (see the `REVISION_NOT_RETAINED` refusal in `reduceCommand`), and that set is bounded by
- * a count. Two different bounds over the same window: on a design with large records the byte
- * budget could prune to eight operations while thirty-two-plus revisions stayed acceptable, and a
- * client submitting against one of the uncovered ones got every staleness check answering "nobody
- * wrote this" from a history that had simply been thrown away. Not a missing conflict notice — a
- * silent overwrite reported as clean.
+ * Staleness checks used to scan [PersistedDesignV1.acceptedOperations], which is pruned by a byte
+ * budget ([UiBuilderServiceLimits.retainedUndoBytes]) while acceptance is bounded by retained
+ * position snapshots. With large records the two windows diverged and stale submissions were
+ * silently reported clean. Touch records are small enough to keep for the whole acceptance window,
+ * and are pruned against the oldest retained position snapshot.
  *
- * Splitting the question from the payload is what fixes it. A touch record is a revision and a set
- * of short keys, so retaining one per accepted operation for the whole acceptance window costs
- * kilobytes where retaining the operations themselves cost megabytes. [conflictTouches] is pruned
- * against the oldest retained position snapshot rather than by a count of its own, which is the
- * invariant stated directly: history covers exactly what the service will accept.
- *
- * The keys are opaque and internal — see `touchKeys`. They are `\u0000`-separated rather than
- * joined on a printable character because node ids, property names and event names are all
- * caller-supplied, and any printable separator is one a caller can put inside a segment to make two
- * different touches collide.
+ * Keys (see `touchKeys`) are `\u0000`-separated because every segment is caller-supplied and a
+ * printable separator could be used to make two touches collide.
  */
 @Serializable
 internal data class ConflictTouchRecordV1(
   val committedRevision: Long,
   val keys: Set<String>,
   /**
-   * Who wrote these keys, and from which client and starting revision — the batch's
-   * [ReplayRunIdentity]. A Sync's later commands use it to tell the run's own earlier writes from a
-   * concurrent edit (see [StalenessWindow]).
-   *
-   * Absent for an undo, a redo, and every record written before this existed, which therefore match
-   * no run: a write nobody can attribute to the run is reported, never silently treated as the
-   * author's own. Never written when absent, so those records keep the bytes they had.
+   * The writing batch's [ReplayRunIdentity], letting a Sync tell its own earlier writes from a
+   * concurrent edit (see [StalenessWindow]). Absent for undo, redo and older records, which
+   * therefore match no run and are always reported.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val actorId: String? = null,
   @EncodeDefault(EncodeDefault.Mode.NEVER) val clientId: String? = null,
@@ -200,11 +173,8 @@ internal data class ConflictTouchRecordV1(
 @Serializable internal sealed interface ChangeRecordV1
 
 /**
- * The bounded evidence needed to validate an explicit catalog rollback.
- *
- * The candidate itself already lives in retained snapshots. Keeping whole before/after documents
- * here would duplicate every byte inside the undo budget even though generic undo deliberately
- * refuses this record.
+ * The bounded evidence needed to validate an explicit catalog rollback; the documents themselves
+ * live in retained snapshots.
  */
 @Serializable
 @SerialName("catalogUpgrade")
@@ -224,19 +194,15 @@ internal data class PropertyChangeV1(
   val before: UiValueV1?,
   val after: UiValueV1,
   /**
-   * False when the operation unset the property — a `setProperty` whose value was `null`. [after]
-   * is then the null value as submitted, kept so the record still says what was asked for.
-   * Defaulted, because every record written before the rule existed set a value.
+   * False when the operation unset the property (a `setProperty` with `null`); defaulted for older
+   * records.
    */
   val afterPresent: Boolean = true,
 ) : ChangeRecordV1
 
 /**
- * One node's whole modifier chain, before and after.
- *
- * Node-granular rather than field-granular, because the chain is one value:
- * `SetModifiersMutationV1` writes it whole, its elements are order-dependent and have no identity
- * to address, and two writers editing it are editing the same thing.
+ * One node's whole modifier chain, before and after; the chain is written whole and has no
+ * addressable elements.
  */
 @Serializable
 @SerialName("modifiers")
@@ -247,10 +213,7 @@ internal data class ModifierChangeV1(
 ) : ChangeRecordV1
 
 /**
- * One placement's whole `arguments` map, before and after.
- *
- * Node-granular for the reason [ModifierChangeV1] is: `SetComponentArgumentsMutationV1` writes the
- * map whole, and two writers editing one placement's arguments are editing the same thing.
+ * One placement's whole `arguments` map, before and after, node-granular like [ModifierChangeV1].
  */
 @Serializable
 @SerialName("componentArguments")
@@ -260,13 +223,7 @@ internal data class ComponentArgumentsChangeV1(
   val after: Map<String, UiValueV1>,
 ) : ChangeRecordV1
 
-/**
- * One state variable's declaration, before and after.
- *
- * `before == null` is a declaration this operation introduced and `after == null` one it removed,
- * so the same record compensates a `setStateVariable` and a `removeStateVariable` without a second
- * type or a flag saying which it was.
- */
+/** One state variable's declaration, before and after; a null side means introduced or removed. */
 @Serializable
 @SerialName("stateVariable")
 internal data class StateVariableChangeV1(
@@ -276,11 +233,8 @@ internal data class StateVariableChangeV1(
 ) : ChangeRecordV1
 
 /**
- * One event's actions on one node, before and after.
- *
- * Null on either side is the absent binding rather than an empty list, which is the same
- * distinction the mutation makes: `actions: []` means unbind, and a document that stored it as an
- * empty list would carry two spellings of "nothing is bound here".
+ * One event's actions on one node, before and after. Null is the absent binding, never an empty
+ * list.
  */
 @Serializable
 @SerialName("eventBinding")
@@ -291,14 +245,7 @@ internal data class EventBindingChangeV1(
   val after: List<DesignActionV1>?,
 ) : ChangeRecordV1
 
-/**
- * One component declaration, before and after.
- *
- * `before == null` is a declaration this operation introduced and `after == null` one it removed,
- * so the same record compensates a `declareComponent` and a `removeComponent` — exactly as
- * [StateVariableChangeV1] does for the pair beside it, and for the same reason: a second type or a
- * flag saying which it was would be a fact the two nulls already carry.
- */
+/** One component declaration, before and after; a null side means declared or removed. */
 @Serializable
 @SerialName("component")
 internal data class ComponentChangeV1(

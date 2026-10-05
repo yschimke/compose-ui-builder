@@ -31,12 +31,7 @@ sealed interface UiBuilderEditorEvent {
   /** Shows or hides one component's variants in the insert panel. */
   data class ToggleCatalogComponent(val componentId: String) : UiBuilderEditorEvent
 
-  /**
-   * Opens every shelf in the insert panel — the way back out of a corner of the catalog.
-   *
-   * It does not also close every component: the variants you opened are what you were looking at,
-   * and "show me everything" is a statement about the shelves.
-   */
+  /** Opens every shelf in the insert panel; expanded components are left as they are. */
   data object ExpandAllCatalogGroups : UiBuilderEditorEvent
 
   /** Show or hide one component pack's shelf in the insert panel. */
@@ -46,10 +41,8 @@ sealed interface UiBuilderEditorEvent {
   data class SetEnabledPacks(val packIds: Set<String>) : UiBuilderEditorEvent
 
   /**
-   * What a read of the project's component library found, for the Issues panel to say.
-   *
-   * An event rather than a parameter of `problems` because the fetch is the host's — it needs a
-   * design id, a base URL and a token, none of which the reducer has or should acquire.
+   * What a read of the project's component library found. An event because the fetch needs host
+   * credentials the reducer does not have.
    */
   data class SetComponentDrift(val findings: List<ComponentDriftFinding>) : UiBuilderEditorEvent
 
@@ -66,23 +59,15 @@ sealed interface UiBuilderEditorEvent {
   data class SearchLayers(val query: String) : UiBuilderEditorEvent
 
   /**
-   * Switches one design pane on, or off.
-   *
-   * The only family of editor events that stays live with the authoring canvas switched off.
-   * Everything else is suppressed, because the chords that select and delete would otherwise still
-   * be editing a document nobody can see themselves editing — and a pane toggle is the way back.
-   *
-   * Switching off the last open pane is refused rather than obeyed: see [EditorPane].
+   * Switches one design pane on or off. The only editing event still live with the canvas off,
+   * since it is the way back; switching off the last pane is refused.
    */
   data class TogglePane(val pane: EditorPane) : UiBuilderEditorEvent
 
   /** Shows or hides the generated-Kotlin pane under the canvas. */
   data object ToggleCodePane : UiBuilderEditorEvent
 
-  /**
-   * Opens the selection's quick editor, or closes it. Only a single selection has one: the card
-   * edits one node's values.
-   */
+  /** Opens or closes the quick editor. Single selection only. */
   data object ToggleQuickEditor : UiBuilderEditorEvent
 
   /** Opens the quick editor, for a route that is about to hand it the caret. */
@@ -95,18 +80,14 @@ sealed interface UiBuilderEditorEvent {
   data object ToggleHistoryBar : UiBuilderEditorEvent
 
   /**
-   * Looks at one revision, or comes back to the design with null.
-   *
-   * Also the way out of a comparison: picking a revision replaces both ends, because a third click
-   * on a two-ended control otherwise has to guess which end the person meant.
+   * Looks at one revision, or returns to the design with null. Also ends a comparison by replacing
+   * both ends.
    */
   data class ShowRevision(val revision: Int?) : UiBuilderEditorEvent
 
   /**
-   * Adds the other end of a comparison, against whatever [ShowRevision] is looking at.
-   *
-   * Ignored while nothing is being looked at: there is no comparison to add an end to, and the
-   * living design is not the second end — the strip's newest row is, and it names a revision.
+   * Adds the other end of a comparison against [ShowRevision]; ignored while nothing is being
+   * looked at.
    */
   data class CompareRevision(val revision: Int) : UiBuilderEditorEvent
 
@@ -114,20 +95,12 @@ sealed interface UiBuilderEditorEvent {
   data class ShowPanes(val panes: Set<EditorPane>) : UiBuilderEditorEvent
 
   /**
-   * Chooses which host container a Wear widget design is framed in.
-   *
-   * A view over the design rather than an edit to it — see
+   * Chooses the Wear widget host container; a view, not an edit. See
    * [UiBuilderEditorState.wearWidgetHostShape].
    */
   data class ShowWearWidgetHostShape(val shape: WearWidgetHostShape) : UiBuilderEditorEvent
 
-  /**
-   * Selects every row the layers filter matched.
-   *
-   * The multi-node property editor is only as reachable as the selection is: restyling every text
-   * on a screen meant finding each of them by eye in a hundred-row tree. Filter, then take all of
-   * them in one press.
-   */
+  /** Selects every row the layers filter matched. */
   data object SelectAllMatches : UiBuilderEditorEvent
 
   /** Add or remove one node, leaving the rest of the selection alone (ctrl/⌘-click). */
@@ -137,19 +110,10 @@ sealed interface UiBuilderEditorEvent {
   data class ExtendSelectionTo(val nodeId: String) : UiBuilderEditorEvent
 
   /**
-   * Insert a catalog component, optionally as one of its declared variants.
+   * Insert a catalog component, optionally as one of its variants, as one batch and one revision.
    *
-   * [variant] rides this event rather than being a second insert-then-edit, because the two are not
-   * the same thing to a collaborator: an insert followed by a property write is a filled card
-   * appearing on their canvas and turning outlined a frame later, and a rejected second operation
-   * would leave the wrong one there for good. One event, one batch, one revision.
-   *
-   * [afterNodeId] is where a canvas drop lands — the seam the marker was drawn at, which is a fact
-   * about the pointer and not about the selection. Null is the long-standing Add: after whatever
-   * the slot already holds. A name the slot no longer holds falls back to that, the same way a
-   * stale variant does: the geometry a plan was resolved against can age while the drag is in
-   * flight, and an edit that would otherwise be legal must never be refused by an out-of-date
-   * neighbour.
+   * [afterNodeId] is the seam a canvas drop landed on; null, or a sibling that no longer exists,
+   * appends after the slot's children so a stale drag plan never refuses an otherwise legal edit.
    */
   data class InsertComponent(
     val componentId: String,
@@ -159,14 +123,8 @@ sealed interface UiBuilderEditorEvent {
   ) : UiBuilderEditorEvent
 
   /**
-   * Add a top-level item beside the design rather than into the selection — see
-   * [UiBuilderEditorState.addBeside].
-   *
-   * It names no target, and cannot: where the item lands depends on whether the design already has
-   * a board to append into or has to be wrapped in one, and both of those are decided from the
-   * document at the moment the command is built. [InsertComponent] names a target because the
-   * insert panel showed the author that target before they pressed it; there is nothing equivalent
-   * to show here, because "beside everything else" is the whole of the destination.
+   * Add a top-level item beside the design (see [UiBuilderEditorState.addBeside]). No target:
+   * whether to append to a board or wrap the design in one is decided when the command is built.
    */
   data class InsertComponentBeside(
     val componentId: String,
@@ -177,10 +135,8 @@ sealed interface UiBuilderEditorEvent {
   data object ToggleAddBeside : UiBuilderEditorEvent
 
   /**
-   * Pin a component to the top of the insert panel, or take it off.
-   *
-   * The first press materialises the catalog's defaults and then flips the one pressed — see
-   * [UiBuilderEditorState.pinnedComponents] for why "not chosen" and "chose none" are different.
+   * Pin or unpin a component in the insert panel. The first press materialises the catalog
+   * defaults; see [UiBuilderEditorState.pinnedComponents].
    */
   data class TogglePinnedComponent(val componentId: String) : UiBuilderEditorEvent
 
@@ -197,15 +153,8 @@ sealed interface UiBuilderEditorEvent {
   ) : UiBuilderEditorEvent
 
   /**
-   * Move a node to a named place — the slot it lands in, and the child it lands after.
-   *
-   * [MoveNode] is a step within the slot a node already sits in, which is all the keyboard needs
-   * and all a one-step drag could mean. It cannot answer the layers panel's drag, where the row
-   * released under the pointer is often in a different slot, or in a different parent entirely —
-   * and where a screen whose every node is an only child in its slot has no in-slot step to take,
-   * so every drag was a no-op.
-   *
-   * A null [afterNodeId] means first in the slot.
+   * Move a node into [parent] after [afterNodeId] (null = first). Unlike [MoveNode], which steps
+   * within the current slot, this can cross slots and parents, as layer-panel drags need.
    */
   data class MoveNodeInto(
     val nodeId: String,
@@ -228,12 +177,8 @@ sealed interface UiBuilderEditorEvent {
     val property: String,
     val variable: String,
     /**
-     * When set, bind as a comparison rather than a bare read.
-     *
-     * The catalog decides which shape a property accepts: a bare read yields the variable's value,
-     * so it suits a property typed like the variable, while `stateEquals` yields a boolean, which
-     * is what a `selected` or `visible` flag needs. Binding a boolean property to a bare read of a
-     * string variable is refused, correctly, by the catalog.
+     * When set, bind as a `stateEquals` comparison (a boolean) rather than a bare read; the catalog
+     * decides which shape a property accepts.
      */
     val equalsValue: String? = null,
   ) : UiBuilderEditorEvent
@@ -242,12 +187,9 @@ sealed interface UiBuilderEditorEvent {
   data class UnbindProperty(val nodeId: String, val property: String) : UiBuilderEditorEvent
 
   /**
-   * Turn the selected subtree into a reusable component of this design, named [name].
-   *
-   * One command: the subtree leaves the screen and becomes the component's body, a placement takes
-   * its place, and every text the body shows becomes a parameter the placement passes — so the
-   * screen draws exactly what it drew before, and the next placement can say something else. Null
-   * [name] takes [UiBuilderEditorReducer.suggestedComponentName].
+   * Turn the selected subtree into a reusable component, replacing it with a placement whose texts
+   * become parameters, so the screen draws the same. Null [name] uses
+   * [UiBuilderEditorReducer.suggestedComponentName].
    */
   data class MakeComponent(val name: String? = null) : UiBuilderEditorEvent
 
@@ -304,31 +246,21 @@ sealed interface UiBuilderEditorEvent {
   data class RenameLocalComponent(val componentKey: String, val name: String) : UiBuilderEditorEvent
 
   /**
-   * Replace every placement of a design-only component with [catalogComponentId] — the component
-   * the app's catalog now ships — and drop the local definition.
-   *
-   * Each placement's arguments become the catalog component's properties of the same name, and its
-   * layout modifiers carry across, so the swap is the call the graduated code makes.
+   * Replace every placement of a design-only component with [catalogComponentId] and drop the local
+   * definition. Arguments become same-named properties and layout modifiers carry across.
    */
   data class ReplaceLocalComponent(val componentKey: String, val catalogComponentId: String) :
     UiBuilderEditorEvent
 
   /**
-   * Put one layout modifier on a node, or take it back off.
-   *
-   * The whole chain is rewritten either way, because [DesignOperation.SetModifiers] is whole-list:
-   * a chain is order-dependent and its elements have no identity to address. Added modifiers go on
-   * the end, which is the order somebody reading the exported Kotlin will see them in.
+   * Add or remove one layout modifier. The whole chain is rewritten ([DesignOperation.SetModifiers]
+   * is whole-list); additions go on the end.
    */
   data class ToggleModifier(val nodeId: String, val type: String) : UiBuilderEditorEvent
 
   /**
-   * Size a node: each axis to hug its content, fill its parent, or a fixed number of dp, and a null
-   * axis left as it is.
-   *
-   * What a resize handle, a double-click on one and the size chips all send. Both axes in one event
-   * so a corner drag is one edit and one undo step. The reducer rewrites only the modifiers that
-   * decide each axis — see `resizedModifierChain` — so a padding or a clip survives it.
+   * Size a node per axis (hug, fill or fixed dp; null leaves the axis alone) as one undo step. Only
+   * the modifiers that decide each axis are rewritten — see `resizedModifierChain`.
    */
   data class ResizeNode(
     val nodeId: String,
@@ -336,12 +268,7 @@ sealed interface UiBuilderEditorEvent {
     val height: EditorSizing? = null,
   ) : UiBuilderEditorEvent
 
-  /**
-   * Give one number inside one modifier a new value.
-   *
-   * The whole chain is rewritten, because that is the only shape the wire has; everything else on
-   * the node — including the rest of that modifier — is carried through untouched.
-   */
+  /** Give one number inside one modifier a new value; the rest of the chain is carried through. */
   data class SetModifierValue(
     val nodeId: String,
     val type: String,
@@ -389,12 +316,7 @@ sealed interface UiBuilderEditorEvent {
   /** Lift the selected container's children out and delete it. */
   data object UnwrapSelection : UiBuilderEditorEvent
 
-  /**
-   * Insert a component already wired to write state when it is clicked.
-   *
-   * Insert the node and its initial handler atomically. Existing handlers can also be edited with
-   * [SetEventBinding].
-   */
+  /** Insert a component and its initial click handler atomically. */
   data class InsertComponentWithAction(
     val componentId: String,
     val target: ParentSlot,
@@ -402,15 +324,9 @@ sealed interface UiBuilderEditorEvent {
   ) : UiBuilderEditorEvent
 
   /**
-   * Insert a `remote-compose/document` already holding one of the catalog's published documents.
-   *
-   * Separate from [InsertComponent] for the same reason as [InsertComponentWithAction]: the wire's
-   * mutation set reaches properties one at a time, but the bytes and the node have to arrive
-   * together — a `remote-compose/document` with no `documentBase64` renders as its own error
-   * diagnostic, and collaborators would see that intermediate state on the canvas.
-   *
-   * [documentBase64] is resolved by the host, not by the reducer: the bytes come over the network
-   * and this reducer is pure. The reducer's job is to refuse what will not decode.
+   * Insert a `remote-compose/document` together with its bytes, so collaborators never see the
+   * empty-document error state. [documentBase64] is fetched by the host; the reducer only refuses
+   * what will not decode.
    */
   data class InsertRemoteComposeDocument(
     val source: RemoteComposeSource,
@@ -418,11 +334,7 @@ sealed interface UiBuilderEditorEvent {
     val target: ParentSlot,
   ) : UiBuilderEditorEvent
 
-  /**
-   * The same insert, beside the design — see [InsertComponentBeside], whose reason for naming no
-   * target this shares: where a top-level item lands is decided from the document when the command
-   * is built, and for this one that is after a fetch has come back.
-   */
+  /** [InsertRemoteComposeDocument], beside the design — see [InsertComponentBeside]. */
   data class InsertRemoteComposeDocumentBeside(
     val source: RemoteComposeSource,
     val documentBase64: String,
@@ -452,11 +364,8 @@ sealed interface UiBuilderEditorEvent {
   data object Redo : UiBuilderEditorEvent
 
   /**
-   * Attach an imported picture as the base reference, replacing whatever was there.
-   *
-   * Only the image crosses; the layout boxes are read out of it here, so that every path into the
-   * editor — a paste, a file, a snapshot, a design reopened from the server — gets the same boxes
-   * from the same reader rather than depending on the host to have run one.
+   * Attach an imported picture as the base reference. Layout boxes are read from it here so every
+   * path into the editor gets the same boxes.
    */
   data class AttachReference(val image: ReferenceImage) : UiBuilderEditorEvent
 
@@ -466,20 +375,12 @@ sealed interface UiBuilderEditorEvent {
   /** Re-aim the overlay: mode, opacity, nudge, scale, split. */
   data class UpdateReferenceSettings(val settings: ReferenceOverlaySettings) : UiBuilderEditorEvent
 
-  /**
-   * Show the overlay again in the mode it was last drawn in, or hide it.
-   *
-   * A toggle rather than a mode picker because that is the gesture the work actually needs: an
-   * overlay is put up, looked through, and taken down again several times per adjustment, and
-   * re-choosing the mode each time is the friction that makes people leave it off.
-   */
+  /** Show the overlay again in its last mode, or hide it. */
   data object ToggleReference : UiBuilderEditorEvent
 
   /**
-   * Take the pointer for a markup tool, or hand it back to selection.
-   *
-   * Explicit, never inferred. An editor where a drag sometimes moves a node and sometimes draws on
-   * it is one nobody trusts, so the canvas only stops selecting when the operator says so.
+   * Take the pointer for a markup tool, or hand it back to selection. Always explicit, never
+   * inferred.
    */
   data class SelectReferenceTool(val tool: ReferenceTool) : UiBuilderEditorEvent
 
@@ -493,28 +394,20 @@ sealed interface UiBuilderEditorEvent {
   data class AddReferenceMark(val kind: ReferenceMarkupKind, val points: List<Float>) :
     UiBuilderEditorEvent
 
-  /** Rub out one mark. Every mark is individually removable; that is what makes markup usable. */
+  /** Rub out one mark. */
   data class RemoveReferenceMark(val markId: String) : UiBuilderEditorEvent
 
-  /** Rub out the most recent mark — the gesture that follows a stroke that went wrong. */
+  /** Rub out the most recent mark. */
   data object UndoReferenceMark : UiBuilderEditorEvent
 
   data object ClearReferenceMarkup : UiBuilderEditorEvent
 
-  /**
-   * Drop a picture onto the frame as a positioned piece rather than as the base.
-   *
-   * This is "copy a component out of Figma and put it where it should go": the base reference asks
-   * whether the whole screen is right, and a piece asks whether *this* belongs *there*, which is a
-   * question nothing stretched across the frame can pose.
-   */
+  /** Drop a picture onto the frame as a positioned piece rather than as the base. */
   data class PlaceReferencePiece(
     val image: ReferenceImage,
     /**
-     * The catalog component this picture is *of*, when it is a picture of one.
-     *
-     * Set by the capture path and null for an imported or pasted file. It is what makes the piece
-     * promotable later, and the reason a captured piece is not simply another image.
+     * The catalog component this picture is of, set by the capture path; it is what makes the piece
+     * promotable.
      */
     val componentId: String? = null,
   ) : UiBuilderEditorEvent
@@ -531,40 +424,22 @@ sealed interface UiBuilderEditorEvent {
   data class RemoveReferencePiece(val pieceId: String) : UiBuilderEditorEvent
 
   /**
-   * Turn a placed piece into the component it is a picture of.
-   *
-   * The one crossing from the reference half back into the design, and the reason a captured piece
-   * records what it was a picture of. It needs no agent and makes no guess: the piece names a
-   * catalog component, [target] is the slot the caller hit-tested under it, and the result is the
-   * same insertion a drag from the catalog performs — after which the picture is removed, because
-   * the real thing is now standing where it was.
-   *
-   * A piece with no provenance — a screenshot region, a Figma export — is refused here rather than
-   * approximated. Deciding which component *that* is, is a judgement, and this reducer does not
-   * make judgements.
+   * Replace a captured piece with the catalog component it pictures, inserted into [target] as a
+   * catalog drag would. Pieces without provenance are refused rather than guessed.
    */
   data class PromoteReferencePiece(val pieceId: String, val target: ParentSlot) :
     UiBuilderEditorEvent
 
   /**
-   * Replace the whole stack with a single picture of it — the annotated composite becomes the new
-   * base, and the pieces and marks that made it are gone.
-   *
-   * The picture arrives already composed, because composing it needs a bitmap, a frame size and a
-   * PNG encoder, none of which belong in a pure reducer.
+   * Replace the stack with a single pre-composed picture of it; composing needs a bitmap and
+   * encoder the reducer does not have.
    */
   data class FlattenReference(val image: ReferenceImage) : UiBuilderEditorEvent
 
   /**
-   * Make a layer agree with the reference: move it, resize it, and set its type size, as one edit.
-   *
-   * What the reference panel's *Apply* sends after matching a layer — see `alignmentFor`. One event
-   * rather than a move, a resize and a property commit in turn, so the correction is one undo step:
-   * a match that is wrong is undone in one press, not three, and never left two-thirds applied.
-   *
-   * The move is written as padding (start/top grow, end/bottom give back what they can, so the box
-   * keeps its size) and falls back to an `offset` only for the part padding cannot express — a move
-   * left of where the node's padding already starts.
+   * Move, resize and set the type size of a layer as one undo step — what the reference panel's
+   * Apply sends (see `alignmentFor`). Moves are written as padding, falling back to `offset` only
+   * where padding cannot express them.
    */
   data class AlignNodeToReference(
     val nodeId: String,
@@ -577,11 +452,8 @@ sealed interface UiBuilderEditorEvent {
 }
 
 /**
- * A state write a click can perform, narrowed to what the renderer executes.
- *
- * The protocol declares `increment` and `navigatePage` as well; this renderer writes nothing for
- * them, so offering them would author a control that does nothing when pressed. Narrower than the
- * wire on purpose — a builder should not be able to draw a dead button.
+ * A state write a click can perform, narrowed to what the renderer executes so the builder cannot
+ * author a dead button.
  */
 sealed interface EditorStateAction {
   val variable: String
@@ -600,20 +472,8 @@ sealed interface EditorStateAction {
 }
 
 /**
- * The wire form of one action, with its value typed against the variable it writes.
- *
- * The renderer keeps preview state as strings and compares them as strings, so a quoted `"true"`
- * works there and hid this: the Compose exporter declares each variable from its `initialValue`, so
- * a flag is a real Kotlin `Boolean` and assigning it a quoted string does not compile. The action
- * carries the declaration's own kind rather than whatever the editor typed.
- */
-/**
- * Why an action's value cannot be written to its variable, or null when it can.
- *
- * The encoder types a value against the declaration, and its fallbacks are `false`, `0` and `0.0` —
- * so `Set("expanded", "yes")` inserted a control that wrote `false`. Storing a different value than
- * the one asked for is worse than refusing: the design looks authored and does something else. The
- * encoder keeps its fallbacks; nothing reaches it that needs them.
+ * Why an action's value cannot be written to its variable, or null when it can. Refusing beats the
+ * encoder's silent `false` / `0` fallbacks, which would store a value nobody asked for.
  */
 internal fun EditorStateAction.valueRefusal(declaration: JsonObject?): String? {
   val raw =
@@ -627,13 +487,9 @@ internal fun EditorStateAction.valueRefusal(declaration: JsonObject?): String? {
   val parses =
     when (kind) {
       StateKind.BOOLEAN -> raw.toBooleanStrictOrNull() != null
-      // `toIntOrNull`, because the exporter declares an integer variable as `Int`. A value past
-      // that range parses as a Long and then emits a literal the generated Kotlin cannot hold.
+      // The exporter declares integer variables as `Int`.
       StateKind.INTEGER -> raw.toIntOrNull() != null
-      // Finite, and for the same reason the integer case is bounded to `Int`: `kotlinLiteral`
-      // emits a JSON number verbatim, so `NaN` and `Infinity` — which `toDoubleOrNull` accepts —
-      // would export as bare identifiers the generated Kotlin never declares. The property editor
-      // already refuses them; the state editor was the way past it.
+      // `kotlinLiteral` emits numbers verbatim, so NaN / Infinity would not compile.
       StateKind.DECIMAL -> raw.toDoubleOrNull()?.isFinite() == true
       StateKind.STRING -> true
     }
@@ -650,12 +506,8 @@ internal enum class StateKind {
 }
 
 /**
- * A variable's kind, from `valueType` where the declaration carries it.
- *
- * `initialValue` alone is not a safe classifier: `booleanOrNull` and `longOrNull` on a
- * `JsonPrimitive` parse its content whether or not it was quoted, so a text variable initialised to
- * `"true"` or `"1"` reads as a flag or a number and the value written back would not match the
- * Kotlin type the exporter declares. `isString` settles it wherever `valueType` is absent.
+ * A variable's kind, from `valueType` where present. `initialValue` alone is unsafe because
+ * `booleanOrNull` / `longOrNull` parse quoted content too, so `isString` is checked first.
  */
 internal fun declaredStateKind(declaration: JsonObject?): StateKind {
   when (declaration?.get("valueType")?.primitiveOrNull()?.contentOrNull) {
@@ -680,12 +532,8 @@ internal fun declaredNullable(declaration: JsonObject?): Boolean =
     ?: (declaration?.get("initialValue") is JsonNull)
 
 /**
- * One authored value, typed against the variable it will be written to or compared with.
- *
- * `Int`, not `Long`, for a whole number: the exporter declares an integer variable as `Int`, so a
- * value past that range would be authored here and then emitted as a literal the generated Kotlin
- * cannot hold. Callers check with [EditorStateAction.valueRefusal] first, so the fallbacks are
- * unreachable rather than load-bearing.
+ * One authored value typed against its variable. `Int` because the exporter declares integers as
+ * `Int`; callers check [EditorStateAction.valueRefusal] first, so the fallbacks are unreachable.
  */
 internal fun typedStateValue(raw: String, declaration: JsonObject?): JsonPrimitive =
   when (declaredStateKind(declaration)) {
@@ -723,7 +571,7 @@ internal fun EditorStateAction.encoded(declaration: JsonObject?): JsonObject {
   }
 }
 
-/** Pure editor interaction reducer. Every document mutation delegates to CollaborationReducer. */
+/** What the editor reducer submits to the collaboration layer. */
 sealed interface EditorSubmission {
   data class Batch(val command: DesignCommand) : EditorSubmission
 

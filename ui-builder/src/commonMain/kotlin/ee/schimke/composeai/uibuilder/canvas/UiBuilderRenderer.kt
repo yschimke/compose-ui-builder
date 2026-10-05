@@ -250,18 +250,8 @@ private val LocalUiBuilderCornerRadius = staticCompositionLocalOf { 16f }
  * renderer bundle — is unchanged.
  */
 /**
- * Component id to canvas adapter id, as the catalog names them.
- *
- * The dispatch below is keyed on this rather than on the component id —
- * `UI_BUILDER_CATALOG_CONTRACT.md` item 17, "the adapter registry is the existing `when`, keyed by
- * adapter id instead of component id". Provided by the editor from the catalog, exactly like
- * [LocalUiBuilderNativeOnly].
- *
- * Empty by default and empty in practice today, which makes this change a no-op on every current
- * catalog: with no entry, a component keys on its own id and draws what it drew before. What it
- * buys is that a catalog CAN now say which adapter draws its component, so a new component needs no
- * case written here — which is the coupling that made this repository hold a copy of every
- * catalog's inventory.
+ * Component id to canvas adapter id, as the catalog names them; the dispatch below keys on the
+ * adapter (`UI_BUILDER_CATALOG_CONTRACT.md` item 17). A component with no entry keys on its own id.
  */
 internal val LocalUiBuilderCanvasAdapters =
   staticCompositionLocalOf<Map<String, String>> { emptyMap() }
@@ -290,25 +280,12 @@ internal fun ReportContentMissing() {
 }
 
 /**
- * Every component id the catalog offers, so the `else` branch can tell two different things apart.
+ * Every component id the catalog offers, so the `else` branch can tell an unknown id (an error)
+ * from one the catalog offers but this canvas cannot draw (a [NativeOnlyPlaceholder], as the
+ * published shelf promises; m3-catalog#324).
  *
- * Falling off the `when` means one of two things, and until now both drew the same error container
- * reading "Unsupported component". They are not the same:
- * - **the catalog does not offer this id** — a design pinned to another catalog, a stale import, a
- *   typo. Something IS wrong, and the error container is right.
- * - **the catalog offers it and this canvas has no case for it.** Nothing is wrong. The component
- *   is on the palette, it exports, and m3-catalog renders every one of them — the browser just
- *   cannot draw it. That is [NativeOnlyPlaceholder]'s situation exactly, and it is what the
- *   published shelf already *says*: `PublishedUiBuilderCatalog.wasm()` writes the note "drawn on
- *   the canvas as a named placeholder" for every component with no adapter, and then the canvas
- *   drew an error instead. This is the renderer keeping that promise (m3-catalog#324).
- *
- * Membership, deliberately, rather than the capability's own `adapterStatus`. That field would be
- * the direct statement of "this canvas can draw it" and it is not trustworthy: the frozen
- * `m3-catalog` capabilities report `planned` for `layout/box`, `m3/button`, `m3/card`,
- * `m3/icon-button`, `m3/search-bar`, `m3/search-input-field`, `m3/snackbar-host` and
- * `m3/horizontal-floating-toolbar`, all eight of which the `when` above draws. Reaching the `else`
- * is the renderer's own first-hand answer to the same question and cannot drift from it.
+ * Membership rather than the capability's `adapterStatus`, which is stale in the frozen m3-catalog
+ * capabilities.
  */
 internal val LocalUiBuilderCatalogComponentIds =
   staticCompositionLocalOf<Set<String>> { emptySet() }
@@ -317,33 +294,15 @@ internal val LocalUiBuilderCatalogComponentIds =
 internal val LocalUiBuilderNavigator = staticCompositionLocalOf<(String) -> Unit> { { _ -> } }
 
 /**
- * Which host container a Wear widget design is drawn inside.
- *
- * A composition local rather than a document property, because the shape is not the design's: the
- * launcher draws the frame from `WearWidgetParams`, and the same widget appears in every shape the
- * platform ships. Switching it asks "what does this look like in the host's other frame", which is
- * a view over the design rather than an edit to it — nothing here writes to the document, and a
- * design saved while the rectangular frame is showing reopens exactly as it was.
- *
- * Defaults to the squircle, so every other host of this surface — the thumbnails, the JVM render
- * port, the previews — draws the frame it always has.
+ * Which host container a Wear widget design is drawn inside. A composition local because the
+ * launcher, not the design, owns the frame; switching it never edits the document.
  */
 internal val LocalWearWidgetHostShape = staticCompositionLocalOf { WearWidgetHostShape.Default }
 
 /**
- * Remote Compose documents a host has fetched for the `documentUrl` of an embedded document node.
- *
- * A composition local rather than a renderer parameter, for the reason [LocalUiBuilderNativeOnly]
- * is one: every surface that draws a document — the canvas, the thumbnails, the JVM render port,
- * the previews — would otherwise have to thread a parameter it has no opinion about.
- *
- * A **lookup**, not a fetch. Loading bytes is suspending, size-limited and cancellable, and none of
- * those belong inside a composable that draws: the host resolves a URL once, decides what an
- * over-large or unreachable one means, and answers here with the document or the failure. `null` is
- * the third answer and the common one — *not resolved yet*, which is what a first frame sees and
- * what a host with no resolver at all always answers. The node draws its own waiting state for it
- * rather than an error, because a design pointing at a URL nobody has fetched is not a broken
- * design.
+ * Remote Compose documents a host has fetched for embedded document nodes, keyed by `documentUrl`.
+ * A lookup, not a fetch: the host loads bytes outside composition. `null` means not resolved yet,
+ * and the node draws a waiting state rather than an error.
  */
 public val LocalRemoteComposeDocuments:
   androidx.compose.runtime.ProvidableCompositionLocal<(String) -> Result<RcDocument>?> =
@@ -352,24 +311,9 @@ public val LocalRemoteComposeDocuments:
   }
 
 /**
- * Remote Compose documents a host has **captured** from a design's own inline content, by node id.
- *
- * The sibling of [LocalRemoteComposeDocuments] and deliberately a second local rather than a
- * widening of it. That one is keyed by URL because an embedded document names a URL and two nodes
- * pointing at the same one are the same bytes; this one is keyed by *node*, because an inline
- * subtree is not addressed by anything — it is the design, and what identifies it is where it sits.
- *
- * A **lookup**, not a capture, for the same reason: producing these bytes means compiling the
- * generated `@RemoteComposable` body and running `captureSingleRemoteDocument` on an Android
- * daemon, which is a network round trip to `ServeUiBuilderInlineCapture` and cannot happen inside a
- * composable that draws. The host captures once, decides what a failed capture means, and answers
- * here.
- *
- * `null` — nothing captured for this node — is the common answer and the honest one: it is what a
- * host with no capture lane always says, and what every node says before anyone has asked for a
- * capture. The node then draws the Compose stand-ins in their marked frame, exactly as it always
- * has. A capture is an *upgrade* from describing the content to playing it, never a precondition
- * for drawing the design.
+ * Remote Compose documents a host has captured from a design's inline content, keyed by node id
+ * (inline subtrees have no URL). A lookup, not a capture. `null` is the common answer, and the node
+ * then draws its Compose stand-ins; a capture only upgrades that to real playback.
  */
 public val LocalRemoteComposeCaptures:
   androidx.compose.runtime.ProvidableCompositionLocal<(String) -> Result<RcDocument>?> =
@@ -378,20 +322,10 @@ public val LocalRemoteComposeCaptures:
   }
 
 /**
- * Draw the design at its whole extent rather than at its frame: lists unrolled, scrolling dropped.
- *
- * Compose refuses to measure a scrollable against an unbounded height — a `LazyColumn` under
- * `wrapContentSize(unbounded = true)` fails with "measured with an infinity maximum height
- * constraints" rather than growing — so a pane that draws a design at content height cannot be the
- * design's own composition. It is a **proxy**: `layout/lazy-column` becomes a `Column`,
- * `layout/lazy-grid` a non-lazy grid, and a `verticalScroll` modifier is dropped, so the content
- * that would be behind a scroll position is laid out where it would sit if the screen were tall
- * enough to hold it.
- *
- * What that costs is the laziness itself, and it is worth stating rather than discovering: nothing
- * here recycles, `fillParentMaxHeight` measures against the extent instead of the viewport, and a
- * sticky header does not stick. The same trade [WearScreenScaffold] already makes for the Wear
- * stadium, for the same reason and with the same honesty about it.
+ * Draw the design at its whole extent rather than its frame. Scrollables cannot be measured against
+ * an unbounded height, so this is a proxy: lazy lists become non-lazy layouts and `verticalScroll`
+ * is dropped. Nothing recycles, `fillParentMaxHeight` measures against the extent, and sticky
+ * headers do not stick.
  */
 internal val LocalUiBuilderUnrolled = staticCompositionLocalOf { false }
 
@@ -428,18 +362,9 @@ internal fun uiBuilderRenderStrategy(
   }
 
 /**
- * The density the design is drawn at: the one its environment names, not the host's.
- *
- * Public to the module rather than inlined into [UiBuilderSurface], because the editor's canvas has
- * to ask the same question. The canvas sizes the frame in *pixels* and this renderer then reads
- * those pixels as dp at this density, so the frame is the size the design was authored for only
- * while the two agree about what the density is. They used to each decide separately — the canvas
- * simply did not ask, and used the host's — and a design whose density was not the browser's was
- * handed a frame scaled by the ratio between them: a 240dp watch at 2.0 in a browser at 1.0 became
- * 120dp of room, which is not enough for a 216dp widget. See `PinnedDesignCanvas`.
- *
- * [fallback] is the host's own density, which is what an environment that names neither field
- * means.
+ * The density the design is drawn at: its environment's, not the host's. Shared with the editor
+ * canvas, which sizes the frame in pixels, so both agree on the frame's dp size (see
+ * `PinnedDesignCanvas`). [fallback] is the host density.
  */
 internal fun UiBuilderDocument.renderDensity(fallback: Density): Density =
   Density(
@@ -1034,18 +959,8 @@ private fun RenderNode(
       // structured-path export the SVG lane needs. Drawing it twice would be two answers to one
       // question.
       "wear-m3/icon" -> BuilderIcon(node, measured)
-      // Wear's own `Text`, out of the port the canvas links: Wear Compose publishes its own text
-      // component, and the canvas has no reason to call the mobile one.
-      //
-      // The difference is not the name. This branch used to read four properties (`text`, `color`,
-      // `style`, `maxLines`) where the catalog declares sixteen, so every `fontSizeSp`,
-      // `lineHeightSp`, `softWrap` and `overflow` a design set on a Wear text node was inert on the
-      // canvas while the mobile branch beside it honoured all of them. Wear's `Text` takes the same
-      // argument list, so this now reads what the mobile one reads.
-      //
-      // The style comes from `wearTextStyle`, which resolves the role names against Wear's own
-      // typography — Wear's type scale, not Material 3's — and is what makes the sizes right when a
-      // design sets none.
+      // Wear's own `Text`, reading the same properties as the mobile branch. The style comes from
+      // `wearTextStyle`, which resolves roles against Wear's type scale.
       "wear-m3/text" ->
         WearText(
           node.string("text"),
@@ -1132,22 +1047,12 @@ private fun RenderNode(
       "wear-m3/transforming-lazy-column" -> {
         val items = slot("items")
         if (LocalUiBuilderUnrolled.current) {
-          // At the extent the list is a Column: no viewport, no row transformation, and the rows
-          // are
-          // the list's unscaled layout — which is exactly the `ScrollMode.LONG` reference, whose
-          // stitch turns the transformation off. The real lazy layout cannot be measured against an
-          // unbounded height: it reports infinity, and the canvas fails outright with
-          // `Size(w x 2147483647) is out of range` — the same wall `layout/scaffold` and
-          // `layout/lazy-column` each already draw around. Without this the whole editor is blank
-          // for
-          // a Wear screen, because the extent's height is the content's.
+          // At the extent the list is a Column: no viewport and no row transformation, matching the
+          // `ScrollMode.LONG` reference. The real lazy layout cannot be measured against an
+          // unbounded height.
           //
-          //
-          // Each row is handed the full width, as the real list hands it
-          // (`WearCanvasTransformingLazyColumn`'s `fillMaxWidth()`), and centred as the real list
-          // centres them. Handed nothing, a row that sizes to its content — `ListHeader` centres
-          // its label within the width it is given — sat at the start of the column, so the extent
-          // drew every header left-aligned while the device previews beside it drew them centred.
+          // Rows get the full width and are centred, as `WearCanvasTransformingLazyColumn` does, so
+          // headers match the device previews.
           Column(
             modifier = measured,
             verticalArrangement = Arrangement.spacedBy(node.float("verticalSpacingDp", 4f).dp),
@@ -1189,23 +1094,10 @@ private fun RenderNode(
           { next -> slot("mainPane").forEach { child(it, next) } },
           { next -> slot("supportingPane").forEach { child(it, next) } },
         )
-      // The vocabulary switch. Everything below is `@RemoteComposable` in the code this design
-      // generates, and this canvas draws it with the ordinary Compose stand-ins the `remote-m3`
-      // catalog has always used for the same components — a `RemoteColumn` is drawn by a `Column`.
-      //
-      // Framed rather than drawn flush, and the frame is the honest part. The browser has no Remote
-      // Compose writer, so these are the shapes the generated body *describes* rather than the
-      // pixels
-      // a player produces; the frame is what stops an author reading them as the latter. The rule
-      // this keeps is `wear-m3`'s — never fake a component so it runs in Wasm — applied to a whole
-      // subtree rather than to one component.
-      //
-      // Once a host has captured the subtree ([LocalRemoteComposeCaptures]) none of that applies:
-      // there are real bytes, and they are played by the same `RcComposePlayer` that draws the
-      // embedded document beside it. The frame stays — the boundary is still a fact about the
-      // design
-      // — but it stops standing in for the content, which is the difference between marking a scope
-      // and approximating it.
+      // Inline remote content: everything below is `@RemoteComposable` in the generated code.
+      // Without a capture it is drawn with ordinary Compose stand-ins in a marked frame, since the
+      // browser has no Remote Compose writer. With a capture ([LocalRemoteComposeCaptures]) the
+      // real bytes are played by `RcComposePlayer`, and the frame only marks the boundary.
       REMOTE_COMPOSE_INLINE_COMPONENT_ID -> {
         val captured = LocalRemoteComposeCaptures.current(node.id)
         RemoteContentFrame(
@@ -1266,16 +1158,9 @@ private fun RenderNode(
       "remote-m3/lottie" -> LottiePlaceholder(node, measured)
       "layout/scaffold" -> {
         val containerColor = node.color("containerColor", MaterialTheme.colorScheme.background)
-        // `Scaffold` is a `SubcomposeLayout`, and one measured against an unbounded height does not
-        // grow — it fails outright with `Size(w x 2147483647) is out of range`. So the extent draws
-        // the same three parts as a plain Column: the bar, then the content under it.
-        //
-        // The snackbar host is dropped rather than stacked below the content. It is a transient
-        // overlay that floats above the *viewport*, and a strip three screens long has no viewport
-        // to
-        // float above — drawing it at the bottom of the extent would put it where nobody will ever
-        // see it and add a band of empty space where the design has none. The frame pane beside the
-        // extent is a real `Scaffold`, so that is where a snackbar keeps its meaning.
+        // `Scaffold` is a `SubcomposeLayout` and fails against an unbounded height, so the extent
+        // draws the bar then the content as a Column. The snackbar host is dropped: it floats over
+        // a viewport, which the extent does not have.
         if (LocalUiBuilderUnrolled.current) {
           Column(measured.background(containerColor)) {
             slot("topBar").forEach { child(it, Modifier) }
@@ -1360,17 +1245,10 @@ private fun RenderNode(
             child(id, aligned)
           }
         }
-      // A row that wraps. The one layout primitive in this catalog whose response to a narrow
-      // window needs no breakpoint, no `if` and no second design: children that do not fit the line
-      // go on the next one, which is what a Material chip group has always done and what
-      // `layout/row` cannot do — at 411 dp a row of four filter chips squeezes each one to a letter
-      // per line rather than wrapping (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 3).
-      //
-      // Every property it reads is one `layout/row` and `layout/lazy-grid` already declare, read by
-      // the same two helpers: the main axis is a row's
-      // `horizontalArrangement`/`horizontalSpacingDp`
-      // and the cross axis — the gap BETWEEN lines — is a column's pair. Nothing new to learn, and
-      // nothing new for the wire to carry.
+      // A row that wraps, the one layout primitive that adapts to a narrow window without a
+      // breakpoint (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 3). The main axis reads a
+      // row's `horizontalArrangement`/`horizontalSpacingDp`; the gap between lines reads a column's
+      // pair.
       "layout/flow-row" ->
         FlowRow(
           measured,
@@ -2029,20 +1907,8 @@ private fun RenderNode(
         NativeOnlyPlaceholder(node, measured, caption = node.componentId.substringBefore('/')) {
           node.slots.values.flatten().forEach { childId -> child(childId, Modifier) }
         }
-      // On the palette, exportable, rendered by its own catalog — and this canvas has no case for
-      // it. The shelf already promises exactly this picture; see
-      // [LocalUiBuilderCatalogComponentIds]
-      // for why membership answers the question and `adapterStatus` does not.
-      //
-      // Below every specific case, so it can only ever catch an id that would otherwise have drawn
-      // an error: nothing this renderer knows how to draw can be demoted to a placeholder by it.
-      // Both of these ask about the COMPONENT id, not the adapter id above, which is why they are
-      // an
-      // `if` inside the `else` rather than two more `when` branches. Keying the membership test on
-      // the adapter would mean a component whose catalog names an adapter this build lacks — the
-      // one
-      // case item 17 exists to handle — comparing an adapter id against a set of component ids,
-      // missing, and drawing an ERROR where the contract says it must draw a placeholder.
+      // Checked against the component id, not the adapter id, so a component whose catalog names an
+      // adapter this build lacks draws a placeholder rather than an error (contract item 17).
       else ->
         if (node.componentId in LocalUiBuilderCatalogComponentIds.current) {
           // On the palette, exportable, rendered by its own catalog — and this canvas has no case
@@ -2092,17 +1958,9 @@ private fun UiBuilderNode.linearGradientBrush(): Brush {
 }
 
 /**
- * The screen diameter a Wear design is authored against, in dp.
- *
- * Read from the document's own frame rather than from a scaffold property, because the Screen
- * inspector already carries it: `DeviceDimensions` publishes `wearos_small_round` (192dp),
- * `wearos_large_round` (227dp) and `wearos_xl_round` (240dp), and the server serves them to the
- * frame menu. A fifth scaffold property would be a second answer to a question already answered,
- * and the two would disagree the first time somebody changed one.
- *
- * The fallback is the small round size rather than the frame's raw width: a design opened on a
- * phone frame is a design somebody has not picked a watch for yet, and drawing a 411dp-wide watch
- * is a worse answer than drawing the smallest real one.
+ * The screen diameter a Wear design is authored against, from the document's own frame (the Screen
+ * inspector's `wearos_*_round` presets). Falls back to the small round size for a frame no watch
+ * was picked for.
  */
 private fun UiBuilderDocument.wearScreenWidthDp(frame: UiBuilderFrameGeometry): Int =
   frame.diameterFor(environment["widthDp"]?.jsonPrimitive?.intOrNull)
@@ -2110,39 +1968,10 @@ private fun UiBuilderDocument.wearScreenWidthDp(frame: UiBuilderFrameGeometry): 
 /**
  * The watch the Wear components in this design are laid out against.
  *
- * ## Why the host has to say, and what happened when it did not
- *
- * `androidx.wear.compose` reads the device out of Android's `Configuration`, which does not exist
- * off Android. The CMP port replaces that with one value, `LocalWearDeviceConfiguration`, and each
- * platform answers it for itself: the JVM takes the 192dp reference watch, and **the browser
- * reports its own viewport** — `window.innerWidth` / `window.innerHeight` — because a viewport is
- * the closest thing a browser has to `Configuration.screenWidthDp`.
- *
- * So on the Wasm canvas a Wear component was laid out against the editor window. Measured on the
- * real `ScreenScaffold`, whose content padding is 5.2% of the screen's width and 10% of its height:
- * 10dp x 20dp at 192x192, and **75dp x 90dp at 1440x900**. The same design drawn on the desktop
- * canvas — same code, JVM default — got the watch. Two lanes of one canvas disagreed about what a
- * watch is, and the Wasm one was the size of a browser.
- *
- * What that reached is every component that branches on the screen: `DatePicker` and `TimePicker`
- * (their `isLargeScreen` typography and 46dp options against the small screen's 36dp), `EdgeButton`
- * (its arc is computed from the screen width), `SwipeToReveal`, `PagerScaffold`, the progress
- * indicator's and scroll indicator's stroke widths. The Wear screen scaffold did not show it,
- * because the canvas draws that one itself with a measured padding table — which is exactly why
- * this went unnoticed: the one component big enough to be obvious was the one not asking.
- *
- * ## What it answers
- *
- * The frame the document names, by [wearScreenWidthDp]'s rule, so the stand-in scaffold and the
- * components inside it cannot disagree about the screen they are on. Both axes are the diameter: a
- * round watch's screen is as tall as it is wide, and the port reads `screenHeightDp` for its
- * vertical content padding (10%) and its list's minimum vertical content padding (23%), which
- * `ScreenScaffoldDefaults.contentPadding` computes from this configuration.
- *
- * `isScreenRound` is true because a Wear design in this builder is drawn on a round watch — the
- * scaffold stand-in is a stadium for that reason — and the remaining fields stay at the port's
- * defaults, which are the deterministic ones: a 24-hour clock whatever the browser's locale says,
- * and the left wrist. A canvas whose picture moved with the host's locale could not be diffed.
+ * The Wear port reads `LocalWearDeviceConfiguration`, which on Wasm defaults to the browser
+ * viewport — so components that branch on screen size (pickers, `EdgeButton`, padding) were laid
+ * out against the editor window. This answers with the document's diameter on both axes, round,
+ * with deterministic defaults (24-hour clock, left wrist) so renders do not vary with the host.
  */
 internal fun UiBuilderDocument.wearDeviceConfiguration(
   frame: UiBuilderFrameGeometry = UiBuilderFrameGeometry.None
@@ -2177,39 +2006,14 @@ internal val LocalUiBuilderCatalogPlatform = staticCompositionLocalOf { "" }
 internal val LocalUiBuilderFrameGeometry = staticCompositionLocalOf { UiBuilderFrameGeometry.None }
 
 /**
- * The Wear screen as a long screenshot: the frame's width, the content's height, round caps.
+ * The Wear screen at its whole extent, drawn as a long screenshot: the frame's width, the content's
+ * height and a round cap at each end — the same stadium `@ScrollingPreview(modes =
+ * [ScrollMode.LONG])` produces.
  *
- * ## Why a stadium and not a circle
- *
- * Because that is what the real one is. `@ScrollingPreview(modes = [ScrollMode.LONG])` on
- * wear-m3-catalog's `TransformingLazyColumn` component stitches the whole scroll into one tall PNG,
- * and the result is a stadium: the screen's width, the content's height, a round cap at each end.
- * This draws the same shape because the shape is not a metaphor — it is the Wear long-screenshot
- * form, and the extent is what an author is building. A 192dp keyhole shows one screenful and hides
- * the rest of the list behind a scroll position they have to keep re-finding.
- *
- * ## Every number here was measured, not chosen
- *
- * The geometry comes from that render and from `ScreenScaffoldPaddingProbeTest` in wear-m3-catalog,
- * which composes the real `AppScaffold` / `ScreenScaffold` / `TransformingLazyColumn` under
- * Robolectric and reports what the scaffold hands its list. The content padding is now the
- * library's own `ScreenScaffoldDefaults.contentPadding`, which that probe was measuring.
- *
- * ## Only the extent is drawn by hand
- *
- * A pane with a viewport — the frame pane and every device pane — is the Wear port's real
- * `ScreenScaffold`, edge button, scroll indicator and all. The extent cannot be: it has no viewport
- * for a scaffold to reserve space in or reveal a button against, so that path alone is drawn here,
- * with the button on the bottom cap where the scaffold puts it at the end of the scroll.
- *
- * ## What it still gets wrong, on purpose
- *
- * The rows are not transformed. `SurfaceTransformation` scales and fades each row by where it sits
- * in the viewport, and on the stitched reference that is visible as rows of *different widths* down
- * the page — each strip carrying the scale it had in the frame it came from. A stand-in cannot have
- * that without inventing a scroll position for a page that has none, so rows here are drawn at the
- * one width the transformation passes through: full content width, which is what a row gets at the
- * centre of the display.
+ * Only the extent is drawn by hand; panes with a viewport use the port's real `ScreenScaffold`.
+ * Content padding is the library's `ScreenScaffoldDefaults.contentPadding`. Rows are not
+ * transformed: without a scroll position they are drawn at full content width, as at the centre of
+ * the display.
  */
 @Composable
 private fun WearScreenScaffold(
@@ -2266,18 +2070,9 @@ private fun WearScreenScaffold(
         .heightIn(min = width)
         .clip(RoundedCornerShape(percent = 50))
         .background(background)
-    // Nothing drawn over the design. An earlier version outlined the first screenful — a
-    // circle over the top cap and a line where it ends — to answer "how much of this is above
-    // the fold". It reads as an artifact, because it is one: the canvas paints the *design*,
-    // and a guide painted into it is editor chrome in the one layer that has to stay
-    // comparable, pixel for pixel, with a render that has no such thing. The editor overlay is
-    // where that belongs, the way the reference overlay already works.
-    //
-    // No scroll indicator either. It is a real property of the design and it reaches the
-    // generated code; what it has no meaning on is this picture. An indicator shows where a
-    // viewport sits within the content, and the extent has no viewport. The real long
-    // screenshot agrees: `ScrollMode.LONG` sets `LocalScrollCaptureInProgress`, the emitted
-    // scaffold reads it and draws none, and the stitched capture comes back clean.
+    // Nothing is drawn over the design: a fold guide would be editor chrome in the layer that must
+    // stay pixel-comparable with renders. No scroll indicator either — the extent has no viewport,
+    // and the real `ScrollMode.LONG` capture draws none.
   ) {
     if (unrolled) {
       CompositionLocalProvider(
@@ -2392,15 +2187,8 @@ private const val ROUND_SCREEN_FRAME = "frame/round-screen"
 private const val WEAR_CARD_CORNER_RADIUS_DP = 26f
 
 /**
- * The Material 3 scheme a Wear design's mobile-side pieces draw through, taken from Wear's own.
- *
- * The canvas installs one mobile `MaterialTheme` for its own chrome and for the few mobile nodes a
- * Wear design can hold (an icon's tint, text with no colour of its own), and the Wear components
- * inside read the port's theme, which [WearCatalogTheme] installs. This is Wear's default
- * `ColorScheme` role for role, so the two cannot disagree. It used to be colours sampled off a
- * reference render, and sampling put a value under the wrong role: the warm `#FFDCC2` was filed as
- * `onSurfaceVariant` and is Wear's `tertiary`, and `#F6EDFF` stood in for `onBackground`, which is
- * `onSurface`.
+ * Wear's default `ColorScheme`, role for role, for the mobile `MaterialTheme` a Wear design's few
+ * mobile nodes draw through, so it cannot disagree with [WearCatalogTheme].
  */
 private val WearDarkColorScheme =
   WearColorScheme().let { wear ->
@@ -2659,18 +2447,8 @@ private fun UiBuilderNode.resolvedBool(name: String, state: Map<String, String?>
 }
 
 /**
- * Whether a `stateEquals` comparison holds — decided the way the Compose export decides it.
- *
- * This renderer keeps state in its string form, so comparing the strings makes `1` and `1.0` two
- * different values. The generated Kotlin declares a `float` variable as `Double` and emits
- * `variable == 1.0`, which calls them the same. The preview and the exported screen then disagree
- * about whether a chip is selected, which is exactly the divergence this builder exists to not
- * have.
- *
- * The operand's own JSON type settles which comparison is the faithful one, without needing the
- * declaration here: an unquoted number exports as a numeric literal and so compares numerically; a
- * quoted one exports as a string literal and so keeps comparing as text, where `1` and `1.0` are
- * properly unequal.
+ * Whether a `stateEquals` comparison holds, decided as the Compose export decides it: an unquoted
+ * numeric operand compares numerically (`1 == 1.0`), a quoted one as text.
  */
 internal fun uiBuilderStateEquals(held: String?, operand: JsonElement?): Boolean {
   return canvasStateEquals(held, operand)
@@ -2980,19 +2758,9 @@ private fun UiBuilderNode.themeColor(name: String): Color? =
     ?.let { value -> runCatching { Color(parseArgb(value)) }.getOrNull() }
 
 /**
- * How this Column distributes its children down the axis.
- *
- * The catalog has always declared `verticalArrangement`; the renderer read only `verticalSpacingDp`
- * and the Compose exporter emitted only `Arrangement.spacedBy` of it, so a design that asked for
- * `spaceBetween` got `Top` on the canvas AND in the generated Kotlin. Both are fixed together,
- * because a property honoured by one and not the other is the disagreement that made the linear
- * gradient's `direction` worth finding.
- *
- * Spacing composes with the three *aligned* arrangements through `spacedBy(space, alignment)` —
- * which is also why the default path is unchanged: `spacedBy(space)` IS `spacedBy(space, Top)`, so
- * every design authored before this renders identically. The three `space*` arrangements distribute
- * the free space themselves and Compose has no form that also inserts a fixed gap, so there the
- * arrangement wins and the spacing is not silently added on top of it.
+ * How this Column distributes its children, matching the exporter: aligned arrangements compose
+ * with spacing via `spacedBy(space, alignment)` (so the default is unchanged), while `space*`
+ * arrangements ignore the gap because Compose has no form for both.
  */
 private fun UiBuilderNode.verticalArrangement(): Arrangement.Vertical {
   val spacing = float("verticalSpacingDp")
@@ -3171,34 +2939,15 @@ private val JetcasterDarkColorScheme =
   )
 
 /**
- * A dialog drawn where it sits, with `AlertDialog`'s own surface, spacing and button row.
+ * A dialog drawn inline with `AlertDialog`'s surface, spacing and button row.
  *
- * ## Why not a real `Dialog`
+ * Not a real `Dialog`: that is a separate window, outside the canvas and not hit-testable, and
+ * `AlertDialog` requires an `onDismissRequest` the document's action vocabulary cannot express. The
+ * catalog's `wasm.notes` and the export's compatibility helper say the same.
  *
- * Two reasons, and the second is the one that decides it.
- *
- * A real `Dialog` is a **window**. It leaves the composition's layout, centres itself over the
- * whole screen and scrims everything behind it — so it would draw outside the canvas the operator
- * is arranging, would not be hit-testable as a node, and would export as a picture of a scrim. The
- * canvas is a place to lay a screen out; a window is not a thing that can be laid out in it.
- *
- * And `AlertDialog` requires `onDismissRequest`, which a design has nothing to write into. The
- * document's action vocabulary is `toggle`, `set`, `select` and `selectOrClear` over declared state
- * variables — there is no "close this dialog", because there is no visibility state a dialog is
- * bound to. A real dialog emitted from here would be one nobody could close, which is worse than a
- * panel that admits what it is.
- *
- * So this is the same trade `m3/search-bar` makes, and it is written down in the same place: the
- * component's `wasm.notes` in the catalog say the dialog is drawn inline, and the Compose export
- * emits a matching compatibility helper rather than claiming API parity.
- *
- * ## The geometry is Material's, not invented
- *
- * `AlertDialogDefaults` and the Material 3 dialog spec: a 28dp corner — Material's own,
- * deliberately not the theme's `themeCornerRadius`, which every other surface reads —
- * `surfaceContainerHigh`, 6dp tonal elevation, 24dp padding, 280..560dp wide, and the buttons on
- * one end-aligned row with the dismissing action before the confirming one. An icon, when there is
- * one, is centred and takes the title centre with it — which is Material's rule, not a preference.
+ * The geometry is Material's: a 28dp corner (not the theme radius), `surfaceContainerHigh`, 6dp
+ * tonal elevation, 24dp padding, 280..560dp wide, end-aligned buttons with dismiss before confirm,
+ * and a centred icon centring the title.
  */
 @Composable
 private fun BuilderDialogSurface(
@@ -3251,18 +3000,9 @@ private fun BuilderDialogSurface(
 }
 
 /**
- * Material's own `DatePicker`, with every source of today's date taken out of it.
- *
- * A picker that reads the clock is a picker whose render changes overnight: the calendar opens on
- * the current month and rings today's cell, so the same document would produce a different PNG on
- * the first of every month and a different one again the day the ring moved. Both are pinned here —
- * the selection and the displayed month come from `selectedDate`, which is an ISO date the document
- * carries — so a render is a function of the design and nothing else, which is what the golden
- * lanes and the visual diff both assume.
- *
- * `input` is not a second component. It is `DisplayMode.Input`, the typed date field Material calls
- * the date input, reached from the same state — which is why the catalog spends a `mode` property
- * here rather than a second id.
+ * Material's `DatePicker` with today's date taken out: selection and displayed month come from the
+ * document's `selectedDate`, so renders do not change with the clock. `input` mode is
+ * `DisplayMode.Input`.
  */
 @Composable
 private fun BuilderDatePicker(node: UiBuilderNode, modifier: Modifier) {
@@ -3323,16 +3063,8 @@ private fun UiBuilderDocument.timePickerLayoutType(): TimePickerLayoutType? {
 }
 
 /**
- * `YYYY-MM-DD` as UTC epoch milliseconds, or null when it is not a date.
- *
- * Written out rather than taken from a date library because this module has none on its floor and a
- * dependency for one civil-date conversion is a poor trade. The algorithm is the standard
- * days-from-civil one: shift the year so March starts it, which makes the leap day the last day of
- * the year and removes every special case from the month arithmetic.
- *
- * Null rather than a substituted date on bad input: the caller decides what an unparseable date
- * falls back to, and silently drawing January 1970 would look like a rendering bug rather than a
- * typo in a property.
+ * `YYYY-MM-DD` as UTC epoch milliseconds, or null when it is not a date, using the days-from-civil
+ * algorithm (this module has no date library).
  */
 internal fun isoDateToEpochMillis(value: String): Long? {
   val parts = value.split('-')

@@ -84,22 +84,11 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.longOrNull
 
 /**
- * The Kotlin parameter a catalog slot fills, when the two are not spelled the same.
+ * The Kotlin parameter a catalog slot fills, where the two are spelled differently
+ * (`layout/column`'s `children` is `Column(content = …)`).
  *
- * A capability catalog names slots for designers — `layout/column` has `children` — and a Compose
- * signature names them for the compiler: `Column(content = …)`. The generator emits `<parameter> =
- * { … }` from the record's own parameter list, so a document slot that keeps the catalog's spelling
- * either fails to match the record or emits `children = { … }`, which does not compile. Neither is
- * recoverable from data: the record describes the real signature and the document describes the
- * design, and the fact that these two names mean the same region is knowledge that lives in
- * neither.
- *
- * So it is authored, here, per component — and deliberately **not** by renaming the parameter in
- * the record, which would make the record lie about the signature it exists to attest.
- *
- * An id with no entry passes its slot names through unchanged, which is right for the majority:
- * `layout/scaffold`'s `topBar`, `snackbarHost` and `content` already match `Scaffold`'s, and so do
- * `m3/filter-chip`'s `label` and `leadingIcon`.
+ * Authored here rather than by renaming the record's parameter, which would make the record lie
+ * about the signature it attests. Unlisted slots pass through unchanged.
  */
 private val SLOT_PARAMETERS: Map<String, Map<String, String>> =
   mapOf(
@@ -137,63 +126,15 @@ private fun parameterForSlot(componentId: String, slot: String): String =
 /**
  * Projects a saved [DesignDocumentV1] onto the [ScreenDocument] `ScreenGenerator` consumes.
  *
- * ## Why this is the interesting half
+ * The generator only emits call sites the component record proves, so this projection must express
+ * each piece of content or refuse it by name — never guess. Refused today, each under its own
+ * reason: computed state beyond reads and scalar declarations, events beyond assignments,
+ * conditional nodes, assets, insets, accessibility semantics, and enum values no table names.
  *
- * The generator's guarantee is narrow and load-bearing: it emits a call site only when the
- * discovered component record proves one can be written, and refuses otherwise. That guarantee is
- * worth exactly as much as this projection's honesty, because everything the generator trusts —
- * which component a node is, what type a value has, which Kotlin expression a design token means —
- * arrives from here.
- *
- * So the rule here is the same one: **express it or refuse it by name.** The projection this
- * replaced (`ComposeSourceProjection`, which shipped a self-declared `ALMOST_COMPILING_PROJECTION`
- * warning on every export) guessed instead. It put `@file:OptIn(ExperimentalMaterial3Api::class)`
- * on every file whether or not anything needed it, `modifier = …` on every node whether or not the
- * component had such a parameter, and `checkNotNull(components[componentId])` where a stale
- * document deserved an error. The output looked like Kotlin and did not compile, and nothing in the
- * artifact said which of the two it was.
- *
- * ## What it does not express, deliberately
- *
- * Seven kinds of document content have no expression here, and each refuses under its own name
- * rather than being dropped — the seventh, enum values, has its own section below because this file
- * claimed the opposite for a round:
- *
- * - **Computed state.** Bare state reads and scalar declarations project to the generator's checked
- *   state preamble. Comparisons and derived values need further expression shapes.
- * - **Events beyond assignments.** Set and toggle handlers project in authored order. Callbacks
- *   with event parameters and other action kinds need an explicit shared lowering.
- * - **Conditional nodes.** A `predicate` is a state read in disguise.
- * - **Assets.** `assetBindings` resolves to project-owned artwork through a caller-supplied
- *   adapter, which this projection has no channel for.
- * - **Insets.** `WindowInsets` is read through a composable-scope call, not a value.
- * - **Accessibility.** A `semantics {}` block is a modifier chain the record cannot type-check.
- *
- * ## The one claim it makes
- *
- * A design token (`colorToken`, `typographyToken`, `shapeToken`) is resolved through a **table of
- * Material 3's own accessors** below. That table is the design-system knowledge the generator
- * deliberately does not hold, and it lives here because this is the layer that knows the catalog is
- * Material 3.
- *
- * ## Enum values are the seventh refusal, for the values nothing names
- *
- * An earlier revision of this file resolved an `enum` against the parameter's own recorded type,
- * appending the document's entry name to `TargetParameter.typeFqn` and calling that a claim the
- * compile gate would check. It is not a claim, and this documented it as one for a round:
- *
- * - the wire values are lower-camel (`center`, `semiBold`), so `TextAlign.center` never compiled;
- * - and capitalising fixes only the half of them that are members of that type at all. Jetcaster's
- *   `accountCircle`, `moreVert` and `playCircle` sit on an `ImageVector` parameter whose entries
- *   live under `Icons`, while `expandedTwoPane`, `fab` and `uncontained` name authored variants
- *   with no single Kotlin type behind them.
- *
- * So the derivation stayed refused and the mapping is **authored**: [ENUM_MEMBERS] for the values
- * that are members of a type, [ICON_MEMBERS] for the icon keys, which are extension properties on
- * `Icons.Filled` and therefore a [ScreenValue.Chain] rather than a path. A value neither table
- * names is still refused by name, under a reason authored for it in [VARIANT_PROPERTIES]:
- * `expandedTwoPane` is a mode of one adaptive component and `uncontained` names which carousel to
- * call, and neither is a member of anything a table could hold.
+ * Design tokens resolve through a table of Material 3's own accessors below; this is the layer that
+ * knows the catalog is Material 3. Enum values are mapped by authored tables ([ENUM_MEMBERS],
+ * [ICON_MEMBERS]) because wire values are lower-camel and many are not members of the parameter's
+ * type; [VARIANT_PROPERTIES] carries the reasons for the rest.
  */
 object ScreenDocumentProjection {
 
@@ -553,16 +494,9 @@ object ScreenDocumentProjection {
     private val paneWidths = mutableMapOf<String, ChainLink>()
 
     /**
-     * `Modifier.padding(contentPadding)` for each child of a `Scaffold`'s `content`, keyed by that
-     * child, and led with rather than appended.
-     *
-     * `Scaffold`'s content lambda receives the padding its bars occupy, and the canvas applies it
-     * to every content child as the first modifier (`child(it, Modifier.padding(padding))`), so a
-     * body sits below the top bar. The export used to write a bare `{ … }` whose `it` nothing read,
-     * and every Scaffold drew its body underneath its bar. Handed across like [paneWidths]: set
-     * when the scaffold's `content` slot is visited, spent when the child's modifier chain is
-     * built. A child that builds no chain of its own (a placement, a repetition, a selection) drops
-     * it unspent, which is the old, unpadded, export rather than a refusal.
+     * `Modifier.padding(contentPadding)` for each child of a `Scaffold`'s `content`, led with as
+     * the canvas does so bodies sit below the bars. Set when the `content` slot is visited and
+     * spent when the child's chain is built; children that build no chain drop it unpadded.
      */
     private val scaffoldPaddings = mutableMapOf<String, ChainLink>()
 
@@ -1085,20 +1019,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * A card's content, inside the `Box` this catalog says a card's content is.
-     *
-     * The canvas stacks a card's children with box alignments, the editor offers a card child
-     * exactly what a `layout/box` child gets, and the capability exporter writes `Card { Box { … }
-     * }` — so a card's children live in a `BoxScope`, and a design that lays an image, a gradient
-     * and an aligned title over each other in one card (the Jetcaster podcast cards do) means
-     * exactly that. This projection used to compose them straight under `Card`'s own `ColumnScope`,
-     * which stacked the same children top to bottom and refused every `matchParentSize` among them:
-     * the one lane whose whole claim is fidelity drew a different card from the two it exists to
-     * check.
-     *
-     * The box is emitted as the catalog's `layout/box`, which the record attests like any other
-     * node, and sized by [cardContentFill] — the rule the canvas and the capability exporter read —
-     * so a card with no height wraps here exactly as it does there (#483).
+     * A card's content inside the `layout/box` the canvas and capability exporter put it in, so
+     * children get `BoxScope` alignment rather than `Card`'s `ColumnScope`. Sized by
+     * [cardContentFill] like the other lanes (#483).
      */
     private fun cardContentBox(card: DesignNodeV1, children: List<String>): ScreenNode {
       val fill = card.toUiBuilderNode().cardContentFill()
@@ -1132,24 +1055,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * Whether a progress indicator's `indeterminate` property was handled here, refusal included.
-     *
-     * Both Compose indicators have two overloads — an indeterminate one whose parameters all
-     * default, and a determinate one taking `progress: () -> Float` — and the argument list is what
-     * picks between them. The catalog says the same thing in its own words: "absent means the
-     * indeterminate indicator, Material's own distinction between a progress you know and one you
-     * do not". So `progress` is now an ordinary argument (see [PROPERTY_PARAMETERS]) and this is
-     * left with the boolean that restates the choice rather than making it.
-     *
-     * It used to refuse both. `progress` was unwritable while no [ScreenValue] was a lambda, and
-     * that reason was true of the vocabulary rather than of the component — `ScreenValue.Lambda`
-     * (compose-ai-tools#5219) is the narrow kind that ended it.
-     *
-     * `indeterminate` is **spent either way**, because it never adds anything the argument list has
-     * not already said: `true` describes the overload an absent `progress` selects, and `false`
-     * describes the one a present `progress` selects. The single case worth a refusal is the
-     * contradiction — not indeterminate, and no progress to be determinate with — which asks for
-     * the determinate overload without the one argument it requires.
+     * Whether a progress indicator's `indeterminate` property was handled here. The overload is
+     * chosen by whether `progress` is present (see [PROPERTY_PARAMETERS]), so `indeterminate` is
+     * always spent; only "not indeterminate, but no progress" is refused.
      */
     private fun determinacy(property: String, value: UiValueV1, node: DesignNodeV1): Boolean {
       if (property != INDETERMINATE) return false
@@ -1163,18 +1071,10 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * Whether this property asks for something about the node's **placement in its parent** that no
-     * argument to the node itself could carry — refusing by name if so.
-     *
-     * `span` is the case, and it is worth refusing loudly rather than dropping. A child of a lazy
-     * grid with `span = full` is a row that crosses every column, and the old exporter wrote it as
-     * `item(span = { GridItemSpan(maxLineSpan) })` — an argument to the **wrapper**, computed from
-     * a lambda whose receiver supplies `maxLineSpan`. Two separate things put that out of reach: a
-     * [SlotItem] is one wrapper for a whole slot rather than one per child, and
-     * `ScreenValue.Lambda` returns a value the document already holds — it cannot read a receiver,
-     * which is the whole of what `maxLineSpan` is. Dropped instead, a full-width row would silently
-     * export as a single cell — a different design that compiles, which is the failure this
-     * projection exists to prevent.
+     * Whether this property asks for something about the node's placement in its parent that no
+     * argument can carry, refusing by name if so. `span = full` needs a per-child `item(span = {
+     * GridItemSpan(maxLineSpan) })`, which a per-slot [SlotItem] cannot express; dropping it would
+     * silently export a single cell.
      */
     private fun unplaceable(property: String, node: DesignNodeV1): Boolean {
       if (property != SPAN) return false
@@ -1319,15 +1219,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * The arguments built from **more than one** property, and the properties they consumed.
-     *
-     * Every other property is one value on one parameter, which the loop in [arguments] handles a
-     * row at a time. Four shapes are not: an arrangement and a spacing name **one** `Arrangement`
-     * between them, two colour roles fill **one** `TopAppBarColors` bundle, a time picker's hour
-     * and minute are **one** `TimePickerState`, and a colour dot is a `Box` whose entire meaning is
-     * a modifier chain built from both its properties. Read one at a time, the second of each pair
-     * would silently overwrite the first in the argument map — a row with `spaceBetween` and an 8dp
-     * gap exporting as whichever the document happened to list last.
+     * Arguments built from more than one property, and the properties they consumed: arrangement +
+     * spacing, top-bar colour pairs, time-picker hour + minute, and colour-dot chains. Read one at
+     * a time, the second would overwrite the first.
      */
     private fun composite(
       node: DesignNodeV1,
@@ -1412,14 +1306,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * One state-factory argument, clamped to the range the canvas clamps to.
-     *
-     * `coerceIn` rather than a refusal, deliberately, and only where the canvas coerces: the
-     * builder already drew this design with the clamped value, so the export that matches the
-     * picture is the clamped one. Refusing instead would reject a document the service accepted and
-     * the canvas rendered — the disagreement between surfaces this projection exists to remove. A
-     * value the catalog validator lets through as "an integer" and Material rejects as an hour is
-     * the case this closes: 25 becomes 23 here exactly as it does on the canvas.
+     * One state-factory argument, clamped exactly where the canvas clamps (e.g. an hour of 25
+     * becomes 23), so the export matches the picture instead of refusing a document the canvas
+     * rendered.
      */
     private fun stateArgument(
       argument: StateArgument,
@@ -1434,17 +1323,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * The one `Arrangement` a node's arrangement **and** spacing name together, or null having said
-     * why there isn't one.
-     *
-     * Compose has two families here and the catalog documents which composes with what: the three
-     * *aligned* arrangements take a gap through `Arrangement.spacedBy(space, alignment)`, and the
-     * three `space*` arrangements "distribute the free space themselves, and Compose has no form
-     * that also inserts a fixed gap" — the catalog's own note on `verticalArrangement`. The canvas
-     * renders exactly that rule, so this writes exactly that rule: `spacedBy(8.dp, Alignment.End)`
-     * for an aligned value with a gap, the bare member for a `space*` value with the gap spent, and
-     * the bare member again for an aligned value whose gap is zero — `spacedBy(0.dp, Top)` is
-     * `Top`, and a person writes the shorter one.
+     * The one `Arrangement` a node's arrangement and spacing name together, following the canvas's
+     * rule: aligned arrangements take a gap via `spacedBy(gap, alignment)`, `space*` arrangements
+     * spend it, and a zero gap writes the bare member.
      */
     private fun arranged(axis: ArrangementAxis, node: DesignNodeV1): ScreenValue? {
       val where = "node `${node.id}`.`${axis.property}`"
@@ -1515,14 +1396,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * A colour dot's whole modifier chain — `size(d.dp).clip(CircleShape).background(colour)` — and
-     * the two properties it spent.
-     *
-     * `shape/colour-dot` is a `Box` and nothing else: the catalog's own `code.symbol` says so, and
-     * the canvas draws exactly this chain. So the record it exports through is `Box`'s, reached by
-     * alias, and the component's identity is entirely the links appended here. The diameter
-     * defaults to the canvas's 8dp rather than to nothing, because a `Box` with no size is 0dp and
-     * a dot that vanished on export is a different design.
+     * A colour dot's modifier chain — `size(d.dp).clip(CircleShape).background(colour)` — and the
+     * properties it spent. Exported through `Box`'s record by alias; the diameter defaults to the
+     * canvas's 8dp so the dot does not vanish.
      */
     private fun colourDot(node: DesignNodeV1, fromProperties: MutableList<ChainLink>): Set<String> {
       val where = "node `${node.id}`"
@@ -1560,25 +1436,12 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * `SupportingPaneScaffold`'s two computed arguments, and the properties they spent.
+     * `SupportingPaneScaffold`'s computed `directive` and `value` arguments, written as the window
+     * computation an app (and the canvas) performs.
      *
-     * The scaffold takes a `PaneScaffoldDirective` and a `ThreePaneScaffoldValue`, and neither is a
-     * value a design holds: both are computed from the window. So the export writes the
-     * computation, exactly as an app does and exactly as the canvas does for a constrained frame —
-     * `calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())`, and the library's own
-     * `calculateThreePaneScaffoldValue` over that directive's partition count. How many panes show
-     * is therefore `androidx.compose.material3.adaptive`'s answer in the exported file too, which
-     * is the property the samples exist to demonstrate.
-     *
-     * `layoutMode` is spent rather than written: `adaptive`, `twoPane` and `expandedTwoPane` all
-     * mean "what the directive decides" on the canvas, which is what the computation above is.
-     * `singlePane` caps the directive at one partition and a pane spacing sets its spacer, exactly
-     * as the canvas adjusts its own directive: one `directive.copy(maxHorizontalPartitions = 1,
-     * horizontalPartitionSpacerSize = …)`, a [ChainLink.member] call, whose result is then both the
-     * `directive` argument and the receiver the value reads its partition count from. A hidden pane
-     * is still refused by name: it means building a `ThreePaneScaffoldValue` by hand. Each pane's
-     * preferred width is not an argument at all; it is `Modifier.preferredWidth` on the pane's
-     * content, which [paneWidthLink] hands down.
+     * `layoutMode` is spent: every mode but `singlePane` means "what the directive decides", and
+     * `singlePane` / pane spacing become a `directive.copy(…)`. A hidden pane is refused; preferred
+     * pane widths go on the pane content via [paneWidthLink].
      */
     private fun supportingPanes(
       node: DesignNodeV1,
@@ -1906,15 +1769,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * A linear gradient's one modifier link — `background(brush = Brush.…Gradient(listOf(a, b)))` —
-     * and the three properties it spent.
-     *
-     * `shape/linear-gradient` is a `Box` painted with a brush and nothing else, which is exactly
-     * what the canvas draws, so like [colourDot] it exports through `Box`'s record by alias and its
-     * identity is the link appended here. `direction` picks the brush factory and the order of the
-     * two colours by the canvas's own table — `leftToRight`/`horizontal` and `rightToLeft` are
-     * horizontal, `bottomToTop` is vertical reversed, and everything else, unset included, is
-     * vertical — so a direction the canvas reads as vertical is never exported as anything else.
+     * A linear gradient's `background(brush = …)` link and the properties it spent. Exported
+     * through `Box` by alias like [colourDot]; `direction` follows the canvas's table so vertical
+     * never exports as anything else.
      */
     private fun linearGradient(
       node: DesignNodeV1,
@@ -2005,14 +1862,8 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * A list item's leading accent bar, which is the one part of the component nothing here can
-     * write.
-     *
-     * The canvas draws it with `Modifier.drawBehind { drawRect(colour, size = Size(3.dp.toPx(),
-     * size.height)) }` — a draw lambda with a statement in it, which is precisely the shape this
-     * vocabulary refuses to grow into. An empty value is the catalog's own "draws none" and is
-     * spent, so a plain list item exports; a colour refuses by name, so a schedule whose track
-     * colours are the point does not come back as a plain list that compiles.
+     * A list item's leading accent bar. The canvas draws it in a `drawBehind` lambda this
+     * vocabulary cannot express, so an empty value is spent and a colour is refused by name.
      */
     private fun accent(value: UiValueV1, node: DesignNodeV1, property: String) {
       if (value is StringValueV1 && value.value.isEmpty()) return
@@ -2052,18 +1903,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * The `Modifier.weight(…)` a layout weight becomes, or null having said why there isn't one.
-     *
-     * Two things had to change upstream before this could exist, and both were about spelling
-     * rather than about the value. `Modifier.weight` is declared on `RowScope` and `ColumnScope`,
-     * so it is legal only in the slot the node was placed in — [ChainLink.receiverScopeFqn] states
-     * that and `ScreenGenerator` checks it against the slot it emits into. And it takes a `Float`,
-     * which a nested `Fractional` could not be: nested, a fraction renders as a `Double` and
-     * `weight(1.0)` does not compile, which is what [ScreenValue.Fractional32] exists for.
-     *
-     * Outside a row or a column it stays refused, and the refusal now says where the node actually
-     * is — a weight on a `Box` child is a design mistake worth reading rather than a gap in a
-     * table.
+     * The `Modifier.weight(…)` a layout weight becomes, or null having said why. Scoped to
+     * `RowScope` / `ColumnScope` via [ChainLink.receiverScopeFqn] and written as
+     * [ScreenValue.Fractional32] because `weight` takes a `Float`.
      */
     private fun weightLink(value: UiValueV1, node: DesignNodeV1, scope: String?): ChainLink? {
       val where = "node `${node.id}`.`weight`"
@@ -2080,14 +1922,8 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * The same link, for a `weight` authored as a **modifier** rather than as a property.
-     *
-     * Both spellings reach the builder — the catalog declares `weight` in `modifierCapabilities`
-     * and m3-catalog components also carry it as a property — and they mean one thing, so they
-     * produce one link rather than two nearly-identical ones that could disagree about the
-     * narrowing rule or about which scopes are legal. `fill` exists only on the modifier form;
-     * omitted, Compose's own default of `true` stands, which is what the property form has always
-     * meant.
+     * The same link for `weight` authored as a modifier, so both spellings share one narrowing
+     * rule. `fill` exists only on the modifier form.
      */
     private fun weightLink(
       number: Double?,
@@ -2203,20 +2039,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * The chain link one authored modifier becomes, or null having said why there isn't one.
-     *
-     * Every subtype of `DesignModifierV1` is answered here — twenty-eight of them — because the
-     * catalog admits a modifier onto a component by *type*, so anything this `when` does not name
-     * refuses a document the builder was happy to author. That was the state this replaces: six
-     * kinds were expressible and the other twenty-two came back as "which this projection has no
-     * expression for", including `background`, `border`, `width` and `align`, which the m3-catalog
-     * palette offers on almost every component.
-     *
-     * None is refused on principle any more. `verticalScroll` and `horizontalScroll` were, as "a
-     * `remember { … }` preamble this projection does not emit", and that was a wrong diagnosis —
-     * see [scrolls]. The `else` branch below is therefore not a list of things left undone; it is
-     * what a *newer* `ui-builder-protocol` than the one this compiled against would fall into, and
-     * it keeps that arriving as a named refusal rather than as a silently dropped modifier.
+     * The chain link one authored modifier becomes, or null having said why. Every
+     * `DesignModifierV1` subtype is answered; the `else` branch only catches a newer protocol,
+     * keeping that a named refusal instead of a dropped modifier.
      */
     private fun link(modifier: DesignModifierV1, nodeId: String, scope: String?): ChainLink? {
       return when (modifier) {
@@ -2478,20 +2303,9 @@ object ScreenDocumentProjection {
       }
 
     /**
-     * The `Shape` a shape name resolves to — theme role first, then the two constants, then a
-     * corner radius.
-     *
-     * The third case is the one a document most often carries and the one this refused for several
-     * rounds. A modifier's `shape` is a free string on the wire, and the builder writes a
-     * **number** into it for a corner the designer sized by hand: `"16"` is 16dp, which is what
-     * `UiBuilderRenderer.shapeFor` draws and what the capability exporter's `shapeDp` writes. Every
-     * one of the committed Google-app designs clips or fills that way, so refusing it made the
-     * record-driven export unusable on the designs this repository ships — 112 of the 196 refusals
-     * across them were this one sentence.
-     *
-     * Named roles stay roles rather than becoming their dp equivalents: `medium` exports as
-     * `MaterialTheme.shapes.medium`, which follows a re-themed catalog, and collapsing it to
-     * `12.dp` would silently pin it.
+     * The `Shape` a shape name resolves to: theme role, then the two constants, then a numeric
+     * corner radius (`"16"` is 16dp, as the canvas draws it). Named roles stay roles so a re-themed
+     * catalog is followed.
      */
     private fun shapeOf(name: String): ScreenValue? =
       SHAPE_TOKENS[name]?.let { path -> pathValue(path, SHAPE) }
@@ -2520,15 +2334,8 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * `.verticalScroll(rememberScrollState())` — the state remembered **inline**, at the call.
-     *
-     * This refused for several rounds, as taking "a `ScrollState` from `rememberScrollState()` — a
-     * `remember { … }` preamble this projection does not emit", and the diagnosis mislocated the
-     * state. `rememberScrollState()` is a `@Composable` function whose parameters all default, and
-     * the generated screen body is composable, so the call is legal exactly where the modifier is
-     * written — which is where a person writes it, and where `rememberCarouselState { n }` already
-     * goes one component over. A `ScrollState` never needed a declaration line above the tree; it
-     * needed a [ScreenValue.Construct] in the link's argument
+     * `.verticalScroll(rememberScrollState())`, with the state remembered inline at the call —
+     * legal because the generated body is composable
      * ([#481](https://github.com/yschimke/compose-preview-server/issues/481)).
      */
     private fun scrolls(callableFqn: String): ChainLink =
@@ -2567,20 +2374,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * The receiver for a `.dp` or `.sp` chain, or null when no receiver expresses this number.
-     *
-     * Whole when the number is one, because `16.dp` reading as `16.0.dp` in generated source is
-     * noise a human would not have written — but **only inside the `Int` range**. Compose declares
-     * these extensions on `Int`, `Double` and `Float` and not on `Long`, so `2147483648` rendered a
-     * `Long` receiver and `2147483648.dp` does not compile, while the export was returned as a
-     * clean success.
-     *
-     * The `Double` overload exists — checked against `ui-unit`'s own bytecode, which carries
-     * `getDp(int)`, `getDp(double)` and `getDp(float)` — so the fractional fallback compiles. What
-     * it does **not** do is preserve the value: `Dp` is a value class over `Float`, so the `Double`
-     * overload narrows, and `1e100.dp` compiles into `Float.POSITIVE_INFINITY`. That is a success
-     * carrying a number the design never contained, which is worse than a refusal, so anything that
-     * does not survive the narrowing is refused instead.
+     * The receiver for a `.dp` or `.sp` chain, or null. Whole numbers are written as `Int` only
+     * within `Int` range (there is no `Long.dp`); fractional values must survive narrowing to
+     * `Float`, since `Dp` wraps a `Float` and `1e100.dp` would silently become infinity.
      */
     private fun unitReceiver(number: Double): ScreenValue? {
       if (!number.isFinite() || !number.toFloat().isFinite()) return null
@@ -2592,15 +2388,9 @@ object ScreenDocumentProjection {
 
     /** A `Dp` for a JSON number, or null when the field was absent or not a number. */
     /**
-     * Four insets as the arguments `Modifier.padding` and `PaddingValues` are written with by hand,
-     * or null when none of them is a number.
-     *
-     * Both share the same three overloads, so one answer serves both: `(16.dp)` when every side is
-     * the same, `(horizontal = 16.dp, vertical = 8.dp)` when the sides pair up, and otherwise the
-     * sides that are not zero, by name. A zero side is left out because every parameter already
-     * defaults to `0.dp` — `padding(start = 0.dp, top = 12.dp, end = 0.dp, bottom = 0.dp)` and
-     * `padding(top = 12.dp)` are the same modifier. An axis that is not a number was always left
-     * out, and the renderer reads it as zero, so it counts as zero here too.
+     * Four insets as hand-written `padding` / `PaddingValues` arguments: `(all)`, `(horizontal,
+     * vertical)`, or the non-zero sides by name. Non-numeric sides count as zero, as the renderer
+     * reads them.
      */
     private fun insets(
       start: JsonElement?,
@@ -2912,17 +2702,8 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * A `colorToken` wrapper's value, which is a theme role **or** a literal.
-     *
-     * The wrapper does not decide: `UiBuilderRenderer.uiBuilderColor` and the property reader
-     * beside it both test `startsWith("#")` before consulting the token table, so a `#AARRGGBB`
-     * under a `colorToken` draws as that colour on the canvas. The editor writes the right wrapper
-     * today (`colourWrapper` sends a `#` value to `color`), but every design committed before that
-     * rule carries the old spelling, and reading it as a token name asked the theme for a role
-     * called `#FF0D0E11` and refused the whole export over a colour the canvas draws correctly.
-     *
-     * Same widening, same reason, as the `string`-on-a-colour-property case this file already
-     * carries: a document that renders must export.
+     * A `colorToken` wrapper's value, which may be a theme role or a `#AARRGGBB` literal — the
+     * canvas checks `startsWith("#")` first, and older designs use that spelling.
      */
     private fun colourToken(name: String, where: String): ScreenValue? =
       if (name.startsWith("#")) color(name, where)
@@ -3016,21 +2797,17 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * [content] — the projected root surface — inside the `MaterialTheme` [theme] describes, as the
-     * call the screen body makes.
+     * [content] inside the `MaterialTheme` [theme] describes, written as up to three private
+     * functions so each value is a parameter of the next:
+     * - `<Screen>Fonts(provider)`: the Google Fonts provider, built once (only when a typeface is
+     *   named).
+     * - `<Screen>Typography(base, display, …)`: the themed type scale (only when type is scaled or
+     *   a typeface named).
+     * - `<Screen>Theme(colorScheme, typography, shapes)`: `MaterialTheme` around the surface; theme
+     *   roles inside read these parameters (see [pathValue]).
      *
-     * The theme is written as up to three private functions, outermost first, because each value
-     * the next one needs can only be named once it is a parameter:
-     * - `<Screen>Fonts(provider)`: the Google Fonts provider, built once, from which each family is
-     *   built — the provider carries Play services' certificates, which inlined into every `Font`
-     *   of every family would be most of the file. Only when the theme names a typeface.
-     * - `<Screen>Typography(base, display, …)`: the baseline type scale and each family, from which
-     *   the themed typography is built. Only when the theme scales type or names a typeface.
-     * - `<Screen>Theme(colorScheme, typography, shapes)`: `MaterialTheme` around the surface. Theme
-     *   roles inside it read these parameters (see [pathValue]), so all three are always passed.
-     *
-     * The baselines are the canvas's: `lightColorScheme()` or `darkColorScheme()` by the design's
-     * environment, `Typography()` and `Shapes()`.
+     * Baselines match the canvas: light/dark color scheme by environment, `Typography()` and
+     * `Shapes()`.
      */
     fun themed(content: ScreenNode, theme: ScreenTheme, screenName: String): ScreenNode? {
       val themeName = "${screenName}Theme"
@@ -3303,24 +3080,9 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * The Kotlin member a catalog enum value names, or a refusal saying why there isn't one.
-     *
-     * The first version of this projection appended the document's value to the parameter's
-     * recorded type — `TextAlign` + `Center` — and called that a claim the compile gate would
-     * check. It is not one, for two reasons that are both still true. The wire values are
-     * **lower-camel**, so `TextAlign.center` never compiled; and many of them are not members of
-     * the parameter's type at all — `accountCircle` and `moreVert` sit on an `ImageVector`
-     * parameter whose entries live under `Icons`, while `expandedTwoPane`, `filled` and
-     * `uncontained` name authored *component variants* with no single Kotlin member behind them.
-     *
-     * So the derivation stayed refused, and this reads a table instead — [ENUM_MEMBERS], keyed by
-     * component and property for the same reason [SLOT_PARAMETERS] is: which Kotlin member a
-     * catalog value means is knowledge neither side holds, and `style` means a typography role on
-     * `m3/text` and a component variant on `m3/button`.
-     *
-     * A value the table has no entry for is still refused by name. That is the half worth keeping
-     * from the previous behaviour: a variant name emitting nonsense with no diagnostic is the
-     * failure mode all of this exists to remove.
+     * The Kotlin member a catalog enum value names, from [ENUM_MEMBERS], or a refusal by name.
+     * Keyed per component because `style` means a typography role on `m3/text` and a variant on
+     * `m3/button`; deriving members from the parameter type never compiled.
      */
     private fun enum(
       entry: String,
@@ -3364,22 +3126,17 @@ object ScreenDocumentProjection {
       return pathValue(path, mapping.typeFqn)
     }
 
-    /**
-     * The `ImageVector` an icon key names, or null when [ICON_MEMBERS] has no entry for it.
-     *
-     * A [ScreenValue.Chain] rather than the [ScreenValue.Reference] every other enum value gets,
-     * and that is forced rather than chosen: an icon is an **extension property** on `Icons.Filled`
-     * declared in `androidx.compose.material.icons.filled`, so it resolves through an import of the
-     * property and not through a longer qualified path.
-     * `androidx.compose.material.icons.Icons.Filled.AccountCircle` written out is not a spelling of
-     * anything, which is exactly the case [ScreenValue.Chain]'s KDoc exists for.
-     */
     /** Whether this catalog property's values are an enumeration one of the tables names. */
     private fun enumerated(componentId: String, property: String): Boolean =
       ENUM_MEMBERS[componentId]?.containsKey(property) == true ||
         componentId to property in ICON_PROPERTIES ||
         componentId to property in FACTORY_MEMBERS
 
+    /**
+     * The `ImageVector` an icon key names, or null when [ICON_MEMBERS] has no entry. A
+     * [ScreenValue.Chain] because icons are extension properties on `Icons.Filled`, resolved
+     * through an import rather than a qualified path.
+     */
     private fun icon(entry: String): ScreenValue? {
       val path = ICON_MEMBERS[entry]?.split(".") ?: return null
       val pack = path.dropLast(1)
@@ -3683,21 +3440,12 @@ object ScreenDocumentProjection {
   private class ParameterTarget(val parameter: String, val kind: TargetKind)
 
   /**
-   * The Compose parameter each catalog property sets, where the two are not the same name.
+   * The Compose parameter each catalog property sets, where the names differ (`color` →
+   * `containerColor`). The generator refuses unknown parameter names, so without this many
+   * builder-authored components would refuse.
    *
-   * The third authored table, alongside [SLOT_PARAMETERS] and [ENUM_MEMBERS], and the same argument
-   * carries it: the record attests a signature and the catalog describes a design, and the fact
-   * that `containerColor` and `color` are one parameter is knowledge neither of them holds. The
-   * generator keys arguments by **source parameter name** and refuses a name the component does not
-   * declare — correctly, since dropping it would generate a screen that compiles and is not the one
-   * that was designed — so without this every builder-authored `m3/surface` refused twice over.
-   *
-   * `CapabilityComposeCodeExporter` already knew all of this. It is not on the export path, which
-   * is why the knowledge had to be restated somewhere the export can reach.
-   *
-   * Deliberately not exhaustive, and `weight` is deliberately not here: it is not a parameter under
-   * another name, it is a **modifier whose legality depends on the slot the node sits in**. It goes
-   * through `weightLink` and [SLOT_SCOPES] instead, which is the route `matchParentSize` takes too.
+   * `weight` is deliberately absent: its legality depends on the slot, so it goes through
+   * `weightLink` and [SLOT_SCOPES].
    */
   private val PROPERTY_PARAMETERS: Map<String, Map<String, ParameterTarget>> =
     mapOf(
@@ -3880,20 +3628,9 @@ object ScreenDocumentProjection {
     )
 
   /**
-   * Which Kotlin member each catalog enum value names, per component and property.
-   *
-   * Keyed like [SLOT_PARAMETERS] and for the same reason. The catalog names values for designers
-   * (`semiBold`, `centerVertically`) and Kotlin names them for the compiler (`FontWeight.SemiBold`,
-   * `Alignment.CenterVertically`); which one means which is knowledge that lives in neither the
-   * record — it attests the signature, not the vocabulary — nor the document.
-   *
-   * Per **component** and not per property name, because one spelling is two vocabularies:
-   * `m3/text`.`style` is a `MaterialTheme.typography` role, and `m3/button`.`style` picks between
-   * three Compose components. Only the first is a value.
-   *
-   * `m3/text`.`style` reuses [TYPOGRAPHY_TOKENS] rather than restating those fifteen roles. A
-   * document may spell the same intent as either a `typographyToken` or an `enum` — see #339 — and
-   * two tables would be two chances to disagree about what `bodyLarge` means.
+   * Which Kotlin member each catalog enum value names, per component and property (`semiBold` →
+   * `FontWeight.SemiBold`). `m3/text`.`style` reuses [TYPOGRAPHY_TOKENS] so the token and enum
+   * spellings (#339) cannot disagree.
    */
   private val ENUM_MEMBERS: Map<String, Map<String, EnumMembers>> =
     mapOf(
@@ -4034,16 +3771,8 @@ object ScreenDocumentProjection {
     )
 
   /**
-   * Catalog enum values that name a **factory call** rather than a member — `pinned` is
-   * `TopAppBarDefaults.pinnedScrollBehavior()`, a `@Composable` function with every parameter
-   * defaulted, called where the argument goes.
-   *
-   * A third table beside [ENUM_MEMBERS] and [ICON_MEMBERS] because the value's shape is a third
-   * one: a [ScreenValue.Construct] with no arguments, where those two produce a reference and a
-   * chain. The catalog says of `scrollBehavior` that it "reaches the generated Kotlin as the
-   * matching `TopAppBarDefaults` behavior", and that the canvas draws the bar pinned whatever it
-   * says — so this is the one place the export can say more than the canvas shows, and it says
-   * exactly what the catalog promised.
+   * Catalog enum values that name a no-argument `@Composable` factory call rather than a member
+   * (`pinned` → `TopAppBarDefaults.pinnedScrollBehavior()`), written as a [ScreenValue.Construct].
    */
   private class FactoryMembers(
     val typeFqn: String,
@@ -4067,16 +3796,12 @@ object ScreenDocumentProjection {
     )
 
   /**
-   * Colour roles that fill one `…Colors` bundle between them, per component.
-   *
-   * [TargetKind.CARD_COLORS] and [TargetKind.BUTTON_COLORS] are this shape for one role each. A top
-   * app bar carries two — `containerColor` and `scrolledContainerColor` — and they are the same
-   * `colors` argument, so they have to be read together or the second overwrites the first.
+   * Colour roles that fill one `…Colors` bundle between them, so they are read together rather than
+   * overwriting each other.
    *
    * @property roles the catalog properties, which are also the factory's parameter names unless
-   *   [factoryNames] says otherwise.
-   * @property factoryNames the factory parameter a role fills, where the two are spelled apart — a
-   *   floating toolbar's `containerColor` is `toolbarContainerColor` to its factory.
+   *   [factoryNames] says otherwise. @property factoryNames the factory parameter a role fills,
+   *   where the two are spelled apart.
    */
   private class ColorBundle(
     val parameter: String,
@@ -4110,24 +3835,12 @@ object ScreenDocumentProjection {
     )
 
   /**
-   * Properties that configure a component's **remembered state** rather than its call, per
-   * component.
+   * Properties that configure a component's remembered state rather than its call (`TimePicker`'s
+   * hour is `rememberTimePickerState(initialHour = …)`). Filled into the record's `noArgFactory`
+   * placeholder. `m3/date-picker` is absent: its date string needs a conversion this projection
+   * cannot express.
    *
-   * `TimePicker` takes no `hour`: it takes a `TimePickerState`, and the hour is what that state was
-   * remembered with. Discovery already writes `state = rememberTimePickerState()` as the
-   * placeholder for the required parameter — the record's `noArgFactory` — so the shape is already
-   * the right one and the only thing missing was the arguments. This fills them in, which turns the
-   * placeholder into the design: the same factory call, carrying what the canvas draws.
-   *
-   * A [ColorBundle] by another name — several properties into one constructed argument — and kept
-   * apart from it because the values are the properties' own rather than colours, and because the
-   * parameter names differ from the property names (`hour` is `initialHour`).
-   *
-   * `m3/date-picker` is the same shape and is deliberately absent: its `selectedDate` is a date
-   * string and `rememberDatePickerState` wants `initialSelectedDateMillis`, a conversion this
-   * projection has no vocabulary for.
-   *
-   * @property arguments the catalog property, in the factory's own parameter order, mapped to the
+   * @property arguments the catalog property, in the factory's parameter order, mapped to the
    *   factory parameter it fills.
    */
   private class StateBundle(
@@ -4139,18 +3852,12 @@ object ScreenDocumentProjection {
   )
 
   /**
-   * One factory parameter, and the two things the CANVAS does to the property before passing it.
-   *
-   * Both exist because the canvas is what the author saw. `BuilderTimePicker` reads
-   * `node.integer("hour", …).coerceIn(0, 23)` and `node.bool("is24Hour", true)`, so an export that
-   * forwarded the raw property would draw a different picture from the one on screen — or fail in
-   * composition, for an hour a validator accepted as "an integer" and Material rejects as an hour.
+   * One factory parameter, and what the canvas does to the property before passing it, so the
+   * export draws what the author saw.
    *
    * @property range the bounds the canvas clamps to, or null where the value is not a number.
-   * @property whenAbsent the value the canvas uses for an OPTIONAL property nobody set. Without it
-   *   the argument is simply omitted and Material's own default applies — for `is24Hour` that is
-   *   the device locale, so the same design draws a 24-hour dial in the builder and a 12-hour one
-   *   on a US phone. A default the canvas states is part of the design, not an absence.
+   *     @property whenAbsent the value the canvas uses for an unset optional property; without it
+   *       Material's default applies (for `is24Hour`, the device locale).
    */
   private class StateArgument(
     val parameter: String,
@@ -4245,16 +3952,8 @@ object ScreenDocumentProjection {
   private const val SCROLL_STATE = "androidx.compose.foundation.ScrollState"
 
   /**
-   * Catalog properties whose Compose spelling is a **modifier link**, not a parameter.
-   *
-   * The fourth authored table, and the one whose absence reads worst: `m3/icon`'s `sizeDp` refused
-   * as "`Icon` has no parameter `sizeDp`", which is true and useless — `Icon` has no such parameter
-   * because the size goes on the modifier, and the catalog says so itself by declaring `size` in
-   * the component's `modifierCapabilities`.
-   *
-   * Only unscoped links belong here. `Modifier.weight` looks like the same shape and is not: it is
-   * declared on `RowScope`, so whether it compiles depends on the slot the node was placed in — see
-   * [PROPERTY_PARAMETERS] for why that stays refused.
+   * Catalog properties whose Compose spelling is an unscoped modifier link rather than a parameter
+   * (`m3/icon`'s `sizeDp` → `Modifier.size`). Scoped links like `weight` do not belong here.
    */
   private val MODIFIER_PROPERTIES: Map<String, Map<String, String>> =
     mapOf(
@@ -4270,13 +3969,10 @@ object ScreenDocumentProjection {
   /**
    * One component a variant property selects.
    *
-   * @property canonicalId the record to emit. A canonical id rather than a catalog alias, because
-   *   there is no catalog id for `ElevatedCard` — the catalog spells all three as `m3/card` and
-   *   distinguishes them by the property, which is precisely the mapping this table is.
-   * @property defaults the `CardDefaults` prefix whose factories match this component —
-   *   `elevatedCardColors` beside `ElevatedCard`. Carried per variant because all three factories
-   *   return the same type, so the wrong one compiles and silently supplies another component's
-   *   colours.
+   * @property canonicalId the record to emit; there is no catalog id for e.g. `ElevatedCard`.
+   *     @property defaults the `CardDefaults` prefix whose factories match this component. Carried
+   *       per variant because all three return the same type, so the wrong one would compile with
+   *       another component's colours.
    */
   private class ComponentVariant(
     val canonicalId: String,
@@ -4292,18 +3988,9 @@ object ScreenDocumentProjection {
      */
     val slotScopes: Map<String, String> = emptyMap(),
     /**
-     * The [ParameterTarget] **this** component takes for a property, where it differs from the one
-     * the catalog id's own table names.
-     *
-     * [defaults] already made a *factory* vary with the variant — that is how `m3/card` picks
-     * `elevatedCardColors` over `cardColors` — and for three of `m3/button`'s four values that is
-     * the whole difference: the same `colors` parameter, a different `ButtonDefaults` function.
-     *
-     * `fab` is the one it could not express. `FloatingActionButton` takes `containerColor: Color`
-     * directly, so the property lands on a **different parameter** holding a **different shape** —
-     * a bare `Color` rather than a `ButtonColors` bundle — and no choice of factory says that. An
-     * entry here replaces the table's target outright, which is why the value is a whole
-     * [ParameterTarget] rather than a parameter name
+     * The [ParameterTarget] this component takes for a property where it differs from the catalog
+     * id's table — e.g. `FloatingActionButton` takes `containerColor: Color` directly rather than a
+     * `ButtonColors` bundle
      * ([#393](https://github.com/yschimke/compose-preview-server/issues/393)).
      */
     val propertyTargets: Map<String, ParameterTarget> = emptyMap(),
@@ -4328,23 +4015,12 @@ object ScreenDocumentProjection {
     )
 
   /**
-   * Which component each variant value names.
+   * Which component each variant value names (`m3/card` is `Card`, `ElevatedCard` or
+   * `OutlinedCard`), matching the catalog's `code.imports`.
    *
-   * `m3/card` is `Card`, `ElevatedCard` or `OutlinedCard` — three Compose components behind one
-   * catalog id, which is why `variant` was refused as "a call-site decision this projection cannot
-   * make from a parameter". It can make it from *here*: the decision is a lookup, and it was only
-   * ever unmakeable while there was nothing to look up in.
-   *
-   * The catalog agrees, and said so before this table existed: `m3/card`'s `code.imports` already
-   * lists all three, while its `code.symbol` names one. This is that intent, written where the
-   * export can act on it.
-   *
-   * **`fab` is the entry that is not a rename.** The other eleven are the same signature under
-   * another name, so the only thing that changes is which callable is written. `fab` is
-   * `FloatingActionButton`: it has no `enabled`, it takes a `containerColor` directly rather than
-   * through a `ButtonDefaults` bundle, and its content slot has **no receiver** where `Button`'s is
-   * a `RowScope`. That last one is why [ComponentVariant.slotScopes] exists — without it a `weight`
-   * inside a floating action button would be emitted against a receiver that is not there.
+   * `fab` is the one entry that is not a rename: `FloatingActionButton` has no `enabled`, takes
+   * `containerColor` directly, and its content slot has no receiver — hence
+   * [ComponentVariant.slotScopes].
    */
   private val COMPONENT_VARIANTS: Map<String, Map<String, ComponentVariant>> =
     mapOf(
@@ -4455,30 +4131,11 @@ object ScreenDocumentProjection {
     "androidx.compose.material3.ProgressIndicatorKt.CircularProgressIndicator"
 
   /**
-   * Properties that name a node's **identity to the builder**, not a value in the design.
+   * Properties that are builder bookkeeping rather than design values, spent rather than refused.
    *
-   * `scrollStateKey` says which scroll position the canvas restores when it re-renders a design —
-   * the catalog's own note is "independent pane scroll requires distinct stable scrollStateKey
-   * values" — and `stableKey` is the same idea for a child in a list. Neither is a parameter of
-   * anything, and neither describes what the screen looks like.
-   *
-   * Spent rather than refused, which is the one place this file drops something on purpose, so the
-   * reason is written here. Refusing would be the safer reflex and the wrong answer:
-   * `scrollStateKey` is **required** on `layout/lazy-column` and `layout/lazy-grid`, so every real
-   * lazy container carries one and a refusal would make covering them worth nothing. Dropping is
-   * safe only because what is lost is not in the design: `CapabilityComposeCodeExporter` spent
-   * these on a `key("…") { }` wrapper around the node, which changes recomposition identity and
-   * changes no pixel.
-   *
-   * Keyed by property name rather than by component, because the meaning does not vary: the two are
-   * catalog-wide bookkeeping wherever they appear. That reaches one **already covered** id,
-   * `layout/scaffold`, which declares `scrollStateKey` too — deliberately. Before this it refused
-   * as "`Scaffold` has no parameter `scrollStateKey`", so a scaffold carrying one could not export
-   * at all; the widening fixes that rather than causing it.
-   *
-   * That argument is exactly why `span` is **not** here — see `unplaceable`. It reads like another
-   * bookkeeping string and is a layout instruction, and dropping it would export a full-width row
-   * as one cell.
+   * `scrollStateKey` is required on lazy containers, so refusing would make them unexportable;
+   * dropping is safe because the old exporter only used these for a `key("…")` wrapper that changes
+   * no pixel. `span` is deliberately not here — see `unplaceable`.
    */
   private val IDENTITY_PROPERTIES: Set<String> = setOf("scrollStateKey", "stableKey")
 
@@ -4509,45 +4166,12 @@ object ScreenDocumentProjection {
   private const val BOX_SCOPE = "androidx.compose.foundation.layout.BoxScope"
 
   /**
-   * The receiver each catalog slot's children are composed under, where it has one.
+   * The receiver member each of a DSL slot's children is wrapped in (`LazyColumn`'s children are
+   * declared with `item { … }`, #394). `ScreenGenerator` checks the scope against the record's
+   * `TargetParameter.scopeDslReceiver`.
    *
-   * The fifth authored table, and the only one that describes **placement** rather than a value.
-   * Keyed by the catalog's own slot name, like [SLOT_PARAMETERS] — `children` here, `content` on
-   * the record's side — because that is what the document holds.
-   *
-   * It has to agree with the record's `composableSlotReceiver`, since that is what the generator
-   * compares a scoped link's claim against, and `M3CatalogSlotScopeTest` is what keeps the two from
-   * drifting. A slot with no entry composes its children under no receiver, which is correct for
-   * `m3/surface`'s `content` and every `layout/scaffold` slot, and is why a `weight` there refuses.
-   */
-  /**
-   * The receiver member each of a DSL slot's children is wrapped in.
-   *
-   * The sixth authored table, and the one that made a list exportable at all. A lazy container's
-   * `content` is not a composable slot: `LazyColumn` takes a `LazyListScope.() -> Unit`, and its
-   * children are **declared** with `item { … }` rather than composed into it. Emitting them
-   * directly produces `LazyColumn(content = { Text(…) })`, which satisfies the lambda's type and
-   * does not compile, because `Text` is not a member of `LazyListScope` — which is why all three
-   * lazy ids had no component record at all rather than a wrong one (#394).
-   *
-   * `ScreenNode.slotItems` is the shape that expresses it, and `ScreenGenerator` **checks** the
-   * scope named here against the record's own `TargetParameter.scopeDslReceiver` rather than
-   * trusting it — the same bargain `ChainLink.receiverScopeFqn` makes one level in. So a wrong
-   * entry here is a refusal naming both scopes, not a file that fails to compile in someone else's
-   * project.
-   *
-   * Keyed by the catalog's slot name (`items`), like [SLOT_PARAMETERS], because that is what the
-   * document holds.
-   *
-   * **No `key`, deliberately.** `CapabilityComposeCodeExporter` emits `item(key = "…")` from each
-   * *child's* `stableKey`, and a [SlotItem] is one wrapper for the whole slot — so a per-child key
-   * is not expressible here. An unkeyed `item` is correct Kotlin and correct layout; what it costs
-   * is list-item identity across a reorder, which a generated static screen does not do. Stated
-   * rather than discovered, and the narrowing worth revisiting first if `slotItems` ever becomes
-   * per-child.
-   *
-   * Public for the same reason [SLOT_SCOPES] is: `M3CatalogSlotScopeTest` walks it against the
-   * shipped record so the two halves of one claim cannot drift apart silently.
+   * No per-child `key`: a [SlotItem] wraps the whole slot, which costs only reorder identity in a
+   * static screen. Public so `M3CatalogSlotScopeTest` can check it against the shipped record.
    */
   val SLOT_ITEMS: Map<String, Map<String, SlotItem>> =
     mapOf(
@@ -4559,6 +4183,11 @@ object ScreenDocumentProjection {
   private const val LAZY_LIST_SCOPE = "androidx.compose.foundation.lazy.LazyListScope"
   private const val LAZY_GRID_SCOPE = "androidx.compose.foundation.lazy.grid.LazyGridScope"
 
+  /**
+   * The receiver each catalog slot's children are composed under, keyed by catalog slot name. Must
+   * agree with the record's `composableSlotReceiver` (pinned by `M3CatalogSlotScopeTest`); a slot
+   * with no entry composes under no receiver, which is why a `weight` there refuses.
+   */
   val SLOT_SCOPES: Map<String, Map<String, String>> =
     mapOf(
       "layout/column" to mapOf("children" to COLUMN_SCOPE),
@@ -4606,40 +4235,16 @@ object ScreenDocumentProjection {
   private val ICON_PROPERTIES: Set<Pair<String, String>> = setOf("m3/icon" to "iconKey")
 
   /**
-   * Which icon each catalog `iconKey` names, as the member path under `Icons`.
-   *
-   * Generated from the exact Material Icons artifact the canvas compiles against. This module
-   * deliberately has no Compose dependency; generation gives it the same wire-to-Kotlin mapping
-   * without making projection depend on rendering. The original bare keys remain compatibility
-   * aliases, including the non-derivable `genres -> Filled.Category` mapping.
-   *
-   * Exports using these vectors need `material-icons-extended` on the consumer's classpath. A
-   * generated file cannot add that dependency to the project it lands in.
+   * Which icon each catalog `iconKey` names, as the member path under `Icons`, generated from the
+   * Material Icons artifact the canvas uses. Exports need `material-icons-extended` on the
+   * consumer's classpath.
    */
   val ICON_MEMBERS: Map<String, String> = GeneratedMaterialIconMembers
 
   /**
-   * Properties whose values do not name a member of anything, and **why**, per entry.
-   *
-   * A set with one shared sentence was enough while every entry was a card: `m3/card`'s `variant`
-   * really did spell three Compose components as one id, and the refusal said so. Both entries left
-   * moved on from that and the sentence did not, so it went on telling an operator the catalog
-   * spells three components as one id about a property where that is simply untrue
+   * Properties whose values name no member of anything, each with its own refusal reason
    * ([compose-preview-server#394](https://github.com/yschimke/compose-preview-server/issues/394)).
-   *
-   * The one remaining names **which** carousel to call, which is why the reason is authored per
-   * entry rather than shared. A refusal an operator cannot act on is worth about as much as no
-   * refusal, and one that describes a different component is worth less.
-   *
-   * `layout/supporting-pane-scaffold`'s `layoutMode` used to sit here too, as a mode of one
-   * adaptive component with no member to be an argument of. It left when the scaffold's directive
-   * and value became computations this projection writes (`supportingPanes`): every mode but
-   * `singlePane` means "what the directive decides", so it is spent there, and `singlePane` is
-   * refused there with its own reason.
-   *
-   * [COMPONENT_VARIANTS] is where "picks a component" became expressible, and an id that goes
-   * through it leaves this table — `m3/card`, `m3/button`, `m3/text-field` and
-   * `m3/progress-indicator` all have.
+   * Ids that [COMPONENT_VARIANTS] or `supportingPanes` can express have left this table.
    *
    * Each value completes "…`$entry`, which …".
    */

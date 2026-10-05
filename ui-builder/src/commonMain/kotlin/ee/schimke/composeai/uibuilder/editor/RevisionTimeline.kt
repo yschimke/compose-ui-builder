@@ -7,34 +7,12 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.reconstructableFromRevision
 
 /**
- * The design's own revisions, drawn as a strip of pictures — and what changed between two of them.
+ * One row of the revision strip: the design's committed edits drawn as pictures, the visual
+ * counterpart of the History panel.
  *
- * This is the same history the History panel lists in words, asked the other question. A list of
- * revision numbers, actors and summaries answers "what has been done"; it cannot answer "which one
- * looked like what", and only pixels can. The viewer's render-history menu settled that argument
- * for published renders already (`serve-web/src/viewer/historyModel.ts`), and this is that shape on
- * the history the editor keeps.
- *
- * ### Not the viewer's versions
- *
- * The two timelines are different axes and are deliberately kept apart. A **version** in the viewer
- * is one *published render* of a preview — an immutable, content-addressed PNG on the delivery
- * branch, one entry per publish that moved the bytes, diffed by content id. A **revision** here is
- * one *committed edit* to a design document — live, pre-publish, minted by the reducer, and drawn
- * by the same renderer that is drawing the canvas. Versions outlive the session and the design;
- * revisions are what the session has done. What they share is the shape: a picture per entry,
- * identical neighbours collapsed, one entry marked current, and any two of them comparable. Where a
- * design is exported into the render pipeline, its published renders appear in the viewer's
- * versions timeline — a revision is what a version is made of, not a smaller kind of one.
- *
- * ### Where the pictures come from
- *
- * Not from stored thumbnails. [CollaborationState.documentsBackTo] rebuilds the document at each
- * revision from the compensating changes the reducer already recorded, and the bar draws each one
- * through the renderer that draws the canvas — the same choice the component palette makes for its
- * rows. So no PNG is committed, no render is commissioned, a thumbnail cannot disagree with what
- * the canvas would show at that revision, and a design nobody has baked artwork for still gets
- * pictures.
+ * A revision is a live committed edit to the document, not a viewer "version" (a published render).
+ * Pictures are rebuilt with [CollaborationState.documentsBackTo] and drawn by the canvas renderer,
+ * so no thumbnail is stored and none can disagree with the canvas.
  */
 data class EditorRevisionEntry(
   /** The revision this row stands for — the newest of a collapsed run. */
@@ -50,21 +28,15 @@ data class EditorRevisionEntry(
   /** The revision the canvas is showing — the newest row, and only ever one. */
   val current: Boolean,
   /**
-   * The oldest row: where this editor's record begins.
-   *
-   * Revision 0 for a design built in this session. For one reopened from a stored snapshot it is
-   * the revision that snapshot carried — the client holds the mutations made since it connected and
-   * none of the ones that built the document it was handed, so the strip starts there and says so
-   * rather than drawing rows it cannot picture.
+   * The oldest row: revision 0, or the revision a reopened snapshot carried, since earlier
+   * mutations are not held by this client.
    */
   val origin: Boolean,
   /** How many revisions this row covers, when identical neighbours collapsed into it. */
   val span: Int,
   /**
-   * The design at this revision, or null where it could not be rebuilt.
-   *
-   * Null is drawn as a row without a picture, never as a guess: a thumbnail that is not what that
-   * revision looked like is worse than no thumbnail at all.
+   * The design at this revision, or null where it could not be rebuilt (drawn without a picture,
+   * never a guess).
    */
   val document: UiBuilderDocument?,
   /** What the committing command moved, for the row's own tooltip. */
@@ -88,12 +60,8 @@ enum class EditorNodeDiffKind {
 }
 
 /**
- * Two revisions of one design, compared.
- *
- * Computed from the two **documents**, not from the operations between them. A log diff reads
- * plausibly until an undo is in the range, at which point it lists a change and its reversal and
- * calls that the difference; the documents cannot lie about it. The operations are still the right
- * account of *what was done*, and the History panel is where they are read.
+ * Two revisions compared by their documents rather than the operations between them, so an undo in
+ * the range cannot show up as a change and its reversal.
  */
 data class EditorRevisionDiff(
   /** The older revision. */
@@ -121,24 +89,14 @@ data class EditorRevisionDiff(
 }
 
 /**
- * How many revisions back the strip reaches.
- *
- * A bound rather than the whole session, for the reason the History panel has none: every row here
- * costs a rebuilt document held in memory and a composed thumbnail on screen, and a strip long
- * enough to need its own scrollbar has stopped being a glance. Older revisions are still in the
- * record and still undoable — this is the length of the picture strip, not the length of the
- * history.
+ * How many revisions back the strip reaches. Each row costs a rebuilt document and a thumbnail;
+ * older revisions remain in the history and undoable.
  */
 const val REVISION_TIMELINE_LIMIT = 24
 
 /**
- * The revisions this editor can picture, oldest first, ending at the one on the canvas.
- *
- * Built from [operationHistory][UiBuilderEditorReducer.operationHistory] and the collaboration
- * record together: the history says what each revision *was*, and the record is what rebuilds what
- * it *looked like*. Undo and redo commit revisions of their own and have no entry in the history —
- * they are named after the change they took back or put back, because "Undo" on its own is the one
- * thing about a history row a reader already knows.
+ * The revisions this editor can picture, oldest first, ending at the canvas. Undo and redo rows are
+ * named after the change they took back or put back.
  */
 fun revisionTimeline(
   state: UiBuilderEditorState,
@@ -191,13 +149,8 @@ fun revisionTimeline(
 }
 
 /**
- * Adjacent rows holding the same design, folded into one marked `×N`.
- *
- * The rule the viewer's versions timeline already applies to identical render bytes, for the same
- * reason: a strip is a list of *states*, and two pictures that cannot be told apart are one state
- * shown twice. The newer row survives, so the current revision stays current and a row still names
- * a revision the editor can go back to. Rows whose document could not be rebuilt never fold —
- * "unknown" is not evidence of sameness.
+ * Adjacent rows holding the same design, folded into the newer one and marked `×N`. Rows without a
+ * rebuilt document never fold.
  */
 private fun List<EditorRevisionEntry>.collapseIdenticalNeighbours(): List<EditorRevisionEntry> {
   val folded = mutableListOf<EditorRevisionEntry>()
@@ -218,10 +171,8 @@ private fun List<EditorRevisionEntry>.collapseIdenticalNeighbours(): List<Editor
 }
 
 /**
- * What changed between two revisions of this design, or null where either end cannot be rebuilt.
- *
- * [from] and [to] are ordered by the caller's numbers rather than by the order they were picked, so
- * comparing a revision with an older one reads forwards either way round.
+ * What changed between two revisions, or null where either end cannot be rebuilt. Ends are ordered
+ * by number, not pick order.
  */
 fun revisionDiff(
   state: UiBuilderEditorState,
@@ -238,11 +189,8 @@ fun revisionDiff(
 }
 
 /**
- * Two documents compared node by node.
- *
- * Only the nodes each document actually holds, so a tombstoned node the reducer keeps for undo is
- * absent from both ends and is not reported as a difference. Properties are compared per key rather
- * than as one blob, because "the properties changed" is not something anyone can act on.
+ * Two documents compared node by node and property by property. Tombstoned nodes are absent from
+ * both ends, so they never show as differences.
  */
 fun documentDiff(
   before: UiBuilderDocument,

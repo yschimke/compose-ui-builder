@@ -85,6 +85,7 @@ import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewStatusV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradePreviewV1
 import ee.schimke.composeai.uibuilder.protocol.DesignCommandV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
+import ee.schimke.composeai.uibuilder.runCatchingCancellable
 
 @Composable
 private fun rememberNewDesignFormState(
@@ -1261,7 +1262,7 @@ private fun DesignThumbnail(
   var loading by remember(design.designId, revision) { mutableStateOf(revision != null) }
   LaunchedEffect(design.designId, revision) {
     if (revision != null)
-      picture = runCatching { loadThumbnail(design.designId, revision) }.getOrNull()
+      picture = runCatchingCancellable { loadThumbnail(design.designId, revision) }.getOrNull()
     loading = false
   }
   val previewModifier =

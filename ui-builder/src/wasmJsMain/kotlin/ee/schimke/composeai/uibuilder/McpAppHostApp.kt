@@ -107,7 +107,7 @@ internal fun McpAppHostApp() {
     connection.onResourceUpdated { uri -> scope.launch { session?.resourceUpdated(uri) } }
     bridge = connection
     bootPhase("Connecting to the host")
-    val host = runCatching {
+    val host = runCatchingCancellable {
       connection.initialize(mcpAppVersion())
     }
       .getOrElse {
@@ -179,7 +179,7 @@ internal fun McpAppHostApp() {
       if (current.edited(editor.document)) editTick++
       selectedNodeId = editor.selectedNodeId
     },
-    onHelp = { scope.launch { runCatching { bridge?.openLink(MCP_APP_GUIDE_URL) } } },
+    onHelp = { scope.launch { runCatchingCancellable { bridge?.openLink(MCP_APP_GUIDE_URL) } } },
     onEditorShown = { markReady() },
     devicePresets = devicePresets,
   )

@@ -1795,7 +1795,7 @@ private data class DevicePresetWire(
  * at all.
  */
 internal suspend fun fetchCatalogRecord(catalogSystemId: String): ComponentRecordFile? =
-  runCatching {
+  runCatchingCancellable {
     catalogRecordJson.decodeFromString<ComponentRecordFile>(
       fetchText(
         "/api/ui-builder/v1/catalogs/${encodeUriComponent(catalogSystemId)}/component-record"

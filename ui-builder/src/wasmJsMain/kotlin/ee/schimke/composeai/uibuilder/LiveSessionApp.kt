@@ -340,7 +340,7 @@ private fun LiveSessionApp(
   var serverFoldersAvailable by remember { mutableStateOf(false) }
   val homeFolderHost = remember { BrowserHomeFolderHost() }
   LaunchedEffect(http, config.catalogSystemId) {
-    runCatching { homeFolderHost.load() }
+    runCatchingCancellable { homeFolderHost.load() }
       .getOrNull()
       ?.let {
         homeFolders = it
@@ -831,7 +831,7 @@ private fun LiveSessionApp(
       awaitBrowserPaintOpportunity()
     }
     suspend fun installCatalogList(availableCatalogs: List<CatalogCapabilityV1>) {
-      val fixture = runCatching {
+      val fixture = runCatchingCancellable {
         val path = "jetcaster-discover-operations-v1.json"
         Json.parseToJsonElement(localSession?.text?.text(path) { fetchText(it) } ?: fetchText(path))
           .jsonObject
@@ -1158,7 +1158,7 @@ private fun LiveSessionApp(
     }
     catalogRecoveryLoading = true
     catalogRecoveryError = null
-    runCatching { fetchCatalogRecovery(config.designId) }
+    runCatchingCancellable { fetchCatalogRecovery(config.designId) }
       .onSuccess { catalogRecovery = it }
       .onFailure { catalogRecoveryError = it.message ?: "Catalog recovery could not be previewed" }
     catalogRecoveryLoading = false
@@ -1429,7 +1429,7 @@ private fun LiveSessionApp(
           { designId, folder ->
             if (serverFoldersAvailable) {
               scope.launch {
-                runCatching { homeFolderHost.move(designId, folder) }
+                runCatchingCancellable { homeFolderHost.move(designId, folder) }
                   .getOrNull()
                   ?.let { stored ->
                     homeFolders = stored

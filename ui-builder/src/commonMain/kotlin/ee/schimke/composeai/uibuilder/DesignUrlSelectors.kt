@@ -1,37 +1,12 @@
 package ee.schimke.composeai.uibuilder
 
 /**
- * What a design URL says it means, beyond which design it is.
+ * What a design URL points at inside the design, beyond which design it is. All three selectors are
+ * optional and additive.
  *
- * The canonical URL for a design is `/ui-builder/<designId>`. Its catalog is document state,
- * resolved from `catalogPin`, rather than a second identity embedded in the address. Identity and
- * transport — `actor`, `clientId`, `token`, `endpoint` — live in the query because they configure
- * *who* is editing. Neither says **what** in the design a link means, so "look at this thread"
- * could not be pasted into a chat and an agent told "the button on the checkout design" had to
- * search for it.
- *
- * These three selectors are that missing half, and they are additive: a URL carrying none of them
- * opens exactly what it opened before.
- *
- * - [revision] pins the design to one committed revision, shown read-only.
- * - [nodeId] selects one layer as the design opens.
- * - [threadId] opens the Talk panel on one conversation.
- *
- * ### Why the thread is a fragment and the other two are not
- *
- * [revision] and [nodeId] are read as a query; [threadId] is read from the URL **fragment**, and
- * the difference is deliberate rather than cosmetic. A fragment is never sent to the server: it
- * does not reach the request line, the access log, a proxy, or a referrer header. A thread id is
- * the one selector that names a *discussion* — the private half of a private design — so the id of
- * a conversation somebody linked to should not accumulate in logs that outlive the link. The
- * revision and the node are properties of the document the reader is about to be served anyway.
- *
- * ### What is never in one of these URLs
- *
- * A link built by [designUrlPath] carries the path and the selectors and nothing else — no value
- * from [DESIGN_URL_IDENTITY_KEYS], and above all no token. A shared link is an address, never a
- * credential; whoever opens it presents their own, which is the rule the export lane's Copy link
- * already follows.
+ * [threadId] is read from the URL fragment, never the query, so a private discussion's id does not
+ * reach server logs, proxies or referrers. Links built by [designUrlPath] never carry identity keys
+ * or a token.
  */
 data class DesignUrlSelectors(
   /** A committed revision to show read-only, or null for the living design. */
@@ -46,14 +21,8 @@ data class DesignUrlSelectors(
 }
 
 /**
- * What `?revision=` did to this editor: which revision was asked for, and which one is on screen.
- *
- * Two fields rather than one, because "the link named a revision" and "you are looking at it" are
- * different facts and the banner has to say which. A revision that was trimmed out of the retained
- * window, or that a design never reached, cannot be shown — and refusing to open the design at all
- * would be the worst possible answer to a stale link somebody pasted a month ago. So the editor
- * opens the living design and the banner says why, which is the same rule the catalog-less design
- * URL follows: answer the question the reader actually has.
+ * What `?revision=` did: which revision was asked for and whether it is on screen. A revision that
+ * cannot be shown opens the living design with a banner rather than refusing the link.
  */
 data class DesignRevisionPin(
   /** The revision the URL asked for. */
@@ -62,11 +31,8 @@ data class DesignRevisionPin(
   val pinned: Boolean,
 ) {
   /**
-   * Whether the design may be edited.
-   *
-   * A pinned revision is history: an edit to it would either have to fork the design or be applied
-   * to the head it is not showing, and both are worse than a canvas that says it is read-only. Only
-   * *document* edits are refused — a comment, a reference mark and a panel are not the design.
+   * A pinned revision is history, so document edits are refused; comments, marks and panels still
+   * work.
    */
   val readOnly: Boolean
     get() = pinned
@@ -82,15 +48,9 @@ const val DESIGN_URL_NODE_KEY: String = "node"
 const val DESIGN_URL_THREAD_KEY: String = "thread"
 
 /**
- * The identity and transport values the editor carries from one URL to the next.
- *
- * One list, read by both sides of the same question: the browser's canonical rewrite copies exactly
- * these forward, and [designUrlPath] writes none of them. Two lists would eventually disagree, and
- * the way they would disagree is a token riding along in a link somebody pastes into a chat.
- *
- * `token` is deliberately not in it: a browser holds the host's browse credential as a cookie the
- * host sets when a `?token=` link is first opened, so neither the page's own URL nor a navigation
- * from it carries one (`stripPageToken` takes a stray one back out of the address bar).
+ * Identity and transport values carried from one URL to the next. One list read by both sides: the
+ * canonical rewrite keeps exactly these and [designUrlPath] writes none of them. `token` is absent
+ * because the browse credential lives in a cookie.
  */
 val DESIGN_URL_IDENTITY_KEYS: List<String> =
   listOf(
@@ -100,29 +60,15 @@ val DESIGN_URL_IDENTITY_KEYS: List<String> =
     "color",
     "endpoint",
     "updatesEndpoint",
-    // Not an identity, but it belongs here on both counts this list decides. The open page must
-    // keep it, because a rewrite that dropped it would move the tab from the design this browser
-    // holds to the *server's* design of the same id without saying so; and a shared link must not
-    // carry it, because the design it names does not exist in the browser that opens the link.
+    // Not identity, but the open page must keep it (dropping it would switch to the server's design
+    // of the same id) and a shared link must not carry it (the browser-local design is not there).
     "storage",
   )
 
 /**
- * Reads the three selectors out of one URL's query and fragment.
- *
- * Tolerant by construction, because every input is somebody else's link: an unknown key is ignored
- * rather than refused, a `revision` that is not a non-negative number is dropped rather than
- * failing the page, and a value that is blank or absurdly long is treated as absent. A selector
- * that names something this design does not have is **not** this function's problem — an unknown
- * node id is still returned here and answered by the editor with a notice, because "there is no
- * such layer" is a sentence a reader needs and a parse failure is not.
- *
- * Both arguments take the browser's own spelling, with or without their leading `?` and `#`, so a
- * caller can hand over `location.search` and `location.hash` unmodified.
- *
- * The fragment is read for [DESIGN_URL_THREAD_KEY] only. A `revision` or `node` written into the
- * fragment is ignored rather than honoured: those two are query keys, and a URL that worked by
- * accident in one spelling is one that breaks when the server learns to read them.
+ * Reads the selectors from `location.search` and `location.hash` (leading `?` / `#` optional).
+ * Tolerant: unknown keys are ignored and invalid values dropped. Only the thread is read from the
+ * fragment.
  */
 fun parseDesignUrlSelectors(query: String?, fragment: String?): DesignUrlSelectors {
   val queryValues = parseUrlPairs(query?.removePrefix("?"))
@@ -135,18 +81,9 @@ fun parseDesignUrlSelectors(query: String?, fragment: String?): DesignUrlSelecto
 }
 
 /**
- * Whether the path form can name this design at all.
- *
- * The two ends of a design URL do not agree on what an id may contain, and this is the seam. The
- * service stores any id that is not blank; the editor's own entry point refuses to start on a
- * design *named in the path* unless it matches this, and the app shell routes on the same shape. So
- * a design created through the protocol, MCP or the Design API with a space in its id is reachable
- * only through the legacy `?designId=` query — and a path-form link to it would hand its recipient
- * a 404 or a page that refuses to initialise.
- *
- * Asked before the link is offered rather than repaired afterwards: a builder that quietly emitted
- * a different *kind* of URL for some designs would be a second address form to keep working, and
- * the one thing worse than no Copy link is a Copy link that produces a broken address.
+ * Whether the path form can name this design. The service accepts any non-blank id, but the editor
+ * and app shell only route this shape, so callers withhold Copy link rather than emit a broken
+ * address.
  */
 fun isDesignUrlPathSafe(designId: String): Boolean =
   PATH_SAFE_ID.matches(designId) &&
@@ -155,13 +92,7 @@ fun isDesignUrlPathSafe(designId: String): Boolean =
 private val PATH_SAFE_ID = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
 
 /**
- * Suffixes the app shell reads as a file rather than as a design, mirroring the server's own list.
- *
- * A design legitimately called `screen.png` matches the id pattern and is still unreachable by
- * path: the route treats a single segment ending in one of these as an asset request, so the link
- * 404s instead of opening the editor. Duplicated here rather than shared because the two live in
- * different modules and this is the smaller half of the seam; the cost of them drifting is a link
- * that does not open, which is what the test beside this pins.
+ * Suffixes the app shell routes as asset requests, mirroring the server's list (pinned by a test).
  */
 private val DESIGN_PATH_ASSET_EXTENSIONS =
   setOf(
@@ -184,16 +115,9 @@ private val DESIGN_PATH_ASSET_EXTENSIONS =
   )
 
 /**
- * The canonical URL for one design, carrying only what a reader needs to see the same thing.
- *
- * Path form rather than the legacy `?designId=` query, absolute-from-root rather than fully
- * qualified — the origin is the page's own, and a caller that needs an absolute URL resolves this
- * against it. The order is fixed (`revision` then `node`, then the fragment) so the same selection
- * always produces the same string: a link copied twice is the same link, which is what makes it
- * safe to paste into a pull request and compare.
- *
- * The design must be [isDesignUrlPathSafe]; a caller asks first and withholds the affordance rather
- * than handing over an address the editor would refuse to open.
+ * The canonical, root-relative URL for one design with only the selectors a reader needs. Order is
+ * fixed so the same selection always yields the same string. The design must be
+ * [isDesignUrlPathSafe].
  */
 fun designUrlPath(
   designId: String,
@@ -216,12 +140,7 @@ fun designUrlPath(
   return path + (if (query.isEmpty()) "" else query.joinToString("&", prefix = "?")) + fragment
 }
 
-/**
- * `a=1&b=2` as a map, last value wins, tolerant of everything a real URL contains.
- *
- * Empty segments, a bare key with no `=`, and a value that will not percent-decode are all read as
- * far as they can be and otherwise skipped: this parses links people paste, not a wire format.
- */
+/** `a=1&b=2` as a map, last value wins; malformed pairs are skipped. */
 private fun parseUrlPairs(raw: String?): Map<String, String> {
   if (raw.isNullOrEmpty()) return emptyMap()
   val values = mutableMapOf<String, String>()
@@ -235,40 +154,18 @@ private fun parseUrlPairs(raw: String?): Map<String, String> {
   return values
 }
 
-/**
- * A revision is a whole number that is not negative, or it is not a revision.
- *
- * Zero is included, and deliberately: a design is created at revision 0 and that snapshot is
- * retained like any other, so `?revision=0` names the state the design was born in — the one a
- * reader asks for to see what a template started as. The export routes already accept it on the
- * same terms, and a parser that dropped it would answer that link by silently opening the live
- * editable design instead.
- */
+/** A non-negative revision. Zero is valid: it names the state the design was created in. */
 private fun String.toRevisionOrNull(): Long? = trim().toLongOrNull()?.takeIf { it >= 0 }
 
 /**
- * A node or thread id, or null where the URL named nothing usable.
- *
- * The value is returned as it was written, not trimmed. Only *blankness* is tested by trimming,
- * because that is the one thing the service tests too: a node id is rejected when it is blank and
- * accepted otherwise, so `" hero "` is an id a stored design can genuinely have. Returning the
- * trimmed form would make this parser disagree with [designUrlPath], which percent-encodes the id
- * exactly — the feature's own copied link would then select a different node, or none.
- *
- * Blankness is also the *only* thing an id is refused for. A length cap here looked like prudence
- * and was the same bug in another spelling: the service stores a node id of any length, and
- * [designUrlPath] writes out whatever the document holds, so a parser that dropped a long one would
- * make this feature emit links it cannot read back. How long a URL may be is the browser's rule to
- * enforce, on a URL it has already parsed and handed over.
+ * A node or thread id, untrimmed and uncapped, so it round-trips with [designUrlPath]; only blank
+ * is refused, matching the service.
  */
 private fun String.toSelectorIdOrNull(): String? = takeIf { it.isNotBlank() }
 
 /**
- * Percent-encoding for one URL component, matching JavaScript's `encodeURIComponent`.
- *
- * Written here rather than taken from a platform, because this function's output is compared
- * against a fixed expectation in a common test and read by a browser: the same input has to make
- * the same bytes on the JVM the test runs on and in the Wasm the editor ships as.
+ * Percent-encoding matching JavaScript's `encodeURIComponent`, hand-written so JVM tests and the
+ * Wasm build produce identical bytes.
  */
 internal fun encodeUrlComponent(value: String): String {
   val out = StringBuilder(value.length)
@@ -285,11 +182,7 @@ internal fun encodeUrlComponent(value: String): String {
 }
 
 /**
- * The inverse of [encodeUrlComponent], plus `+` as a space.
- *
- * `+` is decoded because a form-encoded query is what a browser produces from a submitted form and
- * this parser reads whatever arrives, not only what this code wrote. A malformed escape is left as
- * written rather than throwing: a link with a stray `%` in it should still open the design.
+ * The inverse of [encodeUrlComponent], plus `+` as a space. Malformed escapes are left as written.
  */
 internal fun decodeUrlComponent(value: String): String {
   if ('%' !in value && '+' !in value) return value
@@ -303,7 +196,9 @@ internal fun decodeUrlComponent(value: String): String {
         index += 1
       }
       char == '%' && index + 2 < value.length -> {
-        val decoded = value.substring(index + 1, index + 3).toIntOrNull(16)
+        // Two hex digits only: `toIntOrNull(16)` alone would also accept a sign, as in `%-1`.
+        val decoded =
+          value.substring(index + 1, index + 3).takeIf { it.all(::isHexDigit) }?.toIntOrNull(16)
         if (decoded == null) {
           bytes.add(char.code.toByte())
           index += 1
@@ -320,6 +215,9 @@ internal fun decodeUrlComponent(value: String): String {
   }
   return bytes.toByteArray().decodeToString()
 }
+
+private fun isHexDigit(char: Char): Boolean =
+  char in '0'..'9' || char in 'a'..'f' || char in 'A'..'F'
 
 private const val UNRESERVED = "-_.!~*'()"
 

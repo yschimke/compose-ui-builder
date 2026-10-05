@@ -113,47 +113,22 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     catalogSystemIds: Set<String> = setOf(DEFAULT_CATALOG_SYSTEM_ID),
     exportCapabilities: ExportCapabilitiesV1 = defaultExportCapabilities(),
     /**
-     * Whether a given catalog can export Compose, asked per catalog rather than once.
-     *
-     * `exportCapabilities` is a field of `CatalogCapabilityV1` — one per catalog on the wire — and
-     * the host used to compute a single boolean and copy it onto every enabled catalog. So a
-     * deployment serving `m3-catalog` (which has a component record) alongside `remote-m3` (which
-     * deliberately does not, Remote Compose being outside the Compose exporter) advertised no
-     * Compose export **anywhere**, and the builder withdrew the action from the catalog that could
-     * have used it. Defaults to the flat value, so a caller that does not care is unaffected.
+     * Whether a given catalog can export Compose. Per catalog, so one catalog without a component
+     * record (e.g. `remote-m3`) does not withdraw Compose export from all the others.
      */
     composeExportFor: (String) -> Boolean = { exportCapabilities.composeCode },
     /**
-     * Component packs admitted by the host, merged into every enabled catalog of the same platform.
-     *
-     * A pack is another catalog's components — a served application catalog such as
-     * `confetti-mobile`, projected from its published component record — offered inside the
-     * authoring catalogs it is compatible with. Merged here rather than served as catalogs of their
-     * own because a design is pinned to one catalog and a pack is not a thing to pin to: it has no
-     * scaffold, no templates and no canvas adapter of its own. What it has is components, and a
-     * Material 3 phone screen that can hold a `SessionCard` beside its `m3/card` is the whole
-     * point.
-     *
-     * Which catalogs a pack reaches is decided by platform, never by name. A mobile pack lands in
-     * `m3-catalog`; it does not land in `remote-m3`, whose widget body is `@RemoteComposable` and
-     * cannot call it, nor in `wear-m3`, which is not Material 3. The catalog declares what it
-     * carried under `statusSemantics.componentPacks` so the editor can shelve the pack under its
-     * own name and let an author switch it on and off.
+     * Component packs admitted by the host (another catalog's components, e.g. `confetti-mobile`),
+     * merged into every enabled catalog of the same platform. Merged rather than served because a
+     * pack has no scaffold or templates to pin to. The catalog records them under
+     * `statusSemantics.componentPacks`.
      */
     packs: List<UiBuilderComponentPackSource> = emptyList(),
     /**
-     * Catalogs composed from what a catalog repository PUBLISHED, keyed by system id.
-     *
-     * The cutover of `docs/design/UI_BUILDER_CATALOG_CONTRACT.md`, and the reason this class can
-     * stop being the place a catalog is written. An entry here is preferred over the synthesised
-     * catalog of the same id, and an id with no synthesiser is served from here alone — which is
-     * what lets a catalog this binary has never heard of appear in the chooser.
-     *
-     * Per catalog and reversible on purpose: a catalog that publishes nothing, or whose published
-     * file will not compose, keeps the synthesised one and a startup line says which source each
-     * came from. Composing the file is `:server`'s job (it needs the component record reader, which
-     * `checkUiBuilderRuntimeBoundary` keeps off this module's classpath), so this takes the
-     * finished catalogs rather than the files.
+     * Catalogs composed from what a catalog repository published, keyed by system id
+     * (`docs/design/UI_BUILDER_CATALOG_CONTRACT.md`). Preferred over the synthesised catalog of the
+     * same id; a catalog with no synthesiser is served from here alone. Composed by `:server`,
+     * which can read component records.
      */
     published: Map<String, CatalogCapabilityV1> = emptyMap(),
   ) : this(
@@ -217,53 +192,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     )
 
   /**
-   * Where a published catalog's builder components come from: [composeFoundationCatalog].
-   *
-   * NOT one fixed set. The foundation curates the builder vocabulary per platform, and it has to:
-   * `wear` gets `layout/box`, `layout/column`, `layout/row` and `asset/image` and nothing else,
-   * because `WearScreenCodeExporter` refuses everything else with "no Wear Compose Material 3
-   * counterpart this generator can write". Handing a published Wear catalog all seventeen would put
-   * `layout/lazy-grid`, `layout/scaffold` and the shapes on a watch palette, where a design that
-   * uses one is guaranteed to fail export — a palette entry that cannot be exported is worse than a
-   * missing one, because it is only discovered at the end.
-   *
-   * Keyed by PLATFORM, which is the axis the curation was always along -- the synthesised catalogs
-   * used to be the donors and this hop tried their ids first.
-   *
-   * [platformFor] keeps that id hop for the one case where dropping it would change an answer: a
-   * published catalog that declares NO platform. Such a catalog is mobile everywhere else in the
-   * system, because that is what [platform] defaults to, but the old chain handed a published
-   * `wear-m3` the Wear vocabulary off its id alone, and `WearM3ScreenCatalogTest` pins that. The
-   * hop goes when `synthesisedCatalogs` does (#819 step 3), and that is a change to review on its
-   * own rather than a side effect of this one.
-   *
-   * What is NOT kept is the id winning over a platform the catalog DID declare. A catalog saying
-   * `platform: mobile` under any id now gets the mobile vocabulary, which is the one its exporter
-   * can write, and which every other reader of `statusSemantics.platform` already assumed.
-   *
-   * Built once, at construction, for the platforms this deployment actually publishes something for
-   * -- `donorFor` is only reached from `withBuilderVocabulary`, which runs over `published` while
-   * `availableCatalogs` is initialised and never again. `getOrElse` rather than `getValue` so a
-   * later caller outside that loop gets a donor rather than an exception.
-   */
-  /**
-   * Where the `remote-compose/` seams come from, which is NOT the foundation.
-   *
-   * `remote-m3` is the catalog that describes Remote Compose, so a seam it declares ITSELF is the
-   * one to hand out. It declares none today — like every published catalog it publishes only its
-   * own prefix — so every seam currently falls through to the packaged catalog, which is where they
-   * have always come from and why no deployment changes behaviour.
-   *
-   * Read off `published`, deliberately, rather than off `availableCatalogs`: the served `remote-m3`
-   * is itself a published catalog with seams injected INTO it by `withBuilderVocabulary`, so
-   * sourcing from the served one would be circular. What this asks is the narrower question the
-   * contract cares about — what did the catalog repository actually publish.
-   *
-   * When it publishes them (#819), this map picks them up and the packaged fallback stops being
-   * reached; a seam `remote-m3` declines, like `remote-compose/inline` today, keeps falling
-   * through. The fallback goes when the packaged catalog stops carrying a `remote-compose/` id at
-   * all, and not before — dropping it sooner takes the seams off every palette on a deployment that
-   * serves no Remote Compose catalog, which is what `--ui-builder-catalogs` defaults to.
+   * Where the `remote-compose/` seams come from: the packaged catalog, overridden by any
+   * `remote-m3` publishes itself (#819). Read from `published`, not the served catalogs, because
+   * those already have seams injected.
    */
   private val remoteComposeSeams: Map<String, ComponentCapabilityV1> = buildMap {
     baseCatalog.components
@@ -275,6 +206,15 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       ?.forEach { put(it.componentId, it) }
   }
 
+  /**
+   * The builder vocabulary donated to published catalogs, curated per platform by
+   * [composeFoundationCatalog] (Wear gets only what `WearScreenCodeExporter` can write). Built for
+   * the platforms this deployment publishes.
+   *
+   * [platformFor] falls back to the synthesised catalog's platform for a published catalog that
+   * declares none (pinned by `WearM3ScreenCatalogTest`; goes with `synthesisedCatalogs`, #819 step
+   * 3). [donorFor] uses `getOrElse` so a caller outside construction still gets a donor.
+   */
   private val composeFoundation: Map<String, CatalogCapabilityV1> =
     published.values.map(::platformFor).distinct().associateWith {
       composeFoundationCatalog(baseCatalog, it, remoteComposeSeams)
@@ -293,16 +233,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     }
 
   /**
-   * A published catalog, plus the builder components it does not offer itself.
-   *
-   * Additive only, and the catalog wins every collision: a catalog that DOES declare `layout/box`
-   * as a builtin keeps its own, so this cannot overwrite a deliberate statement.
-   *
-   * The donor's asset registry travels with `asset/image`. `declaredAssetKeys` reads
-   * `statusSemantics.assetRegistry` and returns null when there is none, and a null registry makes
-   * `INVALID_PROPERTY` checking return early rather than fail — so handing over the image component
-   * without it would accept any `assetKey` a design invented and surface it as a broken picture at
-   * render time. Only when the catalog states none of its own; a catalog with a registry keeps it.
+   * A published catalog plus the builder components it does not offer itself. Additive only: the
+   * catalog wins every collision. The donor's asset registry travels with `asset/image` unless the
+   * catalog has its own, since without one any invented `assetKey` would be accepted.
    */
   private fun withBuilderVocabulary(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {
     val donor = donorFor(catalog)
@@ -340,16 +273,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           )
       }
     }
-    // A component's shelf comes with it. The insert panel groups by `componentMenu`, and an entry
-    // with no group falls back to a generic role heading — so injecting `layout/box` without the
-    // donor's "Layout" would put the whole builder vocabulary under "Container"/"Leaf" instead of
-    // the shelves it was written for.
-    //
-    // The ORDER is the donor's, not the order the components happen to be injected in. Appending
-    // as they came put `Layout` and `Scaffolds` — the builder's primary shelves — at the BOTTOM of
-    // the insert panel, below every catalog group, because those components are iterated last.
-    // Catalog-owned groups keep their relative order; a donor group is inserted where the donor
-    // puts it relative to the groups already present.
+    // Injected components keep the donor's insert-panel shelves, in the donor's order relative to
+    // the catalog's own groups (appending put the primary Layout and Scaffolds shelves at the
+    // bottom).
     val donorGroups = donor.statusSemantics.menuGroups()
     val donorOrder = donor.statusSemantics.menuGroupOrder()
     for (component in missing) {
@@ -491,34 +417,13 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val references = catalogs.mapValues { (_, catalog) -> referenceOf(catalog) }
 
   /**
-   * Every reference a stored design may be pinned to for a catalog this deployment serves.
+   * Every reference a stored design may be pinned to for a catalog this deployment serves: both the
+   * synthesised and the published source's, so flipping `--ui-builder-published-catalogs` does not
+   * strand designs (#796).
    *
-   * A catalog's reference is built from its `benchmark`, and the SOURCE changes it: the synthesised
-   * `remote-m3` states `wear-widget-scaffolds-v1` where the published one takes a content-hash
-   * revision. So flipping `--ui-builder-published-catalogs` -- one variable, documented as per
-   * catalog and reversible -- used to strand every design persisted against the other source:
-   * `resolve` returned null, `unusableReason` turned that into `CATALOG_UNAVAILABLE`, and the
-   * runtime offered no upgrade path (#796).
-   *
-   * Both sources' references are accepted for the same `systemId`. No history is kept and nothing
-   * is persisted: the catalog the OTHER source would serve is already in this process --
-   * `synthesisedCatalogs` still holds its entry while the published one is being served -- so its
-   * reference is simply computed. Neither `withPacks` nor `withBuilderVocabulary` touches
-   * `benchmark`, so the value computed here is the one that catalog would carry if it were the one
-   * being served.
-   *
-   * ONE DIRECTION ONLY, and the asymmetry is in what the process holds rather than in this map. The
-   * synthesised catalog is generated here and always resident, so a server on the published source
-   * can always compute the synthesised reference. `ServeRunner` fetches a published file only for
-   * the ids `--ui-builder-published-catalogs` names, so a server that has flipped BACK has never
-   * seen the published file and cannot know the reference it would have produced.
-   * `CatalogSourceFlipTest` asserts that gap rather than leaving it to be discovered; #818's
-   * re-pinning is what closes it.
-   *
-   * This does NOT weaken the check that catches a document drifting from its catalog. The accepted
-   * set is only ever the references of the SAME catalog id as this build can produce it; a pin
-   * naming a revision from neither source is still refused, and a document that no longer fits the
-   * catalog still fails the component checks below on their own terms.
+   * One direction only: the synthesised catalog is always resident, but a server that flipped back
+   * has never seen the published file (asserted by `CatalogSourceFlipTest`; #818 closes it). Pins
+   * naming neither source are still refused.
    */
   private val acceptedReferences: Map<String, Set<CatalogReferenceV1>> =
     catalogs.mapValues { (systemId, catalog) ->
@@ -568,16 +473,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     for ((nodeId, nodeElement) in encodedNodes.entries.sortedBy { it.key }) {
       val node = nodeElement.jsonObject
       val componentId = node.requiredString("componentId")
-      // A placement is a document construct, not a catalog component: no catalog declares
-      // `design/component-instance`, so looking it up here refused every design that placed one of
-      // its own components — which made `declareComponent` unusable, since nothing could then
-      // instantiate what it declared. The editor's `CapabilityValidator` has always drawn this
-      // distinction; this is the same rule on the writing side.
-      //
-      // What it is checked for instead is the one thing that can be wrong about it here: the key
-      // has to name a component this document declares. Its properties are the body's arguments
-      // rather than a catalog component's properties, so the property and slot rules below do not
-      // apply to it and are not run against it.
+      // A placement is a document construct, not a catalog component: check only that its key names
+      // a component this document declares. Catalog property and slot rules do not apply.
       if (componentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) {
         val key = node["component"]?.jsonObject?.get("componentKey")?.jsonPrimitive?.contentOrNull
         if (key.isNullOrBlank()) {
@@ -875,14 +772,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   }
 
   /**
-   * The asset rule: the key is one the catalog's registry lists, or one the design has pinned.
-   *
-   * `asset/image` is the one component whose value the renderer must *resolve*, and it was the one
-   * property nothing checked: the reducer accepted `avatar-lain`, and every render of the design
-   * then failed with an `IllegalStateException` (#484). The registry is
-   * `statusSemantics.assetRegistry.keys`; a catalog that declares none says nothing about keys.
-   * [pinnedAssetKeys] are the design's own `assets` — what the asset lane put behind a key (#478) —
-   * and they resolve exactly as a catalog key does, because the canvas draws them.
+   * The asset rule: the key must be in the catalog's `statusSemantics.assetRegistry` or the
+   * design's own pinned [pinnedAssetKeys] (#478); unchecked keys used to fail every render (#484).
+   * A catalog without a registry says nothing about keys.
    */
   private fun assetKeyWriteIssue(
     catalog: CatalogCapabilityV1,
@@ -1016,24 +908,17 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
 }
 
 /**
- * A component pack as the host admits it: another catalog's components, ready to be merged.
+ * A component pack as the host admits it: another catalog's finished capabilities, built by
+ * `:server` (reading records is outside this module's boundary).
  *
- * The runtime does not derive packs — a pack derived from a served catalog's component record is
- * `:server`'s to build, because reading a record needs the discovery library this module's boundary
- * keeps out. What arrives here is the finished list of capabilities and the facts the merge needs
- * about them.
- *
- * @property id the pack's id, which is the served catalog it came from and the prefix every one of
- *   its component ids carries (`confetti-mobile/session-card`). Checked against the same id rule as
- *   a catalog, because it reaches a served-catalog branch name on the native lane.
- * @property label what the editor calls the pack.
- * @property platform the platform word (`mobile`, `wear`, `remote-compose`) naming which enabled
- *   catalogs receive it. Compared as written; a catalog declaring no platform is
- *   [CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM].
- * @property nativeCatalog the served catalog whose bundle compiles a design that uses the pack, or
- *   null when the pack does not say. A derived pack names the catalog it was derived from.
- * @property components the capabilities, every id prefixed `<id>/`.
- * @property notes a sentence for the settings row; empty when there is nothing to add.
+ * @property id the pack's id: the served catalog it came from and the prefix of every component id
+ *   (`confetti-mobile/session-card`). Checked like a catalog id. @property label what the editor
+ *   calls the pack. @property platform the platform word (`mobile`, `wear`, `remote-compose`)
+ *   naming which enabled catalogs receive it; a catalog declaring none is
+ *   [CurrentM3UiBuilderCatalogExecutor.DEFAULT_PLATFORM]. @property nativeCatalog the served
+ *   catalog whose bundle compiles a design using the pack, or null. @property components the
+ *   capabilities, every id prefixed `<id>/`. @property notes a sentence for the settings row; empty
+ *   when there is nothing to add.
  */
 public data class UiBuilderComponentPackSource(
   val id: String,
@@ -1067,14 +952,9 @@ public data class UiBuilderComponentPackSource(
  * fidelity a note could be making a claim about.
  */
 /**
- * The node that switches a subtree into the Remote Compose vocabulary.
- *
- * Spelled here rather than imported from `:ui-builder-export`, which owns the same two constants
- * for the emitter and the canvas. This module's dependency graph is a positive allowlist checked by
- * `checkUiBuilderRuntimeBoundary` and written down in `docs/design/UI_BUILDER_PROJECT_BOUNDARY.md`;
- * taking an edge to the export module to reach two string literals would be a change to that
- * document for no gain. `SlotAcceptanceTest`'s committed table is what keeps the two spellings
- * honest — a catalog naming an id no component declares shows up there.
+ * The node that switches a subtree into the Remote Compose vocabulary. Duplicated from
+ * `:ui-builder-export` to keep this module's dependency allowlist (`checkUiBuilderRuntimeBoundary`)
+ * unchanged; `SlotAcceptanceTest` keeps the spellings honest.
  */
 internal const val REMOTE_COMPOSE_INLINE_COMPONENT_ID = "remote-compose/inline"
 
@@ -1089,30 +969,15 @@ internal const val REMOTE_COMPOSE_CUSTOM_COMPONENT_ID = "remote-compose/custom"
 internal val FOUNDATION_NAMESPACES = listOf("layout/", "shape/", "asset/")
 
 /**
- * The fourth, and NOT the foundation's.
- *
- * `remote-compose/document`, `/inline` and `/custom` are the seams into Remote Compose — a
- * different library from Compose UI, and `remote-m3` is the catalog that describes it. They are
- * separated here so [composeFoundationCatalog] takes them from a Remote Compose source rather than
- * declaring them, which is the shape that lets `remote-m3` publish them and this build stop
- * carrying them (#819).
- *
- * Kept inside [BUILDER_NAMESPACES] because the INJECTION rule has not changed: a catalog is still
- * right to publish only its own prefix, and a published shelf still needs these on it.
+ * The Remote Compose seams' namespace. Separate from the foundation's so [composeFoundationCatalog]
+ * can take them from a Remote Compose source, letting `remote-m3` publish them (#819); still part
+ * of [BUILDER_NAMESPACES].
  */
 internal const val REMOTE_COMPOSE_NAMESPACE: String = "remote-compose/"
 
 /**
- * The id namespaces the BUILDER owns, on every shelf.
- *
- * Not a design system's: a box, a gradient, an image and the Remote Compose seams are the builder's
- * own vocabulary, which is why a catalog is right to publish components only under its own prefix
- * and why [composeFoundationCatalog] supplies the rest. Adding a namespace here widens what every
- * published catalog is handed, so it is a deliberate list rather than a pattern.
- *
- * Named rather than derived from the packaged catalog's prefix, deliberately: that catalog declares
- * no `componentIdPrefix`, and "everything the published catalog does not own" would hand a future
- * `m4/` catalog the whole `m3/` shelf.
+ * The id namespaces the builder owns on every shelf, which [composeFoundationCatalog] supplies to
+ * published catalogs. An explicit list: widening it widens every published catalog.
  */
 internal val BUILDER_NAMESPACES = FOUNDATION_NAMESPACES + REMOTE_COMPOSE_NAMESPACE
 
@@ -1124,21 +989,11 @@ internal val REMOTE_COMPOSE_BORROWED_AS_THEMSELVES =
   )
 
 /**
- * The note a shared foundation component carries on a Wear palette.
- *
- * A Material component could never be shared — a Wear card is not a Material 3 card and the two
- * libraries are not used together — but Box, Column, Row and Image are the same declarations on
- * both platforms, so there is nothing to stand in for and nothing to translate.
- *
- * Shared between `wearM3Catalog` and [composeFoundationCatalog] rather than written out twice. The
- * two have to agree exactly — `ComposeFoundationFaithfulnessTest` compares the components they
- * donate field for field — and one constant cannot drift the way a copied string can.
- *
- * It lives in THIS file rather than beside the foundation because it names a catalog, and
- * `.github/scripts/ui-builder-catalog-literals.sh` holds that name to the files that already
- * carried one; a new file may not add one. When `wearM3Catalog` goes (#819 step 3) this constant
- * goes with it, and the note then has to say the same thing without naming a catalog — or move into
- * the published catalog's own data, which is where the contract puts it.
+ * The note a shared foundation component (Box, Column, Row, Image) carries on a Wear palette.
+ * Shared by `wearM3Catalog` and [composeFoundationCatalog], which
+ * `ComposeFoundationFaithfulnessTest` compares field for field. Lives here because
+ * `ui-builder-catalog-literals.sh` restricts which files may name a catalog; goes with
+ * `wearM3Catalog` (#819 step 3).
  */
 internal const val WEAR_FOUNDATION_NOTE: String =
   "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` " +
@@ -1167,20 +1022,9 @@ internal val CatalogCapabilityV1.declaredPlatform: String?
       ?.takeIf(String::isNotEmpty)
 
 /**
- * This catalog with [packs] merged in, or itself when there are none.
- *
- * Three things change and nothing else does. The components are appended, in pack order, after the
- * catalog's own — an id the catalog already has is a configuration error and refused, since two
- * capabilities under one id would make validation depend on list order. The insert-panel shelf
- * declaration gains one shelf per pack, named for the pack, so its components read as a group
- * rather than being scattered by kind among the catalog's own; an existing shelf table is extended,
- * a missing one is created, and the pack's shelves go after every shelf the catalog declared. And
- * `componentPacks` records what was merged, which is how the editor and the server tell a pack's
- * component from the catalog's own afterwards — `UiBuilderComponentPacks` in `:ui-builder-export`
- * reads it back.
- *
- * The catalog pin is untouched. A pack is part of the catalog the way `wear-m3`'s borrowed
- * foundation components are, and a design pinned before a pack was admitted keeps resolving.
+ * This catalog with [packs] merged in: components appended in pack order (duplicate ids refused),
+ * one insert-panel shelf per pack after the catalog's own, and `componentPacks` recording what was
+ * merged. The catalog pin is unchanged, so existing designs keep resolving.
  */
 private fun CatalogCapabilityV1.withPacks(
   packs: List<UiBuilderComponentPackSource>
@@ -1300,14 +1144,9 @@ internal fun JsonObject.withMenuEntry(
 }
 
 /**
- * Whether [slot] accepts a child of [component]: both the role and a trait have to match, an empty
- * list constrains nothing on its axis, and `AnyContent` is the same as declaring no traits.
- *
- * This is `SlotCapability.accepts` from `:ui-builder`, written again because this module cannot
- * reach that one; `SlotAcceptanceTest` on either side pins both to the same committed table so they
- * cannot drift. Before this, an empty role list counted as a role *match* and the two were joined
- * with *or*, so for a catalog built with `singleSlot`/`manySlot` — every slot below — the server
- * checked traits on no slot at all, while the editor did.
+ * Whether [slot] accepts a child of [component]: role and trait must both match, an empty list
+ * constrains nothing, and `AnyContent` equals no traits. A copy of `:ui-builder`'s
+ * `SlotCapability.accepts`; `SlotAcceptanceTest` pins both to one table.
  */
 internal fun slotAccepts(slot: SlotCapabilityV1, component: ComponentCapabilityV1): Boolean {
   val roleAccepted = slot.acceptedRoles.isEmpty() || component.role in slot.acceptedRoles
@@ -1325,25 +1164,11 @@ internal fun slotAccepts(slot: SlotCapabilityV1, component: ComponentCapabilityV
  * 26dp corner radius, producing 216x76dp and 216x124dp canvases.
  */
 /**
- * The Wear widget host frame's authored parameters.
+ * The Wear widget host frame's authored parameters. `background` is the widget's own background
+ * (the brush passed to `WearWidgetDocument`), defaulting to `WearWidgetContainer`'s `#FF272430`.
  *
- * The one that matters most is `background`: on-device it is the *widget's* own background — the
- * brush passed to `WearWidgetDocument` — and the container paints it as the round rect, so the
- * coloured squircle IS the widget. A scaffold without it forced an author to fake the background
- * with a filled surface inside the content slot, which draws a coloured rectangle inside a
- * differently-coloured frame: not what any widget looks like.
- *
- * `background` defaults to the literal `#FF272430` that `WearWidgetContainer` forks from
- * `androidx.wear.compose.material3.ColorScheme.surfaceContainerLow` and applies when a widget
- * declares no background of its own.
- *
- * Padding and corner radius are deliberately NOT here. `WearWidgetParams` hands them to the widget
- * per host shape — 0 rectangular, 26 squircle, 999 round — so they are the host's, and
- * [ee.schimke.composeai.uibuilder.export.WearWidgetHostShape] already shows a design in every shape
- * as a view rather than an edit. Declaring them made the catalog promise an authored value the host
- * ignores, and the published remote-m3 catalog dropped them for that reason
- * (yschimke/wear-m3-catalog#623). A stored design that still carries one is read as an override by
- * the renderer and the exporters, as before; it just cannot be authored any more.
+ * Padding and corner radius are deliberately absent: the host supplies them per shape
+ * (yschimke/wear-m3-catalog#623). Stored designs that carry them are still read as overrides.
  */
 internal fun widgetContainerProperties(): List<PropertyCapabilityV1> =
   listOf(
@@ -1699,17 +1524,8 @@ private fun JsonObject.optionalString(name: String): String? =
   this[name]?.takeUnless { it is JsonNull }?.jsonPrimitive?.contentOrNull
 
 /**
- * The catalog capability of what a placement actually draws, or null when it cannot be resolved.
- *
- * A `design/component-instance` is a document construct with no capability of its own; what decides
- * which modifiers it may carry, and which slots will accept it, is the component it places. So this
- * walks from the placement to its declaration, to that declaration's body root — and, when the root
- * is itself a placement, keeps walking. Nested design components are an ordinary composition that
- * the renderer and the exporter both traverse.
- *
- * [seen] guards the walk. A declaration whose body root places the declaration itself is a cycle
- * the export gate reports as `GRAPH_CYCLE`; reaching it from here must return "cannot resolve"
- * rather than recurse until the stack gives out.
+ * The capability of what a placement actually draws, following placements through their bodies'
+ * roots; null when unresolvable. [seen] stops a `GRAPH_CYCLE` from recursing forever.
  */
 private fun placedCapability(
   placement: JsonObject,

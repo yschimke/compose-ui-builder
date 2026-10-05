@@ -170,7 +170,8 @@ internal object BrowserLocalStorageBackend {
   /** What `navigator.storage.estimate()` says, or null where the browser does not say. */
   suspend fun estimate(): BrowserStorageEstimate? {
     val parts =
-      runCatching { awaitString(storageEstimate()) }.getOrNull()?.split(',') ?: return null
+      runCatchingCancellable { awaitString(storageEstimate()) }.getOrNull()?.split(',')
+        ?: return null
     if (parts.size < 3) return null
     val usage = parts[0].toDoubleOrNull() ?: return null
     val quota = parts[1].toDoubleOrNull() ?: return null

@@ -104,6 +104,8 @@ class DesignUrlSelectorsTest {
   @Test
   fun `a malformed escape opens the design rather than failing`() {
     assertEquals("100%", parseDesignUrlSelectors("?node=100%", null).nodeId)
+    assertEquals("a%-1", parseDesignUrlSelectors("?node=a%-1", null).nodeId)
+    assertEquals("% F", decodeUrlComponent("%+F"))
   }
 
   @Test

@@ -107,34 +107,19 @@ class UiBuilderEditorReducer(
   private val clientId: String = EDITOR_CLIENT_ID,
   private val operationIdPrefix: String = clientId,
   /**
-   * This catalog's OWN component record, as the host that serves the catalog reads it, or null when
-   * the host has none to give.
-   *
-   * The record embedded in this module is `m3-catalog`'s authored one, baked in at build time, and
-   * it is the only record the editor had. Against a **published** catalog that is the wrong record
-   * rather than an incomplete one: the shelf serves components this build has never heard of, so
-   * the code pane and the problems panel reported "no component `m3/…` in this catalog" for every
-   * one of them while the server's export wrote their call sites perfectly well. Fetched from the
-   * host and handed in here, the two lanes read one record and can no longer disagree about what a
-   * component is.
-   *
-   * Null is today's behaviour, unchanged: a host that serves no record, a catalog whose record this
-   * build will not generate from, and a page that could not reach either fall back to the embedded
-   * record.
+   * This catalog's own component record as served by its host, or null to fall back to the embedded
+   * `m3-catalog` record. Lets the code pane and problems panel agree with the server's export for
+   * published catalogs.
    */
   private val catalogRecord: ComponentRecordFile? = null,
 ) {
   private val capabilityValidator = CapabilityValidator(catalog)
 
   /**
-   * The record the code pane and the problems panel generate from: this catalog's own where the
-   * host served one and the embedded one otherwise, plus this catalog's pack components projected
-   * back into record shape. See [packComponentRecords].
-   *
-   * The catalog's own record REPLACES the embedded one rather than joining it, because parity is
-   * the point: the server generates from that record and nothing else, and a union would let the
-   * browser resolve an id the export refuses — a disagreement in the more expensive direction,
-   * since it is discovered at export rather than while authoring.
+   * The record the code pane and problems panel generate from: [catalogRecord] or the embedded one,
+   * plus this catalog's pack components (see [packComponentRecords]). The served record replaces
+   * the embedded one rather than joining it, so the browser never resolves an id the export
+   * refuses.
    */
   private val exportRecord by lazy {
     catalog.exportRecord(catalogRecord ?: embeddedComponentRecord())
@@ -147,24 +132,12 @@ class UiBuilderEditorReducer(
   private val packComponents by lazy { catalog.packComponentsById() }
 
   /**
-   * The catalog ids the Compose export can write a call site for, or null when this panel cannot
-   * say.
+   * The catalog ids the Compose export can write a call site for, judged by [exportRecord] exactly
+   * as `ScreenGenerator` does; null where this panel cannot say.
    *
-   * The record, not a second table: a component is covered when [exportRecord] holds a component
-   * answering to its id with a printable call, which is the same question `ScreenGenerator` asks
-   * before it writes one. A pack's components count, because [exportRecord] carries their projected
-   * records exactly as the export does.
-   *
-   * Null — no marker on any row — for a catalog the embedded record was not authored for. `wear-m3`
-   * and `remote-m3` screens generate through their own emitters (`RecordFreeExport`) and are judged
-   * by neither this record nor its absence, so greying every row of a Wear palette against
-   * `m3-catalog`'s record would be the palette lying in the other direction.
-   *
-   * That question does not arise for [catalogRecord]: the host served it AS this catalog's record,
-   * so it is this catalog's whatever module discovery ran against — and the module names differ in
-   * practice, m3-catalog's shipped record saying `m3-catalog/…` where its own repository says
-   * `catalog/…`. Comparing them would have taken every marker off a published palette, which is the
-   * case this record exists to serve.
+   * Null for catalogs the embedded record was not authored for (`wear-m3` and `remote-m3` export
+   * through `RecordFreeExport`). A served [catalogRecord] is trusted as this catalog's regardless
+   * of its module names.
    */
   private val composeExportCoverage: Set<String>? by lazy {
     val record = exportRecord ?: return@lazy null
@@ -185,16 +158,9 @@ class UiBuilderEditorReducer(
     )
 
   /**
-   * This editor's state carried onto a new authoritative document.
-   *
-   * Every accepted local edit and every remote delta arrives as a new document and rebuilds the
-   * editor from it, so anything not carried across is lost on the next keystroke anyone in the
-   * session makes. The multi-selection and the clipboard are editing intent rather than document
-   * content — a copy has to stay pasteable after a collaborator moves something — so they survive,
-   * minus whatever the new document no longer holds.
-   *
-   * Selection keeps its order, which is what keeps its anchor: the last entry is the node the
-   * inspector edits and the one a range extends from.
+   * This editor's state carried onto a new authoritative document. Selection (in order, keeping its
+   * anchor) and clipboard are editing intent and survive, minus nodes the new document no longer
+   * holds.
    */
   fun reconciled(
     state: UiBuilderEditorState,
@@ -251,14 +217,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The state after [event], with one rule this reducer applies to every event rather than to some
-   * of them: **an edit ends a peek**.
-   *
-   * The panels stay live while an old revision is on screen — the layers tree, the inspector and
-   * every chord still act on the design, because they are acting on the *document*, which the peek
-   * never touched. What must not happen is the edit landing invisibly behind a picture of revision
-   * 12. So any event that moves the document brings the canvas back to it, and the strip gains the
-   *     row the edit just made.
+   * The state after [event]. Any event that changes the document also ends a revision peek, so an
+   * edit never lands invisibly behind a picture of an old revision.
    */
   fun reduce(state: UiBuilderEditorState, event: UiBuilderEditorEvent): UiBuilderEditorState {
     val reduced = reduceEvent(state, event)
@@ -544,16 +504,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Whether the whole selection can go.
-   *
-   * Checked **cumulatively**, not one node at a time against the original document. Three children
-   * of a slot with `min = 1` can lose two; asking of each separately says yes three times and the
-   * third delete is rejected halfway through — a partial delete the user did not ask for and cannot
-   * undo in one step.
-   *
-   * The selection is reduced to its top-most nodes first: a node selected alongside its own
-   * ancestor is deleted by the ancestor's removal, and counting it separately would over-count what
-   * each slot loses.
+   * Whether the whole selection can go, checked cumulatively per slot (so `min = 1` slots are not
+   * over-deleted halfway) over the selection's top-most nodes.
    */
   fun canDeleteSelected(state: UiBuilderEditorState): Boolean {
     val targets = state.selectionRoots()
@@ -579,15 +531,9 @@ class UiBuilderEditorReducer(
   fun canRedo(state: UiBuilderEditorState): Boolean = state.redoTargetUndoId(actorId) != null
 
   /**
-   * What has been done to this design, newest first, and which of it undo would take back.
-   *
-   * Read out of the collaboration state rather than recorded alongside it: an accepted command
-   * already carries its operations and the before/after of everything it moved, and a second
-   * account of the same history is a second account that can disagree with the first.
-   *
-   * Everybody's changes, not only this editor's. Undo walks your own commands, so the entry it
-   * would take back is often not the newest one in the list, and the ones above it are the answer
-   * to "why did undo not put back what I was looking at".
+   * Everybody's changes to this design, newest first, read from the collaboration state rather than
+   * recorded separately. Undo walks only this editor's commands, so its target is often not the
+   * newest entry.
    */
   fun operationHistory(state: UiBuilderEditorState): List<EditorOperationEntry> {
     val collaboration = state.collaboration
@@ -658,13 +604,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * What a person calls this node — the layers panel's own name for it, or the bare id.
-   *
-   * The name it has *now*, deliberately, which for a text node whose text is what changed is the
-   * new one: "Set text on Nightcall". The row is a way back to a node on the canvas, so it has to
-   * agree with what the canvas and the layers panel call that node today, and the before/after line
-   * under the summary is where the old value is already said. A node deleted by the change it is
-   * describing has no name left to read and falls back to its id.
+   * What a person calls this node now (the layers panel's name), or the bare id for a node that no
+   * longer exists.
    */
   internal fun nodeLabel(state: UiBuilderEditorState, nodeId: String): String {
     val node = state.document.nodes[nodeId] ?: return nodeId
@@ -769,13 +710,8 @@ class UiBuilderEditorReducer(
    * that will be accepted, instead of offering one and relaying the catalog's refusal.
    */
   /**
-   * Whether a binding on [propertyName] would be accepted at all.
-   *
-   * Answered by building the value the bind would write and putting it through the same validator
-   * the bind itself uses, rather than by reasoning about types a second time. The catalog refuses a
-   * state read whose declared value type does not fit the property — and a menu that offers a
-   * binding the reducer will refuse is a menu that lies. The wrap menu is built the same way and
-   * for the same reason.
+   * Whether a binding on [propertyName] would be accepted, answered by validating the value the
+   * bind would write so the menu never offers what the reducer refuses.
    */
   fun canBindToState(
     state: UiBuilderEditorState,
@@ -811,22 +747,11 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * A one-component document: what the palette's Add would put on an empty canvas.
+   * A one-component document: what the palette's Add would put on an empty canvas, produced by the
+   * same `InsertComponent` so a thumbnail cannot disagree with Add.
    *
-   * This is what the menu's thumbnails draw, and drawing it rather than a baked picture is the
-   * whole point. The document is produced by the **same** `InsertComponent` the row dispatches,
-   * through this reducer, against this catalog — so a thumbnail cannot disagree with what pressing
-   * Add does. A baked PNG can, and the moment a component's starter content or default property
-   * changes, it silently does.
-   *
-   * Null where the component cannot stand alone in the frame: a Scaffold is not something a
-   * `layout/box` accepts, and a `m3/tab` outside a tab row is not a thing. Those rows keep the
-   * plain drag handle, which is honest — a picture that could not be drawn is better absent than
-   * faked. `CatalogThumbnailTest` records which components land in that bucket, so it is a list
-   * that shrinks rather than an absence nobody notices.
-   *
-   * Cached per component and variant. It is a pure function of the catalog, the frame is fixed, and
-   * the panel asks for the same handful of them on every recomposition of a scroll.
+   * Null where the component cannot stand alone in the frame (`CatalogThumbnailTest` tracks which).
+   * Cached per component and variant.
    */
   fun previewDocument(
     componentId: String,
@@ -848,13 +773,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The inserted component pushed to the middle of the frame.
-   *
-   * A `layout/box` stacks its children at the top start, and most components are far smaller than
-   * the frame — so without this a Button drew in the corner and the shrink put it in the corner of
-   * a 44 dp thumbnail, which reads as an empty box with a smudge in it. The `align` modifier is the
-   * catalog's own, applied only where the component declares it: a component that cannot be aligned
-   * keeps its corner rather than having the insert refused for a modifier it never allowed.
+   * The inserted component centred in the thumbnail frame via the catalog's own `align` modifier,
+   * where the component declares it.
    */
   private fun UiBuilderDocument.centeredInFrame(): UiBuilderDocument {
     val cell = nodes[PREVIEW_FRAME_CELL_ID] ?: return this
@@ -884,16 +804,9 @@ class UiBuilderEditorReducer(
   private val previewDocuments = mutableMapOf<Pair<String, String?>, UiBuilderDocument?>()
 
   /**
-   * The container a thumbnail's (and a drag ghost's) component is inserted into, from this
-   * catalog's own vocabulary.
-   *
-   * `layout/box` wherever the catalog has it, which is every catalog the builder defines. A catalog
-   * that brings its own layout vocabulary instead — A2UI, whose palette is `a2ui/<Component>` and
-   * nothing else — has no box, and a frame built from one was refused by the validator for every
-   * component, so the whole shelf drew as bare tiles. Such a catalog is framed by its own list
-   * container: the first with an unbounded `children` slot, a `…/box` or `…/column` by preference
-   * because they stack a single child without spreading it. Only a catalog with no such container
-   * at all keeps the box, and its tiles keep the plain handle as before.
+   * The container thumbnails and drag ghosts insert into: `layout/box` where the catalog has it,
+   * else the catalog's own first unbounded list container (A2UI has no box), preferring `…/box` or
+   * `…/column`.
    */
   private val frameComponentId: String by lazy {
     if (FRAME_BOX in catalog.componentsById) return@lazy FRAME_BOX
@@ -997,22 +910,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The component carried beside a drag, drawn the size it would land.
-   *
-   * The thumbnail's document answers "what is this" at 44 dp; the ghost answers "what will this
-   * look like where I let go", and that is the component at its own size, in the design's own
-   * theme, unconstrained by a frame — the canvas bounds it by the slot it is hovering over, so a
-   * field that will fill its slot is drawn filling it while it is still in the air.
-   *
-   * The frame cell therefore carries no `size` modifier (a fixed cell would cap the component at
-   * the thumbnail's 176 dp whatever the landing slot says) and no centring pass (there is nothing
-   * to centre in), and the environment is the design's own with the design's density taken out: the
-   * ghost is drawn into the workspace's density and then scaled by the canvas, which is what makes
-   * one of its dp land as one of the design's dp on screen.
-   *
-   * Null is a guard rather than a live case — the catalog accepts every component into a bare box,
-   * the same list `CatalogThumbnailTest` keeps empty — and the canvas answers a null with a chip
-   * naming the component instead of faking a picture of it.
+   * The component carried beside a drag, drawn at the size it would land: no fixed cell or
+   * centring, and the design's environment without its density (the canvas scales the ghost). Null
+   * is only a guard; the canvas then shows a named chip.
    */
   fun dragGhostDocument(
     state: UiBuilderEditorState,
@@ -1106,41 +1006,15 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The insert panel's rows: each catalog family, the components under it, and the variants under
-   * whichever of those are open.
-   *
-   * Grouped by family rather than by [EditorComponentKind], which is what the panel used to do and
-   * what made it unreadable at 39 components: "Containers" held a scaffold's tab row, a card, a
-   * dialog and a plain Row, which is every question except the one being asked. The families come
-   * from [ComponentMenu], and are the ones the published catalog puts the same components under.
-   *
-   * A catalog [ComponentMenu] says nothing about falls back to the kind headings, which is exactly
-   * the panel this replaced — so a second catalog is unstyled rather than broken.
-   *
-   * **A search overrides every twisty.** While [UiBuilderEditorState.catalogQuery] is non-blank
-   * every surviving group is open and every surviving component shows its variants, because a
-   * filtered list that hides its matches behind collapsed rows is a list that says nothing matched.
-   * Collapsing something and then typing does not lose the collapse — it is remembered and comes
-   * back when the field is cleared.
-   */
-  /**
-   * The components the insert panel keeps at the top: the reader's choice, or the catalog's.
-   *
-   * One place rather than a ternary at each use, because the panel, the star on a row and the
-   * persistence path all have to agree about what "pinned" is — and the disagreement that matters
-   * is a star drawn unpinned on a row the top of the panel is showing.
+   * The components the insert panel keeps at the top: the reader's choice, or the catalog's. One
+   * place so the panel, row stars and persistence agree.
    */
   fun pinnedComponents(state: UiBuilderEditorState): Set<String> =
     state.pinnedComponents ?: catalog.pinnedComponents
 
   /**
-   * Whether [componentId] has nowhere to go in this design, so the list leaves it out.
-   *
-   * A root-only component — a Wear widget container, a Wear screen scaffold — is exported as the
-   * whole design, so it is refused by both kinds of Add once the design has a root:
-   * `findDestination` finds it no slot and `besideRefusal` no board. Listed anyway, a widget
-   * design's palette opened on three more widget containers it could never take. It stays on an
-   * empty design, where it is the one placement that is right.
+   * Whether [componentId] has nowhere to go in this design: root-only components (Wear widget
+   * containers, screen scaffolds) once the design has a root.
    */
   fun placeableNowhere(state: UiBuilderEditorState, componentId: String): Boolean =
     componentId in RecordFreeExport.ROOT_ONLY_COMPONENT_IDS && state.document.roots.isNotEmpty()
@@ -1149,6 +1023,11 @@ class UiBuilderEditorReducer(
   fun listedComponentCount(state: UiBuilderEditorState): Int =
     catalog.paletteComponents.count { !placeableNowhere(state, it.componentId) }
 
+  /**
+   * The insert panel's rows: each catalog family (from [ComponentMenu], falling back to kind
+   * headings), its components, and the variants of open components. A non-blank search opens every
+   * surviving group and component without forgetting what was collapsed.
+   */
   fun catalogRows(state: UiBuilderEditorState): List<EditorCatalogRow> {
     val needle = state.catalogQuery.trim().lowercase()
     val filtering = needle.isNotEmpty()
@@ -1302,16 +1181,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The layers panel's rows, narrowed by [UiBuilderEditorState.layerQuery].
-   *
-   * A row survives the filter when it matches **or when one of its descendants does**, because a
-   * tree filtered to bare matches loses the indentation that made it a tree: a row three levels
-   * deep would sit flush against an unrelated root. Ancestors come through as context, with
-   * [EditorTreeRow.matched] false, so nothing selects them by accident.
-   *
-   * Matching is over everything the panel and the document call the node — what it says, what its
-   * component is called, its own id and its component id — because those are the four things a
-   * person types when looking for one.
+   * The layers panel's rows, narrowed by [UiBuilderEditorState.layerQuery]. Ancestors of matches
+   * stay as context with [EditorTreeRow.matched] false. Matches text, component name, node id and
+   * component id.
    */
   fun visibleTreeRows(state: UiBuilderEditorState): List<EditorTreeRow> {
     val rows = treeRows(state.document)
@@ -1355,22 +1227,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The layers panel's lines: the rows of [visibleTreeRows], with the slot each group of children
-   * sits in named above it.
-   *
-   * Indentation alone said a Scaffold's app bar and its screen content were siblings, which they
-   * are not: they are the only children of two different slots, and nothing in the panel said so.
-   * That reading is what made the drag look broken — dropping one onto the other is a move between
-   * slots, and it is refused for reasons the panel had no way to show.
-   *
-   * A slot line is drawn when it is a choice or a destination:
-   * - the parent declares more than one slot, so which one a child is in is information; or
-   * - the slot is empty, and is therefore the one place a drop can land that no node row names; or
-   * - the document put children under a name the catalog does not declare (a dynamic slot).
-   *
-   * A container with one slot and something in it draws none, because the indentation already says
-   * everything the slot name would. Under a filter, empty slots are left out: nothing there matches
-   * and the panel is answering a search.
+   * The layers panel's lines: [visibleTreeRows] with slot headings where the slot is information —
+   * the parent has several slots, the slot is empty (a drop target), or the slot is undeclared.
+   * Empty slots are omitted under a filter.
    */
   fun layerRows(state: UiBuilderEditorState): List<EditorLayerRow> {
     val rows = visibleTreeRows(state)
@@ -1420,23 +1279,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The inspector's fields for the current selection.
-   *
-   * For more than one node it shows the properties **every** selected component declares, so
-   * editing six texts' style is one edit rather than six. A property only some of them have is left
-   * out rather than shown and silently applied to a subset — the inspector would otherwise claim to
-   * be editing the selection while editing part of it.
-   *
-   * Where the nodes disagree the field is [EditorPropertyField.mixed] and its value is blank, so
-   * the control shows nothing rather than one node's value standing in for all of them.
-   */
-  /**
-   * The text [nodeId] shows, when it can be typed over in place on the canvas — or null.
-   *
-   * A node qualifies when its `text` property is free text the author wrote: a Text, a Button's
-   * label. A text bound to a state variable does not — typing over it would replace the binding
-   * with a literal, which is not what anyone double-clicking a label means — and nor does anything
-   * whose `text` is a choice from a list.
+   * The free text [nodeId] shows when it can be typed over in place on the canvas, or null for
+   * bound or choice-valued text.
    */
   fun inlineText(state: UiBuilderEditorState, nodeId: String): String? {
     if (nodeId !in state.document.nodes) return null
@@ -1447,6 +1291,10 @@ class UiBuilderEditorReducer(
     return field.value
   }
 
+  /**
+   * The inspector's fields for the current selection. For several nodes, only properties every
+   * selected component declares are shown, and disagreeing values are [EditorPropertyField.mixed].
+   */
   fun propertyFields(state: UiBuilderEditorState): List<EditorPropertyField> {
     val anchor = state.selectedNodeId?.let(state.document.nodes::get)
     // A placement has no catalog properties: what it sets is the arguments its body reads.
@@ -1627,13 +1475,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Apply a reference match as one batch: the chain that moves and sizes the node, and the type
-   * size, together. See [UiBuilderEditorEvent.AlignNodeToReference].
-   *
-   * Refused whole, with the reason, when any part cannot be written — a component that declares
-   * neither `padding` nor `offset` cannot be moved, one that does not declare `fontSizeSp` cannot
-   * have its type sized — because applying the half that fits would leave the layer neither where
-   * it was nor where the reference has it.
+   * Apply a reference match as one batch (see [UiBuilderEditorEvent.AlignNodeToReference]), refused
+   * whole if any part cannot be written.
    */
   private fun alignNodeToReference(
     state: UiBuilderEditorState,
@@ -1725,14 +1568,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The layout modifiers a menu can offer the selection, and whether it already has them.
-   *
-   * Single selection only: a chain is one value on one node, and six nodes have six of them —
-   * "toggle this on all of them" would mean six different results from one press. Restricted here
-   * rather than in the menu so the reducer and the UI cannot disagree about what is offered.
-   *
-   * Empty for a component whose catalog entry declares none of them, which is how a text inside a
-   * row is stopped from being offered a fill it cannot carry.
+   * The layout modifiers the selection can be given, and whether it has them. Single selection
+   * only, and only modifiers the catalog declares on the component.
    */
   fun modifierToggles(state: UiBuilderEditorState): List<EditorModifierToggle> {
     val nodeId = state.selection.singleOrNull() ?: return emptyList()
@@ -1818,13 +1655,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Write one value into one modifier.
-   *
-   * Refused rather than committed on a draft the field cannot hold: the reducer would take a string
-   * where the renderer expects a dimension, or an alignment no scope defines, and a chain that no
-   * longer applies is worse than a rejected keystroke. Which of the two a field is comes from
-   * [MODIFIER_FIELDS] — the same table the inspector draws from, so the control offered and the
-   * value accepted cannot disagree.
+   * Write one value into one modifier, refusing drafts the field cannot hold. Field kinds come from
+   * [MODIFIER_FIELDS], the table the inspector draws from.
    */
   private fun setModifierValue(
     state: UiBuilderEditorState,
@@ -1912,13 +1744,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * One numeric edge of an object-valued property, as its own number field.
-   *
-   * Four fields rather than one composite control: the edges are independent numbers with their own
-   * bounds, and a padding edited edge by edge reuses the number control's parsing, its bounds
-   * message and its behaviour across a multi-selection instead of growing a second copy of all
-   * three. The field is addressed as `property.edge`, and [commitProperty] merges it back into the
-   * whole value, because the wire carries one `padding` and not four numbers.
+   * One numeric edge of an object-valued property (e.g. padding), addressed as `property.edge` and
+   * merged back by [commitProperty] because the wire carries the whole value.
    */
   private fun objectEdgeField(
     state: UiBuilderEditorState,
@@ -1959,27 +1786,12 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Everything the Compose export gate would refuse, against the document as it stands.
+   * Everything the Compose export would refuse for this document, beyond the per-write validation:
+   * unreachable nodes, missing required properties, pin drift, unemittable components.
    *
-   * The editor validates each write as it happens, so a rejected edit never lands — but nothing was
-   * checking the document as a whole. A node can become unreachable when its parent is deleted, a
-   * required property can be missing on a node nobody touched, and a catalog pin can drift; none of
-   * those is a rejected write, and all of them are a failed export. Until now the first anyone knew
-   * was the export refusing.
-   *
-   * Read from [CapabilityComposeCodeExporter.diagnose] rather than from `validateDocumentForExport`
-   * alone, because those are two different questions and only the wider one is the promise this
-   * panel makes. A design can satisfy every structural rule and still hold a component the exporter
-   * has no emitter for, or a modifier the catalog does not allow on it — and against the narrower
-   * gate the panel said nothing was blocking an export right up until the export refused.
-   *
-   * Errors only. A warning is something the export notes and proceeds through, so listing it beside
-   * the things that stop the build would make the panel's one claim untrue in the other direction.
-   *
-   * A node id that no longer exists is dropped rather than offered as something to select.
-   *
-   * Takes the document rather than the state because it reads nothing else, which is what lets the
-   * caller cache it against the document alone.
+   * Read from [CapabilityComposeCodeExporter.diagnose] plus the real export's refusals. Errors
+   * only, since warnings do not block. Nodes that no longer exist are dropped. Takes only the
+   * document so callers can cache on it.
    */
   fun problems(
     document: UiBuilderDocument,
@@ -1987,21 +1799,10 @@ class UiBuilderEditorReducer(
   ): List<EditorProblem> {
     val export = exportOutcome(document, assetBytes)
     return (CapabilityComposeCodeExporter.diagnose(document, catalog)
-        // "No Kotlin symbol/import mapping exists" and "no typed call emitter exists" are
-        // `CapabilityComposeCodeExporter` describing *itself*, and it is not what writes a design's
-        // Kotlin: the export runs a dedicated emitter (`RecordFreeExport` — a Wear widget's
-        // Remote Compose, a Wear screen's `ScreenScaffold`, an A2UI program) or the record-driven
-        // `ScreenGenerator`. `wear-m3` leaves `code` null on every component on purpose for exactly
-        // that reason, so a Wear screen that generates cleanly was listed as blocked on every
-        // node — "Missing code capability" under a heading promising what the export refuses.
-        //
-        // So the two codes are dropped wherever the generator that does run has given its own
-        // answer and it is authoritative: always for a dedicated emitter, whose refusals are
-        // appended below in its own words, and for the record path when it generates. Where the
-        // record path refuses they stay, beside its refusals, because there they point at the node
-        // of a design that really does not export — the one case they were ever true of. Every
-        // other capability diagnostic (pin drift, a disallowed modifier, an unknown component) is
-        // kept: those are questions no generator asks.
+        // "No symbol mapping" / "no call emitter" describe `CapabilityComposeCodeExporter` itself,
+        // which does not write the export. Drop them when the generator that actually runs (a
+        // dedicated emitter, or the record path when it generates) has answered; other capability
+        // diagnostics stay.
         .filterNot { it.code in GENERATOR_OWNED_CODES && export?.answersForTheEmitter == true }
         .filter { it.severity == ComposeExportSeverity.ERROR && it.code != "UNKNOWN_PROPERTY" }
         .map { diagnostic ->
@@ -2012,15 +1813,9 @@ class UiBuilderEditorReducer(
             componentId = diagnostic.componentId,
           )
         } +
-        // The same refusals the server's export will produce, from the same code: the projection
-        // and the generator that the export runs, against the record the export reads. Before
-        // this the panel judged a design with `CapabilityComposeCodeExporter`, which has an
-        // emitter for every catalog id, so it stayed silent about the components the record does
-        // not back and the export refuses with `NO_COMPONENT_RECORD`.
-        //
-        // Appended rather than replacing: the capability diagnostics still answer questions the
-        // generator does not ask — catalog pin drift, a modifier the catalog disallows on a
-        // component — and dropping them to unify the source would narrow the panel's promise.
+        // The refusals the server's export produces, from the same projection and generator.
+        // Appended rather than replacing, since capability diagnostics answer questions the
+        // generator does not ask.
         export?.refusals.orEmpty() +
         undeclaredPropertyProblems(document) +
         // Not a refusal — the export runs — but the one property a whole design is judged by that
@@ -2125,15 +1920,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The Kotlin the Compose export would write for [document], or why it would not.
-   *
-   * The same call the problems panel makes, asked for its other half. Before this the editor could
-   * show a designer what was blocking an export but never what an export would produce, so the only
-   * way to read the code your edits were writing was to run the export and download the artifact.
-   *
-   * Total for the same reason [exportRefusals] is: a malformed property makes `toProtocolDocument`
-   * fail its decode, and a pane that propagated that would take the editor down over exactly the
-   * document whose code someone is trying to read.
+   * The Kotlin the Compose export would write for [document], or why it would not. Total, like
+   * [exportRefusals], so a malformed property cannot take the editor down.
    */
   fun generatedCode(
     document: UiBuilderDocument,
@@ -2142,13 +1930,8 @@ class UiBuilderEditorReducer(
     screenCode(document, assetBytes).withRemoteContent(document).withA2uiMessages(document)
 
   /**
-   * An A2UI design's other output, under its Kotlin: the messages an agent streams to draw the same
-   * surface, one pretty-printed message per block, as line comments so the pane stays one Kotlin
-   * file a person can paste.
-   *
-   * Both come from `A2uiDocumentExporter.lower`, so the payload the Kotlin sends and the JSON shown
-   * here are the same payload; a design that refuses one has already refused the other, and is left
-   * as that refusal.
+   * An A2UI design's streamed messages appended under its Kotlin as line comments, both from
+   * `A2uiDocumentExporter.lower`.
    */
   private fun EditorGeneratedCode.withA2uiMessages(
     document: UiBuilderDocument
@@ -2177,15 +1960,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The `@RemoteComposable` bodies of the design's inline remote content, joined to [screenCode].
-   *
-   * Two generators write one design, and a pane that showed only the first would show a refusal for
-   * every design holding remote content — the screen generators have no call site for it, which is
-   * the whole reason [InlineRemoteContentExporter] exists. So the bodies are appended when the
-   * screen generates, and *replace* the refusal when it does not: a designer who has drawn remote
-   * content and is told only "this design cannot be exported" has been given the least useful true
-   * thing that could be said. The screen's reasons are kept as a header comment above the bodies,
-   * so nothing is dropped.
+   * The `@RemoteComposable` bodies of the design's inline remote content joined to [screenCode].
+   * They are appended when the screen generates and replace a refusal when it does not, with the
+   * refusal reasons kept as a header comment.
    */
   private fun EditorGeneratedCode.withRemoteContent(
     document: UiBuilderDocument
@@ -2224,15 +2001,8 @@ class UiBuilderEditorReducer(
     document: UiBuilderDocument,
     assetBytes: (contentDigest: String) -> ByteArray?,
   ): EditorGeneratedCode = runCatching {
-    // A Wear widget ships as a `WearWidgetDocument` of Remote Compose and a Wear screen's
-    // `ScreenScaffold` takes a scroll state no record can recover, so neither has a component
-    // record and the Compose gate below can only ever refuse them. Asked first rather than as a
-    // fallback, because "refused, and also here is different code" would be two answers to one
-    // question — and asked through `RecordFreeExport`, which is the same call the server's export
-    // makes, so the pane and the artifact cannot disagree about a design.
-    //
-    // No package: this pane is read and pasted into a file that already has one. The export passes
-    // `ScreenExportGate.PACKAGE_NAME` for the same designs, because an artifact *is* the file.
+    // Wear widgets and Wear screens have no component record, so ask `RecordFreeExport` first — the
+    // same call the server's export makes. No package: the pane is pasted into a file that has one.
     RecordFreeExport.generate(
         document,
         catalog.platform,
@@ -2260,21 +2030,10 @@ class UiBuilderEditorReducer(
     }
 
   /**
-   * What the export would refuse, and which generator says so — or null when the design could not
-   * be read at all.
-   *
-   * `nodeId` is deliberately null: a refusal names the component and the reason in its text, and
-   * the generator reports against the *projected* screen rather than the document's node ids. A
-   * guessed id would offer the designer a node to select that is not the one at fault.
-   *
-   * Asked of whichever generator actually writes the design, because a panel headed "what the
-   * export would refuse" is a claim about the export. A Wear widget judged by the record-driven
-   * gate was told two things that are not true of it: that its `remote-m3/widget-container-large`
-   * root is "no component in this catalog" — it is the host frame the launcher draws and
-   * `WearWidgetCodeExporter` deliberately erases — and that a `center` alignment maps to no Kotlin
-   * member, when `RemoteContentEmitter` writes exactly that alignment. Both refusals named a
-   * blocker on a design that exports perfectly well, and told a designer to go and undo the widget
-   * they had just drawn.
+   * What the export would refuse and which generator says so, or null when the design cannot be
+   * read. Asked of the generator that actually writes the design, so record-free designs are not
+   * reported as blocked. `nodeId` is null because refusals refer to the projected screen, not
+   * document nodes.
    */
   private fun exportOutcome(
     document: UiBuilderDocument,
@@ -2378,17 +2137,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The selection's path from a root to the selected node, root first.
-   *
-   * The layers panel answers "where does this live" by indentation the reader scrolls through; the
-   * breadcrumb answers it in one line above the canvas, and every rung but the last is a way back
-   * up as much as a name. Walked from the selection upward through each node's location, so the
-   * slot a rung sits in is the slot the document put it in rather than the one the catalog wishes
-   * for — a dynamic slot still names itself.
-   *
-   * A cycle in the document (which the Issues panel reports rather than assumes away) ends the walk
-   * at the first repeat instead of spinning, and an ancestor the document has lost ends it there: a
-   * path with a hole is worse than a shorter one.
+   * The selection's path from a root, root first, walked up through each node's location. Stops at
+   * a cycle or a missing ancestor.
    */
   fun selectionPath(state: UiBuilderEditorState): List<UiBuilderBreadcrumbEntry> {
     val selected = state.selectedNodeId ?: return emptyList()
@@ -2490,20 +2240,11 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Where an Add beside lands, and what has to happen to the document first.
-   *
-   * Shared, because two insert paths ask it — the palette's and the Remote Compose panel's — and a
-   * second copy is a second answer to "does this design have a board yet".
-   *
-   * Three shapes
+   * Where an Add beside lands and the prelude it needs, shared by the palette and the Remote
+   * Compose panel
    * ([`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md)):
-   * a design whose root is already a board appends into it with no prelude, an empty design takes
-   * the item as its root (no board: there is nothing to be beside, and a root-only component added
-   * first would quietly stop being one), and any other root is wrapped — insert the board beside
-   * it, move it inside.
-   *
-   * The prelude and the insert that motivated it are one command, so a board that appeared because
-   * of an Add disappears when that Add is undone.
+   * append into an existing board, become the root of an empty design, or wrap the current root in
+   * a new board. The prelude and insert are one command, so they undo together.
    */
   private fun besideDestination(state: UiBuilderEditorState, sequence: Int): BesideDestination {
     val document = state.document
@@ -2527,17 +2268,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Add a top-level item beside the design rather than into the selection.
-   *
-   * Three shapes, one command
-   * ([`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md)):
-   * a design whose root is already a board appends into it, an empty design gets the board as its
-   * root, and any other root is wrapped in one first — insert the board beside it, move it inside.
-   *
-   * The document has two roots between those last two operations, which is legal because the client
-   * reducer checks the root count once per command (`requireSingleRoot`) rather than once per
-   * operation. It is one command, so the wrap and the item that motivated it undo together: a board
-   * that appeared because of an Add disappears when that Add is taken back.
+   * Add a top-level item beside the design as one command (see [besideDestination]). The two roots
+   * mid-command are legal because `requireSingleRoot` runs per command.
    */
   private fun insertBeside(
     state: UiBuilderEditorState,
@@ -2569,14 +2301,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * [variant] as encoded properties to write over the component's defaults, or empty.
-   *
-   * Encoded through the same [asLiteral] the catalog's own default goes through, so a variant lands
-   * in whatever shape that property already takes — an `enum` literal here, and whatever a future
-   * property declares there — rather than in a `string` this function guessed at. A variant naming
-   * a property this component does not declare, or a value it does not allow, encodes to nothing
-   * and the insert proceeds as an ordinary one: a stale variant row must never be able to refuse an
-   * insert that would otherwise work.
+   * [variant] as encoded properties via [asLiteral]. A variant the component no longer declares or
+   * allows encodes to nothing, so a stale row never refuses an insert.
    */
   private fun ComponentCapability.variantProperties(
     variant: EditorCatalogVariant?
@@ -2587,16 +2313,6 @@ class UiBuilderEditorReducer(
     return value?.let { mapOf(property.name to it.asLiteral(property)) }.orEmpty()
   }
 
-  /**
-   * Insert [component] into [target], with no opinion about the selection.
-   *
-   * Split out of [insert] because the selection check there is a guard on one *route in* rather
-   * than a rule about insertion: a drag from the catalog lands where the selection implies, and a
-   * client asking for any other slot is asking for something the editor never offered. A promoted
-   * reference piece arrives by a different route — its slot comes from a hit test this reducer ran
-   * against the catalog itself — and re-deriving it from the selection would refuse a slot that is
-   * demonstrably legal, because the selection is wherever the operator last clicked.
-   */
   private fun appendAction(
     state: UiBuilderEditorState,
     event: UiBuilderEditorEvent.AppendAction,
@@ -2628,6 +2344,10 @@ class UiBuilderEditorReducer(
     )
   }
 
+  /**
+   * Insert [component] into [target] regardless of the selection. [insert]'s selection check guards
+   * the catalog-drag route; a promoted reference piece arrives with a hit-tested slot instead.
+   */
   private fun insertAt(
     state: UiBuilderEditorState,
     component: ComponentCapability,
@@ -2713,18 +2433,11 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Insert `remote-compose/document` carrying [documentBase64].
+   * Insert `remote-compose/document` carrying [documentBase64], decoded first so an undecodable
+   * fetch (an HTML error page, say) is refused instead of becoming a shared design revision.
    *
-   * The bytes are decoded before the operation is built. The renderer decodes them too — it has to,
-   * it is what plays them — but a document that reaches the canvas undecodable is already saved,
-   * shared with every collaborator, and shown as an error box where a component should be. Refusing
-   * here is what keeps "the fetch returned an HTML error page" from becoming a design revision.
-   *
-   * The decoded document is then dropped rather than kept: [UiBuilderDocument] holds JSON, the
-   * player owns the parsed form, and a second in-memory copy would only be a second thing to
-   * invalidate.
+   * @param target the slot to fill, or null for an Add beside — see [besideDestination].
    */
-  /** @param target the slot to fill, or null for an Add beside — see [besideDestination]. */
   private fun insertRemoteComposeDocument(
     state: UiBuilderEditorState,
     source: RemoteComposeSource,
@@ -3026,17 +2739,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Attach an import as the base, reading its structure once.
-   *
-   * The boxes are extracted here rather than by the caller so that every route in — a paste, a
-   * file, a snapshot, a design reopened with a reference already stored — passes through the same
-   * reader. A raster import simply has none, and the panel then does not offer the mode.
-   *
-   * Alignment is deliberately *not* carried over from the previous attachment, except for the two
-   * fields that describe how the operator is working rather than where the picture sits: a
-   * different picture is a different picture, and inheriting the last one's nudge would silently
-   * misalign it, but being thrown out of difference mode on every import is friction with no
-   * purpose.
+   * Attach an import as the base, extracting its boxes once so every route in uses the same reader.
+   * Only the mode and visibility carry over from the previous attachment; alignment does not.
    */
   private fun attached(state: UiBuilderEditorState, image: ReferenceImage): ReferenceOverlayState =
     state.reference.copy(
@@ -3124,16 +2828,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The slot a piece would be built into, from the layout the canvas actually produced.
-   *
-   * Position rather than selection, because a piece's whole claim is *where it is*: it was dragged
-   * over the row it belongs in, and the selection is wherever the operator last clicked. The
-   * deepest accepting slot under [point] wins — deepest because a slot inside another slot is the
-   * more specific answer, and the outer one is still reachable by moving the piece somewhere the
-   * inner one does not cover.
-   *
-   * Falls back to [dropTarget] when nothing under the point accepts the component, so promoting
-   * still does something sensible for a piece parked over empty canvas.
+   * The slot a piece would be built into: the deepest accepting slot under [point] in the rendered
+   * layout (not the selection), falling back to [dropTarget].
    */
   fun promotionTarget(
     state: UiBuilderEditorState,
@@ -3198,13 +2894,7 @@ class UiBuilderEditorReducer(
 
   /**
    * Where a canvas move of [nodeId] hovering at a point would land, or null while no legal slot is
-   * under the pointer.
-   *
-   * The same geometry question as [catalogDropPlan], answered with the move's own legality —
-   * [moveRefusal], which is what the layers panel greys a row out with — so the canvas marker and
-   * the panel marker refuse for the same reasons and say it in the same words. A slot that refuses
-   * is no plan at all: the canvas draws nothing there rather than a marker the release would
-   * betray, and the ghost keeps travelling until the pointer reaches somewhere legal.
+   * under the pointer. Legality is [moveRefusal], the same check the layers panel uses.
    */
   fun canvasMovePlan(
     state: UiBuilderEditorState,
@@ -3224,18 +2914,11 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The smallest slot region that contains the point and answers to [legal], or null.
+   * The smallest slot region containing the point that answers to [legal], or null. Containment is
+   * checked before legality because it is cheaper.
    *
-   * Containment is asked first and legality second, the cheaper question first: a document's
-   * declared slots outnumber the two or three under any one pointer many times over, and the canvas
-   * re-asks this on every move of a drag.
-   *
-   * A slot's region is the container it fills, not the union of the children it happens to have: a
-   * column holding one short line leaves the rest of itself empty, and a drop into that emptiness
-   * is a drop into the column — that is what "into this container" means to the hand holding the
-   * pointer. A parent that declares several slots keeps the child union, because there the unions
-   * are what tell its slots apart (a Scaffold's app bar and its content have no boxes of their own
-   * to report), and an unmaterialized slot falls back to its parent's box as it always has.
+   * A slot's region is the container it fills, except where a parent declares several slots: then
+   * child unions distinguish them, and unmaterialized slots fall back to the parent's box.
    */
   private fun dropSlotUnderPoint(
     state: UiBuilderEditorState,
@@ -3280,14 +2963,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The region each of [parent]'s declared slots occupies for a hit test, or none where a slot has
-   * neither a measured child union nor a container to infer from.
-   *
-   * A populated slot is its children's union — what the renderer measured. An **empty** slot has no
-   * children to measure, so its region is inferred: the container minus the strips its *populated*
-   * sibling slots occupy. That is what gives an empty Scaffold's content the body below a populated
-   * top bar rather than the whole screen, and it is the same region the placeholder is drawn at, so
-   * what a reader sees is what a drop hits.
+   * The hit-test region of each of [parent]'s declared slots: a populated slot's child union, or
+   * for an empty slot the container minus its populated siblings' strips (where the placeholder is
+   * drawn).
    */
   private fun slotRegions(
     parent: UiBuilderNode,
@@ -3318,13 +2996,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The part of [container] an empty slot is left with once the populated sibling strips are taken
-   * out.
-   *
-   * A strip is a sibling union that spans most of the container across one axis and hugs an edge —
-   * a top bar, a navigation bar, a rail — which is the shape a slot's content actually takes in
-   * this catalog. Anything else (a box floating in the middle) is left alone: subtracting it
-   * wholesale would shrink the region to nothing and make the empty slot undroppable.
+   * The part of [container] an empty slot keeps once edge-hugging sibling strips (bars, rails) are
+   * removed. Other shapes are left alone so the region never shrinks to nothing.
    */
   private fun emptySlotRegion(
     container: UiBuilderPixelBounds,
@@ -3361,13 +3034,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The empty recommended slots, as regions the canvas draws a placeholder at.
-   *
-   * Editor-only: a placeholder is not in the document, takes no revision and reaches no exporter —
-   * it is the panel's "where would this go" question answered on the canvas instead of in a line of
-   * text. Only the recommended slot of each component gets one, because a Scaffold's three empty
-   * slots would otherwise draw three boxes over the same screen; the rest are still droppable
-   * through [slotRegions].
+   * The empty recommended slots, as regions the canvas draws an editor-only placeholder at. One per
+   * component, so a Scaffold does not draw three; the rest stay droppable via [slotRegions].
    */
   fun slotPlaceholders(
     state: UiBuilderEditorState,
@@ -4020,13 +3688,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The containers that could hold the current selection where it stands.
-   *
-   * Offered rather than a single "Group", because this builder wraps in a **real component** from
-   * the catalog — a `Column`, a `Card`, a `Surface` — not in an inert frame. Which ones are legal
-   * depends on both ends: the parent slot has to accept the container, and the container needs a
-   * slot that accepts every selected node. Asking both here means the menu lists what will work
-   * instead of offering everything and refusing most of it.
+   * The catalog containers that could wrap the current selection in place: the parent slot must
+   * accept the container and the container must accept every selected node.
    */
   fun wrapCandidates(state: UiBuilderEditorState): List<EditorCatalogItem> {
     val targets = state.selectionRoots()
@@ -4044,29 +3707,15 @@ class UiBuilderEditorReducer(
       .sortedWith(compareBy(EditorCatalogItem::kind, EditorCatalogItem::displayName))
   }
 
-  /**
-   * The one slot every selected node shares, or null when they do not share one.
-   *
-   * Wrapping a selection spread across two parents has no answer: the container can only live in
-   * one place, so the other nodes would have to move somewhere the document never put them. A
-   * refusal is better than picking a parent on the user's behalf.
-   *
-   * Roots are excluded for the same reason a root cannot be deleted freely — a screen body is not a
-   * slot, so there is nothing to insert the container into.
-   */
+  /** The one non-root slot every selected node shares, or null. */
   private fun wrappableParent(
     state: UiBuilderEditorState,
     targets: List<String>,
   ): ParentSlot? = targets.map { state.document.location(it) }.distinct().singleOrNull()
 
   /**
-   * Whether the selection is one unbroken run of siblings.
-   *
-   * Wrapping `A` and `C` out of `A, B, C` has no faithful answer. The container takes the place of
-   * the first node it swallows, so `B` — which nobody selected and nobody moved — comes out after
-   * the container rather than between the two nodes it was between. Silently reordering a screen
-   * around a node the user did not touch is worse than not offering the wrap, and the same reason
-   * [wrappableParent] refuses a selection spread across two parents.
+   * Whether the selection is one unbroken run of siblings; wrapping `A` and `C` out of `A, B, C`
+   * would silently reorder `B`.
    */
   private fun UiBuilderEditorState.adjacentInParent(
     targets: List<String>,
@@ -4187,14 +3836,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Whether the selected node's children can be lifted into its own parent.
-   *
-   * Wrap without unwrap is a one-way door, and the door is worse here than for a binding: a
-   * container added by mistake cannot be deleted either, because deleting it takes the children
-   * with it.
-   *
-   * The parent slot has to accept every child and have room for all of them at once — the container
-   * leaves and its children arrive, so occupancy changes by `children - 1`.
+   * Whether the selected node's children can be lifted into its parent, which must accept all of
+   * them and have room for `children - 1` more.
    */
   fun canUnwrapSelected(state: UiBuilderEditorState): Boolean = unwrapPlan(state) != null
 
@@ -4249,14 +3892,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The components that can be inserted already wired to a click action.
-   *
-   * Two limits, not one. Where the node may go, and whether the Compose export emits a handler for
-   * it: `click` is universal in the *renderer* — `actionModifier` makes anything carrying a click
-   * binding clickable — but the exporter emits one only for the components whose emitter takes an
-   * `onClick`, and reports `UNEMITTED_EVENT` for the rest. Offering the others built a control that
-   * worked in the preview and silently lost its interaction on export, which is the divergence this
-   * builder exists to not have.
+   * The components insertable already wired to a click action: placeable here, and with an emitter
+   * that takes `onClick`, so the interaction is not lost on export (`UNEMITTED_EVENT`).
    */
   fun actionInsertCandidates(state: UiBuilderEditorState): List<EditorCatalogItem> =
     if (state.document.stateVariables.isEmpty()) emptyList()
@@ -4737,13 +4374,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Take a newer version of an imported component from the library, in place.
-   *
-   * The design's copy is what it draws until somebody decides otherwise — drift is reported, never
-   * redrawn — and this is that decision. The body is replaced by the symbol's, the declaration
-   * records the new digest, and every placement keeps its place, its layout and the arguments the
-   * new body still reads: the ones it no longer reads are dropped, and a text parameter it newly
-   * reads starts as its own name, as a first placement's does.
+   * Replace an imported component with a newer library version in place. Placements keep their
+   * position, layout and still-read arguments; newly read text parameters start as their own name.
    */
   private fun updateLibraryComponent(
     state: UiBuilderEditorState,
@@ -5628,16 +5260,9 @@ class UiBuilderEditorReducer(
     )
 
   /**
-   * Where an insert of [inserted] lands with [selectedNodeId] selected: the first of the selected
-   * node's own slots that accepts it and has room, else the first such slot anywhere below it in
-   * document order, else the slot the selected node itself sits in.
-   *
-   * The descent is what makes a fresh design usable. The blank template is a scaffold holding one
-   * box in its single `content` slot, and the scaffold is what is selected when the editor opens;
-   * its `topBar` takes an app bar or a layout primitive and nothing else, and `content` is full. A
-   * chip added there used to go into the top bar — a `Container` matched on its role alone — and
-   * with the slot rule now asking for the trait too, a search that stopped at the scaffold's own
-   * slots would offer nowhere at all. The box below it is where the chip was always meant to go.
+   * Where an insert of [inserted] lands with [selectedNodeId] selected: the first accepting slot
+   * with room on the selected node, else the first below it in document order, else the selected
+   * node's own slot. The descent lets a fresh blank scaffold accept content into its inner box.
    */
   private fun findDestination(
     document: UiBuilderDocument,
@@ -5699,13 +5324,8 @@ class UiBuilderEditorReducer(
 }
 
 /**
- * The picture bytes a widget export inlines, as this editor holds them: carried in the document
- * when its source is `embedded`, otherwise the bytes the editor has fetched for an uploaded
- * picture.
- *
- * Without them the code pane and the problems panel refused every widget whose background is a
- * picture ("whose bytes this export could not read") while the server's export, which reads the
- * asset store, generated the same design perfectly well.
+ * The picture bytes a widget export inlines: embedded bytes from the document, or those the editor
+ * fetched for an uploaded picture.
  */
 internal fun UiBuilderDocument.widgetAssetBytes(
   fetched: (contentDigest: String) -> ByteArray?

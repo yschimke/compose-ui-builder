@@ -3,12 +3,8 @@ package ee.schimke.composeai.uibuilder.service
 import ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1
 
 /**
- * One design as an operator sees it: every design on the host, regardless of who owns it or who has
- * been granted access.
- *
- * Deliberately not [ee.schimke.composeai.uibuilder.protocol.DesignListItemV1]: that shape carries
- * the *requester's* access and cannot be built for an actor the design was never shared with, which
- * is precisely the position an administrator is in.
+ * One design as an operator sees it, regardless of ownership or grants. Not
+ * [ee.schimke.composeai.uibuilder.protocol.DesignListItemV1], which carries the requester's access.
  */
 public data class UiBuilderAdminDesignSummary(
   val designId: String,
@@ -25,104 +21,59 @@ public data class UiBuilderAdminDesignSummary(
 )
 
 /**
- * The operator's view of a UI-builder host.
+ * The operator's view of a UI-builder host, reached only through an admin-token route. Separate
+ * from [UiBuilderServicePort] because nothing here is an actor operation: no ACL, capability or
+ * protocol shape.
  *
- * Separate from [UiBuilderServicePort] because nothing here is an actor operation: there is no ACL
- * check, no capability, and no protocol request shape (`ui-builder-protocol` is a published
- * contract and has no delete). It is reached only through an admin-token route.
+ * New methods are added with defaults rather than as data class fields, so the published ABI stays
+ * binary-compatible.
  */
 public interface UiBuilderAdminPort {
   /** Every design on the host, oldest-created first. */
   public fun adminListDesigns(): List<UiBuilderAdminDesignSummary>
 
   /**
-   * One design by id, or null where the host holds no such design.
-   *
-   * Separate from [adminListDesigns] because a caller that wants a single design should not pay a
-   * scan of every design to get it, and because a scan cannot be taken atomically with anything
-   * else the caller is doing. The default is that scan, so an implementation that has nothing
-   * cheaper stays correct; a store that keys designs by id overrides it with the lookup.
+   * One design by id, or null. The default scans [adminListDesigns]; stores keyed by id override
+   * it.
    */
   public fun adminDesignSummary(designId: String): UiBuilderAdminDesignSummary? =
     adminListDesigns().firstOrNull { it.designId == designId }
 
   /**
-   * Remove a design and everything the service holds for it: its history, snapshots, presence and
-   * subscribers (whose streams are closed). Durable before it returns. False when no such design
-   * exists.
+   * Remove a design and everything held for it (history, snapshots, presence, subscribers). Durable
+   * before it returns; false when no such design exists.
    */
   public fun adminDeleteDesign(designId: String): Boolean
 
   /**
-   * Stored designs this build cannot serve, by id, each with the reason.
-   *
-   * `diagnostics()` counts them; this names them. A count tells an operator that something is being
-   * held back and nothing about which design or why, which is the difference between knowing a host
-   * has a problem and being able to act on it — repair the catalog the design pins and restart, or
-   * retire it with [adminDeleteDesign].
-   *
-   * Deliberately a method beside [adminListDesigns] rather than a field on
-   * [UiBuilderAdminDesignSummary]: this artifact is published and its ABI is checked, and a new
-   * constructor parameter on a data class changes `copy` and every `componentN` — binary-breaking
-   * for a consumer compiled against an earlier release. A defaulted method is additive.
+   * Stored designs this build cannot serve, by id, with the reason — so an operator can repair the
+   * pinned catalog or retire the design with [adminDeleteDesign].
    */
   public fun adminUnusableDesigns(): Map<String, String> = emptyMap()
 
   /**
    * Stored designs that still open but carry properties their pinned catalog no longer declares.
-   *
-   * Unlike [adminUnusableDesigns], these designs remain editable and export by omitting the stale
-   * properties. Naming them separately keeps a survivable catalog change visible without turning it
-   * into quarantine. Defaulted empty so adding the diagnostic remains binary-compatible for other
-   * implementations of this port.
+   * Unlike [adminUnusableDesigns] they stay editable and export without the stale properties.
    */
   public fun adminDegradedDesigns(): Map<String, String> = emptyMap()
 
   /**
-   * Of those, the designs whose stored **files** could not be read.
-   *
-   * The two kinds of unusable design recover differently and the difference is not cosmetic. A
-   * design the catalog outgrew has a document the host read fine: it can be downloaded, edited and
-   * put back. A design whose files would not decode has no document to hand anybody — download and
-   * repair both answer "not found" — and retiring it is the only move. Telling an operator to
-   * download a design that cannot be read sends them somewhere there is nothing, during an
-   * incident, which is the worst moment to be sent there.
-   *
-   * Defaulted empty for the same reason [adminUnusableDesigns] is: a new method is additive where a
-   * changed return type would be binary-breaking.
+   * The subset of [adminUnusableDesigns] whose stored files could not be read. These have no
+   * document to download or repair; retiring them is the only option.
    */
   public fun adminUnreadableDesigns(): Set<String> = emptySet()
 
   /**
-   * The stored design document as JSON, or null when no design has this id.
-   *
-   * The recovery path for a design [adminUnusableDesigns] names, and the reason it is here rather
-   * than on [UiBuilderServicePort]: the ordinary export renders through the catalog, so a design
-   * held back *because* its catalog cannot serve it is exactly the one that export cannot reach.
-   * Without this an operator's only move on a quarantined design is [adminDeleteDesign], which
-   * loses the document — and a design is generally quarantined by a rule that changed under it, not
-   * by being worthless. So: take a copy, repair it against the current rules, create it again.
-   *
-   * Deliberately the document alone, and deliberately not gated on the design being servable. It
-   * reads what is already on disk and interprets none of it, which is what makes it usable in the
-   * state it exists for. Access grants, history and presence are not included: they are the
-   * service's bookkeeping rather than the operator's content, and the owner of the repaired copy is
-   * whoever creates it.
+   * The stored design document as JSON, or null when no design has this id. The recovery path for a
+   * quarantined design, which the catalog-rendered export cannot reach. Reads the document as
+   * stored without interpreting it; grants, history and presence are not included.
    */
   public fun adminDesignDocument(designId: String): String? = null
 
   /**
-   * Put a repaired document back in place of a quarantined one.
-   *
-   * The other half of [adminDesignDocument], and what turns quarantine into a workflow rather than
-   * a waiting room: copy the design out, edit it to satisfy the rule that changed under it, put it
-   * back, and the host serves it again without a restart and without anything else on the host
-   * being touched. The candidate is checked against the same conditions that held the original
-   * back, so a repair that does not repair is refused with what is still wrong rather than stored.
-   *
-   * Only a design [adminUnusableDesigns] names may be repaired this way. A design the host serves
-   * is edited through the service, with an actor, authorization and a sequence; this is the door
-   * that exists because that one is closed.
+   * Put a repaired document back in place of a design [adminUnusableDesigns] names, without a
+   * restart. The candidate is checked against the same conditions that held the original back, and
+   * refused with what is still wrong.
    */
   public fun adminRepairDesign(designId: String, documentJson: String): UiBuilderAdminRepair =
     UiBuilderAdminRepair.Rejected("design repair is not supported by this runtime")
@@ -130,10 +81,7 @@ public interface UiBuilderAdminPort {
 
 /** What [UiBuilderAdminPort.adminRepairDesign] did, or why it did nothing. */
 public sealed interface UiBuilderAdminRepair {
-  /**
-   * The design is stored and servable again, at [revision]. [previousReason] is what had held it
-   * back, kept so the operator's log says what was repaired and not merely that something was.
-   */
+  /** The design is servable again at [revision]; [previousReason] is what had held it back. */
   public data class Repaired(
     val designId: String,
     val revision: Long,
@@ -144,8 +92,8 @@ public sealed interface UiBuilderAdminRepair {
   public data class NotFound(val designId: String) : UiBuilderAdminRepair
 
   /**
-   * Nothing was written. Either the candidate is not a readable design, or it is one the host still
-   * cannot serve — [reason] is the remaining failure, in the same words the quarantine uses.
+   * Nothing was written: the candidate is unreadable or still unservable, and [reason] says why in
+   * the quarantine's words.
    */
   public data class Rejected(val reason: String) : UiBuilderAdminRepair
 }
