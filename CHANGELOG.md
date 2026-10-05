@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.85.0](https://github.com/yschimke/compose-ui-builder/compare/v3.84.0...v3.85.0) (2026-10-05)
+
+
+### Features
+
+* add reusable Google app items with typed data models ([#480](https://github.com/yschimke/compose-ui-builder/issues/480)) ([4e49002](https://github.com/yschimke/compose-ui-builder/commit/4e4900293e679d1d84b65d0f9453b5c50b09a34d))
+* **codegen:** support nullable fallbacks and keyed component lists ([#482](https://github.com/yschimke/compose-ui-builder/issues/482)) ([f0a55d3](https://github.com/yschimke/compose-ui-builder/commit/f0a55d34b14d434042728c4fb7877de8b97ad3bd))
+* **editor:** preserve production contracts through file round trips ([#475](https://github.com/yschimke/compose-ui-builder/issues/475)) ([01fcdea](https://github.com/yschimke/compose-ui-builder/commit/01fcdea4411efda32f7f134946c9e64876b32c7a))
+* **ui-builder:** tab between the editor and each device preview on phones ([#478](https://github.com/yschimke/compose-ui-builder/issues/478)) ([920d6f6](https://github.com/yschimke/compose-ui-builder/commit/920d6f62079f2bfdf8b2a2c3c6814ff48fee689b))
+
 ## [3.84.0](https://github.com/yschimke/compose-ui-builder/compare/v3.83.0...v3.84.0) (2026-10-05)
 
 
