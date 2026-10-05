@@ -1,8 +1,8 @@
 # Build generation from project owned designs
 
-**Status: experimental opt-in build lane implemented, 2026-10-04.** Strict project-file contracts,
+**Status: experimental opt-in build lane implemented, 2026-10-05.** Strict project-file contracts,
 tracked input resolution, owned model generation, stateless Compose generation and a JVM consumer
-build are implemented. Single-file export remains the default. Editor round-trip support, event
+build are implemented. Single-file export remains the default. Editor round-trip support, UI-value callback
 lowering, dynamic lists, nullable binding fallbacks and a packaged Gradle plugin remain proposed.
 The experimental file schema does not extend the current design-service wire schema.
 
@@ -29,9 +29,8 @@ enable this mode. Separate component and model files are a rule of the durable m
 4. Reusable components are generated into separate files. A screen calls them rather than
    receiving an expanded copy of their implementation.
 
-The additional choices below are proposed defaults within the opt-in durable mode. In particular, explicit event callbacks are
-an extension of the data-input requirement, and need agreement before implementing interactive
-controls.
+Explicit callbacks are part of the experimental opt-in API. Zero-argument UI callbacks can report
+intent and declared data payloads; callbacks receiving UI values remain proposed.
 
 ## Current foundation and missing contracts
 
@@ -285,8 +284,8 @@ fixture does not claim Android or Wasm compatibility.
 
 ## Decisions to settle before implementation
 
-- Approve explicit callbacks as part of the stateless composable API. The proposed initial event
-  types are zero-argument callbacks and callbacks with one supported data value.
+- Extend callback lowering to UI-provided values, such as text edits, with explicit typed payload
+  scopes. The current lane reports payloads read from the input model.
 - Choose the versioned production metadata shape with `compose-preview-contracts`. Model and
   component-only `.uid` files need an explicit schema; they must not pretend to be ordinary screens
   with fabricated root nodes.
@@ -377,7 +376,7 @@ body once in their own file; screen bodies call that implementation. The generat
 scalar parameters, while the wrapper reads the declared data paths, including external property
 names. The shared generator proves those scalar types against the actual catalog parameters.
 Kotlin PSI verifies and selects the supporting declaration; no regular-expression source splitting
-is used. Explicit event declarations, implicit supporting functions, application state, generated
+is used. Implicit supporting functions, application state, generated
 `remember` calls, assets, incomplete bindings and unreachable design nodes refuse output. Component
 placements currently accept only their declared data mapping; placement modifiers and slots refuse.
 
@@ -403,3 +402,37 @@ protection of handwritten directories. The CI gate also stages the published art
 throwaway Maven repository, compiles from a different checkout path, deletes and regenerates output
 offline, and proves untracking an unchanged import blocks compilation. A packaged Gradle plugin and source-archive manifests are
 follow-up distribution work; the fixture documents the reusable `JavaExec` build wiring today.
+
+## Explicit production events
+
+An entry's ordered `events` declares required callback parameters independently of layout usage.
+`eventBindings` explicitly connects a node's catalog Kotlin callback parameter to one declared
+application event:
+
+```json
+{
+  "events": [{"name": "onEpisodeClick", "payload": {"kind": "scalar", "scalar": "string"}}],
+  "eventBindings": [{
+    "nodeId": "playButton",
+    "property": "onClick",
+    "event": "onEpisodeClick",
+    "payloadPath": ["episode", "title"]
+  }]
+}
+```
+
+The UI callback must take zero arguments and return `Unit`; value callbacks and composable slots
+are refused against the pinned catalog. Omit `payloadPath` only for an event without a payload.
+An empty path reports the entire input model. Paths obey the model contract and external property
+mapping; nullable intermediate objects still refuse traversal. A nullable leaf, model or list may
+be reported as data without generating a branch or list rendering.
+
+Each component use forwards every child event through its explicit `events` map, with identical
+payload types. Bindings on component placements, unknown events, conflicting bindings and payload
+type mismatches fail with located diagnostics. Preview state actions remain forbidden.
+
+The JVM adapter lowers callbacks to typed helper parameters using the shared generator. The data
+wrapper captures each declared payload read and invokes the required application callback when
+clicked. It generates no application state, default callback or preview action. Unused event
+declarations remain in the API. The production consumer's Compose interaction tests exercise both
+screen forwarding and the component API, including updated input data after recomposition.

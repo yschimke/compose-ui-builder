@@ -402,6 +402,37 @@ object ProductionContractValidator {
           )
         }
       }
+      entry.eventBindings.forEach { binding ->
+        node(input, entry, binding.nodeId)
+        fun invalid(code: String, message: String) =
+          issue(code, input, entry.id, binding.nodeId, binding.property, message)
+        if (!isProductionIdentifier(binding.property)) {
+          invalid("INVALID_EVENT_PROPERTY", "event property must be a Kotlin identifier")
+        }
+        if (!bound.add(binding.nodeId to binding.property)) {
+          invalid("DUPLICATE_BINDING", "node property has more than one binding")
+        }
+        if (entry.components.any { it.nodeId == binding.nodeId }) {
+          invalid("COMPONENT_EVENT_BINDING", "forward component events through the component use")
+        }
+        if (design.nodes[binding.nodeId]?.properties?.containsKey(binding.property) == true) {
+          invalid("CONFLICTING_EVENT_PROPERTY", "event callback also has an authored property")
+        }
+        val event = entry.events.singleOrNull { it.name == binding.event }
+        if (event == null) {
+          invalid("UNKNOWN_EVENT", "event '${binding.event}' is not declared")
+        } else if ((event.payload == null) != (binding.payloadPath == null)) {
+          invalid(
+            "EVENT_PAYLOAD_REQUIRED",
+            "payload path must be supplied exactly when the event declares a payload",
+          )
+        } else if (binding.payloadPath != null) {
+          val actual = readPath(input, entry, binding.nodeId, binding.property, binding.payloadPath)
+          if (actual != null && actual != event.payload) {
+            invalid("EVENT_PAYLOAD_MISMATCH", "event requires ${event.payload}, got $actual")
+          }
+        }
+      }
       val placements = mutableSetOf<String>()
       entry.components.forEach { use ->
         node(input, entry, use.nodeId)

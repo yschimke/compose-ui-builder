@@ -99,9 +99,21 @@ data class ProductionEntryPoint(
   val events: List<ProductionEvent> = emptyList(),
   val bindings: List<ProductionBinding> = emptyList(),
   val components: List<ProductionComponentUse> = emptyList(),
+  val eventBindings: List<ProductionEventBinding> = emptyList(),
 )
 
 @Serializable data class ProductionEvent(val name: String, val payload: ProductionType? = null)
+
+/** A zero-argument UI callback reports an event, optionally reading its payload from data. */
+@Serializable
+data class ProductionEventBinding(
+  val nodeId: String,
+  /** Catalog Kotlin parameter, for example onClick. */
+  val property: String,
+  val event: String,
+  /** Null for a payload-free event; an empty path selects the complete input model. */
+  val payloadPath: List<String>? = null,
+)
 
 /** A checked read from the entry point's input model, for one node property. */
 @Serializable
