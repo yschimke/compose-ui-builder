@@ -4,7 +4,7 @@
     "functionName": "DurableLibraryPreview",
     "module": "ui-builder-production-consumer",
     "renderBasename": "DurableLibraryPreview-40a004c8.png",
-    "sha256": "56fbcf121ba14126f6ffb4a8d03719e5a2e582b76f09c0c1c7222b98b2784a4c",
+    "sha256": "547b35136902d589785d1398dbc36ce67c48ef89473df6ba5a13a1dbbd26e6c8",
     "sourceFile": "src/main/kotlin/example/Consumer.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview": {
