@@ -1,23 +1,20 @@
 {
   "schema": "compose-ui-builder-production/v1",
+  "imports": [
+    "src/main/ui/models/LibraryModels.uid"
+  ],
   "models": [
     {
-      "id": "library",
-      "kotlinType": "example.ui.LibraryData",
+      "id": "dynamic-library",
+      "kotlinType": "example.ui.DynamicLibraryData",
       "ownership": "generated",
       "fields": [
         {
-          "name": "title",
-          "type": {
-            "kind": "scalar",
-            "scalar": "string"
-          }
-        },
-        {
-          "name": "featured",
+          "name": "selection",
           "type": {
             "kind": "model",
-            "modelId": "external"
+            "modelId": "selection",
+            "nullable": true
           }
         },
         {
@@ -27,29 +24,31 @@
             "element": {
               "kind": "model",
               "modelId": "external"
-            }
+            },
+            "nullable": true
           }
         }
       ]
     },
     {
-      "id": "external",
-      "kotlinType": "example.domain.ProjectEpisode",
-      "ownership": "external",
+      "id": "selection",
+      "kotlinType": "example.ui.SelectionData",
+      "ownership": "generated",
       "fields": [
         {
           "name": "title",
-          "property": "displayTitle",
           "type": {
             "kind": "scalar",
-            "scalar": "string"
+            "scalar": "string",
+            "nullable": true
           }
         },
         {
-          "name": "id",
+          "name": "featured",
           "type": {
-            "kind": "scalar",
-            "scalar": "string"
+            "kind": "model",
+            "modelId": "external",
+            "nullable": true
           }
         }
       ]

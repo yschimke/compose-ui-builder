@@ -11,6 +11,24 @@ class ProductionUidRoundTripTest {
   private val file = McpAppFile("EpisodeCard.uid", "host-resource://production")
 
   @Test
+  fun `MCP file saves retain nullable branches fallbacks and item keys`() {
+    val source =
+      checkNotNull(javaClass.classLoader.getResource("production-dynamic-editor.uid")).readText()
+    val original = ProductionUidFiles.decode(source)
+    val host = FakeMcpAppHost(file.resourceUri, source)
+    val session = McpAppDesignSession(host, file)
+    runImmediate { session.open() }
+    assertNull(session.state.failure)
+    val edited = session.state.document!!.copy(title = "Edited dynamic layout", revision = 1)
+    session.edited(edited)
+    runImmediate { session.save() }
+    assertNull(session.state.notice)
+    assertEquals(original.copy(design = edited), ProductionUidFiles.decode(host.text))
+    runImmediate { session.reload() }
+    assertEquals(edited, session.state.document)
+  }
+
+  @Test
   fun `visual edits preserve every production declaration and stabilize after reload`() {
     val opened = UidDesignFiles.open(fixture)
     val edited = opened.document.copy(title = "Edited layout", revision = 1)

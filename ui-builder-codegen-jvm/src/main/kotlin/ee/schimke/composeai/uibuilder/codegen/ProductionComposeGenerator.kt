@@ -28,7 +28,17 @@ object ProductionComposeGenerator {
   private const val MODIFIER = "androidx.compose.ui.Modifier"
   private const val BOX = "layout/box"
 
-  private data class Read(val path: List<String>, val type: ProductionType.Scalar)
+  private data class Read(
+    val path: List<String>,
+    val type: ProductionType.Scalar,
+    val fallback: JsonPrimitive? = null,
+  )
+
+  private data class DynamicPlacement(
+    val use: ProductionComponentUse,
+    val entry: ProductionEntryPoint,
+    val symbol: String,
+  )
 
   private data class Callback(val event: String, val payloadPath: List<String>?)
 
@@ -36,6 +46,7 @@ object ProductionComposeGenerator {
     val entry: ProductionEntryPoint,
     val reads: List<Read>,
     val callbacks: List<Callback>,
+    val placements: List<DynamicPlacement>,
     val root: ScreenNode,
     val record: ComponentRecordFile,
   )
@@ -103,7 +114,7 @@ object ProductionComposeGenerator {
           "${binding.nodeId}.${binding.property}: only non-null scalar reads are supported",
         )
         val parameter = "p${reads.size}"
-        reads += Read(binding.path, requireNotNull(type))
+        reads += Read(binding.path, requireNotNull(type), binding.fallback)
         val node = nodes.getValue(binding.nodeId)
         nodes[binding.nodeId] =
           node.copy(
@@ -127,6 +138,7 @@ object ProductionComposeGenerator {
           ScreenValue.ParameterRead(parameter, "kotlin.Function0")
       }
       val overrides = linkedMapOf<String, ScreenNode>()
+      val placements = mutableListOf<DynamicPlacement>()
       val children =
         entry.components.map { use ->
           val child = body(use.componentId)
@@ -142,6 +154,12 @@ object ProductionComposeGenerator {
             entry.bindings.none { it.nodeId == use.nodeId },
             "${use.nodeId}: bind component data through dataPath",
           )
+          if (use.keyPath != null || use.onNull != null || child.placements.isNotEmpty()) {
+            val symbol = helperFqn(entry) + "Placement" + placements.size
+            placements += DynamicPlacement(use, child.entry, symbol)
+            overrides[use.nodeId] = ScreenNode(componentId = symbol)
+            return@map child
+          }
           val arguments =
             linkedMapOf<String, ScreenValue>(
               "modifier" to ScreenValue.Reference(MODIFIER, typeFqn = MODIFIER)
@@ -194,6 +212,25 @@ object ProductionComposeGenerator {
           .copy(
             components =
               projected.resolvable(record.callableAliases()).components +
+                placements.map { placement ->
+                  ComponentRecord(
+                    canonicalId = placement.symbol,
+                    symbol =
+                      ComponentSymbol(
+                        jvmOwner = placement.symbol + "Kt",
+                        callable = placement.symbol,
+                        name = placement.symbol.substringAfterLast('.'),
+                        origin = ComponentOrigin.PROJECT,
+                      ),
+                    signatureKnown = true,
+                    parameters = emptyList(),
+                    code =
+                      ComponentCode(
+                        call = placement.symbol.substringAfterLast('.') + "()",
+                        imports = listOf(placement.symbol),
+                      ),
+                  )
+                } +
                 children
                   .map { child ->
                     ComponentRecord(
@@ -236,7 +273,7 @@ object ProductionComposeGenerator {
                   }
                   .distinctBy { it.canonicalId }
           )
-      return Body(entry, reads, callbacks, root, combined).also { bodies[id] = it }
+      return Body(entry, reads, callbacks, placements, root, combined).also { bodies[id] = it }
     }
     contract.entryPoints.keys.sorted().forEach(::body)
     val disposable = Disposer.newDisposable()
@@ -321,15 +358,71 @@ object ProductionComposeGenerator {
             ) {
               "${entry.id}: generated body owns Compose state"
             }
+            // ScreenGenerator still emits all visual bodies. Replace only our checked, synthetic
+            // placement call nodes with composable slots; control flow stays in the data wrapper.
+            val replacements = mutableListOf<Pair<IntRange, String>>()
+            fun replacement(start: Int, end: Int, text: String) {
+              replacements +=
+                (start - function.textRange.startOffset until
+                  end - function.textRange.startOffset) to text
+            }
+            body.placements.forEachIndexed { index, placement ->
+              val sites =
+                PsiTreeUtil.findChildrenOfType(function, KtCallExpression::class.java).filter {
+                  it.calleeExpression?.text == placement.symbol.substringAfterLast('.')
+                }
+              require(sites.size == 1 && sites.single().valueArguments.isEmpty()) {
+                "${entry.id}: placement was not projected exactly once"
+              }
+              val site = sites.single()
+              replacement(site.textRange.startOffset, site.textRange.endOffset, "uidSlot$index()")
+            }
+            if (body.placements.isNotEmpty()) {
+              val parameters = requireNotNull(function.valueParameterList)
+              val values =
+                function.valueParameters.map { it.text } +
+                  body.placements.indices.map {
+                    "uidSlot$it: @androidx.compose.runtime.Composable () -> kotlin.Unit"
+                  }
+              replacement(
+                parameters.textRange.startOffset,
+                parameters.textRange.endOffset,
+                values.joinToString(", ", "(", ")"),
+              )
+            }
             val privateToken =
               requireNotNull(function.modifierList?.getModifier(KtTokens.PRIVATE_KEYWORD))
-            val offset = privateToken.textRange.startOffset - function.textRange.startOffset
+            replacement(
+              privateToken.textRange.startOffset,
+              privateToken.textRange.endOffset,
+              "internal",
+            )
             val helper =
-              function.text.replaceRange(offset, offset + privateToken.textLength, "internal")
+              replacements
+                .sortedByDescending { it.first.first }
+                .fold(function.text) { text, (range, value) -> text.replaceRange(range, value) }
+            val reservedNames = entry.events.map { it.name }.toSet()
+            fun local(base: String): String =
+              generateSequence(base) { it + "_" }.first { it !in reservedNames }
+            val keyName = local("uidComposeKey")
+            val requireName = local("uidRequire")
             val source = buildString {
               appendLine("// Generated from an opt-in project-owned .uid contract. Do not edit.")
               appendLine(file.packageDirective!!.text)
-              appendLine(file.importList!!.text)
+              file.importDirectives
+                .filter { directive ->
+                  body.placements.none { it.symbol == directive.importedFqName?.asString() }
+                }
+                .forEach { appendLine(it.text) }
+              body.placements.forEachIndexed { index, placement ->
+                appendLine(
+                  "import ${placement.entry.kotlinFunction} as ${local("uidComponent$index")}"
+                )
+              }
+              if (body.placements.any { it.use.keyPath != null }) {
+                appendLine("import androidx.compose.runtime.key as $keyName")
+                appendLine("import kotlin.require as $requireName")
+              }
               appendLine()
               appendLine(helper)
               appendLine()
@@ -348,7 +441,7 @@ object ProductionComposeGenerator {
               appendLine("    modifier = modifier,")
               body.reads.forEachIndexed { index, read ->
                 appendLine(
-                  "    p$index = ${readExpression(contract, entry.inputModel, read.path)},"
+                  "    p$index = ${readExpression(contract, entry.inputModel, read.path, safe = read.fallback != null)}${read.fallback?.let { " ?: " + literal(it, read.type.scalar) }.orEmpty()},"
                 )
               }
               body.callbacks.forEachIndexed { index, callback ->
@@ -357,6 +450,61 @@ object ProductionComposeGenerator {
                     ?.let { readExpression(contract, entry.inputModel, it) }
                     .orEmpty()
                 appendLine("    c$index = { ${callback.event}($payload) },")
+              }
+              body.placements.forEachIndexed { index, placement ->
+                val use = placement.use
+                val value = local("uidValue$index")
+                val item = local("uidItem$index")
+                val expression =
+                  readExpression(
+                    contract,
+                    entry.inputModel,
+                    use.dataPath,
+                    safe = use.onNull != null,
+                  )
+                appendLine("    uidSlot$index = {")
+                appendLine("      val $value = $expression")
+                if (use.onNull != null) appendLine("      if ($value != null) {")
+                if (use.keyPath != null) {
+                  val key =
+                    readExpression(
+                      contract,
+                      placement.entry.inputModel,
+                      requireNotNull(use.keyPath),
+                      receiver = item,
+                    )
+                  val keys = local("uidKeys$index")
+                  val position = local("uidIndex$index")
+                  var keyType: ProductionType = ProductionType.Model(placement.entry.inputModel)
+                  requireNotNull(use.keyPath).forEach { field ->
+                    keyType =
+                      contract.models
+                        .getValue((keyType as ProductionType.Model).modelId)
+                        .fields
+                        .single { it.name == field }
+                        .type
+                  }
+                  appendLine(
+                    "      val $keys: kotlin.collections.List<${kotlinType(contract, keyType)}> = $value.map { $item -> $key }"
+                  )
+                  appendLine(
+                    "      $requireName($keys.toSet().size == $value.size) { \"Duplicate production list keys\" }"
+                  )
+                  appendLine("      $value.forEachIndexed { $position, $item ->")
+                  appendLine("        $keyName($keys[$position]) {")
+                }
+                appendLine("      ${local("uidComponent$index")}(")
+                appendLine("        data = ${if (use.keyPath != null) item else value},")
+                placement.entry.events.forEach { event ->
+                  appendLine("        ${event.name} = ${use.events.getValue(event.name)},")
+                }
+                appendLine("      )")
+                if (use.keyPath != null) {
+                  appendLine("        }")
+                  appendLine("      }")
+                }
+                if (use.onNull != null) appendLine("      }")
+                appendLine("    },")
               }
               appendLine("  )")
               appendLine("}")
@@ -380,15 +528,47 @@ object ProductionComposeGenerator {
     contract: ValidatedProductionContract,
     modelId: String,
     path: List<String>,
+    safe: Boolean = false,
+    receiver: String = "data",
   ): String {
+    var nullable = false
     var model = contract.models.getValue(modelId)
-    return "data" +
+    return receiver +
       path.joinToString("") { fieldName ->
         val field = model.fields.single { it.name == fieldName }
         (field.type as? ProductionType.Model)?.let { model = contract.models.getValue(it.modelId) }
-        ".${field.property ?: field.name}"
+        val access = if (safe && nullable) "?." else "."
+        nullable = nullable || field.type.nullable
+        "$access${field.property ?: field.name}"
       }
   }
+
+  private fun literal(value: JsonPrimitive, type: ScalarType): String =
+    when (type) {
+      ScalarType.STRING ->
+        buildString {
+          append('"')
+          value.content.forEach { char ->
+            when (char) {
+              '\\' -> append("\\\\")
+              '"' -> append("\\\"")
+              '$' -> append("\\$")
+              else ->
+                if (char.code < 32 || char.code == 127)
+                  append("\\u" + char.code.toString(16).padStart(4, '0'))
+                else append(char)
+            }
+          }
+          append('"')
+        }
+      ScalarType.BOOLEAN -> value.boolean.toString()
+      ScalarType.INT -> value.int.toString()
+      ScalarType.LONG ->
+        if (value.long == Long.MIN_VALUE) "(-9223372036854775807L - 1L)"
+        else value.long.toString() + "L"
+      ScalarType.FLOAT -> value.float.toString() + "f"
+      ScalarType.DOUBLE -> value.double.toString()
+    }
 
   private fun helperName(entry: ProductionEntryPoint): String =
     "UidBody" +

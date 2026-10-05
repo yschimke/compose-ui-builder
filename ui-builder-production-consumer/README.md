@@ -52,9 +52,10 @@ generate <project root> <output> --entries <entry .uid paths...> --records <reco
 
 The versioned `compose-ui-builder-production/v1` schema is deliberately separate from the editor's v1 document; old editors
 cannot silently drop the declared API. The current lane supports non-null scalar reads through
-nested generated and external models, and separate reusable component bodies. Nullable model
-fields and lists are supported as declarations, but nullable binding fallbacks, dynamic list
-rendering, assets and component placement modifiers/slots currently fail generation.
+nested generated and external models, and separate reusable component bodies. Nullable scalar reads require explicit literal fallbacks. `DynamicLibrary.uid` demonstrates
+nullable component branches and keyed repetition over typed item models. Assets and component
+placement modifiers/slots still fail generation. The nullable/list wire additions currently require
+the companion contracts composite checkout; its release pin is pending.
 Explicit event bindings support zero-argument UI callbacks such as `onClick`, reporting either no
 payload or one declared data-path payload. Callbacks accepting UI values (such as text changes)
 remain unsupported. Required application callbacks never receive no-op defaults.

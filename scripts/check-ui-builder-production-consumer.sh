@@ -68,6 +68,19 @@ PYTHON
   fi
   grep -q 'Unresolved reference.*displayTitle' external-mapping-build.log
   cp external-model-original.kt ui-builder-production-consumer/src/main/kotlin/example/domain/ProjectEpisode.kt
+  # Compose key accepts Any, but the production contract must still check mapped key types.
+  python3 - ui-builder-production-consumer/src/main/kotlin/example/domain/ProjectEpisode.kt <<'PYTHON'
+import pathlib,sys
+p=pathlib.Path(sys.argv[1]);p.write_text(p.read_text().replace('val id: String = displayTitle', 'val id: Int = 1'))
+PYTHON
+  if ./gradlew --offline --no-daemon --max-workers=2 \
+    -PgateRepository="${repository}" -PuiBuilderGeneratorVersion="${version}" \
+    :ui-builder-production-consumer:compileKotlin >key-type-build.log 2>&1; then
+    echo "ERROR: incompatible external key type was accepted" >&2
+    exit 1
+  fi
+  grep -q 'type mismatch' key-type-build.log
+  cp external-model-original.kt ui-builder-production-consumer/src/main/kotlin/example/domain/ProjectEpisode.kt
   # Required callbacks cannot silently become defaults in a published generator.
   cp ui-builder-production-consumer/src/main/kotlin/example/Consumer.kt caller-original.kt
   python3 - ui-builder-production-consumer/src/main/kotlin/example/Consumer.kt <<'PYTHON'

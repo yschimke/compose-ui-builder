@@ -30,7 +30,8 @@ dependencies {
   @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class) testImplementation(compose.uiTest)
 }
 
-val entries = listOf("src/main/ui/Library.uid", "src/main/ui/Queue.uid")
+val entries =
+  listOf("src/main/ui/Library.uid", "src/main/ui/Queue.uid", "src/main/ui/DynamicLibrary.uid")
 val records =
   files(
     rootProject.file("docs/design/fixtures/ui-builder/compose-foundation-components-v1.json"),

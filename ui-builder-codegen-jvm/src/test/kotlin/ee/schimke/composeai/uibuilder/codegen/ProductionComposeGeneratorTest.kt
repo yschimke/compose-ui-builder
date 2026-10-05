@@ -346,6 +346,178 @@ class ProductionComposeGeneratorTest {
     assertTrue(refused.reasons.any { "outside a component or loop" in it })
   }
 
+  private fun dynamicInputs(): List<ProductionInput> =
+    inputs +
+      listOf("DynamicLibrary.uid", "models/DynamicModels.uid").map { name ->
+        val path = "src/main/ui/$name"
+        ProductionInput(path, ProductionUidFiles.decode(Files.readString(consumer.resolve(path))))
+      }
+
+  @Test
+  fun `nullable and keyed placements use declared scopes and deterministic stateless wrappers`() {
+    val inputs = dynamicInputs()
+    val files = generate(inputs)
+    assertEquals(files, generate(inputs.reversed()))
+    val source = files.single { it.path.endsWith("DynamicLibraryScreen.kt") }.source
+    assertContains(source, "data.selection?.title ?: \"No selection\"")
+    assertContains(source, "data.selection?.featured")
+    assertContains(source, "uidComposeKey(uidKeys1[uidIndex1])")
+    assertContains(source, "data = uidItem1")
+    assertContains(source, "Duplicate production list keys")
+    assertContains(source, "@androidx.compose.runtime.Composable () -> kotlin.Unit")
+    assertFalse(source.contains("remember"))
+    assertFalse(source.contains("Placement0"))
+    inputs.forEach {
+      assertEquals(it.file, ProductionUidFiles.decode(ProductionUidFiles.encode(it.file)))
+    }
+  }
+
+  @Test
+  fun `missing fallbacks keys branches and invalid item paths refuse before generation`() {
+    fun check(code: String, change: (ProductionEntryPoint) -> ProductionEntryPoint) {
+      val inputs =
+        dynamicInputs().map { input ->
+          if (input.path.endsWith("/DynamicLibrary.uid"))
+            input.copy(file = input.file.copy(entryPoint = change(input.file.entryPoint!!)))
+          else input
+        }
+      val invalid =
+        assertIs<ProductionContractResult.Invalid>(ProductionContractValidator.validate(inputs))
+      assertTrue(invalid.issues.any { it.code == code }, invalid.issues.toString())
+    }
+    check("MISSING_NULL_FALLBACK") {
+      it.copy(bindings = it.bindings.map { b -> b.copy(fallback = null) })
+    }
+    check("INVALID_NULL_FALLBACK") {
+      it.copy(bindings = it.bindings.map { b -> b.copy(fallback = JsonPrimitive(42)) })
+    }
+    check("MISSING_NULL_BRANCH") {
+      it.copy(components = it.components.map { c -> c.copy(onNull = null) })
+    }
+    check("MISSING_LIST_KEY") {
+      it.copy(components = it.components.map { c -> c.copy(keyPath = null) })
+    }
+    check("INVALID_LIST_KEY") {
+      it.copy(
+        components =
+          it.components.map { c -> if (c.keyPath != null) c.copy(keyPath = emptyList()) else c }
+      )
+    }
+    check("UNKNOWN_DATA_FIELD") {
+      it.copy(
+        components =
+          it.components.map { c ->
+            if (c.keyPath != null) c.copy(keyPath = listOf("missing")) else c
+          }
+      )
+    }
+    check("INVALID_DATA_PATH") {
+      it.copy(
+        components =
+          it.components.map { c ->
+            if (c.keyPath != null) c.copy(keyPath = listOf("id", "missing")) else c
+          }
+      )
+    }
+    check("UNKNOWN_DATA_FIELD") {
+      it.copy(bindings = it.bindings.map { b -> b.copy(path = listOf("selection", "missing")) })
+    }
+  }
+
+  @Test
+  fun `fallback literals are typed and nullable items are refused`() {
+    fun scalarInputs(type: ScalarType, fallback: JsonPrimitive) =
+      dynamicInputs().map { input ->
+        input.copy(
+          file =
+            input.file.copy(
+              entryPoint =
+                input.file.entryPoint?.let { entry ->
+                  if (entry.id != "dynamic-library") entry
+                  else
+                    entry.copy(
+                      bindings =
+                        entry.bindings.map {
+                          it.copy(expectedType = ProductionType.Scalar(type), fallback = fallback)
+                        }
+                    )
+                },
+              models =
+                input.file.models.map { model ->
+                  if (model.id != "selection") model
+                  else
+                    model.copy(
+                      fields =
+                        model.fields.map { field ->
+                          if (field.name != "title") field
+                          else field.copy(type = ProductionType.Scalar(type, nullable = true))
+                        }
+                    )
+                },
+            )
+        )
+      }
+    for ((type, value) in
+      listOf(
+        ScalarType.BOOLEAN to JsonPrimitive(false),
+        ScalarType.INT to JsonPrimitive(Int.MIN_VALUE),
+        ScalarType.LONG to JsonPrimitive(Long.MIN_VALUE),
+        ScalarType.FLOAT to JsonPrimitive(0.5f),
+        ScalarType.DOUBLE to JsonPrimitive(0.5),
+        ScalarType.STRING to JsonPrimitive("literal"),
+      )) {
+      assertIs<ProductionContractResult.Valid>(
+        ProductionContractValidator.validate(scalarInputs(type, value))
+      )
+    }
+    for ((type, value) in
+      listOf(
+        ScalarType.INT to JsonPrimitive(2147483648L),
+        ScalarType.LONG to JsonPrimitive(1.5),
+        ScalarType.FLOAT to JsonPrimitive(Double.MAX_VALUE),
+        ScalarType.BOOLEAN to JsonPrimitive("true"),
+        ScalarType.STRING to JsonPrimitive(1),
+      )) {
+      val invalid =
+        assertIs<ProductionContractResult.Invalid>(
+          ProductionContractValidator.validate(scalarInputs(type, value))
+        )
+      assertTrue(invalid.issues.any { it.code == "INVALID_NULL_FALLBACK" })
+    }
+    val nullableItems =
+      dynamicInputs().map { input ->
+        input.copy(
+          file =
+            input.file.copy(
+              models =
+                input.file.models.map { model ->
+                  if (model.id != "dynamic-library") model
+                  else
+                    model.copy(
+                      fields =
+                        model.fields.map { field ->
+                          if (field.name != "episodes") field
+                          else
+                            field.copy(
+                              type =
+                                ProductionType.ListType(
+                                  ProductionType.Model("external", nullable = true)
+                                )
+                            )
+                        }
+                    )
+                }
+            )
+        )
+      }
+    val invalid =
+      assertIs<ProductionContractResult.Invalid>(
+        ProductionContractValidator.validate(nullableItems)
+      )
+    assertTrue(invalid.issues.any { it.code == "INVALID_LIST_KEY" })
+    assertTrue(invalid.issues.any { it.code == "COMPONENT_INPUT_MISMATCH" })
+  }
+
   @Test
   fun `output replacement removes stale files and protects handwritten sources`() {
     val root = Files.createTempDirectory("uid-output-test").toRealPath()

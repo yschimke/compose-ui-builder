@@ -269,7 +269,7 @@ class ProductionContractsTest {
             )
         )
       }
-    issue(inputs, "NULLABLE_PATH")
+    issue(inputs, "MISSING_NULL_FALLBACK")
     issue(
       editScreen {
         it.copy(
