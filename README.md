@@ -15,7 +15,7 @@ what the product is, and [`docs/UI_BUILDER_GETTING_STARTED.md`](docs/UI_BUILDER_
 for running it. For agent integration, install `compose-catalogs` and `compose-skills` through
 the [Compose Agent Plugins quick start](https://github.com/yschimke/compose-agent-plugins#quick-start).
 
-The proposed contract for regenerating stateless Compose source from checked-in `.uid` files is in
+The experimental opt-in contract for regenerating stateless Compose source from checked-in `.uid` files is in
 [`Build generation from project owned designs`](docs/design/UI_BUILDER_BUILD_GENERATION.md).
 
 ## The modules
@@ -28,6 +28,7 @@ The proposed contract for regenerating stateless Compose source from checked-in 
 | `:ui-builder-intellij-plugin` | IntelliJ Platform | `ee.schimke.composeai.uibuilder.intellij` | proof-of-concept Jewel tool-window host for the native editor |
 | `:ui-builder-runtime` | JVM | `ee.schimke.composeai.uibuilder.service` | the design service: state, catalog validation, revision-pinned export |
 | `:ui-builder-codegen-jvm` | JVM | `ee.schimke.composeai.uibuilder.codegen` | opt-in build generation from tracked production `.uid` contracts |
+| `:ui-builder-gradle-plugin` | JVM Gradle | `ee.schimke.composeai.uibuilder.gradle` | [explicit Kotlin source-set integration](ui-builder-gradle-plugin/README.md) for durable generation |
 | `:ui-builder-production-consumer` | JVM Compose | `example` | executable durable-generation consumer fixture |
 | `:ui-builder-export` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder.export` | design → screen-model projection |
 | `:ui-builder-renderer` | `wasmJs` | `ee.schimke.composeai.uibuilder.renderer` | the sandboxed renderer-only runtime |
@@ -63,6 +64,7 @@ A release goes out in two halves, because the four seams are not the same kind o
 | `…:compose-preview-ui-builder-runtime` | the design service |
 | `…:compose-preview-ui-builder-export` | the design → screen-model projection |
 | `…:compose-preview-ui-builder-codegen-jvm` | opt-in durable build generation |
+| `…:compose-preview-ui-builder-gradle-plugin` | Gradle integration; plugin ID `ee.schimke.compose-ui-builder` |
 | `…:compose-preview-ui-builder-render-bundle` | the packaged preview a design renders through |
 
 `-render-bundle` is on that list even though nobody names it directly: it is an `api` dependency of

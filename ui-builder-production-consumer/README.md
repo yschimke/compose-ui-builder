@@ -17,22 +17,16 @@ The component contains a button whose required `onEpisodeClick` callback reports
 `displayTitle` property. Both screens explicitly forward that event to their application caller.
 Interaction tests click the generated button before and after an application data update.
 
-The [`build.gradle.kts`](build.gradle.kts) is the complete JVM build integration. To use it outside
-this checkout, keep the verification/generation tasks and source-set wiring, and replace the
-project generator dependency with a pinned published version:
-
-```kotlin
-val uiBuilderGenerator = configurations.create("uiBuilderGenerator")
-dependencies {
-  uiBuilderGenerator("ee.schimke.composeai:compose-preview-ui-builder-codegen-jvm:<release>")
-}
-```
+The [`build.gradle.kts`](build.gradle.kts) retains the direct CLI integration as a lower-level
+baseline. For application builds, use the [Gradle plugin](../ui-builder-gradle-plugin/README.md):
+apply `ee.schimke.compose-ui-builder` and register explicit Kotlin source sets with their entry
+paths and ordered records. The [published-plugin fixture](../scripts/ui-builder-production-plugin-consumer/build.gradle.kts)
+builds these same application sources with the plugin resolved from staged Maven publications.
 
 The application separately selects compatible Compose dependencies and the Compose compiler.
-The generator and its Kotlin PSI dependencies stay on the build tool's classpath. Compilation
-must depend on generation; generation must depend on the always-run Git verification. The two
-`JavaExec` tasks deliberately have no cached outputs, so eligibility and generation run even when
-Kotlin compilation is up to date. Only registered files and their imports generate code.
+The generator and its Kotlin PSI dependencies stay on the build tool's classpath. Generation
+validates Git eligibility on every invocation, including when Kotlin compilation is up to date.
+Only registered files and their imports generate code.
 
 Imports are relative to the consumer project directory. All `.uid` inputs must be tracked there
 (staged additions and local edits to tracked files are accepted). Generation accepts a dedicated
@@ -60,8 +54,7 @@ Explicit event bindings support zero-argument UI callbacks such as `onClick`, re
 payload or one declared data-path payload. Callbacks accepting UI values (such as text changes)
 remain unsupported. Required application callbacks never receive no-op defaults.
 Editor file sessions preserve the production wrapper around visual edits; API declarations remain
-explicit source edits, and model-only files stay source-only. A packaged Gradle plugin remains
-follow-up work. See the
+explicit source edits, and model-only files stay source-only. See the
 [design plan](../docs/design/UI_BUILDER_BUILD_GENERATION.md) for the full intended contract.
 
 The publication and regeneration gate runs a second checkout outside the producer tree:
