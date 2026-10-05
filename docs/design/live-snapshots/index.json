@@ -1,0 +1,43 @@
+{
+  "schema": "compose-ui-builder-live-snapshots/v1",
+  "capturedAt": "2026-10-05T12:46:02.323514+00:00",
+  "canonicalOrigin": "https://preview.coo.ee",
+  "purpose": "Read-only snapshots; edit at the live canonical home, never re-import over a saved design.",
+  "designs": [
+    {
+      "designId": "google-gmail-tablet",
+      "revision": 14,
+      "url": "https://preview.coo.ee/ui-builder/m3-catalog/google-gmail-tablet",
+      "file": "google-gmail-tablet.json",
+      "sha256": "222b2e1cc99c641c57474be0f6054d591c778c40f8def0bbe86fed48e1c3f033"
+    },
+    {
+      "designId": "google-calendar-tablet",
+      "revision": 2,
+      "url": "https://preview.coo.ee/ui-builder/m3-catalog/google-calendar-tablet",
+      "file": "google-calendar-tablet.json",
+      "sha256": "a52460e7b9dc4a1be48f9c56de7e007a47642dfa0429761503b4543150eb7514"
+    },
+    {
+      "designId": "google-photos-tablet",
+      "revision": 1,
+      "url": "https://preview.coo.ee/ui-builder/m3-catalog/google-photos-tablet",
+      "file": "google-photos-tablet.json",
+      "sha256": "619269538707cd6ae499493627435fd98f9cb5f162b48b277234c6493d6c208a"
+    },
+    {
+      "designId": "google-keep-tablet",
+      "revision": 1,
+      "url": "https://preview.coo.ee/ui-builder/m3-catalog/google-keep-tablet",
+      "file": "google-keep-tablet.json",
+      "sha256": "6d88c16d30be5e8ae838934212924ad3869afbd4bea81915e416bcde321b685f"
+    },
+    {
+      "designId": "google-play-tablet",
+      "revision": 1,
+      "url": "https://preview.coo.ee/ui-builder/m3-catalog/google-play-tablet",
+      "file": "google-play-tablet.json",
+      "sha256": "4e9c6d961a052ee0c364c859203530656b9898d3b6a75a281a0f34fae470fe6f"
+    }
+  ]
+}

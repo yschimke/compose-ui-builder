@@ -19,6 +19,14 @@ They are four things at once:
 | `scripts/ui-builder/design-sync.mjs` | opens it as a live design on a server, and writes a live design back into this shape |
 | `.github/workflows/ui-builder-designs.yml` | renders it with `compose-preview-server design render --local` on a pull request that touches it, and posts the picture. A design compiles only against its own catalog's bundle, so there is one job per catalog over this directory, each picking its designs by the `catalogPin.systemId` in their `createDesign`: `m3-catalog` against m3-catalog's bundle, `wear-m3` against wear-m3-catalog's, each with its own sticky comment and render branches. A design pinned to any other catalog is rendered by neither, so give a new catalog its own job. |
 
+## Existing live Google app designs
+
+Gmail, Calendar, Photos, Keep and Play on `preview.coo.ee` are **server-canonical**. Their captured
+live revisions are in [live snapshots](../../../live-snapshots/README.md). These test fixtures may
+illustrate different content; they must never be imported over those saved designs. Change the live
+document in place, preserving its history and user edits, then refresh its Git snapshot. Docs is still
+a repository-only example until a live design is explicitly created.
+
 ## Round-tripping with a live server
 
 ```shell

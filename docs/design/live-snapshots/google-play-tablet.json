@@ -1,0 +1,3917 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "google-play-tablet",
+  "title": "Google Play — Games and apps (tablet)",
+  "revision": 1,
+  "catalogPin": {
+    "systemId": "m3-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 1280,
+    "heightDp": 800,
+    "density": 1.0,
+    "theme": "light",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1.0,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "browserZoomPercent": 100,
+    "fixedTime": "2024-05-16T12:00:00Z",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_tablet",
+      "id:pixel_fold",
+      "id:pixel_7"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "root"
+  ],
+  "nodes": {
+    "root": {
+      "id": "root",
+      "componentId": "m3/navigation-suite-scaffold",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "navigationItems": [
+          "play-rail-games",
+          "play-rail-apps",
+          "play-rail-books",
+          "play-rail-offers"
+        ],
+        "content": [
+          "play-screen"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-games": {
+      "id": "play-rail-games",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": true
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "play-rail-games-icon"
+        ],
+        "label": [
+          "play-rail-games-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-games-icon": {
+      "id": "play-rail-games-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/games"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Games"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-games-label": {
+      "id": "play-rail-games-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Games"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-apps": {
+      "id": "play-rail-apps",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "play-rail-apps-icon"
+        ],
+        "label": [
+          "play-rail-apps-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-apps-icon": {
+      "id": "play-rail-apps-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/apps"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Apps"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-apps-label": {
+      "id": "play-rail-apps-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Apps"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-books": {
+      "id": "play-rail-books",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "play-rail-books-icon"
+        ],
+        "label": [
+          "play-rail-books-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-books-icon": {
+      "id": "play-rail-books-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/menuBook"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Books"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-books-label": {
+      "id": "play-rail-books-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Books"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-offers": {
+      "id": "play-rail-offers",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "play-rail-offers-icon"
+        ],
+        "label": [
+          "play-rail-offers-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-offers-icon": {
+      "id": "play-rail-offers-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/emojiEvents"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Offers"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-rail-offers-label": {
+      "id": "play-rail-offers-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Offers"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-screen": {
+      "id": "play-screen",
+      "componentId": "layout/scaffold",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "topBar": [
+          "play-search"
+        ],
+        "content": [
+          "play-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-search": {
+      "id": "play-search",
+      "componentId": "m3/search-bar",
+      "properties": {
+        "expanded": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 8,
+          "endDp": 12,
+          "bottomDp": 4
+        }
+      ],
+      "slots": {
+        "inputField": [
+          "play-search-field"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-search-field": {
+      "id": "play-search-field",
+      "componentId": "m3/search-input-field",
+      "properties": {
+        "value": {
+          "type": "string",
+          "value": ""
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "placeholder": [
+          "play-search-placeholder"
+        ],
+        "leadingIcon": [
+          "play-search-leading"
+        ],
+        "trailingIcon": [
+          "play-search-trailing"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-search-placeholder": {
+      "id": "play-search-placeholder",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Search for apps & games"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyLarge"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-search-leading": {
+      "id": "play-search-leading",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/search"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Search"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-search-trailing": {
+      "id": "play-search-trailing",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/accountCircle"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Google Account"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-body": {
+      "id": "play-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "verticalScroll"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-tabs",
+          "play-heading-recommended",
+          "play-carousel",
+          "play-heading-top",
+          "play-app-list"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-tabs": {
+      "id": "play-tabs",
+      "componentId": "m3/primary-scrollable-tab-row",
+      "properties": {
+        "selectedIndex": {
+          "type": "int",
+          "value": 0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "tabs": [
+          "play-tab-0",
+          "play-tab-1",
+          "play-tab-2",
+          "play-tab-3",
+          "play-tab-4"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-tab-0": {
+      "id": "play-tab-0",
+      "componentId": "m3/tab",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": true
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "text": [
+          "play-tab-0-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-tab-0-label": {
+      "id": "play-tab-0-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "For you"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-tab-1": {
+      "id": "play-tab-1",
+      "componentId": "m3/tab",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "text": [
+          "play-tab-1-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-tab-1-label": {
+      "id": "play-tab-1-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Top charts"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-tab-2": {
+      "id": "play-tab-2",
+      "componentId": "m3/tab",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "text": [
+          "play-tab-2-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-tab-2-label": {
+      "id": "play-tab-2-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Kids"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-tab-3": {
+      "id": "play-tab-3",
+      "componentId": "m3/tab",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "text": [
+          "play-tab-3-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-tab-3-label": {
+      "id": "play-tab-3-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Premium"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-tab-4": {
+      "id": "play-tab-4",
+      "componentId": "m3/tab",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "text": [
+          "play-tab-4-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-tab-4-label": {
+      "id": "play-tab-4-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Categories"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-heading-recommended": {
+      "id": "play-heading-recommended",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Recommended for you"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleMedium"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "padding",
+          "startDp": 20,
+          "topDp": 20,
+          "endDp": 20,
+          "bottomDp": 10
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-carousel": {
+      "id": "play-carousel",
+      "componentId": "layout/lazy-row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "contentPadding": {
+          "type": "padding",
+          "startDp": 20,
+          "topDp": 0,
+          "endDp": 20,
+          "bottomDp": 0
+        },
+        "scrollStateKey": {
+          "type": "string",
+          "value": "play-recommended-carousel"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "items": [
+          "play-feature-stellar",
+          "play-feature-bloom",
+          "play-feature-lantern",
+          "play-feature-skyline",
+          "play-feature-nimbus"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-stellar": {
+      "id": "play-feature-stellar",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "elevated"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "large"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "play-stellar"
+        },
+        "elevationDp": {
+          "type": "float",
+          "value": 1.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 220
+        }
+      ],
+      "slots": {
+        "content": [
+          "play-feature-stellar-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-stellar-body": {
+      "id": "play-feature-stellar-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-stellar-art",
+          "play-feature-stellar-meta"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-stellar-art": {
+      "id": "play-feature-stellar-art",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 124
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-stellar-art-fill"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-stellar-art-fill": {
+      "id": "play-feature-stellar-art-fill",
+      "componentId": "shape/linear-gradient",
+      "properties": {
+        "startColor": {
+          "type": "color",
+          "value": "#FF1A73E8"
+        },
+        "endColor": {
+          "type": "color",
+          "value": "#FF9334E6"
+        },
+        "direction": {
+          "type": "enum",
+          "value": "leftToRight"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "matchParentSize"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-stellar-meta": {
+      "id": "play-feature-stellar-meta",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 0,
+          "endDp": 12,
+          "bottomDp": 12
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-stellar-title",
+          "play-feature-stellar-rating"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-stellar-title": {
+      "id": "play-feature-stellar-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Stellar Drift"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-stellar-rating": {
+      "id": "play-feature-stellar-rating",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "play-feature-stellar-genre",
+          "play-feature-stellar-star"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-stellar-genre": {
+      "id": "play-feature-stellar-genre",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Racing · 4.7"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-stellar-star": {
+      "id": "play-feature-stellar-star",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Rating"
+        },
+        "sizeDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-bloom": {
+      "id": "play-feature-bloom",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "elevated"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "large"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "play-bloom"
+        },
+        "elevationDp": {
+          "type": "float",
+          "value": 1.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 220
+        }
+      ],
+      "slots": {
+        "content": [
+          "play-feature-bloom-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-bloom-body": {
+      "id": "play-feature-bloom-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-bloom-art",
+          "play-feature-bloom-meta"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-bloom-art": {
+      "id": "play-feature-bloom-art",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 124
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-bloom-art-fill"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-bloom-art-fill": {
+      "id": "play-feature-bloom-art-fill",
+      "componentId": "shape/linear-gradient",
+      "properties": {
+        "startColor": {
+          "type": "color",
+          "value": "#FF0F9D58"
+        },
+        "endColor": {
+          "type": "color",
+          "value": "#FFB4E197"
+        },
+        "direction": {
+          "type": "enum",
+          "value": "leftToRight"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "matchParentSize"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-bloom-meta": {
+      "id": "play-feature-bloom-meta",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 0,
+          "endDp": 12,
+          "bottomDp": 12
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-bloom-title",
+          "play-feature-bloom-rating"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-bloom-title": {
+      "id": "play-feature-bloom-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Bloom & Bramble"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-bloom-rating": {
+      "id": "play-feature-bloom-rating",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "play-feature-bloom-genre",
+          "play-feature-bloom-star"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-bloom-genre": {
+      "id": "play-feature-bloom-genre",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Puzzle · 4.9"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-bloom-star": {
+      "id": "play-feature-bloom-star",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Rating"
+        },
+        "sizeDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-lantern": {
+      "id": "play-feature-lantern",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "elevated"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "large"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "play-lantern"
+        },
+        "elevationDp": {
+          "type": "float",
+          "value": 1.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 220
+        }
+      ],
+      "slots": {
+        "content": [
+          "play-feature-lantern-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-lantern-body": {
+      "id": "play-feature-lantern-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-lantern-art",
+          "play-feature-lantern-meta"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-lantern-art": {
+      "id": "play-feature-lantern-art",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 124
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-lantern-art-fill"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-lantern-art-fill": {
+      "id": "play-feature-lantern-art-fill",
+      "componentId": "shape/linear-gradient",
+      "properties": {
+        "startColor": {
+          "type": "color",
+          "value": "#FFE37400"
+        },
+        "endColor": {
+          "type": "color",
+          "value": "#FFFBBC04"
+        },
+        "direction": {
+          "type": "enum",
+          "value": "leftToRight"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "matchParentSize"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-lantern-meta": {
+      "id": "play-feature-lantern-meta",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 0,
+          "endDp": 12,
+          "bottomDp": 12
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-lantern-title",
+          "play-feature-lantern-rating"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-lantern-title": {
+      "id": "play-feature-lantern-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Lantern Keeper"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-lantern-rating": {
+      "id": "play-feature-lantern-rating",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "play-feature-lantern-genre",
+          "play-feature-lantern-star"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-lantern-genre": {
+      "id": "play-feature-lantern-genre",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Adventure · 4.5"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-lantern-star": {
+      "id": "play-feature-lantern-star",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Rating"
+        },
+        "sizeDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-skyline": {
+      "id": "play-feature-skyline",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "elevated"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "large"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "play-skyline"
+        },
+        "elevationDp": {
+          "type": "float",
+          "value": 1.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 220
+        }
+      ],
+      "slots": {
+        "content": [
+          "play-feature-skyline-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-skyline-body": {
+      "id": "play-feature-skyline-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-skyline-art",
+          "play-feature-skyline-meta"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-skyline-art": {
+      "id": "play-feature-skyline-art",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 124
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-skyline-art-fill"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-skyline-art-fill": {
+      "id": "play-feature-skyline-art-fill",
+      "componentId": "shape/linear-gradient",
+      "properties": {
+        "startColor": {
+          "type": "color",
+          "value": "#FF3C4043"
+        },
+        "endColor": {
+          "type": "color",
+          "value": "#FF80868B"
+        },
+        "direction": {
+          "type": "enum",
+          "value": "leftToRight"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "matchParentSize"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-skyline-meta": {
+      "id": "play-feature-skyline-meta",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 0,
+          "endDp": 12,
+          "bottomDp": 12
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-skyline-title",
+          "play-feature-skyline-rating"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-skyline-title": {
+      "id": "play-feature-skyline-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Skyline Tactics"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-skyline-rating": {
+      "id": "play-feature-skyline-rating",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "play-feature-skyline-genre",
+          "play-feature-skyline-star"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-skyline-genre": {
+      "id": "play-feature-skyline-genre",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Strategy · 4.4"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-skyline-star": {
+      "id": "play-feature-skyline-star",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Rating"
+        },
+        "sizeDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-nimbus": {
+      "id": "play-feature-nimbus",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "elevated"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "large"
+        },
+        "stableKey": {
+          "type": "string",
+          "value": "play-nimbus"
+        },
+        "elevationDp": {
+          "type": "float",
+          "value": 1.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 220
+        }
+      ],
+      "slots": {
+        "content": [
+          "play-feature-nimbus-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-nimbus-body": {
+      "id": "play-feature-nimbus-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 8.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-nimbus-art",
+          "play-feature-nimbus-meta"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-nimbus-art": {
+      "id": "play-feature-nimbus-art",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 124
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-nimbus-art-fill"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-nimbus-art-fill": {
+      "id": "play-feature-nimbus-art-fill",
+      "componentId": "shape/linear-gradient",
+      "properties": {
+        "startColor": {
+          "type": "color",
+          "value": "#FFEA4335"
+        },
+        "endColor": {
+          "type": "color",
+          "value": "#FFFBBC04"
+        },
+        "direction": {
+          "type": "enum",
+          "value": "leftToRight"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "matchParentSize"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-nimbus-meta": {
+      "id": "play-feature-nimbus-meta",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 0,
+          "endDp": 12,
+          "bottomDp": 12
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-feature-nimbus-title",
+          "play-feature-nimbus-rating"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-nimbus-title": {
+      "id": "play-feature-nimbus-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Nimbus Racer"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-nimbus-rating": {
+      "id": "play-feature-nimbus-rating",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "play-feature-nimbus-genre",
+          "play-feature-nimbus-star"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-nimbus-genre": {
+      "id": "play-feature-nimbus-genre",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Arcade · 4.6"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-feature-nimbus-star": {
+      "id": "play-feature-nimbus-star",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Rating"
+        },
+        "sizeDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-heading-top": {
+      "id": "play-heading-top",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Top free apps"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleMedium"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "padding",
+          "startDp": 20,
+          "topDp": 24,
+          "endDp": 20,
+          "bottomDp": 10
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-list": {
+      "id": "play-app-list",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-notes",
+          "play-app-mapper",
+          "play-app-ledger",
+          "play-app-shutter",
+          "play-app-cadence",
+          "play-app-verse"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-notes": {
+      "id": "play-app-notes",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 8,
+          "endDp": 16,
+          "bottomDp": 8
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-notes-rank",
+          "play-app-notes-icon",
+          "play-app-notes-meta",
+          "play-app-notes-install"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-notes-rank": {
+      "id": "play-app-notes-rank",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "1"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 20
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-notes-icon": {
+      "id": "play-app-notes-icon",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 48,
+          "heightDp": 48
+        },
+        {
+          "type": "clip",
+          "shape": "12"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-notes-icon-fill"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-notes-icon-fill": {
+      "id": "play-app-notes-icon-fill",
+      "componentId": "shape/linear-gradient",
+      "properties": {
+        "startColor": {
+          "type": "color",
+          "value": "#FFFBBC04"
+        },
+        "endColor": {
+          "type": "color",
+          "value": "#FFE37400"
+        },
+        "direction": {
+          "type": "enum",
+          "value": "leftToRight"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "matchParentSize"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-notes-meta": {
+      "id": "play-app-notes-meta",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-notes-name",
+          "play-app-notes-sub"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-notes-name": {
+      "id": "play-app-notes-name",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Quill Notes"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-notes-sub": {
+      "id": "play-app-notes-sub",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "play-app-notes-genre",
+          "play-app-notes-star"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-notes-genre": {
+      "id": "play-app-notes-genre",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Productivity · 4.8"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-notes-star": {
+      "id": "play-app-notes-star",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Rating"
+        },
+        "sizeDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-notes-install": {
+      "id": "play-app-notes-install",
+      "componentId": "m3/button",
+      "properties": {
+        "style": {
+          "type": "enum",
+          "value": "filledTonal"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "play-app-notes-install-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-notes-install-label": {
+      "id": "play-app-notes-install-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Install"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelLarge"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-mapper": {
+      "id": "play-app-mapper",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 8,
+          "endDp": 16,
+          "bottomDp": 8
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-mapper-rank",
+          "play-app-mapper-icon",
+          "play-app-mapper-meta",
+          "play-app-mapper-install"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-mapper-rank": {
+      "id": "play-app-mapper-rank",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "2"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 20
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-mapper-icon": {
+      "id": "play-app-mapper-icon",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 48,
+          "heightDp": 48
+        },
+        {
+          "type": "clip",
+          "shape": "12"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-mapper-icon-fill"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-mapper-icon-fill": {
+      "id": "play-app-mapper-icon-fill",
+      "componentId": "shape/linear-gradient",
+      "properties": {
+        "startColor": {
+          "type": "color",
+          "value": "#FF0F9D58"
+        },
+        "endColor": {
+          "type": "color",
+          "value": "#FF34A853"
+        },
+        "direction": {
+          "type": "enum",
+          "value": "leftToRight"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "matchParentSize"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-mapper-meta": {
+      "id": "play-app-mapper-meta",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-mapper-name",
+          "play-app-mapper-sub"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-mapper-name": {
+      "id": "play-app-mapper-name",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Trailmapper"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-mapper-sub": {
+      "id": "play-app-mapper-sub",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "play-app-mapper-genre",
+          "play-app-mapper-star"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-mapper-genre": {
+      "id": "play-app-mapper-genre",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Maps & Navigation · 4.6"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-mapper-star": {
+      "id": "play-app-mapper-star",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Rating"
+        },
+        "sizeDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-mapper-install": {
+      "id": "play-app-mapper-install",
+      "componentId": "m3/button",
+      "properties": {
+        "style": {
+          "type": "enum",
+          "value": "filledTonal"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "play-app-mapper-install-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-mapper-install-label": {
+      "id": "play-app-mapper-install-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Install"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelLarge"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-ledger": {
+      "id": "play-app-ledger",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 8,
+          "endDp": 16,
+          "bottomDp": 8
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-ledger-rank",
+          "play-app-ledger-icon",
+          "play-app-ledger-meta",
+          "play-app-ledger-install"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-ledger-rank": {
+      "id": "play-app-ledger-rank",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "3"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 20
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-ledger-icon": {
+      "id": "play-app-ledger-icon",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 48,
+          "heightDp": 48
+        },
+        {
+          "type": "clip",
+          "shape": "12"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-ledger-icon-fill"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-ledger-icon-fill": {
+      "id": "play-app-ledger-icon-fill",
+      "componentId": "shape/linear-gradient",
+      "properties": {
+        "startColor": {
+          "type": "color",
+          "value": "#FF1A73E8"
+        },
+        "endColor": {
+          "type": "color",
+          "value": "#FF4285F4"
+        },
+        "direction": {
+          "type": "enum",
+          "value": "leftToRight"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "matchParentSize"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-ledger-meta": {
+      "id": "play-app-ledger-meta",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-ledger-name",
+          "play-app-ledger-sub"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-ledger-name": {
+      "id": "play-app-ledger-name",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Ledgerly"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-ledger-sub": {
+      "id": "play-app-ledger-sub",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "play-app-ledger-genre",
+          "play-app-ledger-star"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-ledger-genre": {
+      "id": "play-app-ledger-genre",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Finance · 4.3"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-ledger-star": {
+      "id": "play-app-ledger-star",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Rating"
+        },
+        "sizeDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-ledger-install": {
+      "id": "play-app-ledger-install",
+      "componentId": "m3/button",
+      "properties": {
+        "style": {
+          "type": "enum",
+          "value": "filledTonal"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "play-app-ledger-install-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-ledger-install-label": {
+      "id": "play-app-ledger-install-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Install"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelLarge"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-shutter": {
+      "id": "play-app-shutter",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 8,
+          "endDp": 16,
+          "bottomDp": 8
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-shutter-rank",
+          "play-app-shutter-icon",
+          "play-app-shutter-meta",
+          "play-app-shutter-install"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-shutter-rank": {
+      "id": "play-app-shutter-rank",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "4"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 20
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-shutter-icon": {
+      "id": "play-app-shutter-icon",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 48,
+          "heightDp": 48
+        },
+        {
+          "type": "clip",
+          "shape": "12"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-shutter-icon-fill"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-shutter-icon-fill": {
+      "id": "play-app-shutter-icon-fill",
+      "componentId": "shape/linear-gradient",
+      "properties": {
+        "startColor": {
+          "type": "color",
+          "value": "#FF9334E6"
+        },
+        "endColor": {
+          "type": "color",
+          "value": "#FFEA4335"
+        },
+        "direction": {
+          "type": "enum",
+          "value": "leftToRight"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "matchParentSize"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-shutter-meta": {
+      "id": "play-app-shutter-meta",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-shutter-name",
+          "play-app-shutter-sub"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-shutter-name": {
+      "id": "play-app-shutter-name",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Shutterbox"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-shutter-sub": {
+      "id": "play-app-shutter-sub",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "play-app-shutter-genre",
+          "play-app-shutter-star"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-shutter-genre": {
+      "id": "play-app-shutter-genre",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Photography · 4.7"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-shutter-star": {
+      "id": "play-app-shutter-star",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Rating"
+        },
+        "sizeDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-shutter-install": {
+      "id": "play-app-shutter-install",
+      "componentId": "m3/button",
+      "properties": {
+        "style": {
+          "type": "enum",
+          "value": "filledTonal"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "play-app-shutter-install-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-shutter-install-label": {
+      "id": "play-app-shutter-install-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Install"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelLarge"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-cadence": {
+      "id": "play-app-cadence",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 8,
+          "endDp": 16,
+          "bottomDp": 8
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-cadence-rank",
+          "play-app-cadence-icon",
+          "play-app-cadence-meta",
+          "play-app-cadence-install"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-cadence-rank": {
+      "id": "play-app-cadence-rank",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "5"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 20
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-cadence-icon": {
+      "id": "play-app-cadence-icon",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 48,
+          "heightDp": 48
+        },
+        {
+          "type": "clip",
+          "shape": "12"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-cadence-icon-fill"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-cadence-icon-fill": {
+      "id": "play-app-cadence-icon-fill",
+      "componentId": "shape/linear-gradient",
+      "properties": {
+        "startColor": {
+          "type": "color",
+          "value": "#FFEA4335"
+        },
+        "endColor": {
+          "type": "color",
+          "value": "#FFFBBC04"
+        },
+        "direction": {
+          "type": "enum",
+          "value": "leftToRight"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "matchParentSize"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-cadence-meta": {
+      "id": "play-app-cadence-meta",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-cadence-name",
+          "play-app-cadence-sub"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-cadence-name": {
+      "id": "play-app-cadence-name",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Cadence"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-cadence-sub": {
+      "id": "play-app-cadence-sub",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "play-app-cadence-genre",
+          "play-app-cadence-star"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-cadence-genre": {
+      "id": "play-app-cadence-genre",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Health & Fitness · 4.5"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-cadence-star": {
+      "id": "play-app-cadence-star",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Rating"
+        },
+        "sizeDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-cadence-install": {
+      "id": "play-app-cadence-install",
+      "componentId": "m3/button",
+      "properties": {
+        "style": {
+          "type": "enum",
+          "value": "filledTonal"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "play-app-cadence-install-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-cadence-install-label": {
+      "id": "play-app-cadence-install-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Install"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelLarge"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-verse": {
+      "id": "play-app-verse",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 8,
+          "endDp": 16,
+          "bottomDp": 8
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-verse-rank",
+          "play-app-verse-icon",
+          "play-app-verse-meta",
+          "play-app-verse-install"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-verse-rank": {
+      "id": "play-app-verse-rank",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "6"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 20
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-verse-icon": {
+      "id": "play-app-verse-icon",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 48,
+          "heightDp": 48
+        },
+        {
+          "type": "clip",
+          "shape": "12"
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-verse-icon-fill"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-verse-icon-fill": {
+      "id": "play-app-verse-icon-fill",
+      "componentId": "shape/linear-gradient",
+      "properties": {
+        "startColor": {
+          "type": "color",
+          "value": "#FF3C4043"
+        },
+        "endColor": {
+          "type": "color",
+          "value": "#FF80868B"
+        },
+        "direction": {
+          "type": "enum",
+          "value": "leftToRight"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "matchParentSize"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-verse-meta": {
+      "id": "play-app-verse-meta",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {
+        "children": [
+          "play-app-verse-name",
+          "play-app-verse-sub"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-verse-name": {
+      "id": "play-app-verse-name",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Verse Reader"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-verse-sub": {
+      "id": "play-app-verse-sub",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "play-app-verse-genre",
+          "play-app-verse-star"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-verse-genre": {
+      "id": "play-app-verse-genre",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Books & Reference · 4.9"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-verse-star": {
+      "id": "play-app-verse-star",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Rating"
+        },
+        "sizeDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-verse-install": {
+      "id": "play-app-verse-install",
+      "componentId": "m3/button",
+      "properties": {
+        "style": {
+          "type": "enum",
+          "value": "filledTonal"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "play-app-verse-install-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "play-app-verse-install-label": {
+      "id": "play-app-verse-install-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Install"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelLarge"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    }
+  },
+  "assets": {},
+  "tokenBindings": {},
+  "createdAtEpochMillis": 1790342575852,
+  "updatedAtEpochMillis": 1791204256974,
+  "components": {},
+  "home": {
+    "kind": "server",
+    "url": "https://preview.coo.ee",
+    "designId": "google-play-tablet"
+  }
+}

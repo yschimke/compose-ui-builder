@@ -1,0 +1,5292 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "google-calendar-tablet",
+  "title": "Google Calendar — Day and month (tablet)",
+  "revision": 2,
+  "catalogPin": {
+    "systemId": "m3-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 1280,
+    "heightDp": 800,
+    "density": 1.0,
+    "theme": "light",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1.0,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "browserZoomPercent": 100,
+    "fixedTime": "2024-05-16T12:00:00Z",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_tablet",
+      "id:pixel_fold",
+      "id:pixel_7"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "root"
+  ],
+  "nodes": {
+    "root": {
+      "id": "root",
+      "componentId": "m3/navigation-suite-scaffold",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "navigationItems": [
+          "cal-rail-day",
+          "cal-rail-week",
+          "cal-rail-month",
+          "cal-rail-tasks"
+        ],
+        "content": [
+          "cal-panes"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-day": {
+      "id": "cal-rail-day",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": true
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "cal-rail-day-icon"
+        ],
+        "label": [
+          "cal-rail-day-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-day-icon": {
+      "id": "cal-rail-day-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/viewDay"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Day"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-day-label": {
+      "id": "cal-rail-day-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Day"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-week": {
+      "id": "cal-rail-week",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "cal-rail-week-icon"
+        ],
+        "label": [
+          "cal-rail-week-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-week-icon": {
+      "id": "cal-rail-week-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/viewWeek"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Week"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-week-label": {
+      "id": "cal-rail-week-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Week"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-month": {
+      "id": "cal-rail-month",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "cal-rail-month-icon"
+        ],
+        "label": [
+          "cal-rail-month-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-month-icon": {
+      "id": "cal-rail-month-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/calendarMonth"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Month"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-month-label": {
+      "id": "cal-rail-month-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Month"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-tasks": {
+      "id": "cal-rail-tasks",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "icon": [
+          "cal-rail-tasks-icon"
+        ],
+        "label": [
+          "cal-rail-tasks-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-tasks-icon": {
+      "id": "cal-rail-tasks-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "outlined/checkCircle"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Tasks"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-rail-tasks-label": {
+      "id": "cal-rail-tasks-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Tasks"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-panes": {
+      "id": "cal-panes",
+      "componentId": "layout/supporting-pane-scaffold",
+      "properties": {
+        "layoutMode": {
+          "type": "enum",
+          "value": "adaptive"
+        },
+        "mainPaneVisible": {
+          "type": "bool",
+          "value": true
+        },
+        "supportingPaneVisible": {
+          "type": "bool",
+          "value": true
+        },
+        "mainPanePreferredWidthDp": {
+          "type": "float",
+          "value": 760.0
+        },
+        "supportingPanePreferredWidthDp": {
+          "type": "float",
+          "value": 380.0
+        },
+        "paneSizing": {
+          "type": "enum",
+          "value": "fixedEnd"
+        },
+        "fixedPaneWidthDp": {
+          "type": "float",
+          "value": 380.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "mainPane": [
+          "cal-day"
+        ],
+        "supportingPane": [
+          "cal-side"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day": {
+      "id": "cal-day",
+      "componentId": "layout/scaffold",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "topBar": [
+          "cal-bar"
+        ],
+        "content": [
+          "cal-day-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-bar": {
+      "id": "cal-bar",
+      "componentId": "m3/center-aligned-top-app-bar",
+      "properties": {
+        "containerColor": {
+          "type": "colorToken",
+          "value": "surface"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "title": [
+          "cal-bar-title"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-bar-title": {
+      "id": "cal-bar-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "May 2024"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleLarge"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-body": {
+      "id": "cal-day-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-head",
+          "cal-hours"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-head": {
+      "id": "cal-day-head",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 4.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 16,
+          "topDp": 4,
+          "endDp": 16,
+          "bottomDp": 12
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-title",
+          "cal-search-button",
+          "cal-refresh-button",
+          "cal-add-button"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-title": {
+      "id": "cal-day-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Thu 16 May"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleLarge"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "medium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-search-button": {
+      "id": "cal-search-button",
+      "componentId": "m3/icon-button",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "standard"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "cal-search-button-icon"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-search-button-icon": {
+      "id": "cal-search-button-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/search"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Search"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-refresh-button": {
+      "id": "cal-refresh-button",
+      "componentId": "m3/icon-button",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "standard"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "cal-refresh-button-icon"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-refresh-button-icon": {
+      "id": "cal-refresh-button-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/refresh"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Refresh"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-add-button": {
+      "id": "cal-add-button",
+      "componentId": "m3/icon-button",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "filled"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "cal-add-button-icon"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-add-button-icon": {
+      "id": "cal-add-button-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "enum",
+          "value": "filled/add"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Create"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-hours": {
+      "id": "cal-hours",
+      "componentId": "layout/lazy-column",
+      "properties": {
+        "scrollStateKey": {
+          "type": "string",
+          "value": "calendar-day-hours"
+        },
+        "contentPadding": {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 0,
+          "endDp": 0,
+          "bottomDp": 32
+        },
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "items": [
+          "cal-slot-0800",
+          "cal-slot-0900",
+          "cal-slot-1000",
+          "cal-slot-1100",
+          "cal-slot-1200",
+          "cal-slot-1300",
+          "cal-slot-1400",
+          "cal-slot-1500",
+          "cal-slot-1600",
+          "cal-slot-1700"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-0800": {
+      "id": "cal-slot-0800",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 16.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 72
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 0,
+          "endDp": 24,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-0800-label",
+          "cal-slot-0800-lane"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-0800-label": {
+      "id": "cal-slot-0800-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "08:00"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 48
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-0800-lane": {
+      "id": "cal-slot-0800-lane",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        },
+        {
+          "type": "fillMaxHeight"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-0800-rule"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-0800-rule": {
+      "id": "cal-slot-0800-rule",
+      "componentId": "m3/horizontal-divider",
+      "properties": {
+        "thicknessDp": {
+          "type": "float",
+          "value": 1.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "outlineVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "align",
+          "alignment": "topStart"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-0900": {
+      "id": "cal-slot-0900",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 16.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 72
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 0,
+          "endDp": 24,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-0900-label",
+          "cal-slot-0900-lane"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-0900-label": {
+      "id": "cal-slot-0900-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "09:00"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 48
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-0900-lane": {
+      "id": "cal-slot-0900-lane",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        },
+        {
+          "type": "fillMaxHeight"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-0900-rule",
+          "cal-event-0900"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-0900-rule": {
+      "id": "cal-slot-0900-rule",
+      "componentId": "m3/horizontal-divider",
+      "properties": {
+        "thicknessDp": {
+          "type": "float",
+          "value": 1.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "outlineVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "align",
+          "alignment": "topStart"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-0900": {
+      "id": "cal-event-0900",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "filled"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FF1A73E8"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 4
+        }
+      ],
+      "slots": {
+        "content": [
+          "cal-event-0900-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-0900-body": {
+      "id": "cal-event-0900-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 8,
+          "endDp": 12,
+          "bottomDp": 8
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-event-0900-title",
+          "cal-event-0900-detail"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-0900-title": {
+      "id": "cal-event-0900-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Design review — adaptive panes"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "color": {
+          "type": "color",
+          "value": "#FFFFFFFF"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-0900-detail": {
+      "id": "cal-event-0900-detail",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "09:00 – 10:00 · Meet"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "color",
+          "value": "#FFFFFFFF"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1000": {
+      "id": "cal-slot-1000",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 16.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 72
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 0,
+          "endDp": 24,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1000-label",
+          "cal-slot-1000-lane"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1000-label": {
+      "id": "cal-slot-1000-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "10:00"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 48
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1000-lane": {
+      "id": "cal-slot-1000-lane",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        },
+        {
+          "type": "fillMaxHeight"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1000-rule",
+          "cal-event-1000"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1000-rule": {
+      "id": "cal-slot-1000-rule",
+      "componentId": "m3/horizontal-divider",
+      "properties": {
+        "thicknessDp": {
+          "type": "float",
+          "value": 1.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "outlineVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "align",
+          "alignment": "topStart"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1000": {
+      "id": "cal-event-1000",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "filled"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FF0F9D58"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 4
+        }
+      ],
+      "slots": {
+        "content": [
+          "cal-event-1000-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1000-body": {
+      "id": "cal-event-1000-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 8,
+          "endDp": 12,
+          "bottomDp": 8
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-event-1000-title",
+          "cal-event-1000-detail"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1000-title": {
+      "id": "cal-event-1000-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Catalog audit with Priya"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "color": {
+          "type": "color",
+          "value": "#FFFFFFFF"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1000-detail": {
+      "id": "cal-event-1000-detail",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "10:00 – 10:45 · Room 4"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "color",
+          "value": "#FFFFFFFF"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1100": {
+      "id": "cal-slot-1100",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 16.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 72
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 0,
+          "endDp": 24,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1100-label",
+          "cal-slot-1100-lane"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1100-label": {
+      "id": "cal-slot-1100-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "11:00"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 48
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1100-lane": {
+      "id": "cal-slot-1100-lane",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        },
+        {
+          "type": "fillMaxHeight"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1100-rule"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1100-rule": {
+      "id": "cal-slot-1100-rule",
+      "componentId": "m3/horizontal-divider",
+      "properties": {
+        "thicknessDp": {
+          "type": "float",
+          "value": 1.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "outlineVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "align",
+          "alignment": "topStart"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1200": {
+      "id": "cal-slot-1200",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 16.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 72
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 0,
+          "endDp": 24,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1200-label",
+          "cal-slot-1200-lane"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1200-label": {
+      "id": "cal-slot-1200-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "12:00"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 48
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1200-lane": {
+      "id": "cal-slot-1200-lane",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        },
+        {
+          "type": "fillMaxHeight"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1200-rule",
+          "cal-event-1200"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1200-rule": {
+      "id": "cal-slot-1200-rule",
+      "componentId": "m3/horizontal-divider",
+      "properties": {
+        "thicknessDp": {
+          "type": "float",
+          "value": 1.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "outlineVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "align",
+          "alignment": "topStart"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1200": {
+      "id": "cal-event-1200",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "filled"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FFE37400"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 4
+        }
+      ],
+      "slots": {
+        "content": [
+          "cal-event-1200-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1200-body": {
+      "id": "cal-event-1200-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 8,
+          "endDp": 12,
+          "bottomDp": 8
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-event-1200-title",
+          "cal-event-1200-detail"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1200-title": {
+      "id": "cal-event-1200-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Lunch"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "color": {
+          "type": "color",
+          "value": "#FFFFFFFF"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1200-detail": {
+      "id": "cal-event-1200-detail",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "12:00 – 13:00"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "color",
+          "value": "#FFFFFFFF"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1300": {
+      "id": "cal-slot-1300",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 16.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 72
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 0,
+          "endDp": 24,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1300-label",
+          "cal-slot-1300-lane"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1300-label": {
+      "id": "cal-slot-1300-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "13:00"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 48
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1300-lane": {
+      "id": "cal-slot-1300-lane",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        },
+        {
+          "type": "fillMaxHeight"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1300-rule"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1300-rule": {
+      "id": "cal-slot-1300-rule",
+      "componentId": "m3/horizontal-divider",
+      "properties": {
+        "thicknessDp": {
+          "type": "float",
+          "value": 1.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "outlineVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "align",
+          "alignment": "topStart"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1400": {
+      "id": "cal-slot-1400",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 16.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 72
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 0,
+          "endDp": 24,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1400-label",
+          "cal-slot-1400-lane"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1400-label": {
+      "id": "cal-slot-1400-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "14:00"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 48
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1400-lane": {
+      "id": "cal-slot-1400-lane",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        },
+        {
+          "type": "fillMaxHeight"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1400-rule",
+          "cal-event-1400"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1400-rule": {
+      "id": "cal-slot-1400-rule",
+      "componentId": "m3/horizontal-divider",
+      "properties": {
+        "thicknessDp": {
+          "type": "float",
+          "value": 1.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "outlineVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "align",
+          "alignment": "topStart"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1400": {
+      "id": "cal-event-1400",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "filled"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FF9334E6"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 4
+        }
+      ],
+      "slots": {
+        "content": [
+          "cal-event-1400-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1400-body": {
+      "id": "cal-event-1400-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 8,
+          "endDp": 12,
+          "bottomDp": 8
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-event-1400-title",
+          "cal-event-1400-detail"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1400-title": {
+      "id": "cal-event-1400-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Tablet layout spike"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "color": {
+          "type": "color",
+          "value": "#FFFFFFFF"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1400-detail": {
+      "id": "cal-event-1400-detail",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "14:00 – 15:30 · Focus time"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "color",
+          "value": "#FFFFFFFF"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1500": {
+      "id": "cal-slot-1500",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 16.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 72
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 0,
+          "endDp": 24,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1500-label",
+          "cal-slot-1500-lane"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1500-label": {
+      "id": "cal-slot-1500-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "15:00"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 48
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1500-lane": {
+      "id": "cal-slot-1500-lane",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        },
+        {
+          "type": "fillMaxHeight"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1500-rule"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1500-rule": {
+      "id": "cal-slot-1500-rule",
+      "componentId": "m3/horizontal-divider",
+      "properties": {
+        "thicknessDp": {
+          "type": "float",
+          "value": 1.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "outlineVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "align",
+          "alignment": "topStart"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1600": {
+      "id": "cal-slot-1600",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 16.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 72
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 0,
+          "endDp": 24,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1600-label",
+          "cal-slot-1600-lane"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1600-label": {
+      "id": "cal-slot-1600-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "16:00"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 48
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1600-lane": {
+      "id": "cal-slot-1600-lane",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        },
+        {
+          "type": "fillMaxHeight"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1600-rule",
+          "cal-event-1600"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1600-rule": {
+      "id": "cal-slot-1600-rule",
+      "componentId": "m3/horizontal-divider",
+      "properties": {
+        "thicknessDp": {
+          "type": "float",
+          "value": 1.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "outlineVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "align",
+          "alignment": "topStart"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1600": {
+      "id": "cal-event-1600",
+      "componentId": "m3/card",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "filled"
+        },
+        "containerColor": {
+          "type": "color",
+          "value": "#FFEA4335"
+        },
+        "shape": {
+          "type": "shapeToken",
+          "value": "medium"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 4
+        }
+      ],
+      "slots": {
+        "content": [
+          "cal-event-1600-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1600-body": {
+      "id": "cal-event-1600-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "padding",
+          "startDp": 12,
+          "topDp": 8,
+          "endDp": 12,
+          "bottomDp": 8
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-event-1600-title",
+          "cal-event-1600-detail"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1600-title": {
+      "id": "cal-event-1600-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Weekly sync"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "color": {
+          "type": "color",
+          "value": "#FFFFFFFF"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-event-1600-detail": {
+      "id": "cal-event-1600-detail",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "16:00 – 16:30 · Meet"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "color",
+          "value": "#FFFFFFFF"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1700": {
+      "id": "cal-slot-1700",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 16.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "height",
+          "heightDp": 72
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 0,
+          "endDp": 24,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1700-label",
+          "cal-slot-1700-lane"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1700-label": {
+      "id": "cal-slot-1700-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "17:00"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 48
+        },
+        {
+          "type": "padding",
+          "startDp": 0,
+          "topDp": 4,
+          "endDp": 0,
+          "bottomDp": 0
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1700-lane": {
+      "id": "cal-slot-1700-lane",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        },
+        {
+          "type": "fillMaxHeight"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-slot-1700-rule"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-slot-1700-rule": {
+      "id": "cal-slot-1700-rule",
+      "componentId": "m3/horizontal-divider",
+      "properties": {
+        "thicknessDp": {
+          "type": "float",
+          "value": 1.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "outlineVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        },
+        {
+          "type": "align",
+          "alignment": "topStart"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-side": {
+      "id": "cal-side",
+      "componentId": "layout/scaffold",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "cal-side-body"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-side-body": {
+      "id": "cal-side-body",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 16.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "verticalScroll"
+        },
+        {
+          "type": "padding",
+          "startDp": 20,
+          "topDp": 20,
+          "endDp": 20,
+          "bottomDp": 24
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-mini-title",
+          "cal-mini-weekdays",
+          "cal-mini-grid",
+          "cal-side-rule",
+          "cal-next-title",
+          "cal-next-review",
+          "cal-next-audit",
+          "cal-next-spike"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-mini-title": {
+      "id": "cal-mini-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "May 2024"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleMedium"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-mini-weekdays": {
+      "id": "cal-mini-weekdays",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        },
+        "horizontalArrangement": {
+          "type": "enum",
+          "value": "spaceBetween"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-weekday-0",
+          "cal-weekday-1",
+          "cal-weekday-2",
+          "cal-weekday-3",
+          "cal-weekday-4",
+          "cal-weekday-5",
+          "cal-weekday-6"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-weekday-0": {
+      "id": "cal-weekday-0",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "M"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 36
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-weekday-1": {
+      "id": "cal-weekday-1",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "T"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 36
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-weekday-2": {
+      "id": "cal-weekday-2",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "W"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 36
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-weekday-3": {
+      "id": "cal-weekday-3",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "T"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 36
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-weekday-4": {
+      "id": "cal-weekday-4",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "F"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 36
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-weekday-5": {
+      "id": "cal-weekday-5",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "S"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 36
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-weekday-6": {
+      "id": "cal-weekday-6",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "S"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelSmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "width",
+          "widthDp": 36
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-mini-grid": {
+      "id": "cal-mini-grid",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        },
+        "horizontalAlignment": {
+          "type": "enum",
+          "value": "start"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-week-0",
+          "cal-week-1",
+          "cal-week-2",
+          "cal-week-3",
+          "cal-week-4"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-week-0": {
+      "id": "cal-week-0",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        },
+        "horizontalArrangement": {
+          "type": "enum",
+          "value": "spaceBetween"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-1",
+          "cal-day-2",
+          "cal-day-3",
+          "cal-day-4",
+          "cal-day-5",
+          "cal-day-6",
+          "cal-day-7"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-1": {
+      "id": "cal-day-1",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-1-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-1-label": {
+      "id": "cal-day-1-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "1"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-2": {
+      "id": "cal-day-2",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-2-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-2-label": {
+      "id": "cal-day-2-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "2"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-3": {
+      "id": "cal-day-3",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-3-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-3-label": {
+      "id": "cal-day-3-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "3"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-4": {
+      "id": "cal-day-4",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-4-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-4-label": {
+      "id": "cal-day-4-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "4"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-5": {
+      "id": "cal-day-5",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-5-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-5-label": {
+      "id": "cal-day-5-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "5"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-6": {
+      "id": "cal-day-6",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-6-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-6-label": {
+      "id": "cal-day-6-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "6"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-7": {
+      "id": "cal-day-7",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-7-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-7-label": {
+      "id": "cal-day-7-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "7"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-week-1": {
+      "id": "cal-week-1",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        },
+        "horizontalArrangement": {
+          "type": "enum",
+          "value": "spaceBetween"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-8",
+          "cal-day-9",
+          "cal-day-10",
+          "cal-day-11",
+          "cal-day-12",
+          "cal-day-13",
+          "cal-day-14"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-8": {
+      "id": "cal-day-8",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-8-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-8-label": {
+      "id": "cal-day-8-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "8"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-9": {
+      "id": "cal-day-9",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-9-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-9-label": {
+      "id": "cal-day-9-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "9"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-10": {
+      "id": "cal-day-10",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-10-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-10-label": {
+      "id": "cal-day-10-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "10"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-11": {
+      "id": "cal-day-11",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-11-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-11-label": {
+      "id": "cal-day-11-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "11"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-12": {
+      "id": "cal-day-12",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-12-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-12-label": {
+      "id": "cal-day-12-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "12"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-13": {
+      "id": "cal-day-13",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-13-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-13-label": {
+      "id": "cal-day-13-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "13"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-14": {
+      "id": "cal-day-14",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-14-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-14-label": {
+      "id": "cal-day-14-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "14"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-week-2": {
+      "id": "cal-week-2",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        },
+        "horizontalArrangement": {
+          "type": "enum",
+          "value": "spaceBetween"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-15",
+          "cal-day-16",
+          "cal-day-17",
+          "cal-day-18",
+          "cal-day-19",
+          "cal-day-20",
+          "cal-day-21"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-15": {
+      "id": "cal-day-15",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-15-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-15-label": {
+      "id": "cal-day-15-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "15"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-16": {
+      "id": "cal-day-16",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        },
+        {
+          "type": "background",
+          "color": {
+            "type": "colorToken",
+            "value": "primary"
+          },
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-16-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-16-label": {
+      "id": "cal-day-16-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "16"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onPrimary"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-17": {
+      "id": "cal-day-17",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-17-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-17-label": {
+      "id": "cal-day-17-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "17"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-18": {
+      "id": "cal-day-18",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-18-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-18-label": {
+      "id": "cal-day-18-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "18"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-19": {
+      "id": "cal-day-19",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-19-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-19-label": {
+      "id": "cal-day-19-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "19"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-20": {
+      "id": "cal-day-20",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-20-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-20-label": {
+      "id": "cal-day-20-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "20"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-21": {
+      "id": "cal-day-21",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-21-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-21-label": {
+      "id": "cal-day-21-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "21"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-week-3": {
+      "id": "cal-week-3",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        },
+        "horizontalArrangement": {
+          "type": "enum",
+          "value": "spaceBetween"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-22",
+          "cal-day-23",
+          "cal-day-24",
+          "cal-day-25",
+          "cal-day-26",
+          "cal-day-27",
+          "cal-day-28"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-22": {
+      "id": "cal-day-22",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-22-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-22-label": {
+      "id": "cal-day-22-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "22"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-23": {
+      "id": "cal-day-23",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-23-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-23-label": {
+      "id": "cal-day-23-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "23"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-24": {
+      "id": "cal-day-24",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-24-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-24-label": {
+      "id": "cal-day-24-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "24"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-25": {
+      "id": "cal-day-25",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-25-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-25-label": {
+      "id": "cal-day-25-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "25"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-26": {
+      "id": "cal-day-26",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-26-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-26-label": {
+      "id": "cal-day-26-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "26"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-27": {
+      "id": "cal-day-27",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-27-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-27-label": {
+      "id": "cal-day-27-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "27"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-28": {
+      "id": "cal-day-28",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-28-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-28-label": {
+      "id": "cal-day-28-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "28"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-week-4": {
+      "id": "cal-week-4",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 0.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "top"
+        },
+        "horizontalArrangement": {
+          "type": "enum",
+          "value": "spaceBetween"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-29",
+          "cal-day-30",
+          "cal-day-31",
+          "cal-blank-4-3",
+          "cal-blank-4-4",
+          "cal-blank-4-5",
+          "cal-blank-4-6"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-29": {
+      "id": "cal-day-29",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-29-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-29-label": {
+      "id": "cal-day-29-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "29"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-30": {
+      "id": "cal-day-30",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-30-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-30-label": {
+      "id": "cal-day-30-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "30"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-31": {
+      "id": "cal-day-31",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        },
+        {
+          "type": "clip",
+          "shape": "18"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-day-31-label"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-day-31-label": {
+      "id": "cal-day-31-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "31"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurface"
+        },
+        "alignment": {
+          "type": "enum",
+          "value": "center"
+        },
+        "textAlign": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-blank-4-3": {
+      "id": "cal-blank-4-3",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-blank-4-4": {
+      "id": "cal-blank-4-4",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-blank-4-5": {
+      "id": "cal-blank-4-5",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-blank-4-6": {
+      "id": "cal-blank-4-6",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "size",
+          "widthDp": 36,
+          "heightDp": 36
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-side-rule": {
+      "id": "cal-side-rule",
+      "componentId": "m3/horizontal-divider",
+      "properties": {
+        "thicknessDp": {
+          "type": "float",
+          "value": 1.0
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "outlineVariant"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-title": {
+      "id": "cal-next-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Up next"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleSmall"
+        },
+        "fontWeight": {
+          "type": "enum",
+          "value": "semiBold"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-review": {
+      "id": "cal-next-review",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-next-review-dot",
+          "cal-next-review-text"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-review-dot": {
+      "id": "cal-next-review-dot",
+      "componentId": "shape/colour-dot",
+      "properties": {
+        "color": {
+          "type": "color",
+          "value": "#FF1A73E8"
+        },
+        "diameterDp": {
+          "type": "float",
+          "value": 10.0
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-review-text": {
+      "id": "cal-next-review-text",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-next-review-headline",
+          "cal-next-review-detail"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-review-headline": {
+      "id": "cal-next-review-headline",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Design review — adaptive panes"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-review-detail": {
+      "id": "cal-next-review-detail",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "09:00 · Meet"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-audit": {
+      "id": "cal-next-audit",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-next-audit-dot",
+          "cal-next-audit-text"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-audit-dot": {
+      "id": "cal-next-audit-dot",
+      "componentId": "shape/colour-dot",
+      "properties": {
+        "color": {
+          "type": "color",
+          "value": "#FF0F9D58"
+        },
+        "diameterDp": {
+          "type": "float",
+          "value": 10.0
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-audit-text": {
+      "id": "cal-next-audit-text",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-next-audit-headline",
+          "cal-next-audit-detail"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-audit-headline": {
+      "id": "cal-next-audit-headline",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Catalog audit with Priya"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-audit-detail": {
+      "id": "cal-next-audit-detail",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "10:00 · Room 4"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-spike": {
+      "id": "cal-next-spike",
+      "componentId": "layout/row",
+      "properties": {
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 12.0
+        },
+        "verticalAlignment": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxWidth"
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-next-spike-dot",
+          "cal-next-spike-text"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-spike-dot": {
+      "id": "cal-next-spike-dot",
+      "componentId": "shape/colour-dot",
+      "properties": {
+        "color": {
+          "type": "color",
+          "value": "#FF9334E6"
+        },
+        "diameterDp": {
+          "type": "float",
+          "value": 10.0
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-spike-text": {
+      "id": "cal-next-spike-text",
+      "componentId": "layout/column",
+      "properties": {
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 2.0
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {
+        "children": [
+          "cal-next-spike-headline",
+          "cal-next-spike-detail"
+        ]
+      },
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-spike-headline": {
+      "id": "cal-next-spike-headline",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Tablet layout spike"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyMedium"
+        },
+        "maxLines": {
+          "type": "int",
+          "value": 1
+        },
+        "overflow": {
+          "type": "enum",
+          "value": "ellipsis"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    },
+    "cal-next-spike-detail": {
+      "id": "cal-next-spike-detail",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "14:00 · Focus time"
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodySmall"
+        },
+        "color": {
+          "type": "colorToken",
+          "value": "onSurfaceVariant"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {},
+      "assetBindings": {},
+      "tokenBindings": {}
+    }
+  },
+  "assets": {},
+  "tokenBindings": {},
+  "createdAtEpochMillis": 1790342565459,
+  "updatedAtEpochMillis": 1791204282183,
+  "components": {},
+  "home": {
+    "kind": "server",
+    "url": "https://preview.coo.ee",
+    "designId": "google-calendar-tablet"
+  }
+}
