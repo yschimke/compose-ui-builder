@@ -9,10 +9,10 @@ import example.ui.components.EpisodeCard
 
 // Handwritten application code depends on the declared API, including fields unused by a layout.
 @Composable
-fun Application(data: LibraryData) {
-  LibraryScreen(data)
-  QueueScreen(data)
-  EpisodeCard(data.featured)
+fun Application(data: LibraryData, onEpisodeClick: (String) -> Unit) {
+  LibraryScreen(data, onEpisodeClick)
+  QueueScreen(data, onEpisodeClick)
+  EpisodeCard(data.featured, onEpisodeClick)
 }
 
 fun sampleData(): LibraryData =
@@ -26,5 +26,7 @@ fun sampleData(): LibraryData =
 )
 @Composable
 fun DurableLibraryPreview() {
-  androidx.compose.material3.MaterialTheme { LibraryScreen(sampleData()) }
+  androidx.compose.material3.MaterialTheme {
+    LibraryScreen(sampleData(), onEpisodeClick = { println("Selected episode: $it") })
+  }
 }

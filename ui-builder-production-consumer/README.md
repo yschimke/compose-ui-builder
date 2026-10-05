@@ -13,6 +13,9 @@ The generated `LibraryData` includes an external `ProjectEpisode` and a list of 
 The external field `displayTitle` maps to the design field `title`. The shared component body is
 emitted once in `example/ui/components/EpisodeCard.kt`; both screens call it. `Consumer.kt` is
 handwritten application code, and its `DurableLibraryPreview` renders the generated screen.
+The component contains a button whose required `onEpisodeClick` callback reports its mapped
+`displayTitle` property. Both screens explicitly forward that event to their application caller.
+Interaction tests click the generated button before and after an application data update.
 
 The [`build.gradle.kts`](build.gradle.kts) is the complete JVM build integration. To use it outside
 this checkout, keep the verification/generation tasks and source-set wiring, and replace the
@@ -51,7 +54,10 @@ This experimental schema is deliberately separate from the editor's v1 document;
 cannot silently drop the declared API. The current lane supports non-null scalar reads through
 nested generated and external models, and separate reusable component bodies. Nullable model
 fields and lists are supported as declarations, but nullable binding fallbacks, dynamic list
-rendering, events, assets and component placement modifiers/slots currently fail generation.
+rendering, assets and component placement modifiers/slots currently fail generation.
+Explicit event bindings support zero-argument UI callbacks such as `onClick`, reporting either no
+payload or one declared data-path payload. Callbacks accepting UI values (such as text changes)
+remain unsupported. Required application callbacks never receive no-op defaults.
 Editor integration and a packaged Gradle plugin remain follow-up work. See the
 [design plan](../docs/design/UI_BUILDER_BUILD_GENERATION.md) for the full intended contract.
 

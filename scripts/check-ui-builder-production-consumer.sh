@@ -68,6 +68,20 @@ PYTHON
   fi
   grep -q 'Unresolved reference.*displayTitle' external-mapping-build.log
   cp external-model-original.kt ui-builder-production-consumer/src/main/kotlin/example/domain/ProjectEpisode.kt
+  # Required callbacks cannot silently become defaults in a published generator.
+  cp ui-builder-production-consumer/src/main/kotlin/example/Consumer.kt caller-original.kt
+  python3 - ui-builder-production-consumer/src/main/kotlin/example/Consumer.kt <<'PYTHON'
+import pathlib,sys
+p=pathlib.Path(sys.argv[1]);p.write_text(p.read_text().replace('LibraryScreen(data, onEpisodeClick)', 'LibraryScreen(data)'))
+PYTHON
+  if ./gradlew --offline --no-daemon --max-workers=2 \
+    -PgateRepository="${repository}" -PuiBuilderGeneratorVersion="${version}" \
+    :ui-builder-production-consumer:compileKotlin >missing-callback-build.log 2>&1; then
+    echo "ERROR: required application callback was optional" >&2
+    exit 1
+  fi
+  grep -q "No value passed for parameter.*onEpisodeClick" missing-callback-build.log
+  cp caller-original.kt ui-builder-production-consumer/src/main/kotlin/example/Consumer.kt
   # Untracking an unchanged import must fail even when generated Kotlin is already up to date.
   git rm --cached -q ui-builder-production-consumer/src/main/ui/components/EpisodeCard.uid
   if ./gradlew --offline --no-daemon --max-workers=2 \

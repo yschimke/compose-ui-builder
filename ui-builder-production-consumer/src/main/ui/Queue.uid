@@ -30,7 +30,19 @@
         "componentId": "episode-card",
         "dataPath": [
           "featured"
-        ]
+        ],
+        "events": {
+          "onEpisodeClick": "onEpisodeClick"
+        }
+      }
+    ],
+    "events": [
+      {
+        "name": "onEpisodeClick",
+        "payload": {
+          "kind": "scalar",
+          "scalar": "string"
+        }
       }
     ]
   },

@@ -27,6 +27,7 @@ dependencies {
   implementation(compose.desktop.currentOs)
   implementation(libs.compose.ui.tooling.preview)
   testImplementation(kotlin("test"))
+  @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class) testImplementation(compose.uiTest)
 }
 
 val entries = listOf("src/main/ui/Library.uid", "src/main/ui/Queue.uid")

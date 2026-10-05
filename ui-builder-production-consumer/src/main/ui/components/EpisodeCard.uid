@@ -10,7 +10,7 @@
     "kind": "component",
     "visibility": "internal",
     "inputModel": "external",
-    "root": "root",
+    "root": "button",
     "bindings": [
       {
         "nodeId": "root",
@@ -22,6 +22,25 @@
           "kind": "scalar",
           "scalar": "string"
         }
+      }
+    ],
+    "events": [
+      {
+        "name": "onEpisodeClick",
+        "payload": {
+          "kind": "scalar",
+          "scalar": "string"
+        }
+      }
+    ],
+    "eventBindings": [
+      {
+        "nodeId": "button",
+        "property": "onClick",
+        "event": "onEpisodeClick",
+        "payloadPath": [
+          "title"
+        ]
       }
     ]
   },
@@ -53,13 +72,23 @@
     },
     "stateVariables": {},
     "roots": [
-      "root"
+      "button"
     ],
     "nodes": {
       "root": {
         "id": "root",
         "componentId": "m3/text",
         "slots": {},
+        "properties": {}
+      },
+      "button": {
+        "id": "button",
+        "componentId": "m3/button",
+        "slots": {
+          "content": [
+            "root"
+          ]
+        },
         "properties": {}
       }
     }

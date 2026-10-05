@@ -113,19 +113,6 @@ class ProductionComposeGeneratorTest {
           generate(
             editScreen {
               it.copy(
-                entryPoint = it.entryPoint!!.copy(events = listOf(ProductionEvent("onClick")))
-              )
-            }
-          )
-        }
-        .message!!,
-      "event lowering",
-    )
-    assertContains(
-      assertFailsWith<IllegalArgumentException> {
-          generate(
-            editScreen {
-              it.copy(
                 entryPoint =
                   it.entryPoint!!.copy(
                     bindings =
@@ -138,6 +125,135 @@ class ProductionComposeGeneratorTest {
         .message!!,
       "binding",
     )
+  }
+
+  @Test
+  fun `callbacks are required API parameters and mapped payloads are forwarded`() {
+    val files = generate()
+    val screen = files.single { it.path.endsWith("LibraryScreen.kt") }.source
+    val component = files.single { it.path.endsWith("EpisodeCard.kt") }.source
+    assertContains(screen, "onEpisodeClick: (kotlin.String) -> kotlin.Unit,")
+    assertContains(screen, "c0 = { onEpisodeClick(data.featured.displayTitle) }")
+    assertContains(component, "onClick = c0")
+    assertContains(component, "c0 = { onEpisodeClick(data.displayTitle) }")
+    assertFalse(files.any { "remember" in it.source || "TODO" in it.source })
+    // Removing a visual binding cannot remove the declared callback from the application API.
+    val unbound =
+      generate(
+        editScreen { file ->
+          file.copy(
+            entryPoint =
+              file.entryPoint!!.copy(
+                events = file.entryPoint!!.events + ProductionEvent("onRefresh")
+              )
+          )
+        }
+      )
+    assertContains(
+      unbound.single { it.path.endsWith("LibraryScreen.kt") }.source,
+      "onRefresh: () -> kotlin.Unit,",
+    )
+  }
+
+  @Test
+  fun `payload-free callbacks and complete model payloads retain their declared types`() {
+    data class Case(
+      val payload: ProductionType?,
+      val path: List<String>?,
+      val signature: String,
+      val call: String,
+    )
+    for ((payload, path, signature, call) in
+      listOf(
+        Case(null, null, "()", "onEpisodeClick()"),
+        Case(
+          ProductionType.Model("external"),
+          emptyList(),
+          "(example.domain.ProjectEpisode)",
+          "onEpisodeClick(data.featured)",
+        ),
+      )) {
+      val changed = inputs.map { input ->
+        val entry = input.file.entryPoint
+        if (entry == null) input
+        else
+          input.copy(
+            file =
+              input.file.copy(
+                entryPoint =
+                  entry.copy(
+                    events = listOf(ProductionEvent("onEpisodeClick", payload)),
+                    eventBindings = entry.eventBindings.map { it.copy(payloadPath = path) },
+                  )
+              )
+          )
+      }
+      val files = generate(changed)
+      val screen = files.single { it.path.endsWith("LibraryScreen.kt") }.source
+      assertContains(screen, "onEpisodeClick: $signature -> kotlin.Unit,")
+      assertContains(screen, call)
+      changed.forEach {
+        assertEquals(it.file, ProductionUidFiles.decode(ProductionUidFiles.encode(it.file)))
+      }
+    }
+  }
+
+  @Test
+  fun `invalid event contracts refuse before generation`() {
+    fun checkIssue(code: String, change: (ProductionEntryPoint) -> ProductionEntryPoint) {
+      val changed = inputs.map { input ->
+        if (input.path.endsWith("EpisodeCard.uid"))
+          input.copy(file = input.file.copy(entryPoint = change(input.file.entryPoint!!)))
+        else input
+      }
+      val result =
+        assertIs<ProductionContractResult.Invalid>(ProductionContractValidator.validate(changed))
+      assertTrue(result.issues.any { it.code == code }, result.issues.toString())
+    }
+    checkIssue("UNKNOWN_EVENT") {
+      it.copy(eventBindings = listOf(it.eventBindings.single().copy(event = "missing")))
+    }
+    checkIssue("EVENT_PAYLOAD_REQUIRED") {
+      it.copy(eventBindings = listOf(it.eventBindings.single().copy(payloadPath = null)))
+    }
+    checkIssue("EVENT_PAYLOAD_MISMATCH") {
+      it.copy(eventBindings = listOf(it.eventBindings.single().copy(payloadPath = emptyList())))
+    }
+    checkIssue("DUPLICATE_BINDING") { it.copy(eventBindings = it.eventBindings + it.eventBindings) }
+    val missingForward = editScreen { file ->
+      file.copy(
+        entryPoint =
+          file.entryPoint!!.copy(
+            components = file.entryPoint!!.components.map { it.copy(events = emptyMap()) }
+          )
+      )
+    }
+    val result =
+      assertIs<ProductionContractResult.Invalid>(
+        ProductionContractValidator.validate(missingForward)
+      )
+    assertTrue(result.issues.any { it.code == "COMPONENT_EVENT_MISMATCH" })
+  }
+
+  @Test
+  fun `a callback cannot target a value or composable slot`() {
+    for (property in listOf("enabled", "content", "missing")) {
+      val changed = inputs.map { input ->
+        if (input.path.endsWith("EpisodeCard.uid")) {
+          val entry = input.file.entryPoint!!
+          input.copy(
+            file =
+              input.file.copy(
+                entryPoint =
+                  entry.copy(
+                    eventBindings = listOf(entry.eventBindings.single().copy(property = property))
+                  )
+              )
+          )
+        } else input
+      }
+      assertFailsWith<IllegalArgumentException>(property) { generate(changed) }
+    }
   }
 
   @Test
@@ -182,8 +298,9 @@ class ProductionComposeGeneratorTest {
     val design = inputs.single { it.path.endsWith("EpisodeCard.uid") }.file.design!!
     val literal =
       design.copy(
+        roots = listOf("root"),
         nodes =
-          design.nodes +
+          emptyMap<String, ee.schimke.composeai.uibuilder.export.UiBuilderNode>() +
             ("root" to
               design.nodes
                 .getValue("root")
@@ -195,7 +312,7 @@ class ProductionComposeGeneratorTest {
                         put("value", "Ordinary export")
                       }
                     }
-                ))
+                )),
       )
     val emitted =
       assertIs<ScreenExportGate.Outcome.Emitted>(

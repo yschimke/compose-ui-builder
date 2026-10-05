@@ -30,9 +30,12 @@ object ProductionComposeGenerator {
 
   private data class Read(val path: List<String>, val type: ProductionType.Scalar)
 
+  private data class Callback(val event: String, val payloadPath: List<String>?)
+
   private data class Body(
     val entry: ProductionEntryPoint,
     val reads: List<Read>,
+    val callbacks: List<Callback>,
     val root: ScreenNode,
     val record: ComponentRecordFile,
   )
@@ -53,10 +56,6 @@ object ProductionComposeGenerator {
       check(
         input.file.catalogDigest == catalogDigest,
         "component records differ from the declared catalogDigest",
-      )
-      check(
-        entry.events.isEmpty(),
-        "event declarations need explicit event lowering, which this generator does not yet support",
       )
       val design = requireNotNull(input.file.design)
       check(
@@ -119,6 +118,14 @@ object ProductionComposeGenerator {
               )
           )
       }
+      val callbacks = mutableListOf<Callback>()
+      val callbackArguments = linkedMapOf<String, MutableMap<String, ScreenValue>>()
+      entry.eventBindings.forEach { binding ->
+        val parameter = "c${callbacks.size}"
+        callbacks += Callback(binding.event, binding.payloadPath)
+        callbackArguments.getOrPut(binding.nodeId) { linkedMapOf() }[binding.property] =
+          ScreenValue.ParameterRead(parameter, "kotlin.Function0")
+      }
       val overrides = linkedMapOf<String, ScreenNode>()
       val children =
         entry.components.map { use ->
@@ -144,12 +151,26 @@ object ProductionComposeGenerator {
             reads += read.copy(path = use.dataPath + read.path)
             arguments["p$index"] = ScreenValue.ParameterRead(parameter, read.type.scalar.kotlinType)
           }
+          child.callbacks.forEachIndexed { index, callback ->
+            val parameter = "c${callbacks.size}"
+            callbacks +=
+              Callback(
+                use.events.getValue(callback.event),
+                callback.payloadPath?.let { use.dataPath + it },
+              )
+            arguments["c$index"] = ScreenValue.ParameterRead(parameter, "kotlin.Function0")
+          }
           overrides[use.nodeId] =
             ScreenNode(componentId = helperFqn(child.entry), arguments = arguments)
           child
         }
       val typed = design.copy(nodes = nodes).toDesignDocumentV1()
-      val projected = ScreenDocumentProjection.projectProduction(typed, nodeOverrides = overrides)
+      val projected =
+        ScreenDocumentProjection.projectProduction(
+          typed,
+          nodeOverrides = overrides,
+          callbackArguments = callbackArguments,
+        )
       check(
         projected is ScreenDocumentProjection.Outcome.Projected,
         (projected as? ScreenDocumentProjection.Outcome.Refused)?.reasons?.joinToString("; ")
@@ -197,6 +218,14 @@ object ProductionComposeGenerator {
                               read.type.scalar.kotlinType.substringAfterLast('.'),
                               typeFqn = read.type.scalar.kotlinType,
                             )
+                          } +
+                          child.callbacks.indices.map { index ->
+                            TargetParameter(
+                              "c$index",
+                              "() -> Unit",
+                              typeFqn = "kotlin.Function0",
+                              lambdaReturnTypeFqn = "kotlin.Unit",
+                            )
                           },
                       code =
                         ComponentCode(
@@ -207,7 +236,7 @@ object ProductionComposeGenerator {
                   }
                   .distinctBy { it.canonicalId }
           )
-      return Body(entry, reads, root, combined).also { bodies[id] = it }
+      return Body(entry, reads, callbacks, root, combined).also { bodies[id] = it }
     }
     contract.entryPoints.keys.sorted().forEach(::body)
     val disposable = Disposer.newDisposable()
@@ -229,18 +258,14 @@ object ProductionComposeGenerator {
               listOf(ScreenParameter.Value("modifier", MODIFIER)) +
                 body.reads.mapIndexed { index, read ->
                   ScreenParameter.Value("p$index", read.type.scalar.kotlinType)
-                }
-            val placeholders =
-              linkedMapOf<String, ScreenValue>(
-                "modifier" to ScreenValue.Reference(MODIFIER, typeFqn = MODIFIER)
-              )
-            body.reads.forEachIndexed { index, read ->
-              placeholders["p$index"] = literal(read.type.scalar)
-            }
+                } +
+                body.callbacks.indices.map { ScreenParameter.Callback("c$it") }
             val screen =
               ScreenDocument(
                 "UidValidationHost",
-                ScreenNode("", function = name, arguments = placeholders),
+                // The host is discarded by PSI extraction; it never invents callback
+                // implementations.
+                ScreenNode(BOX),
                 functions = listOf(ScreenFunction(name, parameters, body.root)),
               )
             val generated =
@@ -269,6 +294,11 @@ object ProductionComposeGenerator {
             body.reads.indices.forEach { index ->
               require("p$index" in references) {
                 "${entry.id}: binding p$index was not projected; refusing to drop a data binding"
+              }
+            }
+            body.callbacks.indices.forEach { index ->
+              require("c$index" in references) {
+                "${entry.id}: callback c$index was not projected; refusing to drop an event binding"
               }
             }
             val calls =
@@ -308,6 +338,10 @@ object ProductionComposeGenerator {
                 "${entry.visibility.name.lowercase()} fun ${entry.kotlinFunction.substringAfterLast('.')}("
               )
               appendLine("  data: ${contract.models.getValue(entry.inputModel).kotlinType},")
+              entry.events.forEach { event ->
+                val payload = event.payload?.let { kotlinType(contract, it) }.orEmpty()
+                appendLine("  ${event.name}: ($payload) -> kotlin.Unit,")
+              }
               appendLine("  modifier: $MODIFIER = $MODIFIER,")
               appendLine(") {")
               appendLine("  $name(")
@@ -316,6 +350,13 @@ object ProductionComposeGenerator {
                 appendLine(
                   "    p$index = ${readExpression(contract, entry.inputModel, read.path)},"
                 )
+              }
+              body.callbacks.forEachIndexed { index, callback ->
+                val payload =
+                  callback.payloadPath
+                    ?.let { readExpression(contract, entry.inputModel, it) }
+                    .orEmpty()
+                appendLine("    c$index = { ${callback.event}($payload) },")
               }
               appendLine("  )")
               appendLine("}")
@@ -327,6 +368,13 @@ object ProductionComposeGenerator {
       Disposer.dispose(disposable)
     }
   }
+
+  private fun kotlinType(contract: ValidatedProductionContract, type: ProductionType): String =
+    when (type) {
+      is ProductionType.Scalar -> type.scalar.kotlinType
+      is ProductionType.Model -> contract.models.getValue(type.modelId).kotlinType
+      is ProductionType.ListType -> "kotlin.collections.List<${kotlinType(contract, type.element)}>"
+    } + if (type.nullable) "?" else ""
 
   private fun readExpression(
     contract: ValidatedProductionContract,
@@ -351,14 +399,4 @@ object ProductionComposeGenerator {
 
   private fun helperFqn(entry: ProductionEntryPoint): String =
     entry.kotlinFunction.substringBeforeLast('.') + "." + helperName(entry)
-
-  private fun literal(type: ScalarType): ScreenValue =
-    when (type) {
-      ScalarType.STRING -> ScreenValue.Text("")
-      ScalarType.BOOLEAN -> ScreenValue.Bool(false)
-      ScalarType.INT -> ScreenValue.Whole(0)
-      ScalarType.LONG -> ScreenValue.Whole(0)
-      ScalarType.FLOAT -> ScreenValue.Fractional32(0f)
-      ScalarType.DOUBLE -> ScreenValue.Fractional(0.0)
-    }
 }

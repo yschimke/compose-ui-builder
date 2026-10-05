@@ -257,7 +257,22 @@ object ScreenDocumentProjection {
   fun projectProduction(
     document: DesignDocumentV1,
     nodeOverrides: Map<String, ScreenNode> = emptyMap(),
-  ): Outcome = projectInternal(document, screenNameFor(document), false, true, nodeOverrides)
+  ): Outcome = projectProduction(document, nodeOverrides, emptyMap())
+
+  /** Production-only callback parameters, checked against the catalog by the shared generator. */
+  fun projectProduction(
+    document: DesignDocumentV1,
+    nodeOverrides: Map<String, ScreenNode>,
+    callbackArguments: Map<String, Map<String, ScreenValue>>,
+  ): Outcome =
+    projectInternal(
+      document,
+      screenNameFor(document),
+      false,
+      true,
+      nodeOverrides,
+      callbackArguments,
+    )
 
   private fun projectInternal(
     document: DesignDocumentV1,
@@ -265,12 +280,13 @@ object ScreenDocumentProjection {
     tagNodes: Boolean,
     rootBindings: Boolean,
     nodeOverrides: Map<String, ScreenNode>,
+    callbackArguments: Map<String, Map<String, ScreenValue>> = emptyMap(),
   ): Outcome {
     // No component record parameter. It was here only so an enum value could be qualified with
     // its parameter's recorded type, and `enum` refuses instead — see its KDoc. A parameter kept
     // "in case" is how a reader starts believing this projection type-checks against the record,
     // which it does not: `ScreenGenerator` does that, once, with the record it is handed.
-    val pass = Pass(document, tagNodes, rootBindings, nodeOverrides)
+    val pass = Pass(document, tagNodes, rootBindings, nodeOverrides, callbackArguments)
     val roots = document.roots
     if (roots.size != 1) {
       // One root is not a limitation of the generator; it is what a `@Composable fun Screen()`
@@ -380,6 +396,7 @@ object ScreenDocumentProjection {
     val tagNodes: Boolean = false,
     rootBindings: Boolean = false,
     val nodeOverrides: Map<String, ScreenNode> = emptyMap(),
+    val productionCallbacks: Map<String, Map<String, ScreenValue>> = emptyMap(),
   ) {
     val reasons = mutableListOf<String>()
     val assetPlaceholders = mutableListOf<AssetPlaceholder>()
@@ -689,6 +706,9 @@ object ScreenDocumentProjection {
       else field.convert(value)
 
     private fun callbackArguments(node: DesignNodeV1): Map<String, ScreenValue> {
+      productionCallbacks[node.id]?.let {
+        return it
+      }
       if (functionScope == null) return emptyMap()
       return node.eventBindings
         .filterValues { it.isNotEmpty() }
