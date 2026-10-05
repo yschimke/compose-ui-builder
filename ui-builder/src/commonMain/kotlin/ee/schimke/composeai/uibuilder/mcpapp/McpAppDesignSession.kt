@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.mcpapp
 
+import ee.schimke.composeai.uibuilder.OpenedUidDesign
 import ee.schimke.composeai.uibuilder.UidDesignFiles
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.coroutines.sync.Mutex
@@ -82,6 +83,7 @@ class McpAppDesignSession(
 
   /** The document as last read or written: what "dirty" is measured against. */
   private var savedDocument: UiBuilderDocument? = null
+  private var openedFile: OpenedUidDesign? = null
 
   /** The document the editor currently shows. */
   private var current: UiBuilderDocument? = null
@@ -216,14 +218,18 @@ class McpAppDesignSession(
     // A host without etags: compare what the file says with what it said last.
     if (etag == null && state.etag == null) {
       val saved = savedDocument ?: return false
-      return runCatching { UidDesignFiles.decode(contents.text) }.getOrNull() == saved
+      return runCatching {
+          val read = UidDesignFiles.open(contents.text)
+          read.document == saved && read.production == openedFile?.production
+        }
+        .getOrDefault(false)
     }
     return false
   }
 
   private fun adopt(contents: McpAppFileContents, initial: Boolean) {
-    val document = runCatching {
-      UidDesignFiles.decode(contents.text)
+    val opened = runCatching {
+      UidDesignFiles.open(contents.text)
     }
       .getOrElse {
         val message = "${file.name} is not a UI Builder design: ${it.message}"
@@ -232,6 +238,8 @@ class McpAppDesignSession(
           else state.copy(notice = McpAppNotice.Error(message))
         return
       }
+    openedFile = opened
+    val document = opened.document
     savedDocument = document
     current = document
     lastContext = null
@@ -256,7 +264,13 @@ class McpAppDesignSession(
     if (!force && document == savedDocument) return
     // A conflict is resolved by a person, not by the next autosave writing over it.
     if (!force && state.notice is McpAppNotice.Conflict) return
-    val text = UidDesignFiles.encode(document)
+    val text = runCatching {
+      requireNotNull(openedFile).encode(document)
+    }
+      .getOrElse {
+        state = state.copy(notice = McpAppNotice.Error("Not saved: ${it.message}"))
+        return
+      }
     state = state.copy(saving = true)
     val outcome = runCatching {
       bridge.write(file.resourceUri, text, ifMatch)
@@ -269,6 +283,7 @@ class McpAppDesignSession(
       when (outcome) {
         is McpAppWriteOutcome.Saved -> {
           savedDocument = document
+          openedFile = UidDesignFiles.open(text)
           state.copy(
             saving = false,
             etag = outcome.etag.ifEmpty { null },

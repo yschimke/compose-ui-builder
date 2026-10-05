@@ -71,7 +71,7 @@ object ProductionContractValidator {
         if (!paths.add(input.path)) {
           issue("DUPLICATE_FILE", input, message = "input path is registered more than once")
         }
-        if (input.file.schema != ProductionUidFiles.SCHEMA) {
+        if (input.file.schema !in ProductionUidFiles.SCHEMAS) {
           issue("UNSUPPORTED_SCHEMA", input, message = "unsupported schema '${input.file.schema}'")
         }
         input.file.models.forEach { model ->

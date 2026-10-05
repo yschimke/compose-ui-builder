@@ -1,5 +1,5 @@
 {
-  "schema": "compose-ui-builder-production/v1-candidate",
+  "schema": "compose-ui-builder-production/v1",
   "models": [
     {
       "id": "library",

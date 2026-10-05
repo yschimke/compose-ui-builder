@@ -84,6 +84,7 @@ val extractProtocolSchemas =
       mapOf(
         "design-document-v1.schema.json" to "compose-ui-builder-document-v1.schema.json",
         "design-mutation-v1.schema.json" to "compose-ui-builder-mutation-v1.schema.json",
+        "production-uid-v1.schema.json" to "compose-ui-builder-production-v1.schema.json",
       )
     )
     ids.putAll(
@@ -92,6 +93,8 @@ val extractProtocolSchemas =
           "https://schemas.compose-preview.dev/ui-builder/document/v1",
         "compose-ui-builder-mutation-v1.schema.json" to
           "https://schemas.compose-preview.dev/ui-builder/mutation/v1",
+        "compose-ui-builder-production-v1.schema.json" to
+          "https://schemas.compose-preview.dev/ui-builder/production/v1",
       )
     )
     output.set(layout.buildDirectory.dir("generated/protocolSchemas"))

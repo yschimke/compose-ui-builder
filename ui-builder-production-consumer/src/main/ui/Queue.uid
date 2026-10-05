@@ -1,5 +1,5 @@
 {
-  "schema": "compose-ui-builder-production/v1-candidate",
+  "schema": "compose-ui-builder-production/v1",
   "catalogDigest": "df448956605b680b670765fb35fa0b0298b208308da17f37d251fc7c3c611777",
   "imports": [
     "src/main/ui/components/EpisodeCard.uid"

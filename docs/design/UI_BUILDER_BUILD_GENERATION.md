@@ -2,8 +2,9 @@
 
 **Status: experimental opt-in build lane implemented, 2026-10-05.** Strict project-file contracts,
 tracked input resolution, owned model generation, stateless Compose generation and a JVM consumer
-build are implemented. Single-file export remains the default. Editor round-trip support, UI-value callback
-lowering, dynamic lists, nullable binding fallbacks and a packaged Gradle plugin remain proposed.
+build are implemented. Versioned production metadata and explicit editor file round trips are
+implemented against the published contracts 3.18.0 release. Single-file export remains
+the default. UI-value callback lowering, dynamic lists, nullable binding fallbacks and a packaged Gradle plugin remain proposed.
 The experimental file schema does not extend the current design-service wire schema.
 
 The project owns the design and its declared Kotlin API. A build turns those inputs into stateless
@@ -216,8 +217,9 @@ registered project inputs and pinned records
 ```
 
 Implement the production projection and validation in the builder's export layer, independent of
-Compose rendering and editor classes. Canonical production metadata belongs in the versioned
-`compose-preview-contracts` protocol; the editor must round-trip it before a project relies on it.
+Compose rendering and editor classes. Canonical production metadata lives in the versioned
+`compose-preview-contracts` protocol. Editor file sessions retain its wrapper separately from the
+ordinary service document and preserve it when saving visual edits.
 A future typed entry-point and multi-file API in `compose-ai-tools` can replace the JVM PSI
 adapter. The current implementation uses the pinned released generator and preserves the existing
 single-file export API and JVM signature for consumers.
@@ -286,9 +288,8 @@ fixture does not claim Android or Wasm compatibility.
 
 - Extend callback lowering to UI-provided values, such as text edits, with explicit typed payload
   scopes. The current lane reports payloads read from the input model.
-- Choose the versioned production metadata shape with `compose-preview-contracts`. Model and
-  component-only `.uid` files need an explicit schema; they must not pretend to be ordinary screens
-  with fabricated root nodes.
+- Model-only files remain source documents without fabricated visual roots; a declaration editor
+  and imported component previews remain future authoring work.
 - Choose the published Gradle plugin identity and generator coordinates, and document those new
   consumer surfaces alongside the existing seams.
 - Specify preview samples for external model mappings without requiring the editor to load or
@@ -299,14 +300,19 @@ first generation contract stable.
 
 ## Implemented contract foundation
 
-The experimental schema is `compose-ui-builder-production/v1-candidate`, implemented by
-[`ProductionUidFile`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/production/ProductionUidFile.kt).
-It deliberately has a different schema and shape from an editor document. Existing editors cannot
-open it as a v1 design and silently drop its API. `ProductionUidFiles` is its strict codec; unknown
-versions, fields and type variants fail decoding. A model-only file declares `models` without an
-entry point or a fabricated design. A screen or component file declares an `entryPoint` and embeds
-its `design`. This is a builder-owned experiment, awaiting promotion to the shared contracts
-protocol before editor integration.
+The versioned schema is `compose-ui-builder-production/v1`, owned by
+`compose-preview-contracts`' `production.ProductionUidFileV1`. It contains explicit model,
+entry-point, binding, component and event declarations plus an optional embedded `DesignDocumentV1`.
+The shared module publishes its generated JSON Schema and uses builders for binary-compatible
+optional-field additions. No filesystem, generation or editor behavior moves into that repository.
+
+[`ProductionUidFile`](../../ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/production/ProductionUidFile.kt)
+remains a build-tool compatibility adapter so existing generator callers keep their Kotlin types.
+`ProductionUidFiles` checks the shared wire contract before adapting it. The old
+`compose-ui-builder-production/v1-candidate` remains readable without implicit migration; v1 also
+strictly checks the embedded protocol document. Unknown versions, fields and type variants refuse.
+A model-only file declares `models` without an entry point or fabricated design. Both wrappers
+remain distinct from ordinary editor documents, so a design-only reader cannot drop their API.
 
 Each file declares project-root-relative `imports`. Model types use stable model ids; generated
 classes and entry points have explicit qualified Kotlin names. Field declaration order fixes the
@@ -436,3 +442,31 @@ wrapper captures each declared payload read and invokes the required application
 clicked. It generates no application state, default callback or preview action. Unused event
 declarations remain in the API. The production consumer's Compose interaction tests exercise both
 screen forwarding and the component API, including updated input data after recomposition.
+
+## Editor file round trips
+
+`UidDesignFiles.open` returns the editable layout together with its original production wrapper.
+MCP App and browser-host sessions, native desktop saves (including Save As), and the IntelliJ
+project writer preserve that wrapper when replacing its design. Entry names, model ownership and
+field order, imports, catalog digests, data bindings, component forwarding and events stay authored
+source metadata; a visual edit does not infer or rewrite them. IntelliJ selects the production
+JSON Schema for production source files.
+
+Edits removing a declared root or binding target, or adding preview-owned state/actions, refuse
+the save and report the error. External source edits retain existing conflict/reload protection,
+including metadata-only changes on hosts without etags. Model-only contracts remain source-only.
+There is no implicit conversion of a mockup into a production API and no metadata inspector yet;
+API declarations are edited explicitly in source. Imported component resolution and model sample
+rendering are separate authoring work; opening a file does not fetch imports or execute Kotlin.
+
+Development of this change uses the existing contracts composite override:
+
+```sh
+./gradlew -PlocalBuilds=contracts -PlocalBuild.contracts=/path/to/compose-preview-contracts \
+  :ui-builder-export:jvmTest :ui-builder-codegen-jvm:test
+```
+
+Use a JDK 17 Gradle runtime for the composite's unpinned modules; the editor selects its own JDK 21
+toolchain. Normal builds use published contracts 3.18.0 and require no composite override.
+The publication/consumer gate verifies generation from staged builder artifacts and published
+contracts dependencies in an independent checkout.

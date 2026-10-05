@@ -1,6 +1,10 @@
 package ee.schimke.composeai.uibuilder.intellij
 
+import ee.schimke.composeai.uibuilder.export.production.ProductionUidFiles
 import java.io.InputStream
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * How much of a `.json` file [sniffDesignSchema] is given. The writer's header — `schema` is the
@@ -27,7 +31,7 @@ internal fun sniffDesignSchema(head: CharSequence): String? =
 internal const val DESIGN_SCAN_LIMIT_BYTES = 8 * 1024 * 1024
 
 private val designSchemaPattern =
-  Regex(""""schema"\s*:\s*"(compose-ui-builder-document/[^"\\]{1,96})"""")
+  Regex(""""schema"\s*:\s*"(compose-ui-builder-(?:document|production)/[^"\\]{1,96})"""")
 
 /**
  * The UI Builder schema a document declares anywhere in its first [limit] bytes.
@@ -36,7 +40,8 @@ private val designSchemaPattern =
  * valid document may put it anywhere — key order means nothing in JSON, and an agent or a formatter
  * may reorder keys — so a file whose head is inconclusive is scanned the rest of the way for a UI
  * Builder schema value. It is a text scan in chunks, never a decode, and only a
- * `compose-ui-builder-document/...` value counts, so an unrelated `schema` key cannot claim a file.
+ * `compose-ui-builder-document/...` or `compose-ui-builder-production/...` value counts, so an
+ * unrelated `schema` key cannot claim a file.
  */
 internal fun scanForDesignSchema(
   input: InputStream,
@@ -57,4 +62,10 @@ internal fun scanForDesignSchema(
     carry = window.takeLast(256)
   }
   return null
+}
+
+/** Unlike the header prefilter, schema routing must use the outer file's declaration. */
+internal fun isProductionDesignSource(text: String): Boolean {
+  val root = Json.parseToJsonElement(text) as? JsonObject
+  return (root?.get("schema") as? JsonPrimitive)?.content in ProductionUidFiles.SCHEMAS
 }
