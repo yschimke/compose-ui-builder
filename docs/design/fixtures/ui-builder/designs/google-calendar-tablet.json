@@ -309,27 +309,27 @@
       },
       "node": {
         "id": "cal-panes",
-        "componentId": "layout/list-detail-pane-scaffold",
+        "componentId": "layout/supporting-pane-scaffold",
         "properties": {
           "paneSizing": {"type": "enum", "value": "fixedEnd"},
           "fixedPaneWidthDp": {"type": "float", "value": 380.0},
           "layoutMode": {
             "type": "enum",
-            "value": "expandedTwoPane"
+            "value": "adaptive"
           },
-          "listPaneVisible": {
+          "mainPaneVisible": {
             "type": "bool",
             "value": true
           },
-          "detailPaneVisible": {
+          "supportingPaneVisible": {
             "type": "bool",
             "value": true
           },
-          "listPanePreferredWidthDp": {
+          "mainPanePreferredWidthDp": {
             "type": "float",
             "value": 760.0
           },
-          "detailPanePreferredWidthDp": {
+          "supportingPanePreferredWidthDp": {
             "type": "float",
             "value": 380.0
           }
@@ -346,7 +346,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "cal-panes",
-        "slot": "listPane"
+        "slot": "mainPane"
       },
       "node": {
         "id": "cal-day",
@@ -2636,7 +2636,7 @@
       "type": "insertNode",
       "parent": {
         "nodeId": "cal-panes",
-        "slot": "detailPane"
+        "slot": "supportingPane"
       },
       "node": {
         "id": "cal-side",
@@ -5516,5 +5516,5 @@
       "afterNodeId": "cal-next-spike-headline"
     }
   ],
-  "expectedDocumentHash": "1ffad3700ea0e3c587b1a636bbbcf0d2b3dd7ab1667d48aa0f04d3a5354b522e"
+  "expectedDocumentHash": "2008401c23e95c43bea7fa01ff704d72e55eae5e435997a0992b584baf5c68cf"
 }

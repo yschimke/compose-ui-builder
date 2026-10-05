@@ -11,6 +11,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -148,11 +149,41 @@ class AdaptiveListDetailTest {
     }
 
   @Test
-  fun `first party list-detail samples render at compact and expanded widths`() {
-    for (sample in listOf("google-gmail-tablet", "google-calendar-tablet")) for (width in
-      listOf(412, 1280)) {
-      runDesktopComposeUiTest(width = width, height = 800) {
-        setContent { MaterialTheme { UiBuilderSurface(designFixtureDocument(sample)) } }
+  fun `first party adaptive samples keep their primary content at every size`() {
+    val samples =
+      mapOf(
+        "google-gmail-tablet" to "Compose 1.9 is stable",
+        "google-calendar-tablet" to "Thu 16 May",
+        "google-docs-tablet" to "Project brief",
+        "google-photos-tablet" to "Photos",
+        "google-keep-tablet" to "Search your notes",
+        "google-play-tablet" to "For you",
+      )
+    for ((sample, primary) in samples) for ((width, height) in
+      listOf(411 to 914, 841 to 701, 1280 to 800)) {
+      runDesktopComposeUiTest(width = width, height = height) {
+        setContent {
+          MaterialTheme { UiBuilderSurface(designFixtureDocument(sample), editorOverlay = false) }
+        }
+        mainClock.advanceTimeBy(1000)
+        onAllNodesWithText(primary)[0].assertIsDisplayed()
+        if (sample == "google-docs-tablet") {
+          if (width == 1280) {
+            onNodeWithText("Reviewer comments").assertIsDisplayed()
+            val mainLeft =
+              onNodeWithText("Project brief").fetchSemanticsNode().boundsInRoot.left - 24f
+            val supportingLeft =
+              onNodeWithText("Reviewer comments").fetchSemanticsNode().boundsInRoot.left - 24f
+            assertTrue(
+              abs(supportingLeft - mainLeft - ((width - mainLeft) * .7f + 12f)) < 2f,
+              "Docs must preserve its 70/30 split and 24 dp gutter",
+            )
+          } else onNodeWithText("Reviewer comments").assertIsNotDisplayed()
+        }
+        if (sample == "google-calendar-tablet") {
+          if (width == 1280) onNodeWithText("Up next").assertIsDisplayed()
+          else onNodeWithText("Up next").assertIsNotDisplayed()
+        }
         val output =
           File(System.getProperty("uiBuilderProjectDir"), "build/adaptive-evidence").apply {
             mkdirs()

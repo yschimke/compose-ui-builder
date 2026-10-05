@@ -1,0 +1,736 @@
+{
+  "schema": "compose-ui-builder-operations/v1-candidate",
+  "documentSchema": "compose-ui-builder-document/v1-candidate",
+  "designId": "google-docs-tablet",
+  "operations": [
+    {
+      "operationId": "create",
+      "type": "createDesign",
+      "title": "Google Docs — Document and reviewer comments",
+      "catalogPin": {
+        "systemId": "m3-catalog",
+        "catalogRevision": "candidate",
+        "capabilityDigest": "candidate",
+        "nativeRuntimeId": "candidate"
+      },
+      "environment": {
+        "widthDp": 1280,
+        "heightDp": 800,
+        "density": 1,
+        "theme": "light",
+        "dynamicColor": false,
+        "locale": "en-US",
+        "fontScale": 1,
+        "layoutDirection": "ltr",
+        "windowPosture": "flat",
+        "browserZoomPercent": 100,
+        "fixedTime": "2024-05-16T12:00:00Z",
+        "animations": "settled",
+        "networkAccess": false,
+        "exportDevices": [
+          "id:pixel_tablet",
+          "id:pixel_fold",
+          "id:pixel_7"
+        ]
+      },
+      "stateVariables": {}
+    },
+    {
+      "operationId": "insert-root",
+      "type": "insertNode",
+      "parent": null,
+      "node": {
+        "id": "root",
+        "componentId": "m3/navigation-suite-scaffold",
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-docs-nav-day",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "docs-nav-day",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": true
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-docs-nav-day-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "docs-nav-day",
+        "slot": "icon"
+      },
+      "node": {
+        "id": "docs-nav-day-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/description"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Documents"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-docs-nav-day-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "docs-nav-day",
+        "slot": "label"
+      },
+      "node": {
+        "id": "docs-nav-day-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Documents"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-docs-nav-week",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "docs-nav-week",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "docs-nav-day"
+    },
+    {
+      "operationId": "insert-docs-nav-week-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "docs-nav-week",
+        "slot": "icon"
+      },
+      "node": {
+        "id": "docs-nav-week-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/group"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Shared"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-docs-nav-week-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "docs-nav-week",
+        "slot": "label"
+      },
+      "node": {
+        "id": "docs-nav-week-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Shared"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-docs-nav-month",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "docs-nav-month",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "docs-nav-week"
+    },
+    {
+      "operationId": "insert-docs-nav-month-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "docs-nav-month",
+        "slot": "icon"
+      },
+      "node": {
+        "id": "docs-nav-month-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/history"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Recent"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-docs-nav-month-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "docs-nav-month",
+        "slot": "label"
+      },
+      "node": {
+        "id": "docs-nav-month-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Recent"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-docs-nav-tasks",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "navigationItems"
+      },
+      "node": {
+        "id": "docs-nav-tasks",
+        "componentId": "m3/navigation-suite-item",
+        "properties": {
+          "selected": {
+            "type": "bool",
+            "value": false
+          }
+        }
+      },
+      "afterNodeId": "docs-nav-month"
+    },
+    {
+      "operationId": "insert-docs-nav-tasks-icon",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "docs-nav-tasks",
+        "slot": "icon"
+      },
+      "node": {
+        "id": "docs-nav-tasks-icon",
+        "componentId": "m3/icon",
+        "properties": {
+          "iconKey": {
+            "type": "enum",
+            "value": "outlined/star"
+          },
+          "contentDescription": {
+            "type": "string",
+            "value": "Starred"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-docs-nav-tasks-label",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "docs-nav-tasks",
+        "slot": "label"
+      },
+      "node": {
+        "id": "docs-nav-tasks-label",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Starred"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelMedium"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-docs-panes",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "root",
+        "slot": "content"
+      },
+      "node": {
+        "id": "docs-panes",
+        "componentId": "layout/supporting-pane-scaffold",
+        "properties": {
+          "layoutMode": {
+            "type": "enum",
+            "value": "adaptive"
+          },
+          "paneSizing": {
+            "type": "enum",
+            "value": "split"
+          },
+          "splitFraction": {
+            "type": "float",
+            "value": 0.7
+          },
+          "paneSpacingDp": {
+            "type": "float",
+            "value": 24
+          },
+          "mainPaneVisible": {
+            "type": "bool",
+            "value": true
+          },
+          "supportingPaneVisible": {
+            "type": "bool",
+            "value": true
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-document",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "docs-panes",
+        "slot": "mainPane"
+      },
+      "node": {
+        "id": "document",
+        "componentId": "layout/lazy-column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 20
+          },
+          "scrollStateKey": {
+            "type": "string",
+            "value": "document-scroll"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "endDp": 24,
+            "topDp": 24,
+            "bottomDp": 24
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-doc-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "document",
+        "slot": "items"
+      },
+      "node": {
+        "id": "doc-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Project brief"
+          },
+          "style": {
+            "type": "enum",
+            "value": "headlineLarge"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-doc-subtitle",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "document",
+        "slot": "items"
+      },
+      "node": {
+        "id": "doc-subtitle",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Product team · Draft for review"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          }
+        }
+      },
+      "afterNodeId": "doc-title"
+    },
+    {
+      "operationId": "insert-doc-intro",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "document",
+        "slot": "items"
+      },
+      "node": {
+        "id": "doc-intro",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "A calmer way to plan the week. This proposal brings the next useful action into focus, while keeping the detail close at hand."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyLarge"
+          }
+        }
+      },
+      "afterNodeId": "doc-subtitle"
+    },
+    {
+      "operationId": "insert-doc-heading",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "document",
+        "slot": "items"
+      },
+      "node": {
+        "id": "doc-heading",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "The opportunity"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleLarge"
+          }
+        }
+      },
+      "afterNodeId": "doc-intro"
+    },
+    {
+      "operationId": "insert-doc-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "document",
+        "slot": "items"
+      },
+      "node": {
+        "id": "doc-body",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "People move between quick checks on a phone and focused work on a larger screen. The document should remain readable in both settings. Contextual comments sit beside the draft when there is room."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyLarge"
+          }
+        }
+      },
+      "afterNodeId": "doc-heading"
+    },
+    {
+      "operationId": "insert-doc-heading2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "document",
+        "slot": "items"
+      },
+      "node": {
+        "id": "doc-heading2",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Design principles"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleLarge"
+          }
+        }
+      },
+      "afterNodeId": "doc-body"
+    },
+    {
+      "operationId": "insert-doc-body2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "document",
+        "slot": "items"
+      },
+      "node": {
+        "id": "doc-body2",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Keep the main task visible. Use clear headings and short paragraphs. Give readers room to scan, and let each pane scroll independently so feedback does not move the document."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyLarge"
+          }
+        }
+      },
+      "afterNodeId": "doc-heading2"
+    },
+    {
+      "operationId": "insert-doc-heading3",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "document",
+        "slot": "items"
+      },
+      "node": {
+        "id": "doc-heading3",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Next steps"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleLarge"
+          }
+        }
+      },
+      "afterNodeId": "doc-body2"
+    },
+    {
+      "operationId": "insert-doc-body3",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "document",
+        "slot": "items"
+      },
+      "node": {
+        "id": "doc-body3",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Review the proposal with the team, capture open questions, and prepare a small prototype for the next research session. We will use that feedback to refine the first milestone."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyLarge"
+          }
+        }
+      },
+      "afterNodeId": "doc-heading3"
+    },
+    {
+      "operationId": "insert-comments",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "docs-panes",
+        "slot": "supportingPane"
+      },
+      "node": {
+        "id": "comments",
+        "componentId": "layout/lazy-column",
+        "properties": {
+          "verticalSpacingDp": {
+            "type": "float",
+            "value": 20
+          },
+          "scrollStateKey": {
+            "type": "string",
+            "value": "comments-scroll"
+          }
+        },
+        "modifiers": [
+          {
+            "type": "fillMaxSize"
+          },
+          {
+            "type": "padding",
+            "startDp": 24,
+            "endDp": 24,
+            "topDp": 24,
+            "bottomDp": 24
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "insert-comments-title",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "comments",
+        "slot": "items"
+      },
+      "node": {
+        "id": "comments-title",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Reviewer comments"
+          },
+          "style": {
+            "type": "enum",
+            "value": "titleLarge"
+          }
+        }
+      }
+    },
+    {
+      "operationId": "insert-comment-author",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "comments",
+        "slot": "items"
+      },
+      "node": {
+        "id": "comment-author",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Alex Morgan · 10:10"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          }
+        }
+      },
+      "afterNodeId": "comments-title"
+    },
+    {
+      "operationId": "insert-comment-body",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "comments",
+        "slot": "items"
+      },
+      "node": {
+        "id": "comment-body",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Can we include the phone experience in the first milestone? The main document should stay visible when this comments pane is hidden."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyLarge"
+          }
+        }
+      },
+      "afterNodeId": "comment-author"
+    },
+    {
+      "operationId": "insert-comment-author2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "comments",
+        "slot": "items"
+      },
+      "node": {
+        "id": "comment-author2",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "Sam Chen · 10:10"
+          },
+          "style": {
+            "type": "enum",
+            "value": "labelLarge"
+          }
+        }
+      },
+      "afterNodeId": "comment-body"
+    },
+    {
+      "operationId": "insert-comment-body2",
+      "type": "insertNode",
+      "parent": {
+        "nodeId": "comments",
+        "slot": "items"
+      },
+      "node": {
+        "id": "comment-body2",
+        "componentId": "m3/text",
+        "properties": {
+          "text": {
+            "type": "string",
+            "value": "The independent scrolling is useful here. Let’s test longer documents and keep the review context beside the relevant section."
+          },
+          "style": {
+            "type": "enum",
+            "value": "bodyLarge"
+          }
+        }
+      },
+      "afterNodeId": "comment-author2"
+    }
+  ],
+  "expectedDocumentHash": "7e27d375f5ec58e766921afeab28a9d06f7e84534d52082ee028120a525cd720"
+}

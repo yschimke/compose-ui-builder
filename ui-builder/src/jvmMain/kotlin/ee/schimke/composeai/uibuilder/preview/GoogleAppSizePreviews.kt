@@ -12,7 +12,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The five Google-app sample designs, drawn at three window sizes each.
+ * The six Google-app sample designs, drawn at three window sizes each.
  *
  * `DesignFixturePreviews.kt` frames every fixture at the environment the design pins, which is what
  * keeps a capture from landing in a corner of its image. These are the other question: what the
@@ -168,3 +168,15 @@ fun GoogleHomeWearSmallExtentPreview() = ExtentDesignFixture("google-home-wear",
 @WearPreviewLargeRoundExtent
 @Composable
 fun GoogleHomeWearLargeExtentPreview() = ExtentDesignFixture("google-home-wear", watchDp = 240)
+
+@Preview(device = "spec:width=1280dp,height=800dp,dpi=160")
+@Composable
+fun DocsExpandedPreview() = SizedDesignFixture("google-docs-tablet")
+
+@Preview(device = "spec:width=841dp,height=701dp,dpi=160")
+@Composable
+fun DocsMediumPreview() = SizedDesignFixture("google-docs-tablet")
+
+@Preview(device = "spec:width=411dp,height=914dp,dpi=160")
+@Composable
+fun DocsCompactPreview() = SizedDesignFixture("google-docs-tablet")
