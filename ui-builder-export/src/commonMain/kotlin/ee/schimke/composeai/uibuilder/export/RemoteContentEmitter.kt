@@ -15,22 +15,12 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The modifier types [RemoteContentEmitter] can write, and therefore the only ones a `remote-m3`
- * component may advertise.
+ * component may advertise (yschimke/compose-preview-server#508). Tests in `:ui-builder` and
+ * `:server` hold the emitter and the catalog to this set.
  *
- * This constant exists because the two lists drifted: the catalog offered 28 modifiers on a widget
- * node, the canvas drew them, and the generator could write three — so `size`, `background` and
- * `weight`, which is how anyone builds a fixed-size coloured button beside a text column that
- * truncates, made a design that exported nowhere (yschimke/compose-preview-server#508). Two tests
- * hold the halves together: one in `:ui-builder` walks every name here through the emitter and
- * fails on a refusal, and one in `:server` fails when a `remote-m3` component advertises a modifier
- * this set does not carry.
- *
- * What is deliberately *absent* is as load-bearing as what is here. `matchParentSize`,
- * `aspectRatio`, `shadow` and `testTag` have no `RemoteModifier` counterpart at
- * `remote-creation-compose` 1.0.0-alpha18; each is refused by name with the reason and the route
- * that does work, rather than being dropped from the chain. The three `align*` modifiers are in
- * here but write no call of their own: a played document aligns content from the container, so they
- * become an argument of the row, column or box above — and are refused anywhere else.
+ * Deliberately absent: `matchParentSize`, `aspectRatio`, `shadow` and `testTag`, which have no
+ * `RemoteModifier` counterpart and are refused by name. The `align*` modifiers write no call of
+ * their own; they become an argument of the enclosing row, column or box.
  */
 public val REMOTE_CONTENT_MODIFIERS: Set<String> =
   setOf(
@@ -97,19 +87,11 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     RemoteMaterial3.components.map { it.componentId }
 
 /**
- * Which widget file a [RemoteContentEmitter] body is being written into, which decides its imports.
- *
- * The two are not variants of one file. [Exported] is the artifact a designer keeps: a
- * `GlanceWearWidget`, the `WearWidgetDocument` it provides, and a `@Preview` per host container
- * shape driven by the shipped `WidgetPreviewParams` providers, because those are the only container
- * specs a file somebody pastes into their own module can name. [NativePreview] is the source this
- * server compiles and renders for the builder's Native pane, which names no widget class at all —
- * it is the body, its brush and the container spec the *design* declares, and nothing downstream of
- * it ever constructs a widget.
- *
- * Null is the third answer and it is not a widget: [InlineRemoteContentExporter] writes a
- * `@RemoteComposable` fragment for somebody else's screen, so none of `androidx.glance.wear` is
- * involved.
+ * Which widget file a [RemoteContentEmitter] body is written into, which decides its imports.
+ * [Exported] is the kept artifact: a `GlanceWearWidget`, its `WearWidgetDocument` and a `@Preview`
+ * per shipped host shape. [NativePreview] is the body the server compiles for the Native pane,
+ * naming no widget class. Null is an [InlineRemoteContentExporter] fragment, with no
+ * `androidx.glance.wear` at all.
  */
 internal sealed interface WidgetSourceShape {
 
@@ -137,30 +119,15 @@ internal class RemoteContentEmitter(
   private val refusals: MutableList<String>,
   private val assets: WidgetAssetBytes = WidgetAssetBytes { null },
   /**
-   * Whether a picture in the **content** carries its bytes rather than naming a parameter.
-   *
-   * Off for everything a designer keeps. A widget's content picture is application data — album
-   * art, an avatar — that changes long after the file is written, so the export asks for it as a
-   * parameter ([imageParameters]) rather than freezing today's bytes into source.
-   *
-   * On for the native preview lane, where the opposite is true. Nothing downstream of it can pass
-   * an argument: the lane compiles a body and renders it, so a parameter is a picture that can only
-   * arrive as the blank placeholder the widget class defaults to — a render showing a hole where
-   * the canvas beside it shows the artwork, which is the one disagreement between the two surfaces
-   * that is this lane's own fault. Inlined, the two draw the same picture.
+   * Whether content pictures carry their bytes rather than becoming parameters ([imageParameters]).
+   * Only for the native preview lane, which has no way to pass an argument and must draw what the
+   * canvas draws.
    */
   private val inlineContentImages: Boolean = false,
   /**
-   * The registry for the **bundle** lane, or null for the inlining one.
-   *
-   * Which of the two is set decides what a picture becomes: a base64 literal the file carries, or a
-   * file beside it and a path the source opens. Nothing else about the walk changes, which is why
-   * this is one nullable field rather than a second emitter
-   * (`docs/design/UI_BUILDER_EXPORT_BUNDLE.md`).
-   *
-   * Independent of [inlineContentImages], and never set with it: that flag is the native preview
-   * lane asking for bytes because it has no argument to pass, and this one is an export shipping
-   * files because it has somewhere to put them.
+   * The registry for the bundle lane (`docs/design/UI_BUILDER_EXPORT_BUNDLE.md`): pictures become
+   * files beside the source rather than base64 literals. Never set together with
+   * [inlineContentImages].
    */
   private val bundled: WidgetAssetContents? = null,
   /**
@@ -291,15 +258,8 @@ internal class RemoteContentEmitter(
   fun stateLocals(): List<String> = stateWrites.values.toList()
 
   /**
-   * The body a widget container with an **empty** content slot gets: a box that fills the frame.
-   *
-   * A method on the emitter rather than a line the widget exporter writes itself, and that is the
-   * whole point of it existing. The imports are the emitter's, derived from what it wrote: a caller
-   * composing `RemoteBox(modifier = RemoteModifier.fillMaxSize())` by hand leaves `RemoteBox`,
-   * `RemoteModifier` and `fillMaxSize` out of [imports] and the generated file does not compile —
-   * which is exactly what the first compilation of the published templates' generated source
-   * caught, for the two empty host frames, after `remote-m3` had published them as templates whose
-   * generated Kotlin nobody compiled.
+   * The body for a widget container with an empty content slot: a box that fills the frame. On the
+   * emitter so its imports are recorded in [imports].
    */
   fun emptyBox(depth: Int): String {
     usesBox = true
@@ -895,32 +855,17 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * A call written from the component RECORD, for a component this emitter has no case for.
+   * A call written from the component record, for components with no hand-written case (those run
+   * first, as they encode more than a signature). Each parameter is filled by mapping the design's
+   * value to the Remote type the record names, refusing by name otherwise.
    *
-   * The hand-written cases above are here because a `remote-material3` component takes Remote
-   * Compose values rather than Kotlin ones — `RemoteText(text: RemoteString)` — and a design
-   * carries `"text": "Next train"`. That is a mapping from a design's value to a Remote value, one
-   * TYPE at a time, and the record already says which type each parameter wants. Six types block
-   * every component this generator cannot write; twenty-five components do not.
+   * Rules, each a refusal rather than a guess:
+   * - one content slot, and it must be last (a trailing lambda);
+   * - every required parameter, or none of it;
+   * - an unauthored `onClick` is `lambdaAction {}`.
    *
-   * So this writes the call the record describes, filling each parameter from the design and
-   * refusing by name when it cannot. It runs only after every hand-written case has declined,
-   * because those encode more than a signature can: `layout/box` chooses `RemoteBox`'s alignment
-   * from the CHILD's, and `m3/text` maps a style token onto the theme.
-   *
-   * Three rules, each a refusal rather than a guess:
-   * - **one content slot.** A component with two `@Composable` slots and no default on either
-   *   cannot be filled from a design that says only "these are my children"; a component whose
-   *   content slot is not last cannot take a trailing lambda.
-   * - **every required parameter, or none of it.** A missing `RemoteFloat` is not a component drawn
-   *   slightly wrong, it is source that does not compile.
-   * - **`onClick` with nothing authored is `lambdaAction {}`.** Nine of this catalog's components
-   *   require an `Action` and no design carries one, which read as an open question until it was
-   *   compiled: a design that says nothing about behaviour means an action that does nothing.
-   *
-   * What it does not do is prove the result compiles. The spellings are compile-verified in
-   * wear-m3-catalog (`RemoteValueVocabularyProbe`), and the generated file beside it is the gate
-   * that will catch this one: `UI_BUILDER_CATALOG_CONTRACT.md` phase 2, item 11.
+   * Spellings are compile-verified in wear-m3-catalog (`RemoteValueVocabularyProbe`); the
+   * generated-file gate is `UI_BUILDER_CATALOG_CONTRACT.md` phase 2, item 11.
    */
   private fun recordCall(node: UiBuilderNode, depth: Int): List<String>? {
     val record = components[node.componentId] ?: return null
@@ -1074,22 +1019,13 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * What a design's event binding becomes, or `lambdaAction {}` when it binds nothing.
+   * What a design's event binding becomes, or `lambdaAction {}` when it binds nothing. Every
+   * document action is a state write, so all become one `valueChange` (spellings verified by
+   * wear-m3-catalog's `RemoteActionVocabularyProbe`). The event key is the parameter without `on`,
+   * as in the Compose lane.
    *
-   * Every action a document can carry is a state WRITE — `set`, `select` and `setText` assign,
-   * `toggle` negates — each naming a variable declared in `stateVariables`. Nothing in the model
-   * calls out to the host, so all of them are one `valueChange`, and the spellings are compiled in
-   * wear-m3-catalog's `RemoteActionVocabularyProbe` rather than guessed here.
-   *
-   * The event key is the parameter without its `on`: `onClick` reads `click`, which is what the
-   * Compose lane's `actionLambda("click", …)` reads for the same component.
-   *
-   * Refusals, each because the alternative is a design that means something else:
-   * - **`selectOrClear`** assigns null, and `valueChange`'s second parameter is a non-null
-   *   `RemoteState<T>`. A design that clears a selection and one that sets it to a sentinel are
-   *   different designs, so this refuses rather than picking one.
-   * - **a variable the document does not declare**, which would compile into a write to nothing.
-   * - **a `toggle` on anything but a boolean**, which is what `!` means and nothing else.
+   * Refused: `selectOrClear` (assigns null, which `valueChange` cannot), undeclared variables, and
+   * `toggle` on a non-boolean.
    */
   private fun actionExpression(node: UiBuilderNode, parameter: TargetParameter): String? {
     val event = parameter.name.removePrefix("on").replaceFirstChar { it.lowercaseChar() }
@@ -1993,17 +1929,8 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * A row's own `verticalAlignment`, as the canvas reads it — **centre when it says nothing**.
-   *
-   * The canvas has always read this property, and its default for a row is `CenterVertically`
-   * rather than Compose's `Top`. The emitter read only the children's `alignVertical` modifiers, so
-   * a row that declared the property, or declared nothing at all, generated a `RemoteRow` with no
-   * alignment and drew top-aligned — a widget laid out differently from the design its author
-   * approved, silently, with no diagnostic (yschimke/compose-preview-server#518).
-   *
-   * The centre is written explicitly rather than left to the callee, because `RemoteRow`'s own
-   * default is `Top` like Compose's. Emitting nothing would keep the two lanes disagreeing; the
-   * argument is what makes them agree.
+   * A row's `verticalAlignment` as the canvas reads it, defaulting to centre. Written explicitly
+   * because `RemoteRow` defaults to `Top` (yschimke/compose-preview-server#518).
    */
   private fun UiBuilderNode.canvasVerticalAlignment(): String =
     when (properties["verticalAlignment"]?.stringOrNull()) {
@@ -2092,22 +2019,10 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * `RemoteCustomComponent(name = "field", …)` — the way host content gets back inside a document.
-   *
-   * A custom component is a `LAYOUT_CUSTOM` operation naming a renderer the *host* registers, so
-   * what the body writes is the hole and its reserved bounds, and never the content filling it. The
-   * node's `content` slot is therefore deliberately not walked: those children are ordinary Compose
-   * the application draws under this name, and emitting them here would put host composables inside
-   * a `@RemoteComposable` body, which is the one thing the vocabulary cannot do.
-   *
-   * The size comes from the node's `widthDp`/`heightDp` rather than from the content, for the
-   * reason the capability states: a player lays a custom component out from the document, which
-   * cannot measure content it does not have. Both absent is legal and emits no size — the component
-   * then takes whatever its parent gives it, which is what an author who set neither asked for.
-   *
-   * `RemoteCustomComponent` is `@RestrictTo(LIBRARY_GROUP)`, which is why both generated files open
-   * with `@file:Suppress("RestrictedApi")`: the call compiles, and the annotation is a lint opinion
-   * about who upstream expects to call it rather than a guarantee it will keep working.
+   * `RemoteCustomComponent(name = "field", …)`: a hole the host fills with its own renderer. The
+   * `content` slot is not walked (host composables cannot go in a `@RemoteComposable` body), and
+   * the size comes from `widthDp`/`heightDp` because the player cannot measure absent content. The
+   * API is `@RestrictTo`, hence the files' `@file:Suppress("RestrictedApi")`.
    */
   private fun customComponent(node: UiBuilderNode, pad: String): String? {
     // `name` is what the operation carries and what the host looks the renderer up by, so a blank
@@ -2144,19 +2059,10 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * `LottieAnimation(json = …)` — Horologist's Lottie **compiler**, called with the animation this
-   * element carries.
-   *
-   * The animation does not travel beside the widget: `LottieAnimation` is a `@RemoteComposable`
-   * that parses the JSON while the document is being built and re-emits it as Remote Compose
-   * operations, so what reaches the watch is a document that draws the animation and nothing else.
-   * That is also why a URL cannot be written here — the generated widget has no network at the
-   * moment it needs the bytes, so the builder resolves the URL into `json` at authoring time and
-   * this refuses the element that still carries only one.
-   *
-   * The JSON goes into a top-level constant rather than inline. A minified animation is a few
-   * thousand columns on one line; put in the body it buries the design in a file somebody has to
-   * read, and put in a constant it sits at the bottom where a reader can skip it.
+   * `LottieAnimation(json = …)` — Horologist's Lottie compiler, which turns the JSON into Remote
+   * Compose operations at build time. A URL-only element is refused because the widget cannot fetch
+   * it; the builder resolves URLs into `json` at authoring time. The JSON goes into a top-level
+   * constant to keep the body readable.
    */
   private fun lottie(node: UiBuilderNode, pad: String): String? {
     val url = node.properties["url"]?.stringOrNull().orEmpty()
@@ -2214,23 +2120,12 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * `RemoteImage(remoteBitmap = albumArt, …)` — a picture in the widget's content, drawn from a
-   * bitmap the **application** supplies.
+   * `RemoteImage(remoteBitmap = …)` — a content picture the application supplies. The asset key
+   * becomes a parameter ([imageParameters]) passed through `provideWidgetData`, because widget
+   * pictures are app data that change after export. The bundle lane defaults the parameter to the
+   * design's shipped artwork (`docs/design/UI_BUILDER_EXPORT_BUNDLE.md`).
    *
-   * The design carries an asset *key* and the builder's registry carries the bytes behind it.
-   * Neither travels into generated source: a widget's picture is application data — album art, an
-   * avatar, a logo — that changes long after this file is written, and baking today's bytes in as a
-   * constant would generate a widget that draws the picture the design was built with forever. So
-   * the key becomes a **parameter**: [imageParameters] names one per distinct key, the content
-   * function takes it, and `provideWidgetData` hands it on. The bundle lane keeps the parameter and
-   * changes only what it defaults to: the design's own artwork, shipped as a file and opened where
-   * the `Context` is, so the generated `@Preview` draws the design rather than a blank bitmap — and
-   * the picture the application supplies still wins (`docs/design/UI_BUILDER_EXPORT_BUNDLE.md`).
-   * That is the same split `docs/UI_BUILDER_GETTING_STARTED.md` already describes for an image
-   * *background*, applied to the content slot rather than to the brush chain.
-   *
-   * `contentDescription` is not optional in the call: upstream declares it `RemoteString?` with no
-   * default, so a node without one passes `null` explicitly rather than leaving it out.
+   * `contentDescription` has no default upstream, so `null` is passed explicitly when absent.
    */
   private fun image(node: UiBuilderNode, pad: String): String? {
     val key = node.properties["assetKey"]?.stringOrNull().orEmpty()
@@ -2345,17 +2240,9 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * Where an asset key's bytes go inside the archive.
-   *
-   * `uibuilder/<design>/<key>.<extension>` — scoped by design because asset paths are global to the
-   * application, and two designs unpacked into one app would otherwise collide on a shared key like
-   * `cover`. No renaming happens inside the segment: an asset key is 1-64 characters of
-   * `[A-Za-z0-9][A-Za-z0-9._-]*`, which is already a safe path segment, so the mapping is injective
-   * and there is nothing to disambiguate. The design id is written through the same alphabet as a
-   * precaution rather than as a rule — a server-issued id already satisfies it.
-   *
-   * The extension is for the person reading the archive. `AssetManager` serves bytes by path and
-   * `BitmapFactory` sniffs them, so nothing at runtime reads it.
+   * Where an asset's bytes go in the archive: `uibuilder/<design>/<key>.<extension>`, scoped by
+   * design so keys like `cover` cannot collide. Asset keys are already safe path segments. The
+   * extension is for humans; nothing at runtime reads it.
    */
   private fun bundleFile(identifier: String, key: String, content: WidgetAssetContent) =
     BundledAsset(
@@ -3084,24 +2971,10 @@ private fun String.remoteVertical(): String =
   }
 
 /**
- * `#FF2196F3` becomes `Color(0xFF2196F3)`, and `#2196F3` becomes `Color(0xFF2196F3)` too.
- *
- * The padding is the whole point. `androidx.compose.ui.graphics.Color` reads its argument as
- * **ARGB**, so splicing a six-digit value straight through produced `Color(0x2196F3)` — alpha
- * `0x00`, a fully transparent colour that compiles, runs and draws nothing
- * (yschimke/compose-preview-server#516). Every colour in a widget went out that way, because
- * `#RRGGBB` is the spelling the commit-time validator asks for: "a colour, which is written as a
- * `#RRGGBB` literal or as a theme role". The documented form was the broken one.
- *
- * It failed silently in the one direction nobody could see. The canvas and the PNG export both
- * treat `#RRGGBB` as opaque, so a design looked right everywhere its author could look, and drew an
- * empty widget on the watch.
- *
- * Six digits mean opaque here exactly as they do in `RcJvmServerRenderer.rcColorToArgb`, which
- * carries the same rule for the RC player's seeded colours and a test that pins it. Anything that
- * is neither six nor eight hex digits is passed through untouched: the validator refuses those
- * before a document can hold one, so inventing an alpha for a value this cannot read would only
- * turn a rejection into a wrong colour.
+ * `#FF2196F3` and `#2196F3` both become `Color(0xFF2196F3)`. Six digits mean opaque, as on the
+ * canvas and in `RcJvmServerRenderer.rcColorToArgb`; spliced through unpadded they produced a
+ * transparent `Color(0x2196F3)` (yschimke/compose-preview-server#516). Anything else passes through
+ * untouched, since the validator refuses it first.
  */
 private fun String.argbLiteral(): String {
   val digits = removePrefix("#").uppercase()

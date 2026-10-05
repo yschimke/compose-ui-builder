@@ -4,22 +4,10 @@ import ee.schimke.composeai.discovery.ComponentRecord
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 
 /**
- * The designs whose Kotlin comes from a **dedicated emitter** rather than from a discovered
- * component record.
- *
- * `ScreenGenerator` writes a call site only where a component record proves one can be written, and
- * that is the right discipline for a Material 3 screen made of catalog components. It is not
- * available to every design this builder authors: a Wear widget ships as a `WearWidgetDocument` of
- * Remote Compose, and a Wear screen's `ScreenScaffold` takes a scroll state that has to agree with
- * the list inside its own content lambda. Neither can be recovered from a record, so both catalogs
- * deliberately have none — and both nevertheless generate source, through [WearWidgetCodeExporter]
- * and [WearScreenCodeExporter].
- *
- * Collected here rather than restated at each caller because three surfaces ask the same question
- * and used to answer it separately: the editor's Code pane, the server's Compose-export action, and
- * the per-catalog `composeCode` capability that decides whether the action is offered at all. A
- * catalog advertised as exportable whose designs then refuse, or a design that generates in the
- * pane and refuses in the export, is exactly the disagreement `:ui-builder-export` exists to end.
+ * The designs whose Kotlin comes from a dedicated emitter rather than a component record: Wear
+ * widgets ([WearWidgetCodeExporter]) and Wear screens ([WearScreenCodeExporter]), whose catalogs
+ * deliberately have no record. One place so the Code pane, the server's export and the
+ * `composeCode` capability agree.
  */
 object RecordFreeExport {
 
@@ -136,23 +124,10 @@ object RecordFreeExport {
       misplacesWearContent(platform, document.nodes.values.map { it.componentId })
 
   /**
-   * Why a Wear design that neither Wear emitter takes does not export, or null when this is not
-   * that design.
-   *
-   * Both emitters route on the root ([ROOT_ONLY_COMPONENT_IDS]), so a `wear-m3/button` dropped onto
-   * an empty design and left as its root is written by neither — and used to fall through to the
-   * record-driven generator, which has no record for any component of a record-free catalog and
-   * answered "no component `wear-m3/button` in this catalog" once per component. All true, none of
-   * it the cause, and nothing in it said what to do. The cause is the root, so it is one reason
-   * that says so and replaces those per-component ones: they were the same symptom repeated, and a
-   * designer reading them was being told the catalog lacked the button they had just drawn from it.
-   *
-   * Answered here, where the routing is decided, so the served export, the editor's Code pane and
-   * Issues panel, and the MCP export — every caller of [generate] with a platform — say the same
-   * sentence. Claimed only on a [UiBuilderCatalogPlatform.WEAR] catalog and only for a design
-   * holding a component of a record-free catalog ([CATALOG_SYSTEM_IDS]): one holding nothing but
-   * shared layout or pack components is still the record-driven generator's question, because a
-   * record can back those.
+   * Why a Wear design neither Wear emitter takes (one whose root is not a widget container or
+   * screen scaffold) does not export, as one sentence instead of a per-component "no record"
+   * refusal. Only for a [UiBuilderCatalogPlatform.WEAR] catalog and a design holding a record-free
+   * component ([CATALOG_SYSTEM_IDS]).
    */
   private fun wearRootRefusal(
     platform: UiBuilderCatalogPlatform,
@@ -196,38 +171,22 @@ object RecordFreeExport {
     }
 
   /**
-   * Components their emitters will only write when they are the document's **root**.
-   *
-   * [generate] routes on the root component id, so one of these anywhere else — a Wear screen
-   * scaffold that has become one item of a board, say — falls through to the record-driven
-   * generator instead, losing the emitter and the authoritative native preview lane that go with
-   * it. An authoring surface that can place a component somewhere other than the root asks this
-   * first.
-   *
-   * Derived from the same two sources [CATALOG_SYSTEM_IDS] is derived from, and for its reason: a
-   * hand-kept list drifts towards claiming a component is placeable while its emitter still demands
-   * the root.
+   * Components their emitters only write as the document's root, so authoring surfaces can refuse
+   * placing them elsewhere. Derived from the same sources as [CATALOG_SYSTEM_IDS].
    */
   val ROOT_ONLY_COMPONENT_IDS: Set<String> =
     (WEAR_WIDGET_CONTAINER_IDS + WearScreenCodeExporter.SCAFFOLD).toSet()
 
   /**
-   * The Kotlin [document] generates on its own, or null when it is an ordinary screen the record
-   * -driven generator owns.
+   * The Kotlin [document] generates on its own, or null when it is an ordinary screen the
+   * record-driven generator owns.
    *
-   * Null rather than a refusal for the screen case: "this is not a widget" is not something to tell
-   * a caller that never asked about widgets, and the record-driven generator is the answer, not a
-   * fallback after a failure.
-   *
-   * @param packageName the package the emitted file declares, or null for a snippet without one —
-   *   which is what the editor's Code pane wants and what an exported *file* must not be.
-   * @param previews whether a Wear **screen**'s file carries the preview fan-out an export artifact
-   *   wants. The native preview lane passes `false` because it compiles this source against a
-   *   catalog's runtime bundle, which carries neither `compose-ui-tooling` nor
-   *   `preview-annotations`; see [WearScreenCodeExporter.export].
-   * @param packComponents the component pack components a Wear **screen** may hold, by component
-   *   id, each as its record — see [WearScreenCodeExporter.export]. A widget takes none: its source
-   *   is Remote Compose, which no pack's Jetpack Compose composable can be played as.
+   * @param packageName the package the file declares, or null for a snippet (the Code pane).
+   *     @param previews whether a Wear screen's file carries its preview fan-out; the native
+   *       preview lane passes `false` because its bundle lacks tooling (see
+   *       [WearScreenCodeExporter.export]).
+   *     @param packComponents pack components a Wear screen may hold, by id, as records; widgets
+   *       take none.
    */
   fun generate(
     document: UiBuilderDocument,
@@ -270,15 +229,8 @@ object RecordFreeExport {
   }
 
   /**
-   * The same question asked of the **saved** document, which is the shape the server holds.
-   *
-   * The kind is decided on `DesignDocumentV1` itself rather than after converting, so a conversion
-   * that fails is a refusal about a design already known to be record-free rather than a silent
-   * fall-through to the record-driven generator — which would then refuse a Wear widget for having
-   * no component record, advice nobody can act on. The conversion narrows the wire's `Long`
-   * revision to the candidate document's `Int`, the same narrowing the browser client makes at its
-   * own boundary; the emitters never read it, and the artifact's provenance header carries the
-   * revision the export was pinned to.
+   * The same for the saved document. The kind is decided before converting, so a failed conversion
+   * is a refusal rather than a fall-through to the record-driven generator.
    */
   fun generate(
     document: DesignDocumentV1,
@@ -310,21 +262,9 @@ object RecordFreeExport {
   }
 
   /**
-   * The tagged overloads above, also answering a Wear design that neither Wear emitter takes.
-   *
-   * The server's **native preview** lane needs [tagNodes], so it cannot use the platform overloads
-   * — and without a platform the two overloads above cannot tell a `wear-m3` design from any other,
-   * so a bare `wear-m3/button` root fell through to the record-driven generator and that lane
-   * reported "no component `wear-m3/button` in this catalog" per component while the export said to
-   * wrap the content in a screen. Passing the catalog's [platform] gets the export's sentence.
-   *
-   * Separate overloads with [platform] last and required rather than a defaulted parameter on the
-   * two above, for binary compatibility (see [nativePreview]): a default argument would replace
-   * their JVM descriptors, and a host compiled against the previous release would fail with
-   * `NoSuchMethodError`. Null behaves exactly as the overloads above.
-   *
-   * Only the Wear root refusal is added: A2UI and inline Remote Compose content still route through
-   * the platform overloads, which take no [tagNodes] because neither writes test tags.
+   * The tagged overloads above, plus the Wear root refusal when [platform] is given (the native
+   * preview lane needs [tagNodes]). Separate overloads rather than a default argument to keep the
+   * published JVM descriptors (see [nativePreview]).
    */
   fun generate(
     document: UiBuilderDocument,
@@ -378,22 +318,10 @@ object RecordFreeExport {
   fun applies(document: DesignDocumentV1): Boolean = document.isRecordFree()
 
   /**
-   * Whether a record-free design's source is **Kotlin a Compose classpath can build**.
-   *
-   * The two record-free emitters are not the same kind of thing, and the native preview lane is
-   * where the difference finally matters. [WearScreenCodeExporter] writes ordinary Wear Compose —
-   * `ScreenScaffold`, `TitleCard`, `Text` — so a host holding a bundle that carries
-   * `androidx.wear.compose:compose-material3` can compile it and render it on the
-   * Android/Robolectric daemon, which is the only honest picture a Wear design has: the browser's
-   * Wasm canvas cannot link an Android AAR and never will
-   * (`docs/design/UI_BUILDER_WEAR_SCREEN.md`). [WearWidgetCodeExporter] writes a
-   * `WearWidgetDocument` — Remote Compose, played rather than composed — which is not a screen this
-   * lane can call, so a widget answers false here and reaches the same lane by [nativePreview]
-   * instead.
-   *
-   * Asked of the emitter's target rather than of the catalog id, for the reason
-   * [CATALOG_SYSTEM_IDS] is derived: a third record-free emitter answers this question by which of
-   * the two shapes it writes, not by being added to a list somebody remembers.
+   * Whether a record-free design's source is Kotlin a Compose classpath can build: Wear screens
+   * are, so the native lane can render them on the Android daemon
+   * (`docs/design/UI_BUILDER_WEAR_SCREEN.md`); Wear widgets are Remote Compose and reach that lane
+   * through [nativePreview].
    */
   fun composeCompilable(document: DesignDocumentV1): Boolean {
     val root = document.roots.singleOrNull()?.let(document.nodes::get) ?: return false
@@ -415,15 +343,8 @@ object RecordFreeExport {
   }
 
   /**
-   * The Kotlin the **native preview lane** compiles for a widget, or why there is none.
-   *
-   * A second entry point beside [generate] rather than a flag on it, because the two produce files
-   * with different contents for different readers, and the one place that could confuse them —
-   * "which of these does an export write?" — is answered by which function was called.
-   * [WearWidgetNativePreviewExporter] carries the full reasoning.
-   *
-   * Null when [document] is not a widget at all, matching [generate]'s "this is not mine" rather
-   * than refusing a caller that never asked about widgets.
+   * The Kotlin the native preview lane compiles for a widget, or why there is none; null when
+   * [document] is not a widget. See [WearWidgetNativePreviewExporter].
    */
   fun nativePreview(
     document: DesignDocumentV1,
@@ -433,19 +354,11 @@ object RecordFreeExport {
   ): NativePreview? = nativePreview(document, packageName, assets, shape, emptyMap())
 
   /**
-   * As above, resolving a component the emitter has no hand-written case for through [components].
+   * As above, resolving components without a hand-written case through [components]. A separate
+   * overload (not a default argument) because v3.21.0 shipped the other descriptor (#691).
    *
-   * A second function rather than a defaulted parameter on the one above, for binary compatibility
-   * rather than taste: this function shipped in the v3.21.0 distribution, and a default argument
-   * generates no compatibility overload — both the direct descriptor and the synthetic
-   * `nativePreview$default` would change, so a mixed-version host could get `NoSuchMethodError`.
-   * [components] therefore has no default of its own: two overloads differing only by a defaulted
-   * tail parameter would make every four-argument call ambiguous. Raised in review on #691.
-   *
-   * @param components the catalog's own component record, by component id — the same map [generate]
-   *   takes as `packComponents` for a widget, and it has to be the same one: a design whose picture
-   *   refuses while its file exports, or the reverse, is a disagreement between two surfaces
-   *   showing the same design.
+   * @param components the catalog's component record by id — the same map [generate] takes as
+   *   `packComponents`, so preview and export cannot disagree.
    */
   fun nativePreview(
     document: DesignDocumentV1,

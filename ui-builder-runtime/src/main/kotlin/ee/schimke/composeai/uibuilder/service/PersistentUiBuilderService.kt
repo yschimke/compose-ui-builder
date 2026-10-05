@@ -61,20 +61,10 @@ public interface UiBuilderCatalogExecutor {
   public fun reference(catalog: CatalogCapabilityV1): CatalogReferenceV1? = null
 
   /**
-   * Whether one property **write** carries a value of the kind the catalog means, asked of the node
-   * as it will be committed.
-   *
-   * [validate] asks about shape — is the component declared, does it declare this property, is the
-   * scalar the right JSON type, is an enumerated value in `allowedValues` — and every expensive
-   * failure of yschimke/compose-preview-server#487 passed it: a colour committed as `string` and
-   * refused at export, an `asset/image` whose key nothing resolved and whose render then failed the
-   * whole design. This is the semantic half, and it is asked **only where a value is chosen** — a
-   * `setProperty`, and each property of an `insertNode` — never document-wide, so a design
-   * committed before a rule existed stays editable everywhere but the field that holds the old
-   * value. The default says nothing, which is what a catalog with no value semantics means.
-   *
-   * A refusal is returned as `INVALID_PROPERTY` naming the node and the field, the way every other
-   * property refusal in the reducer is.
+   * Whether one property write carries a value of the kind the catalog means — the semantic half of
+   * [validate] (yschimke/compose-preview-server#487). Asked only where a value is chosen
+   * (`setProperty`, `insertNode`), never document-wide, so designs predating a rule stay editable.
+   * Refusals are `INVALID_PROPERTY` naming the node and field.
    */
   public fun validateWrite(
     catalog: CatalogCapabilityV1,
@@ -149,16 +139,9 @@ public data class UiBuilderServiceLimits(
   val retainedCommittedOperations: Int = 1_024,
   val retainedOperationOutcomes: Int = 4_096,
   /**
-   * The most whole-document revisions one design may retain.
-   *
-   * This was 1,025, and a retained revision is a **whole copy** of the document and of the position
-   * map. A 40-node design serializes to about 9.5 KB and therefore occupied 11.5 MB of the one
-   * state file — 99.9% of a store whose live documents were 0.1% of it — which is how
-   * `preview.coo.ee` reached 24.5 MB against a 32 MiB ceiling with a handful of designs and nothing
-   * wrong with any of them (yschimke/compose-preview-server#568). Retention depth is not a protocol
-   * promise: `SNAPSHOT_REQUIRED` and the retained-from floor beside it exist precisely so the
-   * service can say how far back it still goes, which leaves this free to be a number chosen for
-   * the sizes designs actually reach. The store this is the stopgap for is
+   * The most whole-document revisions one design may retain. Each is a full copy of the document
+   * and position map, so the old 1,025 dominated the store (yschimke/compose-preview-server#568);
+   * `SNAPSHOT_REQUIRED` lets clients learn how far back retention goes. See
    * `docs/design/UI_BUILDER_STATE_STORAGE.md`.
    */
   val retainedRevisionSnapshots: Int = 128,
@@ -174,35 +157,15 @@ public data class UiBuilderServiceLimits(
    */
   val retainedRevisionBytes: Long = 2L * 1_024 * 1_024,
   /**
-   * The depth [retainedRevisionBytes] may never cut below.
-   *
-   * Below some depth collaboration breaks rather than degrades: a client editing against a
-   * `baseRevision` needs that revision's position snapshot to rebase onto, and undo replays through
-   * retained state. So a design whose documents are large enough to exhaust the budget keeps this
-   * many anyway and is reported through the storage gauge instead — still strictly better than the
-   * 1,025 the same design would have kept before.
-   *
-   * Never raises [retainedRevisionSnapshots]: a caller that deliberately sets a shallow ceiling
-   * means it, and a floor above it is read as "as deep as the ceiling allows" rather than as a
-   * contradiction to refuse construction over.
+   * The depth [retainedRevisionBytes] may never cut below, since rebasing and undo need retained
+   * state. Never raises [retainedRevisionSnapshots].
    */
   val minimumRetainedRevisionSnapshots: Int = 32,
   /**
-   * The byte budget one design's undo state may hold, applied to `acceptedOperations` and to
-   * `tombstones` separately.
-   *
-   * Measuring the live store is what put this here. The guess was that retained revisions held the
-   * bytes; they held 35% of it. Undo bookkeeping held **55%** — `acceptedOperations` alone was
-   * 29.9% — and one 386-node design spent 4.29 MB across **ten** accepted operations, about 430 KB
-   * each. The cause is structural: `StructureChangeV1` carries `before` and `after` as whole node
-   * subtrees, so one edit near the root of a large design stores that subtree twice, and
-   * `acceptedOperations` was bounded only by [retainedOperationOutcomes] — a count of 4,096 with no
-   * relation to how big a record is. Four thousand records at that size is a design that alone
-   * exceeds any ceiling, and nothing stood between the store and it.
-   *
-   * A count cannot bound this because the records differ in size by three orders of magnitude. The
-   * budget is walked newest-first and stops as soon as it is exceeded, so the work one commit does
-   * is proportional to the budget rather than to the history behind it.
+   * The byte budget one design's undo state may hold, applied to `acceptedOperations` and
+   * `tombstones` separately. A count cannot bound these: `StructureChangeV1` records carry whole
+   * subtrees and vary by orders of magnitude. Walked newest-first, so each commit's work is
+   * proportional to the budget.
    */
   val retainedUndoBytes: Long = 4L * 1_024 * 1_024,
   /**
@@ -310,18 +273,9 @@ public class PersistentUiBuilderService(
   UiBuilderBranchPort {
 
   /**
-   * The constructor this class published before it learned about icon outlines, defaults and all.
-   *
-   * Both halves of the released shape have to come back, which is the part the first attempt got
-   * wrong. A Kotlin default argument compiles into *two* JVM constructors — the plain
-   * seven-parameter one and a synthetic `(…, int, DefaultConstructorMarker)` that a caller omitting
-   * a defaulted argument invokes — and adding an eighth parameter with a default replaces both.
-   * Restoring only the plain one still leaves `NoSuchMethodError` for every consumer compiled
-   * against `PersistentUiBuilderService(store, catalogs, exporter)`.
-   *
-   * So the defaults live here rather than on the primary constructor: this emits exactly the two
-   * descriptors 3.24 published, and the primary — which now has no defaults at all — adds the
-   * eight-parameter one beside them without touching either.
+   * The constructor published before icon outlines existed. A defaulted parameter compiles to two
+   * JVM constructors (plain and synthetic `DefaultConstructorMarker`), so the defaults live here to
+   * keep exactly the two descriptors 3.24 published.
    */
   public constructor(
     designStore: UiBuilderDesignStateStore,
@@ -515,30 +469,12 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * Why one stored design cannot be served, held rather than thrown.
+   * Why one stored design cannot be served, held rather than thrown so one bad design never stops
+   * the server from starting. Requests naming it get the reason, and `diagnostics()` counts them.
+   * Owners can still delete it and `adminDesignDocument` can still read it out.
    *
-   * A design the current catalog or limits no longer accept used to be fatal: the check ran in
-   * `init`, so the service could not be constructed, so **the server did not start** — over one
-   * design, in a store that may hold a thousand. And it is not a rare shape. A catalog revision
-   * moves and every design pinned to the old one stops resolving; an operator stops serving a
-   * catalog, or tightens a node limit, and everything authored against it is unloadable. The blast
-   * radius of a content change had no relationship to its cause.
-   *
-   * So the check moved to the point of use. Every design loads, one that cannot be served is
-   * recorded here with the reason, and any request naming it is answered with that reason. A design
-   * nobody asks for costs nothing, the rest of the store works, and `diagnostics()` counts them so
-   * this is visible without opening one.
-   *
-   * What it must not become is a one-way door. A quarantined design is still its owner's content as
-   * much as the operator's: the header a quarantine carries names who owns it, so the owner can
-   * delete it from the same file manager that lists it, and `adminDesignDocument` reads the stored
-   * document out regardless of whether it can be served — retiring it with [adminDeleteDesign] is a
-   * choice rather than the only move left.
-   *
-   * The line this does **not** cross is integrity. A state file whose checksum does not match, that
-   * is truncated, or that declares a format this build cannot read is still refused by the storage
-   * layer before any of this runs, and `restoreBackup` is the recovery. Trusting a file that failed
-   * those checks would be worse than not starting; carrying a design the catalog outgrew is not.
+   * Integrity is a different line: checksum, truncation or unknown-format failures are still
+   * refused by the storage layer (`restoreBackup` recovers).
    */
   private data class UnusableDesign(
     val code: ServiceErrorCodeV1,
@@ -562,16 +498,8 @@ public class PersistentUiBuilderService(
   )
 
   /**
-   * Computed once at load and then maintained, rather than fixed for the life of the process.
-   *
-   * A frozen set would make quarantine a one-way door: a design repaired through
-   * [adminRepairDesign] would go on being refused until a restart, and a *deleted* one would leave
-   * its entry behind — so its id would answer with a stale catalog error instead of "not found",
-   * and re-creating a design under that id could never be served. Both are the same mistake this
-   * whole mechanism exists to undo, one scope smaller.
-   *
-   * Written under [lock] with every other state change; concurrent because [execute] reads it
-   * before taking the lock, and export runs outside it entirely.
+   * Maintained after load, so a repaired or deleted design stops being refused without a restart.
+   * Written under [lock]; concurrent because [execute] and exports read it outside the lock.
    */
   private val unusableDesigns: MutableMap<String, UnusableDesign> =
     ConcurrentHashMap(
@@ -594,57 +522,23 @@ public class PersistentUiBuilderService(
     )
 
   /**
-   * The designs the store could not read, by the id each is reported under, with what the store
-   * still knows about them.
-   *
-   * [unusableDesigns] answers "may this request name this design"; this answers "who does this
-   * quarantined design belong to, and what was it called". The header a quarantine carries is the
-   * access record read at load, which is what lets [delete] and [list] treat the design as its
-   * owner's rather than an operator's orphan; a record without one (a header this build could not
-   * read) has nobody left to check against and stays the operator's.
-   *
-   * Written under [lock] only — loaded once, removed by the two paths that retire a quarantine.
+   * Designs the store could not read, with the header it still holds, so [delete] and [list] can
+   * treat them as their owner's. Without a header they stay the operator's. Written under [lock]
+   * only.
    */
   private val quarantinedDesigns: MutableMap<String, StoredQuarantineV3> =
     ConcurrentHashMap(loadedPersistence.quarantined)
 
   /**
-   * The same design, pinned to the catalog reference this deployment actually serves.
+   * The same design pinned to the catalog reference this deployment actually serves.
    *
-   * ## The half a stored design was left in
+   * `--ui-builder-published-catalogs` changes a catalog's reference without changing what fits it.
+   * The server accepts both (#816), but the browser compares the pin against the served catalog and
+   * refused every export (#818). Re-pinning here keeps that knowledge server-side; every downstream
+   * `catalogs.resolve(...)` sees the result. In memory only — see [persistRePins].
    *
-   * `--ui-builder-published-catalogs` changes a catalog's `benchmark`, and therefore the reference
-   * built from it, without changing the catalog a document fits. `acceptedReferences` (#816) made
-   * the **server** accept both sources' references for one `systemId`, so a design written before
-   * the flip opens again instead of reporting `CATALOG_UNAVAILABLE`. The browser was not party to
-   * that: it holds the served catalog and nothing else, so `ExportValidation.validateCatalogPin`
-   * compared the stored pin field by field against the catalog in front of it, put
-   * `CATALOG_PIN_MISMATCH` in the Issues panel, and — because the Compose and SVG projections share
-   * that fail-closed validator — refused every export. The design came back and could not be used
-   * (#818).
-   *
-   * ## Why re-pinning, and why here
-   *
-   * Teaching the editor about alternate pins means shipping the other source's reference to the
-   * client, which turns a server-side compatibility detail into part of the wire contract and
-   * leaves two validators that have to agree about it forever. Re-pinning keeps that knowledge
-   * where it already lives, and the document the editor receives simply names the catalog it is
-   * being shown.
-   *
-   * This runs where `persisted.designs` is built, so every downstream `catalogs.resolve(...)` —
-   * `unusableReason` included, which is computed from this map — sees the re-pinned document
-   * without each call site needing to know. In memory only: nothing is written on a read path, and
-   * the stored file converges at the next save on its own, because a write carries
-   * `document.catalogPin` forward rather than re-stamping it.
-   *
-   * ## The conditions, which are the whole safety argument
-   *
-   * The pin must resolve to a catalog this deployment serves, name that catalog's **own
-   * `systemId`**, and the document must **validate against it**. That last clause is what keeps the
-   * drift check intact: a document that has drifted from the catalog fails validation, is not
-   * re-pinned, and goes on failing for its own reasons under its own pin. A design that is unusable
-   * for a topology or limit reason is untouched here as well — this changes one field of one
-   * document and nothing about what is checked afterwards.
+   * Safe because the pin must resolve to a served catalog with the same `systemId` and the document
+   * must validate against it, so drifted documents keep failing under their own pin.
    */
   private fun PersistedDesignV1.rePinned(): PersistedDesignV1 {
     val pin = document.catalogPin
@@ -667,35 +561,13 @@ public class PersistentUiBuilderService(
   private data class RePinOutcome(val designs: Int = 0, val failure: String? = null)
 
   /**
-   * Writes the re-pinned designs through to the store, once, at startup.
+   * Writes the re-pinned designs through to the store once at startup, so stored pins converge
+   * before a synthesised catalog is retired (#819 step 3) even for designs nobody edits. Only moved
+   * pins are written.
    *
-   * ## Why this is not left in memory
-   *
-   * The re-pin above converges the stored file "at the next save on its own", and a design nobody
-   * edits is never saved — so its stored pin keeps naming the source it was written against for as
-   * long as nobody opens it. That is survivable only while BOTH references are still computable,
-   * which is the job `acceptedReferences` does by keeping the other source's catalog resident. The
-   * moment a synthesised catalog is retired (#819 step 3), its reference stops existing in the
-   * process, `resolve` returns null for an old pin, and `rePinned` cannot help — it asks `resolve`
-   * first. Every design not edited since the flip would go `CATALOG_UNAVAILABLE` permanently: the
-   * outage of 2026-09-13, made durable.
-   *
-   * So the convergence has to have happened BEFORE the fallback is removed, and it has to happen
-   * for designs nobody touches. One write at boot does that, and only for the designs whose pin
-   * actually moved — a store that is already converged writes nothing and the next boot is free.
-   *
-   * ## Why a failure here is not fatal
-   *
-   * The in-memory re-pin has already been applied, so this process serves correctly whether or not
-   * the write lands; what a failure costs is the convergence, which the next boot retries. Failing
-   * startup over it would put back exactly the trap the surrounding design removed — a content
-   * condition taking the whole server down — and a read-only or full store is a condition an
-   * operator acts on, not one the server should die of. It is reported instead: counted in
-   * [diagnostics] and carried to `status.json`.
-   *
-   * The count is what was attempted rather than what provably landed. [UiBuilderDesignStore.commit]
-   * is per design, so a failure part-way through leaves some written and some not, and claiming a
-   * number for that would be a guess; the failure string beside it is the honest signal.
+   * Not fatal: the in-memory re-pin already serves correctly, and a failure is reported via
+   * [diagnostics]. The count is what was attempted, since [UiBuilderDesignStore.commit] is per
+   * design.
    */
   private fun persistRePins(): RePinOutcome {
     // Identity, not equality: `rePinned` returns the receiver untouched when it changes nothing, so
@@ -789,24 +661,10 @@ public class PersistentUiBuilderService(
   override suspend fun execute(call: UiBuilderServiceCall): UiBuilderServiceResponse {
     call.request.designId()?.let { designId ->
       unusableDesigns[designId]?.let { unusable ->
-        // Three exceptions, and only three.
-        //
-        // A design the CATALOG outgrew may still be asked what moving it would cost. Refusing that
-        // refuses the only repair such a design has -- the designs the preview was written for are
-        // exactly the ones quarantined here, so a gate in front of it would put the feature
-        // permanently out of their reach.
-        //
-        // And a design may be deleted by whoever owns it, however wrong the document itself is --
-        // key mismatch, node count, quota, topology, a catalog nobody serves, files the store
-        // cannot read. The listing keeps an unusable design visible and the page that lists it
-        // offers the owner a delete button; a delete that always answered with the reason it is
-        // unusable is not a warning, it is a trap -- corruption would then be removable only by an
-        // operator with an admin token. Ownership is [delete]'s question, answered from the access
-        // record the design or its quarantine carries, not this gate's.
-        //
-        // A design whose files loaded may also be renamed by an actor with write, for the same
-        // reason one step smaller: naming a design is not serving it. One the STORE could not read
-        // has no document in memory to rename, and stays refused.
+        // Three exceptions to the unusable-design gate:
+        // - a catalog upgrade preview, the only repair a catalog-outgrown design has;
+        // - delete by the owner, however broken the document ([delete] checks ownership);
+        // - rename by a writer, for designs whose files loaded (an unreadable one has no document).
         val previewing =
           (call.request is UiBuilderServiceRequest.PreviewCatalogUpgrade ||
             call.request is UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade) &&
@@ -847,16 +705,9 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * An asset write is a commit without an operation.
-   *
-   * It moves the revision and the sequence exactly as an accepted batch does — the document's bytes
-   * changed, so its hash, its retained snapshot and every `baseRevision` a client quotes must move
-   * with it — but no `CommittedOperationV1` can describe it, because the released mutation set has
-   * no asset write. So the delta log is cut here: `history` is emptied, which makes
-   * `retainedFromSequence` this sequence, and a subscriber behind it is caught up with a whole
-   * snapshot instead of a delta it could not replay. Live subscribers get that snapshot now. It is
-   * not undoable, for the same reason: undo compensates an operation record, and there is none.
-   * Re-pointing the key, or deleting the node that names it, is how it is taken back.
+   * An asset write is a commit without an operation: revision and sequence move, but no
+   * `CommittedOperationV1` can describe it, so `history` is cut here and subscribers get a whole
+   * snapshot. Not undoable; re-pointing the key or deleting the node takes it back.
    */
   private fun putAssetLocked(write: UiBuilderAssetWrite): LockedExecution {
     val store =
@@ -1687,17 +1538,9 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * See [UiBuilderServiceRequest.DeleteDesign] for who may. The removal itself is the operator's
-   * [adminDeleteDesign], reached through an ownership check rather than an admin token; the two
-   * share [removeLocked] so they cannot disagree about what "gone" means.
-   *
-   * Reached for an unusable design too — [execute] lets the request past its guard, because a
-   * corrupted design its owner cannot delete is a trap the file manager pages straight into. A
-   * design the store could not read is removed through its quarantine record: when the record
-   * carries the header the store read at load, the access record answers [ownedBy] and the owner
-   * retires it as their own; when it does not — a header this build could not read — there is
-   * nothing left to check ownership against, and the answer is the reason it is quarantined, which
-   * is the operator's door.
+   * See [UiBuilderServiceRequest.DeleteDesign] for who may; shares [removeLocked] with
+   * [adminDeleteDesign]. Unusable designs are deletable by their owner; an unreadable one is
+   * checked against its quarantine header, and without one stays the operator's to retire.
    */
   private fun delete(actor: AuthenticatedUiBuilderActor, designId: String): LockedExecution {
     val design = persisted.designs[designId]
@@ -1944,16 +1787,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * What moving [request]'s design to another catalog would cost it — without moving it.
-   *
-   * Read access is enough, because this writes nothing: the stored design is untouched, and the
-   * candidate travels back to the caller to be looked at. That is the whole point of a preview on a
-   * design that has stopped opening — an owner decides whether a move that drops `letterSpacingSp`
-   * is the repair they want, rather than discovering it after the fact.
-   *
-   * BLOCKED rather than an error where the candidate still does not validate. A refusal here is an
-   * answer to the question that was asked ("can this design move?"), not a failure to answer it,
-   * and the changes and issues beside it are what say why.
+   * What moving [request]'s design to another catalog would cost, without moving it. Read access
+   * suffices. A candidate that still does not validate is BLOCKED (an answer), not an error.
    */
   private fun previewUpgrade(
     actor: AuthenticatedUiBuilderActor,
@@ -4901,22 +4736,10 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * Replace a quarantined design's document with a repaired one, or say why the repair is not one.
-   *
-   * The other half of [adminDesignDocument] and the whole point of holding a design back rather
-   * than refusing to start: a rule changed under a stored document, so the operator edits the
-   * document to satisfy the rule and puts it back. The candidate is checked against exactly the
-   * conditions that quarantined the original, so a repair that does not repair is refused with the
-   * remaining reason instead of being stored and quarantined again.
-   *
-   * Deliberately restricted to a design that is currently unusable. A design the host serves has
-   * live editors, a revision history and subscribers reading a sequence, and replacing its document
-   * underneath them is a mutation — [UiBuilderServiceRequest.ApplyOperation] is how that is done,
-   * with authorization and a sequence. A quarantined design has none of those by construction: it
-   * refuses every request that names it, so nothing is watching and its history describes a
-   * document this build could not load anyway. That history is therefore replaced rather than
-   * extended, and the sequence continues upward so no client can mistake the repaired design for
-   * the old one.
+   * Replace a quarantined design's document with a repaired one, checked against the same
+   * conditions that quarantined it. Restricted to unusable designs, which nothing watches; their
+   * history is replaced and the sequence continues upward so no client mistakes the repaired design
+   * for the old one.
    */
   override fun adminRepairDesign(designId: String, documentJson: String): UiBuilderAdminRepair =
     lock.withLock {

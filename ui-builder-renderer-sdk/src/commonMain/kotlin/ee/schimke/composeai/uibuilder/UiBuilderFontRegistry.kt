@@ -18,9 +18,8 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-// Moved from `:ui-builder` into the renderer SDK so a catalog's own runtime resolves a design's
-// typefaces exactly as the editor's canvas does: the same manifest, the same fallback to the host's
-// Google Fonts route, the same names.
+// Lives in the renderer SDK so a catalog runtime resolves typefaces exactly as the editor canvas
+// does.
 
 /** One file of a vendored family, as `assets/rc-fonts/fonts.json` lists it. */
 @Serializable data class VendoredFontFile(val file: String, val weight: Int = 400)
@@ -55,30 +54,17 @@ fun parseVendoredFontManifest(text: String): VendoredFontManifest =
   manifestJson.decodeFromString(VendoredFontManifest.serializer(), text)
 
 /**
- * The vendored families, loaded one at a time on first use.
+ * The vendored families, loaded lazily one at a time on first use (the full set is ~4.5 MB).
+ * [loaded] is snapshot state, so readers recompose when a family arrives. Nothing, not even the
+ * manifest, loads until the first [request] or [loadFamilies].
  *
- * Lazy because the whole set is about 4.5 MB (Roboto Flex alone is 1.7 MB) and a design uses one
- * family, most use none. A family loads when something asks for it — the renderer, for the family
- * its document names, or the typeface picker, for the options it is about to draw — and [loaded] is
- * snapshot state, so whatever read the missing family recomposes when it arrives.
+ * A family that fails to load is left out rather than retried, so a missing file cannot become a
+ * request loop. Names outside the manifest go to [readRemoteFont] when the host has a font service
+ * (e.g. any Google Fonts family).
  *
- * Nothing happens at construction, the manifest included: a page that never needs a font makes no
- * font request, and one that does makes it after the first frame, never in the way of it. The
- * manifest is fetched by the first [request] or [loadFamilies], once.
- *
- * A family that fails to load is left out rather than retried: the renderer's answer to an
- * unresolved name is the default face, which is the right answer for a font the host cannot fetch
- * too, and retrying on every recomposition would turn one missing file into a request loop.
- *
- * A name the manifest does not list is not the end of it when the host can reach a font service:
- * [readRemoteFont] asks it for the family by name, which is how a design that names any Google
- * Fonts family — the usual result of an agent picking a face — draws in it rather than in the
- * default face. Without one, such a name resolves to nothing, as before.
- *
- * @param readManifest the manifest's text; failures leave the registry with no families.
- * @param readFont a manifest file's bytes, by the name the manifest gives it.
- * @param readRemoteFont a family's file at one weight, by family name, from outside the manifest;
- *   null for a host with no such service.
+ * @param readManifest the manifest's text; failures leave the registry with no families. @param
+ *   readFont a manifest file's bytes, by the name the manifest gives it. @param readRemoteFont a
+ *   family's file at one weight, by family name; null for a host with no such service.
  */
 class UiBuilderFontRegistry(
   private val scope: CoroutineScope,
