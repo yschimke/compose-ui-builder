@@ -3,9 +3,9 @@
 **Status: experimental opt-in build lane implemented, 2026-10-05.** Strict project-file contracts,
 tracked input resolution, owned model generation, stateless Compose generation and a JVM consumer
 build are implemented. Versioned production metadata and explicit editor file round trips are
-implemented against the published contracts 3.18.0 release. Single-file export remains
-the default. Nullable fallbacks and keyed component lists are implemented against a companion
-contracts change (release pin pending). UI-value callbacks and a packaged Gradle plugin remain proposed.
+implemented against published contracts 3.19.0, including nullable fallbacks and keyed component
+lists. Single-file export remains the default. UI-value callbacks and a packaged Gradle plugin remain
+proposed.
 The experimental file schema does not extend the current design-service wire schema.
 
 The project owns the design and its declared Kotlin API. A build turns those inputs into stateless
@@ -469,7 +469,7 @@ Development of this change uses the existing contracts composite override:
 ```
 
 Use a JDK 17 Gradle runtime for the composite's unpinned modules; the editor selects its own JDK 21
-toolchain. Normal builds use published contracts 3.18.0 and require no composite override.
+toolchain. Normal builds use published contracts 3.19.0 and require no composite override.
 The publication/consumer gate verifies generation from staged builder artifacts and published
 contracts dependencies in an independent checkout.
 
@@ -504,6 +504,5 @@ and current callback payloads. The visual body still comes from the pinned `Scre
 Kotlin PSI identifies each synthetic placement and its parameter list; exact source ranges adapt
 those calls to composable slots, and the stateless wrapper supplies the typed null/list logic.
 
-The new wire fields belong to a companion `compose-preview-contracts` change. This builder PR
-remains draft until that change is released and pinned; development uses the documented contracts
-composite override. Re-run the published external-consumer gate after the released pin lands.
+The wire fields are published in `compose-preview-contracts` 3.19.0. Normal builds and the
+external-consumer gate resolve this release from Maven Central without a composite override.

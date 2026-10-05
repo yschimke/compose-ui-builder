@@ -54,8 +54,8 @@ The versioned `compose-ui-builder-production/v1` schema is deliberately separate
 cannot silently drop the declared API. The current lane supports non-null scalar reads through
 nested generated and external models, and separate reusable component bodies. Nullable scalar reads require explicit literal fallbacks. `DynamicLibrary.uid` demonstrates
 nullable component branches and keyed repetition over typed item models. Assets and component
-placement modifiers/slots still fail generation. The nullable/list wire additions currently require
-the companion contracts composite checkout; its release pin is pending.
+placement modifiers/slots still fail generation. The nullable/list wire declarations use published
+contracts 3.19.0; no composite checkout is required.
 Explicit event bindings support zero-argument UI callbacks such as `onClick`, reporting either no
 payload or one declared data-path payload. Callbacks accepting UI values (such as text changes)
 remain unsupported. Required application callbacks never receive no-op defaults.
