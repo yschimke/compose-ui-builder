@@ -55,6 +55,14 @@
     "sha256": "98c9ccb23feafb5ace37eca688b63e1f3b876f27beae90c385d5c4a2272c1568",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/DesignFixturePreviews.kt"
   },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.DesignFixturePreviewsKt.DesignDocsTabletPreview_width=1280dp,height=800dp,dpi=160": {
+    "captureLabel": "",
+    "functionName": "DesignDocsTabletPreview",
+    "module": "ui-builder",
+    "renderBasename": "DesignDocsTabletPreview_width_1280dp_height_800dp_dpi_160-e533184f.png",
+    "sha256": "41c05e6c6f791830d424d7a5fa32de5708003bccdd84af7bde40eca0a034d2d2",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/DesignFixturePreviews.kt"
+  },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.DesignFixturePreviewsKt.DesignGmailTabletPreview_width=1280dp,height=800dp,dpi=160": {
     "captureLabel": "",
     "functionName": "DesignGmailTabletPreview",
@@ -261,6 +269,30 @@
     "module": "ui-builder",
     "renderBasename": "CalendarMediumPreview_width_841dp_height_701dp_dpi_160-0a8f7dc6.png",
     "sha256": "e58e7c1b240d0b538076577de42892c44e5fce050c80244fb3a0304a39590d61",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/GoogleAppSizePreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.GoogleAppSizePreviewsKt.DocsCompactPreview_width=411dp,height=914dp,dpi=160": {
+    "captureLabel": "",
+    "functionName": "DocsCompactPreview",
+    "module": "ui-builder",
+    "renderBasename": "DocsCompactPreview_width_411dp_height_914dp_dpi_160-e023e4e8.png",
+    "sha256": "9a41ddab91778ce8f8d674649b5b1b158833f03e714fcbdb6be48942f243380a",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/GoogleAppSizePreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.GoogleAppSizePreviewsKt.DocsExpandedPreview_width=1280dp,height=800dp,dpi=160": {
+    "captureLabel": "",
+    "functionName": "DocsExpandedPreview",
+    "module": "ui-builder",
+    "renderBasename": "DocsExpandedPreview_width_1280dp_height_800dp_dpi_160-0f6a5770.png",
+    "sha256": "41c05e6c6f791830d424d7a5fa32de5708003bccdd84af7bde40eca0a034d2d2",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/GoogleAppSizePreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.GoogleAppSizePreviewsKt.DocsMediumPreview_width=841dp,height=701dp,dpi=160": {
+    "captureLabel": "",
+    "functionName": "DocsMediumPreview",
+    "module": "ui-builder",
+    "renderBasename": "DocsMediumPreview_width_841dp_height_701dp_dpi_160-7ed0b0ce.png",
+    "sha256": "4a7314bb54de30f58f8da6fb929ad8cc6a4813338ab89fe7054dd294bb182768",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/GoogleAppSizePreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.GoogleAppSizePreviewsKt.GmailCompactPreview_width=411dp,height=914dp,dpi=160": {
