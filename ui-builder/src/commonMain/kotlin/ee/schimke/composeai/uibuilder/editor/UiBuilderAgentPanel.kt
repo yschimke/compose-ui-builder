@@ -135,33 +135,35 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
         )
       }
     }
-    Row(
-      Modifier.fillMaxWidth()
-        .heightIn(min = 48.dp)
-        .toggleable(
-          value = includeSetup,
-          role = Role.Checkbox,
-          onValueChange = { draft = draft.copy(connectedBefore = !it) },
-        ),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-      Checkbox(checked = includeSetup, onCheckedChange = null)
-      Text("Include setup instructions")
-    }
-    Row(
-      Modifier.fillMaxWidth()
-        .heightIn(min = 48.dp)
-        .toggleable(
-          value = customizePrompt,
-          role = Role.Checkbox,
-          onValueChange = { customizePrompt = it },
-        ),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-      Checkbox(checked = customizePrompt, onCheckedChange = null)
-      Text("Customize prompt")
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      Row(
+        Modifier.weight(1f)
+          .heightIn(min = 48.dp)
+          .toggleable(
+            value = includeSetup,
+            role = Role.Checkbox,
+            onValueChange = { draft = draft.copy(connectedBefore = !it) },
+          ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+      ) {
+        Checkbox(checked = includeSetup, onCheckedChange = null)
+        Text("Include setup", style = MaterialTheme.typography.bodySmall)
+      }
+      Row(
+        Modifier.weight(1f)
+          .heightIn(min = 48.dp)
+          .toggleable(
+            value = customizePrompt,
+            role = Role.Checkbox,
+            onValueChange = { customizePrompt = it },
+          ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+      ) {
+        Checkbox(checked = customizePrompt, onCheckedChange = null)
+        Text("Customize", style = MaterialTheme.typography.bodySmall)
+      }
     }
     if (customizePrompt) {
       OutlinedTextField(
