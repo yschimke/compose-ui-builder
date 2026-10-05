@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.84.0](https://github.com/yschimke/compose-ui-builder/compare/v3.83.0...v3.84.0) (2026-10-05)
+
+
+### Features
+
+* **codegen:** lower explicit production event bindings ([#472](https://github.com/yschimke/compose-ui-builder/issues/472)) ([1454a84](https://github.com/yschimke/compose-ui-builder/commit/1454a84825eedd7e030734d91319372bf257a0c5))
+
+
+### Bug Fixes
+
+* align adaptive app samples with their content relationships ([#471](https://github.com/yschimke/compose-ui-builder/issues/471)) ([13276f6](https://github.com/yschimke/compose-ui-builder/commit/13276f6be8e90010af69476add1406dbf5403471))
+* simplify agent prompt copying and customization ([#468](https://github.com/yschimke/compose-ui-builder/issues/468)) ([589b9d8](https://github.com/yschimke/compose-ui-builder/commit/589b9d8f65d2d9eb4f32ee3c39c6b3a428adb47b))
+* **ui-builder:** re-probe the canvas extent when a theme font loads ([#477](https://github.com/yschimke/compose-ui-builder/issues/477)) ([00ff181](https://github.com/yschimke/compose-ui-builder/commit/00ff1818abc5b28510fa50eed00077520dd461f0))
+
+
+### Performance Improvements
+
+* defer optional catalogs until the design paints ([#473](https://github.com/yschimke/compose-ui-builder/issues/473)) ([0b2c791](https://github.com/yschimke/compose-ui-builder/commit/0b2c7912acba1f3bce55c63be0b773e1a95f52c0))
+* overlap independent editor startup requests ([#476](https://github.com/yschimke/compose-ui-builder/issues/476)) ([6034c25](https://github.com/yschimke/compose-ui-builder/commit/6034c25b4213068d3a1ce592ca4911b35a4a3b9b))
+
 ## [3.83.0](https://github.com/yschimke/compose-ui-builder/compare/v3.82.0...v3.83.0) (2026-10-04)
 
 
