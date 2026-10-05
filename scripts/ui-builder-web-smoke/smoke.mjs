@@ -17,6 +17,7 @@
 // - `offline`: the phone again with `?offline=1`, which registers the service worker; once it
 //              controls the page, a reload with the network cut must still come up ready.
 // - `cache`:    restart Chromium twice with the same disk profile; require compiled-Wasm cache hits.
+// - `live`:     render a saved snapshot before fetching optional catalogs; tolerate their failure.
 
 import { createServer } from 'node:http';
 import { readFile, mkdir, writeFile, mkdtemp, rm } from 'node:fs/promises';
@@ -24,6 +25,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 import { verifyCompiledWasmCache } from './cache.mjs';
+import { verifyDesignFirstStartup } from './live-startup.mjs';
 
 const root = resolve(process.argv[2] ?? 'ui-builder/build/wasmDist');
 const shots = process.argv[3] ? resolve(process.argv[3]) : null;
@@ -49,10 +51,10 @@ const RUNS = [
   { lane: 'mobile', mode: 'mode=interactive-editor', languages: null, device: PHONE },
   { lane: 'offline', mode: 'mode=interactive-editor&offline=1', languages: null, device: PHONE },
 ];
-const LANES = (process.env.SMOKE_LANES ?? 'desktop,mobile,offline,cache').split(',').map((it) => it.trim());
-const unknown = LANES.filter((lane) => lane !== 'cache' && !RUNS.some((run) => run.lane === lane));
+const LANES = (process.env.SMOKE_LANES ?? 'desktop,mobile,offline,cache,live').split(',').map((it) => it.trim());
+const unknown = LANES.filter((lane) => lane !== 'cache' && lane !== 'live' && !RUNS.some((run) => run.lane === lane));
 if (unknown.length) {
-  console.error(`unknown SMOKE_LANES ${unknown.join(', ')}; known: desktop, mobile, offline, cache`);
+  console.error(`unknown SMOKE_LANES ${unknown.join(', ')}; known: desktop, mobile, offline, cache, live`);
   process.exit(2);
 }
 
@@ -240,6 +242,10 @@ if (LANES.includes('cache')) {
     console.error(`FAIL cache: ${error.message}`);
     failures++;
   }
+}
+if (LANES.includes('live')) {
+  try { await verifyDesignFirstStartup(base, root, launchOptions, shots); }
+  catch (error) { console.error(`FAIL live: ${error.stack}`); failures++; }
 }
 server.close();
 process.exit(failures === 0 ? 0 : 1);

@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,7 +61,6 @@ import ee.schimke.composeai.uibuilder.capability.validateCapabilities
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
@@ -81,6 +81,8 @@ internal fun VisualFixtureApp(mode: String) {
     return
   }
 
+  val scope = rememberCoroutineScope()
+  val inspectionPublisher = remember(scope) { CoalescingInspectionPublisher(scope) }
   var document by remember { mutableStateOf<UiBuilderDocument?>(null) }
   var catalog by remember { mutableStateOf<CapabilityCatalog?>(null) }
   LaunchedEffect(Unit) {
@@ -123,8 +125,9 @@ internal fun VisualFixtureApp(mode: String) {
           onCanvasMetrics = ::publishEditorCanvasMetrics,
           onCanvasBoundsChanged = ::publishEditorCanvasBounds,
           onDropTargetChanged = ::publishEditorDropTarget,
-          onInspectionSnapshot = { snapshot ->
-            publishInspection(inspectionJson.encodeToString(snapshot))
+          onInspectionSnapshot = inspectionPublisher::publish,
+          onInspectionInvalidated = { collector ->
+            inspectionPublisher.offer(collector, it.revision)
           },
           showSelectionOverlay = mode != "interactive-editor-clean",
           // The clean lane exists to prove the editor draws the design the same as the harness
@@ -139,8 +142,9 @@ internal fun VisualFixtureApp(mode: String) {
         it,
         editorOverlay = mode == "editor" || mode == "jetcaster-editor",
         selectedNodeId = if (mode == "jetcaster-editor") "discover-grid" else null,
-        onInspectionSnapshot = { snapshot ->
-          publishInspection(inspectionJson.encodeToString(snapshot))
+        onInspectionSnapshot = inspectionPublisher::publish,
+        onInspectionInvalidated = { collector ->
+          inspectionPublisher.offer(collector, it.revision)
         },
       )
     }

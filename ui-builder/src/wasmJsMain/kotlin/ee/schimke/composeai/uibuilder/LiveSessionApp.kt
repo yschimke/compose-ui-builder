@@ -116,10 +116,12 @@ import ee.schimke.composeai.uibuilder.reference.ReferenceImportOutcome
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import ee.schimke.composeai.uibuilder.reference.RestoredReference
 import kotlin.io.encoding.Base64
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -228,6 +230,7 @@ private fun LiveSessionApp(
   // what says where in that history it was.
   var authoritativeSequence by remember { mutableStateOf(0L) }
   var catalog by remember { mutableStateOf<CapabilityCatalog?>(null) }
+  val initialDesignLayout = remember(config) { CompletableDeferred<Unit>() }
   var newDesignCatalogs by remember { mutableStateOf<List<UiBuilderNewDesignCatalog>>(emptyList()) }
   // The chooser's answer is a form-factor summary; seeding a design locally needs the catalog's
   // own revision and runtime id, which only the capability document carries.
@@ -820,6 +823,12 @@ private fun LiveSessionApp(
     bootPhase("Opening the design")
     // Form-factor order — Mobile, Wear, RemoteCompose — however the host lists them: the chooser
     // is a "what am I making" question, not a catalog registry.
+    suspend fun afterInitialDesign() {
+      // Inspection is delivered after layout (or by the pinned renderer's validated reply).
+      // Keep optional chooser work off the first frame; still make it available if rendering fails.
+      withTimeoutOrNull(5_000) { initialDesignLayout.await() }
+      awaitBrowserPaintOpportunity()
+    }
     suspend fun installCatalogList(availableCatalogs: List<CatalogCapabilityV1>) {
       val fixture = runCatching {
         val path = "jetcaster-discover-operations-v1.json"
@@ -870,15 +879,27 @@ private fun LiveSessionApp(
             markReady()
             return@LaunchedEffect
           }
-      installCatalogList(availableCatalogs)
-      if (config.startWithNewDesign) return@LaunchedEffect
+      catalogCapabilities = availableCatalogs
+      if (config.startWithNewDesign) {
+        installCatalogList(availableCatalogs)
+        return@LaunchedEffect
+      }
+      launch {
+        afterInitialDesign()
+        installCatalogList(availableCatalogs)
+      }
     } else {
-      // Beside the open, not ahead of it. The list is every catalog's full capability record —
-      // around a megabyte for the three — and only the New design menu reads it; the design being
-      // opened brings its own catalog in its snapshot. Waiting for it put a round trip and that
-      // megabyte's parse between a person and their design. A failure still takes the page down,
-      // as it did when it came first: this child's exception cancels the effect.
-      launch { installCatalogList(loadLiveCatalogs(http)) }
+      launch {
+        afterInitialDesign()
+        try {
+          installCatalogList(loadLiveCatalogs(http))
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+          throw cancelled
+        } catch (failure: Exception) {
+          // The open brings its own catalog. A chooser outage must not cancel that design.
+          println("compose-ui-builder: could not load the New design catalogs: $failure")
+        }
+      }
     }
     fun installCatalog(capability: CatalogCapabilityV1, revision: Long?) {
       activeCatalogSystemId = capability.benchmark.catalogSystemId
@@ -1890,9 +1911,13 @@ private fun LiveSessionApp(
             )
           }
         },
-      onInspectionSnapshot = inspectionPublisher::publish,
+      onInspectionSnapshot = {
+        inspectionPublisher.publish(it)
+        initialDesignLayout.complete(Unit)
+      },
       onInspectionInvalidated = { collector ->
         inspectionPublisher.offer(collector, loadedDocument.revision)
+        initialDesignLayout.complete(Unit)
       },
       // The native render is a real Compose render the server performs from the stored design, so
       // it is the one pane a design this server has never seen cannot fill.
