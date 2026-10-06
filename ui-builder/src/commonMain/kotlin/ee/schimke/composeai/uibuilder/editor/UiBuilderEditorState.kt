@@ -213,6 +213,11 @@ class UiBuilderEditorReducer(
       addBeside = state.addBeside,
       variantAxes = state.variantAxes,
       canvasView = state.canvasView,
+      // Tool state like the axes above, and only for the same design: a node id in another design
+      // is a different node that happens to share a name.
+      tunables =
+        if (document.id == state.document.id) state.tunables.resolvedIn(document) else emptyList(),
+      tunedValues = if (document.id == state.document.id) state.tunedValues else emptyMap(),
     )
   }
 
@@ -352,6 +357,28 @@ class UiBuilderEditorReducer(
         recordLibrarySource(state, event.componentKey, event.source)
       is UiBuilderEditorEvent.ReplaceLocalComponent ->
         replaceLocalComponent(state, event.componentKey, event.catalogComponentId)
+      is UiBuilderEditorEvent.TuneTarget -> tuneTarget(state, event.target, event.into)
+      is UiBuilderEditorEvent.UntuneTarget ->
+        state.copy(
+          tunables =
+            state.tunables.map {
+              if (it.name == event.name) it.copy(targets = it.targets - event.target) else it
+            }
+        )
+      is UiBuilderEditorEvent.EditTunable -> editTunable(state, event.name, event.tunable)
+      is UiBuilderEditorEvent.RemoveTunable ->
+        state.copy(
+          tunables = state.tunables.filterNot { it.name == event.name },
+          tunedValues = state.tunedValues - event.name,
+        )
+      is UiBuilderEditorEvent.SetTunedValue -> {
+        val tunable = state.tunables.firstOrNull { it.name == event.name }
+        if (tunable == null) state
+        else
+          state.copy(tunedValues = state.tunedValues + (event.name to tunable.coerce(event.value)))
+      }
+      UiBuilderEditorEvent.ResetTunedValues -> state.copy(tunedValues = emptyMap())
+      UiBuilderEditorEvent.ApplyTunables -> applyTunables(state)
       is UiBuilderEditorEvent.SetStateVariable ->
         state.apply(
           state.operationSequence + 1,
@@ -3555,6 +3582,135 @@ class UiBuilderEditorReducer(
     val nodeId = state.selectedNodeId?.takeIf(state.document.nodes::containsKey) ?: return state
     val move = moveTarget(state, nodeId, direction) ?: return state
     return move(state, move)
+  }
+
+  /**
+   * Link [target] to the tunable named [into], or to a new tunable seeded from what the target
+   * holds: its value becomes the default, and a range around it inside the catalog's own bounds
+   * becomes the slider's. A target is driven by one tunable at a time, so linking it moves it.
+   */
+  private fun tuneTarget(
+    state: UiBuilderEditorState,
+    target: TunableTarget,
+    into: String?,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val fieldName =
+      when (target) {
+        is TunableTarget.Property -> target.property
+        is TunableTarget.Modifier -> "modifiers"
+      }
+    fun refused(message: String) =
+      state.rejected(sequence, RejectionCode.INVALID_PROPERTY, message, target.nodeId, fieldName)
+    val field =
+      (target as? TunableTarget.Property)?.let { property ->
+        propertyFields(state.copy(selection = listOf(property.nodeId))).firstOrNull {
+          it.name == property.property
+        }
+      }
+    if (
+      !state.document.canTune(target) ||
+        (target is TunableTarget.Property &&
+          (field?.control != EditorPropertyControl.Number || '.' in target.property))
+    ) {
+      return refused("Only a plain number can be tuned")
+    }
+    val others = state.tunables.map { it.copy(targets = it.targets - target) }
+    if (into != null) {
+      if (others.none { it.name == into }) return refused("There is no tunable called $into")
+      return state.copy(
+        tunables =
+          others.map { if (it.name == into) it.copy(targets = it.targets + target) else it }
+      )
+    }
+    if (others.size >= MAX_DESIGN_TUNABLES) {
+      return refused("A design has at most $MAX_DESIGN_TUNABLES tunables")
+    }
+    val bounds =
+      when (target) {
+        is TunableTarget.Property -> field?.numberBounds
+        is TunableTarget.Modifier -> MODIFIER_TUNING_BOUNDS[target.type]
+      }
+    val current =
+      state.document.heldValue(target)
+        ?: field?.value?.toDoubleOrNull()
+        ?: bounds?.minimum?.coerceAtLeast(0.0)
+        ?: 0.0
+    val (minimum, maximum) =
+      if (target is TunableTarget.Modifier && bounds != null) bounds.minimum to bounds.maximum
+      else suggestedTunableRange(current, bounds)
+    val label =
+      when (target) {
+        is TunableTarget.Property -> field?.label ?: target.label
+        is TunableTarget.Modifier -> target.label
+      }
+    val tunable =
+      DesignTunable(
+        name = freshTunableName(label, others.map(DesignTunable::name)),
+        minimum = minimum,
+        maximum = maximum,
+        default = current.coerceIn(minimum, maximum),
+        integer = bounds?.integer == true,
+        targets = listOf(target),
+      )
+    return state.copy(tunables = others + tunable)
+  }
+
+  /**
+   * Replace the tunable [name] with [edited], keeping where its slider is — moved into the new
+   * range — under its new name. A rename onto another tunable's name is refused rather than merged.
+   */
+  private fun editTunable(
+    state: UiBuilderEditorState,
+    name: String,
+    edited: DesignTunable,
+  ): UiBuilderEditorState {
+    if (state.tunables.none { it.name == name }) return state
+    if (edited.name != name && state.tunables.any { it.name == edited.name }) {
+      return state.rejected(
+        state.operationSequence + 1,
+        RejectionCode.INVALID_PROPERTY,
+        "There is already a tunable called ${edited.name}",
+      )
+    }
+    val slider = state.tunedValues[name]
+    return state.copy(
+      tunables = state.tunables.map { if (it.name == name) edited else it },
+      tunedValues =
+        (state.tunedValues - name).let { values ->
+          if (slider == null) values else values + (edited.name to edited.coerce(slider))
+        },
+    )
+  }
+
+  /**
+   * Write every tunable's current value into the targets it drives. Property writes are one command
+   * and modifier writes another, because undo compensates each lane on its own and refuses a batch
+   * that mixes them; so one undo per lane takes the configuration back. The values become the
+   * defaults and the sliders rest on them. A refused command stops there and leaves the sliders
+   * where they were, so nothing the author dragged is lost.
+   */
+  private fun applyTunables(state: UiBuilderEditorState): UiBuilderEditorState {
+    val settled = state.tunables.map { it.copy(default = state.tunedValues.valueOf(it)) }
+    val writes = state.document.tunableWrites(state.tunables, state.tunedValues)
+    val propertyWrites = writes.flatMap { (nodeId, tuned) ->
+      val held = state.document.nodes.getValue(nodeId)
+      tuned.properties
+        .filter { (property, value) -> held.properties[property] != value }
+        .map { (property, value) -> DesignOperation.SetProperty(nodeId, property, value) }
+    }
+    val modifierWrites = writes.mapNotNull { (nodeId, tuned) ->
+      DesignOperation.SetModifiers(nodeId, tuned.modifiers).takeIf {
+        tuned.modifiers != state.document.nodes.getValue(nodeId).modifiers
+      }
+    }
+    var applied = state
+    for (operations in listOf(propertyWrites, modifierWrites)) {
+      if (operations.isEmpty()) continue
+      applied = applied.apply(applied.operationSequence + 1, operations, state.selectedNodeId)
+      if (applied.lastOutcome !is CommandOutcome.Accepted) return applied
+    }
+    return applied.copy(tunables = settled, tunedValues = emptyMap())
   }
 
   /**

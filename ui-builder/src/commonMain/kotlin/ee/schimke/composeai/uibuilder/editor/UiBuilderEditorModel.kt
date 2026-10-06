@@ -506,6 +506,13 @@ data class UiBuilderEditorState(
    * than view-local because it changes what selection does.
    */
   val canvasView: EditorCanvasView = EditorCanvasView.Extent,
+  /**
+   * The design's tunables: named numbers with a range, each driving some numeric properties. A way
+   * of looking, like [variantAxes] — not stored, shared or undone; applying one is the edit.
+   */
+  val tunables: List<DesignTunable> = emptyList(),
+  /** Where each tunable's slider sits, by name; a tunable absent here is at its default. */
+  val tunedValues: Map<String, Double> = emptyMap(),
 ) {
   /** A reference update, which never touches the document and so never becomes a submission. */
   internal fun withReference(reference: ReferenceOverlayState): UiBuilderEditorState =

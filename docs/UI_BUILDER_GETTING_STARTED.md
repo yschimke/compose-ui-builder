@@ -523,6 +523,20 @@ and reaches a variant pane only while one is drawn: in `Both`, or in the compact
 The compact layout below 840 dp is different: it draws the builder canvas whatever surface is
 selected, so the chips stay active there.
 
+### Tunables: drag a few numbers to try them
+
+Some designs turn on a handful of numbers: a gap, a card width, a padding. Press **Tune** beside
+any numeric property or modifier field to make a *tunable* from it: a named value with a min, a
+max and a default. Use the same menu on other fields to link them to it, so one slider can drive
+both card widths. The **Tune** card floats over the canvas. Drag a slider and the canvas and every
+variant pane redraw live, so you can try a value on a phone, a tablet and in dark mode at once.
+
+Dragging changes nothing stored. No revision is written, nothing reaches collaborators and nothing
+reaches the export until you press **Apply**, which writes the values and makes them the new
+defaults. **Reset** returns every slider to its default. Tunables live in the editor session and
+are not yet saved with the design. Why, and what storing them would take, is in
+[`UI_BUILDER_TUNABLES.md`](design/UI_BUILDER_TUNABLES.md).
+
 ## Starting from a worked widget
 
 `remote-m3`'s New Widget dialog offers four templates. Two are empty host frames — **Small widget**

@@ -7,6 +7,7 @@ package ee.schimke.composeai.uibuilder.editor
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -1542,22 +1543,28 @@ fun UiBuilderEditor(
   val dragGhostLabel =
     draggedComponentId?.let { catalog.componentsById[it]?.displayName ?: it }
       ?: draggedNodeId?.let { state.document.nodes[it]?.componentId }
+  // What every design surface draws: the document, with each linked tunable's slider value in
+  // place of what its targets hold. The same instance as the document while nothing is tuned.
+  val drawnDocument =
+    remember(state.document, state.tunables, state.tunedValues) {
+      state.document.tuned(state.tunables, state.tunedValues)
+    }
   // The strip beside the design: the devices it claims, plus whichever unstored axes are switched
   // on. Computed here rather than in the canvas because it is a question about the *design* — its
   // stored `exportDevices` and the editor's own axes — and the canvas draws what it is handed.
   val variantPanes =
-    remember(state.document, devicePresets, state.variantAxes) {
-      state.document.variantPanes(devicePresets, state.variantAxes)
+    remember(drawnDocument, devicePresets, state.variantAxes) {
+      drawnDocument.variantPanes(devicePresets, state.variantAxes)
     }
   // A dedicated Preview view has no authoring canvas beside it, so its first frame is the current
   // design. In the combined workspace that frame would be a duplicate and the pane remains the
   // comparison-only strip it has always been.
   val previewPanes =
-    remember(state.document, variantPanes, availablePanes) {
-      if (EditorPane.Editor in availablePanes || state.document.wearWidgetScaffoldSize() != null) {
+    remember(drawnDocument, variantPanes, availablePanes) {
+      if (EditorPane.Editor in availablePanes || drawnDocument.wearWidgetScaffoldSize() != null) {
         variantPanes
       } else {
-        listOf(state.document.currentFramePane()) + variantPanes
+        listOf(drawnDocument.currentFramePane()) + variantPanes
       }
     }
   // The compact layout's preview tabs, one frame each (see [MobileViewTabs]). The design's own
@@ -1565,9 +1572,9 @@ fun UiBuilderEditor(
   // devices still has a frame to try. A Wear widget's frames are its host shapes, as in
   // the Preview pane.
   val mobilePreviewPanes =
-    remember(state.document, variantPanes) {
-      state.document.wearWidgetScaffoldSize()?.let(state.document::wearWidgetPreviewPanes)
-        ?: (listOf(state.document.currentFramePane("Preview")) + variantPanes)
+    remember(drawnDocument, variantPanes) {
+      drawnDocument.wearWidgetScaffoldSize()?.let(drawnDocument::wearWidgetPreviewPanes)
+        ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)
     }
   // The read-only pane. The catalog decides whether this is the constrained canvas renderer or an
   // exported artifact played by a browser adapter. No catalog or platform id is interpreted here:
@@ -1581,7 +1588,7 @@ fun UiBuilderEditor(
   val previewPane: @Composable (Modifier) -> Unit = { modifier ->
     if (documentBackedPreview != null) {
       RemoteDocumentDesignPreviewPane(
-        document = state.document,
+        document = drawnDocument,
         variants = previewPanes,
         authoritativeGeneration = authoritativeGeneration,
         request = requireNotNull(onRequestDocumentPreview),
@@ -1589,7 +1596,7 @@ fun UiBuilderEditor(
       )
     } else {
       DesignPreviewPane(
-        document = state.document,
+        document = drawnDocument,
         variants = previewPanes,
         modifier = modifier,
         deviceRenderer = canvasRenderer,
@@ -1605,7 +1612,7 @@ fun UiBuilderEditor(
       // and the second would wait on a result it was never sent.
       key(pane.id) {
         RemoteDocumentDesignPreviewPane(
-          document = state.document,
+          document = drawnDocument,
           variants = listOf(pane),
           authoritativeGeneration = authoritativeGeneration,
           request = requireNotNull(onRequestDocumentPreview),
@@ -1615,7 +1622,7 @@ fun UiBuilderEditor(
       }
     } else {
       DesignPreviewPane(
-        document = state.document,
+        document = drawnDocument,
         variants = listOf(pane),
         modifier = modifier,
         deviceRenderer = canvasRenderer,
@@ -1752,10 +1759,10 @@ fun UiBuilderEditor(
             )
           )
       }
-  val canvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
+  val designCanvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
     CompositionLocalProvider(LocalWearWidgetHostShape provides canvasHostShape) {
       PinnedDesignCanvas(
-        document = state.document,
+        document = drawnDocument,
         selectedNodeId = state.selectedNodeId,
         onNodeSelected = { selectNodeForEditing(it) },
         onCanvasMetrics = { width, height, scale -> onCanvasMetrics(width, height, scale) },
@@ -1973,6 +1980,24 @@ fun UiBuilderEditor(
         contentAlignment = alignment,
         modifier = modifier,
       )
+    }
+  }
+  // The Tune card floats over the canvas rather than sitting in a dock, so a slider and the design
+  // it moves are on screen together whichever dock is open.
+  val canvas: @Composable (Modifier, Alignment) -> Unit = { modifier, alignment ->
+    Box(modifier) {
+      designCanvas(Modifier.fillMaxSize(), alignment)
+      if (state.tunables.isNotEmpty() && state.revisionPeek == null) {
+        TunePanel(
+          document = state.document,
+          tunables = state.tunables,
+          values = state.tunedValues,
+          onTextInputFocusChanged = { textInputFocused = it },
+          dispatch = ::dispatch,
+          // Top, clear of the zoom bar along the bottom edge.
+          modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
+        )
+      }
     }
   }
   // Cached against the document, because it is not cheap and depends on nothing else: it walks
