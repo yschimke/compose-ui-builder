@@ -240,6 +240,18 @@ internal constructor(
    * Saves visual edits while preserving the complete explicitly authored production API, or every
    * other design of a collection.
    */
+  /**
+   * The file's bytes with [id] made the active design, carrying [current] — the editor's unsaved
+   * version of the design that was active — into the file as it goes.
+   */
+  fun switchTo(id: String, current: UiBuilderDocument = document): String {
+    val designs = requireNotNull(collection) { "only a design collection has designs to switch" }
+    return UidDesignFiles.encodeCollection(
+      designs.replaceActive(current).withActive(id),
+      collectionText,
+    )
+  }
+
   fun encode(current: UiBuilderDocument = document): String {
     collection?.let {
       return UidDesignFiles.encodeCollection(it.replaceActive(current), collectionText)

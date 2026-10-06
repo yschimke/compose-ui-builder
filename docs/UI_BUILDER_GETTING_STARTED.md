@@ -148,10 +148,19 @@ of them is made active:
 ```
 
 Each entry is a complete design document, so one can be cut out into a file of its own. Ids must be
-unique, and every entry must name the same `catalogPin.systemId`. On the desktop, the **Designs**
-menu of an open file switches the active design, adds a new one (an ordinary file becomes a
-collection the first time you do this), or removes the active one. Hosts that open the file
-(desktop, the VS Code bridge, the MCP App) save edits back into the active entry only.
+unique, and every entry must name the same `catalogPin.systemId`.
+
+The editor lists a file's designs in a **Designs** strip under its toolbar, the active one selected.
+Pressing another makes it active: the host writes the file with it active, carrying any unsaved
+edit to the design you were on, and the editor opens it with a fresh undo history.
+
+| Host | Strip | Also |
+| --- | --- | --- |
+| Desktop | switch, **Add design**, **Remove design**; shown for every design file, so a file of one design can grow | the same three in the **Designs** menu |
+| MCP App | switch, through the same etag check as a save | a read-only file lists its designs without switching |
+| VS Code / IntelliJ bridge | switch: the editor posts `changed` with the whole file and opens the new active design | the Preview role draws no strip |
+
+Every host saves edits back into the active entry only.
 
 The same mode works against a local UI-builder/Wasm host, for example
 `--server http://localhost:8080`; plain HTTP is accepted only on loopback. Remote hosts must use

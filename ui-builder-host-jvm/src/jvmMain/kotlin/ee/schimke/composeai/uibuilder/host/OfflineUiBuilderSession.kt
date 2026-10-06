@@ -21,6 +21,7 @@ import ee.schimke.composeai.uibuilder.editor.MaterialUiBuilderChrome
 import ee.schimke.composeai.uibuilder.editor.UiBuilderChrome
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderExportHost
+import ee.schimke.composeai.uibuilder.editor.UiBuilderFileDesigns
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
@@ -393,6 +394,8 @@ fun OfflineUiBuilderSessionView(
    * Import, links and the editor's own snapshot work either way; see [JvmReferenceHost].
    */
   referenceStore: Path? = null,
+  /** The open file's top-level designs, for the strip above the canvas; null for none. */
+  fileDesigns: UiBuilderFileDesigns? = null,
 ) {
   val snapshot by session.snapshot.collectAsState()
   val failure by session.failure.collectAsState()
@@ -426,6 +429,7 @@ fun OfflineUiBuilderSessionView(
       clientId = session.clientId,
       operationIdPrefix = session.operationIdPrefix,
       sessionLabel = sessionLabel,
+      fileDesigns = fileDesigns,
       initialPanes = initialPanes,
       availablePanes = availablePanes,
       openDefaultPreview = openDefaultPreview,

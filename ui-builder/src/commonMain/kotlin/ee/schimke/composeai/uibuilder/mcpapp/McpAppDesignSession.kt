@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.mcpapp
 
 import ee.schimke.composeai.uibuilder.OpenedUidDesign
+import ee.schimke.composeai.uibuilder.UidDesignCollection
 import ee.schimke.composeai.uibuilder.UidDesignFiles
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.coroutines.sync.Mutex
@@ -28,6 +29,8 @@ data class McpAppDesignState(
   val notice: McpAppNotice? = null,
   /** Set when there is no design to show at all: the first read or parse failed. */
   val failure: String? = null,
+  /** The file's top-level designs when it holds several; [document] is the active one. */
+  val designs: UidDesignCollection? = null,
 )
 
 /** Something the person has to see, and for some of them decide. */
@@ -126,6 +129,52 @@ class McpAppDesignSession(
   suspend fun overwrite() = lock.withLock {
     val conflict = state.notice as? McpAppNotice.Conflict ?: return@withLock
     writeLocked(ifMatch = conflict.currentEtag, force = true)
+  }
+
+  /**
+   * Makes [id] the file's active design: writes the file with it active — carrying any unsaved edit
+   * to the design that was active — and opens it. Refused, as a save is, by a read-only file or an
+   * unresolved conflict.
+   */
+  suspend fun selectDesign(id: String) = lock.withLock {
+    val opened = openedFile ?: return@withLock
+    if (opened.collection == null || opened.document.id == id) return@withLock
+    if (!state.writable) {
+      state = state.copy(notice = McpAppNotice.ReadOnly)
+      return@withLock
+    }
+    if (state.notice is McpAppNotice.Conflict) return@withLock
+    val text = runCatching {
+      opened.switchTo(id, current ?: opened.document)
+    }
+      .getOrElse {
+        state = state.copy(notice = McpAppNotice.Error("Not switched: ${it.message}"))
+        return@withLock
+      }
+    state = state.copy(saving = true)
+    val outcome = runCatching {
+      bridge.write(file.resourceUri, text, state.etag)
+    }
+      .getOrElse {
+        state =
+          state.copy(saving = false, notice = McpAppNotice.Error("Not switched: ${it.message}"))
+        return@withLock
+      }
+    state = state.copy(saving = false)
+    when (outcome) {
+      is McpAppWriteOutcome.Saved ->
+        adopt(
+          McpAppFileContents(text, outcome.etag.ifEmpty { null }, writable = true),
+          initial = false,
+        )
+      is McpAppWriteOutcome.Conflict ->
+        state = state.copy(notice = McpAppNotice.Conflict(outcome.etag))
+      is McpAppWriteOutcome.TooLarge ->
+        state =
+          state.copy(
+            notice = McpAppNotice.TooLarge(outcome.maxBytes, text.encodeToByteArray().size)
+          )
+    }
   }
 
   /** Discards local changes and reads the file again. */
@@ -252,6 +301,7 @@ class McpAppDesignSession(
         dirty = false,
         failure = null,
         notice = if (contents.writable) null else McpAppNotice.ReadOnly,
+        designs = opened.collection,
       )
   }
 
@@ -285,6 +335,7 @@ class McpAppDesignSession(
           savedDocument = document
           openedFile = UidDesignFiles.open(text)
           state.copy(
+            designs = openedFile?.collection,
             saving = false,
             etag = outcome.etag.ifEmpty { null },
             // An edit made while the write was in flight is still unsaved.

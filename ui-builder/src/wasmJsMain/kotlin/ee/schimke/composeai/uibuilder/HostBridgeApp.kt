@@ -21,6 +21,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorTheme
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHostAction
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHostChrome
+import ee.schimke.composeai.uibuilder.editor.fileDesigns
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import kotlinx.serialization.Serializable
@@ -71,6 +72,9 @@ import kotlinx.serialization.json.jsonObject
 internal fun HostBridgeApp() {
   val role = remember { hostBridgeRole() }
   var opened by remember { mutableStateOf<HostOpenedDesign?>(null) }
+  // One count for the host's `open`s and this editor's own design switches, so neither reuses the
+  // other's key and keeps an editor whose history was made against another design.
+  var generation by remember { mutableStateOf(0) }
   var selectionRequest by remember { mutableStateOf<EditorSelectionRequest?>(null) }
   // The editor's toolbar and rails, drawn by the host (see UiBuilderHostChrome). One instance for
   // the page, so an `invoke` that lands between two `open`s still finds the current handlers.
@@ -87,7 +91,6 @@ internal fun HostBridgeApp() {
     }
   }
   LaunchedEffect(Unit) {
-    var generation = 0
     var selections = 0
     listenForHostMessages(
       onOpen = { messageJson ->
@@ -120,6 +123,16 @@ internal fun HostBridgeApp() {
           document = design.document,
           catalog = design.catalog,
           sessionLabel = design.label,
+          // A switch is a change to the file like any edit: the host is sent the whole file,
+          // and the editor opens the newly active design as it would a fresh `open`.
+          fileDesigns =
+            design.collection?.fileDesigns(
+              onSelect = { id ->
+                runCatching { design.switchTo(id, ++generation) }
+                  .onSuccess { opened = it }
+                  .onFailure { postHostError("Not switched: ${it.message}") }
+              }
+            ),
           onStateChanged = { state ->
             publishEditorState(state)
             design.publishIfChanged(state.document)
@@ -202,6 +215,29 @@ internal class HostOpenedDesign(
 ) {
   private var published: UiBuilderDocument = document
   private var publishedSelection: String? = null
+
+  /** The file's top-level designs when it holds several; [document] is the active one. */
+  val collection: UidDesignCollection?
+    get() = fileContext?.collection
+
+  /**
+   * Makes [id] the active design: sends the host the file with it active — carrying the last
+   * published edit — and returns the design to open in this one's place.
+   */
+  fun switchTo(id: String, generation: Int): HostOpenedDesign {
+    val context = requireNotNull(fileContext) { "this design is not one of several in a file" }
+    val text = context.switchTo(id, published)
+    val next = UidDesignFiles.open(text)
+    postHostChanged(text)
+    return HostOpenedDesign(
+      document = next.document,
+      catalog = catalog,
+      label = label,
+      generation = generation,
+      seeded = false,
+      fileContext = next,
+    )
+  }
 
   /** Tells the host which layer is selected, so a tree it draws beside the canvas can follow. */
   fun publishSelectionIfChanged(nodeId: String?) {
