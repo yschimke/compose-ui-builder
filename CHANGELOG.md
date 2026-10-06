@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.88.0](https://github.com/yschimke/compose-ui-builder/compare/v3.87.0...v3.88.0) (2026-10-06)
+
+
+### Features
+
+* **editor:** export design tokens as W3C DTCG, import DTCG and Material Theme Builder ([#499](https://github.com/yschimke/compose-ui-builder/issues/499)) ([575d8cb](https://github.com/yschimke/compose-ui-builder/commit/575d8cb335e4347fcb7b0f85f9d025281f029121))
+* show a file's designs in a strip above the editor canvas ([#498](https://github.com/yschimke/compose-ui-builder/issues/498)) ([e3d2f9a](https://github.com/yschimke/compose-ui-builder/commit/e3d2f9a9314d581da58b8f8126777238ab86fcdb))
+* show a file's designs in a strip above the editor canvas ([#498](https://github.com/yschimke/compose-ui-builder/issues/498)) ([6c0222d](https://github.com/yschimke/compose-ui-builder/commit/6c0222dc41bab92a85a68bcf43dae8dac9a3e494))
+
+
+### Bug Fixes
+
+* **remote-m3:** frame widgets only in the predefined host shapes ([#501](https://github.com/yschimke/compose-ui-builder/issues/501)) ([33e874a](https://github.com/yschimke/compose-ui-builder/commit/33e874afb2e26b7a62982ad98b2f6e009e98fca4))
+* **runtime:** give the packaged renderer an identity for render caches ([#502](https://github.com/yschimke/compose-ui-builder/issues/502)) ([150434a](https://github.com/yschimke/compose-ui-builder/commit/150434a645cb2e681388a899d335e338d02b92e2))
+
 ## [3.87.0](https://github.com/yschimke/compose-ui-builder/compare/v3.86.0...v3.87.0) (2026-10-06)
 
 
