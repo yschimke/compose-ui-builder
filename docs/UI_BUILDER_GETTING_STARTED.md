@@ -133,6 +133,26 @@ build a design, not the design, so do not rename one into the other.
 The **File** menu does the same from inside the app: **New** opens a catalog's workspace, **Open…**
 loads a design file, and **Save As…** writes the current design to a file and keeps editing it there.
 
+One `.uid` file can hold several top-level designs for the same design system. Exactly one of them
+is **active**: it is the design every host opens, edits, previews and exports, and to everything
+downstream of the file it is an ordinary one-root document. The others are kept untouched until one
+of them is made active:
+
+```json
+{
+  "schema": "compose-ui-builder-designs/v1",
+  "active": "detail",
+  "designs": [ { "schema": "compose-ui-builder-document/v1", "id": "home", … },
+               { "schema": "compose-ui-builder-document/v1", "id": "detail", … } ]
+}
+```
+
+Each entry is a complete design document, so one can be cut out into a file of its own. Ids must be
+unique, and every entry must name the same `catalogPin.systemId`. On the desktop, the **Designs**
+menu of an open file switches the active design, adds a new one (an ordinary file becomes a
+collection the first time you do this), or removes the active one. Hosts that open the file
+(desktop, the VS Code bridge, the MCP App) save edits back into the active entry only.
+
 The same mode works against a local UI-builder/Wasm host, for example
 `--server http://localhost:8080`; plain HTTP is accepted only on loopback. Remote hosts must use
 HTTPS.

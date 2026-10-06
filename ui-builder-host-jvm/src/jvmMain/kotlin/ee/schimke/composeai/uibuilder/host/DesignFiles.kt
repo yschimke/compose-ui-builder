@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.host
 
+import ee.schimke.composeai.uibuilder.UidDesignCollection
 import ee.schimke.composeai.uibuilder.UidDesignFiles
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
@@ -34,7 +35,10 @@ object DesignFiles {
     val encoded = json.parseToJsonElement(text)
     val objectValue = encoded as? JsonObject
     val schema = (objectValue?.get("schema") as? JsonPrimitive)?.contentOrNull
-    if (schema?.startsWith("compose-ui-builder-production/") == true) {
+    if (
+      schema?.startsWith("compose-ui-builder-production/") == true ||
+        schema == UidDesignFiles.COLLECTION_SCHEMA
+    ) {
       return UidDesignFiles.open(text).document.toDesignDocumentV1()
     }
     val home = objectValue?.get("home") as? JsonObject
@@ -83,9 +87,32 @@ object DesignFiles {
       original
         ?.let { (json.parseToJsonElement(it) as? JsonObject)?.get("schema") as? JsonPrimitive }
         ?.contentOrNull
-    return if (schema?.startsWith("compose-ui-builder-production/") == true) {
+    return if (
+      schema?.startsWith("compose-ui-builder-production/") == true ||
+        schema == UidDesignFiles.COLLECTION_SCHEMA
+    ) {
       UidDesignFiles.open(requireNotNull(original)).encode(document.toUiBuilderDocument())
     } else encode(document)
+  }
+
+  /**
+   * The designs [path] holds: a collection's, or an ordinary file's one design as a collection of
+   * one.
+   */
+  fun readCollection(path: Path): UidDesignCollection =
+    UidDesignFiles.decodeCollection(Files.readString(path)).also {
+      it.catalogSystemId?.let(OfflineCatalog::forSystem)
+    }
+
+  /**
+   * Rewrites [path] with [update] applied to its designs, turning a single design into a
+   * collection.
+   */
+  fun updateCollection(path: Path, update: (UidDesignCollection) -> UidDesignCollection) {
+    val original = Files.readString(path)
+    val designs = UidDesignFiles.decodeCollection(original)
+    designs.catalogSystemId?.let(OfflineCatalog::forSystem)
+    writeText(path, UidDesignFiles.encodeCollection(update(designs), original))
   }
 
   fun write(path: Path, document: DesignDocumentV1, original: String?) {

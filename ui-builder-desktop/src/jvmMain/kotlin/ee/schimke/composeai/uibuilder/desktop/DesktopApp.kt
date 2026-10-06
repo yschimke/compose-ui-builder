@@ -18,6 +18,7 @@ import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
+import ee.schimke.composeai.uibuilder.UidDesignCollection
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.host.CatalogOverride
@@ -45,7 +46,8 @@ sealed interface DesktopDesign {
       get() = "${catalog.displayName} ${template?.let(::templateLabel) ?: "scratch"}"
   }
 
-  data class File(val path: Path) : DesktopDesign {
+  /** [reopen] is bumped to read [path] again after the file's active design changes. */
+  data class File(val path: Path, val reopen: Int = 0) : DesktopDesign {
     override val title: String
       get() = path.fileName.toString()
   }
@@ -109,6 +111,23 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
         }
       }
     val session = opened.getOrNull()?.first
+    val collection =
+      remember(design, session) {
+        (design as? DesktopDesign.File)?.let {
+          runCatching { DesignFiles.readCollection(it.path) }.getOrNull()
+        }
+      }
+    /** Rewrites the open file's designs, then reads it again so the new active design opens. */
+    fun updateDesigns(update: (UidDesignCollection) -> UidDesignCollection) {
+      val file = design as? DesktopDesign.File ?: return
+      runCatching {
+        // The session's own pending writes land first; its guard is closed with it.
+        session?.close()
+        DesignFiles.updateCollection(file.path, update)
+      }
+        .onFailure { showError("Cannot change the designs in ${file.title}", it) }
+      design = file.copy(reopen = file.reopen + 1)
+    }
     DisposableEffect(session) { onDispose { session?.close() } }
     // A file that no longer opens falls back to the scratch workspace rather than a blank window.
     opened.exceptionOrNull()?.let { failure ->
@@ -131,6 +150,25 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
             .onFailure { showError("Cannot save ${target.fileName}", it) }
         },
       onQuit = ::exitApplication,
+      designs = collection,
+      onSelectDesign = { id -> updateDesigns { it.withActive(id) } },
+      onAddDesign = {
+        updateDesigns { designs ->
+          val catalog = OfflineCatalog.forSystem(requireNotNull(designs.catalogSystemId))
+          val capabilities = catalog.capabilityCatalog().benchmark
+          val id = nextDesignId(designs)
+          designs.plus(
+            catalog
+              .seed(
+                designId = id,
+                catalogRevision = capabilities.catalogRevision,
+                nativeRuntimeId = capabilities.nativeRuntimeId,
+              )
+              .copy(title = templateLabel(id))
+          )
+        }
+      },
+      onRemoveDesign = { updateDesigns { it.minus(it.active) } },
     )
     MaterialTheme {
       Surface(Modifier.fillMaxSize()) {
@@ -161,6 +199,10 @@ private fun FrameWindowScope.DesktopMenuBar(
   onOpen: () -> Unit,
   onSaveAs: () -> Unit,
   onQuit: () -> Unit,
+  designs: UidDesignCollection?,
+  onSelectDesign: (String) -> Unit,
+  onAddDesign: () -> Unit,
+  onRemoveDesign: () -> Unit,
 ) {
   MenuBar {
     Menu("File", mnemonic = 'F') {
@@ -189,7 +231,33 @@ private fun FrameWindowScope.DesktopMenuBar(
       Separator()
       Item("Quit", onClick = onQuit, shortcut = KeyShortcut(Key.Q, ctrl = true))
     }
+    // A design file can hold several top-level designs; the active one is what the canvas edits
+    // and every preview renders.
+    if (designs != null) {
+      Menu("Designs", mnemonic = 'D') {
+        designs.designs.forEach { document ->
+          CheckboxItem(
+            document.title.ifBlank { document.id },
+            checked = document.id == designs.active,
+            onCheckedChange = { if (document.id != designs.active) onSelectDesign(document.id) },
+          )
+        }
+        Separator()
+        Item("Add design", onClick = onAddDesign)
+        Item(
+          "Remove active design",
+          onClick = onRemoveDesign,
+          enabled = designs.designs.size > 1,
+        )
+      }
+    }
   }
+}
+
+/** The first design id not yet used in [designs]: `design-2`, `design-3`, … */
+internal fun nextDesignId(designs: UidDesignCollection): String {
+  val taken = designs.designs.map { it.id }.toSet()
+  return generateSequence(2) { it + 1 }.map { "design-$it" }.first { it !in taken }
 }
 
 /** Where [design]'s reference overlay is kept under [storageRoot]. */
