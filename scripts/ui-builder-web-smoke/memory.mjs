@@ -10,6 +10,9 @@
 // charged to the next. Environment: MEMORY_RUNS (default 3), MEMORY_SETTLE_MS (default 8000),
 // MEMORY_VIEWPORT (`desktop` or `mobile`, default both), MEMORY_DEBUG (page console, progress),
 // HARNESS_CHROMIUM. Write the output to a file, not a pipe: a pipe holds it until the end.
+// For digging into one result: MEMORY_SCENARIOS (comma-separated ids), MEMORY_INFRA (Chromium's
+// per-allocator memory dump), MEMORY_HEAPSNAPSHOT (a .heapsnapshot per scenario), MEMORY_RESOURCES
+// (Resource Timing sizes) and MEMORY_BLOCK (a URL regex to abort, e.g. `fonts\.gstatic\.com`).
 
 import { createServer } from 'node:http';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
@@ -193,7 +196,7 @@ const scenarios = [
   ...Object.entries(scenarioDesigns).map(([catalog, designId]) => ({
     id: `open-${catalog}`, label: `Open design · ${catalog}`, path: `/ui-builder/${designId}`, catalog, designId,
   })),
-];
+].filter((s) => !process.env.MEMORY_SCENARIOS || process.env.MEMORY_SCENARIOS.split(',').includes(s.id));
 
 async function procMemory(pid) {
   try {
@@ -234,6 +237,36 @@ async function processBreakdown(browser) {
   } finally {
     await session.detach();
   }
+}
+
+// Chromium's own per-allocator accounting (chrome://tracing's memory-infra), per process type.
+async function memoryInfra(browser) {
+  const session = await browser.newBrowserCDPSession();
+  const events = [];
+  session.on('Tracing.dataCollected', ({ value }) => events.push(...value));
+  const done = new Promise((resolve) => session.once('Tracing.tracingComplete', resolve));
+  await session.send('Tracing.start', {
+    traceConfig: { includedCategories: ['disabled-by-default-memory-infra'], memoryDumpConfig: { triggers: [] } },
+    transferMode: 'ReportEvents',
+  });
+  await session.send('Tracing.requestMemoryDump', { deterministic: true, levelOfDetail: 'detailed' });
+  await session.send('Tracing.end');
+  await done;
+  await session.detach();
+  const names = {};
+  for (const e of events) if (e.ph === 'M' && e.name === 'process_name') names[e.pid] = e.args.name;
+  const result = {};
+  for (const e of events) {
+    const allocators = e.ph === 'v' && e.args?.dumps?.allocators;
+    if (!allocators) continue;
+    const proc = (result[names[e.pid] ?? e.pid] ??= {});
+    for (const [name, dump] of Object.entries(allocators)) {
+      if (name.split('/').length > 3 || name.includes('0x')) continue;
+      const size = dump.attrs?.size?.value;
+      if (size) proc[name] = parseInt(size, 16);
+    }
+  }
+  return result;
 }
 
 async function sample(page, cdp, browser) {
@@ -291,6 +324,7 @@ async function measure(scenario, viewportName) {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (error) => errors.push(String(error)));
+    if (process.env.MEMORY_BLOCK) await context.route(new RegExp(process.env.MEMORY_BLOCK), (route) => route.abort());
     const cdp = await context.newCDPSession(page);
     await cdp.send('Performance.enable');
     const started = Date.now();
@@ -305,6 +339,17 @@ async function measure(scenario, viewportName) {
     const atReady = await sample(page, cdp, browser);
     await page.waitForTimeout(settleMs);
     const settled = await sample(page, cdp, browser);
+    if (process.env.MEMORY_INFRA) settled.allocators = await memoryInfra(browser);
+    if (process.env.MEMORY_HEAPSNAPSHOT) {
+      const chunks = [];
+      cdp.on('HeapProfiler.addHeapSnapshotChunk', ({ chunk }) => chunks.push(chunk));
+      await cdp.send('HeapProfiler.takeHeapSnapshot', { reportProgress: false });
+      await writeFile(join(out, `${scenario.id}-${viewportName}.heapsnapshot`), chunks.join(''));
+    }
+    if (process.env.MEMORY_RESOURCES) {
+      settled.resources = await page.evaluate(() => performance.getEntriesByType('resource')
+        .map((e) => ({ name: e.name.replace(location.origin, ''), size: e.decodedBodySize, type: e.initiatorType })));
+    }
     const status = await page.evaluate(() => ({ ...document.documentElement.dataset }));
     await page.screenshot({ path: join(out, `${scenario.id}-${viewportName}.png`) });
     return { readyMs, atReady, settled, errors, status };
