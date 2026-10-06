@@ -11,7 +11,7 @@ ktfmt { googleStyle() }
 kotlin { jvmToolchain(libs.versions.java.server.get().toInt()) }
 
 dependencies {
-  implementation(compose.material3)
+  implementation(libs.compose.material3)
   implementation(libs.material.icons.extended)
   implementation(compose.foundation)
   implementation(compose.ui)

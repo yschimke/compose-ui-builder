@@ -19,7 +19,7 @@ kotlin {
     commonMain.dependencies {
       @Suppress("DEPRECATION") implementation(compose.runtime)
       @Suppress("DEPRECATION") implementation(compose.foundation)
-      @Suppress("DEPRECATION") implementation(compose.material3)
+      implementation(libs.compose.material3)
       // The real Material 3 adaptive scaffolds. The oracle has to draw `SupportingPaneScaffold`
       // itself for the same reason the builder does -- a `BoxWithConstraints` imitating one is what
       // let this app and the builder disagree by ~7.7% at expanded width after #788.

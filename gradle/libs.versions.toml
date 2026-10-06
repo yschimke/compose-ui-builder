@@ -27,18 +27,14 @@ ktfmt-cli = "0.64"
 # Also consumed by compose-preview-ide through its pinned source version catalog.
 intellij-platform-gradle = "2.19.0"
 compose-multiplatform = "1.12.0"
+# Material 3 stable 1.9.0 implements an older CustomStyle ABI and fails in text fields
+# against the 1.12 foundation runtime. This release targets foundation 1.12.0-beta01.
+material3-compose = "1.12.0-alpha03"
 # Material 3 adaptive, for the real `SupportingPaneScaffold` on the editor's canvas and preview
 # panes. Its own version line rather than the Compose Multiplatform one, which is why it is a
 # separate ref: the adaptive artifacts ship independently of the CMP bundle.
 compose-material3-adaptive = "1.2.0"
-# `NavigationSuiteScaffold`, the navigation that is a rail on a tablet and a bar on a phone. It ships
-# on the Compose Multiplatform Material 3 line, not the adaptive one, and has to be the Material 3
-# version `compose.material3` resolves — 1.9.0 for Compose Multiplatform 1.12.0. A newer one drags
-# Material 3 up past the `foundation` it was compiled against: 1.11.0-alpha07 did exactly that, and
-# `OutlinedTextField` then failed at runtime with an `AbstractMethodError` on `CustomStyle`. Its
-# adaptive dependency (1.1.2) is below the 1.2.0 pinned above, which wins. Bump it with Compose
-# Multiplatform, not on its own.
-compose-material3-navigation-suite = "1.9.0"
+# Navigation suite shares Material 3's release line; keep it on the same version.
 # Wear Compose Material 3 / Foundation, compiled for Compose Multiplatform. `androidx.wear.compose`
 # publishes an Android AAR and nothing else — its Gradle module metadata carries exactly two
 # variants, both `releaseVariantRelease*Publication` — so the canvas cannot link the real library.
@@ -119,7 +115,7 @@ maven-publish = "0.37.0"
 # and it is built against compose-preview-daemon 3.13.1 (compose-ai-tools#5687). 2.33.0 makes theme
 # pinning opt-in, generates `themeModules` providers into every listed module, keeps the rc-players
 # players in Remote Compose bundles, and is built against compose-preview-daemon 3.13.2.
-composeai-tools = "2.33.0"
+composeai-tools = "2.35.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -186,7 +182,7 @@ composeai-tools = "2.33.0"
 # (compose-preview-daemon#213), the spare-pool churn fix (compose-preview-daemon#215), a desktop
 # Dispatchers.Main (compose-preview-daemon#214), and contracts and rc-players resolved through their
 # BOMs (compose-preview-daemon#211).
-composeai-preview-daemon = "3.13.2"
+composeai-preview-daemon = "3.14.0"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
@@ -216,7 +212,7 @@ composeai-preview-daemon = "3.13.2"
 composeai-contracts = "3.19.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
-rc-players = "2.1.2"
+rc-players = "2.1.4"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.6.0"
@@ -343,10 +339,11 @@ snipme-highlights = { module = "dev.snipme:highlights", version.ref = "snipme-hi
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "json-schema-validator" }
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3-compose" }
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
 compose-material3-adaptive-layout = { module = "org.jetbrains.compose.material3.adaptive:adaptive-layout", version.ref = "compose-material3-adaptive" }
 compose-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "compose-material3-adaptive" }
-compose-material3-navigation-suite = { module = "org.jetbrains.compose.material3:material3-adaptive-navigation-suite", version.ref = "compose-material3-navigation-suite" }
+compose-material3-navigation-suite = { module = "org.jetbrains.compose.material3:material3-adaptive-navigation-suite", version.ref = "material3-compose" }
 androidx-window-core = { module = "org.jetbrains.androidx.window:window-core", version.ref = "androidx-window" }
 wearcmp-compose-material3 = { module = "ee.schimke.wearcmp:wear-compose-material3", version.ref = "wearcmp-port" }
 wearcmp-compose-foundation = { module = "ee.schimke.wearcmp:wear-compose-foundation", version.ref = "wearcmp-port" }

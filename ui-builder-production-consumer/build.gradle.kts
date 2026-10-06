@@ -21,7 +21,7 @@ dependencies {
       "ee.schimke.composeai:compose-preview-ui-builder-codegen-jvm:$publishedGeneratorVersion"
     )
   }
-  implementation(compose.material3)
+  implementation(libs.compose.material3)
   implementation(libs.material.icons.extended)
   implementation(compose.foundation)
   implementation(compose.ui)

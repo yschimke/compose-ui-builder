@@ -20,7 +20,7 @@ kotlin {
     jvmMain.dependencies {
       // Sessions, catalogs, files and export; this module is the window and the File menu.
       implementation(project(":ui-builder-host-jvm"))
-      @Suppress("DEPRECATION") implementation(compose.material3)
+      implementation(libs.compose.material3)
       @Suppress("DEPRECATION") implementation(compose.desktop.currentOs)
       implementation(libs.kotlinx.coroutines.core)
     }

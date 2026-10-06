@@ -100,7 +100,7 @@ kotlin {
     commonMain.dependencies {
       @Suppress("DEPRECATION") implementation(compose.runtime)
       @Suppress("DEPRECATION") implementation(compose.foundation)
-      @Suppress("DEPRECATION") implementation(compose.material3)
+      implementation(libs.compose.material3)
       // The real Material 3 adaptive scaffolds, so the canvas and the preview pane draw
       // `SupportingPaneScaffold` itself rather than a `BoxWithConstraints` imitating one. See
       // `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md` for why the preview pane owes real components.

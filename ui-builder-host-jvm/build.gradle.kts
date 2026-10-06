@@ -32,7 +32,7 @@ kotlin {
       // OfflineUiBuilderSessionView exposes UiBuilderChrome so embedding hosts can supply native
       // chrome.
       api(project(":ui-builder"))
-      @Suppress("DEPRECATION") implementation(compose.material3)
+      implementation(libs.compose.material3)
       implementation(libs.kotlinx.coroutines.core)
     }
     jvmTest.dependencies {
