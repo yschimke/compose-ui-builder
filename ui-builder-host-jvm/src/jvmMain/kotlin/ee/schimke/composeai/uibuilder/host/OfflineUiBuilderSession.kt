@@ -40,7 +40,8 @@ import ee.schimke.composeai.uibuilder.protocol.OperationOutcomeResponseV1
 import ee.schimke.composeai.uibuilder.protocol.SnapshotResponseV1
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -54,9 +55,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -330,14 +329,25 @@ private constructor(
    * to apply its queue to, and must not hold the caller forever.
    */
   override fun close() {
-    submissions.close()
-    runBlocking { withTimeoutOrNull(CLOSE_DRAIN_TIMEOUT) { worker.join() } }
-    scope.cancel()
+    // IDE hosts provide coroutines themselves. Avoid the compiler-generated close$default
+    // bridge, which is not binary-compatible across their coroutines interface-default modes.
+    submissions.close(null)
+    // Keep this synchronous boundary independent of runBlocking's version-specific JVM name.
+    val drained = CountDownLatch(1)
+    val completion = worker.invokeOnCompletion { drained.countDown() }
+    try {
+      drained.await(CLOSE_DRAIN_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+    } catch (_: InterruptedException) {
+      Thread.currentThread().interrupt()
+    } finally {
+      completion.dispose()
+      scope.cancel()
+    }
   }
 }
 
 /** How long [OfflineUiBuilderSession.close] waits for queued edits to be persisted. */
-private val CLOSE_DRAIN_TIMEOUT = 2.seconds
+private const val CLOSE_DRAIN_TIMEOUT_MILLIS = 2_000L
 
 /**
  * This document pinned to [catalog]'s revision and runtime. A capability digest written as the old
