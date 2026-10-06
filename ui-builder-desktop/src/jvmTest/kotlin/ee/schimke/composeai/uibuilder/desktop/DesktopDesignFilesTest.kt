@@ -222,4 +222,14 @@ class DesktopDesignFilesTest {
       DesktopLaunchOptions.parse(arrayOf("a.uid", "b.uid"))
     }
   }
+
+  @Test
+  fun `an added design takes the next free id`() {
+    val designs = ee.schimke.composeai.uibuilder.UidDesignCollection(seed.id, listOf(seed))
+    assertEquals("design-2", nextDesignId(designs))
+    assertEquals(
+      "design-3",
+      nextDesignId(designs.plus(seed.copy(id = "design-2")).plus(seed.copy(id = "design-4"))),
+    )
+  }
 }
