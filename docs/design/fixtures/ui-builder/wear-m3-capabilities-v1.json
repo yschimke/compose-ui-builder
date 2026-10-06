@@ -13886,6 +13886,216 @@
                 "Content"
             ]
         },
+        "designTokens": {
+            "tokens": [
+                {
+                    "default": null,
+                    "id": "color.primary",
+                    "kind": "color",
+                    "label": "Primary",
+                    "theme": [
+                        {
+                            "component": "wear-m3/screen-scaffold",
+                            "property": "themePrimaryColor"
+                        }
+                    ]
+                },
+                {
+                    "default": null,
+                    "id": "color.onPrimary",
+                    "kind": "color",
+                    "label": "On primary",
+                    "theme": [
+                        {
+                            "component": "wear-m3/screen-scaffold",
+                            "property": "themeOnPrimaryColor"
+                        }
+                    ]
+                },
+                {
+                    "default": null,
+                    "id": "color.primaryContainer",
+                    "kind": "color",
+                    "label": "Primary container",
+                    "theme": [
+                        {
+                            "component": "wear-m3/screen-scaffold",
+                            "property": "themePrimaryContainerColor"
+                        }
+                    ]
+                },
+                {
+                    "default": null,
+                    "id": "color.secondary",
+                    "kind": "color",
+                    "label": "Secondary",
+                    "theme": [
+                        {
+                            "component": "wear-m3/screen-scaffold",
+                            "property": "themeSecondaryColor"
+                        }
+                    ]
+                },
+                {
+                    "default": null,
+                    "id": "color.tertiary",
+                    "kind": "color",
+                    "label": "Tertiary",
+                    "theme": [
+                        {
+                            "component": "wear-m3/screen-scaffold",
+                            "property": "themeTertiaryColor"
+                        }
+                    ]
+                },
+                {
+                    "default": null,
+                    "id": "color.surfaceContainer",
+                    "kind": "color",
+                    "label": "Surface container",
+                    "theme": [
+                        {
+                            "component": "wear-m3/screen-scaffold",
+                            "property": "themeSurfaceContainerColor"
+                        }
+                    ]
+                },
+                {
+                    "default": null,
+                    "id": "color.onSurface",
+                    "kind": "color",
+                    "label": "On surface",
+                    "theme": [
+                        {
+                            "component": "wear-m3/screen-scaffold",
+                            "property": "themeOnSurfaceColor"
+                        }
+                    ]
+                },
+                {
+                    "default": null,
+                    "id": "color.background",
+                    "kind": "color",
+                    "label": "Background",
+                    "theme": [
+                        {
+                            "component": "wear-m3/screen-scaffold",
+                            "property": "themeBackgroundColor"
+                        }
+                    ]
+                },
+                {
+                    "default": null,
+                    "id": "color.error",
+                    "kind": "color",
+                    "label": "Error",
+                    "theme": [
+                        {
+                            "component": "wear-m3/screen-scaffold",
+                            "property": "themeErrorColor"
+                        }
+                    ]
+                },
+                {
+                    "components": [
+                        {
+                            "component": "wear-m3/transforming-lazy-column",
+                            "property": "verticalSpacingDp"
+                        },
+                        {
+                            "component": "layout/column",
+                            "property": "verticalSpacingDp"
+                        }
+                    ],
+                    "default": null,
+                    "id": "space.list",
+                    "kind": "number",
+                    "label": "List spacing",
+                    "maximum": 24,
+                    "minimum": 0
+                },
+                {
+                    "components": [
+                        {
+                            "component": "layout/row",
+                            "property": "horizontalSpacingDp"
+                        }
+                    ],
+                    "default": null,
+                    "id": "space.row",
+                    "kind": "number",
+                    "label": "Row spacing",
+                    "maximum": 24,
+                    "minimum": 0
+                },
+                {
+                    "components": [
+                        {
+                            "component": "wear-m3/icon",
+                            "property": "sizeDp"
+                        }
+                    ],
+                    "default": null,
+                    "id": "size.icon",
+                    "kind": "number",
+                    "label": "Icon size",
+                    "maximum": 48,
+                    "minimum": 12
+                },
+                {
+                    "components": [
+                        {
+                            "component": "wear-m3/button",
+                            "property": "containerColor"
+                        },
+                        {
+                            "component": "wear-m3/icon-button",
+                            "property": "containerColor"
+                        },
+                        {
+                            "component": "wear-m3/edge-button",
+                            "property": "containerColor"
+                        }
+                    ],
+                    "default": null,
+                    "id": "color.buttonContainer",
+                    "kind": "color",
+                    "label": "Button container"
+                },
+                {
+                    "components": [
+                        {
+                            "component": "wear-m3/button",
+                            "property": "contentColor"
+                        },
+                        {
+                            "component": "wear-m3/icon-button",
+                            "property": "contentColor"
+                        },
+                        {
+                            "component": "wear-m3/edge-button",
+                            "property": "contentColor"
+                        }
+                    ],
+                    "default": null,
+                    "id": "color.buttonContent",
+                    "kind": "color",
+                    "label": "Button content"
+                },
+                {
+                    "components": [
+                        {
+                            "component": "wear-m3/card",
+                            "property": "containerColor"
+                        }
+                    ],
+                    "default": null,
+                    "id": "color.cardContainer",
+                    "kind": "color",
+                    "label": "Card container"
+                }
+            ]
+        },
         "frame": {
             "adapter": "frame/round-screen",
             "geometry": {

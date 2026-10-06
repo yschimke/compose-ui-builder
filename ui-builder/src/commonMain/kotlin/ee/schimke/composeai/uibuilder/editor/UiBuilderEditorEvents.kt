@@ -277,6 +277,44 @@ sealed interface UiBuilderEditorEvent {
     val modifierIndex: Int? = null,
   ) : UiBuilderEditorEvent
 
+  /**
+   * Drive [target] from a tunable: the one named [into], or a new one seeded from the target's own
+   * value and range. See [DesignTunable].
+   */
+  data class TuneTarget(val target: TunableTarget, val into: String? = null) : UiBuilderEditorEvent
+
+  /** Stop [name] driving [target]; the target draws what it holds again. */
+  data class UntuneTarget(val name: String, val target: TunableTarget) : UiBuilderEditorEvent
+
+  /**
+   * Replace the tunable called [name] with [tunable] — a rename, a new range or a new default. Its
+   * slider is kept, moved into the new range.
+   */
+  data class EditTunable(val name: String, val tunable: DesignTunable) : UiBuilderEditorEvent
+
+  data class RemoveTunable(val name: String) : UiBuilderEditorEvent
+
+  /** Move [name]'s slider. Live only: the canvas redraws, the document is not touched. */
+  data class SetTunedValue(val name: String, val value: Double) : UiBuilderEditorEvent
+
+  /** Every slider back to its tunable's default. */
+  data object ResetTunedValues : UiBuilderEditorEvent
+
+  /**
+   * Write every tunable's current value into the targets it drives — one undoable edit for the
+   * properties and one for the modifiers — and make those values the new defaults.
+   */
+  data object ApplyTunables : UiBuilderEditorEvent
+
+  /**
+   * Set the design token [tokenId] to [value] — written into every property it binds, as one edit —
+   * or, for a null [value], reset it to the design system's default.
+   */
+  data class ApplyDesignToken(val tokenId: String, val value: String?) : UiBuilderEditorEvent
+
+  /** Put a slider on the number token [tokenId]: a tunable over every property it binds. */
+  data class TuneDesignToken(val tokenId: String) : UiBuilderEditorEvent
+
   data class SetStateVariable(val name: String, val declaration: JsonObject) : UiBuilderEditorEvent
 
   data class RemoveStateVariable(val name: String) : UiBuilderEditorEvent

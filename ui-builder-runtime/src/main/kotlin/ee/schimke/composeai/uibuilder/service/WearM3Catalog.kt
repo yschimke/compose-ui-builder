@@ -24,6 +24,130 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 /**
+ * The values `wear-m3` lets a design re-skin: its design tokens, read by the editor's Theme panel
+ * (`DesignTokens.from` in `:ui-builder`, which this module cannot name — hence the literal keys).
+ *
+ * Every default is **null**, because every property here already says "unset keeps Wear's own": a
+ * token that is not set draws the design system's value, and setting one writes it into the
+ * properties it binds. Theme tokens land on the screen's `ScreenScaffold`, which is where a Wear
+ * design's `MaterialTheme` colour scheme hangs; component tokens land on every node of the
+ * components they name. The colours are the roles a screen re-skins most — the rest of the scheme
+ * stays a property of the scaffold for whoever needs it — and the numbers are the three the
+ * catalog's components share: list spacing, row spacing and icon size.
+ */
+internal fun wearDesignTokens(): JsonObject {
+  val scaffold = "wear-m3/screen-scaffold"
+  fun theme(id: String, label: String, property: String) = buildJsonObject {
+    put("id", JsonPrimitive(id))
+    put("label", JsonPrimitive(label))
+    put("kind", JsonPrimitive("color"))
+    put("default", kotlinx.serialization.json.JsonNull)
+    putJsonArray("theme") {
+      add(
+        buildJsonObject {
+          put("component", JsonPrimitive(scaffold))
+          put("property", JsonPrimitive(property))
+        }
+      )
+    }
+  }
+  fun components(
+    id: String,
+    label: String,
+    kind: String,
+    targets: List<Pair<String, String>>,
+    range: Pair<Int, Int>? = null,
+  ) = buildJsonObject {
+    put("id", JsonPrimitive(id))
+    put("label", JsonPrimitive(label))
+    put("kind", JsonPrimitive(kind))
+    put("default", kotlinx.serialization.json.JsonNull)
+    range?.let { (minimum, maximum) ->
+      put("minimum", JsonPrimitive(minimum))
+      put("maximum", JsonPrimitive(maximum))
+    }
+    putJsonArray("components") {
+      targets.forEach { (component, property) ->
+        add(
+          buildJsonObject {
+            put("component", JsonPrimitive(component))
+            put("property", JsonPrimitive(property))
+          }
+        )
+      }
+    }
+  }
+  val buttons = listOf("wear-m3/button", "wear-m3/icon-button", "wear-m3/edge-button")
+  return buildJsonObject {
+    putJsonArray("tokens") {
+      add(theme("color.primary", "Primary", "themePrimaryColor"))
+      add(theme("color.onPrimary", "On primary", "themeOnPrimaryColor"))
+      add(theme("color.primaryContainer", "Primary container", "themePrimaryContainerColor"))
+      add(theme("color.secondary", "Secondary", "themeSecondaryColor"))
+      add(theme("color.tertiary", "Tertiary", "themeTertiaryColor"))
+      add(theme("color.surfaceContainer", "Surface container", "themeSurfaceContainerColor"))
+      add(theme("color.onSurface", "On surface", "themeOnSurfaceColor"))
+      add(theme("color.background", "Background", "themeBackgroundColor"))
+      add(theme("color.error", "Error", "themeErrorColor"))
+      add(
+        components(
+          "space.list",
+          "List spacing",
+          "number",
+          listOf(
+            "wear-m3/transforming-lazy-column" to "verticalSpacingDp",
+            "layout/column" to "verticalSpacingDp",
+          ),
+          range = 0 to 24,
+        )
+      )
+      add(
+        components(
+          "space.row",
+          "Row spacing",
+          "number",
+          listOf("layout/row" to "horizontalSpacingDp"),
+          range = 0 to 24,
+        )
+      )
+      add(
+        components(
+          "size.icon",
+          "Icon size",
+          "number",
+          listOf("wear-m3/icon" to "sizeDp"),
+          range = 12 to 48,
+        )
+      )
+      add(
+        components(
+          "color.buttonContainer",
+          "Button container",
+          "color",
+          buttons.map { it to "containerColor" },
+        )
+      )
+      add(
+        components(
+          "color.buttonContent",
+          "Button content",
+          "color",
+          buttons.map { it to "contentColor" },
+        )
+      )
+      add(
+        components(
+          "color.cardContainer",
+          "Card container",
+          "color",
+          listOf("wear-m3/card" to "containerColor"),
+        )
+      )
+    }
+  }
+}
+
+/**
  * How the builder's insert panel shelves `wear-m3`, and which property carries a component's
  * variants.
  *
@@ -1534,7 +1658,9 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             // `:ui-builder`, which this module must never depend on —
             // `checkUiBuilderRuntimeBoundary`
             // enforces the arrow, and the editor is above the runtime, not beside it.
-            ("componentMenu" to wearComponentMenu())
+            ("componentMenu" to wearComponentMenu()) +
+            // What a design may re-skin, and where each value lands; see [wearDesignTokens].
+            ("designTokens" to wearDesignTokens())
         )
       it.benchmark =
         base.benchmark

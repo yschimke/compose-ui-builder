@@ -184,6 +184,8 @@ internal fun PropertyInspector(
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
   modifier: Modifier = Modifier.width(INSPECTOR_WIDTH).fillMaxHeight(),
+  /** The catalog's design tokens as this design reads them, for the Theme panel. */
+  designTokens: List<EditorDesignTokenRow> = emptyList(),
 ) {
   val node = state.selectedNodeId?.let(state.document.nodes::get)
   val propertyDrafts =
@@ -279,6 +281,7 @@ internal fun PropertyInspector(
           onTextInputFocusChanged = onTextInputFocusChanged,
           propertyDrafts = propertyDrafts,
           dispatch = dispatch,
+          designTokens = designTokens,
         )
       }
     }
@@ -336,6 +339,7 @@ private fun InspectorBody(
   onTextInputFocusChanged: (Boolean) -> Unit,
   propertyDrafts: MutableMap<InspectorPropertyDraftKey, InspectorPropertyDraft>,
   dispatch: (UiBuilderEditorEvent) -> Unit,
+  designTokens: List<EditorDesignTokenRow>,
 ) {
   Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
     if (state.inspectorMode == EditorInspectorMode.Issues) {
@@ -405,6 +409,12 @@ private fun InspectorBody(
       // Scrolled for the reason the Screen tab is: the typeface pickers below the colour fields
       // run past a short panel.
       Column(Modifier.verticalScroll(rememberScrollState())) {
+        // The design system's own tokens first: on a catalog that declares them they are the theme,
+        // and the builder below is the Material 3 surface's.
+        if (designTokens.isNotEmpty()) {
+          DesignTokensSection(designTokens, state.tunables, onTextInputFocusChanged, dispatch)
+          HorizontalDivider(Modifier.padding(vertical = 14.dp))
+        }
         ThemeBuilder(themeSettings, state.document.themeHost(), onTextInputFocusChanged, dispatch)
       }
       return@Column
@@ -528,42 +538,56 @@ private fun InspectorBody(
     }
     LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
       itemsIndexed(visibleFields, key = { _, field -> field.name }) { _, field ->
-        PropertyControl(
-          field = field,
-          stateVariables = if (field.name in bindableProperties) stateVariables else emptyList(),
-          needsComparison = { variable ->
-            val declaration = state.document.stateVariables[variable] as? JsonObject
-            val valueType = (declaration?.get("valueType") as? JsonPrimitive)?.content
-            val booleanState =
-              valueType == "bool" ||
-                (valueType == null &&
-                  (declaration?.get("initialValue") as? JsonPrimitive)?.booleanOrNull != null)
-            val nullableState =
-              (declaration?.get("nullable") as? JsonPrimitive)?.booleanOrNull == true ||
-                declaration?.get("initialValue") is JsonNull
-            field.name in comparisonBindingProperties && (!booleanState || nullableState)
-          },
-          onTextInputFocusChanged = onTextInputFocusChanged,
-          draft = propertyDrafts[InspectorPropertyDraftKey(field.nodeId, field.name)],
-          onDraftChange = { draft ->
-            val key = InspectorPropertyDraftKey(field.nodeId, field.name)
-            if (draft == null) propertyDrafts.remove(key) else propertyDrafts[key] = draft
-          },
-          onBind = { variable, equalsValue ->
-            dispatch(
-              UiBuilderEditorEvent.BindPropertyToState(
-                node.id,
-                field.name,
-                variable,
-                equalsValue,
-              )
+        // A plain number on one node can be handed to a tunable; see [DesignTunable].
+        val tuneTarget =
+          TunableTarget.Property(node.id, field.name).takeIf {
+            field.control == EditorPropertyControl.Number &&
+              field.nodeCount == 1 &&
+              field.boundVariable == null &&
+              state.document.canTune(it)
+          }
+        Row(verticalAlignment = Alignment.Top) {
+          Box(Modifier.weight(1f)) {
+            PropertyControl(
+              field = field,
+              stateVariables =
+                if (field.name in bindableProperties) stateVariables else emptyList(),
+              needsComparison = { variable ->
+                val declaration = state.document.stateVariables[variable] as? JsonObject
+                val valueType = (declaration?.get("valueType") as? JsonPrimitive)?.content
+                val booleanState =
+                  valueType == "bool" ||
+                    (valueType == null &&
+                      (declaration?.get("initialValue") as? JsonPrimitive)?.booleanOrNull != null)
+                val nullableState =
+                  (declaration?.get("nullable") as? JsonPrimitive)?.booleanOrNull == true ||
+                    declaration?.get("initialValue") is JsonNull
+                field.name in comparisonBindingProperties && (!booleanState || nullableState)
+              },
+              onTextInputFocusChanged = onTextInputFocusChanged,
+              draft = propertyDrafts[InspectorPropertyDraftKey(field.nodeId, field.name)],
+              onDraftChange = { draft ->
+                val key = InspectorPropertyDraftKey(field.nodeId, field.name)
+                if (draft == null) propertyDrafts.remove(key) else propertyDrafts[key] = draft
+              },
+              onBind = { variable, equalsValue ->
+                dispatch(
+                  UiBuilderEditorEvent.BindPropertyToState(
+                    node.id,
+                    field.name,
+                    variable,
+                    equalsValue,
+                  )
+                )
+              },
+              onUnbind = { dispatch(UiBuilderEditorEvent.UnbindProperty(node.id, field.name)) },
+              commit = { value ->
+                dispatch(UiBuilderEditorEvent.CommitProperty(node.id, field.name, value))
+              },
             )
-          },
-          onUnbind = { dispatch(UiBuilderEditorEvent.UnbindProperty(node.id, field.name)) },
-          commit = { value ->
-            dispatch(UiBuilderEditorEvent.CommitProperty(node.id, field.name, value))
-          },
-        )
+          }
+          if (tuneTarget != null) TuneFieldButton(tuneTarget, state.tunables, dispatch)
+        }
       }
       if (fields.isEmpty()) {
         item {
@@ -659,26 +683,35 @@ private fun InspectorBody(
               Text(label, style = MaterialTheme.typography.labelMedium)
               editable.forEach { field ->
                 key(node.id, index, field.field) {
-                  HoverEditorRow(
-                    label = field.label,
-                    value = field.value,
-                    control =
-                      if (field.choices.isEmpty()) EditorPropertyControl.Number
-                      else EditorPropertyControl.Enum,
-                    choices = field.choices,
-                    focused = false,
-                    onFocusHandled = {},
-                    onTextInputFocusChanged = onTextInputFocusChanged,
-                  ) { value ->
-                    dispatch(
-                      UiBuilderEditorEvent.SetModifierValue(
-                        node.id,
-                        field.type,
-                        field.field,
-                        value,
-                        index,
-                      )
-                    )
+                  val tuneTarget =
+                    TunableTarget.Modifier(node.id, index, field.type, field.field).takeIf {
+                      field.choices.isEmpty() && state.document.canTune(it)
+                    }
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
+                      HoverEditorRow(
+                        label = field.label,
+                        value = field.value,
+                        control =
+                          if (field.choices.isEmpty()) EditorPropertyControl.Number
+                          else EditorPropertyControl.Enum,
+                        choices = field.choices,
+                        focused = false,
+                        onFocusHandled = {},
+                        onTextInputFocusChanged = onTextInputFocusChanged,
+                      ) { value ->
+                        dispatch(
+                          UiBuilderEditorEvent.SetModifierValue(
+                            node.id,
+                            field.type,
+                            field.field,
+                            value,
+                            index,
+                          )
+                        )
+                      }
+                    }
+                    if (tuneTarget != null) TuneFieldButton(tuneTarget, state.tunables, dispatch)
                   }
                 }
               }
