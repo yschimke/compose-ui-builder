@@ -109,7 +109,10 @@ object DesignFiles {
    * collection.
    */
   fun updateCollection(path: Path, update: (UidDesignCollection) -> UidDesignCollection) {
-    writeText(path, UidDesignFiles.encodeCollection(update(readCollection(path))))
+    val original = Files.readString(path)
+    val designs = UidDesignFiles.decodeCollection(original)
+    designs.catalogSystemId?.let(OfflineCatalog::forSystem)
+    writeText(path, UidDesignFiles.encodeCollection(update(designs), original))
   }
 
   fun write(path: Path, document: DesignDocumentV1, original: String?) {

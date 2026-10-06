@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -49,7 +50,7 @@ object UidDesignFiles {
     val schema = (encoded?.get("schema") as? JsonPrimitive)?.content
     if (schema == COLLECTION_SCHEMA) {
       val collection = decodeCollection(text)
-      return OpenedUidDesign(collection.activeDocument, null, collection)
+      return OpenedUidDesign(collection.activeDocument, null, collection, text)
     }
     if (schema?.startsWith("compose-ui-builder-production/") == true) {
       val production = ProductionUidFiles.decode(text)
@@ -107,16 +108,7 @@ object UidDesignFiles {
       val single = decode(text)
       return UidDesignCollection(single.id, listOf(single))
     }
-    val designs =
-      requireNotNull(encoded["designs"] as? JsonArray) { "a design collection lists its designs" }
-        .map { element ->
-          val wire = json.decodeFromJsonElement(DesignDocumentV1.serializer(), element)
-          require(wire.schema in SCHEMAS) {
-            "unsupported design schema '${wire.schema}' in a design collection; this editor reads " +
-              SCHEMAS.joinToString()
-          }
-          wire.toUiBuilderDocument()
-        }
+    val designs = collectionEntries(encoded).map { it.second }
     val active =
       requireNotNull(encoded["active"]?.jsonPrimitive?.contentOrNull) {
         "a design collection names its active design"
@@ -124,8 +116,19 @@ object UidDesignFiles {
     return UidDesignCollection(active, designs)
   }
 
-  /** The file's bytes for [collection]. */
-  fun encodeCollection(collection: UidDesignCollection): String {
+  /**
+   * The file's bytes for [collection]. Given the [original] file, every design that is unchanged
+   * from it is written back as the JSON it was read from, so a field this editor does not model —
+   * written by a newer one — survives in the designs nobody edited.
+   */
+  fun encodeCollection(collection: UidDesignCollection, original: String? = null): String {
+    val unchanged =
+      original
+        ?.let { text -> runCatching { json.parseToJsonElement(text) as? JsonObject }.getOrNull() }
+        ?.takeIf { (it["schema"] as? JsonPrimitive)?.contentOrNull == COLLECTION_SCHEMA }
+        ?.let { encoded -> runCatching { collectionEntries(encoded) }.getOrNull() }
+        .orEmpty()
+        .associate { (raw, document) -> document to raw }
     val encoded =
       JsonObject(
         linkedMapOf(
@@ -134,13 +137,29 @@ object UidDesignFiles {
           "designs" to
             JsonArray(
               collection.designs.map {
-                json.encodeToJsonElement(DesignDocumentV1.serializer(), it.toDesignDocumentV1())
+                unchanged[it]
+                  ?: json.encodeToJsonElement(
+                    DesignDocumentV1.serializer(),
+                    it.toDesignDocumentV1(),
+                  )
               }
             ),
         )
       )
     return json.encodeToString(JsonObject.serializer(), encoded) + "\n"
   }
+
+  /** Each entry of a collection file as its JSON and the design it decodes to. */
+  private fun collectionEntries(encoded: JsonObject): List<Pair<JsonElement, UiBuilderDocument>> =
+    requireNotNull(encoded["designs"] as? JsonArray) { "a design collection lists its designs" }
+      .map { element ->
+        val wire = json.decodeFromJsonElement(DesignDocumentV1.serializer(), element)
+        require(wire.schema in SCHEMAS) {
+          "unsupported design schema '${wire.schema}' in a design collection; this editor reads " +
+            SCHEMAS.joinToString()
+        }
+        element to wire.toUiBuilderDocument()
+      }
 }
 
 /**
@@ -214,6 +233,8 @@ internal constructor(
   val production: ProductionUidFile?,
   /** The file's other designs when it is a collection; [document] is its active one. */
   val collection: UidDesignCollection? = null,
+  /** The bytes [collection] was read from, so its untouched designs are written back as read. */
+  private val collectionText: String? = null,
 ) {
   /**
    * Saves visual edits while preserving the complete explicitly authored production API, or every
@@ -221,7 +242,7 @@ internal constructor(
    */
   fun encode(current: UiBuilderDocument = document): String {
     collection?.let {
-      return UidDesignFiles.encodeCollection(it.replaceActive(current))
+      return UidDesignFiles.encodeCollection(it.replaceActive(current), collectionText)
     }
     val source = production ?: return UidDesignFiles.encode(current)
     val entry = requireNotNull(source.entryPoint)

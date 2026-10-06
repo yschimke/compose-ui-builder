@@ -6,8 +6,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 
 /** Several top-level designs in one `.uid`, one of them active. */
 class UidDesignCollectionTest {
@@ -74,6 +78,32 @@ class UidDesignCollectionTest {
     }
     assertFailsWith<IllegalArgumentException> {
       UidDesignCollection(home.id, listOf(home)).minus(home.id)
+    }
+  }
+
+  @Test
+  fun `a field this editor does not model survives in the designs nobody edited`() {
+    val encoded = Json.parseToJsonElement(text).jsonObject
+    val designs = encoded.getValue("designs").jsonArray
+    val future = JsonObject(designs[0].jsonObject + ("futureField" to JsonPrimitive("kept")))
+    val withFuture =
+      Json.encodeToString(
+        JsonObject.serializer(),
+        JsonObject(encoded + ("designs" to JsonArray(listOf(future, designs[1])))),
+      )
+
+    val saved = UidDesignFiles.open(withFuture).encode(detail.copy(title = "Detail, edited"))
+    val switched =
+      UidDesignFiles.encodeCollection(
+        UidDesignFiles.decodeCollection(saved).withActive(home.id),
+        saved,
+      )
+
+    for (written in listOf(saved, switched)) {
+      assertEquals(
+        future,
+        Json.parseToJsonElement(written).jsonObject.getValue("designs").jsonArray[0],
+      )
     }
   }
 }
