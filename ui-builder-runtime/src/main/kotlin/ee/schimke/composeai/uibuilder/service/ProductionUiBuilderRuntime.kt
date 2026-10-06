@@ -1168,7 +1168,8 @@ internal fun slotAccepts(slot: SlotCapabilityV1, component: ComponentCapabilityV
  * (the brush passed to `WearWidgetDocument`), defaulting to `WearWidgetContainer`'s `#FF272430`.
  *
  * Padding and corner radius are deliberately absent: the host supplies them per shape
- * (yschimke/wear-m3-catalog#623). Stored designs that carry them are still read as overrides.
+ * (yschimke/wear-m3-catalog#623). Stored designs that carry them keep the values, but no lane reads
+ * them: only the predefined host shapes are supported.
  */
 internal fun widgetContainerProperties(): List<PropertyCapabilityV1> =
   listOf(

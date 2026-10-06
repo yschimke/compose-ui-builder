@@ -2271,13 +2271,12 @@ internal fun WearWidgetContainerScaffold(
   hasBrushes: Boolean,
   content: @Composable () -> Unit,
 ) {
-  // The viewed shape's published spec is the baseline; a design that authored its own padding or
-  // radius still overrides it, which is what it always did — only the number it overrides changed
-  // from "the squircle's" to "this shape's". The content box is not on that list and cannot be:
-  // it is the footprint the host reserves, not a value a widget holds.
-  val horizontalPadding = node.float("horizontalPaddingDp", spec.horizontalPaddingDp)
-  val verticalPadding = node.float("verticalPaddingDp", spec.verticalPaddingDp)
-  val cornerRadius = node.float("cornerRadiusDp", spec.cornerRadiusDp)
+  // The frame is the viewed host's published spec and nothing else. A design saved while padding
+  // and radius were authorable still carries them, but only the predefined host shapes are
+  // supported, so those values are ignored rather than drawn as a frame no launcher produces.
+  val horizontalPadding = spec.horizontalPaddingDp
+  val verticalPadding = spec.verticalPaddingDp
+  val cornerRadius = spec.cornerRadiusDp
   val shape = RoundedCornerShape(cornerRadius.dp)
   // The default applies only when the chain is EMPTY, which is what `WearWidgetBrush.isEmpty()`
   // asks upstream. A widget that declares a gradient or an image and no colour has a one-element

@@ -271,8 +271,8 @@ for as a **parameter** because a widget's artwork is application data, and a `@P
 container shape driven by the shipped `WidgetPreviewParams` providers because those are the only
 container specs such a file can name. Submitting that to this lane draws a widget with a hole where
 the artwork goes — the class defaults each picture to a blank 1×1 bitmap and nothing downstream can
-pass another — and refuses outright any design that authored its own padding or corner radius, which
-no provider carries.
+pass another — and draws a `@Preview` per host shape where this lane wants the one shape the editor
+is showing.
 
 So the lane submits a different file, written by `WearWidgetNativePreviewExporter`, holding the
 three things it actually needs and no ceremony:
@@ -281,7 +281,7 @@ three things it actually needs and no ceremony:
 | --- | --- |
 | `<Name>Content()` | the `@RemoteComposable` body, with every picture's bytes **inlined** rather than asked for |
 | `<Name>Background()` | the widget's own `WearWidgetBrush` — what the host paints the squircle with |
-| `<Name>Params()` | the `WearWidgetParams` **this design** describes: its footprint, its padding, its radius |
+| `<Name>Params()` | the `WearWidgetParams` of the **selected host shape**: its footprint, padding and radius, from `hostSpec` — never the design's |
 
 `UiBuilderGeneratedPreviewAdapter` hands the three to `androidx.glance.wear.tooling.preview`'s
 `WearWidgetPreview`, which builds the document and runs it through the same `WearWidgetContainer`
@@ -295,9 +295,9 @@ deployment cost for nothing; producing a document is what the
 Two consequences worth stating out loud:
 
 - **The frame is the container's, not the environment's.** A widget design's `environment` describes
-  a watch screen; the render is measured at the content box plus the padding the design authored —
-  216×124dp for a Large container at the shipped 8dp — which is exactly what the Wasm canvas draws
-  beside it.
+  a watch screen; the render is measured at the content box plus the host shape's padding —
+  216×124dp for a Large squircle — which is exactly what the Wasm canvas draws beside it. Only the
+  predefined host shapes exist: a legacy padding or radius stored on a design is ignored.
 - **There is no clickable overlay.** A `testTag` is a Compose UI modifier and this body is Remote
   Compose, recorded into a document rather than composed into a semantics tree, so the lane reports
   no tagged nodes and no bounds. The layers panel still selects; a rectangle this lane could not

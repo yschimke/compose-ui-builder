@@ -660,8 +660,10 @@ container's parameters it carries one, plus the widget's theme typefaces and def
 
 Padding and corner radius are not properties. `WearWidgetParams` hands them to the widget per host
 shape — 8/8/26 for the squircle, 0 radius for the rectangle, 999 for round — so they belong to the
-host, not to the design; switch the host shape in the editor to see the widget in each frame. A
-design saved while they were authorable keeps its values as an override.
+host, not to the design; switch the host shape in the editor to see the widget in each frame.
+Only the predefined host shapes are supported: a design saved while padding and radius were
+authorable still carries them, but the canvas, the native preview and the export all ignore them
+and draw the selected shape's own frame.
 
 The background belongs on the scaffold, not on a surface inside it. On-device the coloured squircle
 **is** the widget: `WearWidgetDocument(background = …)` hands the brush to the container, which
@@ -920,19 +922,16 @@ is the parser; an object it cannot read is ignored, not an error):
 
 A `shape` is a named shape or a corner radius in dp written as a string, `"32"`.
 
-Three things the container does not do, which surprise people building a widget for several
-screens:
+Two things that surprise people building a widget for several screens:
 
 - **The content box is fixed by the container size.** Small is 200×60dp and Large 200×108dp of
   content; a `size` modifier on the container is refused
   (`UNKNOWN_MODIFIER: modifier size is not declared by remote-m3/widget-container-small`).
-  Padding and corner radius come from the host shape, not the design — switch the host shape to see
-  them change — and they surround that box rather than shrinking it; only a design saved while they
-  were authorable still carries an override. That is the host's model — the launcher picks the
-  container — so the container cannot stand in for other screen-size footprints.
-- **For a per-footprint visual check**, build a `layout/box` root with `size`, `background` and
-  `padding` modifiers: it renders at exactly that frame. It is not a widget container, so its
-  export is not a `GlanceWearWidget` — use it for comparison only.
+  Padding and corner radius come from the host shape, not the design, and they surround that box
+  rather than shrinking it. That is the host's model — the launcher picks the container — so a
+  widget is checked against the **predefined host shapes** (Squircle, Rectangular and Round, each
+  at Small and Large), not against an arbitrary frame: switch the host shape in the editor to see
+  each one.
 - **An icon is `remote-m3/remote-icon`**, on the Iconography shelf. Its `imageVector` is a Material
   icon key — the same keys `m3/icon` takes (`home`, `search`, …), `addCircle` when unset — and it
   exports as `RemoteIcon(imageVector = Icons.Filled.Home.toRemoteImageVector(), …)`, so the

@@ -18,17 +18,17 @@ import ee.schimke.composeai.discovery.ComponentRecord
  * 1. nothing downstream can pass an argument, so a picture asked for as a parameter arrives as the
  *    blank 1×1 placeholder the widget class defaults to — a render with a hole in it where the
  *    canvas beside it shows the album art;
- * 2. the shipped providers carry only the specs upstream publishes — for the shape a design is
- *    authored against, the squircle's 8dp padding and 26dp radius — so a design that moved either
- *    is refused by the exporter rather than drawn, a refusal that is true of a pasteable file and
- *    not of a render this host builds its own params for; and
+ * 2. the providers' `@Preview` per shape is several frames, and this lane draws the one host shape
+ *    the editor is showing; and
  * 3. the widget class and its `provideWidgetData` are ceremony around a body nobody here calls
  *    through them.
  *
  * So this writes the three things the lane actually needs and nothing else: the `@RemoteComposable`
  * body with its pictures **inlined**, the widget's own `WearWidgetBrush`, and the
- * `WearWidgetParams` the design's scaffold describes. The preview entry that puts them together
- * lives in the server, beside the entry it already synthesizes for a screen.
+ * `WearWidgetParams` of the selected predefined host shape. Padding and radius are the host's
+ * (`hostSpec`), never the design's: a legacy override on the container is ignored. The preview
+ * entry that puts them together lives in the server, beside the entry it already synthesizes for a
+ * screen.
  *
  * ## What it still does not do
  *
@@ -140,13 +140,12 @@ internal object WearWidgetNativePreviewExporter {
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
     val name = document.widgetIdentifier()
-    // The selected shape's published spec is the baseline; a design that authored its own padding
-    // or radius overrides it, exactly as the canvas beside this render does. Content box is not on
-    // that list and cannot be: it is the footprint the host reserves, not a value a widget holds.
+    // The selected shape's published spec, exactly as the canvas beside this render draws it. Only
+    // the predefined host shapes are supported: a legacy padding or radius override is ignored.
     val spec = size.hostSpec(shape)
-    val horizontalPadding = root.previewFloat("horizontalPaddingDp", spec.horizontalPaddingDp)
-    val verticalPadding = root.previewFloat("verticalPaddingDp", spec.verticalPaddingDp)
-    val cornerRadius = root.previewFloat("cornerRadiusDp", spec.cornerRadiusDp)
+    val horizontalPadding = spec.horizontalPaddingDp
+    val verticalPadding = spec.verticalPaddingDp
+    val cornerRadius = spec.cornerRadiusDp
     return Result.Emitted(
       name = name,
       widthDp = (spec.contentWidthDp + 2f * horizontalPadding).toInt(),
@@ -193,10 +192,8 @@ internal object WearWidgetNativePreviewExporter {
           appendLine("${INDENT}return ${background.expression}")
           appendLine("}")
           appendLine()
-          // The design's own container spec, not a shipped provider's. This is the whole reason a
-          // design that authored its padding or its radius renders here while its export refuses:
-          // an exported file may only name what upstream publishes, and this host constructs the
-          // params itself.
+          // The selected host shape's published params, constructed here because this host builds
+          // its own `WearWidgetParams` rather than naming a shipped provider.
           appendLine("fun ${name}Params(): WearWidgetParams =")
           appendLine("${INDENT}WearWidgetParams(")
           appendLine(
@@ -225,10 +222,6 @@ internal object WearWidgetNativePreviewExporter {
   }
 
   private fun refuse(reason: String) = Result.Refused(listOf(reason))
-
-  /** The design's own value, or the shipped default when it declares none. */
-  private fun UiBuilderNode.previewFloat(name: String, fallback: Float): Float =
-    properties[name]?.numberOrNull() ?: fallback
 
   /** `8.0` is what a `Float` argument reads as; `8` would be an `Int`. */
   private fun Float.dpLiteral(): String = if (this % 1f == 0f) "${toInt()}f" else "${this}f"
