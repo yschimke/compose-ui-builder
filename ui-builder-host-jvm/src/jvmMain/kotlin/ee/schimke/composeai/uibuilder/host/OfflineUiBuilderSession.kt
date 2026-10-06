@@ -330,7 +330,9 @@ private constructor(
    * to apply its queue to, and must not hold the caller forever.
    */
   override fun close() {
-    submissions.close()
+    // IDE hosts provide coroutines themselves. Avoid the compiler-generated close$default
+    // bridge, which is not binary-compatible across their coroutines interface-default modes.
+    submissions.close(null)
     runBlocking { withTimeoutOrNull(CLOSE_DRAIN_TIMEOUT) { worker.join() } }
     scope.cancel()
   }
