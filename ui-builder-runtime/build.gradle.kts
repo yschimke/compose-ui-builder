@@ -41,6 +41,9 @@ dependencies {
   // The public service port deliberately speaks the released v1 contract types. Keeping this `api`
   // makes those types available to the host implementing or decorating the port.
   api(libs.composeai.ui.builder.protocol)
+  // `PublishedUiBuilderCatalog.Result.Composed.records` hands the host the record components it
+  // joined, so the record types are part of this module's public surface.
+  api(libs.composeai.screen.model)
   implementation(libs.kotlinx.serialization.json)
   // Shared binding semantics: the browser and persistent service must accept the same state reads.
   implementation(project(":ui-builder-export"))

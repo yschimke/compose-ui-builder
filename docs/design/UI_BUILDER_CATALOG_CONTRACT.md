@@ -746,6 +746,13 @@ binary has never heard of. Items 15, 16, 17 and 19 remain: the platform word, th
 the canvas mapping and the `compose-preview-server ui` lane still read Kotlin, so a published catalog
 is served but a **Wear-shaped** one is not yet drawn from its own declarations.
 
+`PublishedUiBuilderCatalog` and its tests live in `:ui-builder-runtime`, beside the executor that
+serves what it composes. They started in compose-preview-server, where the tests pinned this
+repository's exporter and catalog behaviour, so each change here turned that repository's checkout
+build red until a release shipped and its pin moved. The equivalence tests read one captured set of
+published, record and frozen files from `ui-builder-runtime/src/test/resources/published-catalog/`
+rather than the documentation fixtures, for the reason `PublishedCatalogSnapshots.kt` gives.
+
 **The lever item 18 promised is now a flag, and it defaults to `remote-m3`.** Item 18 says the
 cutover is "per catalog and reversible"; as shipped, the only reversal an operator had was
 `SERVE_UI_BUILDER_CATALOGS`, which withdraws a catalog from the builder entirely rather than
