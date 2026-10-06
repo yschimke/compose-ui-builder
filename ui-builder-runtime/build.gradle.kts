@@ -42,7 +42,11 @@ dependencies {
   // makes those types available to the host implementing or decorating the port.
   api(libs.composeai.ui.builder.protocol)
   // `PublishedUiBuilderCatalog.Result.Composed.records` hands the host the record components it
-  // joined, so the record types are part of this module's public surface.
+  // joined, so the record types are part of this module's public surface. `screen-model` carries
+  // no version of its own either; the tools platform supplies it, exactly as in `:ui-builder-export`.
+  // Without it the published POM names `screen-model` with no version, and a consumer resolving
+  // this module alone fails at "Could not find ee.schimke.composeai:screen-model:." (3.88.0).
+  api(platform(libs.composeai.tools.bom))
   api(libs.composeai.screen.model)
   implementation(libs.kotlinx.serialization.json)
   // Shared binding semantics: the browser and persistent service must accept the same state reads.
