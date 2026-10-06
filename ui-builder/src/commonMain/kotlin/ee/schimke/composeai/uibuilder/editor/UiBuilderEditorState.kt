@@ -388,6 +388,7 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.ApplyDesignToken ->
         applyDesignToken(state, event.tokenId, event.value)
       is UiBuilderEditorEvent.TuneDesignToken -> tuneDesignToken(state, event.tokenId)
+      is UiBuilderEditorEvent.ImportDesignTokens -> importDesignTokens(state, event.values)
       is UiBuilderEditorEvent.SetStateVariable ->
         state.apply(
           state.operationSequence + 1,
@@ -3784,6 +3785,59 @@ class UiBuilderEditorReducer(
     val operations = token.writes(state.document, catalog, parsed)
     if (operations.isEmpty()) return state
     return state.apply(sequence, operations, state.selectedNodeId)
+  }
+
+  /**
+   * Apply every imported token value as one command. Each token's writes are computed against the
+   * document as the tokens before it left it, so two tokens binding the same property resolve the
+   * way applying them one by one would: the later one wins. A value a token cannot take refuses the
+   * whole import by name, rather than applying the half that happened to come first.
+   */
+  private fun importDesignTokens(
+    state: UiBuilderEditorState,
+    values: Map<String, String>,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val tokens = catalog.designTokens.associateBy { it.id }
+    var document = state.document
+    val operations = mutableListOf<DesignOperation>()
+    values.forEach { (id, value) ->
+      val token = tokens[id] ?: return@forEach
+      val parsed =
+        token.parse(value).getOrElse { why ->
+          return state.rejected(
+            sequence,
+            RejectionCode.INVALID_PROPERTY,
+            why.message.orEmpty(),
+            field = id,
+          )
+        }
+      val writes = token.writes(document, catalog, parsed)
+      operations += writes
+      document =
+        writes.filterIsInstance<DesignOperation.SetProperty>().fold(document) { held, write ->
+          val node = held.nodes.getValue(write.nodeId)
+          held.copy(
+            nodes =
+              held.nodes +
+                (write.nodeId to
+                  node.copy(
+                    properties = JsonObject(node.properties + (write.property to write.value))
+                  ))
+          )
+        }
+    }
+    // One write per property: the later token's, as applying them in turn would leave it.
+    val last =
+      operations.asReversed().distinctBy { operation ->
+        when (operation) {
+          is DesignOperation.SetProperty -> operation.nodeId to operation.property
+          is DesignOperation.RemoveNodeProperty -> operation.nodeId to operation.property
+          else -> operation
+        }
+      }
+    if (last.isEmpty()) return state
+    return state.apply(sequence, last.asReversed(), state.selectedNodeId)
   }
 
   /**

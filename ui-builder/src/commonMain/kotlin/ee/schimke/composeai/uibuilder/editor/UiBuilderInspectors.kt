@@ -412,7 +412,14 @@ private fun InspectorBody(
         // The design system's own tokens first: on a catalog that declares them they are the theme,
         // and the builder below is the Material 3 surface's.
         if (designTokens.isNotEmpty()) {
-          DesignTokensSection(designTokens, state.tunables, onTextInputFocusChanged, dispatch)
+          DesignTokensSection(
+            designTokens,
+            state.tunables,
+            onTextInputFocusChanged,
+            dispatch,
+            preferredScheme =
+              if (state.platform == UiBuilderCatalogPlatform.WEAR) "dark" else "light",
+          )
           HorizontalDivider(Modifier.padding(vertical = 14.dp))
         }
         ThemeBuilder(themeSettings, state.document.themeHost(), onTextInputFocusChanged, dispatch)

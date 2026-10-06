@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -19,15 +21,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.capability.DesignTokenKind
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.contentOrNull
 
 /**
@@ -41,6 +47,8 @@ internal fun DesignTokensSection(
   tunables: List<DesignTunable>,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
+  /** Which scheme of a Material Theme Builder file to read: a watch is dark, a phone light. */
+  preferredScheme: String = "light",
 ) {
   if (rows.isEmpty()) return
   LocalUiBuilderChrome.current.InspectorFormHeader(
@@ -65,6 +73,127 @@ internal fun DesignTokensSection(
       )
       HorizontalDivider()
     }
+  }
+  DesignTokenExchange(rows, preferredScheme, onTextInputFocusChanged, dispatch)
+}
+
+/**
+ * Tokens out as a DTCG file and in from DTCG or a Material Theme Builder export. Text rather than a
+ * file picker, because every host — browser, desktop, IDE — has a text field and a clipboard and
+ * not every one has a file chooser the editor can open.
+ */
+@Composable
+private fun DesignTokenExchange(
+  rows: List<EditorDesignTokenRow>,
+  preferredScheme: String,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  var open by remember { mutableStateOf(false) }
+  var text by remember { mutableStateOf("") }
+  var note by remember { mutableStateOf<String?>(null) }
+  var scheme by remember(preferredScheme) { mutableStateOf(preferredScheme) }
+  val clipboard = LocalClipboard.current
+  val scope = rememberCoroutineScope()
+  TextButton(
+    onClick = { open = !open },
+    modifier = Modifier.semantics { contentDescription = "Import or export design tokens" },
+  ) {
+    Text(if (open) "Hide import and export" else "Import / export tokens")
+  }
+  if (!open) return
+  Text(
+    "Export writes the tokens this design sets as W3C DTCG JSON. Import reads DTCG or a Material " +
+      "Theme Builder export, and applies what matches as one undoable edit.",
+    style = MaterialTheme.typography.bodySmall,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+  )
+  val tokens = rows.map { it.token }
+  val themeBuilder = isThemeBuilderExport(text)
+  val preview = text.takeIf { it.isNotBlank() }?.let { importDesignTokens(it, tokens, scheme) }
+  Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    TextButton(
+      onClick = {
+        val export = exportDesignTokens(rows)
+        text = export.text()
+        note =
+          "${export.written.size} set token${if (export.written.size == 1) "" else "s"} written" +
+            if (export.skipped.isEmpty()) "."
+            else "; ${export.skipped.size} unset or mixed left out (DTCG has no unset value)."
+      },
+      modifier = Modifier.semantics { contentDescription = "Export design tokens" },
+    ) {
+      Text("Export DTCG")
+    }
+    TextButton(
+      enabled = text.isNotBlank(),
+      onClick = {
+        scope.launch { runCatching { clipboard.setClipEntry(plainTextClipEntry(text)) } }
+      },
+    ) {
+      Text("Copy")
+    }
+  }
+  OutlinedTextField(
+    text,
+    {
+      text = it
+      note = null
+    },
+    Modifier.fillMaxWidth().heightIn(min = 96.dp, max = 240.dp).onFocusChanged {
+      onTextInputFocusChanged(it.hasFocus)
+    },
+    label = { Text("Token JSON") },
+    placeholder = { Text("Paste DTCG or Theme Builder JSON to import") },
+    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+  )
+  if (themeBuilder) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+      listOf("light", "dark").forEach { choice ->
+        FilterChip(
+          selected = scheme == choice,
+          onClick = { scheme = choice },
+          label = { Text(choice.replaceFirstChar { it.uppercase() } + " scheme") },
+        )
+      }
+    }
+  }
+  note?.let {
+    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+  }
+  preview?.let { result ->
+    result.fold(
+      onSuccess = { read ->
+        Text(
+          buildString {
+            append("${read.format}: ${read.values.size} token")
+            append(if (read.values.size == 1) "" else "s")
+            append(" to apply.")
+            if (read.unknown.isNotEmpty())
+              append(" Not in this design system: ${read.unknown.joinToString()}.")
+            read.invalid.forEach { (id, why) -> append(" $id $why.") }
+          },
+          style = MaterialTheme.typography.bodySmall,
+          color =
+            if (read.invalid.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.error,
+        )
+        TextButton(
+          enabled = read.values.isNotEmpty() && note == null,
+          onClick = { dispatch(UiBuilderEditorEvent.ImportDesignTokens(read.values)) },
+          modifier = Modifier.semantics { contentDescription = "Import design tokens" },
+        ) {
+          Text("Import ${read.values.size}")
+        }
+      },
+      onFailure = {
+        Text(
+          it.message.orEmpty(),
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.error,
+        )
+      },
+    )
   }
 }
 

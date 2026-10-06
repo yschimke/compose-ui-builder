@@ -620,7 +620,9 @@ declares its theme colours and its list spacing, row spacing, icon size, button 
 colour. They appear at the top of the **Theme** panel. Each row shows whether the token is unset,
 set or mixed. **Apply** writes the value into the theme host or into every component the token
 binds, as one undoable edit. **Reset** returns it to the default. **Tune** puts a slider on a
-number token, so you can drag the list spacing of every list at once. The details are in
+number token, so you can drag the list spacing of every list at once. **Import / export tokens** writes
+the design's tokens as W3C DTCG JSON, which Style Dictionary, Tokens Studio and Figma read, and
+reads DTCG or a Material Theme Builder export back in as one undoable edit. The details are in
 [`UI_BUILDER_DESIGN_TOKENS.md`](design/UI_BUILDER_DESIGN_TOKENS.md).
 
 ## Starting from a worked widget
