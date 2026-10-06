@@ -68,7 +68,7 @@
     "functionName": "CatalogRuntimeRoutingPreview",
     "module": "ui-builder",
     "renderBasename": "CatalogRuntimeRoutingPreview-00544b46.png",
-    "sha256": "dc72dcb3fde027704109597aac552c77f5b22f0e37ebe7a1f42978a0e9040e27",
+    "sha256": "58ef03bb25af15ccfb6b69ac5c7a230fbae8a7624c8a18ada09b3bce0cedf0f1",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/CatalogRuntimeRoutingPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.ComponentPackPreviewsKt.ComponentPacksPanelPreview": {
