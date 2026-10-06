@@ -38,6 +38,7 @@ import ee.schimke.composeai.uibuilder.protocol.StringValueV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import ee.schimke.composeai.uibuilder.protocol.UploadedAssetSourceV1
 import java.io.Closeable
+import java.lang.invoke.MethodHandles
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -1369,16 +1370,21 @@ public object PackagedUiBuilderRenderBundle {
   }
 
   /**
-   * The SHA-256 of the packaged bundle: which renderer draws a PNG export, as a string.
+   * Which pipeline draws a PNG export, as a SHA-256: the packaged bundle, and the projection
+   * ([projectRendererDocument]) this runtime applies to a saved design before the bundle sees it.
    *
    * A host that keeps renders across restarts keys them by this, because the host's own version
    * does not move when only its UI-builder pin does. preview.coo.ee's design-card thumbnails were
    * keyed by the server version alone, so pictures drawn before 3.85.0 — whose projection dropped
    * every placement's `component`, drawing each as "Unsupported component:
-   * design/component-instance → (none)" — kept serving after the renderer that fixed it shipped. It
-   * is also the directory name [copyTo] stages the bundle under.
+   * design/component-instance → (none)" — kept serving after the release that fixed it shipped.
+   *
+   * Both halves, because that fix was in the projection: a hash of the bundle alone need not have
+   * moved with it. The projection half is the compiled class the projection lives in, read from
+   * this runtime's own jar, so any change to it changes the identity without a number to raise.
    */
-  public fun digest(): String = bundleBytes().sha256()
+  public fun digest(): String =
+    "bundle=${bundleBytes().sha256()}\nprojection=${projectionBytes().sha256()}".sha256()
 
   public fun copyTo(root: Path): Path {
     val bytes = bundleBytes()
@@ -1407,7 +1413,21 @@ public object PackagedUiBuilderRenderBundle {
         "packaged UI-builder renderer bundle is missing"
       }
       .use { it.readBytes() }
+
+  private fun projectionBytes(): ByteArray {
+    val resource = "/" + PROJECTION_CLASS.name.replace('.', '/') + ".class"
+    return checkNotNull(PROJECTION_CLASS.getResourceAsStream(resource)) {
+        "UI-builder renderer projection class $resource is not readable"
+      }
+      .use { it.readBytes() }
+  }
 }
+
+/**
+ * The file class [projectRendererDocument] compiles into, for
+ * [PackagedUiBuilderRenderBundle.digest].
+ */
+private val PROJECTION_CLASS: Class<*> = MethodHandles.lookup().lookupClass()
 
 /** Canonical, loss-checked protocol → renderer wire projection used by the named override. */
 public fun projectRendererDocument(document: DesignDocumentV1): String =
