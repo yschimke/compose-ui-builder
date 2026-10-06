@@ -301,7 +301,7 @@ Unit and integration tests compiled into the Gradle build. Test source lives und
 | `:ui-builder-host-jvm` | `src/jvmTest` | Desktop app host layer |
 | `:ui-builder-desktop` | `src/jvmTest` | Desktop window and File menu |
 | `:ui-builder-runtime` | `src/test` | Design service, revision pinning |
-| `:ui-builder-intellij-plugin` | `src/integrationTest` | IntelliJ Platform integration |
+| [compose-preview-ide](https://github.com/yschimke/compose-preview-ide) | `src/integrationTest` | IntelliJ Platform integration (separate repository) |
 
 ### Running Tests
 
@@ -375,7 +375,7 @@ Tests the design service that compose-preview-server depends on:
 
 #### Plugin/Desktop Tests
 
-**IntelliJ Plugin** (`src/integrationTest`):
+**IntelliJ Plugin** ([compose-preview-ide](https://github.com/yschimke/compose-preview-ide), `src/integrationTest`):
 - IDE tool window rendering
 - File handling and project integration
 

@@ -24,6 +24,7 @@ java-ui-builder = "21"
 kotlin = "2.4.20"
 ktfmt = "0.27.0"
 ktfmt-cli = "0.64"
+# Also consumed by compose-preview-ide through its pinned source version catalog.
 intellij-platform-gradle = "2.19.0"
 compose-multiplatform = "1.12.0"
 # Material 3 adaptive, for the real `SupportingPaneScaffold` on the editor's canvas and preview

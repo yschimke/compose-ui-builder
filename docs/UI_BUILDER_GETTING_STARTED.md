@@ -140,60 +140,10 @@ signed, so the first launch asks you to confirm an app from an unidentified deve
 
 ### As an IntelliJ Platform plugin (proof of concept)
 
-The `:ui-builder-intellij-plugin` module embeds that same offline editor in IntelliJ's main editor
-area. It uses Jewel's Swing bridge for the Compose/Swing boundary and stores a separate workspace
-for each IDE project and catalog under the IDE system directory. The **Compose UI Builder** tool
-window is the separate preview view, with **Material 3** and **Wear M3** tabs. Its title actions open
-the corresponding visual-editor tab; opening the tool window for the first time opens Material 3.
-The editor and preview share one project session, so a saved edit is reconciled into both views.
-Selecting a Material 3 or Wear M3 editor tab selects its matching Preview tab as well.
-
-Run a sandbox IDE with:
-
-```bash
-./gradlew :ui-builder-intellij-plugin:runIde
-```
-
-Open **View → Tool Windows → Compose UI Builder** in the sandbox, then use **Open Material 3
-editor** or **Open Wear M3 editor** in the tool-window title bar. The visual canvas occupies an IDE
-editor tab; Preview (and Native where a host supplies it) stays in the tool window. This is
-intentionally an offline proof of concept: it persists edits locally but does not yet discover the
-open project's composables or connect to the preview server's collaboration and native-render
-lanes.
-
-The plugin also recognizes published `DesignDocumentV1` files under the project's conventional
-`ui-builder/designs/` directory. Open one from the Project view, or choose **Open checked-in
-design** in the UI Builder tool-window title bar. Its **Design** editor tab and the separate Preview
-edit the checked-in JSON directly; the ordinary JSON editor remains available beside it for review
-and git diffs. A valid saved change from the JSON editor, an IDE agent or another process is adopted
-automatically by the open visual editor and Preview. Invalid JSON leaves the last valid design on
-screen with a status message, and an unsaved or concurrent JSON change is never overwritten.
-
-Choose **Browse server designs** to connect to a compose-preview host. The plugin requests a
-short-lived `ui-builder-read`, `ui-builder-write`, and `ui-builder-export` grant, opens its approval
-page in the browser, lists the designs that actor may access, and opens the selected design as a
-live editor tab. Server, browser, agent, editor, and Preview changes all use the same revisioned
-protocol and update stream.
-
-**Copy active design for an agent** copies a source-specific handoff. For a checked-in design it
-names the repository JSON file, which an IDE agent can read and edit directly while the visual
-editor automatically follows valid saves. For a remote design it names the design id and the server's
-`/mcp` endpoint, where the agent requests its own grant rather than receiving the IDE's credential.
-The plugin deliberately does not embed another MCP server: HTTP/WebSocket routes and MCP tools
-belong to the compose-preview host, while the checked-in file is already the local agent boundary.
-
-The plugin supplies Jewel chrome for the shared editor toolbar, panel rails, property-inspector
-shells, draft and Theme fields, binding/actions, boolean and Add-property controls, Insert/Layers
-navigator frame, headings, close action, search fields, component-browser controls and tile shells,
-editor and export menus, workspace choices, and layer/canvas context menus. The web and standalone
-desktop hosts continue to render those controls with Material 3. In every host the canvas and the
-content inside component thumbnails remain the same catalog-backed Compose render: Jewel changes
-the IDE controls around a design, not the design being authored.
-
-Repository releases include `compose-ui-builder-intellij-plugin-<version>.zip`. Install it with
-**Settings → Plugins → Install Plugin from Disk**, then restart the IDE and open the tool window.
-The plugin requires IntelliJ Platform build 262 or newer (IntelliJ IDEA 2026.2+); older IDEs filter
-the ZIP out of the plugin chooser as incompatible.
+The IntelliJ plugin lives in [compose-preview-ide](https://github.com/yschimke/compose-preview-ide).
+That repository owns its build, installed-IDE smoke tests, releases and installation instructions.
+It compiles the shared editor and JVM host from a pinned UI Builder source commit.
+Historical releases through 3.86.0 still carry the plugin ZIP here.
 
 ### The flags underneath, and one that is easy to confuse
 

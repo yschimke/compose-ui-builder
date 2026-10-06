@@ -48,7 +48,7 @@ both were decisions nothing was checking.
 
 **The UI builder** — the design surface and everything that serves one design:
 
-`:ui-builder` · `:ui-builder-artwork` · `:ui-builder-desktop` · `:ui-builder-host-jvm` · `:ui-builder-intellij-plugin` · `:ui-builder-export` · `:ui-builder-generated-jetcaster` ·
+`:ui-builder` · `:ui-builder-artwork` · `:ui-builder-desktop` · `:ui-builder-host-jvm` · `:ui-builder-export` · `:ui-builder-generated-jetcaster` ·
 `:ui-builder-reference-jetcaster` · `:ui-builder-render-bundle` · `:ui-builder-renderer` ·
 `:ui-builder-renderer-sdk` · `:ui-builder-runtime` · `:ui-builder-web`
 
@@ -142,3 +142,13 @@ Ordinary editor/service export stays single-file and does not invoke the build g
 `ee.schimke.compose-ui-builder`. It registers explicitly selected Kotlin source sets and runs the
 build generator in a separate JVM. Kotlin Gradle APIs are compile-only; compiler/PSI and generation
 libraries remain on the isolated tool configuration. This adds no server seam or server dependency.
+
+## IntelliJ host extraction
+
+The IntelliJ plugin lives in [compose-preview-ide](https://github.com/yschimke/compose-preview-ide).
+That repository owns its IDE adapters, descriptor, tests and releases. It compiles
+`:ui-builder-host-jvm` and the transitive editor modules from an exact source commit using a Gradle
+composite build. It imports the matching version catalog and packages schemas from the export JAR.
+This is an explicit native-host source boundary, like the in-repository desktop host; it adds no
+server seam and publishes no new Maven artifact. Shared host/editor changes remain here and reach
+the plugin through a reviewed source-pin update and installed-IDE smoke tests there.

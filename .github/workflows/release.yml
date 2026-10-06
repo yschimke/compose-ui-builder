@@ -50,8 +50,7 @@ concurrency:
 #
 #   - GitHub release assets: `compose-preview-ui-builder-web-<v>.zip`, the Wasm editor; the
 #     native Desktop host as a Linux `.deb` (built here) and a macOS `.dmg` and Windows `.msi`
-#     (built by `desktop-packages.yml`); and `compose-ui-builder-intellij-plugin-<v>.zip`,
-#     the installable IntelliJ plugin; and the visual harness's three Wasm fixtures,
+#     (built by `desktop-packages.yml`); and the visual harness's three Wasm fixtures,
 #     `compose-preview-ui-builder-renderer-<v>.zip` and `-reference-jetcaster-` /
 #     `-generated-jetcaster-<v>.zip` (`harness-dists`). Nothing compiles against them. compose-preview-server
 #     resolves the web archive through a group-fenced ivy repository over this release, which keeps
@@ -238,11 +237,6 @@ jobs:
           UI_BUILDER_DESKTOP_VERSION: ${{ env.PLUGIN_VERSION }}
         run: ./gradlew :ui-builder-desktop:packageDistributionForCurrentOS
 
-      # The plugin ZIP is platform-neutral: Compose and Skiko come from the target IDE's bundled
-      # modules rather than from an OS-specific runtime inside this archive.
-      - name: Build the IntelliJ plugin
-        run: ./gradlew :ui-builder-intellij-plugin:buildPlugin
-
       # Which coordinates this release has to upload (#247). Decided by
       # `.github/scripts/maven-publish-plan.sh` against the versions Maven Central reports: a module
       # publishes when it, a project it depends on, or a shared build input changed since the tag it
@@ -321,7 +315,6 @@ jobs:
         run: |
           tag="$TAG"
           archive="ui-builder-web/build/distributions/compose-preview-ui-builder-web-${PLUGIN_VERSION}.zip"
-          intellij_plugin="ui-builder-intellij-plugin/build/distributions/compose-ui-builder-intellij-plugin-${PLUGIN_VERSION}.zip"
           # The digest an instance pins beside the version (compose-preview-server#1035), published
           # so an operator copies it rather than re-hashing a download. `sha256sum` format, with
           # the bare file name, so `sha256sum -c` works beside the zip.
@@ -348,9 +341,9 @@ jobs:
             fi
           done
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$archive" "$archive.sha256" "$desktop_package" "$intellij_plugin" "${schemas[@]}" --clobber
+            gh release upload "$tag" "$archive" "$archive.sha256" "$desktop_package" "${schemas[@]}" --clobber
           else
-            gh release create "$tag" "$archive" "$archive.sha256" "$desktop_package" "$intellij_plugin" "${schemas[@]}" --title "$tag" --generate-notes --draft
+            gh release create "$tag" "$archive" "$archive.sha256" "$desktop_package" "${schemas[@]}" --title "$tag" --generate-notes --draft
           fi
 
   # The macOS and Windows installers, attached to the same draft release. Needed by
