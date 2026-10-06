@@ -270,7 +270,7 @@ public object RemoteMaterial3 {
         displayName = "Icon",
         group = "Iconography",
         canvas = "wear-m3/icon",
-        canvasProperties = mapOf("iconKey" to "imageVector"),
+        canvasProperties = mapOf("iconKey" to "imageVector", "color" to "tint"),
         canvasSlots = emptyMap(),
         canvasDefaults = mapOf("iconKey" to wrapped("enum", REMOTE_ICON_DEFAULT_KEY)),
       ),

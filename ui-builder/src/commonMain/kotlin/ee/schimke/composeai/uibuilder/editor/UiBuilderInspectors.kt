@@ -786,7 +786,7 @@ private fun PropertyControl(
             }
           }
           EditorPropertyControl.Enum ->
-            if (field.name == "iconKey")
+            if (field.name in ICON_KEY_PROPERTIES)
               GoogleIconPropertyControl(field, onTextInputFocusChanged, commit)
             else EnumPropertyControl(field, commit)
           EditorPropertyControl.Number ->
@@ -2090,6 +2090,14 @@ private fun SwatchRow(
     }
   }
 }
+
+/**
+ * The properties whose values are Material icon keys, and so get the searchable picker rather than
+ * a dropdown: `iconKey` on `m3/icon` and `wear-m3/icon`, and `imageVector` on
+ * `remote-m3/remote-icon`, which keeps `RemoteIcon`'s own parameter name. Either list is eleven
+ * thousand keys long, and an [EnumPropertyControl] builds a menu item for every one of them.
+ */
+internal val ICON_KEY_PROPERTIES: Set<String> = setOf("iconKey", "imageVector")
 
 @Composable
 internal fun GoogleIconPropertyControl(

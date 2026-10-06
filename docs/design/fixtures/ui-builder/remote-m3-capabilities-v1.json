@@ -15529,6 +15529,7 @@
                         }
                     },
                     "properties": {
+                        "color": "tint",
                         "iconKey": "imageVector"
                     },
                     "slots": {}
