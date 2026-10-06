@@ -73,7 +73,9 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.right
 import ee.schimke.composeai.uibuilder.resolveAsset
 import ee.schimke.composeai.uibuilder.stillDescribing
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.round
 import kotlin.math.roundToInt
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -3623,11 +3625,35 @@ class UiBuilderEditorReducer(
       return refused("Only a plain number can be tuned")
     }
     val others = state.tunables.map { it.copy(targets = it.targets - target) }
+    // An `int` target only takes whole numbers, so a tunable it joins must move in whole steps too;
+    // otherwise the slider shows 0.5 while the target is drawn, and written, as 1.
+    val wholeTarget =
+      field?.numberBounds?.integer == true ||
+        ((target as? TunableTarget.Property)
+          ?.let { state.document.nodes[it.nodeId]?.properties?.get(it.property) as? JsonObject }
+          ?.get("type") == JsonPrimitive("int"))
     if (into != null) {
-      if (others.none { it.name == into }) return refused("There is no tunable called $into")
+      val joined =
+        others.firstOrNull { it.name == into } ?: return refused("There is no tunable called $into")
+      val whole =
+        if (!wholeTarget || joined.integer) joined
+        else {
+          val low = ceil(joined.minimum)
+          val high = floor(joined.maximum)
+          if (low >= high) return refused("$into has no whole numbers for ${target.label} to take")
+          joined.copy(
+            integer = true,
+            minimum = low,
+            maximum = high,
+            default = round(joined.default).coerceIn(low, high),
+          )
+        }
       return state.copy(
         tunables =
-          others.map { if (it.name == into) it.copy(targets = it.targets + target) else it }
+          others.map { if (it.name == into) whole.copy(targets = it.targets + target) else it },
+        tunedValues =
+          state.tunedValues[into]?.let { state.tunedValues + (into to whole.coerce(it)) }
+            ?: state.tunedValues,
       )
     }
     if (others.size >= MAX_DESIGN_TUNABLES) {
@@ -3691,11 +3717,12 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Write every tunable's current value into the targets it drives. Property writes are one command
-   * and modifier writes another, because undo compensates each lane on its own and refuses a batch
-   * that mixes them; so one undo per lane takes the configuration back. The values become the
-   * defaults and the sliders rest on them. A refused command stops there and leaves the sliders
-   * where they were, so nothing the author dragged is lost.
+   * Write every tunable's current value into the targets it drives, one lane per event: property
+   * writes first, then modifier writes. Undo compensates the two lanes separately and refuses a
+   * batch that mixes them, and a host is sent the one command an event produced — so a
+   * configuration touching both lanes is two `ApplyTunables`, which the editor dispatches together
+   * (one undo each). Once nothing is left to write, the values become the defaults and the sliders
+   * rest on them. A refused command leaves the sliders where they were, so nothing dragged is lost.
    */
   private fun applyTunables(state: UiBuilderEditorState): UiBuilderEditorState {
     val settled = state.tunables.map { it.copy(default = state.tunedValues.valueOf(it)) }
@@ -3711,13 +3738,13 @@ class UiBuilderEditorReducer(
         tuned.modifiers != state.document.nodes.getValue(nodeId).modifiers
       }
     }
-    var applied = state
-    for (operations in listOf(propertyWrites, modifierWrites)) {
-      if (operations.isEmpty()) continue
-      applied = applied.apply(applied.operationSequence + 1, operations, state.selectedNodeId)
-      if (applied.lastOutcome !is CommandOutcome.Accepted) return applied
-    }
-    return applied.copy(tunables = settled, tunedValues = emptyMap())
+    val lane = propertyWrites.ifEmpty { modifierWrites }
+    if (lane.isEmpty()) return state.copy(tunables = settled, tunedValues = emptyMap())
+    val applied = state.apply(state.operationSequence + 1, lane, state.selectedNodeId)
+    if (applied.lastOutcome !is CommandOutcome.Accepted) return applied
+    val remaining = applied.document.tunableWrites(state.tunables, state.tunedValues)
+    return if (remaining.isEmpty()) applied.copy(tunables = settled, tunedValues = emptyMap())
+    else applied
   }
 
   /** The catalog's design tokens as this design reads them, for the Theme panel. */

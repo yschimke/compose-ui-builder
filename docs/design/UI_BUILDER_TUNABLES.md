@@ -87,12 +87,18 @@ scale. That is the "try different configurations" loop this feature exists for.
 ## Applying
 
 Apply goes through the reducer's ordinary command path, so the catalog validators judge each
-value exactly as they judge a typed one. It submits **one command per lane**: one for the
-property writes and one for the modifier writes. The collaboration reducer undoes properties and
+value exactly as they judge a typed one. It writes **one lane per event**: the property writes,
+then the modifier writes. There are two reasons. The collaboration reducer undoes properties and
 modifier chains in separate lanes and refuses to compensate a batch that mixes them
-(`UNSUPPORTED_COMPENSATION`). A configuration that touches both therefore takes two undos to take
-back, and one that touches only one lane takes one. If a command is refused, Apply stops there and
-the sliders stay where they were, so nothing the author dragged is lost.
+(`UNSUPPORTED_COMPENSATION`). And a host is sent the one command an event produced, so two
+commands from one event would leave the second applied locally but never submitted. When the
+first `ApplyTunables` leaves a lane unwritten, the editor dispatches a second one straight away.
+A configuration that touches both lanes therefore takes two undos to take back, and one that
+touches a single lane takes one. If a command is refused, Apply stops there and the sliders stay
+where they were, so nothing the author dragged is lost.
+
+A target that only takes whole numbers (an `int` property) moves the tunable it joins onto whole
+steps. Otherwise the slider would show `0.5` while that target drew and wrote `1`.
 
 ## Not stored, yet
 

@@ -19,6 +19,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -114,7 +115,7 @@ class TunableParametersTest {
   }
 
   @Test
-  fun `apply writes every tuned value, one edit per lane, and makes it the default`() {
+  fun `apply writes every tuned value, one lane per event, and makes it the default`() {
     var state = reducer.initial(document).on(UiBuilderEditorEvent.TuneTarget(spacing))
     val spacingName = state.tunables.single().name
     state = state.on(UiBuilderEditorEvent.TuneTarget(androidCardWidth))
@@ -124,25 +125,52 @@ class TunableParametersTest {
         UiBuilderEditorEvent.TuneTarget(googleCardWidth, into = widthName),
         UiBuilderEditorEvent.SetTunedValue(spacingName, 12.0),
         UiBuilderEditorEvent.SetTunedValue(widthName, 150.0),
-        UiBuilderEditorEvent.ApplyTunables,
       )
 
-    assertIs<CommandOutcome.Accepted>(state.lastOutcome)
-    // Undo compensates property writes and modifier writes in separate lanes, and refuses a batch
-    // that mixes them, so a configuration touching both is two commands.
-    assertEquals(document.revision + 2, state.document.revision)
-    assertEquals(12.0, state.document.heldValue(spacing))
-    assertEquals(150.0, state.document.heldValue(androidCardWidth))
-    assertEquals(150.0, state.document.heldValue(googleCardWidth))
-    assertEquals(emptyMap(), state.tunedValues)
-    assertEquals(listOf(12.0, 150.0), state.tunables.map(DesignTunable::default))
-    assertFalse(state.document.isTuned(state.tunables, state.tunedValues))
+    // Undo compensates property writes and modifier writes in separate lanes and refuses a batch
+    // that mixes them, and a host is sent the one command an event made — so each lane is its own
+    // ApplyTunables, and the editor dispatches the second when the first leaves one.
+    val first = state.on(UiBuilderEditorEvent.ApplyTunables)
+    assertIs<CommandOutcome.Accepted>(first.lastOutcome)
+    assertNotNull(reducer.acceptedSubmission(state, first), "the property lane is sent")
+    assertEquals(12.0, first.document.heldValue(spacing))
+    assertEquals(128.0, first.document.heldValue(androidCardWidth), "modifiers are the next lane")
+    assertTrue(first.tunedValues.isNotEmpty(), "the sliders wait for the second lane")
 
-    val undone = state.on(UiBuilderEditorEvent.Undo, UiBuilderEditorEvent.Undo)
+    val second = first.on(UiBuilderEditorEvent.ApplyTunables)
+    assertNotNull(reducer.acceptedSubmission(first, second), "the modifier lane is sent too")
+    assertEquals(document.revision + 2, second.document.revision)
+    assertEquals(150.0, second.document.heldValue(androidCardWidth))
+    assertEquals(150.0, second.document.heldValue(googleCardWidth))
+    assertEquals(emptyMap(), second.tunedValues)
+    assertEquals(listOf(12.0, 150.0), second.tunables.map(DesignTunable::default))
+    assertFalse(second.document.isTuned(second.tunables, second.tunedValues))
+
+    val undone = second.on(UiBuilderEditorEvent.Undo, UiBuilderEditorEvent.Undo)
     assertIs<CommandOutcome.Accepted>(undone.lastOutcome, "${undone.lastOutcome}")
     assertEquals(8.0, undone.document.heldValue(spacing))
     assertEquals(128.0, undone.document.heldValue(androidCardWidth))
     assertEquals(128.0, undone.document.heldValue(googleCardWidth))
+  }
+
+  @Test
+  fun `a whole-number target turns the tunable it joins to whole steps`() {
+    val maxLines = TunableTarget.Property("main-episode-title", "maxLines")
+    var state = reducer.initial(document).on(UiBuilderEditorEvent.TuneTarget(spacing))
+    val name = state.tunables.single().name
+    assertFalse(state.tunables.single().integer)
+    state =
+      state.on(
+        UiBuilderEditorEvent.SetTunedValue(name, 5.6),
+        UiBuilderEditorEvent.TuneTarget(maxLines, into = name),
+      )
+
+    val tunable = state.tunables.single()
+    assertTrue(tunable.integer, "maxLines is an int")
+    assertEquals(mapOf(name to 6.0), state.tunedValues, "the slider moved onto a whole step")
+    val drawn = state.document.tuned(state.tunables, state.tunedValues)
+    assertEquals(6.0, drawn.heldValue(spacing))
+    assertEquals(6.0, drawn.heldValue(maxLines), "every target draws the value the slider shows")
   }
 
   @Test

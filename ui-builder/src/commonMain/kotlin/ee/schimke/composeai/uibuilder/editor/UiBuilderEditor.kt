@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.rcplayer.protocol.RcDocument
+import ee.schimke.composeai.uibuilder.CommandOutcome
 import ee.schimke.composeai.uibuilder.ComponentDriftFinding
 import ee.schimke.composeai.uibuilder.DesignRevisionPin
 import ee.schimke.composeai.uibuilder.DesignUrlSelectors
@@ -1087,6 +1088,16 @@ fun UiBuilderEditor(
       else -> Unit
     }
     reduceAndSubmit(event)
+    // Apply writes one lane per event so each command reaches the host, and a configuration that
+    // touched both properties and modifiers has a second lane to write. Once, because there are
+    // only two lanes and one the reducer cannot settle must not spin.
+    if (
+      event == UiBuilderEditorEvent.ApplyTunables &&
+        state.lastOutcome is CommandOutcome.Accepted &&
+        state.document.tunableWrites(state.tunables, state.tunedValues).isNotEmpty()
+    ) {
+      reduceAndSubmit(event)
+    }
     // What a copy or cut took is offered to the rest of the system too, so a design open somewhere
     // else can paste it. A clipboard the host refuses changes nothing here.
     if (event == UiBuilderEditorEvent.CopySelected || event == UiBuilderEditorEvent.CutSelected) {
