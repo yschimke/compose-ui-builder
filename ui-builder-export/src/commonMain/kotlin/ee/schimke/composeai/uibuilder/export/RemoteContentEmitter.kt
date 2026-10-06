@@ -478,6 +478,8 @@ internal class RemoteContentEmitter(
           )
       "layout/for-each" -> repetition(node, depth)
       "remote-m3/lottie" -> lottie(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
+      // Ahead of the record fallback, which has no spelling for `RemoteIcon`'s `ImageVector`.
+      REMOTE_ICON_COMPONENT_ID -> icon(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
       "asset/image" -> image(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
       // A gradient is a widget-frame brush rather than Remote Compose content. It stays in the
       // catalog for the container's `background` slot but cannot enter a widget body.
@@ -2127,6 +2129,64 @@ internal class RemoteContentEmitter(
    *
    * `contentDescription` has no default upstream, so `null` is passed explicitly when absent.
    */
+  /**
+   * `RemoteIcon(Icons.Filled.Home.toRemoteImageVector(), …)`: a Material icon, named in the design
+   * by the same key `m3/icon` and `wear-m3/icon` use and resolved through the same generated table.
+   *
+   * `RemoteIcon` takes a `RemoteImageVector`, which `toRemoteImageVector()` captures from the
+   * `androidx.compose.material.icons` vector — the conversion this repository's own catalog makes
+   * for every icon sticker. The vector is an extension property on `Icons.<Style>` declared in the
+   * lowercased style package, so it is imported by that path and written as `Icons.<Style>.<Name>`,
+   * exactly as the Wear screen exporter writes `Icon`. An unset key is the catalog's default glyph;
+   * an unknown one is refused by name rather than written as a member that does not exist.
+   */
+  private fun icon(node: UiBuilderNode, pad: String): String? {
+    val key =
+      node.properties["imageVector"]?.stringOrNull()?.takeIf { it.isNotEmpty() }
+        ?: REMOTE_ICON_DEFAULT_KEY
+    val member =
+      ScreenDocumentProjection.ICON_MEMBERS[key]
+        ?: run {
+          refusals +=
+            "the icon `${node.id}` names the icon key `$key`, which is not one of the Material " +
+              "icon keys this builder resolves"
+          return null
+        }
+    val path = member.split(".")
+    usedComponentImports += "androidx.wear.compose.remote.material3.RemoteIcon"
+    usedComponentImports += "androidx.compose.material.icons.Icons"
+    usedComponentImports +=
+      "androidx.compose.material.icons." +
+        path.dropLast(1).joinToString(".") { it.lowercase() } +
+        "." +
+        path.last()
+    usedComponentImports += "androidx.compose.remote.creation.compose.capture.toRemoteImageVector"
+    val arguments = mutableListOf("imageVector = Icons.$member.toRemoteImageVector()")
+    val description = node.properties["contentDescription"]?.stringOrNull().orEmpty()
+    arguments +=
+      if (description.isEmpty()) "contentDescription = null"
+      else {
+        usesRemoteString = true
+        "contentDescription = \"${description.escaped()}\".rs"
+      }
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
+    // Unset inherits the enclosing content colour, which is how a button's colour reaches its icon.
+    node.properties["tint"]
+      ?.stringOrNull()
+      ?.takeIf { it.isNotEmpty() }
+      ?.let { color ->
+        arguments +=
+          if (color.startsWith("#")) {
+            usesColorLiteral = true
+            "tint = ${color.argbLiteral()}.rc"
+          } else {
+            usesTheme = true
+            "tint = RemoteMaterialTheme.colorScheme.$color"
+          }
+      }
+    return call("RemoteIcon", arguments, pad)
+  }
+
   private fun image(node: UiBuilderNode, pad: String): String? {
     val key = node.properties["assetKey"]?.stringOrNull().orEmpty()
     if (key.isBlank()) {

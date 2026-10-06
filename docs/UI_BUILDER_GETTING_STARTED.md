@@ -877,9 +877,12 @@ screens:
 - **For a per-footprint visual check**, build a `layout/box` root with `size`, `background` and
   `padding` modifiers: it renders at exactly that frame. It is not a widget container, so its
   export is not a `GlanceWearWidget` — use it for comparison only.
-- **There is no icon component** in `remote-m3` yet. Use an `m3/text` label in a button where an
-  icon would go. A real picture is an `asset/image`, which exports as a `RemoteImage`
-  ([above](#a-picture-in-the-content-slot)).
+- **An icon is `remote-m3/remote-icon`**, on the Iconography shelf. Its `imageVector` is a Material
+  icon key — the same keys `m3/icon` takes (`home`, `search`, …), `addCircle` when unset — and it
+  exports as `RemoteIcon(imageVector = Icons.Filled.Home.toRemoteImageVector(), …)`, so the
+  consuming app needs `material-icons-extended`. Put it in a button's `content` for an icon button;
+  `tint` is unset to inherit the button's content colour. A real picture is still an `asset/image`,
+  which exports as a `RemoteImage` ([above](#a-picture-in-the-content-slot)).
 
 A widget template keeps the `environment` it is created with, and that is the **canvas**, not the
 widget: a PNG export of a widget design comes back at the canvas size (1280×800 in #492's case) with
