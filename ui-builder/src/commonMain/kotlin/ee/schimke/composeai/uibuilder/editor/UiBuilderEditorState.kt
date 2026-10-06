@@ -216,7 +216,9 @@ class UiBuilderEditorReducer(
       // Tool state like the axes above, and only for the same design: a node id in another design
       // is a different node that happens to share a name.
       tunables =
-        if (document.id == state.document.id) state.tunables.resolvedIn(document) else emptyList(),
+        if (document.id == state.document.id)
+          state.tunables.resolvedIn(document).withTokenTargets(document, catalog)
+        else emptyList(),
       tunedValues = if (document.id == state.document.id) state.tunedValues else emptyMap(),
     )
   }
@@ -237,11 +239,13 @@ class UiBuilderEditorReducer(
         reduced
       }
     val moved = next.document.revision != state.document.revision
-    return if (moved && next.revisionPeek != null) {
-      next.copy(revisionPeek = null, revisionCompare = null)
-    } else {
-      next
-    }
+    val peeked =
+      if (moved && next.revisionPeek != null) next.copy(revisionPeek = null, revisionCompare = null)
+      else next
+    // A token's slider covers every node of the components it binds, including one this event
+    // just inserted; see [withTokenTargets].
+    return if (peeked.document === state.document) peeked
+    else peeked.copy(tunables = peeked.tunables.withTokenTargets(peeked.document, catalog))
   }
 
   private fun reduceEvent(
@@ -379,6 +383,9 @@ class UiBuilderEditorReducer(
       }
       UiBuilderEditorEvent.ResetTunedValues -> state.copy(tunedValues = emptyMap())
       UiBuilderEditorEvent.ApplyTunables -> applyTunables(state)
+      is UiBuilderEditorEvent.ApplyDesignToken ->
+        applyDesignToken(state, event.tokenId, event.value)
+      is UiBuilderEditorEvent.TuneDesignToken -> tuneDesignToken(state, event.tokenId)
       is UiBuilderEditorEvent.SetStateVariable ->
         state.apply(
           state.operationSequence + 1,
@@ -3711,6 +3718,75 @@ class UiBuilderEditorReducer(
       if (applied.lastOutcome !is CommandOutcome.Accepted) return applied
     }
     return applied.copy(tunables = settled, tunedValues = emptyMap())
+  }
+
+  /** The catalog's design tokens as this design reads them, for the Theme panel. */
+  fun designTokenRows(state: UiBuilderEditorState): List<EditorDesignTokenRow> =
+    catalog.designTokens.map { token ->
+      EditorDesignTokenRow(
+        token = token,
+        value = token.valueIn(state.document, catalog),
+        targetCount = token.targets(state.document, catalog).size,
+      )
+    }
+
+  /**
+   * Write [value] into every property the token binds, as one command — every write is a property,
+   * so one undo takes the whole token back. Null resets it; see [DesignToken.writes].
+   */
+  private fun applyDesignToken(
+    state: UiBuilderEditorState,
+    tokenId: String,
+    value: String?,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val token = catalog.designTokens.firstOrNull { it.id == tokenId } ?: return state
+    fun refused(message: String) =
+      state.rejected(sequence, RejectionCode.INVALID_PROPERTY, message, field = tokenId)
+    val parsed = value?.let {
+      token.parse(it).getOrElse { why ->
+        return refused(why.message.orEmpty())
+      }
+    }
+    if (token.targets(state.document, catalog).isEmpty()) {
+      return refused(
+        "${token.label} has nowhere to land: this design has no " +
+          token.bindings.joinToString(" or ") { it.componentId.substringAfterLast('/') }
+      )
+    }
+    val operations = token.writes(state.document, catalog, parsed)
+    if (operations.isEmpty()) return state
+    return state.apply(sequence, operations, state.selectedNodeId)
+  }
+
+  /**
+   * A tunable over a number token, or the one that already drives it; see [DesignToken.tunable].
+   */
+  private fun tuneDesignToken(state: UiBuilderEditorState, tokenId: String): UiBuilderEditorState {
+    if (state.tunables.any { it.token == tokenId }) return state
+    val sequence = state.operationSequence + 1
+    val token = catalog.designTokens.firstOrNull { it.id == tokenId } ?: return state
+    if (state.tunables.size >= MAX_DESIGN_TUNABLES) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "A design has at most $MAX_DESIGN_TUNABLES tunables",
+        field = tokenId,
+      )
+    }
+    val tunable =
+      token.tunable(
+        state.document,
+        catalog,
+        freshTunableName(token.label, state.tunables.map(DesignTunable::name)),
+      )
+        ?: return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          "Only a number token with a range can be tuned",
+          field = tokenId,
+        )
+    return state.copy(tunables = state.tunables + tunable)
   }
 
   /**

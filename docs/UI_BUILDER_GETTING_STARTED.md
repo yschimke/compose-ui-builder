@@ -537,6 +537,17 @@ defaults. **Reset** returns every slider to its default. Tunables live in the ed
 are not yet saved with the design. Why, and what storing them would take, is in
 [`UI_BUILDER_TUNABLES.md`](design/UI_BUILDER_TUNABLES.md).
 
+### Design tokens: re-skin what the design system allows
+
+A catalog can declare **design tokens**. These are the values its design system lets a design
+change, each with a default that is usually null, meaning "the system's own value". `wear-m3`
+declares its theme colours and its list spacing, row spacing, icon size, button colours and card
+colour. They appear at the top of the **Theme** panel. Each row shows whether the token is unset,
+set or mixed. **Apply** writes the value into the theme host or into every component the token
+binds, as one undoable edit. **Reset** returns it to the default. **Tune** puts a slider on a
+number token, so you can drag the list spacing of every list at once. The details are in
+[`UI_BUILDER_DESIGN_TOKENS.md`](design/UI_BUILDER_DESIGN_TOKENS.md).
+
 ## Starting from a worked widget
 
 `remote-m3`'s New Widget dialog offers four templates. Two are empty host frames — **Small widget**

@@ -172,15 +172,19 @@ private fun TunableSlider(
               dispatch(UiBuilderEditorEvent.SetTunedValue(tunable.name, tunable.default))
             },
           )
-          tunable.targets.forEach { target ->
-            DropdownMenuItem(
-              text = { Text("Unlink ${target.label} · ${target.nodeId}") },
-              onClick = {
-                menuOpen = false
-                dispatch(UiBuilderEditorEvent.UntuneTarget(tunable.name, target))
-              },
-            )
-          }
+          // A token's targets are the token's, re-read as the design changes; unlinking one by hand
+          // would only last until the next edit.
+          tunable.targets
+            .filter { tunable.token == null }
+            .forEach { target ->
+              DropdownMenuItem(
+                text = { Text("Unlink ${target.label} · ${target.nodeId}") },
+                onClick = {
+                  menuOpen = false
+                  dispatch(UiBuilderEditorEvent.UntuneTarget(tunable.name, target))
+                },
+              )
+            }
           DropdownMenuItem(
             text = { Text("Remove tunable") },
             onClick = {
@@ -206,9 +210,13 @@ private fun TunableSlider(
       )
       Text(
         when (val count = tunable.targets.size) {
-          0 -> "drives nothing — tune a property to link it"
+          0 ->
+            if (tunable.token != null) "token ${tunable.token} · nothing uses it yet"
+            else "drives nothing — tune a property to link it"
           1 -> "drives ${tunable.targets.single().describe(document)}"
-          else -> "drives $count values"
+          else ->
+            if (tunable.token != null) "token ${tunable.token} · $count values"
+            else "drives $count values"
         },
         Modifier.weight(1f).padding(horizontal = 6.dp),
         style = MaterialTheme.typography.labelSmall,
@@ -333,7 +341,7 @@ internal fun TuneFieldButton(
         )
       }
       tunables
-        .filter { it !== linked }
+        .filter { it !== linked && it.token == null }
         .forEach { tunable ->
           DropdownMenuItem(
             text = { Text("Drive from ${tunable.name}") },
@@ -343,7 +351,7 @@ internal fun TuneFieldButton(
             },
           )
         }
-      if (linked != null) {
+      if (linked != null && linked.token == null) {
         DropdownMenuItem(
           text = { Text("Stop tuning") },
           onClick = {

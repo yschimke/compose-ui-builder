@@ -77,6 +77,7 @@ plan extends rather than invents:
 | `previewSurfaces` (which renderer is honest, which daemon) | the editor's Preview, the native lane's backend choice | `statusSemantics.previewSurfaces` |
 | `componentMenu` (shelves, variant properties) | the insert panel | `statusSemantics.componentMenu` |
 | `componentPacks` | the palette, the export | `statusSemantics.componentPacks` |
+| `designTokens` (re-skinnable values, nullable defaults, where each lands) | the Theme panel, the Tune card | `statusSemantics.designTokens` ([`UI_BUILDER_DESIGN_TOKENS.md`](UI_BUILDER_DESIGN_TOKENS.md)) |
 | the component record | packs, the record-driven export, the native lane | `components.json`, declared as `componentsFile` on `catalog.json` |
 | designs | the design library | `ui-builder/designs/index.json` on the delivery branch |
 | device presets | the frame menu | `DeviceDimensions`, the render lane's own catalog |

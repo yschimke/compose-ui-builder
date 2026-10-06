@@ -184,6 +184,8 @@ internal fun PropertyInspector(
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
   modifier: Modifier = Modifier.width(INSPECTOR_WIDTH).fillMaxHeight(),
+  /** The catalog's design tokens as this design reads them, for the Theme panel. */
+  designTokens: List<EditorDesignTokenRow> = emptyList(),
 ) {
   val node = state.selectedNodeId?.let(state.document.nodes::get)
   val propertyDrafts =
@@ -279,6 +281,7 @@ internal fun PropertyInspector(
           onTextInputFocusChanged = onTextInputFocusChanged,
           propertyDrafts = propertyDrafts,
           dispatch = dispatch,
+          designTokens = designTokens,
         )
       }
     }
@@ -336,6 +339,7 @@ private fun InspectorBody(
   onTextInputFocusChanged: (Boolean) -> Unit,
   propertyDrafts: MutableMap<InspectorPropertyDraftKey, InspectorPropertyDraft>,
   dispatch: (UiBuilderEditorEvent) -> Unit,
+  designTokens: List<EditorDesignTokenRow>,
 ) {
   Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
     if (state.inspectorMode == EditorInspectorMode.Issues) {
@@ -405,6 +409,12 @@ private fun InspectorBody(
       // Scrolled for the reason the Screen tab is: the typeface pickers below the colour fields
       // run past a short panel.
       Column(Modifier.verticalScroll(rememberScrollState())) {
+        // The design system's own tokens first: on a catalog that declares them they are the theme,
+        // and the builder below is the Material 3 surface's.
+        if (designTokens.isNotEmpty()) {
+          DesignTokensSection(designTokens, state.tunables, onTextInputFocusChanged, dispatch)
+          HorizontalDivider(Modifier.padding(vertical = 14.dp))
+        }
         ThemeBuilder(themeSettings, state.document.themeHost(), onTextInputFocusChanged, dispatch)
       }
       return@Column

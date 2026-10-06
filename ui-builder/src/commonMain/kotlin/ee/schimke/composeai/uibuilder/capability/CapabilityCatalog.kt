@@ -57,6 +57,13 @@ data class CapabilityCatalog(
   val componentMenu: ComponentMenu by lazy { ComponentMenu.from(statusSemantics) }
 
   /**
+   * The values this design system lets a design re-skin, and where each lands. Read out of
+   * [statusSemantics] for the same reason [previewSurfaces] is; see [DesignTokens]. A catalog that
+   * says nothing has none, and the Theme panel shows no token section.
+   */
+  val designTokens: List<DesignToken> by lazy { DesignTokens.from(statusSemantics) }
+
+  /**
    * Components this build keeps out of the insert panel although the catalog declares them.
    *
    * `RemoteContentEmitter` refuses a repetition unless the build enables Remote Compose authoring,

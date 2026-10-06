@@ -68,6 +68,11 @@ data class DesignTunable(
   /** Whether the value moves in whole steps, which every `int` target needs. */
   val integer: Boolean = false,
   val targets: List<TunableTarget> = emptyList(),
+  /**
+   * The design token this tunable drives, if it was made from one. Its targets are then the token's
+   * — re-read as the design changes — rather than a list the author keeps.
+   */
+  val token: String? = null,
 ) {
   init {
     require(name.isNotBlank()) { "a tunable needs a name" }

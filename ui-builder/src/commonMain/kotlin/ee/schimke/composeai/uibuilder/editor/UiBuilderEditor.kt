@@ -2535,6 +2535,7 @@ fun UiBuilderEditor(
       onTextInputFocusChanged = { textInputFocused = it },
       dispatch = ::dispatch,
       modifier = modifier,
+      designTokens = remember(state.document) { reducer.designTokenRows(state) },
     )
   }
 

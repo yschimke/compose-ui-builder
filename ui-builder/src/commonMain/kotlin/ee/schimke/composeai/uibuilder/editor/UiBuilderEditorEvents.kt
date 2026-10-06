@@ -306,6 +306,15 @@ sealed interface UiBuilderEditorEvent {
    */
   data object ApplyTunables : UiBuilderEditorEvent
 
+  /**
+   * Set the design token [tokenId] to [value] — written into every property it binds, as one edit —
+   * or, for a null [value], reset it to the design system's default.
+   */
+  data class ApplyDesignToken(val tokenId: String, val value: String?) : UiBuilderEditorEvent
+
+  /** Put a slider on the number token [tokenId]: a tunable over every property it binds. */
+  data class TuneDesignToken(val tokenId: String) : UiBuilderEditorEvent
+
   data class SetStateVariable(val name: String, val declaration: JsonObject) : UiBuilderEditorEvent
 
   data class RemoveStateVariable(val name: String) : UiBuilderEditorEvent

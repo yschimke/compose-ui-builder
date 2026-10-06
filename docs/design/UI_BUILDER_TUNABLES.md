@@ -55,6 +55,10 @@ tunable unlinks it from the first.
 - **Apply** writes the current values into the targets and makes them the new defaults. **Reset**
   puts every slider back on its default.
 
+A number **design token** can be tuned as well: **Tune** on its row in the Theme panel puts a
+slider over every property the token binds. Its targets are re-read as the design changes, so a
+list added later is tuned with the rest. See [`UI_BUILDER_DESIGN_TOKENS.md`](UI_BUILDER_DESIGN_TOKENS.md).
+
 A design is offered at most eight tunables (`MAX_DESIGN_TUNABLES`). That is a handful of knobs,
 not a second inspector.
 
