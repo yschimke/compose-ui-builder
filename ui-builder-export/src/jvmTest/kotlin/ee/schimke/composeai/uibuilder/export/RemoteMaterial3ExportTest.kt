@@ -61,6 +61,63 @@ class RemoteMaterial3ExportTest {
     assertTrue("RemoteText(text = \"Play\".rs)" in source, source)
   }
 
+  /**
+   * An icon is named by key and written as the vector `RemoteIcon` takes — the call a launcher
+   * widget's icon buttons need (yschimke/remote-m3-catalog#12).
+   */
+  @Test
+  fun `an icon writes its key as a Material vector converted for Remote Compose`() {
+    val source =
+      emitted(
+        UiBuilderNode(
+          "body",
+          REMOTE_ICON_COMPONENT_ID,
+          properties =
+            buildJsonObject {
+              put("imageVector", wrapped("enum", JsonPrimitive("home")))
+              put("contentDescription", wrapped("string", JsonPrimitive("Home")))
+              put("tint", wrapped("colorToken", JsonPrimitive("primary")))
+            },
+        )
+      )
+
+    assertTrue("imageVector = Icons.Filled.Home.toRemoteImageVector()" in source, source)
+    assertTrue("contentDescription = \"Home\".rs" in source, source)
+    assertTrue("tint = RemoteMaterialTheme.colorScheme.primary" in source, source)
+    assertTrue("import androidx.compose.material.icons.Icons" in source, source)
+    assertTrue("import androidx.compose.material.icons.filled.Home" in source, source)
+    assertTrue(
+      "import androidx.compose.remote.creation.compose.capture.toRemoteImageVector" in source,
+      source,
+    )
+  }
+
+  @Test
+  fun `an icon with no key draws the catalog's default`() {
+    val source = emitted(UiBuilderNode("body", REMOTE_ICON_COMPONENT_ID))
+
+    assertTrue("Icons.Filled.AddCircle.toRemoteImageVector()" in source, source)
+    assertTrue("contentDescription = null" in source, source)
+  }
+
+  @Test
+  fun `an icon key the table does not know is refused by name`() {
+    val result =
+      WearWidgetCodeExporter.export(
+        widget(
+          UiBuilderNode(
+            "body",
+            REMOTE_ICON_COMPONENT_ID,
+            properties =
+              buildJsonObject { put("imageVector", wrapped("enum", JsonPrimitive("not-an-icon"))) },
+          )
+        )
+      )
+
+    val refused = assertIs<WearWidgetCodeExporter.Result.Refused>(result)
+    assertTrue(refused.reasons.any { "not-an-icon" in it }, refused.reasons.toString())
+  }
+
   @Test
   fun `a host's own record for an id wins over the embedded one`() {
     val embedded = RemoteMaterial3.records.getValue("remote-m3/remote-card")

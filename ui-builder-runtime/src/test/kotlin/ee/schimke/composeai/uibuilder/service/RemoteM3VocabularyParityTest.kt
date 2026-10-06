@@ -2,9 +2,13 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.REMOTE_CONTENT_COMPONENT_IDS
 import ee.schimke.composeai.uibuilder.export.REMOTE_CONTENT_MODIFIERS
+import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_COMPONENT_ID
+import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_DEFAULT_KEY
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The `remote-m3` palette against the generator's vocabulary, in the repository that owns both.
@@ -60,5 +64,18 @@ class RemoteM3VocabularyParityTest {
         }
         .filterValues { it.isNotEmpty() },
     )
+  }
+
+  /**
+   * `RemoteIcon`'s vector cannot be derived from its signature, so the palette states it — keyed by
+   * the icon table `m3/icon` publishes, which is the only spelling the export can write.
+   */
+  @Test
+  fun `the icon names its vector by the icon keys the export resolves`() {
+    val icon = catalog.components.single { it.componentId == REMOTE_ICON_COMPONENT_ID }
+    val property = icon.properties.single { it.name == "imageVector" }
+    val keys = property.allowedValues.orEmpty().map { it.jsonPrimitive.content }
+
+    assertTrue("home" in keys && REMOTE_ICON_DEFAULT_KEY in keys, keys.toString())
   }
 }

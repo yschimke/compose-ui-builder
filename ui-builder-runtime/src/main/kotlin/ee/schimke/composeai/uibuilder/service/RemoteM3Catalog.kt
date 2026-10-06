@@ -4,6 +4,8 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.discovery.TargetParameter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_COMPONENT_ID
+import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_DEFAULT_KEY
 import ee.schimke.composeai.uibuilder.export.REMOTE_TEXT_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -13,6 +15,7 @@ import ee.schimke.composeai.uibuilder.protocol.SlotCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.SvgCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.WasmCapabilityV1
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -274,6 +277,7 @@ internal fun remoteM3ComponentMenu(base: JsonObject): JsonObject =
 private val REMOTE_MATERIAL_3_SHELVES =
   listOf(
     "Content",
+    "Iconography",
     "Containment",
     "Buttons",
     "Selection buttons",
@@ -304,6 +308,7 @@ private fun remoteMaterial3Components(
   bodySlot: SlotCapabilityV1,
   supportedWasm: WasmCapabilityV1,
   blockedSvg: SvgCapabilityV1?,
+  iconKeys: List<JsonElement>?,
 ): List<ComponentCapabilityV1> =
   RemoteMaterial3.components.mapNotNull { component ->
     val record = RemoteMaterial3.records[component.componentId] ?: return@mapNotNull null
@@ -334,7 +339,7 @@ private fun remoteMaterial3Components(
         it.properties =
           record.parameters.mapNotNull { parameter ->
             remoteMaterial3Property(record.symbol.name, parameter)
-          } + statedRemoteProperties(component.componentId)
+          } + statedRemoteProperties(component.componentId, iconKeys)
         it.modifierCapabilities = template.modifierCapabilities.remoteAuthorableModifiers()
         it.wasm =
           supportedWasm
@@ -368,8 +373,26 @@ private fun remoteMaterial3Components(
  * catalog declares it as a role on `RemoteTypography`'s Wear scale and `RemoteContentEmitter`
  * writes it as `RemoteMaterialTheme.typography.<role>`.
  */
-private fun statedRemoteProperties(componentId: String): List<PropertyCapabilityV1> =
+private fun statedRemoteProperties(
+  componentId: String,
+  iconKeys: List<JsonElement>?,
+): List<PropertyCapabilityV1> =
   when (componentId) {
+    // `imageVector` is an `ImageVector`, which the derivation above cannot carry, so without this
+    // the palette offered an icon that could only ever draw its default. Named by the same Material
+    // icon key `m3/icon` takes, and taken from that component's own list rather than restated.
+    REMOTE_ICON_COMPONENT_ID ->
+      listOf(
+        PropertyCapabilityV1.Builder("imageVector", JsonPrimitive("string"))
+          .also {
+            it.required = false
+            iconKeys?.let { keys -> it.allowedValues = keys }
+            it.notes =
+              "A Material icon key, written as `Icons.<Style>.<Name>.toRemoteImageVector()`. " +
+                "Unset draws `$REMOTE_ICON_DEFAULT_KEY`, the published catalog's default."
+          }
+          .build()
+      )
     REMOTE_TEXT_COMPONENT_ID ->
       listOf(
         PropertyCapabilityV1.Builder("style", JsonPrimitive("string"))
@@ -626,7 +649,17 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
               .narrowedForRemoteAuthoring()
               .withWidgetProfileNote()
           } +
-          remoteMaterial3Components(box, contentSlot, supportedWasm, blockedSvg)
+          remoteMaterial3Components(
+            box,
+            contentSlot,
+            supportedWasm,
+            blockedSvg,
+            iconKeys =
+              components["m3/icon"]
+                ?.properties
+                ?.singleOrNull { it.name == "iconKey" }
+                ?.allowedValues,
+          )
     }
     .build()
 }

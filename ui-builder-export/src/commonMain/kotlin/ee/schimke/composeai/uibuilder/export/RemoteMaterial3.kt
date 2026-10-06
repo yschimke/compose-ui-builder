@@ -30,10 +30,14 @@ import kotlinx.serialization.json.JsonPrimitive
  * ## What is left out, and why
  *
  * Each of these is published and would be refused by every export, because a required parameter has
- * no value this generator can write:
- * - `remote-m3/remote-icon` takes an `ImageVector`;
- * - `remote-m3/remote-horizontal-page-indicator` and `remote-m3/remote-vertical-page-indicator`
- *   take a pager's state.
+ * no value this generator can write: `remote-m3/remote-horizontal-page-indicator` and
+ * `remote-m3/remote-vertical-page-indicator` take a pager's state.
+ *
+ * `remote-m3/remote-icon` takes an `ImageVector` too, and is offered anyway: the vector is chosen
+ * by a Material icon key — the same table `m3/icon` and `wear-m3/icon` read — which
+ * `RemoteContentEmitter` writes as `Icons.<Style>.<Name>.toRemoteImageVector()` by hand rather than
+ * through the record fallback. A launcher or shortcut widget is a row of icon buttons, and without
+ * it there was no way to put a glyph inside one (yschimke/remote-m3-catalog#12).
  *
  * `remote-m3/remote-text` is offered beside `m3/text`: both are written as the same `RemoteText`,
  * but the published catalog declares only the former, so a design or template that must open
@@ -261,6 +265,16 @@ public object RemoteMaterial3 {
         canvasDefaults = emptyMap(),
       ),
       component(
+        id = REMOTE_ICON_COMPONENT_ID,
+        record = "remote-catalog/androidx.wear.compose.remote.material3.RemoteIconKt.RemoteIcon",
+        displayName = "Icon",
+        group = "Iconography",
+        canvas = "wear-m3/icon",
+        canvasProperties = mapOf("iconKey" to "imageVector"),
+        canvasSlots = emptyMap(),
+        canvasDefaults = mapOf("iconKey" to wrapped("enum", REMOTE_ICON_DEFAULT_KEY)),
+      ),
+      component(
         id = "remote-m3/remote-icon-button",
         record =
           "remote-catalog/androidx.wear.compose.remote.material3.RemoteIconButtonKt.RemoteIconButton",
@@ -368,6 +382,15 @@ public object RemoteMaterial3 {
       )
     )
 }
+
+/** `RemoteIcon`, whose `imageVector` a design names by Material icon key. */
+public const val REMOTE_ICON_COMPONENT_ID: String = "remote-m3/remote-icon"
+
+/**
+ * The icon a `remote-m3/remote-icon` draws when its design names none: the published catalog's own
+ * default for `imageVector`, so the canvas, the browser preview and the export agree on one glyph.
+ */
+public const val REMOTE_ICON_DEFAULT_KEY: String = "addCircle"
 
 private val recordJson = Json { ignoreUnknownKeys = true }
 
