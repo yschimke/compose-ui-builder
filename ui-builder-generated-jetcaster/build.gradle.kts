@@ -19,7 +19,7 @@ kotlin {
     commonMain.dependencies {
       @Suppress("DEPRECATION") implementation(compose.runtime)
       @Suppress("DEPRECATION") implementation(compose.foundation)
-      @Suppress("DEPRECATION") implementation(compose.material3)
+      implementation(libs.compose.material3)
       @Suppress("DEPRECATION") implementation(compose.materialIconsExtended)
       @Suppress("DEPRECATION") implementation(compose.ui)
       // The generated screen calls the real `SupportingPaneScaffold` rather than a hand-rolled
