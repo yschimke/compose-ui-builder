@@ -466,6 +466,12 @@ class ProductionUiBuilderRuntimeTest {
     assertEquals(first, repeated)
     assertTrue(Files.size(first) > 0)
     assertTrue(first.startsWith(stateDirectory.resolve("bundle")))
+    // The identity a host keys stored renders by is stable, and is more than the staged bundle:
+    // it also covers the projection, which #480 fixed without the bundle having to change.
+    val identity = PackagedUiBuilderRenderBundle.digest()
+    assertEquals(identity, PackagedUiBuilderRenderBundle.digest())
+    assertTrue(identity.matches(Regex("[0-9a-f]{64}")), identity)
+    assertNotEquals(first.parent.fileName.toString(), identity)
   }
 
   @Test
