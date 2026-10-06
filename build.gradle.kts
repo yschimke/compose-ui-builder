@@ -14,7 +14,6 @@ plugins {
   alias(libs.plugins.compose.compiler) apply false
   alias(libs.plugins.ktfmt) apply false
   alias(libs.plugins.maven.publish) apply false
-  alias(libs.plugins.intellij.platform) apply false
 }
 
 val materialIconGeneratorClasspath =
@@ -93,7 +92,6 @@ tasks.named("check") {
     ":ui-builder:check",
     ":ui-builder-desktop:check",
     ":ui-builder-host-jvm:check",
-    ":ui-builder-intellij-plugin:check",
     ":ui-builder-artwork:check",
     ":ui-builder-export:check",
     ":ui-builder-codegen-jvm:check",

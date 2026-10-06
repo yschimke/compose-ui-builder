@@ -25,7 +25,6 @@ The experimental opt-in contract for regenerating stateless Compose source from 
 | `:ui-builder` | `jvm`, `wasmJs` | `ee.schimke.composeai.uibuilder` (model, entry points) and `.editor`, `.canvas`, `.inspector`, `.codegen`, `.svg`, `.reference`, `.preview`, `.capability`, `.client`, `.icons`, `.local` | the editor — canvas, palette, inspector, reducer, exporters, offline service |
 | `:ui-builder-desktop` | JVM desktop | `ee.schimke.composeai.uibuilder.desktop` | native offline desktop app: the window, File menu and installers |
 | `:ui-builder-host-jvm` | JVM | `ee.schimke.composeai.uibuilder.host` | the hosting layer the desktop app and the IntelliJ plugin share: sessions, catalogs, design files, export |
-| `:ui-builder-intellij-plugin` | IntelliJ Platform | `ee.schimke.composeai.uibuilder.intellij` | proof-of-concept Jewel tool-window host for the native editor |
 | `:ui-builder-runtime` | JVM | `ee.schimke.composeai.uibuilder.service` | the design service: state, catalog validation, revision-pinned export |
 | `:ui-builder-codegen-jvm` | JVM | `ee.schimke.composeai.uibuilder.codegen` | opt-in build generation from tracked production `.uid` contracts |
 | `:ui-builder-gradle-plugin` | JVM Gradle | `ee.schimke.composeai.uibuilder.gradle` | [explicit Kotlin source-set integration](ui-builder-gradle-plugin/README.md) for durable generation |
@@ -71,12 +70,12 @@ A release goes out in two halves, because the four seams are not the same kind o
 the runtime, so its coordinate appears in the runtime's POM, and a POM naming an artifact nobody
 uploaded is what made `compose-preview-serve` unresolvable for six consecutive releases.
 
-**GitHub release assets — a Wasm ZIP, the Desktop app, and an IntelliJ plugin.**
+**GitHub release assets — a Wasm ZIP and the Desktop app.**
 `compose-preview-ui-builder-web-<version>.zip` is the Wasm editor, which a host unpacks; nothing
 compiles against it or resolves it transitively. The release also carries
 the native offline Compose Desktop application as a Linux `.deb`, a macOS `.dmg` and a Windows
-`.msi` (unsigned), and `compose-ui-builder-intellij-plugin-<version>.zip`, which installs the offline editor as an
-IntelliJ tool window.
+`.msi` (unsigned). The IntelliJ plugin now lives and releases independently in
+[compose-preview-ide](https://github.com/yschimke/compose-preview-ide).
 The web bundle stays off Central because a 40 MB frontend distribution published there is permanent
 and serves no one. compose-preview-server reaches it through a group-fenced ivy repository over
 this repository's releases, so it remains an ordinary versioned dependency:
@@ -135,10 +134,8 @@ Then, with the release version in `PLUGIN_VERSION`:
 ```bash
 PLUGIN_VERSION=0.1.0 ./gradlew publishReleaseArtifacts
 PLUGIN_VERSION=0.1.0 ./gradlew :ui-builder-web:webArchive
-PLUGIN_VERSION=0.1.0 ./gradlew :ui-builder-intellij-plugin:buildPlugin
 gh release upload v0.1.0 \
-  ui-builder-web/build/distributions/compose-preview-ui-builder-web-0.1.0.zip \
-  ui-builder-intellij-plugin/build/distributions/compose-ui-builder-intellij-plugin-0.1.0.zip
+  ui-builder-web/build/distributions/compose-preview-ui-builder-web-0.1.0.zip
 ```
 
 `.github/workflows/release.yml` does all of this from a `v*` tag, given the four secrets, and runs
