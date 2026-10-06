@@ -312,6 +312,12 @@ sealed interface UiBuilderEditorEvent {
    */
   data class ApplyDesignToken(val tokenId: String, val value: String?) : UiBuilderEditorEvent
 
+  /**
+   * Set several design tokens at once — what an import read, token id to value — as one edit, so
+   * one undo takes the whole imported theme back.
+   */
+  data class ImportDesignTokens(val values: Map<String, String>) : UiBuilderEditorEvent
+
   /** Put a slider on the number token [tokenId]: a tunable over every property it binds. */
   data class TuneDesignToken(val tokenId: String) : UiBuilderEditorEvent
 

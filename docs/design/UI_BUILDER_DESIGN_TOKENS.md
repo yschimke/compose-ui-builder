@@ -103,6 +103,60 @@ every node of a component, not about the nodes that existed when somebody presse
 same reason its targets cannot be unlinked or re-linked by hand. An unset token with no default
 starts its slider mid-range, since "the design system's own value" is not a number to start from.
 
+## Import and export
+
+A design's tokens go out and come in through the formats other tools speak. **Import / export
+tokens** at the end of the token section opens a text area, because every host has a text field
+and a clipboard while not every host has a file chooser.
+
+### Out: W3C DTCG
+
+**Export DTCG** writes the tokens the design sets as a
+[Design Tokens Community Group](https://www.designtokens.org/) document. That is the format Style
+Dictionary, Tokens Studio, Penpot and Figma's variable export have converged on.
+
+- A token's dotted id is its group path: `color.primary` is `{"color": {"primary": {…}}}`.
+- A colour is a DTCG 2025 sRGB object (`colorSpace`, `components`, `alpha` when not opaque, and
+  `hex`). A theme role is an **alias** to that role's token: a button container set to the
+  `primary` role is written `"{color.primary}"`.
+- A number bound to `…Dp` properties is a `dimension` in `px`, the unit Android tooling's DTCG
+  exports use for a density-independent pixel. Other numbers are plain `number`s.
+- Whatever DTCG has no field for rides in `$extensions["ee.schimke.compose-ui-builder"]`: the
+  nullable `default`, the range, `integer`, `unit: "dp"`, and the `theme`/`components` bindings.
+  Other tools carry it through untouched.
+
+**Unset and mixed tokens are left out**, and the panel says how many. DTCG has no spelling for
+"the design system decides": a token object without `$value` is not a token. A mixed token holds
+no single value to write.
+
+### In: DTCG, or a Material Theme Builder export
+
+Pasting a file previews what it would do before anything is applied. The preview lists the tokens
+it will set, the paths this design system declares no token for, and the values it cannot take,
+each with the reason. **Import** then applies them as **one command**, so one undo takes the whole
+imported theme back. A value a token cannot take refuses the whole import by name, rather than
+applying the half that happened to come first.
+
+Reading **DTCG**:
+
+- `$type` is inherited from enclosing groups.
+- Aliases resolve through the file, so `primary: "{color.brand}"` takes `brand`'s value. An alias
+  to a theme role the canvas draws (`{color.primary}`) reads back as that role.
+- Colours are read as `#hex` strings, or as objects with a `hex`, or with sRGB `components`. Other
+  colour spaces are refused, because the canvas draws sRGB.
+- Dimensions are read as `{value, unit}` in `px` or `dp`, or as legacy `"8px"` strings. `rem` is
+  refused: a watch or phone screen has no root font size for it to be relative to.
+
+Reading **Material Theme Builder** JSON (`{"schemes": {"light": {…}, "dark": {…}}}`):
+
+- Each scheme role sets the `color.<role>` token of the same name. Theme Builder's role names are
+  the Material 3 colour scheme's, and so are the theme tokens a Material catalog declares.
+- The panel picks the dark scheme for a Wear design and the light one otherwise, and offers both.
+- Roles the catalog has no token for (`surfaceTint`, say) are listed and left alone.
+
+Figma variable modes (light/dark, brand A/B) are not imported yet. A token has one value, so modes
+would first need a place in the token model.
+
 ## Where it lives
 
 | Piece | File |
@@ -112,4 +166,5 @@ starts its slider mid-range, since "the design system's own value" is not a numb
 | Theme panel section | `ui-builder/.../editor/UiBuilderDesignTokensPanel.kt` |
 | Events (`ApplyDesignToken`, `TuneDesignToken`) and reducer | `UiBuilderEditorEvents.kt`, `UiBuilderEditorState.kt` |
 | `wear-m3`'s declaration | `ui-builder-runtime/.../service/WearM3Catalog.kt` (`wearDesignTokens`) |
-| Tests | `ui-builder/src/jvmTest/.../DesignTokensTest.kt` |
+| DTCG export, DTCG and Theme Builder import | `ui-builder/.../editor/DesignTokenInterchange.kt` |
+| Tests | `ui-builder/src/jvmTest/.../DesignTokensTest.kt`, `DesignTokenInterchangeTest.kt` |
