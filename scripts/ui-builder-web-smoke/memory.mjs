@@ -201,8 +201,17 @@ async function procMemory(pid) {
     const field = (name) => Number(rollup.match(new RegExp(`^${name}:\\s+(\\d+) kB`, 'm'))?.[1] ?? 0) * 1024;
     return { rss: field('Rss'), pss: field('Pss') };
   } catch {
-    return { rss: 0, pss: 0 };
+    // A process that exited between the listing and this read; counted, not charged as zero.
+    return null;
   }
+}
+
+// PSS comes from Linux's /proc. Elsewhere every read would fail, so stop rather than report zeros.
+try {
+  await readFile('/proc/self/smaps_rollup', 'utf8');
+} catch (error) {
+  console.error(`memory.mjs needs Linux /proc/<pid>/smaps_rollup for PSS, and could not read it: ${error.message}`);
+  process.exit(2);
 }
 
 async function processBreakdown(browser) {
@@ -212,8 +221,12 @@ async function processBreakdown(browser) {
     const byType = {};
     for (const { type, id } of processInfo) {
       const memory = await procMemory(id);
-      const entry = (byType[type] ??= { count: 0, rss: 0, pss: 0 });
+      const entry = (byType[type] ??= { count: 0, unreadable: 0, rss: 0, pss: 0 });
       entry.count++;
+      if (!memory) {
+        entry.unreadable++;
+        continue;
+      }
       entry.rss += memory.rss;
       entry.pss += memory.pss;
     }
@@ -261,11 +274,18 @@ async function sample(page, cdp, browser) {
   };
 }
 
-async function measure(scenario, viewportName) {
+let browserVersion = null;
+async function launchBrowser() {
   const browser = await chromium.launch({
     args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
     ...(process.env.HARNESS_CHROMIUM ? { executablePath: process.env.HARNESS_CHROMIUM } : {}),
   });
+  browserVersion ??= browser.version();
+  return browser;
+}
+
+async function measure(scenario, viewportName) {
+  const browser = await launchBrowser();
   try {
     const context = await browser.newContext({ ...viewports[viewportName], locale: 'en-US' });
     const page = await context.newPage();
@@ -295,10 +315,7 @@ async function measure(scenario, viewportName) {
 
 // One blank page in a fresh Chromium: the floor every scenario sits on.
 async function baseline(viewportName) {
-  const browser = await chromium.launch({
-    args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
-    ...(process.env.HARNESS_CHROMIUM ? { executablePath: process.env.HARNESS_CHROMIUM } : {}),
-  });
+  const browser = await launchBrowser();
   try {
     const context = await browser.newContext({ ...viewports[viewportName], locale: 'en-US' });
     const page = await context.newPage();
@@ -321,9 +338,17 @@ const summarise = (samples) => Object.fromEntries(keys.map((k) => [k, median(sam
 const mb = (bytes) => (bytes / 1024 / 1024).toFixed(1);
 
 await mkdir(out, { recursive: true });
-const chosen = process.env.MEMORY_VIEWPORT ? process.env.MEMORY_VIEWPORT.split(',') : Object.keys(viewports);
+const chosen = process.env.MEMORY_VIEWPORT
+  ? process.env.MEMORY_VIEWPORT.split(',').map((name) => name.trim()).filter(Boolean)
+  : Object.keys(viewports);
+const unknownViewports = chosen.filter((name) => !viewports[name]);
+if (!chosen.length || unknownViewports.length) {
+  console.error(`MEMORY_VIEWPORT names unknown viewports ${JSON.stringify(unknownViewports)}; use ${Object.keys(viewports).join(', ')}`);
+  process.exit(2);
+}
 const report = {
-  measuredAt: new Date().toISOString(), runs, settleMs, chromium: chromium.executablePath(), results: [],
+  measuredAt: new Date().toISOString(), runs, settleMs,
+  chromium: process.env.HARNESS_CHROMIUM ?? chromium.executablePath(), browserVersion: null, results: [],
 };
 for (const viewportName of chosen) {
   const blank = [];
@@ -353,6 +378,7 @@ for (const viewportName of chosen) {
     });
   }
 }
+report.browserVersion = browserVersion;
 report.unservedRequests = Object.fromEntries(unknownRequests);
 await writeFile(join(out, 'memory.json'), JSON.stringify(report, null, 2));
 
