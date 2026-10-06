@@ -1,8 +1,9 @@
 {
-  "measuredAt": "2026-10-06T21:10:05.553Z",
+  "measuredAt": "2026-10-06T21:53:57.360Z",
   "runs": 3,
   "settleMs": 8000,
   "chromium": "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  "browserVersion": "141.0.7390.37",
   "results": [
     {
       "scenario": "about-blank",
@@ -11,11 +12,11 @@
       "settled": {
         "jsHeapUsed": 484332,
         "jsHeapTotal": 786432,
-        "rendererPss": 50666496,
-        "gpuPss": 30588928,
-        "browserPss": 41572352,
-        "totalPss": 144679936,
-        "totalRss": 294596608,
+        "rendererPss": 50915328,
+        "gpuPss": 30960640,
+        "browserPss": 42025984,
+        "totalPss": 145362944,
+        "totalRss": 296755200,
         "domNodes": 4,
         "canvasBackingBytes": 0
       },
@@ -29,31 +30,35 @@
           "canvasBackingBytes": 0,
           "canvasCount": 0,
           "uaMemory": null,
-          "rendererPss": 51125248,
-          "gpuPss": 30588928,
-          "browserPss": 41479168,
-          "totalPss": 144679936,
-          "totalRss": 294596608,
+          "rendererPss": 50309120,
+          "gpuPss": 30960640,
+          "browserPss": 42201088,
+          "totalPss": 145335296,
+          "totalRss": 296062976,
           "processes": {
             "browser": {
               "count": 1,
-              "rss": 88526848,
-              "pss": 41479168
+              "unreadable": 0,
+              "rss": 89399296,
+              "pss": 42201088
             },
             "renderer": {
               "count": 1,
-              "rss": 87867392,
-              "pss": 51125248
+              "unreadable": 0,
+              "rss": 87359488,
+              "pss": 50309120
             },
             "network.mojom.NetworkService": {
               "count": 1,
-              "rss": 58384384,
-              "pss": 21486592
+              "unreadable": 0,
+              "rss": 58863616,
+              "pss": 21864448
             },
             "GPU": {
               "count": 1,
-              "rss": 59817984,
-              "pss": 30588928
+              "unreadable": 0,
+              "rss": 60440576,
+              "pss": 30960640
             }
           }
         },
@@ -66,31 +71,35 @@
           "canvasBackingBytes": 0,
           "canvasCount": 0,
           "uaMemory": null,
-          "rendererPss": 50358272,
-          "gpuPss": 30350336,
-          "browserPss": 42096640,
-          "totalPss": 144360448,
-          "totalRss": 293941248,
+          "rendererPss": 50915328,
+          "gpuPss": 31481856,
+          "browserPss": 42025984,
+          "totalPss": 145972224,
+          "totalRss": 297889792,
           "processes": {
             "browser": {
               "count": 1,
-              "rss": 89268224,
-              "pss": 42096640
+              "unreadable": 0,
+              "rss": 89477120,
+              "pss": 42025984
             },
             "renderer": {
               "count": 1,
-              "rss": 87302144,
-              "pss": 50358272
+              "unreadable": 0,
+              "rss": 88334336,
+              "pss": 50915328
             },
             "network.mojom.NetworkService": {
               "count": 1,
-              "rss": 58449920,
-              "pss": 21555200
+              "unreadable": 0,
+              "rss": 58777600,
+              "pss": 21549056
             },
             "GPU": {
               "count": 1,
-              "rss": 58920960,
-              "pss": 30350336
+              "unreadable": 0,
+              "rss": 61300736,
+              "pss": 31481856
             }
           }
         },
@@ -103,31 +112,35 @@
           "canvasBackingBytes": 0,
           "canvasCount": 0,
           "uaMemory": null,
-          "rendererPss": 50666496,
-          "gpuPss": 31275008,
-          "browserPss": 41572352,
-          "totalPss": 145324032,
-          "totalRss": 296853504,
+          "rendererPss": 51218432,
+          "gpuPss": 30636032,
+          "browserPss": 41846784,
+          "totalPss": 145362944,
+          "totalRss": 296755200,
           "processes": {
             "browser": {
               "count": 1,
-              "rss": 88940544,
-              "pss": 41572352
+              "unreadable": 0,
+              "rss": 89149440,
+              "pss": 41846784
             },
             "renderer": {
               "count": 1,
-              "rss": 87814144,
-              "pss": 50666496
+              "unreadable": 0,
+              "rss": 87756800,
+              "pss": 51218432
             },
             "network.mojom.NetworkService": {
               "count": 1,
-              "rss": 58486784,
-              "pss": 21810176
+              "unreadable": 0,
+              "rss": 59363328,
+              "pss": 21661696
             },
             "GPU": {
               "count": 1,
-              "rss": 61612032,
-              "pss": 31275008
+              "unreadable": 0,
+              "rss": 60485632,
+              "pss": 30636032
             }
           }
         }
@@ -138,270 +151,294 @@
       "label": "Designs (home)",
       "path": "/ui-builder/designs",
       "viewport": "desktop",
-      "readyMs": 1679,
+      "readyMs": 1558,
       "atReady": {
-        "jsHeapUsed": 25908528,
-        "jsHeapTotal": 26783744,
-        "rendererPss": 208983040,
-        "gpuPss": 85809152,
-        "browserPss": 41530368,
-        "totalPss": 362740736,
-        "totalRss": 551448576,
-        "domNodes": 284,
+        "jsHeapUsed": 26085384,
+        "jsHeapTotal": 27045888,
+        "rendererPss": 210873344,
+        "gpuPss": 85561344,
+        "browserPss": 41592832,
+        "totalPss": 365374464,
+        "totalRss": 555139072,
+        "domNodes": 288,
         "canvasBackingBytes": 5040000
       },
       "settled": {
-        "jsHeapUsed": 25616368,
+        "jsHeapUsed": 25645948,
         "jsHeapTotal": 26521600,
-        "rendererPss": 206991360,
-        "gpuPss": 85288960,
-        "browserPss": 41593856,
-        "totalPss": 361266176,
-        "totalRss": 549191680,
-        "domNodes": 274,
+        "rendererPss": 206113792,
+        "gpuPss": 84946944,
+        "browserPss": 41707520,
+        "totalPss": 360166400,
+        "totalRss": 548454400,
+        "domNodes": 278,
         "canvasBackingBytes": 5040000
       },
       "errors": [],
       "samples": [
         {
-          "readyMs": 1679,
+          "readyMs": 1558,
           "atReady": {
-            "jsHeapUsed": 25902800,
-            "jsHeapTotal": 26783744,
-            "domNodes": 284,
+            "jsHeapUsed": 26085384,
+            "jsHeapTotal": 27045888,
+            "domNodes": 288,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 207027200,
-            "gpuPss": 86204416,
-            "browserPss": 41367552,
-            "totalPss": 362081280,
-            "totalRss": 551448576,
+            "rendererPss": 210900992,
+            "gpuPss": 86062080,
+            "browserPss": 41485312,
+            "totalPss": 365789184,
+            "totalRss": 555474944,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93892608,
-                "pss": 41367552
+                "unreadable": 0,
+                "rss": 93614080,
+                "pss": 41485312
               },
               "renderer": {
                 "count": 1,
-                "rss": 260329472,
-                "pss": 207027200
+                "unreadable": 0,
+                "rss": 263966720,
+                "pss": 210900992
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69603328,
-                "pss": 27482112
+                "unreadable": 0,
+                "rss": 69595136,
+                "pss": 27340800
               },
               "GPU": {
                 "count": 1,
-                "rss": 127623168,
-                "pss": 86204416
+                "unreadable": 0,
+                "rss": 128299008,
+                "pss": 86062080
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 25610440,
+            "jsHeapUsed": 25645948,
             "jsHeapTotal": 26521600,
-            "domNodes": 274,
+            "domNodes": 278,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 206235648,
-            "gpuPss": 85641216,
-            "browserPss": 41399296,
-            "totalPss": 360720384,
-            "totalRss": 549191680,
+            "rendererPss": 206231552,
+            "gpuPss": 85537792,
+            "browserPss": 41554944,
+            "totalPss": 360669184,
+            "totalRss": 549306368,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93966336,
-                "pss": 41399296
+                "unreadable": 0,
+                "rss": 93683712,
+                "pss": 41554944
               },
               "renderer": {
                 "count": 1,
-                "rss": 259043328,
-                "pss": 206235648
+                "unreadable": 0,
+                "rss": 258772992,
+                "pss": 206231552
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69607424,
-                "pss": 27444224
-              },
-              "GPU": {
-                "count": 1,
-                "rss": 126574592,
-                "pss": 85641216
-              }
-            }
-          },
-          "errors": [],
-          "status": {
-            "uiBuilderSocketState": "connecting",
-            "uiBuilderCommentNotifications": "hidden",
-            "uiBuilderReady": "true"
-          }
-        },
-        {
-          "readyMs": 1733,
-          "atReady": {
-            "jsHeapUsed": 26062496,
-            "jsHeapTotal": 26783744,
-            "domNodes": 284,
-            "jsEventListeners": 108,
-            "documents": 1,
-            "canvasBackingBytes": 5040000,
-            "canvasCount": 1,
-            "uaMemory": null,
-            "rendererPss": 211499008,
-            "gpuPss": 85809152,
-            "browserPss": 41530368,
-            "totalPss": 366226432,
-            "totalRss": 555294720,
-            "processes": {
-              "browser": {
-                "count": 1,
-                "rss": 94253056,
-                "pss": 41530368
-              },
-              "renderer": {
-                "count": 1,
-                "rss": 264278016,
-                "pss": 211499008
-              },
-              "network.mojom.NetworkService": {
-                "count": 1,
-                "rss": 69427200,
-                "pss": 27387904
-              },
-              "GPU": {
-                "count": 1,
-                "rss": 127336448,
-                "pss": 85809152
-              }
-            }
-          },
-          "settled": {
-            "jsHeapUsed": 25628552,
-            "jsHeapTotal": 26259456,
-            "domNodes": 274,
-            "jsEventListeners": 108,
-            "documents": 1,
-            "canvasBackingBytes": 5040000,
-            "canvasCount": 1,
-            "uaMemory": null,
-            "rendererPss": 206991360,
-            "gpuPss": 85288960,
-            "browserPss": 41593856,
-            "totalPss": 361266176,
-            "totalRss": 549298176,
-            "processes": {
-              "browser": {
-                "count": 1,
-                "rss": 94322688,
-                "pss": 41593856
-              },
-              "renderer": {
-                "count": 1,
-                "rss": 259252224,
-                "pss": 206991360
-              },
-              "network.mojom.NetworkService": {
-                "count": 1,
-                "rss": 69431296,
-                "pss": 27392000
-              },
-              "GPU": {
-                "count": 1,
-                "rss": 126291968,
-                "pss": 85288960
-              }
-            }
-          },
-          "errors": [],
-          "status": {
-            "uiBuilderSocketState": "connecting",
-            "uiBuilderCommentNotifications": "hidden",
-            "uiBuilderReady": "true"
-          }
-        },
-        {
-          "readyMs": 1538,
-          "atReady": {
-            "jsHeapUsed": 25908528,
-            "jsHeapTotal": 26783744,
-            "domNodes": 284,
-            "jsEventListeners": 108,
-            "documents": 1,
-            "canvasBackingBytes": 5040000,
-            "canvasCount": 1,
-            "uaMemory": null,
-            "rendererPss": 208983040,
-            "gpuPss": 84485120,
-            "browserPss": 41927680,
-            "totalPss": 362740736,
-            "totalRss": 551276544,
-            "processes": {
-              "browser": {
-                "count": 1,
-                "rss": 93540352,
-                "pss": 41927680
-              },
-              "renderer": {
-                "count": 1,
-                "rss": 261898240,
-                "pss": 208983040
-              },
-              "network.mojom.NetworkService": {
-                "count": 1,
-                "rss": 69312512,
+                "unreadable": 0,
+                "rss": 69599232,
                 "pss": 27344896
               },
               "GPU": {
                 "count": 1,
-                "rss": 126525440,
-                "pss": 84485120
+                "unreadable": 0,
+                "rss": 127250432,
+                "pss": 85537792
               }
             }
           },
-          "settled": {
-            "jsHeapUsed": 25616368,
-            "jsHeapTotal": 26521600,
-            "domNodes": 274,
+          "errors": [],
+          "status": {
+            "uiBuilderSocketState": "connecting",
+            "uiBuilderCommentNotifications": "hidden",
+            "uiBuilderReady": "true"
+          }
+        },
+        {
+          "readyMs": 1685,
+          "atReady": {
+            "jsHeapUsed": 26088040,
+            "jsHeapTotal": 27045888,
+            "domNodes": 288,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 207975424,
-            "gpuPss": 84091904,
-            "browserPss": 41997312,
-            "totalPss": 361413632,
-            "totalRss": 549163008,
+            "rendererPss": 210446336,
+            "gpuPss": 84818944,
+            "browserPss": 41810944,
+            "totalPss": 364724224,
+            "totalRss": 552321024,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93609984,
-                "pss": 41997312
+                "unreadable": 0,
+                "rss": 93691904,
+                "pss": 41810944
               },
               "renderer": {
                 "count": 1,
-                "rss": 260497408,
-                "pss": 207975424
+                "unreadable": 0,
+                "rss": 263450624,
+                "pss": 210446336
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69316608,
-                "pss": 27348992
+                "unreadable": 0,
+                "rss": 69500928,
+                "pss": 27648000
               },
               "GPU": {
                 "count": 1,
-                "rss": 125739008,
-                "pss": 84091904
+                "unreadable": 0,
+                "rss": 125677568,
+                "pss": 84818944
+              }
+            }
+          },
+          "settled": {
+            "jsHeapUsed": 25648464,
+            "jsHeapTotal": 26521600,
+            "domNodes": 278,
+            "jsEventListeners": 108,
+            "documents": 1,
+            "canvasBackingBytes": 5040000,
+            "canvasCount": 1,
+            "uaMemory": null,
+            "rendererPss": 205830144,
+            "gpuPss": 84294656,
+            "browserPss": 41876480,
+            "totalPss": 359653376,
+            "totalRss": 546201600,
+            "processes": {
+              "browser": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 93757440,
+                "pss": 41876480
+              },
+              "renderer": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 258310144,
+                "pss": 205830144
+              },
+              "network.mojom.NetworkService": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 69505024,
+                "pss": 27652096
+              },
+              "GPU": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 124628992,
+                "pss": 84294656
+              }
+            }
+          },
+          "errors": [],
+          "status": {
+            "uiBuilderSocketState": "connecting",
+            "uiBuilderCommentNotifications": "hidden",
+            "uiBuilderReady": "true"
+          }
+        },
+        {
+          "readyMs": 1467,
+          "atReady": {
+            "jsHeapUsed": 26081784,
+            "jsHeapTotal": 27045888,
+            "domNodes": 288,
+            "jsEventListeners": 108,
+            "documents": 1,
+            "canvasBackingBytes": 5040000,
+            "canvasCount": 1,
+            "uaMemory": null,
+            "rendererPss": 210873344,
+            "gpuPss": 85561344,
+            "browserPss": 41592832,
+            "totalPss": 365374464,
+            "totalRss": 555139072,
+            "processes": {
+              "browser": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 94236672,
+                "pss": 41592832
+              },
+              "renderer": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 264343552,
+                "pss": 210873344
+              },
+              "network.mojom.NetworkService": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 69394432,
+                "pss": 27346944
+              },
+              "GPU": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 127164416,
+                "pss": 85561344
+              }
+            }
+          },
+          "settled": {
+            "jsHeapUsed": 25639324,
+            "jsHeapTotal": 26521600,
+            "domNodes": 278,
+            "jsEventListeners": 108,
+            "documents": 1,
+            "canvasBackingBytes": 5040000,
+            "canvasCount": 1,
+            "uaMemory": null,
+            "rendererPss": 206113792,
+            "gpuPss": 84946944,
+            "browserPss": 41707520,
+            "totalPss": 360166400,
+            "totalRss": 548454400,
+            "processes": {
+              "browser": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 94302208,
+                "pss": 41707520
+              },
+              "renderer": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 258899968,
+                "pss": 206113792
+              },
+              "network.mojom.NetworkService": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 69398528,
+                "pss": 27398144
+              },
+              "GPU": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 125853696,
+                "pss": 84946944
               }
             }
           },
@@ -419,72 +456,76 @@
       "label": "Open design · m3-catalog",
       "path": "/ui-builder/google-gmail-tablet",
       "viewport": "desktop",
-      "readyMs": 2898,
+      "readyMs": 3474,
       "atReady": {
-        "jsHeapUsed": 48870380,
-        "jsHeapTotal": 71393280,
-        "rendererPss": 358388736,
-        "gpuPss": 97988608,
-        "browserPss": 41639936,
-        "totalPss": 525028352,
-        "totalRss": 719441920,
-        "domNodes": 438,
+        "jsHeapUsed": 49686904,
+        "jsHeapTotal": 73752576,
+        "rendererPss": 362750976,
+        "gpuPss": 98693120,
+        "browserPss": 41747456,
+        "totalPss": 530853888,
+        "totalRss": 728461312,
+        "domNodes": 436,
         "canvasBackingBytes": 5040000
       },
       "settled": {
-        "jsHeapUsed": 38020184,
+        "jsHeapUsed": 38029888,
         "jsHeapTotal": 39071744,
-        "rendererPss": 238744576,
-        "gpuPss": 97464320,
-        "browserPss": 41711616,
-        "totalPss": 404937728,
-        "totalRss": 598302720,
+        "rendererPss": 240614400,
+        "gpuPss": 98299904,
+        "browserPss": 41821184,
+        "totalPss": 408399872,
+        "totalRss": 606621696,
         "domNodes": 355,
         "canvasBackingBytes": 5040000
       },
       "errors": [],
       "samples": [
         {
-          "readyMs": 2875,
+          "readyMs": 3389,
           "atReady": {
-            "jsHeapUsed": 38515296,
-            "jsHeapTotal": 47984640,
-            "domNodes": 438,
-            "jsEventListeners": 116,
+            "jsHeapUsed": 49686904,
+            "jsHeapTotal": 73752576,
+            "domNodes": 436,
+            "jsEventListeners": 115,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 335286272,
-            "gpuPss": 97260544,
-            "browserPss": 41801728,
-            "totalPss": 501959680,
-            "totalRss": 696176640,
+            "rendererPss": 362750976,
+            "gpuPss": 98693120,
+            "browserPss": 41481216,
+            "totalPss": 530853888,
+            "totalRss": 729858048,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94060544,
-                "pss": 41801728
+                "unreadable": 0,
+                "rss": 93843456,
+                "pss": 41481216
               },
               "renderer": {
                 "count": 1,
-                "rss": 391344128,
-                "pss": 335286272
+                "unreadable": 0,
+                "rss": 420806656,
+                "pss": 362750976
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69713920,
-                "pss": 27611136
+                "unreadable": 0,
+                "rss": 69304320,
+                "pss": 27928576
               },
               "GPU": {
                 "count": 1,
-                "rss": 141058048,
-                "pss": 97260544
+                "unreadable": 0,
+                "rss": 145903616,
+                "pss": 98693120
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 38008644,
+            "jsHeapUsed": 38031116,
             "jsHeapTotal": 39071744,
             "domNodes": 355,
             "jsEventListeners": 116,
@@ -492,31 +533,35 @@
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 238256128,
-            "gpuPss": 96605184,
-            "browserPss": 41883648,
-            "totalPss": 404360192,
-            "totalRss": 597266432,
+            "rendererPss": 240614400,
+            "gpuPss": 98299904,
+            "browserPss": 41552896,
+            "totalPss": 408399872,
+            "totalRss": 606621696,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94142464,
-                "pss": 41883648
+                "unreadable": 0,
+                "rss": 93917184,
+                "pss": 41552896
               },
               "renderer": {
                 "count": 1,
-                "rss": 293658624,
-                "pss": 238256128
+                "unreadable": 0,
+                "rss": 298278912,
+                "pss": 240614400
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69718016,
-                "pss": 27615232
+                "unreadable": 0,
+                "rss": 69308416,
+                "pss": 27932672
               },
               "GPU": {
                 "count": 1,
-                "rss": 139747328,
-                "pss": 96605184
+                "unreadable": 0,
+                "rss": 145117184,
+                "pss": 98299904
               }
             }
           },
@@ -535,168 +580,184 @@
           }
         },
         {
-          "readyMs": 3062,
+          "readyMs": 3474,
           "atReady": {
-            "jsHeapUsed": 52482272,
-            "jsHeapTotal": 71393280,
-            "domNodes": 521,
-            "jsEventListeners": 116,
-            "documents": 1,
-            "canvasBackingBytes": 5040000,
-            "canvasCount": 1,
-            "uaMemory": null,
-            "rendererPss": 358388736,
-            "gpuPss": 97988608,
-            "browserPss": 41408512,
-            "totalPss": 525028352,
-            "totalRss": 719441920,
-            "processes": {
-              "browser": {
-                "count": 1,
-                "rss": 94117888,
-                "pss": 41408512
-              },
-              "renderer": {
-                "count": 1,
-                "rss": 414392320,
-                "pss": 358388736
-              },
-              "network.mojom.NetworkService": {
-                "count": 1,
-                "rss": 68825088,
-                "pss": 27242496
-              },
-              "GPU": {
-                "count": 1,
-                "rss": 142106624,
-                "pss": 97988608
-              }
-            }
-          },
-          "settled": {
-            "jsHeapUsed": 38021608,
-            "jsHeapTotal": 39071744,
-            "domNodes": 355,
-            "jsEventListeners": 116,
-            "documents": 1,
-            "canvasBackingBytes": 5040000,
-            "canvasCount": 1,
-            "uaMemory": null,
-            "rendererPss": 238744576,
-            "gpuPss": 97464320,
-            "browserPss": 41482240,
-            "totalPss": 404937728,
-            "totalRss": 598302720,
-            "processes": {
-              "browser": {
-                "count": 1,
-                "rss": 94191616,
-                "pss": 41482240
-              },
-              "renderer": {
-                "count": 1,
-                "rss": 294223872,
-                "pss": 238744576
-              },
-              "network.mojom.NetworkService": {
-                "count": 1,
-                "rss": 68829184,
-                "pss": 27246592
-              },
-              "GPU": {
-                "count": 1,
-                "rss": 141058048,
-                "pss": 97464320
-              }
-            }
-          },
-          "errors": [],
-          "status": {
-            "uiBuilderSocketState": "disconnected",
-            "uiBuilderCommentNotifications": "hidden",
-            "uiBuilderCollaborators": "0",
-            "uiBuilderEditorRevision": "1",
-            "uiBuilderReady": "true",
-            "uiBuilderSelectedNode": "root",
-            "uiBuilderSelectedThread": "",
-            "uiBuilderInspectorMode": "Properties",
-            "uiBuilderPinnedRevision": "",
-            "uiBuilderInspectionGeneration": "google-gmail-tablet@1"
-          }
-        },
-        {
-          "readyMs": 2898,
-          "atReady": {
-            "jsHeapUsed": 48870380,
-            "jsHeapTotal": 80830464,
+            "jsHeapUsed": 59891404,
+            "jsHeapTotal": 78733312,
             "domNodes": 435,
             "jsEventListeners": 115,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 370880512,
-            "gpuPss": 99732480,
-            "browserPss": 41639936,
-            "totalPss": 539928576,
-            "totalRss": 740835328,
+            "rendererPss": 368487424,
+            "gpuPss": 96723968,
+            "browserPss": 41966592,
+            "totalPss": 534988800,
+            "totalRss": 728461312,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94199808,
-                "pss": 41639936
+                "unreadable": 0,
+                "rss": 94068736,
+                "pss": 41966592
               },
               "renderer": {
                 "count": 1,
-                "rss": 429400064,
-                "pss": 370880512
+                "unreadable": 0,
+                "rss": 424394752,
+                "pss": 368487424
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 70107136,
-                "pss": 27675648
+                "unreadable": 0,
+                "rss": 69689344,
+                "pss": 27810816
               },
               "GPU": {
                 "count": 1,
-                "rss": 147128320,
-                "pss": 99732480
+                "unreadable": 0,
+                "rss": 140308480,
+                "pss": 96723968
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 38020184,
-            "jsHeapTotal": 39596032,
+            "jsHeapUsed": 38029888,
+            "jsHeapTotal": 39071744,
             "domNodes": 355,
             "jsEventListeners": 116,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 240244736,
-            "gpuPss": 99208192,
-            "browserPss": 41711616,
-            "totalPss": 408844288,
-            "totalRss": 608706560,
+            "rendererPss": 238389248,
+            "gpuPss": 96330752,
+            "browserPss": 42054656,
+            "totalPss": 404580352,
+            "totalRss": 597331968,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94273536,
-                "pss": 41711616
+                "unreadable": 0,
+                "rss": 94199808,
+                "pss": 42054656
               },
               "renderer": {
                 "count": 1,
-                "rss": 298242048,
-                "pss": 240244736
+                "unreadable": 0,
+                "rss": 293916672,
+                "pss": 238389248
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 70111232,
-                "pss": 27679744
+                "unreadable": 0,
+                "rss": 69693440,
+                "pss": 27805696
               },
               "GPU": {
                 "count": 1,
-                "rss": 146079744,
-                "pss": 99208192
+                "unreadable": 0,
+                "rss": 139522048,
+                "pss": 96330752
+              }
+            }
+          },
+          "errors": [],
+          "status": {
+            "uiBuilderSocketState": "disconnected",
+            "uiBuilderCommentNotifications": "hidden",
+            "uiBuilderCollaborators": "0",
+            "uiBuilderEditorRevision": "1",
+            "uiBuilderReady": "true",
+            "uiBuilderSelectedNode": "root",
+            "uiBuilderSelectedThread": "",
+            "uiBuilderInspectorMode": "Properties",
+            "uiBuilderPinnedRevision": "",
+            "uiBuilderInspectionGeneration": "google-gmail-tablet@1"
+          }
+        },
+        {
+          "readyMs": 4104,
+          "atReady": {
+            "jsHeapUsed": 38767660,
+            "jsHeapTotal": 48246784,
+            "domNodes": 438,
+            "jsEventListeners": 116,
+            "documents": 1,
+            "canvasBackingBytes": 5040000,
+            "canvasCount": 1,
+            "uaMemory": null,
+            "rendererPss": 337354752,
+            "gpuPss": 101816320,
+            "browserPss": 41747456,
+            "totalPss": 508218368,
+            "totalRss": 713183232,
+            "processes": {
+              "browser": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 94478336,
+                "pss": 41747456
+              },
+              "renderer": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 397639680,
+                "pss": 337354752
+              },
+              "network.mojom.NetworkService": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 69505024,
+                "pss": 27299840
+              },
+              "GPU": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 151560192,
+                "pss": 101816320
+              }
+            }
+          },
+          "settled": {
+            "jsHeapUsed": 38026484,
+            "jsHeapTotal": 39071744,
+            "domNodes": 355,
+            "jsEventListeners": 116,
+            "documents": 1,
+            "canvasBackingBytes": 5040000,
+            "canvasCount": 1,
+            "uaMemory": null,
+            "rendererPss": 243511296,
+            "gpuPss": 101292032,
+            "browserPss": 41821184,
+            "totalPss": 413928448,
+            "totalRss": 617844736,
+            "processes": {
+              "browser": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 94552064,
+                "pss": 41821184
+              },
+              "renderer": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 303271936,
+                "pss": 243511296
+              },
+              "network.mojom.NetworkService": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 69509120,
+                "pss": 27303936
+              },
+              "GPU": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 150511616,
+                "pss": 101292032
               }
             }
           },
@@ -721,104 +782,112 @@
       "label": "Open design · wear-m3",
       "path": "/ui-builder/google-home-wear",
       "viewport": "desktop",
-      "readyMs": 2081,
+      "readyMs": 2657,
       "atReady": {
-        "jsHeapUsed": 41235180,
-        "jsHeapTotal": 64933888,
-        "rendererPss": 261853184,
-        "gpuPss": 103970816,
-        "browserPss": 41422848,
-        "totalPss": 434695168,
-        "totalRss": 628654080,
-        "domNodes": 256,
+        "jsHeapUsed": 43713984,
+        "jsHeapTotal": 64671744,
+        "rendererPss": 260416512,
+        "gpuPss": 103085056,
+        "browserPss": 41530368,
+        "totalPss": 432851968,
+        "totalRss": 627748864,
+        "domNodes": 296,
         "canvasBackingBytes": 5040000
       },
       "settled": {
-        "jsHeapUsed": 30028556,
-        "jsHeapTotal": 31301632,
-        "rendererPss": 216415232,
-        "gpuPss": 103446528,
-        "browserPss": 41500672,
-        "totalPss": 388205568,
-        "totalRss": 581775360,
+        "jsHeapUsed": 30033668,
+        "jsHeapTotal": 31039488,
+        "rendererPss": 216300544,
+        "gpuPss": 102560768,
+        "browserPss": 41600000,
+        "totalPss": 388025344,
+        "totalRss": 581787648,
         "domNodes": 223,
         "canvasBackingBytes": 5040000
       },
       "errors": [],
       "samples": [
         {
-          "readyMs": 2373,
+          "readyMs": 2613,
           "atReady": {
-            "jsHeapUsed": 23937976,
-            "jsHeapTotal": 25796608,
+            "jsHeapUsed": 42064240,
+            "jsHeapTotal": 66506752,
             "domNodes": 256,
             "jsEventListeners": 104,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 246686720,
-            "gpuPss": 103183360,
-            "browserPss": 41724928,
-            "totalPss": 418967552,
-            "totalRss": 613691392,
+            "rendererPss": 260416512,
+            "gpuPss": 102491136,
+            "browserPss": 42084352,
+            "totalPss": 432851968,
+            "totalRss": 627748864,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94093312,
-                "pss": 41724928
+                "unreadable": 0,
+                "rss": 94056448,
+                "pss": 42084352
               },
               "renderer": {
                 "count": 1,
-                "rss": 302567424,
-                "pss": 246686720
+                "unreadable": 0,
+                "rss": 316006400,
+                "pss": 260416512
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69263360,
-                "pss": 27372544
+                "unreadable": 0,
+                "rss": 70098944,
+                "pss": 27859968
               },
               "GPU": {
                 "count": 1,
-                "rss": 147767296,
-                "pss": 103183360
+                "unreadable": 0,
+                "rss": 147587072,
+                "pss": 102491136
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 30016272,
-            "jsHeapTotal": 30777344,
+            "jsHeapUsed": 30033524,
+            "jsHeapTotal": 31301632,
             "domNodes": 223,
             "jsEventListeners": 105,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 216415232,
-            "gpuPss": 102454272,
-            "browserPss": 41776128,
-            "totalPss": 388022272,
-            "totalRss": 581775360,
+            "rendererPss": 215938048,
+            "gpuPss": 101966848,
+            "browserPss": 42145792,
+            "totalPss": 387914752,
+            "totalRss": 581787648,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94162944,
-                "pss": 41776128
+                "unreadable": 0,
+                "rss": 94130176,
+                "pss": 42145792
               },
               "renderer": {
                 "count": 1,
-                "rss": 271810560,
-                "pss": 216415232
+                "unreadable": 0,
+                "rss": 271015936,
+                "pss": 215938048
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69267456,
-                "pss": 27376640
+                "unreadable": 0,
+                "rss": 70103040,
+                "pss": 27864064
               },
               "GPU": {
                 "count": 1,
-                "rss": 146534400,
-                "pss": 102454272
+                "unreadable": 0,
+                "rss": 146538496,
+                "pss": 101966848
               }
             }
           },
@@ -837,78 +906,86 @@
           }
         },
         {
-          "readyMs": 2081,
+          "readyMs": 2716,
           "atReady": {
-            "jsHeapUsed": 47089468,
-            "jsHeapTotal": 64933888,
+            "jsHeapUsed": 47076784,
+            "jsHeapTotal": 64671744,
             "domNodes": 296,
             "jsEventListeners": 104,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 261853184,
-            "gpuPss": 103970816,
-            "browserPss": 41420800,
-            "totalPss": 434695168,
-            "totalRss": 628654080,
+            "rendererPss": 262276096,
+            "gpuPss": 103085056,
+            "browserPss": 41530368,
+            "totalPss": 434260992,
+            "totalRss": 628731904,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93773824,
-                "pss": 41420800
+                "unreadable": 0,
+                "rss": 93917184,
+                "pss": 41530368
               },
               "renderer": {
                 "count": 1,
-                "rss": 317468672,
-                "pss": 261853184
+                "unreadable": 0,
+                "rss": 318132224,
+                "pss": 262276096
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 68915200,
-                "pss": 27450368
+                "unreadable": 0,
+                "rss": 69185536,
+                "pss": 27369472
               },
               "GPU": {
                 "count": 1,
-                "rss": 148496384,
-                "pss": 103970816
+                "unreadable": 0,
+                "rss": 147496960,
+                "pss": 103085056
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 30108212,
-            "jsHeapTotal": 31301632,
+            "jsHeapUsed": 30118072,
+            "jsHeapTotal": 31039488,
             "domNodes": 223,
             "jsEventListeners": 105,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 215812096,
-            "gpuPss": 103446528,
-            "browserPss": 41492480,
-            "totalPss": 388205568,
-            "totalRss": 581128192,
+            "rendererPss": 216491008,
+            "gpuPss": 102560768,
+            "browserPss": 41600000,
+            "totalPss": 388025344,
+            "totalRss": 581455872,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93851648,
-                "pss": 41492480
+                "unreadable": 0,
+                "rss": 93990912,
+                "pss": 41600000
               },
               "renderer": {
                 "count": 1,
-                "rss": 270909440,
-                "pss": 215812096
+                "unreadable": 0,
+                "rss": 271826944,
+                "pss": 216491008
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 68919296,
-                "pss": 27454464
+                "unreadable": 0,
+                "rss": 69189632,
+                "pss": 27373568
               },
               "GPU": {
                 "count": 1,
-                "rss": 147447808,
-                "pss": 103446528
+                "unreadable": 0,
+                "rss": 146448384,
+                "pss": 102560768
               }
             }
           },
@@ -927,78 +1004,86 @@
           }
         },
         {
-          "readyMs": 2015,
+          "readyMs": 2657,
           "atReady": {
-            "jsHeapUsed": 41235180,
-            "jsHeapTotal": 69652480,
-            "domNodes": 256,
+            "jsHeapUsed": 43713984,
+            "jsHeapTotal": 61263872,
+            "domNodes": 296,
             "jsEventListeners": 104,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 265732096,
-            "gpuPss": 106020864,
-            "browserPss": 41422848,
-            "totalPss": 440643584,
-            "totalRss": 640237568,
+            "rendererPss": 257075200,
+            "gpuPss": 103454720,
+            "browserPss": 41523200,
+            "totalPss": 429753344,
+            "totalRss": 624627712,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94081024,
-                "pss": 41422848
+                "unreadable": 0,
+                "rss": 93868032,
+                "pss": 41523200
               },
               "renderer": {
                 "count": 1,
-                "rss": 323284992,
-                "pss": 265732096
+                "unreadable": 0,
+                "rss": 312999936,
+                "pss": 257075200
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69373952,
-                "pss": 27467776
+                "unreadable": 0,
+                "rss": 69963776,
+                "pss": 27700224
               },
               "GPU": {
                 "count": 1,
-                "rss": 153497600,
-                "pss": 106020864
+                "unreadable": 0,
+                "rss": 147795968,
+                "pss": 103454720
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 30028556,
-            "jsHeapTotal": 31301632,
+            "jsHeapUsed": 30033668,
+            "jsHeapTotal": 31039488,
             "domNodes": 223,
             "jsEventListeners": 105,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 218801152,
-            "gpuPss": 105627648,
-            "browserPss": 41500672,
-            "totalPss": 393421824,
-            "totalRss": 592293888,
+            "rendererPss": 216300544,
+            "gpuPss": 102930432,
+            "browserPss": 41565184,
+            "totalPss": 388530176,
+            "totalRss": 582463488,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94167040,
-                "pss": 41500672
+                "unreadable": 0,
+                "rss": 93941760,
+                "pss": 41565184
               },
               "renderer": {
                 "count": 1,
-                "rss": 275976192,
-                "pss": 218801152
+                "unreadable": 0,
+                "rss": 271745024,
+                "pss": 216300544
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69439488,
-                "pss": 27492352
+                "unreadable": 0,
+                "rss": 70029312,
+                "pss": 27734016
               },
               "GPU": {
                 "count": 1,
-                "rss": 152711168,
-                "pss": 105627648
+                "unreadable": 0,
+                "rss": 146747392,
+                "pss": 102930432
               }
             }
           },
@@ -1023,104 +1108,210 @@
       "label": "Open design · remote-m3",
       "path": "/ui-builder/weather-widget",
       "viewport": "desktop",
-      "readyMs": 1395,
+      "readyMs": 2010,
       "atReady": {
-        "jsHeapUsed": 42450244,
-        "jsHeapTotal": 69300224,
-        "rendererPss": 255930368,
-        "gpuPss": 101557248,
-        "browserPss": 45688832,
-        "totalPss": 422319104,
-        "totalRss": 618024960,
-        "domNodes": 210,
+        "jsHeapUsed": 41453608,
+        "jsHeapTotal": 52289536,
+        "rendererPss": 263913472,
+        "gpuPss": 103248896,
+        "browserPss": 45830144,
+        "totalPss": 440873984,
+        "totalRss": 641949696,
+        "domNodes": 231,
         "canvasBackingBytes": 5040000
       },
       "settled": {
-        "jsHeapUsed": 37460308,
-        "jsHeapTotal": 38973440,
-        "rendererPss": 263118848,
-        "gpuPss": 104737792,
-        "browserPss": 45793280,
-        "totalPss": 442170368,
-        "totalRss": 643903488,
+        "jsHeapUsed": 34983528,
+        "jsHeapTotal": 35696640,
+        "rendererPss": 218149888,
+        "gpuPss": 102724608,
+        "browserPss": 45898752,
+        "totalPss": 395151360,
+        "totalRss": 596385792,
         "domNodes": 193,
         "canvasBackingBytes": 5040000
       },
       "errors": [],
       "samples": [
         {
-          "readyMs": 1460,
+          "readyMs": 2306,
           "atReady": {
-            "jsHeapUsed": 37313176,
-            "jsHeapTotal": 45871104,
-            "domNodes": 212,
+            "jsHeapUsed": 41453608,
+            "jsHeapTotal": 70823936,
+            "domNodes": 231,
             "jsEventListeners": 96,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 235183104,
-            "gpuPss": 101557248,
-            "browserPss": 45688832,
-            "totalPss": 411216896,
-            "totalRss": 607223808,
+            "rendererPss": 263913472,
+            "gpuPss": 102164480,
+            "browserPss": 45743104,
+            "totalPss": 440873984,
+            "totalRss": 641949696,
             "processes": {
               "browser": {
                 "count": 1,
+                "unreadable": 0,
+                "rss": 99123200,
+                "pss": 45743104
+              },
+              "renderer": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 322576384,
+                "pss": 263913472
+              },
+              "network.mojom.NetworkService": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 71749632,
+                "pss": 29052928
+              },
+              "GPU": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 148500480,
+                "pss": 102164480
+              }
+            }
+          },
+          "settled": {
+            "jsHeapUsed": 34991360,
+            "jsHeapTotal": 35958784,
+            "domNodes": 193,
+            "jsEventListeners": 96,
+            "documents": 1,
+            "canvasBackingBytes": 5040000,
+            "canvasCount": 1,
+            "uaMemory": null,
+            "rendererPss": 217522176,
+            "gpuPss": 101509120,
+            "browserPss": 45820928,
+            "totalPss": 393913344,
+            "totalRss": 593678336,
+            "processes": {
+              "browser": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 99201024,
+                "pss": 45820928
+              },
+              "renderer": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 275529728,
+                "pss": 217522176
+              },
+              "network.mojom.NetworkService": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 71757824,
+                "pss": 29061120
+              },
+              "GPU": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 147189760,
+                "pss": 101509120
+              }
+            }
+          },
+          "errors": [],
+          "status": {
+            "uiBuilderSocketState": "disconnected",
+            "uiBuilderCommentNotifications": "hidden",
+            "uiBuilderCollaborators": "0",
+            "uiBuilderEditorRevision": "1",
+            "uiBuilderReady": "true",
+            "uiBuilderSelectedNode": "wear-widget-large",
+            "uiBuilderSelectedThread": "",
+            "uiBuilderInspectorMode": "Properties",
+            "uiBuilderPinnedRevision": "",
+            "uiBuilderInspectionGeneration": "weather-widget@1"
+          }
+        },
+        {
+          "readyMs": 1555,
+          "atReady": {
+            "jsHeapUsed": 44140120,
+            "jsHeapTotal": 52289536,
+            "domNodes": 210,
+            "jsEventListeners": 95,
+            "documents": 1,
+            "canvasBackingBytes": 5040000,
+            "canvasCount": 1,
+            "uaMemory": null,
+            "rendererPss": 267421696,
+            "gpuPss": 106642432,
+            "browserPss": 45830144,
+            "totalPss": 448250880,
+            "totalRss": 654086144,
+            "processes": {
+              "browser": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 98738176,
+                "pss": 45830144
+              },
+              "renderer": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 328499200,
+                "pss": 267421696
+              },
+              "network.mojom.NetworkService": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 71139328,
+                "pss": 28356608
+              },
+              "GPU": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 155709440,
+                "pss": 106642432
+              }
+            }
+          },
+          "settled": {
+            "jsHeapUsed": 34983528,
+            "jsHeapTotal": 35696640,
+            "domNodes": 193,
+            "jsEventListeners": 96,
+            "documents": 1,
+            "canvasBackingBytes": 5040000,
+            "canvasCount": 1,
+            "uaMemory": null,
+            "rendererPss": 220221440,
+            "gpuPss": 105984000,
+            "browserPss": 45898752,
+            "totalPss": 400483328,
+            "totalRss": 605065216,
+            "processes": {
+              "browser": {
+                "count": 1,
+                "unreadable": 0,
                 "rss": 98811904,
-                "pss": 45688832
+                "pss": 45898752
               },
               "renderer": {
                 "count": 1,
-                "rss": 291397632,
-                "pss": 235183104
+                "unreadable": 0,
+                "rss": 280649728,
+                "pss": 220221440
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 71163904,
-                "pss": 28787712
+                "unreadable": 0,
+                "rss": 71204864,
+                "pss": 28379136
               },
               "GPU": {
                 "count": 1,
-                "rss": 145850368,
-                "pss": 101557248
-              }
-            }
-          },
-          "settled": {
-            "jsHeapUsed": 37460308,
-            "jsHeapTotal": 38973440,
-            "domNodes": 193,
-            "jsEventListeners": 96,
-            "documents": 1,
-            "canvasBackingBytes": 5040000,
-            "canvasCount": 1,
-            "uaMemory": null,
-            "rendererPss": 261288960,
-            "gpuPss": 104563712,
-            "browserPss": 45793280,
-            "totalPss": 440507392,
-            "totalRss": 641671168,
-            "processes": {
-              "browser": {
-                "count": 1,
-                "rss": 98918400,
-                "pss": 45793280
-              },
-              "renderer": {
-                "count": 1,
-                "rss": 320081920,
-                "pss": 261288960
-              },
-              "network.mojom.NetworkService": {
-                "count": 1,
-                "rss": 71237632,
-                "pss": 28861440
-              },
-              "GPU": {
-                "count": 1,
-                "rss": 151433216,
-                "pss": 104563712
+                "unreadable": 0,
+                "rss": 154398720,
+                "pss": 105984000
               }
             }
           },
@@ -1139,168 +1330,86 @@
           }
         },
         {
-          "readyMs": 1293,
+          "readyMs": 2010,
           "atReady": {
-            "jsHeapUsed": 42450244,
-            "jsHeapTotal": 69300224,
-            "domNodes": 210,
-            "jsEventListeners": 95,
+            "jsHeapUsed": 36526208,
+            "jsHeapTotal": 45395968,
+            "domNodes": 231,
+            "jsEventListeners": 96,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 255930368,
-            "gpuPss": 92631040,
-            "browserPss": 46172160,
-            "totalPss": 422319104,
-            "totalRss": 618024960,
+            "rendererPss": 238961664,
+            "gpuPss": 103248896,
+            "browserPss": 46016512,
+            "totalPss": 416405504,
+            "totalRss": 618688512,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 98807808,
-                "pss": 46172160
+                "unreadable": 0,
+                "rss": 99352576,
+                "pss": 46016512
               },
               "renderer": {
                 "count": 1,
-                "rss": 311324672,
-                "pss": 255930368
+                "unreadable": 0,
+                "rss": 298090496,
+                "pss": 238961664
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 70418432,
-                "pss": 27585536
+                "unreadable": 0,
+                "rss": 71831552,
+                "pss": 28178432
               },
               "GPU": {
                 "count": 1,
-                "rss": 137474048,
-                "pss": 92631040
+                "unreadable": 0,
+                "rss": 149413888,
+                "pss": 103248896
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 37491612,
-            "jsHeapTotal": 39497728,
+            "jsHeapUsed": 34973140,
+            "jsHeapTotal": 35696640,
             "domNodes": 193,
             "jsEventListeners": 96,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 263118848,
-            "gpuPss": 104737792,
-            "browserPss": 46163968,
-            "totalPss": 442170368,
-            "totalRss": 643903488,
+            "rendererPss": 218149888,
+            "gpuPss": 102724608,
+            "browserPss": 46090240,
+            "totalPss": 395151360,
+            "totalRss": 596385792,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 98996224,
-                "pss": 46163968
+                "unreadable": 0,
+                "rss": 99426304,
+                "pss": 46090240
               },
               "renderer": {
                 "count": 1,
-                "rss": 321343488,
-                "pss": 263118848
+                "unreadable": 0,
+                "rss": 276754432,
+                "pss": 218149888
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 71577600,
-                "pss": 28149760
+                "unreadable": 0,
+                "rss": 71839744,
+                "pss": 28186624
               },
               "GPU": {
                 "count": 1,
-                "rss": 151986176,
-                "pss": 104737792
-              }
-            }
-          },
-          "errors": [],
-          "status": {
-            "uiBuilderSocketState": "disconnected",
-            "uiBuilderCommentNotifications": "hidden",
-            "uiBuilderCollaborators": "0",
-            "uiBuilderEditorRevision": "1",
-            "uiBuilderReady": "true",
-            "uiBuilderSelectedNode": "wear-widget-large",
-            "uiBuilderSelectedThread": "",
-            "uiBuilderInspectorMode": "Properties",
-            "uiBuilderPinnedRevision": "",
-            "uiBuilderInspectionGeneration": "weather-widget@1"
-          }
-        },
-        {
-          "readyMs": 1395,
-          "atReady": {
-            "jsHeapUsed": 51144380,
-            "jsHeapTotal": 69328896,
-            "domNodes": 210,
-            "jsEventListeners": 95,
-            "documents": 1,
-            "canvasBackingBytes": 5040000,
-            "canvasCount": 1,
-            "uaMemory": null,
-            "rendererPss": 265538560,
-            "gpuPss": 104422400,
-            "browserPss": 45430784,
-            "totalPss": 443824128,
-            "totalRss": 645525504,
-            "processes": {
-              "browser": {
-                "count": 1,
-                "rss": 98549760,
-                "pss": 45430784
-              },
-              "renderer": {
-                "count": 1,
-                "rss": 324321280,
-                "pss": 265538560
-              },
-              "network.mojom.NetworkService": {
-                "count": 1,
-                "rss": 71499776,
-                "pss": 28432384
-              },
-              "GPU": {
-                "count": 1,
-                "rss": 151154688,
-                "pss": 104422400
-              }
-            }
-          },
-          "settled": {
-            "jsHeapUsed": 37329592,
-            "jsHeapTotal": 38711296,
-            "domNodes": 193,
-            "jsEventListeners": 96,
-            "documents": 1,
-            "canvasBackingBytes": 5040000,
-            "canvasCount": 1,
-            "uaMemory": null,
-            "rendererPss": 263996416,
-            "gpuPss": 107831296,
-            "browserPss": 45553664,
-            "totalPss": 445884416,
-            "totalRss": 652812288,
-            "processes": {
-              "browser": {
-                "count": 1,
-                "rss": 98717696,
-                "pss": 45553664
-              },
-              "renderer": {
-                "count": 1,
-                "rss": 325369856,
-                "pss": 263996416
-              },
-              "network.mojom.NetworkService": {
-                "count": 1,
-                "rss": 71577600,
-                "pss": 28503040
-              },
-              "GPU": {
-                "count": 1,
-                "rss": 157147136,
-                "pss": 107831296
+                "unreadable": 0,
+                "rss": 148365312,
+                "pss": 102724608
               }
             }
           },
@@ -1325,72 +1434,76 @@
       "label": "Open design · a2ui-catalog",
       "path": "/ui-builder/a2ui-reservation",
       "viewport": "desktop",
-      "readyMs": 1320,
+      "readyMs": 1797,
       "atReady": {
-        "jsHeapUsed": 31714496,
-        "jsHeapTotal": 50483200,
-        "rendererPss": 236685312,
-        "gpuPss": 96101376,
-        "browserPss": 41627648,
-        "totalPss": 401691648,
-        "totalRss": 601567232,
+        "jsHeapUsed": 34576884,
+        "jsHeapTotal": 56066048,
+        "rendererPss": 241961984,
+        "gpuPss": 96109568,
+        "browserPss": 42101760,
+        "totalPss": 407616512,
+        "totalRss": 606830592,
         "domNodes": 228,
         "canvasBackingBytes": 5040000
       },
       "settled": {
-        "jsHeapUsed": 22206368,
+        "jsHeapUsed": 22172900,
         "jsHeapTotal": 22958080,
-        "rendererPss": 199415808,
-        "gpuPss": 95568896,
-        "browserPss": 41715712,
-        "totalPss": 364138496,
-        "totalRss": 563032064,
+        "rendererPss": 199995392,
+        "gpuPss": 95585280,
+        "browserPss": 42210304,
+        "totalPss": 364820480,
+        "totalRss": 563056640,
         "domNodes": 204,
         "canvasBackingBytes": 5040000
       },
       "errors": [],
       "samples": [
         {
-          "readyMs": 1284,
+          "readyMs": 1797,
           "atReady": {
-            "jsHeapUsed": 31714496,
-            "jsHeapTotal": 49958912,
-            "domNodes": 230,
-            "jsEventListeners": 97,
+            "jsHeapUsed": 37695808,
+            "jsHeapTotal": 56066048,
+            "domNodes": 228,
+            "jsEventListeners": 96,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 237041664,
-            "gpuPss": 97008640,
-            "browserPss": 41627648,
-            "totalPss": 403194880,
-            "totalRss": 603111424,
+            "rendererPss": 241961984,
+            "gpuPss": 96218112,
+            "browserPss": 42101760,
+            "totalPss": 408074240,
+            "totalRss": 606830592,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94076928,
-                "pss": 41627648
+                "unreadable": 0,
+                "rss": 94314496,
+                "pss": 42101760
               },
               "renderer": {
                 "count": 1,
-                "rss": 295735296,
-                "pss": 237041664
+                "unreadable": 0,
+                "rss": 300724224,
+                "pss": 241961984
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69107712,
-                "pss": 27516928
+                "unreadable": 0,
+                "rss": 69361664,
+                "pss": 27792384
               },
               "GPU": {
                 "count": 1,
-                "rss": 144191488,
-                "pss": 97008640
+                "unreadable": 0,
+                "rss": 142430208,
+                "pss": 96218112
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 22203836,
+            "jsHeapUsed": 22172900,
             "jsHeapTotal": 22958080,
             "domNodes": 204,
             "jsEventListeners": 97,
@@ -1398,31 +1511,35 @@
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 199987200,
-            "gpuPss": 96479232,
-            "browserPss": 41715712,
-            "totalPss": 365700096,
-            "totalRss": 564633600,
+            "rendererPss": 199124992,
+            "gpuPss": 95692800,
+            "browserPss": 42210304,
+            "totalPss": 364820480,
+            "totalRss": 562593792,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94208000,
-                "pss": 41715712
+                "unreadable": 0,
+                "rss": 94461952,
+                "pss": 42210304
               },
               "renderer": {
                 "count": 1,
-                "rss": 258170880,
-                "pss": 199987200
+                "unreadable": 0,
+                "rss": 257384448,
+                "pss": 199124992
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69111808,
-                "pss": 27517952
+                "unreadable": 0,
+                "rss": 69365760,
+                "pss": 27792384
               },
               "GPU": {
                 "count": 1,
-                "rss": 143142912,
-                "pss": 96479232
+                "unreadable": 0,
+                "rss": 141381632,
+                "pss": 95692800
               }
             }
           },
@@ -1441,46 +1558,50 @@
           }
         },
         {
-          "readyMs": 1359,
+          "readyMs": 2226,
           "atReady": {
-            "jsHeapUsed": 32002000,
-            "jsHeapTotal": 50483200,
+            "jsHeapUsed": 34576884,
+            "jsHeapTotal": 57114624,
             "domNodes": 228,
             "jsEventListeners": 96,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 236471296,
-            "gpuPss": 96101376,
-            "browserPss": 41700352,
-            "totalPss": 401691648,
-            "totalRss": 601567232,
+            "rendererPss": 242867200,
+            "gpuPss": 95668224,
+            "browserPss": 41562112,
+            "totalPss": 407616512,
+            "totalRss": 607191040,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94105600,
-                "pss": 41700352
+                "unreadable": 0,
+                "rss": 93958144,
+                "pss": 41562112
               },
               "renderer": {
                 "count": 1,
-                "rss": 295215104,
-                "pss": 236471296
+                "unreadable": 0,
+                "rss": 301064192,
+                "pss": 242867200
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69169152,
-                "pss": 27418624
+                "unreadable": 0,
+                "rss": 69509120,
+                "pss": 27518976
               },
               "GPU": {
                 "count": 1,
-                "rss": 143077376,
-                "pss": 96101376
+                "unreadable": 0,
+                "rss": 142659584,
+                "pss": 95668224
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 22206744,
+            "jsHeapUsed": 22226520,
             "jsHeapTotal": 23220224,
             "domNodes": 204,
             "jsEventListeners": 97,
@@ -1488,31 +1609,35 @@
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 199358464,
-            "gpuPss": 95568896,
-            "browserPss": 41790464,
-            "totalPss": 364138496,
-            "totalRss": 563032064,
+            "rendererPss": 200327168,
+            "gpuPss": 95182848,
+            "browserPss": 41627648,
+            "totalPss": 364657664,
+            "totalRss": 563269632,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94240768,
-                "pss": 41790464
+                "unreadable": 0,
+                "rss": 94027776,
+                "pss": 41627648
               },
               "renderer": {
                 "count": 1,
-                "rss": 257589248,
-                "pss": 199358464
+                "unreadable": 0,
+                "rss": 258027520,
+                "pss": 200327168
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69173248,
-                "pss": 27420672
+                "unreadable": 0,
+                "rss": 69513216,
+                "pss": 27520000
               },
               "GPU": {
                 "count": 1,
-                "rss": 142028800,
-                "pss": 95568896
+                "unreadable": 0,
+                "rss": 141701120,
+                "pss": 95182848
               }
             }
           },
@@ -1531,78 +1656,86 @@
           }
         },
         {
-          "readyMs": 1320,
+          "readyMs": 1566,
           "atReady": {
-            "jsHeapUsed": 31308548,
-            "jsHeapTotal": 51007488,
+            "jsHeapUsed": 29982864,
+            "jsHeapTotal": 48386048,
             "domNodes": 202,
             "jsEventListeners": 96,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 236685312,
-            "gpuPss": 95211520,
-            "browserPss": 41572352,
-            "totalPss": 400925696,
-            "totalRss": 599961600,
+            "rendererPss": 233709568,
+            "gpuPss": 96109568,
+            "browserPss": 42386432,
+            "totalPss": 399671296,
+            "totalRss": 598261760,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93716480,
-                "pss": 41572352
+                "unreadable": 0,
+                "rss": 93966336,
+                "pss": 42386432
               },
               "renderer": {
                 "count": 1,
-                "rss": 294739968,
-                "pss": 236685312
+                "unreadable": 0,
+                "rss": 292057088,
+                "pss": 233709568
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69271552,
-                "pss": 27456512
+                "unreadable": 0,
+                "rss": 69582848,
+                "pss": 27465728
               },
               "GPU": {
                 "count": 1,
-                "rss": 142233600,
-                "pss": 95211520
+                "unreadable": 0,
+                "rss": 142655488,
+                "pss": 96109568
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 22206368,
-            "jsHeapTotal": 22958080,
+            "jsHeapUsed": 22172752,
+            "jsHeapTotal": 22695936,
             "domNodes": 204,
             "jsEventListeners": 97,
             "documents": 1,
             "canvasBackingBytes": 5040000,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 199415808,
-            "gpuPss": 94818304,
-            "browserPss": 41637888,
-            "totalPss": 363332608,
-            "totalRss": 561582080,
+            "rendererPss": 199995392,
+            "gpuPss": 95585280,
+            "browserPss": 42464256,
+            "totalPss": 365514752,
+            "totalRss": 563056640,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93782016,
-                "pss": 41637888
+                "unreadable": 0,
+                "rss": 94044160,
+                "pss": 42464256
               },
               "renderer": {
                 "count": 1,
-                "rss": 257077248,
-                "pss": 199415808
+                "unreadable": 0,
+                "rss": 257818624,
+                "pss": 199995392
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69275648,
-                "pss": 27460608
+                "unreadable": 0,
+                "rss": 69586944,
+                "pss": 27469824
               },
               "GPU": {
                 "count": 1,
-                "rss": 141447168,
-                "pss": 94818304
+                "unreadable": 0,
+                "rss": 141606912,
+                "pss": 95585280
               }
             }
           },
@@ -1629,11 +1762,11 @@
       "settled": {
         "jsHeapUsed": 569556,
         "jsHeapTotal": 1048576,
-        "rendererPss": 51528704,
-        "gpuPss": 26742784,
-        "browserPss": 41722880,
-        "totalPss": 141767680,
-        "totalRss": 292610048,
+        "rendererPss": 51901440,
+        "gpuPss": 26719232,
+        "browserPss": 42305536,
+        "totalPss": 142755840,
+        "totalRss": 293195776,
         "domNodes": 4,
         "canvasBackingBytes": 0
       },
@@ -1647,31 +1780,35 @@
           "canvasBackingBytes": 0,
           "canvasCount": 0,
           "uaMemory": null,
-          "rendererPss": 51528704,
-          "gpuPss": 26619904,
-          "browserPss": 41722880,
-          "totalPss": 141767680,
-          "totalRss": 291414016,
+          "rendererPss": 51291136,
+          "gpuPss": 27852800,
+          "browserPss": 41286656,
+          "totalPss": 142755840,
+          "totalRss": 295186432,
           "processes": {
             "browser": {
               "count": 1,
-              "rss": 89079808,
-              "pss": 41722880
+              "unreadable": 0,
+              "rss": 89231360,
+              "pss": 41286656
             },
             "renderer": {
               "count": 1,
-              "rss": 88371200,
-              "pss": 51528704
+              "unreadable": 0,
+              "rss": 89174016,
+              "pss": 51291136
             },
             "network.mojom.NetworkService": {
               "count": 1,
-              "rss": 58441728,
-              "pss": 21896192
+              "unreadable": 0,
+              "rss": 59465728,
+              "pss": 22325248
             },
             "GPU": {
               "count": 1,
-              "rss": 55521280,
-              "pss": 26619904
+              "unreadable": 0,
+              "rss": 57315328,
+              "pss": 27852800
             }
           }
         },
@@ -1684,31 +1821,35 @@
           "canvasBackingBytes": 0,
           "canvasCount": 0,
           "uaMemory": null,
-          "rendererPss": 51458048,
-          "gpuPss": 26742784,
-          "browserPss": 41187328,
-          "totalPss": 140584960,
-          "totalRss": 292610048,
+          "rendererPss": 51901440,
+          "gpuPss": 26719232,
+          "browserPss": 42434560,
+          "totalPss": 143038464,
+          "totalRss": 293195776,
           "processes": {
             "browser": {
               "count": 1,
-              "rss": 88977408,
-              "pss": 41187328
+              "unreadable": 0,
+              "rss": 89538560,
+              "pss": 42434560
             },
             "renderer": {
               "count": 1,
-              "rss": 88199168,
-              "pss": 51458048
+              "unreadable": 0,
+              "rss": 88788992,
+              "pss": 51901440
             },
             "network.mojom.NetworkService": {
               "count": 1,
-              "rss": 59060224,
-              "pss": 21196800
+              "unreadable": 0,
+              "rss": 59248640,
+              "pss": 21983232
             },
             "GPU": {
               "count": 1,
-              "rss": 56373248,
-              "pss": 26742784
+              "unreadable": 0,
+              "rss": 55619584,
+              "pss": 26719232
             }
           }
         },
@@ -1721,31 +1862,35 @@
           "canvasBackingBytes": 0,
           "canvasCount": 0,
           "uaMemory": null,
-          "rendererPss": 52023296,
-          "gpuPss": 27625472,
-          "browserPss": 41845760,
-          "totalPss": 143002624,
-          "totalRss": 294277120,
+          "rendererPss": 52048896,
+          "gpuPss": 26452992,
+          "browserPss": 42305536,
+          "totalPss": 142003200,
+          "totalRss": 290861056,
           "processes": {
             "browser": {
               "count": 1,
-              "rss": 89407488,
-              "pss": 41845760
+              "unreadable": 0,
+              "rss": 89133056,
+              "pss": 42305536
             },
             "renderer": {
               "count": 1,
-              "rss": 89251840,
-              "pss": 52023296
+              "unreadable": 0,
+              "rss": 88322048,
+              "pss": 52048896
             },
             "network.mojom.NetworkService": {
               "count": 1,
-              "rss": 58490880,
-              "pss": 21508096
+              "unreadable": 0,
+              "rss": 57987072,
+              "pss": 21195776
             },
             "GPU": {
               "count": 1,
-              "rss": 57126912,
-              "pss": 27625472
+              "unreadable": 0,
+              "rss": 55418880,
+              "pss": 26452992
             }
           }
         }
@@ -1756,104 +1901,112 @@
       "label": "Designs (home)",
       "path": "/ui-builder/designs",
       "viewport": "mobile",
-      "readyMs": 1645,
+      "readyMs": 2028,
       "atReady": {
-        "jsHeapUsed": 26067672,
+        "jsHeapUsed": 26100408,
         "jsHeapTotal": 26783744,
-        "rendererPss": 224318464,
-        "gpuPss": 102559744,
-        "browserPss": 41411584,
-        "totalPss": 396203008,
-        "totalRss": 602562560,
-        "domNodes": 284,
+        "rendererPss": 224172032,
+        "gpuPss": 103013376,
+        "browserPss": 41571328,
+        "totalPss": 396581888,
+        "totalRss": 602992640,
+        "domNodes": 288,
         "canvasBackingBytes": 10381924
       },
       "settled": {
-        "jsHeapUsed": 25641612,
+        "jsHeapUsed": 25670276,
         "jsHeapTotal": 26521600,
-        "rendererPss": 219780096,
-        "gpuPss": 102035456,
-        "browserPss": 41477120,
-        "totalPss": 391209984,
-        "totalRss": 596520960,
-        "domNodes": 274,
+        "rendererPss": 219858944,
+        "gpuPss": 102489088,
+        "browserPss": 41622528,
+        "totalPss": 391471104,
+        "totalRss": 596631552,
+        "domNodes": 278,
         "canvasBackingBytes": 10381924
       },
       "errors": [],
       "samples": [
         {
-          "readyMs": 1555,
+          "readyMs": 1765,
           "atReady": {
-            "jsHeapUsed": 26067672,
+            "jsHeapUsed": 26100408,
             "jsHeapTotal": 26783744,
-            "domNodes": 284,
+            "domNodes": 288,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 224403456,
-            "gpuPss": 101635072,
-            "browserPss": 41990144,
-            "totalPss": 395421696,
-            "totalRss": 600051712,
+            "rendererPss": 223877120,
+            "gpuPss": 103390208,
+            "browserPss": 41571328,
+            "totalPss": 396581888,
+            "totalRss": 602992640,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94068736,
-                "pss": 41990144
+                "unreadable": 0,
+                "rss": 93925376,
+                "pss": 41571328
               },
               "renderer": {
                 "count": 1,
-                "rss": 285806592,
-                "pss": 224403456
+                "unreadable": 0,
+                "rss": 285585408,
+                "pss": 223877120
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69005312,
-                "pss": 27393024
+                "unreadable": 0,
+                "rss": 70004736,
+                "pss": 27743232
               },
               "GPU": {
                 "count": 1,
-                "rss": 151171072,
-                "pss": 101635072
+                "unreadable": 0,
+                "rss": 153477120,
+                "pss": 103390208
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 25638788,
+            "jsHeapUsed": 25665848,
             "jsHeapTotal": 26521600,
-            "domNodes": 274,
+            "domNodes": 278,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 220164096,
-            "gpuPss": 101110784,
-            "browserPss": 42059776,
-            "totalPss": 390731776,
-            "totalRss": 594313216,
+            "rendererPss": 219395072,
+            "gpuPss": 102719488,
+            "browserPss": 41622528,
+            "totalPss": 391471104,
+            "totalRss": 596631552,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94138368,
-                "pss": 42059776
+                "unreadable": 0,
+                "rss": 93995008,
+                "pss": 41622528
               },
               "renderer": {
                 "count": 1,
-                "rss": 281042944,
-                "pss": 220164096
+                "unreadable": 0,
+                "rss": 280461312,
+                "pss": 219395072
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69009408,
-                "pss": 27397120
+                "unreadable": 0,
+                "rss": 70008832,
+                "pss": 27734016
               },
               "GPU": {
                 "count": 1,
-                "rss": 150122496,
-                "pss": 101110784
+                "unreadable": 0,
+                "rss": 152166400,
+                "pss": 102719488
               }
             }
           },
@@ -1865,78 +2018,86 @@
           }
         },
         {
-          "readyMs": 1654,
+          "readyMs": 2028,
           "atReady": {
-            "jsHeapUsed": 26070404,
+            "jsHeapUsed": 26105056,
             "jsHeapTotal": 26783744,
-            "domNodes": 284,
+            "domNodes": 288,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 224318464,
-            "gpuPss": 102559744,
-            "browserPss": 41411584,
-            "totalPss": 396203008,
-            "totalRss": 602562560,
+            "rendererPss": 224172032,
+            "gpuPss": 102466560,
+            "browserPss": 42065920,
+            "totalPss": 396237824,
+            "totalRss": 602714112,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93974528,
-                "pss": 41411584
+                "unreadable": 0,
+                "rss": 94609408,
+                "pss": 42065920
               },
               "renderer": {
                 "count": 1,
-                "rss": 285794304,
-                "pss": 224318464
+                "unreadable": 0,
+                "rss": 285904896,
+                "pss": 224172032
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69697536,
-                "pss": 27913216
+                "unreadable": 0,
+                "rss": 69750784,
+                "pss": 27533312
               },
               "GPU": {
                 "count": 1,
-                "rss": 153096192,
-                "pss": 102559744
+                "unreadable": 0,
+                "rss": 152449024,
+                "pss": 102466560
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 25641612,
+            "jsHeapUsed": 25670716,
             "jsHeapTotal": 26521600,
-            "domNodes": 274,
+            "domNodes": 278,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 219780096,
-            "gpuPss": 102035456,
-            "browserPss": 41477120,
-            "totalPss": 391209984,
-            "totalRss": 596520960,
+            "rendererPss": 219858944,
+            "gpuPss": 101680128,
+            "browserPss": 42131456,
+            "totalPss": 391207936,
+            "totalRss": 596111360,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94040064,
-                "pss": 41477120
+                "unreadable": 0,
+                "rss": 94674944,
+                "pss": 42131456
               },
               "renderer": {
                 "count": 1,
-                "rss": 280731648,
-                "pss": 219780096
+                "unreadable": 0,
+                "rss": 280805376,
+                "pss": 219858944
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69701632,
-                "pss": 27917312
+                "unreadable": 0,
+                "rss": 69754880,
+                "pss": 27537408
               },
               "GPU": {
                 "count": 1,
-                "rss": 152047616,
-                "pss": 102035456
+                "unreadable": 0,
+                "rss": 150876160,
+                "pss": 101680128
               }
             }
           },
@@ -1948,78 +2109,86 @@
           }
         },
         {
-          "readyMs": 1645,
+          "readyMs": 2040,
           "atReady": {
-            "jsHeapUsed": 26066752,
-            "jsHeapTotal": 26783744,
-            "domNodes": 284,
+            "jsHeapUsed": 26081948,
+            "jsHeapTotal": 26521600,
+            "domNodes": 376,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 223406080,
-            "gpuPss": 106200064,
-            "browserPss": 41304064,
-            "totalPss": 398078976,
-            "totalRss": 603983872,
+            "rendererPss": 225274880,
+            "gpuPss": 103013376,
+            "browserPss": 41391104,
+            "totalPss": 396986368,
+            "totalRss": 603181056,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93794304,
-                "pss": 41304064
+                "unreadable": 0,
+                "rss": 94199808,
+                "pss": 41391104
               },
               "renderer": {
                 "count": 1,
-                "rss": 284831744,
-                "pss": 223406080
+                "unreadable": 0,
+                "rss": 286986240,
+                "pss": 225274880
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69414912,
-                "pss": 27168768
+                "unreadable": 0,
+                "rss": 69398528,
+                "pss": 27307008
               },
               "GPU": {
                 "count": 1,
-                "rss": 155942912,
-                "pss": 106200064
+                "unreadable": 0,
+                "rss": 152596480,
+                "pss": 103013376
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 25644156,
-            "jsHeapTotal": 26521600,
-            "domNodes": 274,
+            "jsHeapUsed": 25670276,
+            "jsHeapTotal": 26259456,
+            "domNodes": 278,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 219169792,
-            "gpuPss": 105410560,
-            "browserPss": 41394176,
-            "totalPss": 393139200,
-            "totalRss": 597536768,
+            "rendererPss": 221113344,
+            "gpuPss": 102489088,
+            "browserPss": 41464832,
+            "totalPss": 392378368,
+            "totalRss": 597524480,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93929472,
-                "pss": 41394176
+                "unreadable": 0,
+                "rss": 94273536,
+                "pss": 41464832
               },
               "renderer": {
                 "count": 1,
-                "rss": 279818240,
-                "pss": 219169792
+                "unreadable": 0,
+                "rss": 282300416,
+                "pss": 221113344
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69419008,
-                "pss": 27164672
+                "unreadable": 0,
+                "rss": 69402624,
+                "pss": 27311104
               },
               "GPU": {
                 "count": 1,
-                "rss": 154370048,
-                "pss": 105410560
+                "unreadable": 0,
+                "rss": 151547904,
+                "pss": 102489088
               }
             }
           },
@@ -2037,104 +2206,112 @@
       "label": "Open design · m3-catalog",
       "path": "/ui-builder/google-gmail-tablet",
       "viewport": "mobile",
-      "readyMs": 2309,
+      "readyMs": 2462,
       "atReady": {
-        "jsHeapUsed": 45573648,
-        "jsHeapTotal": 63528960,
-        "rendererPss": 269600768,
-        "gpuPss": 124367872,
-        "browserPss": 41325568,
-        "totalPss": 462490624,
-        "totalRss": 678121472,
-        "domNodes": 324,
+        "jsHeapUsed": 43786724,
+        "jsHeapTotal": 63004672,
+        "rendererPss": 270494720,
+        "gpuPss": 124988416,
+        "browserPss": 41706496,
+        "totalPss": 464771072,
+        "totalRss": 681119744,
+        "domNodes": 409,
         "canvasBackingBytes": 10381924
       },
       "settled": {
-        "jsHeapUsed": 30133680,
-        "jsHeapTotal": 30683136,
-        "rendererPss": 229866496,
-        "gpuPss": 123581440,
-        "browserPss": 41399296,
-        "totalPss": 422328320,
-        "totalRss": 635756544,
+        "jsHeapUsed": 30147444,
+        "jsHeapTotal": 31207424,
+        "rendererPss": 230499328,
+        "gpuPss": 124252160,
+        "browserPss": 41796608,
+        "totalPss": 423921664,
+        "totalRss": 638652416,
         "domNodes": 324,
         "canvasBackingBytes": 10381924
       },
       "errors": [],
       "samples": [
         {
-          "readyMs": 2047,
+          "readyMs": 2548,
           "atReady": {
-            "jsHeapUsed": 45573648,
-            "jsHeapTotal": 63528960,
+            "jsHeapUsed": 41620092,
+            "jsHeapTotal": 65888256,
             "domNodes": 409,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 269600768,
-            "gpuPss": 123724800,
-            "browserPss": 41658368,
-            "totalPss": 462490624,
-            "totalRss": 677109760,
+            "rendererPss": 271441920,
+            "gpuPss": 124478464,
+            "browserPss": 41706496,
+            "totalPss": 465442816,
+            "totalRss": 681750528,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93601792,
-                "pss": 41658368
+                "unreadable": 0,
+                "rss": 94330880,
+                "pss": 41706496
               },
               "renderer": {
                 "count": 1,
-                "rss": 336183296,
-                "pss": 269600768
+                "unreadable": 0,
+                "rss": 338243584,
+                "pss": 271441920
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69197824,
-                "pss": 27506688
+                "unreadable": 0,
+                "rss": 69353472,
+                "pss": 27815936
               },
               "GPU": {
                 "count": 1,
-                "rss": 178126848,
-                "pss": 123724800
+                "unreadable": 0,
+                "rss": 179822592,
+                "pss": 124478464
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 30133680,
-            "jsHeapTotal": 30683136,
+            "jsHeapUsed": 30151408,
+            "jsHeapTotal": 31207424,
             "domNodes": 324,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 230053888,
-            "gpuPss": 123069440,
-            "browserPss": 41723904,
-            "totalPss": 422358016,
-            "totalRss": 635666432,
+            "rendererPss": 229090304,
+            "gpuPss": 123686912,
+            "browserPss": 41796608,
+            "totalPss": 422390784,
+            "totalRss": 637190144,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93667328,
-                "pss": 41723904
+                "unreadable": 0,
+                "rss": 94466048,
+                "pss": 41796608
               },
               "renderer": {
                 "count": 1,
-                "rss": 295981056,
-                "pss": 230053888
+                "unreadable": 0,
+                "rss": 295116800,
+                "pss": 229090304
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69201920,
-                "pss": 27510784
+                "unreadable": 0,
+                "rss": 69357568,
+                "pss": 27816960
               },
               "GPU": {
                 "count": 1,
-                "rss": 176816128,
-                "pss": 123069440
+                "unreadable": 0,
+                "rss": 178249728,
+                "pss": 123686912
               }
             }
           },
@@ -2153,78 +2330,86 @@
           }
         },
         {
-          "readyMs": 2309,
+          "readyMs": 2462,
           "atReady": {
-            "jsHeapUsed": 45516396,
-            "jsHeapTotal": 63266816,
-            "domNodes": 324,
+            "jsHeapUsed": 43786724,
+            "jsHeapTotal": 61431808,
+            "domNodes": 409,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 268455936,
-            "gpuPss": 124966912,
-            "browserPss": 41325568,
-            "totalPss": 462286848,
-            "totalRss": 678121472,
+            "rendererPss": 268260352,
+            "gpuPss": 124988416,
+            "browserPss": 41891840,
+            "totalPss": 462738432,
+            "totalRss": 678453248,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94060544,
-                "pss": 41325568
+                "unreadable": 0,
+                "rss": 94195712,
+                "pss": 41891840
               },
               "renderer": {
                 "count": 1,
-                "rss": 335183872,
-                "pss": 268455936
+                "unreadable": 0,
+                "rss": 334872576,
+                "pss": 268260352
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69017600,
-                "pss": 27538432
+                "unreadable": 0,
+                "rss": 69402624,
+                "pss": 27597824
               },
               "GPU": {
                 "count": 1,
-                "rss": 179859456,
-                "pss": 124966912
+                "unreadable": 0,
+                "rss": 179982336,
+                "pss": 124988416
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 30148204,
-            "jsHeapTotal": 30683136,
+            "jsHeapUsed": 30147444,
+            "jsHeapTotal": 31207424,
             "domNodes": 324,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 228372480,
-            "gpuPss": 124180480,
-            "browserPss": 41399296,
-            "totalPss": 421494784,
-            "totalRss": 635756544,
+            "rendererPss": 230789120,
+            "gpuPss": 124252160,
+            "browserPss": 42014720,
+            "totalPss": 424710144,
+            "totalRss": 638652416,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94134272,
-                "pss": 41399296
+                "unreadable": 0,
+                "rss": 94265344,
+                "pss": 42014720
               },
               "renderer": {
                 "count": 1,
-                "rss": 294313984,
-                "pss": 228372480
+                "unreadable": 0,
+                "rss": 296570880,
+                "pss": 230789120
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69021696,
-                "pss": 27542528
+                "unreadable": 0,
+                "rss": 69406720,
+                "pss": 27654144
               },
               "GPU": {
                 "count": 1,
-                "rss": 178286592,
-                "pss": 124180480
+                "unreadable": 0,
+                "rss": 178409472,
+                "pss": 124252160
               }
             }
           },
@@ -2243,46 +2428,50 @@
           }
         },
         {
-          "readyMs": 2425,
+          "readyMs": 2249,
           "atReady": {
-            "jsHeapUsed": 45613976,
-            "jsHeapTotal": 63528960,
+            "jsHeapUsed": 45505324,
+            "jsHeapTotal": 63004672,
             "domNodes": 324,
             "jsEventListeners": 108,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 269622272,
-            "gpuPss": 124367872,
-            "browserPss": 41172992,
-            "totalPss": 462796800,
-            "totalRss": 679415808,
+            "rendererPss": 270494720,
+            "gpuPss": 125240320,
+            "browserPss": 41539584,
+            "totalPss": 464771072,
+            "totalRss": 681119744,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93925376,
-                "pss": 41172992
+                "unreadable": 0,
+                "rss": 94093312,
+                "pss": 41539584
               },
               "renderer": {
                 "count": 1,
-                "rss": 335667200,
-                "pss": 269622272
+                "unreadable": 0,
+                "rss": 337432576,
+                "pss": 270494720
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69689344,
-                "pss": 27633664
+                "unreadable": 0,
+                "rss": 68911104,
+                "pss": 27496448
               },
               "GPU": {
                 "count": 1,
-                "rss": 180133888,
-                "pss": 124367872
+                "unreadable": 0,
+                "rss": 180682752,
+                "pss": 125240320
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 30133228,
+            "jsHeapUsed": 30145604,
             "jsHeapTotal": 30683136,
             "domNodes": 324,
             "jsEventListeners": 108,
@@ -2290,31 +2479,35 @@
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 229866496,
-            "gpuPss": 123581440,
-            "browserPss": 41242624,
-            "totalPss": 422328320,
-            "totalRss": 637374464,
+            "rendererPss": 230499328,
+            "gpuPss": 124411904,
+            "browserPss": 41549824,
+            "totalPss": 423921664,
+            "totalRss": 638873600,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93995008,
-                "pss": 41242624
+                "unreadable": 0,
+                "rss": 94162944,
+                "pss": 41549824
               },
               "renderer": {
                 "count": 1,
-                "rss": 295124992,
-                "pss": 229866496
+                "unreadable": 0,
+                "rss": 296685568,
+                "pss": 230499328
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69693440,
-                "pss": 27637760
+                "unreadable": 0,
+                "rss": 68915200,
+                "pss": 27460608
               },
               "GPU": {
                 "count": 1,
-                "rss": 178561024,
-                "pss": 123581440
+                "unreadable": 0,
+                "rss": 179109888,
+                "pss": 124411904
               }
             }
           },
@@ -2339,104 +2532,112 @@
       "label": "Open design · wear-m3",
       "path": "/ui-builder/google-home-wear",
       "viewport": "mobile",
-      "readyMs": 1989,
+      "readyMs": 1941,
       "atReady": {
-        "jsHeapUsed": 51414508,
-        "jsHeapTotal": 64147456,
-        "rendererPss": 262549504,
-        "gpuPss": 127228928,
-        "browserPss": 41438208,
-        "totalPss": 460318720,
-        "totalRss": 677187584,
+        "jsHeapUsed": 35814280,
+        "jsHeapTotal": 61001728,
+        "rendererPss": 260894720,
+        "gpuPss": 128129024,
+        "browserPss": 41809920,
+        "totalPss": 459204608,
+        "totalRss": 675266560,
         "domNodes": 191,
         "canvasBackingBytes": 10381924
       },
       "settled": {
-        "jsHeapUsed": 27375156,
-        "jsHeapTotal": 28418048,
-        "rendererPss": 219056128,
-        "gpuPss": 126442496,
-        "browserPss": 41489408,
-        "totalPss": 414632960,
-        "totalRss": 630071296,
+        "jsHeapUsed": 27384904,
+        "jsHeapTotal": 28155904,
+        "rendererPss": 219504640,
+        "gpuPss": 127342592,
+        "browserPss": 41883648,
+        "totalPss": 416156672,
+        "totalRss": 630730752,
         "domNodes": 191,
         "canvasBackingBytes": 10381924
       },
       "errors": [],
       "samples": [
         {
-          "readyMs": 1852,
+          "readyMs": 1946,
           "atReady": {
-            "jsHeapUsed": 43344232,
-            "jsHeapTotal": 61263872,
+            "jsHeapUsed": 43355968,
+            "jsHeapTotal": 61001728,
             "domNodes": 191,
             "jsEventListeners": 98,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 260323328,
-            "gpuPss": 126049280,
-            "browserPss": 41036800,
-            "totalPss": 454575104,
-            "totalRss": 671809536,
+            "rendererPss": 260894720,
+            "gpuPss": 128129024,
+            "browserPss": 42331136,
+            "totalPss": 459204608,
+            "totalRss": 675266560,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93634560,
-                "pss": 41036800
+                "unreadable": 0,
+                "rss": 94629888,
+                "pss": 42331136
               },
               "renderer": {
                 "count": 1,
-                "rss": 326823936,
-                "pss": 260323328
+                "unreadable": 0,
+                "rss": 327655424,
+                "pss": 260894720
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69681152,
-                "pss": 27165696
+                "unreadable": 0,
+                "rss": 69918720,
+                "pss": 27849728
               },
               "GPU": {
                 "count": 1,
-                "rss": 181669888,
-                "pss": 126049280
+                "unreadable": 0,
+                "rss": 183062528,
+                "pss": 128129024
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 27378320,
-            "jsHeapTotal": 28418048,
+            "jsHeapUsed": 27384904,
+            "jsHeapTotal": 28155904,
             "domNodes": 191,
             "jsEventListeners": 98,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 219056128,
-            "gpuPss": 125262848,
-            "browserPss": 41110528,
-            "totalPss": 412599296,
-            "totalRss": 628260864,
+            "rendererPss": 219504640,
+            "gpuPss": 127342592,
+            "browserPss": 42404864,
+            "totalPss": 417105920,
+            "totalRss": 631595008,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93708288,
-                "pss": 41110528
+                "unreadable": 0,
+                "rss": 94703616,
+                "pss": 42404864
               },
               "renderer": {
                 "count": 1,
-                "rss": 284770304,
-                "pss": 219056128
+                "unreadable": 0,
+                "rss": 285478912,
+                "pss": 219504640
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69685248,
-                "pss": 27169792
+                "unreadable": 0,
+                "rss": 69922816,
+                "pss": 27853824
               },
               "GPU": {
                 "count": 1,
-                "rss": 180097024,
-                "pss": 125262848
+                "unreadable": 0,
+                "rss": 181489664,
+                "pss": 127342592
               }
             }
           },
@@ -2455,46 +2656,50 @@
           }
         },
         {
-          "readyMs": 1989,
+          "readyMs": 1941,
           "atReady": {
-            "jsHeapUsed": 51519964,
-            "jsHeapTotal": 64147456,
+            "jsHeapUsed": 35814280,
+            "jsHeapTotal": 57069568,
             "domNodes": 272,
             "jsEventListeners": 98,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 262549504,
-            "gpuPss": 128626688,
-            "browserPss": 41478144,
-            "totalPss": 460318720,
-            "totalRss": 677187584,
+            "rendererPss": 422244352,
+            "gpuPss": 125853696,
+            "browserPss": 41491456,
+            "totalPss": 617004032,
+            "totalRss": 833142784,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93831168,
-                "pss": 41478144
+                "unreadable": 0,
+                "rss": 93769728,
+                "pss": 41491456
               },
               "renderer": {
                 "count": 1,
-                "rss": 329711616,
-                "pss": 262549504
+                "unreadable": 0,
+                "rss": 488779776,
+                "pss": 422244352
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69648384,
-                "pss": 27664384
+                "unreadable": 0,
+                "rss": 69414912,
+                "pss": 27414528
               },
               "GPU": {
                 "count": 1,
-                "rss": 183996416,
-                "pss": 128626688
+                "unreadable": 0,
+                "rss": 181178368,
+                "pss": 125853696
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 27365096,
+            "jsHeapUsed": 27443784,
             "jsHeapTotal": 28418048,
             "domNodes": 191,
             "jsEventListeners": 98,
@@ -2502,31 +2707,35 @@
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 218798080,
-            "gpuPss": 127840256,
-            "browserPss": 41521152,
-            "totalPss": 415827968,
-            "totalRss": 631185408,
+            "rendererPss": 221945856,
+            "gpuPss": 125231104,
+            "browserPss": 41561088,
+            "totalPss": 416156672,
+            "totalRss": 630730752,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93904896,
-                "pss": 41521152
+                "unreadable": 0,
+                "rss": 93843456,
+                "pss": 41561088
               },
               "renderer": {
                 "count": 1,
-                "rss": 285204480,
-                "pss": 218798080
+                "unreadable": 0,
+                "rss": 287698944,
+                "pss": 221945856
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69652480,
-                "pss": 27668480
+                "unreadable": 0,
+                "rss": 69419008,
+                "pss": 27418624
               },
               "GPU": {
                 "count": 1,
-                "rss": 182423552,
-                "pss": 127840256
+                "unreadable": 0,
+                "rss": 179769344,
+                "pss": 125231104
               }
             }
           },
@@ -2545,78 +2754,86 @@
           }
         },
         {
-          "readyMs": 2032,
+          "readyMs": 1918,
           "atReady": {
-            "jsHeapUsed": 51414508,
-            "jsHeapTotal": 66506752,
+            "jsHeapUsed": 32823756,
+            "jsHeapTotal": 63098880,
             "domNodes": 191,
             "jsEventListeners": 98,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 264408064,
-            "gpuPss": 127228928,
-            "browserPss": 41438208,
-            "totalPss": 460385280,
-            "totalRss": 677351424,
+            "rendererPss": 260647936,
+            "gpuPss": 128178176,
+            "browserPss": 41809920,
+            "totalPss": 457963520,
+            "totalRss": 674013184,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93925376,
-                "pss": 41438208
+                "unreadable": 0,
+                "rss": 93962240,
+                "pss": 41809920
               },
               "renderer": {
                 "count": 1,
-                "rss": 331321344,
-                "pss": 264408064
+                "unreadable": 0,
+                "rss": 327122944,
+                "pss": 260647936
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69091328,
-                "pss": 27310080
+                "unreadable": 0,
+                "rss": 69259264,
+                "pss": 27327488
               },
               "GPU": {
                 "count": 1,
-                "rss": 183013376,
-                "pss": 127228928
+                "unreadable": 0,
+                "rss": 183668736,
+                "pss": 128178176
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 27375156,
-            "jsHeapTotal": 28418048,
+            "jsHeapUsed": 27378292,
+            "jsHeapTotal": 28155904,
             "domNodes": 191,
             "jsEventListeners": 98,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 219386880,
-            "gpuPss": 126442496,
-            "browserPss": 41489408,
-            "totalPss": 414632960,
-            "totalRss": 630071296,
+            "rendererPss": 219151360,
+            "gpuPss": 127391744,
+            "browserPss": 41883648,
+            "totalPss": 415758336,
+            "totalRss": 630235136,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93999104,
-                "pss": 41489408
+                "unreadable": 0,
+                "rss": 94035968,
+                "pss": 41883648
               },
               "renderer": {
                 "count": 1,
-                "rss": 285536256,
-                "pss": 219386880
+                "unreadable": 0,
+                "rss": 284839936,
+                "pss": 219151360
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69095424,
-                "pss": 27314176
+                "unreadable": 0,
+                "rss": 69263360,
+                "pss": 27331584
               },
               "GPU": {
                 "count": 1,
-                "rss": 181440512,
-                "pss": 126442496
+                "unreadable": 0,
+                "rss": 182095872,
+                "pss": 127391744
               }
             }
           },
@@ -2641,162 +2858,76 @@
       "label": "Open design · remote-m3",
       "path": "/ui-builder/weather-widget",
       "viewport": "mobile",
-      "readyMs": 1430,
+      "readyMs": 1443,
       "atReady": {
-        "jsHeapUsed": 44551856,
-        "jsHeapTotal": 63221760,
-        "rendererPss": 263756800,
-        "gpuPss": 114863104,
-        "browserPss": 45665280,
-        "totalPss": 453167104,
-        "totalRss": 673030144,
+        "jsHeapUsed": 49596484,
+        "jsHeapTotal": 67756032,
+        "rendererPss": 268839936,
+        "gpuPss": 114244608,
+        "browserPss": 45611008,
+        "totalPss": 459008000,
+        "totalRss": 678359040,
         "domNodes": 159,
         "canvasBackingBytes": 10381924
       },
       "settled": {
-        "jsHeapUsed": 33792596,
-        "jsHeapTotal": 34385920,
-        "rendererPss": 224861184,
-        "gpuPss": 114076672,
-        "browserPss": 45708288,
-        "totalPss": 413390848,
-        "totalRss": 629833728,
+        "jsHeapUsed": 33792236,
+        "jsHeapTotal": 34648064,
+        "rendererPss": 224713728,
+        "gpuPss": 113721344,
+        "browserPss": 45692928,
+        "totalPss": 412316672,
+        "totalRss": 630075392,
         "domNodes": 159,
         "canvasBackingBytes": 10381924
       },
       "errors": [],
       "samples": [
         {
-          "readyMs": 1434,
+          "readyMs": 1443,
           "atReady": {
-            "jsHeapUsed": 44849380,
-            "jsHeapTotal": 63221760,
+            "jsHeapUsed": 41570952,
+            "jsHeapTotal": 63746048,
             "domNodes": 159,
             "jsEventListeners": 88,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 262837248,
-            "gpuPss": 114485248,
-            "browserPss": 46116864,
-            "totalPss": 452106240,
-            "totalRss": 670556160,
+            "rendererPss": 263310336,
+            "gpuPss": 114244608,
+            "browserPss": 45718528,
+            "totalPss": 451606528,
+            "totalRss": 670679040,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 98861056,
-                "pss": 46116864
+                "unreadable": 0,
+                "rss": 98447360,
+                "pss": 45718528
               },
               "renderer": {
                 "count": 1,
-                "rss": 330444800,
-                "pss": 262837248
+                "unreadable": 0,
+                "rss": 330354688,
+                "pss": 263310336
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 72048640,
-                "pss": 28666880
+                "unreadable": 0,
+                "rss": 71868416,
+                "pss": 28333056
               },
               "GPU": {
                 "count": 1,
-                "rss": 169201664,
-                "pss": 114485248
+                "unreadable": 0,
+                "rss": 170008576,
+                "pss": 114244608
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 33816364,
-            "jsHeapTotal": 34385920,
-            "domNodes": 159,
-            "jsEventListeners": 88,
-            "documents": 1,
-            "canvasBackingBytes": 10381924,
-            "canvasCount": 1,
-            "uaMemory": null,
-            "rendererPss": 224113664,
-            "gpuPss": 113698816,
-            "browserPss": 46190592,
-            "totalPss": 412669952,
-            "totalRss": 629547008,
-            "processes": {
-              "browser": {
-                "count": 1,
-                "rss": 98934784,
-                "pss": 46190592
-              },
-              "renderer": {
-                "count": 1,
-                "rss": 290934784,
-                "pss": 224113664
-              },
-              "network.mojom.NetworkService": {
-                "count": 1,
-                "rss": 72048640,
-                "pss": 28666880
-              },
-              "GPU": {
-                "count": 1,
-                "rss": 167628800,
-                "pss": 113698816
-              }
-            }
-          },
-          "errors": [],
-          "status": {
-            "uiBuilderSocketState": "disconnected",
-            "uiBuilderCommentNotifications": "hidden",
-            "uiBuilderCollaborators": "0",
-            "uiBuilderEditorRevision": "1",
-            "uiBuilderReady": "true",
-            "uiBuilderSelectedNode": "wear-widget-large",
-            "uiBuilderSelectedThread": "",
-            "uiBuilderInspectorMode": "Properties",
-            "uiBuilderPinnedRevision": "",
-            "uiBuilderInspectionGeneration": "weather-widget@1"
-          }
-        },
-        {
-          "readyMs": 1430,
-          "atReady": {
-            "jsHeapUsed": 44102816,
-            "jsHeapTotal": 76406784,
-            "domNodes": 159,
-            "jsEventListeners": 88,
-            "documents": 1,
-            "canvasBackingBytes": 10381924,
-            "canvasCount": 1,
-            "uaMemory": null,
-            "rendererPss": 278700032,
-            "gpuPss": 115048448,
-            "browserPss": 45665280,
-            "totalPss": 467897344,
-            "totalRss": 685764608,
-            "processes": {
-              "browser": {
-                "count": 1,
-                "rss": 98349056,
-                "pss": 45665280
-              },
-              "renderer": {
-                "count": 1,
-                "rss": 345677824,
-                "pss": 278700032
-              },
-              "network.mojom.NetworkService": {
-                "count": 1,
-                "rss": 71696384,
-                "pss": 28483584
-              },
-              "GPU": {
-                "count": 1,
-                "rss": 170041344,
-                "pss": 115048448
-              }
-            }
-          },
-          "settled": {
-            "jsHeapUsed": 33787664,
+            "jsHeapUsed": 33781208,
             "jsHeapTotal": 34910208,
             "domNodes": 159,
             "jsEventListeners": 88,
@@ -2804,31 +2935,35 @@
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 224897024,
-            "gpuPss": 114258944,
-            "browserPss": 45708288,
-            "totalPss": 413390848,
-            "totalRss": 629833728,
+            "rendererPss": 224131072,
+            "gpuPss": 113721344,
+            "browserPss": 45782016,
+            "totalPss": 412011520,
+            "totalRss": 630075392,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 98418688,
-                "pss": 45708288
+                "unreadable": 0,
+                "rss": 98516992,
+                "pss": 45782016
               },
               "renderer": {
                 "count": 1,
-                "rss": 291115008,
-                "pss": 224897024
+                "unreadable": 0,
+                "rss": 290660352,
+                "pss": 224131072
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 71831552,
-                "pss": 28526592
+                "unreadable": 0,
+                "rss": 71938048,
+                "pss": 28377088
               },
               "GPU": {
                 "count": 1,
-                "rss": 168468480,
-                "pss": 114258944
+                "unreadable": 0,
+                "rss": 168960000,
+                "pss": 113721344
               }
             }
           },
@@ -2847,46 +2982,50 @@
           }
         },
         {
-          "readyMs": 1296,
+          "readyMs": 1385,
           "atReady": {
-            "jsHeapUsed": 44551856,
-            "jsHeapTotal": 50638848,
+            "jsHeapUsed": 49628132,
+            "jsHeapTotal": 68280320,
             "domNodes": 159,
             "jsEventListeners": 88,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 263756800,
-            "gpuPss": 114863104,
-            "browserPss": 45476864,
-            "totalPss": 453167104,
-            "totalRss": 673030144,
+            "rendererPss": 272112640,
+            "gpuPss": 114037760,
+            "browserPss": 45611008,
+            "totalPss": 460420096,
+            "totalRss": 679268352,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 98402304,
-                "pss": 45476864
+                "unreadable": 0,
+                "rss": 98635776,
+                "pss": 45611008
               },
               "renderer": {
                 "count": 1,
-                "rss": 331341824,
-                "pss": 263756800
+                "unreadable": 0,
+                "rss": 339451904,
+                "pss": 272112640
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 72585216,
-                "pss": 29070336
+                "unreadable": 0,
+                "rss": 72048640,
+                "pss": 28658688
               },
               "GPU": {
                 "count": 1,
-                "rss": 170700800,
-                "pss": 114863104
+                "unreadable": 0,
+                "rss": 169132032,
+                "pss": 114037760
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 33792596,
+            "jsHeapUsed": 33792236,
             "jsHeapTotal": 34385920,
             "domNodes": 159,
             "jsEventListeners": 88,
@@ -2894,31 +3033,133 @@
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 224861184,
-            "gpuPss": 114076672,
-            "browserPss": 45550592,
-            "totalPss": 413558784,
-            "totalRss": 631848960,
+            "rendererPss": 224713728,
+            "gpuPss": 113251328,
+            "browserPss": 45692928,
+            "totalPss": 412316672,
+            "totalRss": 629592064,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 98476032,
-                "pss": 45550592
+                "unreadable": 0,
+                "rss": 98717696,
+                "pss": 45692928
               },
               "renderer": {
                 "count": 1,
-                "rss": 291659776,
-                "pss": 224861184
+                "unreadable": 0,
+                "rss": 291266560,
+                "pss": 224713728
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 72585216,
-                "pss": 29070336
+                "unreadable": 0,
+                "rss": 72048640,
+                "pss": 28658688
               },
               "GPU": {
                 "count": 1,
-                "rss": 169127936,
-                "pss": 114076672
+                "unreadable": 0,
+                "rss": 167559168,
+                "pss": 113251328
+              }
+            }
+          },
+          "errors": [],
+          "status": {
+            "uiBuilderSocketState": "disconnected",
+            "uiBuilderCommentNotifications": "hidden",
+            "uiBuilderCollaborators": "0",
+            "uiBuilderEditorRevision": "1",
+            "uiBuilderReady": "true",
+            "uiBuilderSelectedNode": "wear-widget-large",
+            "uiBuilderSelectedThread": "",
+            "uiBuilderInspectorMode": "Properties",
+            "uiBuilderPinnedRevision": "",
+            "uiBuilderInspectionGeneration": "weather-widget@1"
+          }
+        },
+        {
+          "readyMs": 1467,
+          "atReady": {
+            "jsHeapUsed": 49596484,
+            "jsHeapTotal": 67756032,
+            "domNodes": 159,
+            "jsEventListeners": 88,
+            "documents": 1,
+            "canvasBackingBytes": 10381924,
+            "canvasCount": 1,
+            "uaMemory": null,
+            "rendererPss": 268839936,
+            "gpuPss": 116258816,
+            "browserPss": 45458432,
+            "totalPss": 459008000,
+            "totalRss": 678359040,
+            "processes": {
+              "browser": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 98492416,
+                "pss": 45458432
+              },
+              "renderer": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 336314368,
+                "pss": 268839936
+              },
+              "network.mojom.NetworkService": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 71950336,
+                "pss": 28450816
+              },
+              "GPU": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 171601920,
+                "pss": 116258816
+              }
+            }
+          },
+          "settled": {
+            "jsHeapUsed": 33794772,
+            "jsHeapTotal": 34648064,
+            "domNodes": 159,
+            "jsEventListeners": 88,
+            "documents": 1,
+            "canvasBackingBytes": 10381924,
+            "canvasCount": 1,
+            "uaMemory": null,
+            "rendererPss": 225076224,
+            "gpuPss": 115467264,
+            "browserPss": 45521920,
+            "totalPss": 414540800,
+            "totalRss": 632385536,
+            "processes": {
+              "browser": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 98562048,
+                "pss": 45521920
+              },
+              "renderer": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 291770368,
+                "pss": 225076224
+              },
+              "network.mojom.NetworkService": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 72024064,
+                "pss": 28475392
+              },
+              "GPU": {
+                "count": 1,
+                "unreadable": 0,
+                "rss": 170029056,
+                "pss": 115467264
               }
             }
           },
@@ -2943,72 +3184,76 @@
       "label": "Open design · a2ui-catalog",
       "path": "/ui-builder/a2ui-reservation",
       "viewport": "mobile",
-      "readyMs": 1541,
+      "readyMs": 1470,
       "atReady": {
-        "jsHeapUsed": 22835884,
-        "jsHeapTotal": 31608832,
-        "rendererPss": 224901120,
-        "gpuPss": 129447936,
-        "browserPss": 41508864,
-        "totalPss": 422880256,
-        "totalRss": 640839680,
+        "jsHeapUsed": 36812796,
+        "jsHeapTotal": 54755328,
+        "rendererPss": 251537408,
+        "gpuPss": 128009216,
+        "browserPss": 41479168,
+        "totalPss": 447936512,
+        "totalRss": 664760320,
         "domNodes": 173,
         "canvasBackingBytes": 10381924
       },
       "settled": {
-        "jsHeapUsed": 21490872,
-        "jsHeapTotal": 22171648,
-        "rendererPss": 209076224,
-        "gpuPss": 128661504,
-        "browserPss": 41578496,
-        "totalPss": 406774784,
-        "totalRss": 623464448,
+        "jsHeapUsed": 21484716,
+        "jsHeapTotal": 22433792,
+        "rendererPss": 208915456,
+        "gpuPss": 128807936,
+        "browserPss": 41552896,
+        "totalPss": 406411264,
+        "totalRss": 622096384,
         "domNodes": 173,
         "canvasBackingBytes": 10381924
       },
       "errors": [],
       "samples": [
         {
-          "readyMs": 1541,
+          "readyMs": 1470,
           "atReady": {
-            "jsHeapUsed": 30871632,
-            "jsHeapTotal": 48910336,
+            "jsHeapUsed": 36812796,
+            "jsHeapTotal": 54755328,
             "domNodes": 173,
             "jsEventListeners": 87,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 243576832,
-            "gpuPss": 129447936,
-            "browserPss": 41508864,
-            "totalPss": 441517056,
-            "totalRss": 659779584,
+            "rendererPss": 251537408,
+            "gpuPss": 127159296,
+            "browserPss": 42020864,
+            "totalPss": 447936512,
+            "totalRss": 664760320,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94576640,
-                "pss": 41508864
+                "unreadable": 0,
+                "rss": 93913088,
+                "pss": 42020864
               },
               "renderer": {
                 "count": 1,
-                "rss": 310255616,
-                "pss": 243576832
+                "unreadable": 0,
+                "rss": 318902272,
+                "pss": 251537408
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 68952064,
-                "pss": 26983424
+                "unreadable": 0,
+                "rss": 69341184,
+                "pss": 27218944
               },
               "GPU": {
                 "count": 1,
-                "rss": 185995264,
-                "pss": 129447936
+                "unreadable": 0,
+                "rss": 182603776,
+                "pss": 127159296
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 21490872,
+            "jsHeapUsed": 21484716,
             "jsHeapTotal": 22171648,
             "domNodes": 173,
             "jsEventListeners": 87,
@@ -3016,31 +3261,35 @@
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 209547264,
-            "gpuPss": 128661504,
-            "browserPss": 41578496,
-            "totalPss": 406774784,
-            "totalRss": 623464448,
+            "rendererPss": 208289792,
+            "gpuPss": 128807936,
+            "browserPss": 42090496,
+            "totalPss": 406411264,
+            "totalRss": 621674496,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 94646272,
-                "pss": 41578496
+                "unreadable": 0,
+                "rss": 93986816,
+                "pss": 42090496
               },
               "renderer": {
                 "count": 1,
-                "rss": 275439616,
-                "pss": 209547264
+                "unreadable": 0,
+                "rss": 274874368,
+                "pss": 208289792
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 68956160,
-                "pss": 26987520
+                "unreadable": 0,
+                "rss": 69345280,
+                "pss": 27223040
               },
               "GPU": {
                 "count": 1,
-                "rss": 184422400,
-                "pss": 128661504
+                "unreadable": 0,
+                "rss": 183468032,
+                "pss": 128807936
               }
             }
           },
@@ -3059,46 +3308,50 @@
           }
         },
         {
-          "readyMs": 1641,
+          "readyMs": 1466,
           "atReady": {
-            "jsHeapUsed": 22835884,
-            "jsHeapTotal": 31346688,
-            "domNodes": 200,
+            "jsHeapUsed": 29067208,
+            "jsHeapTotal": 52056064,
+            "domNodes": 173,
             "jsEventListeners": 87,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 224371712,
-            "gpuPss": 129692672,
-            "browserPss": 41313280,
-            "totalPss": 422752256,
-            "totalRss": 640839680,
+            "rendererPss": 244802560,
+            "gpuPss": 130067456,
+            "browserPss": 41247744,
+            "totalPss": 444058624,
+            "totalRss": 661733376,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93655040,
-                "pss": 41313280
+                "unreadable": 0,
+                "rss": 93454336,
+                "pss": 41247744
               },
               "renderer": {
                 "count": 1,
-                "rss": 291979264,
-                "pss": 224371712
+                "unreadable": 0,
+                "rss": 312320000,
+                "pss": 244802560
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69332992,
-                "pss": 27374592
+                "unreadable": 0,
+                "rss": 69890048,
+                "pss": 27940864
               },
               "GPU": {
                 "count": 1,
-                "rss": 185872384,
-                "pss": 129692672
+                "unreadable": 0,
+                "rss": 186068992,
+                "pss": 130067456
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 21490888,
+            "jsHeapUsed": 21463704,
             "jsHeapTotal": 22433792,
             "domNodes": 173,
             "jsEventListeners": 87,
@@ -3106,31 +3359,35 @@
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 209076224,
-            "gpuPss": 129161216,
-            "browserPss": 41388032,
-            "totalPss": 407003136,
-            "totalRss": 624152576,
+            "rendererPss": 208915456,
+            "gpuPss": 129281024,
+            "browserPss": 41315328,
+            "totalPss": 407456768,
+            "totalRss": 623562752,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93794304,
-                "pss": 41388032
+                "unreadable": 0,
+                "rss": 93523968,
+                "pss": 41315328
               },
               "renderer": {
                 "count": 1,
-                "rss": 276197376,
-                "pss": 209076224
+                "unreadable": 0,
+                "rss": 275648512,
+                "pss": 208915456
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69337088,
-                "pss": 27377664
+                "unreadable": 0,
+                "rss": 69894144,
+                "pss": 27944960
               },
               "GPU": {
                 "count": 1,
-                "rss": 184823808,
-                "pss": 129161216
+                "unreadable": 0,
+                "rss": 184496128,
+                "pss": 129281024
               }
             }
           },
@@ -3149,78 +3406,86 @@
           }
         },
         {
-          "readyMs": 1540,
+          "readyMs": 1539,
           "atReady": {
-            "jsHeapUsed": 22804928,
-            "jsHeapTotal": 31608832,
+            "jsHeapUsed": 37391148,
+            "jsHeapTotal": 55017472,
             "domNodes": 173,
             "jsEventListeners": 87,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 224901120,
-            "gpuPss": 128817152,
-            "browserPss": 41657344,
-            "totalPss": 422880256,
-            "totalRss": 639541248,
+            "rendererPss": 251643904,
+            "gpuPss": 128009216,
+            "browserPss": 41479168,
+            "totalPss": 448430080,
+            "totalRss": 665706496,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93814784,
-                "pss": 41657344
+                "unreadable": 0,
+                "rss": 94203904,
+                "pss": 41479168
               },
               "renderer": {
                 "count": 1,
-                "rss": 291217408,
-                "pss": 224901120
+                "unreadable": 0,
+                "rss": 318398464,
+                "pss": 251643904
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69795840,
-                "pss": 27504640
+                "unreadable": 0,
+                "rss": 69341184,
+                "pss": 27297792
               },
               "GPU": {
                 "count": 1,
-                "rss": 184713216,
-                "pss": 128817152
+                "unreadable": 0,
+                "rss": 183762944,
+                "pss": 128009216
               }
             }
           },
           "settled": {
-            "jsHeapUsed": 21460392,
-            "jsHeapTotal": 22171648,
+            "jsHeapUsed": 21499576,
+            "jsHeapTotal": 22433792,
             "domNodes": 173,
             "jsEventListeners": 87,
             "documents": 1,
             "canvasBackingBytes": 10381924,
             "canvasCount": 1,
             "uaMemory": null,
-            "rendererPss": 208949248,
-            "gpuPss": 128292864,
-            "browserPss": 41716736,
-            "totalPss": 406467584,
-            "totalRss": 622100480,
+            "rendererPss": 209528832,
+            "gpuPss": 127484928,
+            "browserPss": 41552896,
+            "totalPss": 405868544,
+            "totalRss": 622096384,
             "processes": {
               "browser": {
                 "count": 1,
-                "rss": 93884416,
-                "pss": 41716736
+                "unreadable": 0,
+                "rss": 94277632,
+                "pss": 41552896
               },
               "renderer": {
                 "count": 1,
-                "rss": 274751488,
-                "pss": 208949248
+                "unreadable": 0,
+                "rss": 275759104,
+                "pss": 209528832
               },
               "network.mojom.NetworkService": {
                 "count": 1,
-                "rss": 69799936,
-                "pss": 27508736
+                "unreadable": 0,
+                "rss": 69345280,
+                "pss": 27301888
               },
               "GPU": {
                 "count": 1,
-                "rss": 183664640,
-                "pss": 128292864
+                "unreadable": 0,
+                "rss": 182714368,
+                "pss": 127484928
               }
             }
           },
@@ -3252,7 +3517,7 @@
     "GET /api/ui-builder/v1/designs/{id}/review": 54,
     "GET /api/ui-builder/v1/designs/{id}/suggestions": 54,
     "GET /api/ui-builder/v1/designs/{id}/thumbnail.png": 30,
-    "GET /api/ui-builder/v1/designs/{id}/agents": 44,
+    "GET /api/ui-builder/v1/designs/{id}/agents": 48,
     "GET /api/ui-builder/v1/designs/{id}/updates": 24,
     "GET /m3-catalog/api/previews": 6,
     "GET /api/ui-builder/v1/catalogs/m3-catalog/component-record": 6,
