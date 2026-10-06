@@ -869,15 +869,17 @@ screens:
 
 - **The content box is fixed by the container size.** Small is 200×60dp and Large 200×108dp of
   content; a `size` modifier on the container is refused
-  (`UNKNOWN_MODIFIER: modifier size is not declared by remote-m3/widget-container-small`), and a
-  padding or corner-radius override grows the *frame* around that box rather than shrinking the
-  content. That is the host's model — the launcher picks the container — so the container cannot
-  stand in for other screen-size footprints.
+  (`UNKNOWN_MODIFIER: modifier size is not declared by remote-m3/widget-container-small`).
+  Padding and corner radius come from the host shape, not the design — switch the host shape to see
+  them change — and they surround that box rather than shrinking it; only a design saved while they
+  were authorable still carries an override. That is the host's model — the launcher picks the
+  container — so the container cannot stand in for other screen-size footprints.
 - **For a per-footprint visual check**, build a `layout/box` root with `size`, `background` and
   `padding` modifiers: it renders at exactly that frame. It is not a widget container, so its
   export is not a `GlanceWearWidget` — use it for comparison only.
-- **There is no icon component** in `remote-m3` yet. Use an `m3/text` label in a button and a
-  solid-colour tile where an icon or image would go.
+- **There is no icon component** in `remote-m3` yet. Use an `m3/text` label in a button where an
+  icon would go. A real picture is an `asset/image`, which exports as a `RemoteImage`
+  ([above](#a-picture-in-the-content-slot)).
 
 A widget template keeps the `environment` it is created with, and that is the **canvas**, not the
 widget: a PNG export of a widget design comes back at the canvas size (1280×800 in #492's case) with
