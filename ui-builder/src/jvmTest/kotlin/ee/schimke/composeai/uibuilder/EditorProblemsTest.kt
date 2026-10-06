@@ -177,9 +177,46 @@ class EditorProblemsTest {
 
   @Test
   fun `a widget the emitter genuinely cannot write is still reported`() {
-    // The panel is not simply silenced for these designs. 20dp of horizontal padding is a frame the
-    // shipped preview params cannot show, so the emitter refuses it — and that refusal, unlike the
-    // two above, is about the design in front of the person reading it.
+    // The panel is not simply silenced for these designs. A container holds one body, so a second
+    // one is something the emitter refuses — and that refusal, unlike the two above, is about the
+    // design in front of the person reading it.
+    val widget =
+      weatherWidgetUiBuilderDocument("weather", document.catalogPin, document.environment)
+    val rootId = widget.roots.single()
+    val root = widget.nodes.getValue(rootId)
+    val second =
+      UiBuilderNode(
+        id = "second",
+        componentId = "m3/text",
+        properties =
+          JsonObject(
+            mapOf(
+              "text" to
+                JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("2")))
+            )
+          ),
+      )
+    val twoBodies =
+      widget.copy(
+        nodes =
+          widget.nodes +
+            ("second" to second) +
+            (rootId to
+              root.copy(
+                slots = root.slots + ("content" to (root.slots["content"].orEmpty() + "second"))
+              ))
+      )
+
+    val reported = problems(twoBodies)
+
+    assertTrue(
+      reported.any { it.code == "COMPOSE_EXPORT_REFUSED" && "holds one body" in it.message },
+      reported.toString(),
+    )
+  }
+
+  @Test
+  fun `a legacy padding override is not a problem, because the host shape owns the frame`() {
     val widget =
       weatherWidgetUiBuilderDocument("weather", document.catalogPin, document.environment)
     val rootId = widget.roots.single()
@@ -199,13 +236,9 @@ class EditorProblemsTest {
               ))
       )
 
-    val reported = problems(padded)
-
     assertTrue(
-      reported.any {
-        it.code == "COMPOSE_EXPORT_REFUSED" && "horizontal padding is 20dp" in it.message
-      },
-      reported.toString(),
+      problems(padded).none { it.code == "COMPOSE_EXPORT_REFUSED" },
+      problems(padded).toString(),
     )
   }
 

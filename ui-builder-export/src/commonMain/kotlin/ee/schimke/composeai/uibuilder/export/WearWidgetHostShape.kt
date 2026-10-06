@@ -129,10 +129,7 @@ fun WearWidgetScaffoldSize.hostSpec(shape: WearWidgetHostShape): WearWidgetHostS
       }
   }
 
-/**
- * The squircle padding and radius at both sizes. Public because [WearWidgetCodeExporter] refuses
- * designs that move them: the export may only name a shipped provider.
- */
+/** The squircle padding and radius at both sizes. */
 const val SQUIRCLE_PADDING_DP: Float = 8f
 
 const val SQUIRCLE_RADIUS_DP: Float = 26f

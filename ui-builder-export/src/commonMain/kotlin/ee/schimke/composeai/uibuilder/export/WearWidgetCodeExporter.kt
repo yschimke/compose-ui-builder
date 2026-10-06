@@ -149,25 +149,8 @@ object WearWidgetCodeExporter {
 
     val refusals = mutableListOf<String>()
 
-    // The host owns these, and only the shipped providers can be named in a `@Preview`. A design
-    // that moved them would generate a preview drawing a frame the design does not have, which is
-    // exactly the silent disagreement this generator exists to avoid.
-    root.exportFloat("horizontalPaddingDp", WEAR_WIDGET_SPEC_PADDING_DP)?.let {
-      refusals +=
-        "horizontal padding is ${it.withoutTrailingZero()}dp; the published widget preview params only carry " +
-          "${WEAR_WIDGET_SPEC_PADDING_DP.withoutTrailingZero()}dp, so no generated preview can show it"
-    }
-    root.exportFloat("verticalPaddingDp", WEAR_WIDGET_SPEC_PADDING_DP)?.let {
-      refusals +=
-        "vertical padding is ${it.withoutTrailingZero()}dp; the published widget preview params only carry " +
-          "${WEAR_WIDGET_SPEC_PADDING_DP.withoutTrailingZero()}dp, so no generated preview can show it"
-    }
-    root.exportFloat("cornerRadiusDp", WEAR_WIDGET_SPEC_CORNER_RADIUS_DP)?.let {
-      refusals +=
-        "corner radius is ${it.withoutTrailingZero()}dp; the squircle providers carry " +
-          "${WEAR_WIDGET_SPEC_CORNER_RADIUS_DP.withoutTrailingZero()}dp — 999dp is the round shape, which needs " +
-          "the Round provider this generator does not select yet"
-    }
+    // Padding and corner radius are the host's, not the design's: only the predefined host shapes
+    // are supported, so a legacy override on the container is ignored here as it is on the canvas.
 
     val resolved = sizes.map { AdaptiveWearWidget.resolve(document, it) }
     // How deep the body sits, which the emitter needs *before* it writes a line: it wraps a call at
@@ -529,30 +512,9 @@ object WearWidgetCodeExporter {
 
   private fun refuse(reason: String) = Outcome.Refused(listOf(reason))
 
-  /**
-   * The value this property holds when it differs from [expected], or null when it agrees.
-   *
-   * An absent property agrees: the scaffold's defaults ARE the shipped spec, so a design that says
-   * nothing is the one the providers describe.
-   */
-  private fun UiBuilderNode.exportFloat(name: String, expected: Float): String? {
-    val declared = properties[name] ?: return null
-    val value = declared.numberOrNull() ?: return null
-    return if (value == expected) null else value.toString()
-  }
-
-  /** `8.0` reads as `8` in a sentence about dp. */
-  private fun String.withoutTrailingZero(): String = removeSuffix(".0")
-
-  private fun Float.withoutTrailingZero(): String = toString().removeSuffix(".0")
-
   private const val INDENT = "    "
 
   private const val MAX_LINE = 100
-
-  internal const val WEAR_WIDGET_SPEC_PADDING_DP = SQUIRCLE_PADDING_DP
-
-  internal const val WEAR_WIDGET_SPEC_CORNER_RADIUS_DP = SQUIRCLE_RADIUS_DP
 
   /** Where an Android module's `AssetManager` root is, which is what the archive has to name. */
   private const val ASSET_SOURCE_DIRECTORY = "assets"
@@ -578,8 +540,8 @@ object WearWidgetCodeExporter {
  *
  * The widget itself is unchanged between them. A `GlanceWearWidget` describes content; the frame
  * around it is the host's, handed in as `WearWidgetParams` — so drawing the same widget in a second
- * container is a second `@Preview` and nothing else, and the design's authored padding and radius
- * (which the refusals above pin to the squircle spec) are not what any preview reads.
+ * container is a second `@Preview` and nothing else: the design holds no padding or radius of its
+ * own, only the predefined host shapes do.
  */
 internal val WearWidgetScaffoldSize.previewShapes: List<WearWidgetHostShape>
   get() = WearWidgetHostShape.entries

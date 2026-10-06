@@ -140,13 +140,12 @@ internal object WearWidgetNativePreviewExporter {
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
     val name = document.widgetIdentifier()
-    // The selected shape's published spec is the baseline; a design that authored its own padding
-    // or radius overrides it, exactly as the canvas beside this render does. Content box is not on
-    // that list and cannot be: it is the footprint the host reserves, not a value a widget holds.
+    // The selected shape's published spec, exactly as the canvas beside this render draws it. Only
+    // the predefined host shapes are supported: a legacy padding or radius override is ignored.
     val spec = size.hostSpec(shape)
-    val horizontalPadding = root.previewFloat("horizontalPaddingDp", spec.horizontalPaddingDp)
-    val verticalPadding = root.previewFloat("verticalPaddingDp", spec.verticalPaddingDp)
-    val cornerRadius = root.previewFloat("cornerRadiusDp", spec.cornerRadiusDp)
+    val horizontalPadding = spec.horizontalPaddingDp
+    val verticalPadding = spec.verticalPaddingDp
+    val cornerRadius = spec.cornerRadiusDp
     return Result.Emitted(
       name = name,
       widthDp = (spec.contentWidthDp + 2f * horizontalPadding).toInt(),
@@ -193,10 +192,8 @@ internal object WearWidgetNativePreviewExporter {
           appendLine("${INDENT}return ${background.expression}")
           appendLine("}")
           appendLine()
-          // The design's own container spec, not a shipped provider's. This is the whole reason a
-          // design that authored its padding or its radius renders here while its export refuses:
-          // an exported file may only name what upstream publishes, and this host constructs the
-          // params itself.
+          // The selected host shape's published params, constructed here because this host builds
+          // its own `WearWidgetParams` rather than naming a shipped provider.
           appendLine("fun ${name}Params(): WearWidgetParams =")
           appendLine("${INDENT}WearWidgetParams(")
           appendLine(
@@ -225,10 +222,6 @@ internal object WearWidgetNativePreviewExporter {
   }
 
   private fun refuse(reason: String) = Result.Refused(listOf(reason))
-
-  /** The design's own value, or the shipped default when it declares none. */
-  private fun UiBuilderNode.previewFloat(name: String, fallback: Float): Float =
-    properties[name]?.numberOrNull() ?: fallback
 
   /** `8.0` is what a `Float` argument reads as; `8` would be an `Int`. */
   private fun Float.dpLiteral(): String = if (this % 1f == 0f) "${toInt()}f" else "${this}f"
