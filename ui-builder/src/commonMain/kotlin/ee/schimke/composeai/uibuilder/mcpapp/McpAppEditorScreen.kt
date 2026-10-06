@@ -31,6 +31,7 @@ import ee.schimke.composeai.uibuilder.editor.FocusedCanvasUiBuilderChrome
 import ee.schimke.composeai.uibuilder.editor.MaterialUiBuilderChrome
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.editor.fileDesigns
 import kotlinx.coroutines.launch
 
 /**
@@ -92,6 +93,14 @@ fun McpAppEditorScreen(
           catalog = catalog,
           chrome = if (layout == McpAppLayout.Focused) focusedChrome else MaterialUiBuilderChrome,
           sessionLabel = session.file.name,
+          // Switching is a write, so a read-only file lists its designs without offering it.
+          fileDesigns =
+            state.designs?.fileDesigns(
+              onSelect =
+                if (state.writable) {
+                  { id -> scope.launch { session.selectDesign(id) } }
+                } else null
+            ),
           devicePresets = devicePresets,
           onStateChanged = onEditorState,
           onHelp = onHelp,

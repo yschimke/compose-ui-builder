@@ -232,6 +232,12 @@ fun UiBuilderEditor(
   operationIdPrefix: String = clientId,
   sessionLabel: String = "Local session",
   /**
+   * The top-level designs the open file holds, drawn as a strip above the canvas; null (the
+   * default) for a file of one design, or a host that is not editing a file. See
+   * [UiBuilderFileDesigns].
+   */
+  fileDesigns: UiBuilderFileDesigns? = null,
+  /**
    * Who can open this design, in a line above the toolbar; null draws no line. Null by default
    * because only the host knows: an IDE bridge or MCP app editing a server design must not claim it
    * is private to this device.
@@ -2773,6 +2779,11 @@ fun UiBuilderEditor(
                 dispatch = ::dispatch,
               )
             }
+          }
+          // Which of the file's designs this is: under the toolbar on every layout, the compact and
+          // the focused canvas included, because which design is open is a question about the page.
+          if (!dedicatedOutput && fileDesigns?.shown == true) {
+            EditorDesignStrip(fileDesigns, activeTitle = state.document.title)
           }
           if (agentHost != null && !focusedCanvas && !dedicatedOutput && hostChrome == null) {
             AgentInvitation(agentHost, { showAgentPrompt = true }, ::say)

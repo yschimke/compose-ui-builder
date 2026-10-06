@@ -218,6 +218,12 @@ data class UidDesignCollection(val active: String, val designs: List<UiBuilderDo
     return UidDesignCollection(if (active == id) remaining.first().id else active, remaining)
   }
 
+  /** This collection with the design whose id is [document]'s replaced by it. */
+  fun withDesign(document: UiBuilderDocument): UidDesignCollection {
+    require(designs.any { it.id == document.id }) { "no design '${document.id}' in the collection" }
+    return copy(designs = designs.map { if (it.id == document.id) document else it })
+  }
+
   /** This collection with the active design replaced by [current], an edit of it. */
   fun replaceActive(current: UiBuilderDocument): UidDesignCollection =
     UidDesignCollection(current.id, designs.map { if (it.id == active) current else it })
@@ -240,6 +246,18 @@ internal constructor(
    * Saves visual edits while preserving the complete explicitly authored production API, or every
    * other design of a collection.
    */
+  /**
+   * The file's bytes with [id] made the active design, carrying [current] — the editor's unsaved
+   * version of the design that was active — into the file as it goes.
+   */
+  fun switchTo(id: String, current: UiBuilderDocument = document): String {
+    val designs = requireNotNull(collection) { "only a design collection has designs to switch" }
+    return UidDesignFiles.encodeCollection(
+      designs.replaceActive(current).withActive(id),
+      collectionText,
+    )
+  }
+
   fun encode(current: UiBuilderDocument = document): String {
     collection?.let {
       return UidDesignFiles.encodeCollection(it.replaceActive(current), collectionText)

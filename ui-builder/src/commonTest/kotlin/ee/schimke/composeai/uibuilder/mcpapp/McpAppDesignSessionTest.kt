@@ -420,6 +420,8 @@ internal class FakeMcpAppHost(
   private val writable: Boolean = true,
   private val maxBytes: Long = Long.MAX_VALUE,
   private val subscribable: Boolean = true,
+  /** Runs while a write is in flight, before it lands: an edit the person makes meanwhile. */
+  private val onWrite: (() -> Unit)? = null,
 ) : McpAppBridge {
   data class Write(val text: String, val ifMatch: String?)
 
@@ -455,6 +457,7 @@ internal class FakeMcpAppHost(
     check(uri == this.uri)
     check(writable) { "wrote a file the host did not mark writable" }
     writes += Write(text, ifMatch)
+    onWrite?.invoke()
     if (text.encodeToByteArray().size > maxBytes) return McpAppWriteOutcome.TooLarge(maxBytes)
     if (ifMatch != null && ifMatch != etag) return McpAppWriteOutcome.Conflict(etag)
     this.text = text

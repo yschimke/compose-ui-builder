@@ -19,6 +19,7 @@ import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import ee.schimke.composeai.uibuilder.UidDesignCollection
+import ee.schimke.composeai.uibuilder.editor.fileDesigns
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.host.CatalogOverride
@@ -128,6 +129,24 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
         .onFailure { showError("Cannot change the designs in ${file.title}", it) }
       design = file.copy(reopen = file.reopen + 1)
     }
+    val selectDesign: (String) -> Unit = { id -> updateDesigns { it.withActive(id) } }
+    val addDesign: () -> Unit = {
+      updateDesigns { designs ->
+        val catalog = OfflineCatalog.forSystem(requireNotNull(designs.catalogSystemId))
+        val capabilities = catalog.capabilityCatalog().benchmark
+        val id = nextDesignId(designs)
+        designs.plus(
+          catalog
+            .seed(
+              designId = id,
+              catalogRevision = capabilities.catalogRevision,
+              nativeRuntimeId = capabilities.nativeRuntimeId,
+            )
+            .copy(title = templateLabel(id))
+        )
+      }
+    }
+    val removeDesign: () -> Unit = { updateDesigns { it.minus(it.active) } }
     DisposableEffect(session) { onDispose { session?.close() } }
     // A file that no longer opens falls back to the scratch workspace rather than a blank window.
     opened.exceptionOrNull()?.let { failure ->
@@ -151,24 +170,9 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
         },
       onQuit = ::exitApplication,
       designs = collection,
-      onSelectDesign = { id -> updateDesigns { it.withActive(id) } },
-      onAddDesign = {
-        updateDesigns { designs ->
-          val catalog = OfflineCatalog.forSystem(requireNotNull(designs.catalogSystemId))
-          val capabilities = catalog.capabilityCatalog().benchmark
-          val id = nextDesignId(designs)
-          designs.plus(
-            catalog
-              .seed(
-                designId = id,
-                catalogRevision = capabilities.catalogRevision,
-                nativeRuntimeId = capabilities.nativeRuntimeId,
-              )
-              .copy(title = templateLabel(id))
-          )
-        }
-      },
-      onRemoveDesign = { updateDesigns { it.minus(it.active) } },
+      onSelectDesign = selectDesign,
+      onAddDesign = addDesign,
+      onRemoveDesign = removeDesign,
     )
     MaterialTheme {
       Surface(Modifier.fillMaxSize()) {
@@ -185,6 +189,13 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
               // operator's scaffolding, and writing it next to a file somebody shares would put
               // a multi-megabyte mock into their repository.
               referenceStore = referenceStoreFor(design, storageRoot),
+              // The same three verbs as the Designs menu, where the design is.
+              fileDesigns =
+                collection?.fileDesigns(
+                  onSelect = selectDesign,
+                  onAdd = addDesign,
+                  onRemove = removeDesign,
+                ),
             )
           }
         }

@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.mcpapp
 
 import ee.schimke.composeai.uibuilder.OpenedUidDesign
+import ee.schimke.composeai.uibuilder.UidDesignCollection
 import ee.schimke.composeai.uibuilder.UidDesignFiles
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.coroutines.sync.Mutex
@@ -28,6 +29,8 @@ data class McpAppDesignState(
   val notice: McpAppNotice? = null,
   /** Set when there is no design to show at all: the first read or parse failed. */
   val failure: String? = null,
+  /** The file's top-level designs when it holds several; [document] is the active one. */
+  val designs: UidDesignCollection? = null,
 )
 
 /** Something the person has to see, and for some of them decide. */
@@ -90,6 +93,9 @@ class McpAppDesignSession(
 
   private var lastContext: McpAppModelContext? = null
 
+  /** The design a switch was going to when it met a conflict; [overwrite] finishes it. */
+  private var pendingSwitch: String? = null
+
   /** Subscribes for external edits, then reads the file. */
   suspend fun open() = lock.withLock {
     // Best effort: without it the design still opens, it just does not follow external edits,
@@ -125,7 +131,96 @@ class McpAppDesignSession(
   /** After a [McpAppNotice.Conflict]: write anyway, replacing the version the host reported. */
   suspend fun overwrite() = lock.withLock {
     val conflict = state.notice as? McpAppNotice.Conflict ?: return@withLock
-    writeLocked(ifMatch = conflict.currentEtag, force = true)
+    // A conflict met by a switch is resolved by finishing the switch, not by saving where it began.
+    val switch = pendingSwitch
+    if (switch != null) switchLocked(switch, ifMatch = conflict.currentEtag)
+    else writeLocked(ifMatch = conflict.currentEtag, force = true)
+  }
+
+  /**
+   * Makes [id] the file's active design: writes the file with it active — carrying any unsaved edit
+   * to the design that was active — and opens it. Refused, as a save is, by a read-only file or an
+   * unresolved conflict; a switch that meets a conflict is remembered, so [overwrite] retries it.
+   */
+  suspend fun selectDesign(id: String) = lock.withLock {
+    val opened = openedFile ?: return@withLock
+    if (opened.collection == null || opened.document.id == id) return@withLock
+    if (!state.writable) {
+      state = state.copy(notice = McpAppNotice.ReadOnly)
+      return@withLock
+    }
+    if (state.notice is McpAppNotice.Conflict) return@withLock
+    switchLocked(id, ifMatch = state.etag)
+  }
+
+  private suspend fun switchLocked(id: String, ifMatch: String?) {
+    val opened = openedFile ?: return
+    var carried = current ?: opened.document
+    var text = runCatching {
+      opened.switchTo(id, carried)
+    }
+      .getOrElse {
+        state = state.copy(notice = McpAppNotice.Error("Not switched: ${it.message}"))
+        return
+      }
+    var match = ifMatch
+    state = state.copy(saving = true)
+    while (true) {
+      val outcome = runCatching {
+        bridge.write(file.resourceUri, text, match)
+      }
+        .getOrElse {
+          state =
+            state.copy(saving = false, notice = McpAppNotice.Error("Not switched: ${it.message}"))
+          return
+        }
+      when (outcome) {
+        is McpAppWriteOutcome.Saved -> {
+          // The editor stays live while the host writes, so an edit to the design being left can
+          // land in the meantime. It goes into that design's entry before the switch opens the
+          // next one; otherwise opening it would throw the edit away.
+          val latest = current
+          if (latest != null && latest != carried && latest.id == carried.id) {
+            val written = text
+            text =
+              runCatching {
+                UidDesignFiles.encodeCollection(
+                  UidDesignFiles.decodeCollection(written).withDesign(latest),
+                  written,
+                )
+              }
+                .getOrElse {
+                  state =
+                    state.copy(
+                      saving = false,
+                      notice = McpAppNotice.Error("Not switched: ${it.message}"),
+                    )
+                  return
+                }
+            carried = latest
+            match = outcome.etag.ifEmpty { null }
+            continue
+          }
+          pendingSwitch = null
+          state = state.copy(saving = false)
+          adopt(
+            McpAppFileContents(text, outcome.etag.ifEmpty { null }, writable = true),
+            initial = false,
+          )
+        }
+        is McpAppWriteOutcome.Conflict -> {
+          pendingSwitch = id
+          state = state.copy(saving = false, notice = McpAppNotice.Conflict(outcome.etag))
+        }
+        is McpAppWriteOutcome.TooLarge ->
+          state =
+            state.copy(
+              saving = false,
+              notice = McpAppNotice.TooLarge(outcome.maxBytes, text.encodeToByteArray().size),
+            )
+      }
+      return
+    }
   }
 
   /** Discards local changes and reads the file again. */
@@ -239,6 +334,8 @@ class McpAppDesignSession(
         return
       }
     openedFile = opened
+    // Whatever the file now is, a switch that was waiting on the version it replaced is over.
+    pendingSwitch = null
     val document = opened.document
     savedDocument = document
     current = document
@@ -252,6 +349,7 @@ class McpAppDesignSession(
         dirty = false,
         failure = null,
         notice = if (contents.writable) null else McpAppNotice.ReadOnly,
+        designs = opened.collection,
       )
   }
 
@@ -285,6 +383,7 @@ class McpAppDesignSession(
           savedDocument = document
           openedFile = UidDesignFiles.open(text)
           state.copy(
+            designs = openedFile?.collection,
             saving = false,
             etag = outcome.etag.ifEmpty { null },
             // An edit made while the write was in flight is still unsaved.
