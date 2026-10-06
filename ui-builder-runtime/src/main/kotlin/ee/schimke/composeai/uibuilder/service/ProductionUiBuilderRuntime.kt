@@ -1368,12 +1368,20 @@ public object PackagedUiBuilderRenderBundle {
     }
   }
 
+  /**
+   * The SHA-256 of the packaged bundle: which renderer draws a PNG export, as a string.
+   *
+   * A host that keeps renders across restarts keys them by this, because the host's own version
+   * does not move when only its UI-builder pin does. preview.coo.ee's design-card thumbnails were
+   * keyed by the server version alone, so pictures drawn before 3.85.0 — whose projection dropped
+   * every placement's `component`, drawing each as "Unsupported component:
+   * design/component-instance → (none)" — kept serving after the renderer that fixed it shipped. It
+   * is also the directory name [copyTo] stages the bundle under.
+   */
+  public fun digest(): String = bundleBytes().sha256()
+
   public fun copyTo(root: Path): Path {
-    val bytes =
-      checkNotNull(javaClass.getResourceAsStream(RESOURCE)) {
-          "packaged UI-builder renderer bundle is missing"
-        }
-        .use { it.readBytes() }
+    val bytes = bundleBytes()
     val generation = root.toAbsolutePath().normalize().resolve(bytes.sha256())
     Files.createDirectories(generation)
     val bundle = generation.resolve("ui-builder-renderer.bundle.png")
@@ -1393,6 +1401,12 @@ public object PackagedUiBuilderRenderBundle {
     }
     return bundle
   }
+
+  private fun bundleBytes(): ByteArray =
+    checkNotNull(javaClass.getResourceAsStream(RESOURCE)) {
+        "packaged UI-builder renderer bundle is missing"
+      }
+      .use { it.readBytes() }
 }
 
 /** Canonical, loss-checked protocol → renderer wire projection used by the named override. */

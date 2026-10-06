@@ -20,8 +20,8 @@ class GoogleItemSnapshotRenderingTest {
   @Test
   fun `reusable Google items render identically through editor and export projection`() {
     val json = Json { ignoreUnknownKeys = true }
-    for (app in listOf("gmail", "calendar", "photos", "keep", "play")) {
-      val source = File("../docs/design/live-snapshots/google-$app-tablet.json").readText()
+    for (app in GOOGLE_APPS) {
+      val source = snapshot(app)
       val protocol = json.decodeFromString<DesignDocumentV1>(source)
       assertTrue(protocol.components.isNotEmpty(), "$app must exercise reusable components")
       val documents = listOf(source, projectRendererDocument(protocol))
@@ -31,6 +31,7 @@ class GoogleItemSnapshotRenderingTest {
           val document = json.decodeFromString<UiBuilderDocument>(content)
           setContent { MaterialTheme { UiBuilderSurface(document, editorOverlay = false) } }
           mainClock.advanceTimeBy(1000)
+          assertNoUnsupportedComponent("$app (${if (index == 0) "saved" else "projected"})")
           val image = onRoot().captureToImage().toAwtImage()
           val output = File("build/reports/google-items/$app-$index.png")
           output.parentFile.mkdirs()
@@ -46,5 +47,45 @@ class GoogleItemSnapshotRenderingTest {
         "$app changed pixels",
       )
     }
+  }
+
+  /**
+   * The designs page's thumbnails, as the server draws them: the projected document decoded and
+   * drawn by the packaged daemon's own entry point, with its pinned catalog's canvas vocabulary.
+   *
+   * The comparison above cannot catch a placement that both paths lose — two identical pictures of
+   * "Unsupported component: design/component-instance → (none)" are still identical, which is what
+   * every card on preview.coo.ee's designs page showed for these items — so this asks the tree.
+   */
+  @Test
+  fun `reusable Google items draw their bodies through the production render entry point`() {
+    val json = Json { ignoreUnknownKeys = true }
+    for (app in GOOGLE_APPS) {
+      val projected =
+        projectRendererDocument(json.decodeFromString<DesignDocumentV1>(snapshot(app)))
+      runDesktopComposeUiTest(width = 1280, height = 800) {
+        val document = decodeProductionRendererDocument(projected)
+        setContent { MaterialTheme { ProductionUiBuilderSurface(document) } }
+        mainClock.advanceTimeBy(1000)
+        assertNoUnsupportedComponent("$app (production)")
+      }
+    }
+  }
+
+  private fun ComposeUiTest.assertNoUnsupportedComponent(label: String) {
+    val unsupported =
+      onAllNodesWithText("Unsupported component", substring = true, useUnmergedTree = true)
+        .fetchSemanticsNodes()
+    assertTrue(
+      unsupported.isEmpty(),
+      "$label drew ${unsupported.size} Unsupported component diagnostics",
+    )
+  }
+
+  private fun snapshot(app: String): String =
+    File("../docs/design/live-snapshots/google-$app-tablet.json").readText()
+
+  private companion object {
+    val GOOGLE_APPS = listOf("gmail", "calendar", "photos", "keep", "play")
   }
 }

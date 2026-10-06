@@ -466,6 +466,9 @@ class ProductionUiBuilderRuntimeTest {
     assertEquals(first, repeated)
     assertTrue(Files.size(first) > 0)
     assertTrue(first.startsWith(stateDirectory.resolve("bundle")))
+    // The identity a host keys stored renders by is the bundle it staged, not a second notion.
+    assertEquals(PackagedUiBuilderRenderBundle.digest(), first.parent.fileName.toString())
+    assertEquals(64, PackagedUiBuilderRenderBundle.digest().length)
   }
 
   @Test
