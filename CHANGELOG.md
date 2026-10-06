@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.87.0](https://github.com/yschimke/compose-ui-builder/compare/v3.86.0...v3.87.0) (2026-10-06)
+
+
+### Features
+
+* **editor:** live tunable parameters and design tokens ([#494](https://github.com/yschimke/compose-ui-builder/issues/494)) ([2d5286a](https://github.com/yschimke/compose-ui-builder/commit/2d5286a507b87f3447114bf15c06f85ed4ad3822))
+* hold several top-level designs in one .uid file ([#496](https://github.com/yschimke/compose-ui-builder/issues/496)) ([4035a59](https://github.com/yschimke/compose-ui-builder/commit/4035a59d8b65295a1f3e2a76d406b324eda292dc))
+* **remote-m3:** offer RemoteIcon on the widget palette ([#497](https://github.com/yschimke/compose-ui-builder/issues/497)) ([013b138](https://github.com/yschimke/compose-ui-builder/commit/013b1381845aa02658c33c6ef95452b057595679))
+
+
+### Bug Fixes
+
+* align release BOMs and Material 3 preview runtime ([2c8e9aa](https://github.com/yschimke/compose-ui-builder/commit/2c8e9aae5faa4629c76174913733c99692182e02))
+* close host edit channels against IDE coroutine runtimes ([#490](https://github.com/yschimke/compose-ui-builder/issues/490)) ([84c7019](https://github.com/yschimke/compose-ui-builder/commit/84c701964cd65e07c260af89b56b810395f41141))
+* **site:** link to the UI Builder custom domain ([#486](https://github.com/yschimke/compose-ui-builder/issues/486)) ([a1754a5](https://github.com/yschimke/compose-ui-builder/commit/a1754a5d35520d481f23023d2a2959c019309766))
+
 ## [3.86.0](https://github.com/yschimke/compose-ui-builder/compare/v3.85.0...v3.86.0) (2026-10-05)
 
 
