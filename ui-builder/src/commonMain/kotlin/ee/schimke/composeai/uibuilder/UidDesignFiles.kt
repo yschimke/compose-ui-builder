@@ -218,6 +218,12 @@ data class UidDesignCollection(val active: String, val designs: List<UiBuilderDo
     return UidDesignCollection(if (active == id) remaining.first().id else active, remaining)
   }
 
+  /** This collection with the design whose id is [document]'s replaced by it. */
+  fun withDesign(document: UiBuilderDocument): UidDesignCollection {
+    require(designs.any { it.id == document.id }) { "no design '${document.id}' in the collection" }
+    return copy(designs = designs.map { if (it.id == document.id) document else it })
+  }
+
   /** This collection with the active design replaced by [current], an edit of it. */
   fun replaceActive(current: UiBuilderDocument): UidDesignCollection =
     UidDesignCollection(current.id, designs.map { if (it.id == active) current else it })
