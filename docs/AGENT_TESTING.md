@@ -151,6 +151,59 @@ streaming loaders: Chromium 153 created code-cache entries with `rel=preload as=
 but did not consume them on subsequent browser starts. Direct fetches consumed both module caches.
 Neither a service worker nor another copy of the Wasm bytes solves that metadata loss.
 
+### Memory per screen
+
+`scripts/ui-builder-web-smoke/memory.mjs` opens `/ui-builder/designs` and one design per catalog
+against a stand-in host (identity, catalogs, the design list, `openDesign` snapshots of the
+committed `site/designs/*.uid`, plus a small A2UI design) and samples each in a fresh headless
+Chromium: once at `editor-paint-opportunity` and again after 8 s, both after a forced GC. It reads
+the JS heap from CDP (Kotlin/Wasm GC objects live there) and per-process PSS from
+`/proc/<pid>/smaps_rollup` (the renderer's figure also holds compiled Wasm and Skia's linear
+memory). Send its output to a file: through a pipe nothing appears until the end.
+
+```sh
+MEMORY_RUNS=3 node scripts/ui-builder-web-smoke/memory.mjs ui-builder/build/wasmDist build/web-memory > memory.log
+```
+
+Medians of three runs after settling, 2026-10-06, Chromium 141 headless with SwiftShader, from
+[`evidence/web-memory/memory.json`](evidence/web-memory/memory.json) (runs agreed within ~2%):
+
+| Viewport | Screen | JS heap | Renderer PSS | GPU PSS | Total PSS |
+| --- | --- | ---: | ---: | ---: | ---: |
+| desktop 1400×900 | `about:blank` (floor) | 0.5 MB | 48 MB | 29 MB | 138 MB |
+| desktop | Designs (home) | 24 MB | 197 MB | 81 MB | 345 MB |
+| desktop | Material 3 · Gmail tablet (158 nodes) | 36 MB | 228 MB | 93 MB | 386 MB |
+| desktop | Wear M3 · Google Home (22 nodes) | 29 MB | 206 MB | 99 MB | 370 MB |
+| desktop | RemoteCompose · Weather widget (5 nodes) | 36 MB | 251 MB | 100 MB | 422 MB |
+| desktop | A2UI · reservation (9 nodes) | 21 MB | 190 MB | 91 MB | 347 MB |
+| mobile 412×915 @2.625 | `about:blank` (floor) | 0.5 MB | 49 MB | 26 MB | 135 MB |
+| mobile | Designs (home) | 24 MB | 210 MB | 97 MB | 373 MB |
+| mobile | Material 3 | 29 MB | 219 MB | 118 MB | 403 MB |
+| mobile | Wear M3 | 26 MB | 209 MB | 121 MB | 395 MB |
+| mobile | RemoteCompose | 32 MB | 214 MB | 109 MB | 394 MB |
+| mobile | A2UI | 21 MB | 199 MB | 123 MB | 388 MB |
+
+What it says:
+
+- The editor costs about 150 MB of renderer memory before any design is open: the home screen is
+  already 197 MB against a 48 MB blank page. That is the 30 MB `uiBuilder.wasm` and 8.6 MB
+  `skiko.wasm` compiled, plus Skia, not designs.
+- An open design adds 3–77 MB total PSS on top of the home screen. Material 3's Gmail tablet
+  peaks at ~500 MB when it becomes ready (JS heap 47 MB) and falls to 386 MB once it settles; the
+  others are 15–45 MB above their settled figure at ready, except desktop RemoteCompose.
+- RemoteCompose is the largest settled desktop screen despite five nodes, and the only one whose
+  renderer grows between ready and settled (244 → 251 MB): the device previews run the RemoteCompose
+  player.
+- A2UI draws outline stand-ins on the canvas (there is no Wasm A2UI renderer), so it is the floor
+  for an open design rather than a like-for-like comparison.
+- Mobile shifts memory to the GPU process (+20–30 MB): the canvas backing store is 9.9 MB at
+  device pixel ratio 2.625 against 4.8 MB on desktop.
+
+The stand-in host has no WebSockets, comments, reviews, suggestions, folders, thumbnails or
+component records, so the editor shows "Disconnected" and those panels are empty; a real host's
+figures are an upper bound on these. Software GL also means the GPU column is SwiftShader's, not a
+real GPU's.
+
 ## 3. The deployed editor
 
 `https://preview.coo.ee/ui-builder/` needs WebGL (Skiko draws through it). When a browser has none,

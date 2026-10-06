@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "smoke": "node smoke.mjs ../../ui-builder/build/wasmDist",
-    "test": "node --test *.test.mjs"
+    "test": "node --test *.test.mjs",
+    "memory": "node memory.mjs ../../ui-builder/build/wasmDist ../../build/web-memory"
   },
   "devDependencies": {
     "playwright": "1.56.1"
