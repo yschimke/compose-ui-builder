@@ -2536,9 +2536,9 @@ internal class RemoteContentEmitter(
       imports += "androidx.glance.wear.tooling.preview.WearWidgetPreview"
     }
     if (widget is WidgetSourceShape.NativePreview) {
-      // The container spec this lane builds itself, from the design's own scaffold, rather than
-      // reading one of the shipped providers: a design authors its padding and radius and the
-      // providers only carry the published defaults.
+      // The container spec this lane builds itself for the selected host shape, rather than
+      // reading one of the shipped providers. Padding and radius come from `hostSpec`, never
+      // from the design.
       imports += "androidx.glance.wear.core.ContainerInfo"
       imports += "androidx.glance.wear.core.WidgetInstanceId"
     }
