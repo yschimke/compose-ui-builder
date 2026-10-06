@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.preview
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import ee.schimke.composeai.preview.SettledPreview
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
@@ -24,6 +25,8 @@ import kotlinx.serialization.json.JsonPrimitive
  * current time — so if the pinning ever came out, this render would start changing on its own and
  * the visual diff would say so on the next pull request that touched anything.
  */
+// Material 3 pickers animate their initial content; publish the completed still.
+@SettledPreview
 @Preview(widthDp = 460, heightDp = 460)
 @Composable
 fun CatalogDialogAndPickersPreview() {
