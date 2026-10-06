@@ -115,7 +115,16 @@ host instead:
 The two flags combine: `--args='--catalog remote-m3 --server https://preview.coo.ee'`.
 
 To edit a checked-in design instead of a workspace, name the `.uid` (or DesignDocumentV1 `.json`)
-file; every accepted edit is written back to it, in the same shape the IntelliJ plugin writes:
+file; every accepted edit is written back to it, in the same shape the IntelliJ plugin writes.
+A `.uid` file is nothing more than a `DesignDocumentV1` — `"schema":
+"compose-ui-builder-document/v1-candidate"` (or `/v1`), the same document you `PUT` to
+`/api/ui-builder/v1/designs/{id}` — pretty-printed with a trailing newline
+([`UidDesignFiles`](../ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/UidDesignFiles.kt)).
+The one other envelope it may carry is `compose-ui-builder-production/…`, which wraps a design for
+[build generation](design/UI_BUILDER_BUILD_GENERATION.md). Neither is the *operations fixture*
+(`compose-ui-builder-operations/v1-candidate`) that
+[`design-sync.mjs`](#keep-a-design-in-the-repository) writes: that one records the edits that
+build a design, not the design, so do not rename one into the other.
 
 ```bash
 ./gradlew :ui-builder-desktop:run --args="$PWD/docs/design/fixtures/ui-builder/state-actions.uid"
@@ -185,6 +194,52 @@ the **native preview lane cannot compile a widget**: a widget's generated source
 rather than Jetpack Compose, so `--ui-builder-native-catalog` has nothing to offer it and the Wasm
 canvas is the authority — which is why the canvas and the generator have to agree about the same
 design, and are tested against each other rather than separately.
+
+### When it starts but something does not work
+
+Field notes from running the builder locally
+([#492](https://github.com/yschimke/compose-ui-builder/issues/492)). Every one of these leaves the
+server up and the editor loading, so you find out later than you would like:
+
+- **Read the printed `Builder:` URL; do not construct one.** It carries a fresh `?token=` on every
+  restart, and the port it names is the one actually bound, which need not be the default `--help`
+  shows.
+- **PNG/SVG export fails with `UnsatisfiedLinkError … libGL.so.1`.** The render daemon inherits
+  whatever `java` is first on `PATH`. A JDK linked against a non-standard dynamic loader (some
+  Nix- or toolchain-manager builds) ignores the system library cache, so it cannot load `libGL.so.1`
+  even when the package is installed. Check with `file -L "$(which java)"` — the interpreter should
+  be `/lib64/ld-linux-x86-64.so.2` on x86-64 Linux — and put a standard OpenJDK 21 first on
+  `PATH` *and* in `JAVA_HOME`. `ps` confirms which `java` the daemon process is running:
+
+  ```bash
+  JAVA_HOME=/usr/lib/jvm/<openjdk-21> PATH=/usr/lib/jvm/<openjdk-21>/bin:$PATH \
+    compose-preview-server ui --no-project --no-open --ui-builder-state-dir ./scratch/ui-builder-state
+  ```
+
+- **A sandboxed shell breaks it in misleading ways.** An agent's command sandbox may be unable to
+  write the state directory, bind the port or reach loopback. Binding then reports
+  `BindException: Address already in use`, and an HTTP proxy in between may answer
+  `400 Direct IP access is not allowed`. Run the server, and any `curl 127.0.0.1:…`, outside the
+  sandbox, with `curl --noproxy '*'`.
+- **The `?token=` is the operator credential, and it works on the REST routes too** —
+  `PUT /api/ui-builder/v1/designs/{id}`, `…/export.png`, `…/export.svg`, `…/reference` — which is
+  enough to script a design without MCP. Creating a design is `PUT` with `If-None-Match: *`
+  (without it `428`; an id that already exists `412`), and creation never overwrites, so iterate
+  with new ids. To read a design back use `compose-preview-server design get` ([below](#from-a-shell-compose-preview-server-design));
+  the state directory also holds it on disk, as `designs/<hash>/document-*.json`.
+- **`/mcp` answers `404` until MCP is switched on.** Anything that goes through it, including
+  `compose-preview design export`, needs the server started with `--agent-grants --catalog-mcp
+  --agent-grant-capabilities ui-builder-read,ui-builder-write,ui-builder-export`; see
+  [Connect an MCP agent](#connect-an-mcp-agent).
+- **`catalogPin` is checked.** A document you write by hand must pin the revision the catalog
+  serves — for `remote-m3`, `"catalogRevision": "wear-widget-scaffolds-v1"`. Copy the pin from a
+  design the builder created rather than inventing one.
+- **Another machine needs `--lan`.** The token is then the only access control, and a plain-HTTP
+  non-loopback URL is not a browser *secure context*, so the clipboard and similar features may not
+  work there.
+- An unresolved-dependency warning at startup for a catalog renderer you are not using (for example
+  a few of the Wear catalog renderer's classpath coordinates) does not affect other catalogs'
+  renders.
 
 ## Create a design in the website
 
@@ -787,6 +842,48 @@ another is refused: `RemoteBox` has one `contentAlignment` for all of them.
 
 Refusals work the way the Compose exporter's do: a node or modifier with no Remote Compose
 counterpart is named, with the reason and the route that does work, rather than approximated.
+
+A modifier in the document is one object in the node's `modifiers` list, keyed by `type`. When
+writing one by hand rather than through the inspector, these are the fields
+([`CanvasModifiers.kt`](../ui-builder-renderer-sdk/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/renderer/sdk/CanvasModifiers.kt)
+is the parser; an object it cannot read is ignored, not an error):
+
+| `type` | Fields |
+| --- | --- |
+| `size` | `widthDp`, `heightDp` (either may be absent) |
+| `width` / `height` | `widthDp` / `heightDp` |
+| `widthIn` / `heightIn` | `minDp`, `maxDp` |
+| `padding` | `startDp`, `topDp`, `endDp`, `bottomDp` |
+| `weight` | `weight` (> 0), optional `fill` — `{"type":"weight","weight":1.0}` |
+| `background` | `color` as a typed value (`{"type":"color","value":"#FF…"}` or a `colorToken`), optional `shape` |
+| `border` | `widthDp`, `color`, optional `shape` |
+| `clip` | `shape` |
+| `align` / `alignHorizontal` / `alignVertical` | `alignment` |
+| `offset` | `xDp`, `yDp` |
+| `alpha` / `rotate` / `scale` / `zIndex` | `alpha` / `degrees` / `scaleX` + `scaleY` / `zIndex` |
+
+A `shape` is a named shape or a corner radius in dp written as a string, `"32"`.
+
+Three things the container does not do, which surprise people building a widget for several
+screens:
+
+- **The content box is fixed by the container size.** Small is 200×60dp and Large 200×108dp of
+  content; a `size` modifier on the container is refused
+  (`UNKNOWN_MODIFIER: modifier size is not declared by remote-m3/widget-container-small`).
+  Padding and corner radius come from the host shape, not the design — switch the host shape to see
+  them change — and they surround that box rather than shrinking it; only a design saved while they
+  were authorable still carries an override. That is the host's model — the launcher picks the
+  container — so the container cannot stand in for other screen-size footprints.
+- **For a per-footprint visual check**, build a `layout/box` root with `size`, `background` and
+  `padding` modifiers: it renders at exactly that frame. It is not a widget container, so its
+  export is not a `GlanceWearWidget` — use it for comparison only.
+- **There is no icon component** in `remote-m3` yet. Use an `m3/text` label in a button where an
+  icon would go. A real picture is an `asset/image`, which exports as a `RemoteImage`
+  ([above](#a-picture-in-the-content-slot)).
+
+A widget template keeps the `environment` it is created with, and that is the **canvas**, not the
+widget: a PNG export of a widget design comes back at the canvas size (1280×800 in #492's case) with
+the widget centred in it.
 
 ## Authoring a Wear screen
 
