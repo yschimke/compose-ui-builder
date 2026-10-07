@@ -28,7 +28,8 @@ class RemotePageIndicatorExportTest {
               "slots":{"content":["dots"]}},
             "dots":{"id":"dots","componentId":"$REMOTE_HORIZONTAL_PAGE_INDICATOR_ID",
               "properties":{"pageCount":{"type":"int","value":5},"selectedPage":$selectedPage,
-                "selectedColor":{"type":"colorToken","value":"primary"}}}}}
+                "selectedColor":{"type":"colorToken","value":"primary"},
+                "backgroundColor":{"type":"color","value":"#80000000"}}}}}
           """
         ) as JsonObject
       )
@@ -45,6 +46,7 @@ class RemotePageIndicatorExportTest {
     assertContains(source, "RemoteHorizontalPageIndicator(")
     assertContains(source, "rememberRemotePageIndicatorState(pageCount = 5, selectedPage = page)")
     assertContains(source, "selectedColor = RemoteMaterialTheme.colorScheme.primary")
+    assertContains(source, "backgroundColor = Color(0x80000000).rc")
     assertContains(source, "val page = rememberMutableRemoteInt(1)")
     assertContains(
       source,

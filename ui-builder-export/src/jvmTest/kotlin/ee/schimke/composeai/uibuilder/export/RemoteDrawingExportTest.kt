@@ -74,6 +74,55 @@ class RemoteDrawingExportTest {
   }
 
   @Test
+  fun `text sizes are sp and transparent is a literal`() {
+    fun text(id: String, properties: String) =
+      Json.decodeFromString<UiBuilderNode>(
+        """{"id":"$id","componentId":"draw/text","properties":$properties}"""
+      )
+    val canvas = document.nodes.getValue("canvas")
+    val labelled =
+      document.copy(
+        nodes =
+          document.nodes +
+            ("whole" to
+              text(
+                "whole",
+                """{"text":{"type":"string","value":"A"},
+                  "textSizeSp":{"type":"float","value":16},
+                  "color":{"type":"colorToken","value":"transparent"}}""",
+              )) +
+            ("half" to
+              text(
+                "half",
+                """{"text":{"type":"string","value":"B"},
+                  "textSizeSp":{"type":"float","value":14.5}}""",
+              )) +
+            ("live" to
+              text(
+                "live",
+                """{"text":{"type":"string","value":"C"},
+                  "textSizeSp":{"type":"expr","op":"mul","args":[
+                    {"type":"state","variable":"progress"},{"type":"int","value":20}]}}""",
+              )) +
+            ("canvas" to
+              canvas.copy(
+                slots =
+                  mapOf("ops" to canvas.slots.getValue("ops") + listOf("whole", "half", "live"))
+              ))
+      )
+
+    val source =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(WearWidgetCodeExporter.export(labelled))
+        .source
+
+    assertContains(source, "textSize = 16.rsp.toPx()")
+    assertContains(source, "textSize = 14.5f.sp.asRemoteTextUnit().toPx()")
+    assertContains(source, "textSize = ((progress * 20.rf)) * 1.rsp.toPx()")
+    assertContains(source, "color = Color(0x00000000).rc")
+    assertTrue("colorScheme.transparent" !in source, source)
+  }
+
+  @Test
   fun `an operation outside a canvas is refused by name`() {
     val stray =
       document.copy(

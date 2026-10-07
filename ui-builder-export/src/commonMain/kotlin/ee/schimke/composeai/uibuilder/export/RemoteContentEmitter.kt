@@ -1692,7 +1692,8 @@ internal class RemoteContentEmitter(
         ")"
     val arguments = mutableListOf("state = $state")
     node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
-    listOf("selectedColor", "unselectedColor").forEach { name ->
+    // Every colour the published signature takes, so an authored one is never silently dropped.
+    listOf("selectedColor", "unselectedColor", "backgroundColor").forEach { name ->
       pageIndicatorColor(node, name)?.let { arguments += "$name = $it" }
     }
     return (pad + call(symbol, arguments, pad)).split("\n")
@@ -1703,7 +1704,10 @@ internal class RemoteContentEmitter(
     if (authored.isDrawComputed())
       return computed(authored, UiValueKind.COLOR, "nodes.${node.id}.$name")
     val value = authored.stringOrNull()?.takeIf { it.isNotEmpty() } ?: return null
-    return if (value.startsWith("#")) {
+    return if (value == TRANSPARENT_TOKEN) {
+      usesColorLiteral = true
+      "Color(0x00000000).rc"
+    } else if (value.startsWith("#")) {
       usesColorLiteral = true
       "${value.argbLiteral()}.rc"
     } else {
@@ -1963,7 +1967,7 @@ internal class RemoteContentEmitter(
       lines += "strokeCap = StrokeCap.${cap.replaceFirstChar { it.uppercaseChar() }}"
     }
     if (operation.componentId == "draw/text") {
-      lines += "textSize = ${node.drawPx("textSizeSp") ?: 14f.dpLiteral() + ".toPx()"}"
+      lines += "textSize = ${node.drawSpPx("textSizeSp") ?: 14f.spLiteral() + ".toPx()"}"
     }
     return "RemotePaint {\n" + lines.joinToString("\n") { "$pad$INDENT$it" } + "\n$pad}"
   }
@@ -1979,6 +1983,10 @@ internal class RemoteContentEmitter(
         authored?.stringOrNull()?.startsWith("#") == true -> {
           usesColorLiteral = true
           "${authored.stringOrNull()!!.argbLiteral()}.rc"
+        }
+        authored?.stringOrNull() == TRANSPARENT_TOKEN -> {
+          usesColorLiteral = true
+          "Color(0x00000000).rc"
         }
         !authored?.stringOrNull().isNullOrEmpty() -> {
           usesTheme = true
@@ -2010,6 +2018,21 @@ internal class RemoteContentEmitter(
       return "$expression.asRemoteDp().toPx()"
     }
     return value.numberOrNull()?.let { "${it.dpLiteral()}.toPx()" }
+  }
+
+  /**
+   * A text size authored in sp, in pixels as the player sizes text: a literal through
+   * `RemoteTextUnit.toPx()`, which applies the device's (non-linear) font scale. A computed size
+   * cannot become a `RemoteTextUnit` (its constructor is internal), so it is scaled by one sp's
+   * pixels: the font scale applied linearly.
+   */
+  private fun UiBuilderNode.drawSpPx(name: String): String? {
+    val value = properties[name] ?: return null
+    if (value.isDrawComputed()) {
+      val expression = computed(value, UiValueKind.FLOAT, "nodes.$id.$name") ?: return null
+      return "($expression) * ${1f.spLiteral()}.toPx()"
+    }
+    return value.numberOrNull()?.let { "${it.spLiteral()}.toPx()" }
   }
 
   /** A unitless float property — an angle, a scale, an alpha — or null when absent. */
@@ -3674,6 +3697,9 @@ private const val REMOTE_BOOLEAN_FQN =
 private const val REMOTE_FLOAT_FQN = "androidx.compose.remote.creation.compose.state.RemoteFloat"
 private const val REMOTE_INT_FQN = "androidx.compose.remote.creation.compose.state.RemoteInt"
 private const val REMOTE_STATE_PACKAGE = "androidx.compose.remote.creation.compose.state"
+
+/** The colour editor's `transparent`: not a Material scheme role, so written as a literal. */
+private const val TRANSPARENT_TOKEN = "transparent"
 
 /** The events a layout node takes: `RemoteModifier.combinedClickable`'s three. */
 internal val LAYOUT_EVENTS: List<String> = listOf("click", "longClick", "doubleClick")

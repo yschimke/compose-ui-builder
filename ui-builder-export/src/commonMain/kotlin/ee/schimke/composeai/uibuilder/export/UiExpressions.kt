@@ -563,7 +563,7 @@ object UiExpressions {
       Op.MUL -> num(d(0) * d(1))
       Op.DIV ->
         if (integral) (if (d(1) == 0.0) 0 else (d(0) / d(1)).toInt())
-        else if (d(1) == 0.0) 0.0 else d(0) / d(1)
+        else num(if (d(1) == 0.0) 0.0 else d(0) / d(1))
       Op.MOD -> if (d(1) == 0.0) num(0.0) else num(d(0) % d(1))
       Op.NEG -> num(-d(0))
       Op.MIN -> num(minOf(d(0), d(1)))
@@ -662,6 +662,13 @@ enum class UiValueKind(val wire: String) {
 }
 
 private object FormulaPrinter {
+  private const val UNARY = 7
+  private const val POWER = 8
+
+  /** A signed operand of a power is bracketed: `(-2) ^ 2` is not `-2 ^ 2`. */
+  private fun String.signed(parent: Int): String =
+    if (startsWith("-") && parent > UNARY) "($this)" else this
+
   private val INFIX_PRECEDENCE =
     mapOf(
       "or" to 1,
@@ -684,8 +691,13 @@ private object FormulaPrinter {
     val type = (obj["type"] as? JsonPrimitive)?.contentOrNull
     val primitive = obj["value"] as? JsonPrimitive
     return when (type) {
-      "float" -> primitive?.content?.let { if ('.' in it || 'e' in it) it else "$it.0" }.orEmpty()
-      "int",
+      "float" ->
+        primitive
+          ?.content
+          ?.let { if ('.' in it || 'e' in it) it else "$it.0" }
+          .orEmpty()
+          .signed(parent)
+      "int" -> primitive?.content.orEmpty().signed(parent)
       "bool" -> primitive?.content.orEmpty()
       "string" ->
         "\"" + primitive?.content.orEmpty().replace("\\", "\\\\").replace("\"", "\\\"") + "\""
@@ -703,8 +715,13 @@ private object FormulaPrinter {
             val text = "${print(args[0], precedence)} $symbol ${print(args[1], precedence + 1)}"
             if (precedence < parent) "($text)" else text
           }
-          op == "neg" -> "-" + print(args.firstOrNull() ?: JsonNull, 7)
-          op == "not" -> "!" + print(args.firstOrNull() ?: JsonNull, 7)
+          // Powers read as maths: right-associative, tighter than a sign, so `-x ^ 2` is -(x²).
+          op == "pow" && args.size == 2 -> {
+            val text = "${print(args[0], POWER + 1)} ^ ${print(args[1], POWER)}"
+            if (POWER < parent) "($text)" else text
+          }
+          op == "neg" -> ("-" + print(args.firstOrNull() ?: JsonNull, UNARY)).signed(parent)
+          op == "not" -> "!" + print(args.firstOrNull() ?: JsonNull, UNARY)
           else -> "$op(${args.joinToString(", ") { print(it) }})"
         }
       }
@@ -785,8 +802,14 @@ private class FormulaParser(private val text: String, private val stateNames: Se
         else call("neg", operand)
       }
       accept("!") -> call("not", unary())
-      else -> primary()
+      else -> power()
     }
+
+  /** `a ^ b`, right-associative and above a sign: `-x ^ 2` is `-(x ^ 2)`, `2 ^ -1` a half. */
+  private fun power(): JsonObject {
+    val base = primary()
+    return if (accept("^")) call("pow", base, unary()) else base
+  }
 
   private fun literal(type: String, value: JsonPrimitive): JsonObject =
     JsonObject(mapOf("type" to JsonPrimitive(type), "value" to value))
