@@ -179,9 +179,10 @@ object LauncherWidgetCodeExporter {
     return Result.Emitted(source)
   }
 
-  private fun UiBuilderDocument.environmentDp(key: String): Int? = runCatching {
-    environment[key]?.jsonPrimitive?.floatOrNull
-  }.getOrNull()?.toInt()
+  private fun UiBuilderDocument.environmentDp(key: String): Int? {
+    val value = runCatching { environment[key]?.jsonPrimitive?.floatOrNull }.getOrNull()
+    return value?.toInt()
+  }
 
   private const val INDENT = "    "
 }
