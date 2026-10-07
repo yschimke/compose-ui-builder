@@ -120,6 +120,18 @@ tasks.withType<Test>().configureEach {
     )
     .withPropertyName("uiBuilderGoldenFixtures")
     .withPathSensitivity(PathSensitivity.RELATIVE)
+  // `DecoderShapeFixtureTest` reads and, when asked, rewrites the readiness gate's shape table at
+  // the repository root, for the same reason as the goldens above: without it a change to the table
+  // alone leaves the task up to date and the assertion never runs. The update switch is an input
+  // too, so asking for a rewrite actually re-runs the test rather than restoring a cached pass.
+  inputs
+    .file(rootProject.file(".github/scripts/decoder-shapes.json"))
+    .withPropertyName("decoderShapes")
+    .withPathSensitivity(PathSensitivity.RELATIVE)
+  inputs.property(
+    "updateDecoderShapes",
+    providers.environmentVariable("UPDATE_DECODER_SHAPES").orElse(""),
+  )
 }
 
 abstract class CheckUiBuilderRuntimeBoundary : DefaultTask() {
