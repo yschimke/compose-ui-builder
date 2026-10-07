@@ -1,6 +1,8 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import ee.schimke.composeai.uibuilder.export.UiRemoteTheme
+import ee.schimke.composeai.uibuilder.export.UiTimeText
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.SlotCapabilityV1
@@ -84,6 +86,55 @@ internal fun remoteDrawComponent(
       modifiers = true,
     )
   }
+  if (componentId == UiTimeText.ID) {
+    return derived(
+      displayName = "Time text",
+      notes =
+        "RemoteTimeText: the device's time curved along the top of its bounds, with optional " +
+          "text either side. The canvas shows the design's preview time.",
+      traits = listOf("RemoteAuthorable"),
+      slots = emptyList(),
+      // `textSizeSp` is a literal: `RemoteTextUnit` has no public constructor, so a bound or
+      // computed size has no spelling in the export, which refuses one.
+      properties =
+        UiTimeText.PROPERTIES.map(::drawProperty).map { property ->
+          if (property.name != "textSizeSp") property
+          else property.newBuilder().also { it.jsonType = JsonPrimitive("number") }.build()
+        },
+      modifiers = true,
+    )
+  }
+  if (componentId == UiRemoteTheme.ID) {
+    // The box's own slot, holding one child: a theme wraps a subtree, it does not lay one out.
+    val themed =
+      box.slots
+        .single()
+        .newBuilder()
+        .also {
+          it.name = UiRemoteTheme.SLOT
+          it.cardinality =
+            box.slots
+              .single()
+              .cardinality
+              .newBuilder()
+              .also { cardinality ->
+                cardinality.min = 0
+                cardinality.max = 1
+              }
+              .build()
+        }
+        .build()
+    return derived(
+      displayName = "Theme",
+      notes =
+        "RemoteMaterialTheme: re-skins the subtree it holds with the colour roles it overrides, " +
+          "reading the enclosing theme for the rest.",
+      traits = listOf("RemoteAuthorable"),
+      slots = listOf(themed),
+      properties = UiRemoteTheme.PROPERTIES.map(::drawProperty),
+      modifiers = false,
+    )
+  }
   val operation = UiDrawing.BY_ID[componentId] ?: return null
   return derived(
     displayName = operation.displayName,
@@ -118,3 +169,8 @@ private fun drawProperty(property: UiDrawing.Property): PropertyCapabilityV1 {
 
 /** The drawing ids in palette order, the canvas first. */
 internal val REMOTE_DRAW_IDS: List<String> = UiDrawing.COMPONENT_IDS
+
+/**
+ * Remote Material 3 components declared by hand because the embedded record has no row for them.
+ */
+internal val REMOTE_HAND_DECLARED_IDS: List<String> = listOf(UiTimeText.ID, UiRemoteTheme.ID)

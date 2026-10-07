@@ -53,9 +53,11 @@ class RemoteCallModifierExportTest {
     assertEquals("1.0.0-alpha20", RemoteModifierVocabulary.version)
     val names = RemoteModifierVocabulary.modifiers.keys
     assertTrue(names.containsAll(listOf("border", "visibility", "basicMarquee", "defaultMinSize")))
-    // Behaviour is event bindings, and lambda-only calls cannot be a document value.
+    // Behaviour is event bindings, and a lambda-only call cannot be a document value.
     assertTrue("clickable" !in names && "combinedClickable" !in names, names.toString())
-    assertTrue("graphicsLayer" !in names && "drawWithContent" !in names, names.toString())
+    assertTrue("drawWithContent" !in names, names.toString())
+    // `graphicsLayer`'s value overload, once a comment in its parameter list stopped hiding it.
+    assertTrue("graphicsLayer" in names, names.toString())
   }
 
   @Test

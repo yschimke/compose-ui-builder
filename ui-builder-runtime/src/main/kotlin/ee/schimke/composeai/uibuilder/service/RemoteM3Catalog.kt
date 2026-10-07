@@ -4,6 +4,8 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.discovery.TargetParameter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.REMOTE_CONTAINER_IMAGE_PROPERTY
+import ee.schimke.composeai.uibuilder.export.REMOTE_CONTAINER_PAINTER_IDS
 import ee.schimke.composeai.uibuilder.export.REMOTE_HORIZONTAL_PAGE_INDICATOR_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_DEFAULT_KEY
@@ -11,6 +13,7 @@ import ee.schimke.composeai.uibuilder.export.REMOTE_TEXT_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_VERTICAL_PAGE_INDICATOR_ID
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import ee.schimke.composeai.uibuilder.export.UiRemoteTheme
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
@@ -265,7 +268,15 @@ internal fun remoteM3ComponentMenu(base: JsonObject): JsonObject =
     .fold(
       REMOTE_DRAW_IDS.fold(
         REMOTE_ONLY_LAYOUT_IDS.fold(
-          JsonObject(base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content")))
+          REMOTE_HAND_DECLARED_IDS.fold(
+            JsonObject(
+              base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content"))
+            )
+          ) { semantics, id ->
+            // A theme wraps a subtree, so it shelves with the layouts; the rest are content.
+            val shelf = if (id == UiRemoteTheme.ID) "Layout" else "Content"
+            JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, shelf)))
+          }
         ) { semantics, id ->
           JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, "Layout")))
         }
@@ -393,6 +404,19 @@ private fun statedRemoteProperties(
   iconKeys: List<JsonElement>?,
 ): List<PropertyCapabilityV1> =
   when (componentId) {
+    // The picture behind a button or card: `containerPainter`, which the record's overload lacks.
+    in REMOTE_CONTAINER_PAINTER_IDS ->
+      listOf(
+        PropertyCapabilityV1.Builder(REMOTE_CONTAINER_IMAGE_PROPERTY, JsonPrimitive("string"))
+          .also {
+            it.required = false
+            it.notes =
+              "The key of an asset to fill the container with, as `asset/image`'s `assetKey`: " +
+                "written as the `containerPainter` overload, " +
+                "`containerPainter = painterRemoteImageBitmap(…)`. A plain container when absent."
+          }
+          .build()
+      )
     // `imageVector` is an `ImageVector`, which the derivation above cannot carry, so without this
     // the palette offered an icon that could only ever draw its default. Named by the same Material
     // icon key `m3/icon` takes, and taken from that component's own list rather than restated.
@@ -642,6 +666,7 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "shape/linear-gradient",
       "asset/image",
       *REMOTE_DRAW_IDS.toTypedArray(),
+      *REMOTE_HAND_DECLARED_IDS.toTypedArray(),
     )
   return base
     .newBuilder()

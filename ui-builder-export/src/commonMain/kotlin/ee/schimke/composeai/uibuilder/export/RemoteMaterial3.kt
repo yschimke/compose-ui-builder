@@ -156,6 +156,16 @@ public object RemoteMaterial3 {
         canvasDefaults = mapOf("variant" to wrapped("enum", "filled")),
       ),
       component(
+        id = REMOTE_LABEL_BUTTON_ID,
+        record = LABEL_BUTTON_RECORD_ID,
+        displayName = "Label button",
+        group = "Buttons",
+        canvas = "wear-m3/button",
+        canvasProperties = emptyMap(),
+        canvasSlots = mapOf("content" to "label"),
+        canvasDefaults = mapOf("variant" to wrapped("enum", "filled")),
+      ),
+      component(
         id = "remote-m3/remote-compact-button",
         record =
           "remote-catalog/androidx.wear.compose.remote.material3.RemoteButtonKt.RemoteCompactButton",
@@ -351,7 +361,9 @@ public object RemoteMaterial3 {
    */
   public val records: Map<String, ComponentRecord> by
     lazy(LazyThreadSafetyMode.PUBLICATION) {
-      val byCanonicalId = embeddedRecord?.components.orEmpty().associateBy { it.canonicalId }
+      val embedded = embeddedRecord?.components.orEmpty()
+      val byCanonicalId =
+        (embedded + listOfNotNull(labelButtonRecord(embedded))).associateBy { it.canonicalId }
       components
         .mapNotNull { component ->
           byCanonicalId[component.recordId]?.let {
@@ -406,6 +418,74 @@ public object RemoteMaterial3 {
       )
     )
 }
+
+/**
+ * `RemoteButton`'s label overload — `label`, `secondaryLabel` and `icon` slots in place of one
+ * `content` row — the Wear button shape most designs want.
+ *
+ * The record holds one overload per symbol, and for `RemoteButton` it is the `content` one, so this
+ * one is assembled from it: the button's own parameters, with the three slots as
+ * `RemoteCheckboxButton` declares them (the same types: `label` and `secondaryLabel` row-scoped,
+ * `icon` plain and optional). `label` is placed before the defaulted parameters rather than last,
+ * so the emitter names it instead of writing a trailing lambda: `RemoteButton(onClick = …) { … }`
+ * would match both overloads, and a named `label` matches only this one.
+ */
+public const val REMOTE_LABEL_BUTTON_ID: String = "remote-m3/remote-label-button"
+
+/**
+ * Rows this table offers that the published catalog's policy does not have yet. The published
+ * record holds one overload per symbol, so an overload assembled here has no row there until the
+ * catalog adds one; a design using it opens only against this built-in catalog, as one using
+ * [UiTimeText] or [UiRemoteTheme] does.
+ */
+internal val UNPUBLISHED_REMOTE_M3_IDS: Set<String> = setOf(REMOTE_LABEL_BUTTON_ID)
+
+private const val LABEL_BUTTON_RECORD_ID: String =
+  "remote-catalog/androidx.wear.compose.remote.material3.RemoteButtonKt.RemoteButton#label"
+
+private fun labelButtonRecord(embedded: List<ComponentRecord>): ComponentRecord? {
+  val button =
+    embedded.firstOrNull {
+      it.canonicalId ==
+        "remote-catalog/androidx.wear.compose.remote.material3.RemoteButtonKt.RemoteButton"
+    } ?: return null
+  val slots =
+    embedded
+      .firstOrNull {
+        it.canonicalId ==
+          "remote-catalog/androidx.wear.compose.remote.material3.RemoteCheckboxButtonKt.RemoteCheckboxButton"
+      }
+      ?.parameters
+      ?.associateBy { it.name } ?: return null
+  val own = button.parameters.associateBy { it.name }
+  val order =
+    listOf(
+      own["onClick"],
+      own["modifier"],
+      slots["label"],
+      slots["secondaryLabel"],
+      slots["icon"],
+      own["enabled"],
+      own["colors"],
+      own["border"],
+      own["borderColor"],
+      own["shape"],
+      own["contentPadding"],
+    )
+  if (order.any { it == null }) return null
+  return button.copy(canonicalId = LABEL_BUTTON_RECORD_ID, parameters = order.filterNotNull())
+}
+
+/**
+ * The asset whose picture fills a button's or card's container: `RemoteButton`'s and `RemoteCard`'s
+ * `containerPainter` overloads, written `painterRemoteImageBitmap(…)`. The record holds the
+ * overload without one, so this is a stated property rather than a derived parameter.
+ */
+public const val REMOTE_CONTAINER_IMAGE_PROPERTY: String = "containerImageKey"
+
+/** The components [REMOTE_CONTAINER_IMAGE_PROPERTY] is offered on. */
+public val REMOTE_CONTAINER_PAINTER_IDS: Set<String> =
+  setOf("remote-m3/remote-button", REMOTE_LABEL_BUTTON_ID, "remote-m3/remote-card")
 
 /** `RemoteIcon`, whose `imageVector` a design names by Material icon key. */
 public const val REMOTE_ICON_COMPONENT_ID: String = "remote-m3/remote-icon"

@@ -87,7 +87,10 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     // every one of them.
     RemoteMaterial3.components.map { it.componentId } +
     // The drawing vocabulary: a canvas and the operations its `ops` slot holds.
-    UiDrawing.COMPONENT_IDS
+    UiDrawing.COMPONENT_IDS +
+    // Remote Material 3 components the record has no row for, written by hand.
+    UiTimeText.ID +
+    UiRemoteTheme.ID
 
 /**
  * Which widget file a [RemoteContentEmitter] body is written into, which decides its imports.
@@ -483,6 +486,8 @@ internal class RemoteContentEmitter(
           )
       "layout/for-each" -> repetition(node, depth)
       UiDrawing.CANVAS -> drawCanvas(node, depth)
+      UiTimeText.ID -> timeText(node, pad)?.split("\n") ?: emptyList()
+      UiRemoteTheme.ID -> materialTheme(node, depth)
       in UiDrawing.BY_ID ->
         emptyList<String>().also {
           refusals +=
@@ -991,6 +996,19 @@ internal class RemoteContentEmitter(
       arguments += "${parameter.name} = $expression"
     }
 
+    // The painter overload: a picture behind the button or card, chosen by naming its parameter.
+    if (node.componentId in REMOTE_CONTAINER_PAINTER_IDS) {
+      node.properties[REMOTE_CONTAINER_IMAGE_PROPERTY]
+        ?.stringOrNull()
+        ?.takeIf { it.isNotBlank() }
+        ?.let { key ->
+          val bitmap =
+            imageBitmap(node, key, "the container image of `${node.id}`") ?: return emptyList()
+          usedComponentImports +=
+            "androidx.compose.remote.creation.compose.painter.painterRemoteImageBitmap"
+          arguments += "containerPainter = painterRemoteImageBitmap($bitmap)"
+        }
+    }
     usedComponentImports += record.symbol.callable
     val symbol = record.symbol.name
     if (blocks.isEmpty()) return (pad + call(symbol, arguments, pad)).split("\n")
@@ -1713,6 +1731,64 @@ internal class RemoteContentEmitter(
     return (pad + call(symbol, arguments, pad)).split("\n")
   }
 
+  /**
+   * `RemoteTimeText(…)`: the time is the player's own, so only the text beside it, its size and its
+   * colour are written, each left to the component's default when the design does not state it.
+   */
+  private fun timeText(node: UiBuilderNode, pad: String): String? {
+    usedComponentImports += "androidx.wear.compose.remote.material3.RemoteTimeText"
+    val arguments = mutableListOf<String>()
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
+    listOf("leadingText", "trailingText", "separator").forEach { name ->
+      val authored = node.properties[name] ?: return@forEach
+      val value =
+        if (authored.isDrawComputed())
+          computed(authored, UiValueKind.STRING, "nodes.${node.id}.$name") ?: return null
+        else {
+          usesRemoteString = true
+          "\"${authored.stringOrNull().orEmpty().escaped()}\".rs"
+        }
+      arguments += "$name = $value"
+    }
+    node.properties["textSizeSp"]?.let { authored ->
+      if (authored.isDrawComputed()) {
+        // `RemoteTextUnit`'s constructor is internal: a computed size has no spelling here.
+        refusals += "nodes.${node.id}.textSizeSp: a time text's size is a literal"
+        return null
+      }
+      authored.numberOrNull()?.let { arguments += "fontSize = ${it.spLiteral()}" }
+    }
+    pageIndicatorColor(node, "color")?.let { arguments += "color = $it" }
+    return pad + call("RemoteTimeText", arguments, pad)
+  }
+
+  /**
+   * `RemoteMaterialTheme(colorScheme = RemoteMaterialTheme.colorScheme.copy(…)) { … }` around the
+   * themed child, with only the roles the design overrides. A role named as a token reads the
+   * scheme around it, as the canvas and the Wear screen's theme do. With no override the wrapper
+   * would change nothing, so the child is written alone.
+   */
+  private fun materialTheme(node: UiBuilderNode, depth: Int): List<String> {
+    val pad = INDENT.repeat(depth)
+    val roles =
+      WearScreenTheme.ROLES.mapNotNull { role ->
+        pageIndicatorColor(node, WearScreenTheme.property(role))?.let { "$role = $it" }
+      }
+    val children = node.slots[UiRemoteTheme.SLOT].orEmpty()
+    if (roles.isEmpty()) return children.flatMap { emit(it, depth) }
+    usesTheme = true
+    val scheme = call("RemoteMaterialTheme.colorScheme.copy", roles, "$pad$INDENT")
+    val head =
+      call("RemoteMaterialTheme", listOf("colorScheme = $scheme"), pad, OPENING_BRACE.length) +
+        OPENING_BRACE
+    // Not a layout: `weight` and the other scoped modifiers have no receiver inside it.
+    val enclosing = scope
+    scope = "RemoteMaterialTheme"
+    val body = children.flatMap { emit(it, depth + 1) }
+    scope = enclosing
+    return (pad + head).split("\n") + body + listOf("$pad}")
+  }
+
   private fun pageIndicatorColor(node: UiBuilderNode, name: String): String? {
     val authored = node.properties[name] ?: return null
     if (authored.isDrawComputed())
@@ -2211,8 +2287,15 @@ internal class RemoteContentEmitter(
     usedComponentImports += "androidx.compose.remote.creation.compose.shaders.$factory"
     usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteSize"
     val to = drawColor(node, hoisted, "gradientColor", transparentWhenAbsent = true)
+    // A path is drawn under a viewport-to-canvas scale, which scales the shader too, so its
+    // gradient spans the viewport rather than the canvas.
+    val size =
+      if (node.componentId == "draw/path" || node.componentId == UiDrawing.MORPH)
+        "${node.drawFloat("viewportWidth") ?: 24f.floatLiteral()}, " +
+          (node.drawFloat("viewportHeight") ?: 24f.floatLiteral())
+      else "${extent.width}, ${extent.height}"
     return "with(RemoteBrush.$factory(listOf($from, $to))) { " +
-      "applyTo(this@RemotePaint, RemoteSize(${extent.width}, ${extent.height})) }"
+      "applyTo(this@RemotePaint, RemoteSize($size)) }"
   }
 
   /** A draw colour: a literal, a theme role read above the canvas, or a computed colour. */
@@ -2248,7 +2331,8 @@ internal class RemoteContentEmitter(
           usesColorLiteral = true
           if (transparentWhenAbsent) "Color(0x00000000).rc" else "Color(0xFF000000).rc"
         }
-    return if (alpha == null) base else "$base.copy(alpha = $alpha)"
+    // Multiplied, as the canvas does: replacing it would turn a transparent end opaque.
+    return if (alpha == null) base else "$base.let { it.copy(alpha = it.alpha * $alpha) }"
   }
 
   private fun UiBuilderNode.has(name: String): Boolean = name in properties
@@ -3047,14 +3131,12 @@ internal class RemoteContentEmitter(
     return call("RemoteIcon", arguments, pad)
   }
 
-  private fun image(node: UiBuilderNode, pad: String): String? {
-    val key = node.properties["assetKey"]?.stringOrNull().orEmpty()
-    if (key.isBlank()) {
-      refusals +=
-        "the image `${node.id}` names no asset, and a picture with no key is one nothing can " +
-          "resolve — pick an asset for it in the inspector"
-      return null
-    }
+  /**
+   * The `RemoteImageBitmap` for asset [key], as a captured parameter or — on the native lane — the
+   * bytes themselves. Null, with a refusal naming [what], when the lane needs bytes this host does
+   * not have.
+   */
+  private fun imageBitmap(node: UiBuilderNode, key: String, what: String): String? {
     // The native preview lane wants the bytes here rather than a parameter — see
     // [inlineContentImages]. A key with no bytes on this host is refused by name for the same
     // reason a background one is: the lane has no argument to pass and a picture nothing can
@@ -3065,7 +3147,7 @@ internal class RemoteContentEmitter(
         when (val encoded = assets.base64(key)) {
           null -> {
             refusals +=
-              "the image `${node.id}` draws the asset `$key`, whose bytes this host could not " +
+              "$what draws the asset `$key`, whose bytes this host could not " +
                 "read — a native render carries the picture inside the document, so there is " +
                 "nothing to draw it from"
             return null
@@ -3080,6 +3162,18 @@ internal class RemoteContentEmitter(
       ) {
         bitmap
       }
+    return argument
+  }
+
+  private fun image(node: UiBuilderNode, pad: String): String? {
+    val key = node.properties["assetKey"]?.stringOrNull().orEmpty()
+    if (key.isBlank()) {
+      refusals +=
+        "the image `${node.id}` names no asset, and a picture with no key is one nothing can " +
+          "resolve — pick an asset for it in the inspector"
+      return null
+    }
+    val argument = imageBitmap(node, key, "the image `${node.id}`") ?: return null
     val arguments = mutableListOf("remoteBitmap = $argument")
     val description = node.properties["contentDescription"]?.stringOrNull().orEmpty()
     arguments +=
@@ -3685,12 +3779,50 @@ internal class RemoteContentEmitter(
     val arguments =
       overload.parameters.mapNotNull { parameter ->
         val value = args[parameter.name] ?: return@mapNotNull null
-        "${parameter.name} = " +
+        parameter.name to
           (remoteCallArgument(parameter, value, "$where.$name.${parameter.name}")
             ?: return emptyList())
       }
+    if (name == RemoteModifierVocabulary.SEMANTICS) return semanticsCall(arguments.toMap(), where)
     usedComponentImports += "${entry.`package`}.$name"
-    return listOf("$name(${arguments.joinToString()})")
+    return listOf("$name(${arguments.joinToString { (key, value) -> "$key = $value" }})")
+  }
+
+  /**
+   * `semantics(mergeDescendants) { … }` or `clearAndSetSemantics { … }`, with each value the design
+   * states set inside the receiver lambda, as the released API takes them.
+   */
+  private fun semanticsCall(arguments: Map<String, String>, where: String): List<String> {
+    val modifierPackage = "androidx.compose.remote.creation.compose.modifier"
+    val body =
+      listOf("contentDescription", "stateDescription", "role", "enabled").mapNotNull { key ->
+        val value = arguments[key] ?: return@mapNotNull null
+        usedComponentImports += "$modifierPackage.$key"
+        if (key == "role") {
+          val role = value.removeSurrounding("\"")
+          if (role !in RemoteModifierVocabulary.ROLES) {
+            refusals +=
+              "$where.semantics.role: `$role` is not one of ${RemoteModifierVocabulary.ROLES}"
+            return emptyList()
+          }
+          usedComponentImports += "androidx.compose.ui.semantics.Role"
+          "role = Role.$role"
+        } else "$key = $value"
+      }
+    val clear = arguments["clear"] == "true"
+    val merge = arguments["mergeDescendants"] == "true"
+    if (clear && merge) {
+      refusals += "$where.semantics: clearing a node's semantics already replaces its children's"
+      return emptyList()
+    }
+    val head =
+      when {
+        clear -> "clearAndSetSemantics"
+        merge -> "semantics(mergeDescendants = true)"
+        else -> "semantics"
+      }
+    usedComponentImports += "$modifierPackage.${if (clear) "clearAndSetSemantics" else "semantics"}"
+    return listOf("$head { ${body.joinToString("; ")} }")
   }
 
   private fun remoteCallArgument(

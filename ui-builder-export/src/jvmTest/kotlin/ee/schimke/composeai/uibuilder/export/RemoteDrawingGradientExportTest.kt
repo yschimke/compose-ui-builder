@@ -62,7 +62,8 @@ class RemoteDrawingGradientExportTest {
     val faded = exported("sweep", extra = ""","alpha":{"type":"float","value":0.5}""")
     assertContains(
       faded,
-      "listOf(drawColor.copy(alpha = 0.5f.rf), Color(0xFF00FF00).rc.copy(alpha = 0.5f.rf))",
+      "listOf(drawColor.let { it.copy(alpha = it.alpha * 0.5f.rf) }, " +
+        "Color(0xFF00FF00).rc.let { it.copy(alpha = it.alpha * 0.5f.rf) })",
     )
 
     val document: UiBuilderDocument =
