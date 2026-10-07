@@ -61,11 +61,21 @@ earlier revision. The shape is `compose-ui-builder/guidelines-result/v1` (`Desig
 | --- | --- |
 | `id` | Stable name; it is the finding's `code`. |
 | `platforms` | `wear`, `glasses`. |
-| `kind` | `structure`: the design tree is enough evidence. `visual`: the model needs a picture. |
+| `kind` | `structure`: the design tree is enough evidence. `visual`: the model needs a picture, and the `check` says which one. |
+
 | `severity` | `warning` or `info`. |
 | `guidance` | The guidance as written at `source`. |
 | `check` | A yes/no question; YES means the design follows the rule. |
 | `source` | The page on developer.android.com, or a `kb://` Android Knowledge Base article. |
+
+### Two pictures for scrolling screens
+
+A Wear screen whose content scrolls is shown to the model twice:
+
+- the **device picture**: the first frame on the round watch, scrolled to the top. Wear hides the edge button here; `ScreenScaffold` reveals it only when the list reaches its end.
+- the **unrolled picture**: the same design on a tall canvas, so the whole list is visible and the edge button is revealed.
+
+A visual rule's `check` names the picture it is judged on. Content running off the bottom of the device picture continues on scroll, so it is not counted as clipping.
 
 The file is copied in two places:
 
