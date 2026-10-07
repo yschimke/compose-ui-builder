@@ -165,33 +165,55 @@ memory). Send its output to a file: through a pipe nothing appears until the end
 MEMORY_RUNS=3 node scripts/ui-builder-web-smoke/memory.mjs ui-builder/build/wasmDist build/web-memory > memory.log
 ```
 
-Medians of three runs after settling, 2026-10-06 (after the emoji-font fix below), Chromium 141
-headless with SwiftShader, from
+Medians of three runs after settling, 2026-10-07 (after the emoji-font and inlining fixes below),
+Chromium 141 headless with SwiftShader, from
 [`evidence/web-memory/memory.json`](evidence/web-memory/memory.json) (runs agreed within ~2%):
 
 | Viewport | Screen | JS heap | Renderer PSS | GPU PSS | Total PSS |
 | --- | --- | ---: | ---: | ---: | ---: |
-| desktop 1400×900 | `about:blank` (floor) | 0.5 MB | 49 MB | 30 MB | 139 MB |
-| desktop | Designs (home) | 24 MB | 197 MB | 81 MB | 343 MB |
-| desktop | Material 3 · Gmail tablet (158 nodes) | 36 MB | 229 MB | 94 MB | 389 MB |
-| desktop | Wear M3 · Google Home (22 nodes) | 29 MB | 206 MB | 98 MB | 370 MB |
-| desktop | RemoteCompose · Weather widget (5 nodes) | 33 MB | 208 MB | 98 MB | 377 MB |
-| desktop | A2UI · reservation (9 nodes) | 21 MB | 191 MB | 91 MB | 348 MB |
-| mobile 412×915 @2.625 | `about:blank` (floor) | 0.5 MB | 49 MB | 25 MB | 136 MB |
-| mobile | Designs (home) | 24 MB | 210 MB | 98 MB | 373 MB |
-| mobile | Material 3 | 29 MB | 220 MB | 118 MB | 404 MB |
-| mobile | Wear M3 | 26 MB | 209 MB | 121 MB | 397 MB |
-| mobile | RemoteCompose | 32 MB | 214 MB | 108 MB | 393 MB |
-| mobile | A2UI | 20 MB | 199 MB | 123 MB | 388 MB |
+| desktop 1400×900 | `about:blank` (floor) | 0.5 MB | 49 MB | 29 MB | 139 MB |
+| desktop | Designs (home) | 24 MB | 196 MB | 81 MB | 344 MB |
+| desktop | Material 3 · Gmail tablet (158 nodes) | 36 MB | 219 MB | 92 MB | 377 MB |
+| desktop | Wear M3 · Google Home (22 nodes) | 28 MB | 206 MB | 98 MB | 370 MB |
+| desktop | RemoteCompose · Weather widget (5 nodes) | 33 MB | 209 MB | 99 MB | 379 MB |
+| desktop | A2UI · reservation (9 nodes) | 21 MB | 188 MB | 89 MB | 344 MB |
+| mobile 412×915 @2.625 | `about:blank` (floor) | 0.5 MB | 49 MB | 26 MB | 136 MB |
+| mobile | Designs (home) | 24 MB | 210 MB | 97 MB | 373 MB |
+| mobile | Material 3 | 29 MB | 217 MB | 118 MB | 400 MB |
+| mobile | Wear M3 | 26 MB | 210 MB | 121 MB | 397 MB |
+| mobile | RemoteCompose | 32 MB | 215 MB | 109 MB | 395 MB |
+| mobile | A2UI | 21 MB | 200 MB | 122 MB | 388 MB |
 
 What it says:
 
 - The editor costs about 150 MB of renderer memory before any design is open: the home screen is
   already 197 MB against a 48 MB blank page. That is the 30 MB `uiBuilder.wasm` and 8.6 MB
   `skiko.wasm` compiled, plus Skia, not designs.
-- An open design adds 5–46 MB total PSS on top of the home screen. Material 3's Gmail tablet
-  peaks at ~500 MB when it becomes ready (JS heap 47 MB) and falls to 389 MB once it settles; the
-  others are 39–45 MB above their settled figure at ready.
+- An open design adds 0–35 MB total PSS on top of the home screen once it settles.
+- Opening one costs more than that for a few seconds, and that peak is V8, not the editor: the
+  memory it holds while TurboFan optimises a hot Wasm function, released when the compile ends.
+  Binaryen inlines a one-caller function whatever its size, so it had folded Material 3's ~100
+  locale tables into one 328 KB `getTranslation` and every icon builder into one 686 KB
+  function. A Material 3 design calls `getTranslation` often enough to be tiered up, and TurboFan
+  held 312 MB for six seconds on it: the renderer peaked at 430–520 MB around 8 s, long after the
+  editor said it was ready. `wasmNoInlinePatterns` in `ui-builder/build.gradle.kts` keeps those
+  tables out of line (`wasm-opt` matches `*`, and the rules must come before the optimisation
+  passes). The longest TurboFan compile on that screen is now 0.3 s holding 86 MB, the renderer
+  peaks at ~312 MB as the design first draws, and the module grows by 25 KB (0.08%). A global cap
+  (`--one-caller-inline-max-function-size`) is no substitute: at 1000 it left the icon lookup whole
+  at 697 KB, and a Material 3 design then peaked at 2.4 GB while V8 compiled it for 12 s.
+- Wear M3 still peaks at ~390 MB at about 2.5 s for the same reason: Wear Material 3's own
+  `<init properties GeneratedResources.kt>` is one 146 KB map literal (6,630 string literals) that
+  V8 optimises even though it runs once, holding 170 MB for ~1.4 s. No pattern splits it; its
+  growth is helpers like `kotlin.to` inlined thousands of times.
+- Two checks keep the inlining fix from regressing. `wasm-functions.mjs` fails when any function
+  in the shipped `uiBuilder.wasm` is over 200 KB (the largest is that 146 KB initialiser); and
+  `MEMORY_MAX_TURBOFAN_ZONE_MB=128` makes this harness launch Chromium with
+  `--trace-wasm-compilation-times` and fail when one TurboFan compile holds more. CI runs both,
+  the second on the Material 3 screen. To name a function the checks report, rebuild with
+  Binaryen's names kept: run `wasm-opt` on `build/compileSync/wasmJs/main/productionExecutable/kotlin/uiBuilder.wasm`
+  with the Kotlin plugin's arguments (`BinaryenConfig`) plus the rules and `-g`; function indices
+  match the shipped module.
 - RemoteCompose used to be the largest settled desktop screen (422 MB) despite five nodes. Its
   text "75° ☀️" has a glyph no bundled font carries, so Compose downloads a Noto Color Emoji slice
   from `fonts.gstatic.com` and installs it in the editor's font resolver. The device previews

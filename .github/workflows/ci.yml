@@ -191,8 +191,23 @@ jobs:
         working-directory: scripts/ui-builder-web-smoke
       - run: npm test
         working-directory: scripts/ui-builder-web-smoke
+      # No function in the shipped module may grow past 200 KB. Binaryen inlined generated tables
+      # (Material 3 locale strings, the icon builders) into single 328 KB and 686 KB functions, and
+      # V8 held 312 MB for six seconds compiling one; `wasmNoInlinePatterns` in
+      # ui-builder/build.gradle.kts keeps them apart and this fails the day one slips back.
+      - run: node wasm-functions.mjs ../../ui-builder/build/wasmDist/uiBuilder.wasm
+        working-directory: scripts/ui-builder-web-smoke
       - run: npx playwright install --with-deps chromium
         working-directory: scripts/ui-builder-web-smoke
+      # The same regression seen from the browser: open a Material 3 design and fail when one Wasm
+      # TurboFan compile holds over 128 MB (86 MB today, 312 MB before the inlining rules).
+      - run: node memory.mjs ../../ui-builder/build/wasmDist ../../build/web-memory
+        working-directory: scripts/ui-builder-web-smoke
+        env:
+          MEMORY_MAX_TURBOFAN_ZONE_MB: '128'
+          MEMORY_SCENARIOS: open-m3-catalog
+          MEMORY_RUNS: '1'
+          MEMORY_VIEWPORT: desktop
       - run: node smoke.mjs ../../ui-builder/build/wasmDist ../../build/web-smoke
         working-directory: scripts/ui-builder-web-smoke
       # The same editor as an MCP App in a fake host: open, no-op, select, save, external edit.
@@ -202,7 +217,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ui-builder-web-smoke
-          path: build/web-smoke
+          path: |
+            build/web-smoke
+            build/web-memory
           if-no-files-found: ignore
       # The landing page's screenshots, from this checkout's editor rather than the last release, so
       # a change to the editor shows what it does to the page (site/README.md). Advisory: a moved
