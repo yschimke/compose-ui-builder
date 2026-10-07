@@ -6,8 +6,8 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Generates the Kotlin a **launcher widget** design becomes: a `RemoteComposeWidget` whose
- * `Content(context, widgetId)` is the design's body, and a `@Preview` at the launcher grid size
- * the design was authored at.
+ * `Content(context, widgetId)` is the design's body, and a `@Preview` at the launcher grid size the
+ * design was authored at.
  *
  * ## Why this is not the Wear widget exporter
  *
@@ -19,8 +19,8 @@ import kotlinx.serialization.json.jsonPrimitive
  * watch host, frames it, and there is no Remote Material 3 to theme it. So the shared part is
  * [RemoteContentEmitter]'s body vocabulary (layouts, modifiers, state, actions, the catalog's own
  * records) written with `remote-creation-compose`'s `RemoteText` ([RemoteTextVocabulary.CREATION]),
- * and everything around the body is this file's. The shape follows AndroidX's own `MyWidget`
- * demo in `compose/remote/integration-tests/player-view-demos`.
+ * and everything around the body is this file's. The shape follows AndroidX's own `MyWidget` demo
+ * in `compose/remote/integration-tests/player-view-demos`.
  *
  * ## The root is erased into `Content`
  *
@@ -32,10 +32,10 @@ import kotlinx.serialization.json.jsonPrimitive
  * ## Refusals are by name
  *
  * The same discipline as every generator here. A node that only `remote-material3` can write — a
- * theme colour or type role, an ambient text style, a Remote Material 3 component — is refused
- * with the reason, because this catalog does not have that library and the source would not
- * compile. Pictures are refused for now: a launcher widget's bitmaps want a decision about where
- * the bytes live that this first version does not make.
+ * theme colour or type role, an ambient text style, a Remote Material 3 component — is refused with
+ * the reason, because this catalog does not have that library and the source would not compile.
+ * Pictures are refused for now: a launcher widget's bitmaps want a decision about where the bytes
+ * live that this first version does not make.
  */
 object LauncherWidgetCodeExporter {
 
@@ -62,8 +62,7 @@ object LauncherWidgetCodeExporter {
     val rootId =
       document.roots.singleOrNull() ?: return Result.Refused(listOf("a widget design has one root"))
     val root =
-      document.nodes[rootId]
-        ?: return Result.Refused(listOf("the root node `$rootId` is missing"))
+      document.nodes[rootId] ?: return Result.Refused(listOf("the root node `$rootId` is missing"))
     if (root.componentId != ROOT) {
       return Result.Refused(
         listOf("the root is `${root.componentId}`, not a launcher widget (`$ROOT`)")
@@ -102,20 +101,24 @@ object LauncherWidgetCodeExporter {
           emitter.imageParameters.joinToString { "`${it.assetKey}`" }.ifEmpty { "the design's" }
     }
     val background =
-      root.properties["background"]?.stringOrNull()?.takeIf { it.isNotEmpty() }?.let { declared ->
-        if (!declared.startsWith("#")) {
-          refusals +=
-            "the launcher widget's background `$declared` is a theme role; a launcher widget " +
-              "has no Remote theme, so write it as a #AARRGGBB literal"
-          null
-        } else "${declared.argbLiteral()}.rc"
-      }
+      root.properties["background"]
+        ?.stringOrNull()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { declared ->
+          if (!declared.startsWith("#")) {
+            refusals +=
+              "the launcher widget's background `$declared` is a theme role; a launcher widget " +
+                "has no Remote theme, so write it as a #AARRGGBB literal"
+            null
+          } else "${declared.argbLiteral()}.rc"
+        }
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
     val widthDp = document.environmentDp("widthDp") ?: LauncherWidgetGrid.DEFAULT.widthDp
     val heightDp = document.environmentDp("heightDp") ?: LauncherWidgetGrid.DEFAULT.heightDp
     // Off the grid is still a widget — a launcher's cells are not the reference ones — so it is
-    // previewed at the size it was drawn at, named by dp rather than by a cell count it does not have.
+    // previewed at the size it was drawn at, named by dp rather than by a cell count it does not
+    // have.
     val size = LauncherWidgetGrid.of(widthDp, heightDp)
     val previewLabel = size?.label ?: "${widthDp}x${heightDp}dp"
     val source = buildString {
@@ -132,9 +135,8 @@ object LauncherWidgetCodeExporter {
             "androidx.compose.remote.creation.compose.layout.RemoteBox",
             "androidx.compose.remote.creation.compose.modifier.RemoteModifier",
             "androidx.compose.remote.creation.compose.modifier.fillMaxSize",
-            "androidx.compose.remote.creation.compose.modifier.background".takeIf {
-              background != null
-            },
+            "androidx.compose.remote.creation.compose.modifier.background"
+              .takeIf { background != null },
             "androidx.compose.remote.creation.compose.state.rc".takeIf { background != null },
             "androidx.compose.ui.graphics.Color".takeIf { background != null },
             "androidx.compose.remote.creation.compose.widgets.RemoteComposeWidget",
@@ -152,8 +154,7 @@ object LauncherWidgetCodeExporter {
       appendLine("$INDENT@Composable")
       appendLine("${INDENT}override fun Content(context: Context, widgetId: Int) {")
       emitter.stateLocals().forEach { appendLine("$INDENT$INDENT$it") }
-      val modifier =
-        "RemoteModifier.fillMaxSize()" + (background?.let { ".background($it)" } ?: "")
+      val modifier = "RemoteModifier.fillMaxSize()" + (background?.let { ".background($it)" } ?: "")
       if (body.isEmpty()) {
         appendLine("$INDENT${INDENT}RemoteBox(modifier = $modifier)")
       } else {
@@ -178,8 +179,9 @@ object LauncherWidgetCodeExporter {
     return Result.Emitted(source)
   }
 
-  private fun UiBuilderDocument.environmentDp(key: String): Int? =
-    runCatching { environment[key]?.jsonPrimitive?.floatOrNull }.getOrNull()?.toInt()
+  private fun UiBuilderDocument.environmentDp(key: String): Int? = runCatching {
+    environment[key]?.jsonPrimitive?.floatOrNull
+  }.getOrNull()?.toInt()
 
   private const val INDENT = "    "
 }
@@ -194,8 +196,8 @@ fun UiBuilderDocument.isLauncherWidget(): Boolean {
  * The launcher home-screen grid a launcher widget is sized in: discrete cells, `3x2`, `2x1`, rather
  * than dp.
  *
- * The dp behind a cell count is the portrait size Android documents for it — `(73n − 16) ×
- * (118m − 16)` dp, measured on a Pixel 4's 5x4 grid
+ * The dp behind a cell count is the portrait size Android documents for it — `(73n − 16) × (118m −
+ * 16)` dp, measured on a Pixel 4's 5x4 grid
  * (https://developer.android.com/develop/ui/views/appwidgets/layouts). Real launchers vary the
  * cell, which is why a design states the COUNT and this dp is its reference rendering. The
  * `remote-widgets` catalog publishes the same table as its `frame.geometry.sizesDp`.

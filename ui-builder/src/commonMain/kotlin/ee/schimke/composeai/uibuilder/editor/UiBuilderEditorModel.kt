@@ -14,6 +14,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
+import ee.schimke.composeai.uibuilder.export.isLauncherWidget
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlayState
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderPixelBounds
 import kotlinx.serialization.json.JsonArray
@@ -365,7 +366,11 @@ private const val MAX_SCREEN_DP = 3840
 fun UiBuilderDocument.screenEnvironmentValidationError(
   settings: ScreenEnvironmentSettings
 ): String? =
-  settings.validationError(minimumDp = if (wearWidgetScaffoldSize() == null) MIN_SCREEN_DP else 1)
+  // A widget is smaller than any screen: a Wear host container is 76dp tall and a launcher
+  // widget's smallest grid cell 57dp wide, so neither takes the screen minimum.
+  settings.validationError(
+    minimumDp = if (wearWidgetScaffoldSize() == null && !isLauncherWidget()) MIN_SCREEN_DP else 1
+  )
 
 fun ScreenEnvironmentSettings.validationError(minimumDp: Int = MIN_SCREEN_DP): String? =
   when {

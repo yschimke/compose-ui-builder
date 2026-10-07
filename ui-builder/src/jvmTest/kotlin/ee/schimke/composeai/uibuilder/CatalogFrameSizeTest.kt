@@ -3,9 +3,14 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.forPlatform
+import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
+import ee.schimke.composeai.uibuilder.editor.screenEnvironmentValidationError
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
@@ -31,6 +36,7 @@ class CatalogFrameSizeTest {
                   { "widthDp": 130, "heightDp": 102, "label": "2x1" },
                   { "widthDp": 203, "heightDp": 220, "label": "3x2" },
                   { "widthDp": 0, "heightDp": 220, "label": "broken" },
+                  { "widthDp": { "value": 130 }, "heightDp": [102], "label": "malformed" },
                   { "widthDp": 276, "heightDp": 220 }
                 ]
               }
@@ -75,5 +81,37 @@ class CatalogFrameSizeTest {
     )
     // A catalog that declares none keeps the platform's families.
     assertEquals(listOf(watch), listOf(watch).forPlatform(UiBuilderCatalogPlatform.REMOTE_COMPOSE))
+  }
+
+  /**
+   * A grid size is smaller than any screen — 2x1 is 130 × 102 dp — so a launcher widget takes the
+   * widget minimum, as a Wear widget does, or picking one of its own sizes is refused.
+   */
+  @Test
+  fun `a launcher widget accepts its own grid sizes, a screen still does not`() {
+    fun document(root: String) = Json {
+      ignoreUnknownKeys = true
+    }
+      .decodeFromString(
+        UiBuilderDocument.serializer(),
+        """
+          {
+            "schema": "compose-ui-builder-document/v1-candidate",
+            "id": "w", "title": "w", "revision": 0,
+            "catalogPin": { "systemId": "remote-widgets", "catalogRevision": "c",
+              "capabilityDigest": "c", "nativeRuntimeId": "c" },
+            "environment": { "widthDp": 203, "heightDp": 220, "density": 2.75 },
+            "stateVariables": {},
+            "roots": ["root"],
+            "nodes": { "root": { "id": "root", "componentId": "$root", "properties": {},
+              "modifiers": [], "slots": {} } }
+          }
+          """,
+      )
+    val widget = document("remote-widgets/launcher-widget")
+    val twoByOne = widget.screenEnvironmentSettings().copy(widthDp = 130, heightDp = 102)
+    assertNull(widget.screenEnvironmentValidationError(twoByOne))
+    val screen = document("layout/box")
+    assertNotNull(screen.screenEnvironmentValidationError(twoByOne))
   }
 }

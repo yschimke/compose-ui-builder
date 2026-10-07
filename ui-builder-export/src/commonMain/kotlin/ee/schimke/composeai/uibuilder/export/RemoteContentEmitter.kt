@@ -238,7 +238,9 @@ internal class RemoteContentEmitter(
 
   private var usesMaterialText = false
 
-  /** `remote-creation-compose`'s own `RemoteText`, written under [RemoteTextVocabulary.CREATION]. */
+  /**
+   * `remote-creation-compose`'s own `RemoteText`, written under [RemoteTextVocabulary.CREATION].
+   */
   private var usesCreationText = false
 
   /**
@@ -247,9 +249,12 @@ internal class RemoteContentEmitter(
    * refuses the design rather than export source naming it.
    */
   val usesMaterial: Boolean
-    get() = usesTheme || usesLocalTextStyle || usesRemoteColorScheme || usedComponentImports.any {
-      it.startsWith("androidx.wear.compose.remote.material3.")
-    }
+    get() =
+      usesTheme ||
+        usesLocalTextStyle ||
+        usesRemoteColorScheme ||
+        usedComponentImports.any { it.startsWith("androidx.wear.compose.remote.material3.") }
+
   private var usesColumn = false
   private var usesRow = false
   private var usesBox = false
