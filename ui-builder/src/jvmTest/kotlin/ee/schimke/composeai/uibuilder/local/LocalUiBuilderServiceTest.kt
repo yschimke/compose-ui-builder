@@ -83,6 +83,42 @@ class LocalUiBuilderServiceTest {
   }
 
   @Test
+  fun `a stored design the protocol cannot read is refused rather than thrown`() = runBlocking {
+    seed()
+    // `number` is no UiValueV1 tag (the numeric ones are `int` and `float`). The record still
+    // decodes, because a node's properties are stored as JSON; only the protocol projection fails.
+    val key = LocalDesignStore.DESIGN_KEY_PREFIX + LocalDesignFixtures.DESIGN_ID
+    val stored = requireNotNull(storage.read(key))
+    val unreadable =
+      stored.replaceFirst(
+        "\"componentId\":\"m3/column\"",
+        "\"componentId\":\"m3/column\",\"properties\":{\"gap\":{\"type\":\"number\",\"value\":1}}",
+      )
+    assertTrue(unreadable != stored, "the fixture's root is no longer an m3/column")
+    storage.write(key, unreadable)
+    val reopened =
+      UiBuilderProtocolHttpClient(
+        actorId = "tester",
+        endpoint = "local",
+        transport =
+          LocalUiBuilderHttpTransport(
+            LocalUiBuilderService(
+              store = LocalDesignStore(storage),
+              catalogs = { listOf(catalog) },
+              clock = { 1_700_000_000_000 },
+            )
+          ),
+        requestIds = MonotonicUiBuilderRequestIds("reopen"),
+      )
+
+    val result = reopened.execute(OpenDesignRequestV1(LocalDesignFixtures.DESIGN_ID))
+
+    val error = assertIs<UiBuilderHttpResult.ServiceError>(result).error
+    assertEquals(ServiceErrorCodeV1.INTERNAL, error.code)
+    assertTrue("cannot be read" in error.message, error.message)
+  }
+
+  @Test
   fun `creating a design that already exists is refused rather than overwriting it`() =
     runBlocking {
       seed()
