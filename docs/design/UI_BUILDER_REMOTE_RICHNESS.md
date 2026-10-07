@@ -26,6 +26,18 @@ and the emitter all read. The time is the player's own, so it is not a property;
 the design's fixed preview time in its place. It is on the Content shelf and is not donated by the
 generic Remote Compose foundation, since it is a Wear Material 3 component.
 
+## Theme node
+
+`remote-m3/remote-material-theme` is `RemoteMaterialTheme` around one child, re-skinning that
+subtree with the colour roles it overrides. The roles and their property names are the Wear screen
+scaffold's (`WearScreenTheme`: `themePrimaryColor`, `themeOnSurfaceColor`, …), so an author who knows
+one knows the other, and every one exists on `RemoteColorScheme`. Each override is a literal, a
+theme role (read from the enclosing scheme) or a computed colour; the exporter writes
+`RemoteMaterialTheme(colorScheme = RemoteMaterialTheme.colorScheme.copy(…)) { … }` with only the
+roles set, and a theme that sets none writes its child alone. The canvas draws the child under the
+same copy the scaffold uses. Declared by hand in `UiRemoteTheme`; on the Layout shelf; no modifiers,
+since `RemoteMaterialTheme` takes none.
+
 ## Remote modifier vocabulary
 
 A `RemoteModifier` call the typed modifiers do not name is a `remoteCall` modifier: `name` and
@@ -80,7 +92,7 @@ behind a compile-time flag.
 | M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint, gradients, clips (box or path), morphs, curved text, conditionals, loops | Landed |
 | M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Long press and double tap landed (`combinedClickable`); the rest planned |
 | M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Landed as `remoteCall` over the generated vocabulary (33 calls); `graphicsLayer` (its value overload) and `semantics` (hand-declared, written as its lambda) included; `drawWithContent` is a box with a canvas |
-| M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Horizontal and vertical page indicators landed; the rest planned |
+| M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Page indicators, `RemoteTimeText` and the theme node landed; button and card overloads planned |
 | M6 | Device preview: every published component, and expressions played live | In progress (remote-m3-catalog) |
 
 Each milestone lands across the editor, the canvas, validation, MCP-visible document shape and the
