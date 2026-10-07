@@ -282,7 +282,7 @@ private fun ResultSummary(
   )
   Text(
     when {
-      result.platform == null && result.judged == 0 ->
+      result.judged == 0 && result.unanswered.isEmpty() ->
         "No guidelines are written for this design's catalog yet."
       result.findings.isEmpty() -> "${result.judged} guideline(s) checked; none broken."
       else -> "${result.findings.size} of ${result.judged} guideline(s) look broken."

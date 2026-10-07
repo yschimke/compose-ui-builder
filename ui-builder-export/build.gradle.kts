@@ -65,6 +65,24 @@ val embedRemoteModifierVocabulary =
     )
   }
 
+// The design-guideline rules, from the one file people review and edit. `DesignGuidelineRuleSet.
+// Bundled` reads it on both sides: the editor's own-key check and compose-preview-server's
+// guidelines lane and MCP tools ask the same rules, with no copy kept in step by hand.
+val embedDesignGuidelines =
+  tasks.register<EmbedComponentRecord>("embedDesignGuidelines") {
+    record.set(rootProject.file("docs/guidelines/android-design-guidelines.json"))
+    constantName.set("EMBEDDED_ANDROID_DESIGN_GUIDELINES_JSON")
+    sourceDescription.set(
+      "docs/guidelines/android-design-guidelines.json\n" +
+        "// by :ui-builder-export:embedDesignGuidelines"
+    )
+    output.set(
+      layout.buildDirectory.file(
+        "generated/designGuidelines/ee/schimke/composeai/uibuilder/EmbeddedDesignGuidelines.kt"
+      )
+    )
+  }
+
 // The document and mutation JSON Schemas come from the pinned protocol jar, generated there from
 // the serializers; see `ExtractProtocolSchemas`. The JVM jar alone: the attributes pick the JVM
 // variant of the multiplatform root module, and the dependency (not the configuration) is
@@ -141,6 +159,9 @@ kotlin {
         embedRemoteMaterial3Record.map {
           layout.buildDirectory.dir("generated/remoteMaterial3Record")
         }
+      )
+      kotlin.srcDir(
+        embedDesignGuidelines.map { layout.buildDirectory.dir("generated/designGuidelines") }
       )
       kotlin.srcDir(
         embedRemoteModifierVocabulary.map {

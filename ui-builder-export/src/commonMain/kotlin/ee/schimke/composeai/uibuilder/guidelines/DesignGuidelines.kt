@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.guidelines
 
+import ee.schimke.composeai.uibuilder.EMBEDDED_ANDROID_DESIGN_GUIDELINES_JSON
 import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -53,9 +54,13 @@ data class DesignGuidelineRuleSet(
   }
 
   companion object {
-    /** The rules this editor ships with; see `docs/guidelines/android-design-guidelines.json`. */
+    /**
+     * `docs/guidelines/android-design-guidelines.json`, embedded at build time by
+     * `:ui-builder-export:embedDesignGuidelines`: the rules the editor and compose-preview-server
+     * both ask, from the one file.
+     */
     val Bundled: DesignGuidelineRuleSet by lazy {
-      GUIDELINE_JSON.decodeFromString(serializer(), ANDROID_DESIGN_GUIDELINES_JSON)
+      GUIDELINE_JSON.decodeFromString(serializer(), EMBEDDED_ANDROID_DESIGN_GUIDELINES_JSON)
     }
   }
 }
@@ -97,6 +102,8 @@ object DesignGuidelinePrompt {
     return when {
       "glimmer" in id || "glasses" in id -> "glasses"
       "wear" in id || id.startsWith("remote") -> "wear"
+      // Material 3 for phones and tablets: the plain `m3` catalog and its siblings.
+      id == "m3" || id.startsWith("m3-") || "material3" in id -> "mobile"
       else -> null
     }
   }

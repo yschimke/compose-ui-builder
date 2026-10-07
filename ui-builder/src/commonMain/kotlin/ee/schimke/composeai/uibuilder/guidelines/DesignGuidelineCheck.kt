@@ -260,7 +260,8 @@ class DesignGuidelineController(
   ): DesignGuidelineResult {
     val request = prepare(document, encoded)
     if (_prompt.value !is PromptView.Hidden) _prompt.value = PromptView.Shown(request)
-    if (request.platform == null) {
+    // A catalog with no guidelines written, or none this host could judge without a picture.
+    if (request.platform == null || request.rules.asked.isEmpty()) {
       return DesignGuidelineResult(
         document.revision,
         null,
@@ -331,7 +332,7 @@ class DesignGuidelineController(
   companion object {
     /** The document as the protocol writes it, which is what the outline reads. */
     fun encode(document: UiBuilderDocument): JsonObject =
-      GUIDELINE_JSON.encodeToJsonElement(UiBuilderDocument.serializer(), document.copy(home = null))
+      ENCODE_JSON.encodeToJsonElement(UiBuilderDocument.serializer(), document.copy(home = null))
         .jsonObject
   }
 }
@@ -341,3 +342,29 @@ class DesignGuidelineController(
  * null in previews, tests and hosts without one, where the Issues panel leaves the section out.
  */
 val LocalDesignGuidelineCheck = staticCompositionLocalOf<DesignGuidelineController?> { null }
+
+private val ENCODE_JSON = kotlinx.serialization.json.Json { explicitNulls = false }
+
+/**
+ * [this] as a result the panel can show. A verdict on a rule this editor's set does not know (a
+ * newer rule set on the host) is kept as its id and reason rather than dropped.
+ */
+fun DesignGuidelineRecord.toResult(rules: DesignGuidelineRuleSet): DesignGuidelineResult {
+  val known = rules.rules.associateBy { it.id }
+  val askedRules = asked.map { id ->
+    known[id]
+      ?: DesignGuidelineRule(id, emptyList(), "structure", "info", "", id, GUIDELINE_RULES_URL)
+  }
+  val answered = DesignGuidelinePrompt.answered(verdicts, askedRules)
+  val nodeIds = verdicts.flatMap { it.nodeIds }.toSet()
+  return DesignGuidelineResult(
+    revision = revision,
+    platform = askedRules.firstOrNull()?.platforms?.firstOrNull(),
+    findings = DesignGuidelinePrompt.findings(answered, askedRules, nodeIds),
+    judged = answered.size,
+    visualSkipped = 0,
+    model = model,
+    unanswered = asked - answered.map { it.ruleId }.toSet(),
+    ranBy = ranBy,
+  )
+}
