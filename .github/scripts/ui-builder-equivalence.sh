@@ -706,58 +706,68 @@ if (recordPath) {
         if (!spec.optional) errors.push(`${path} is missing, and the property has no default`);
         continue;
       }
-      const entry = value[key];
-      if (entry === null) {
-        if (!spec.nullable) errors.push(`${path} is null, and the property is not nullable`);
-        continue;
-      }
-      switch (spec.kind) {
-        case "string":
-          if (typeof entry !== "string") errors.push(`${path} is not a string`);
-          break;
-        case "boolean":
-          if (typeof entry !== "boolean") errors.push(`${path} is not a boolean`);
-          break;
-        case "int":
-          // Kotlin `Int` is 32-bit and kotlinx refuses a JSON number outside it, so integrality is
-          // not the whole test: 2147483648 is an integer here and an overflow there.
-          if (typeof entry !== "number" || !Number.isInteger(entry))
-            errors.push(`${path} is not an integer`);
-          else if (entry < -2147483648 || entry > 2147483647)
-            errors.push(`${path} is outside the range of a Kotlin Int`);
-          break;
-        // A map, or a free-form JsonElement. The reader accepts any shape there, so asserting one
-        // would refuse records it decodes.
-        case "any":
-          break;
-        case "enum":
-          if (typeof entry !== "string" || !spec.values.includes(entry))
-            errors.push(`${path} is not one of ${spec.values.join(", ")}`);
-          break;
-        case "stringList":
-          if (!Array.isArray(entry) || entry.some((item) => typeof item !== "string"))
-            errors.push(`${path} is not a list of strings`);
-          break;
-        // A list whose ELEMENTS are free-form (`List<JsonElement>`): the list-ness is all the
-        // reader constrains, so demanding more here would refuse documents it decodes.
-        case "anyList":
-          if (!Array.isArray(entry)) errors.push(`${path} is not a list`);
-          break;
-        case "objectList":
-          if (!Array.isArray(entry)) errors.push(`${path} is not a list`);
-          else
-            entry.forEach((item, index) => {
-              if (spec.members) checkShape(item, spec.members, `${path}[${index}]`, errors);
-              else if (!isPlainObject(item)) errors.push(`${path}[${index}] is not an object`);
-            });
-          break;
-        case "object":
-          if (spec.members) checkShape(entry, spec.members, path, errors);
-          else if (!isPlainObject(entry)) errors.push(`${path} is not an object`);
-          break;
-        default:
-          throw new Error(`unknown shape kind ${spec.kind}`);
-      }
+      checkValue(value[key], spec, path, errors);
+    }
+  };
+
+  // One value against its spec: a property, or one entry of a map whose `values` the table states.
+  const checkValue = (entry, spec, path, errors) => {
+    if (entry === null) {
+      if (!spec.nullable) errors.push(`${path} is null, and the property is not nullable`);
+      return;
+    }
+    switch (spec.kind) {
+      case "string":
+        if (typeof entry !== "string") errors.push(`${path} is not a string`);
+        break;
+      case "boolean":
+        if (typeof entry !== "boolean") errors.push(`${path} is not a boolean`);
+        break;
+      case "int":
+        // Kotlin `Int` is 32-bit and kotlinx refuses a JSON number outside it, so integrality is
+        // not the whole test: 2147483648 is an integer here and an overflow there.
+        if (typeof entry !== "number" || !Number.isInteger(entry))
+          errors.push(`${path} is not an integer`);
+        else if (entry < -2147483648 || entry > 2147483647)
+          errors.push(`${path} is outside the range of a Kotlin Int`);
+        break;
+      // A map, or a free-form JsonElement. The reader accepts any shape there, so asserting one
+      // would refuse records it decodes.
+      case "any":
+        break;
+      case "enum":
+        if (typeof entry !== "string" || !spec.values.includes(entry))
+          errors.push(`${path} is not one of ${spec.values.join(", ")}`);
+        break;
+      case "stringList":
+        if (!Array.isArray(entry) || entry.some((item) => typeof item !== "string"))
+          errors.push(`${path} is not a list of strings`);
+        break;
+      // A list whose ELEMENTS are free-form (`List<JsonElement>`): the list-ness is all the
+      // reader constrains, so demanding more here would refuse documents it decodes.
+      case "anyList":
+        if (!Array.isArray(entry)) errors.push(`${path} is not a list`);
+        break;
+      case "objectList":
+        if (!Array.isArray(entry)) errors.push(`${path} is not a list`);
+        else
+          entry.forEach((item, index) => {
+            if (spec.members) checkShape(item, spec.members, `${path}[${index}]`, errors);
+            else if (!isPlainObject(item)) errors.push(`${path}[${index}] is not an object`);
+          });
+        break;
+      case "object":
+        if (spec.members) checkShape(entry, spec.members, path, errors);
+        else if (!isPlainObject(entry)) errors.push(`${path} is not an object`);
+        // A map: kotlinx decodes each value through the value type's serializer, so a
+        // `Map<String, String>` holding a number fails to decode. `values` is absent for a map
+        // of free-form JsonElement, which constrains only the container.
+        else if (spec.values)
+          for (const [mapKey, mapValue] of Object.entries(entry))
+            checkValue(mapValue, spec.values, `${path}[${JSON.stringify(mapKey)}]`, errors);
+        break;
+      default:
+        throw new Error(`unknown shape kind ${spec.kind}`);
     }
   };
 
