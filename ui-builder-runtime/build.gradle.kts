@@ -80,6 +80,12 @@ tasks.processResources {
     into("ee/schimke/composeai/uibuilder/catalogs")
     rename { "m3-catalog-v1.json" }
   }
+  // The readiness gate's shape table, which `DecoderShapeFixtureTest` writes from this module's
+  // decoders. Shipped so a host that runs the gate on its own (compose-preview-server does) can
+  // check its copy against the release it pins, rather than carrying a copy nothing verifies.
+  from(rootProject.file(".github/scripts/decoder-shapes.json")) {
+    into("ee/schimke/composeai/uibuilder/service")
+  }
 }
 
 tasks.withType<Test>().configureEach {
