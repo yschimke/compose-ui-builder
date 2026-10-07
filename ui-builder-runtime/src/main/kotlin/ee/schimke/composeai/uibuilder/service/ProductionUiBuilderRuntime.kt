@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
@@ -73,6 +74,7 @@ private data class Configuration(
   val packs: List<UiBuilderComponentPackSource>,
   val published: Map<String, CatalogCapabilityV1>,
   val nativeRuntimeIds: Map<String, String> = emptyMap(),
+  val catalogOwnership: CatalogOwnership = CatalogOwnership.NONE,
 )
 
 private fun defaultExportCapabilities(): ExportCapabilitiesV1 =
@@ -102,6 +104,15 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val packs = configuration.packs
   private val published = configuration.published
   private val nativeRuntimeIds = configuration.nativeRuntimeIds
+
+  /**
+   * Which catalogs are served from nothing but what they publish (`UI_BUILDER_CATALOG_CUTOVER.md`).
+   * An owned catalog with no usable published file is refused at construction instead of falling
+   * back to the Kotlin catalog this build synthesises, its platform must be declared, and the
+   * synthesised generator for it is never run: the pins of designs created against the synthesised
+   * catalog are accepted from [LegacySynthesisedReferences] instead.
+   */
+  public val catalogOwnership: CatalogOwnership = configuration.catalogOwnership
 
   /**
    * The original constructor, retained temporarily for binary-compatible migration.
@@ -165,6 +176,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     public var published: Map<String, CatalogCapabilityV1> = emptyMap()
     public var nativeRuntimeIds: Map<String, String> = emptyMap()
 
+    /** See [CurrentM3UiBuilderCatalogExecutor.catalogOwnership]. Off by default. */
+    public var catalogOwnership: CatalogOwnership = CatalogOwnership.NONE
+
     public fun build(): CurrentM3UiBuilderCatalogExecutor =
       CurrentM3UiBuilderCatalogExecutor(
         Configuration(
@@ -175,6 +189,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
           packs = packs,
           published = published,
           nativeRuntimeIds = nativeRuntimeIds,
+          catalogOwnership = catalogOwnership,
         )
       )
   }
@@ -186,13 +201,29 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       .newBuilder()
       .also { it.exportCapabilities = exportCapabilities }
       .build()
-  private val synthesisedCatalogs =
+  private val synthesisers: Map<String, () -> CatalogCapabilityV1> =
     mapOf(
-      DEFAULT_CATALOG_SYSTEM_ID to baseCatalog,
-      REMOTE_M3_CATALOG_SYSTEM_ID to remoteM3Catalog(baseCatalog),
-      WEAR_M3_CATALOG_SYSTEM_ID to wearM3Catalog(baseCatalog),
-      A2UI_CATALOG_SYSTEM_ID to a2uiCatalog(baseCatalog),
+      DEFAULT_CATALOG_SYSTEM_ID to { baseCatalog },
+      REMOTE_M3_CATALOG_SYSTEM_ID to { remoteM3Catalog(baseCatalog) },
+      WEAR_M3_CATALOG_SYSTEM_ID to { wearM3Catalog(baseCatalog) },
+      A2UI_CATALOG_SYSTEM_ID to { a2uiCatalog(baseCatalog) },
     )
+
+  /**
+   * The Kotlin catalogs this build writes, for the catalogs it does NOT hand to their owners.
+   *
+   * An owned catalog is left out entirely, so its generator never runs. That is the property the
+   * cutover needs proved before the generators are deleted, and [synthesisedCatalogIds] is how a
+   * test reads it.
+   */
+  private val synthesisedCatalogs: Map<String, CatalogCapabilityV1> =
+    synthesisers
+      .filterKeys { !catalogOwnership.owns(it) }
+      .mapValues { (_, synthesise) -> synthesise() }
+
+  /** Which Kotlin catalog generators this executor ran: none for a catalog it does not own. */
+  internal val synthesisedCatalogIds: Set<String>
+    get() = synthesisedCatalogs.keys
 
   /**
    * Where the `remote-compose/` seams come from: the packaged catalog, overridden by any
@@ -226,7 +257,15 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private fun platformFor(catalog: CatalogCapabilityV1): String =
     catalog.declaredPlatform
       ?: synthesisedCatalogs[catalog.benchmark.catalogSystemId]?.platform
-      ?: DEFAULT_PLATFORM
+      ?: run {
+        // A catalog that answers for itself has nothing to borrow a platform from, and guessing
+        // `mobile` for a watch catalog would hand its palette the phone's builder vocabulary.
+        require(!catalogOwnership.owns(catalog.benchmark.catalogSystemId)) {
+          "UI-builder catalog ${catalog.benchmark.catalogSystemId} is catalog-owned and its " +
+            "published file declares no platform"
+        }
+        DEFAULT_PLATFORM
+      }
 
   private fun donorFor(catalog: CatalogCapabilityV1): CatalogCapabilityV1 =
     platformFor(catalog).let { platform ->
@@ -321,6 +360,10 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       }
       .associateWith { systemId ->
         require(SAFE_SYSTEM_ID.matches(systemId)) { "invalid UI-builder catalog id: $systemId" }
+        require(!catalogOwnership.owns(systemId) || systemId in published) {
+          "UI-builder catalog $systemId is catalog-owned but has no usable published file; " +
+            "this build no longer falls back to its synthesised definition"
+        }
         val catalog =
           requireNotNull(availableCatalogs[systemId]) {
             "UI-builder catalog $systemId is neither published nor synthesised by this build"
@@ -434,6 +477,10 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       setOfNotNull(
         referenceOf(catalog),
         synthesisedCatalogs[systemId]?.let(::referenceOf),
+        // An owned catalog's generator never runs, so the pin its designs were created against is
+        // read from the frozen table instead; `CatalogCutoverReadinessTest` holds the two equal
+        // for as long as the generators exist.
+        LegacySynthesisedReferences.forCatalog(systemId).takeIf { catalogOwnership.owns(systemId) },
         published[systemId]?.let(::referenceOf),
       )
     }

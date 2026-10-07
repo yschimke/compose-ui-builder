@@ -1,0 +1,222 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "adaptive-navigation",
+  "title": "Adaptive navigation",
+  "revision": 0,
+  "catalogPin": {
+    "systemId": "m3-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 412,
+    "heightDp": 915,
+    "density": 1,
+    "theme": "light",
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_6",
+      "spec:width=700dp,height=900dp,dpi=160",
+      "spec:width=1200dp,height=800dp,dpi=160"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "navigation"
+  ],
+  "nodes": {
+    "navigation": {
+      "id": "navigation",
+      "componentId": "m3/navigation-suite-scaffold",
+      "properties": {},
+      "slots": {
+        "navigationItems": [
+          "home",
+          "saved"
+        ],
+        "content": [
+          "body"
+        ]
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "eventBindings": {}
+    },
+    "body": {
+      "id": "body",
+      "componentId": "layout/column",
+      "properties": {},
+      "slots": {
+        "children": [
+          "title",
+          "copy"
+        ]
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 24,
+          "endDp": 24,
+          "bottomDp": 24
+        }
+      ],
+      "eventBindings": {}
+    },
+    "title": {
+      "id": "title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Your app"
+        },
+        "style": {
+          "type": "enum",
+          "value": "headlineMedium"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "copy": {
+      "id": "copy",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Add destination content here."
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyLarge"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "home": {
+      "id": "home",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": true
+        }
+      },
+      "slots": {
+        "icon": [
+          "home-icon"
+        ],
+        "label": [
+          "home-label"
+        ]
+      },
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "home-icon": {
+      "id": "home-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "string",
+          "value": "home"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Home"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "home-label": {
+      "id": "home-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Home"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "saved": {
+      "id": "saved",
+      "componentId": "m3/navigation-suite-item",
+      "properties": {
+        "selected": {
+          "type": "bool",
+          "value": false
+        }
+      },
+      "slots": {
+        "icon": [
+          "saved-icon"
+        ],
+        "label": [
+          "saved-label"
+        ]
+      },
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "saved-icon": {
+      "id": "saved-icon",
+      "componentId": "m3/icon",
+      "properties": {
+        "iconKey": {
+          "type": "string",
+          "value": "star"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Saved"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "saved-label": {
+      "id": "saved-label",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Saved"
+        },
+        "style": {
+          "type": "enum",
+          "value": "labelMedium"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    }
+  },
+  "assets": {}
+}

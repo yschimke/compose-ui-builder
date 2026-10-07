@@ -116,8 +116,7 @@ private class NewDesignFormState(
   private val initialCatalog =
     catalogs.firstOrNull { it.systemId == initialCatalogSystemId } ?: catalogs.first()
 
-  var otherTypesExpanded by
-    mutableStateOf(initialCatalog.systemId !in listOf("m3-catalog", "wear-m3", "remote-m3"))
+  var otherTypesExpanded by mutableStateOf(!initialCatalog.isPrimary)
   var selectedCatalogId by mutableStateOf(initialCatalog.systemId)
   var selectedTemplateId by mutableStateOf(initialCatalog.templates.firstOrNull()?.id.orEmpty())
   // Pre-filled, so a design can be created in one click; a person who wants their own name

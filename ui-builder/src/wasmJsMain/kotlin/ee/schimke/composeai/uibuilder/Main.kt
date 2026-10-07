@@ -60,6 +60,7 @@ import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.editor.supportingText
 import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
@@ -1818,6 +1819,25 @@ internal suspend fun loadLiveCatalogs(
     is UiBuilderHttpResult.ServiceError -> error(result.error.message)
     is UiBuilderHttpResult.SnapshotRequired -> error(result.error.message)
   }
+
+/**
+ * The catalog-owned cutover flag as the host served this page: the shell's
+ * `<meta name="ui-builder-catalog-ownership">`, or a `?catalogOwnership=` override (`all`, `none`,
+ * or a comma-separated list), default `none`. The host is the one that knows whether it seeds owned
+ * catalogs from their published templates, so it is the one that sets this; see
+ * `docs/design/UI_BUILDER_CATALOG_CUTOVER.md`. A value that does not parse is `none`, because the
+ * chooser is the wrong place to fail a page over a flag.
+ */
+internal fun catalogOwnership(): CatalogOwnership = runCatching {
+  CatalogOwnership.parse(catalogOwnershipParameter())
+}
+  .getOrDefault(CatalogOwnership.NONE)
+
+@JsFun(
+  """() => new URL(globalThis.location.href).searchParams.get('catalogOwnership') ||
+    globalThis.document?.querySelector('meta[name="ui-builder-catalog-ownership"]')?.content || ''"""
+)
+private external fun catalogOwnershipParameter(): String
 
 /** The chooser's order. Anything not named here (there is nothing today) sorts first. */
 internal val NEW_DESIGN_CATALOG_ORDER =

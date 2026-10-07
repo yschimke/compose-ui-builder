@@ -59,6 +59,94 @@ object UiBuilderNewDesignSeed {
     }
 
   /**
+   * The template every catalog can be seeded with when it publishes none of its own: the generic
+   * blank screen, built from the builder's own layout vocabulary rather than any catalog's.
+   */
+  const val BLANK_TEMPLATE: String = "blank"
+
+  /**
+   * [templateIds] under the catalog-owned cutover. A catalog [ownership] names offers exactly the
+   * templates it publishes, in its own order, or [BLANK_TEMPLATE] when it publishes none; any other
+   * catalog keeps the built-in set, so this is [templateIds] while the flag is off.
+   */
+  fun templateIds(
+    catalogSystemId: String,
+    ownership: CatalogOwnership,
+    published: CatalogSeedTemplates?,
+  ): Set<String> =
+    if (!ownership.owns(catalogSystemId)) templateIds(catalogSystemId)
+    else
+      published?.ids?.takeIf { it.isNotEmpty() }?.toCollection(LinkedHashSet())
+        ?: setOf(BLANK_TEMPLATE)
+
+  /**
+   * [document] under the catalog-owned cutover: a catalog [ownership] names is seeded from the
+   * template documents it publishes ([published]), never from a Kotlin builder that knows its ids.
+   *
+   * The published document keeps its own environment, because the catalog chose the device its seed
+   * opens on (`frame.seedDevice`) and measured it; the pin is the served catalog's, exactly as
+   * every built-in template is pinned. A catalog that publishes no templates gets the generic
+   * [BLANK_TEMPLATE], and asking an owned catalog for a template it does not publish is refused by
+   * name rather than answered with somebody else's.
+   */
+  fun document(
+    designId: String,
+    catalogSystemId: String,
+    templateId: String,
+    catalogRevision: String,
+    nativeRuntimeId: String,
+    fixture: JsonObject,
+    ownership: CatalogOwnership,
+    published: CatalogSeedTemplates?,
+    state: List<NewDesignState> = emptyList(),
+  ): UiBuilderDocument {
+    if (!ownership.owns(catalogSystemId)) {
+      return document(
+        designId,
+        catalogSystemId,
+        templateId,
+        catalogRevision,
+        nativeRuntimeId,
+        fixture,
+        state,
+      )
+    }
+    require(designId.isNotBlank()) { "a new design needs an id" }
+    require(published == null || published.catalogSystemId == catalogSystemId) {
+      "templates published by ${published?.catalogSystemId} cannot seed $catalogSystemId"
+    }
+    val fixtureDocument = UiBuilderReducer.replay(fixture).document
+    val catalogPin = servedPin(fixtureDocument, catalogSystemId, catalogRevision, nativeRuntimeId)
+    published?.get(templateId)?.let {
+      return it.seed(designId, catalogPin)
+    }
+    require(templateId == BLANK_TEMPLATE && published?.templates.isNullOrEmpty()) {
+      "$catalogSystemId does not publish a `$templateId` template; it publishes " +
+        (published?.ids?.joinToString().takeUnless { it.isNullOrEmpty() } ?: "none")
+    }
+    return blankUiBuilderDocument(
+      designId = designId,
+      catalogPin = catalogPin,
+      environment = mobileScreenEnvironment(fixtureDocument.environment),
+      state = state,
+    )
+  }
+
+  private fun servedPin(
+    fixtureDocument: UiBuilderDocument,
+    catalogSystemId: String,
+    catalogRevision: String,
+    nativeRuntimeId: String,
+  ): JsonObject =
+    JsonObject(
+      fixtureDocument.catalogPin.toMutableMap().also { pin ->
+        pin["systemId"] = JsonPrimitive(catalogSystemId)
+        pin["catalogRevision"] = JsonPrimitive(catalogRevision)
+        pin["nativeRuntimeId"] = JsonPrimitive(nativeRuntimeId)
+      }
+    )
+
+  /**
    * The document a design with this id, catalog and template begins life as, at revision zero.
    *
    * [fixture] is the Jetcaster operations fixture the builder ships beside its Wasm bundle. Every
@@ -78,14 +166,7 @@ object UiBuilderNewDesignSeed {
   ): UiBuilderDocument {
     require(designId.isNotBlank()) { "a new design needs an id" }
     val fixtureDocument = UiBuilderReducer.replay(fixture).document
-    val catalogPin =
-      JsonObject(
-        fixtureDocument.catalogPin.toMutableMap().also { pin ->
-          pin["systemId"] = JsonPrimitive(catalogSystemId)
-          pin["catalogRevision"] = JsonPrimitive(catalogRevision)
-          pin["nativeRuntimeId"] = JsonPrimitive(nativeRuntimeId)
-        }
-      )
+    val catalogPin = servedPin(fixtureDocument, catalogSystemId, catalogRevision, nativeRuntimeId)
     val environment = fixtureDocument.environment
     val widgetSample = WearWidgetSample.forTemplate(templateId)
     return when {

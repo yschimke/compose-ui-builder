@@ -35,6 +35,10 @@ data class UiBuilderNewDesignCatalog(
   /** Which kind of screen it authors; the chooser orders and groups catalogs by it. */
   val platform: UiBuilderCatalogPlatform = UiBuilderCatalogPlatform.MOBILE,
   val previewCatalog: CapabilityCatalog? = null,
+  /**
+   * Built by `catalogOwnedNewDesignCatalog` from the catalog's own data, not the built-in table.
+   */
+  val catalogOwned: Boolean = false,
 )
 
 /**

@@ -159,5 +159,11 @@ answers.
 2. ~~**The device configuration** (§2)~~ — taken, off the platform word the catalog declares.
 3. ~~**The frame adapter dispatch** (§3)~~ — taken. **Moving its implementation** is now tracked by
    the catalog-owned renderer runtime design linked above.
-4. **The templates** (§4) — a data freeze, not a redesign.
-5. **The emitters** (§5) — the contract's hard part, and worth doing last.
+4. **The templates** (§4) — a data freeze, not a redesign. The catalogs have frozen theirs; the
+   reader is in, behind the catalog-owned flag.
+5. **The emitters** (§5) — the contract's hard part, and worth doing last. Routing by declaration is
+   in, behind the same flag; the emitters themselves stay here as named interpreters.
+
+Items 4 and 5, the chooser, and the deletion of the synthesised catalogs are now staged behind one
+flag, with a test measuring every catalog against it:
+[`UI_BUILDER_CATALOG_CUTOVER.md`](UI_BUILDER_CATALOG_CUTOVER.md).
