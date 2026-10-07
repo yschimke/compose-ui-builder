@@ -98,7 +98,13 @@ class DesignGuidelinesTest {
     var sent = ""
     host.respond = { body ->
       sent = body
-      DesignGuidelineHost.Response(200, completion("""{"verdicts":[]}"""))
+      DesignGuidelineHost.Response(
+        200,
+        completion(
+          """{"verdicts":[{"ruleId":"wear.layout.time-text-shown","verdict":"pass",""" +
+            """"confidence":0.9,"nodeIds":[],"reason":""}]}"""
+        ),
+      )
     }
     val controller = DesignGuidelineController(host)
     val document = wearDocument()
@@ -112,6 +118,43 @@ class DesignGuidelinesTest {
     visual.forEach { assertFalse(it.id in sent, it.id) }
     assertEquals("sk-or-1", host.lastKey)
     assertEquals(DEFAULT_GUIDELINE_MODEL, result.model)
+    // One rule answered: the rest are unanswered, which is unchecked rather than passed.
+    assertEquals(1, result.judged)
+    val structural = DesignGuidelineRuleSet.Bundled.forPlatform("wear").filterNot { it.visual }
+    assertEquals(structural.size - 1, result.unanswered.size)
+
+    // No verdict for any rule asked is a failure, not a clean result.
+    host.respond = { DesignGuidelineHost.Response(200, completion("""{"verdicts":[]}""")) }
+    controller.check(document, DesignGuidelineController.encode(document))
+    val failed = assertIs<DesignGuidelineState.Ready>(controller.state.value)
+    assertTrue("no verdict" in failed.notice!!, failed.notice)
+  }
+
+  @Test
+  fun `a component's body is outlined once, and each placement names it`() {
+    val document =
+      Json.parseToJsonElement(
+          """
+          {
+            "roots": ["screen"],
+            "components": {"card": {"name": "Card", "root": "card-root"}},
+            "nodes": {
+              "screen": {"componentId": "layout/column", "slots": {"children": ["a"]}},
+              "a": {"componentId": "design/component-instance",
+                "component": {"componentKey": "card",
+                  "arguments": {"title": {"type": "string", "value": "Hi"}}}},
+              "card-root": {"componentId": "wear-m3/card", "slots": {"content": ["t"]}},
+              "t": {"componentId": "wear-m3/text",
+                "properties": {"text": {"type": "binding", "value": "title"}}}
+            }
+          }
+          """
+        )
+        .jsonObject
+    val outline = DesignGuidelinePrompt.outline(document)
+    assertTrue("- a: design/component-instance instance of card (title=\"Hi\")" in outline, outline)
+    assertTrue("component card (Card):\n  - card-root: wear-m3/card" in outline, outline)
+    assertFalse("more nodes not shown" in outline, outline)
   }
 
   @Test

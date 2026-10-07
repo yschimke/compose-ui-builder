@@ -4,8 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -51,7 +54,15 @@ internal fun GuidelinesSection(
 ) {
   val state by controller.state.collectAsState()
   val scope = rememberCoroutineScope()
-  Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+  var settingsOpen by remember { mutableStateOf(false) }
+  // Bounded and scrolled on its own, so a long list of findings stays reachable and the export
+  // problems under it keep their room.
+  Column(
+    Modifier.fillMaxWidth()
+      .heightIn(max = GUIDELINES_MAX_HEIGHT)
+      .verticalScroll(rememberScrollState())
+      .padding(bottom = 12.dp)
+  ) {
     Text("Design guidelines", style = MaterialTheme.typography.labelLarge)
     when (val current = state) {
       is DesignGuidelineState.NeedsKey ->
@@ -77,13 +88,12 @@ internal fun GuidelinesSection(
           ) {
             Text(if (current.running) "Checking…" else "Check guidelines")
           }
-          var settingsOpen by remember { mutableStateOf(false) }
           TextButton(onClick = { settingsOpen = !settingsOpen }) {
             Text(if (settingsOpen) "Done" else "Model & key")
           }
-          if (settingsOpen) {
-            ModelSettings(controller, current.model, onTextInputFocusChanged)
-          }
+        }
+        if (settingsOpen) {
+          ModelSettings(controller, current.model, onTextInputFocusChanged)
         }
         current.notice?.let {
           Text(
@@ -103,6 +113,10 @@ internal fun GuidelinesSection(
               (if (result.visualSkipped > 0)
                 " ${result.visualSkipped} visual guideline(s) need a picture of the design, " +
                   "which this host could not provide."
+              else "") +
+              (if (result.unanswered.isNotEmpty())
+                " The model gave no answer for ${result.unanswered.size} guideline(s); they " +
+                  "are unchecked, not passed."
               else "") +
               (if (stale) " Checked an earlier revision; check again to update." else ""),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -239,3 +253,6 @@ private fun GuidelineFindingRow(
     }
   }
 }
+
+/** How tall the guidelines section may grow before it scrolls. */
+private val GUIDELINES_MAX_HEIGHT = 320.dp

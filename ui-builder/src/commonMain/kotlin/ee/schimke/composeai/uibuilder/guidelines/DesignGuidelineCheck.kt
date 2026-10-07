@@ -78,6 +78,8 @@ data class DesignGuidelineResult(
   val judged: Int,
   val visualSkipped: Int,
   val model: String,
+  /** Rules asked about that the model returned no verdict for: unchecked, not passed. */
+  val unanswered: List<String> = emptyList(),
 )
 
 /**
@@ -193,11 +195,19 @@ class DesignGuidelineController(
           "$model did not answer with the verdict list asked for. Try another model.",
         )
       }
+    val answered = DesignGuidelinePrompt.answered(verdicts, asked)
+    if (answered.isEmpty()) {
+      throw GuidelineCheckFailure(
+        response.status,
+        "$model returned no verdict for any of the ${asked.size} rules. Try another model.",
+      )
+    }
     return DesignGuidelineResult(
       revision = document.revision,
       platform = platform,
-      findings = DesignGuidelinePrompt.findings(verdicts, asked, document.nodes.keys),
-      judged = asked.size,
+      findings = DesignGuidelinePrompt.findings(answered, asked, document.nodes.keys),
+      judged = answered.size,
+      unanswered = asked.map { it.id } - answered.map { it.ruleId }.toSet(),
       visualSkipped = applicable.size - asked.size,
       model = model,
     )

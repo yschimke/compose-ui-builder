@@ -1,10 +1,6 @@
 package ee.schimke.composeai.uibuilder.guidelines
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.*
 import ee.schimke.composeai.uibuilder.editor.GuidelinesSection
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
@@ -65,23 +61,28 @@ class GuidelinesSectionTest {
     }
 
   @Test
+  fun `model settings open below the actions, with room for the field`() = runComposeUiTest {
+    val controller = DesignGuidelineController(Host(key = "sk-or-1"))
+    setContent { MaterialTheme { GuidelinesSection(controller, document(), {}, {}) } }
+    onNodeWithText("Model & key").performClick()
+    val button = onNodeWithText("Check guidelines").fetchSemanticsNode().boundsInRoot
+    val field = onNodeWithText("OpenRouter model").fetchSemanticsNode().boundsInRoot
+    assertTrue(field.top >= button.bottom, "field $field should sit below $button")
+    onNodeWithText("Forget key").assertExists()
+  }
+
+  @Test
   fun `a check lists what broke and goes to the layer it is about`() = runComposeUiTest {
     val host = Host(key = "sk-or-1")
     val controller = DesignGuidelineController(host)
     val events = mutableListOf<UiBuilderEditorEvent>()
-    setContent {
-      MaterialTheme {
-        Column(Modifier.verticalScroll(rememberScrollState())) {
-          GuidelinesSection(controller, document(), {}, { events += it })
-        }
-      }
-    }
+    setContent { MaterialTheme { GuidelinesSection(controller, document(), {}, { events += it }) } }
     onNodeWithText("Check guidelines").performClick()
     waitUntil(timeoutMillis = 5_000) {
       onAllNodesWithText("The Stop button has a fixed width.").fetchSemanticsNodes().isNotEmpty()
     }
     assertTrue("wear.layout.responsive-width" in host.sent)
-    onNodeWithContentDescription("Go to layer stop").performClick()
+    onNodeWithContentDescription("Go to layer stop").performScrollTo().performClick()
     assertEquals(UiBuilderEditorEvent.SelectNode("stop"), events.first())
   }
 

@@ -217,6 +217,15 @@ object DesignGuidelinePrompt {
       }
       val events = (node["eventBindings"] as? JsonObject)?.keys.orEmpty()
       if (events.isNotEmpty()) out.append(" events[").append(events.joinToString(", ")).append(']')
+      (node["component"] as? JsonObject)?.let { instance ->
+        out.append(" instance of ").append(instance["componentKey"]?.stringOrNull() ?: "?")
+        val arguments =
+          (instance["arguments"] as? JsonObject).orEmpty().entries.mapNotNull { (name, value) ->
+            describeValue(value)?.let { "$name=$it" }
+          }
+        if (arguments.isNotEmpty())
+          out.append(" (").append(arguments.joinToString(", ")).append(')')
+      }
       out.append('\n')
       (node["slots"] as? JsonObject).orEmpty().forEach { (slot, children) ->
         val ids = (children as? JsonArray).orEmpty().mapNotNull { it.stringOrNull() }
@@ -226,6 +235,15 @@ object DesignGuidelinePrompt {
       }
     }
     roots.forEach { visit(it, 0) }
+    // A component's body hangs off `components[key].root`, not off the slots of the nodes that
+    // place it, so it is outlined once here and each placement names it with "instance of".
+    (document["components"] as? JsonObject).orEmpty().forEach { (key, component) ->
+      val root = (component as? JsonObject)?.get("root")?.stringOrNull() ?: return@forEach
+      if (root in seen) return@forEach
+      val name = (component as JsonObject)["name"]?.stringOrNull()
+      out.append("component ").append(key).append(name?.let { " ($it)" }.orEmpty()).append(":\n")
+      visit(root, 1)
+    }
     if (seen.size < nodes.size) out.append("(${nodes.size - seen.size} more nodes not shown)\n")
     return out.toString()
   }
@@ -306,7 +324,7 @@ object DesignGuidelinePrompt {
     minConfidence: Double = DEFAULT_MIN_CONFIDENCE,
   ): List<DesignGuidelineFinding> {
     val byId = asked.associateBy { it.id }
-    return verdicts
+    return answered(verdicts, asked)
       .filter { it.verdict == VERDICT_FAIL && it.confidence >= minConfidence }
       .mapNotNull { verdict ->
         val rule = byId[verdict.ruleId] ?: return@mapNotNull null
@@ -318,6 +336,18 @@ object DesignGuidelinePrompt {
         )
       }
       .sortedWith(compareBy({ it.rule.severity != "warning" }, { -it.confidence }))
+  }
+
+  /**
+   * One verdict per rule asked: the first for each id, nothing for a rule nobody asked about. A
+   * rule missing here got no answer, which is unchecked, never passed.
+   */
+  fun answered(
+    verdicts: List<DesignGuidelineVerdict>,
+    asked: List<DesignGuidelineRule>,
+  ): List<DesignGuidelineVerdict> {
+    val ids = asked.mapTo(mutableSetOf()) { it.id }
+    return verdicts.filter { it.ruleId in ids }.distinctBy { it.ruleId }
   }
 
   /** OpenRouter's `{"error":{"message":…}}`, or the start of whatever came back. */
