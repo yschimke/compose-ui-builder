@@ -2287,8 +2287,15 @@ internal class RemoteContentEmitter(
     usedComponentImports += "androidx.compose.remote.creation.compose.shaders.$factory"
     usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteSize"
     val to = drawColor(node, hoisted, "gradientColor", transparentWhenAbsent = true)
+    // A path is drawn under a viewport-to-canvas scale, which scales the shader too, so its
+    // gradient spans the viewport rather than the canvas.
+    val size =
+      if (node.componentId == "draw/path" || node.componentId == UiDrawing.MORPH)
+        "${node.drawFloat("viewportWidth") ?: 24f.floatLiteral()}, " +
+          (node.drawFloat("viewportHeight") ?: 24f.floatLiteral())
+      else "${extent.width}, ${extent.height}"
     return "with(RemoteBrush.$factory(listOf($from, $to))) { " +
-      "applyTo(this@RemotePaint, RemoteSize(${extent.width}, ${extent.height})) }"
+      "applyTo(this@RemotePaint, RemoteSize($size)) }"
   }
 
   /** A draw colour: a literal, a theme role read above the canvas, or a computed colour. */
@@ -2324,7 +2331,8 @@ internal class RemoteContentEmitter(
           usesColorLiteral = true
           if (transparentWhenAbsent) "Color(0x00000000).rc" else "Color(0xFF000000).rc"
         }
-    return if (alpha == null) base else "$base.copy(alpha = $alpha)"
+    // Multiplied, as the canvas does: replacing it would turn a transparent end opaque.
+    return if (alpha == null) base else "$base.let { it.copy(alpha = it.alpha * $alpha) }"
   }
 
   private fun UiBuilderNode.has(name: String): Boolean = name in properties

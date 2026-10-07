@@ -350,8 +350,10 @@ private sealed interface DrawStep {
             if (path != null) {
               val viewportWidth = node.number("viewportWidth")?.takeIf { it > 0f } ?: 24f
               val viewportHeight = node.number("viewportHeight")?.takeIf { it > 0f } ?: 24f
+              // The scale applies to the shader too, so a gradient spans the viewport.
+              val viewportBrush = paint.brush(Size(viewportWidth, viewportHeight))
               scale(extent.width / viewportWidth, extent.height / viewportHeight, Offset.Zero) {
-                drawPath(path, brush, style = style)
+                drawPath(path, viewportBrush, style = style)
               }
             }
           }

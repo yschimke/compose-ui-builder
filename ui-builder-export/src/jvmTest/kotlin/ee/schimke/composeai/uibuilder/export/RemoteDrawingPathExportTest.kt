@@ -112,6 +112,24 @@ class RemoteDrawingPathExportTest {
   }
 
   @Test
+  fun `a path's gradient spans its viewport, which the path's scale maps onto the canvas`() {
+    val source =
+      exported(
+        document(
+          """"leaf":{"id":"leaf","componentId":"draw/path","properties":{
+            "pathData":{"type":"string","value":"M2 2 L22 2 L12 22 Z"},
+            "gradient":{"type":"enum","value":"horizontal"},
+            "gradientColor":{"type":"color","value":"#FF00FF00"},
+            "color":{"type":"color","value":"#FFFF0000"}}}""",
+          "\"leaf\"",
+        ),
+        "PathGradient",
+      )
+
+    assertContains(source, "applyTo(this@RemotePaint, RemoteSize(24.rf, 24.rf))")
+  }
+
+  @Test
   fun `a morph is a drawTweenPath driven by its progress`() {
     val source = exported(morph, "Morph")
 
