@@ -112,11 +112,11 @@ fun inspectUiBuilderArgumentBindings(document: UiBuilderDocument): UiBuilderArgu
       } else if (node.componentId == UiDrawing.REPEAT) {
         // Validation needs one representative index, of the kind the player's loop hands over.
         val first = (properties["from"] as? JsonObject)?.get("value") ?: JsonPrimitive(0)
+        val name = UiDrawing.indexName(node) ?: return
         val index =
           JsonObject(
             arguments +
-              (UiDrawing.indexName(node) to
-                JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to first)))
+              (name to JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to first)))
           )
         for (child in node.slots[UiDrawing.OPS_SLOT].orEmpty()) {
           if (count > 10_000) break
