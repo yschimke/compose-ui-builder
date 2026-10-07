@@ -68,27 +68,24 @@ class AndroidGoogleFonts(private val indent: String = "    ") {
    * The provider and one `FontFamily` per family, as top-level declarations. Each family carries
    * the weights a type scale uses — regular, medium and bold — and the provider fetches each from
    * Google Fonts on first use; until it arrives the role draws in the platform face.
+   *
+   * The provider comes first. Top-level properties in one file initialise in declaration order, so
+   * a family declared above the provider it reads is `Variable 'GoogleFontsProvider' must be
+   * initialized` to Kotlin 2 — every generated file with a typeface failed to compile that way.
    */
   val declarations: List<String>
     get() {
       if (isEmpty) return emptyList()
       val i = indent
-      return families.map { (name, identifier) ->
-        val google = "GoogleFont(${name.quoted()})"
-        buildString {
-          appendLine("private val $identifier =")
-          appendLine("${i}FontFamily(")
-          listOf("Normal", "Medium", "Bold").forEach {
-            appendLine("$i${i}Font($google, GoogleFontsProvider, FontWeight.$it),")
-          }
-          append("$i)")
-        }
-      } +
+      return listOf(
         buildString {
           appendLine(
             "// Google Play services' published font-provider certificates, inlined so this file"
           )
-          appendLine("// compiles without a `font_certs.xml` of its own.")
+          appendLine("// compiles without a `font_certs.xml` of its own. The `GoogleFont` API is")
+          appendLine(
+            "// `androidx.compose.ui:ui-text-google-fonts`, which the module must depend on."
+          )
           appendLine("private val GoogleFontsProvider =")
           appendLine("${i}GoogleFont.Provider(")
           appendLine("$i${i}providerAuthority = \"com.google.android.gms.fonts\",")
@@ -107,6 +104,18 @@ class AndroidGoogleFonts(private val indent: String = "    ") {
           }
           appendLine("$i$i$i),")
           append("$i)")
+        }
+      ) +
+        families.map { (name, identifier) ->
+          val google = "GoogleFont(${name.quoted()})"
+          buildString {
+            appendLine("private val $identifier =")
+            appendLine("${i}FontFamily(")
+            listOf("Normal", "Medium", "Bold").forEach {
+              appendLine("$i${i}Font($google, GoogleFontsProvider, FontWeight.$it),")
+            }
+            append("$i)")
+          }
         }
     }
 

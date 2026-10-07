@@ -16,6 +16,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,18 +25,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.guidelines.DEFAULT_GUIDELINE_MODEL
 import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineController
 import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineFinding
+import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineRequest
+import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineResult
 import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineState
 import ee.schimke.composeai.uibuilder.guidelines.OPENROUTER_KEYS_URL
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 /**
  * The guidelines section of the Issues panel: a model reads the design on screen against the
@@ -64,10 +70,15 @@ internal fun GuidelinesSection(
       .padding(bottom = 12.dp)
   ) {
     Text("Design guidelines", style = MaterialTheme.typography.labelLarge)
+    val prompt by controller.prompt.collectAsState()
+    val shared by controller.shared.collectAsState()
+    LaunchedEffect(controller, document.id) { controller.loadShared() }
+    var local: DesignGuidelineResult? = null
     when (val current = state) {
       is DesignGuidelineState.NeedsKey ->
         KeySetup(controller, current.notice, onTextInputFocusChanged)
       is DesignGuidelineState.Ready -> {
+        local = current.result
         Text(
           "Checks this design against the Android design guides with ${current.model}, on your " +
             "OpenRouter key. Findings are advice; they never block an export.",
@@ -102,35 +113,27 @@ internal fun GuidelinesSection(
             style = MaterialTheme.typography.bodySmall,
           )
         }
-        current.result?.let { result ->
-          val stale = result.revision != document.revision
-          Text(
-            when {
-              result.platform == null -> "No guidelines are written for this design's catalog yet."
-              result.findings.isEmpty() -> "${result.judged} guideline(s) checked; none broken."
-              else -> "${result.findings.size} of ${result.judged} guideline(s) look broken."
-            } +
-              (if (result.visualSkipped > 0)
-                " ${result.visualSkipped} visual guideline(s) need a picture of the design, " +
-                  "which this host could not provide."
-              else "") +
-              (if (result.platform != null && !result.sourceAttached)
-                " Judged from the design tree alone; this host could not export its Compose " +
-                  "source."
-              else "") +
-              (if (result.unanswered.isNotEmpty())
-                " The model gave no answer for ${result.unanswered.size} guideline(s); they " +
-                  "are unchecked, not passed."
-              else "") +
-              (if (stale) " Checked an earlier revision; check again to update." else ""),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(top = 4.dp),
-          )
-          result.findings.forEach { finding -> GuidelineFindingRow(finding, dispatch) }
-        }
       }
     }
+    // What the model is asked, readable before anybody spends a key on it.
+    TextButton(
+      onClick = {
+        if (prompt is DesignGuidelineController.PromptView.Hidden) {
+          scope.launch { controller.preview(document, DesignGuidelineController.encode(document)) }
+        } else {
+          controller.hidePrompt()
+        }
+      }
+    ) {
+      Text(
+        if (prompt is DesignGuidelineController.PromptView.Hidden) "Show the prompt"
+        else "Hide the prompt"
+      )
+    }
+    PromptView(prompt)
+    // This person's latest run, or else the design's latest recorded one — an agent's, another
+    // person's or the server's.
+    (local ?: shared)?.let { result -> ResultSummary(result, document, dispatch) }
     HorizontalDivider(Modifier.padding(top = 8.dp))
   }
 }
@@ -260,3 +263,141 @@ private fun GuidelineFindingRow(
 
 /** How tall the guidelines section may grow before it scrolls. */
 private val GUIDELINES_MAX_HEIGHT = 320.dp
+
+@Composable
+private fun ResultSummary(
+  result: DesignGuidelineResult,
+  document: UiBuilderDocument,
+  dispatch: (UiBuilderEditorEvent) -> Unit,
+) {
+  val stale = result.revision != document.revision
+  Text(
+    buildString {
+      append("Revision ").append(result.revision).append(" · ").append(result.model)
+      result.ranBy?.let { append(" · run by ").append(it) }
+    },
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.labelSmall,
+    modifier = Modifier.padding(top = 4.dp),
+  )
+  Text(
+    when {
+      result.platform == null && result.judged == 0 ->
+        "No guidelines are written for this design's catalog yet."
+      result.findings.isEmpty() -> "${result.judged} guideline(s) checked; none broken."
+      else -> "${result.findings.size} of ${result.judged} guideline(s) look broken."
+    } +
+      (if (result.visualSkipped > 0)
+        " ${result.visualSkipped} visual guideline(s) need a picture of the design, which this " +
+          "host could not provide."
+      else "") +
+      (if (result.request != null && result.platform != null && !result.sourceAttached)
+        " Judged from the design tree alone; this host could not export its Compose source."
+      else "") +
+      (if (result.unanswered.isNotEmpty())
+        " The model gave no answer for ${result.unanswered.size} guideline(s); they are " +
+          "unchecked, not passed."
+      else "") +
+      (if (stale) " Checked an earlier revision; check again to update." else ""),
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    style = MaterialTheme.typography.labelSmall,
+  )
+  result.findings.forEach { finding -> GuidelineFindingRow(finding, dispatch) }
+}
+
+/**
+ * The prompt, as the model reads it, with where each part comes from. Everything in it is
+ * selectable, and Copy hands the whole request to another tool or agent.
+ */
+@Composable
+private fun PromptView(view: DesignGuidelineController.PromptView) {
+  val uriHandler = LocalUriHandler.current
+  val clipboard = LocalClipboard.current
+  val scope = rememberCoroutineScope()
+  when (view) {
+    DesignGuidelineController.PromptView.Hidden -> Unit
+    DesignGuidelineController.PromptView.Loading ->
+      Text(
+        "Building the prompt…",
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall,
+      )
+    is DesignGuidelineController.PromptView.Failed ->
+      Text(
+        view.reason,
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodySmall,
+      )
+    is DesignGuidelineController.PromptView.Shown -> {
+      val request = view.request
+      Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Text("Where this prompt comes from", style = MaterialTheme.typography.labelMedium)
+        request.provenance.forEach { line ->
+          Text(
+            "• $line",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+          )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+          TextButton(onClick = { uriHandler.openUri(request.rules.source) }) {
+            Text("Open the rule set")
+          }
+          TextButton(
+            onClick = {
+              scope.launch {
+                runCatching { clipboard.setClipEntry(plainTextClipEntry(promptForCopy(request))) }
+              }
+            },
+            modifier = Modifier.semantics { contentDescription = "Copy the prompt" },
+          ) {
+            Text("Copy prompt")
+          }
+        }
+        if (request.pictures.isNotEmpty()) {
+          Text("Pictures attached", style = MaterialTheme.typography.labelMedium)
+          request.pictures.forEach { picture ->
+            Text(
+              "• ${picture.description}",
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.bodySmall,
+            )
+          }
+        }
+        Text(
+          "Rules asked: ${request.rules.asked.size} of ${request.rules.forPlatform} " +
+            "(rule set version ${request.rules.version})",
+          style = MaterialTheme.typography.labelMedium,
+          modifier = Modifier.padding(top = 4.dp),
+        )
+        Text("System prompt", style = MaterialTheme.typography.labelMedium)
+        SelectionContainer {
+          Text(
+            request.systemPrompt,
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+          )
+        }
+        Text(
+          "User message",
+          style = MaterialTheme.typography.labelMedium,
+          modifier = Modifier.padding(top = 4.dp),
+        )
+        SelectionContainer {
+          Text(
+            request.userText,
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+          )
+        }
+      }
+    }
+  }
+}
+
+/** The request as JSON for the clipboard, with picture bytes left out to keep it pasteable. */
+internal fun promptForCopy(request: DesignGuidelineRequest): String =
+  PROMPT_COPY_JSON.encodeToString(
+    DesignGuidelineRequest.serializer(),
+    request.copy(pictures = request.pictures.map { it.copy(dataUrl = null) }),
+  )
+
+private val PROMPT_COPY_JSON = Json { prettyPrint = true }

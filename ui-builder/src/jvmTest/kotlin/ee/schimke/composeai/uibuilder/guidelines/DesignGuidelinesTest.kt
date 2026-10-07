@@ -59,7 +59,17 @@ class DesignGuidelinesTest {
     assertTrue("- stop: wear-m3/button {label=\"Stop\"} modifiers[width(value=80)]" in outline)
 
     val rules = DesignGuidelineRuleSet.Bundled.forPlatform("wear").filterNot { it.visual }
-    val body = DesignGuidelinePrompt.requestBody("m", "wear", encoded, rules, null)
+    val request =
+      DesignGuidelinePrompt.prepare(
+        DesignGuidelineRuleSet.Bundled,
+        "workout",
+        3,
+        encoded,
+        null,
+        null,
+      )
+    assertEquals(rules.map { it.id }, request.rules.asked.map { it.id })
+    val body = DesignGuidelinePrompt.body(request, "m")
     val content = body["messages"]!!.jsonArray[1].jsonObject["content"]!!.jsonArray
     assertEquals(1, content.size)
     val text = content.single().jsonObject["text"]!!.jsonPrimitive.content
@@ -218,6 +228,117 @@ class DesignGuidelinesTest {
     assertEquals("sk-or-pkce", host.storedKey())
   }
 
+  @Test
+  fun `the prompt is shown without a key, and says where each part comes from`(): Unit =
+    runBlocking {
+      val host = FakeHost(key = null)
+      val controller = DesignGuidelineController(host)
+      val document = wearDocument()
+
+      controller.preview(document, DesignGuidelineController.encode(document))
+
+      val shown = assertIs<DesignGuidelineController.PromptView.Shown>(controller.prompt.value)
+      val request = shown.request
+      assertEquals(DesignGuidelineRequest.SCHEMA, request.schema)
+      assertEquals("wear", request.platform)
+      assertEquals(GUIDELINE_RULES_URL, request.rules.source)
+      assertTrue(
+        request.provenance.any { "No picture is attached" in it },
+        request.provenance.toString(),
+      )
+      assertTrue(request.provenance.any { "No Compose source" in it })
+      assertTrue("ruleId: wear.layout.responsive-width" in request.userText)
+      assertNull(host.lastKey, "a preview spends no key")
+      controller.hidePrompt()
+      assertIs<DesignGuidelineController.PromptView.Hidden>(controller.prompt.value)
+    }
+
+  @Test
+  fun `the host's request is preferred, and a run is recorded for everyone`(): Unit = runBlocking {
+    val host = FakeHost(key = "sk-or-1")
+    val document = wearDocument()
+    val local =
+      DesignGuidelinePrompt.prepare(
+        DesignGuidelineRuleSet.Bundled,
+        "workout",
+        3,
+        DesignGuidelineController.encode(document),
+        "data:image/png;base64,AAAA",
+        null,
+      )
+    host.hosted =
+      local.copy(
+        pictures =
+          local.pictures +
+            DesignGuidelinePicture(
+              DesignGuidelinePicture.UNROLLED,
+              "Picture 2 (unrolled picture)",
+              192,
+              768,
+              "data:image/png;base64,BBBB",
+            )
+      )
+    var sent = ""
+    host.respond = { body ->
+      sent = body
+      DesignGuidelineHost.Response(
+        200,
+        completion(
+          """{"verdicts":[{"ruleId":"wear.layout.responsive-width","verdict":"fail",""" +
+            """"confidence":0.9,"nodeIds":["stop"],"reason":"Fixed width."}]}"""
+        ),
+      )
+    }
+    val controller = DesignGuidelineController(host)
+
+    controller.check(document, DesignGuidelineController.encode(document))
+
+    assertTrue("BBBB" in sent && "AAAA" in sent, "both pictures go to the model")
+    val recorded = host.recorded!!
+    assertEquals(3, recorded.revision)
+    assertEquals(listOf("wear.layout.responsive-width"), recorded.verdicts.map { it.ruleId })
+    val result = assertIs<DesignGuidelineState.Ready>(controller.state.value).result!!
+    assertEquals("github:someone", result.ranBy)
+    assertEquals(host.hosted, result.request)
+    assertEquals("github:someone", controller.shared.value!!.ranBy)
+  }
+
+  @Test
+  fun `a recorded result reads back as findings`(): Unit = runBlocking {
+    val host = FakeHost(key = null)
+    host.recorded =
+      DesignGuidelineRecord(
+        designId = "workout",
+        revision = 2,
+        model = "anthropic/claude-haiku-5.5",
+        rulesVersion = 3,
+        asked = listOf("wear.layout.responsive-width", "wear.from-a-newer-set"),
+        verdicts =
+          DesignGuidelinePrompt.parseVerdicts(
+            """
+            {"verdicts":[
+              {"ruleId":"wear.layout.responsive-width","verdict":"fail","confidence":0.8,
+                "nodeIds":["stop"],"reason":"Fixed width."},
+              {"ruleId":"wear.from-a-newer-set","verdict":"fail","confidence":0.9,
+                "nodeIds":[],"reason":"Kept."}
+            ]}
+            """
+          ),
+        ranBy = "agent:review-bot",
+      )
+    val controller = DesignGuidelineController(host)
+
+    controller.loadShared()
+
+    val shared = controller.shared.value!!
+    assertEquals("agent:review-bot", shared.ranBy)
+    assertEquals(2, shared.revision)
+    assertEquals(
+      listOf("wear.layout.responsive-width", "wear.from-a-newer-set"),
+      shared.findings.map { it.rule.id },
+    )
+  }
+
   private class FakeHost(key: String?) : DesignGuidelineHost {
     private var key: String? = key
     private var model: String? = null
@@ -252,6 +373,18 @@ class DesignGuidelinesTest {
     var sourceText: String? = null
 
     override suspend fun source(document: UiBuilderDocument): String? = sourceText
+
+    var hosted: DesignGuidelineRequest? = null
+    var recorded: DesignGuidelineRecord? = null
+
+    override suspend fun hostedRequest(document: UiBuilderDocument) = hosted
+
+    override suspend fun sharedResult() = recorded
+
+    override suspend fun recordResult(record: DesignGuidelineRecord): DesignGuidelineRecord {
+      recorded = record.copy(ranBy = "github:someone", recordedAtEpochMillis = 1L)
+      return recorded!!
+    }
   }
 
   private fun completion(content: String): String = buildJsonObject {

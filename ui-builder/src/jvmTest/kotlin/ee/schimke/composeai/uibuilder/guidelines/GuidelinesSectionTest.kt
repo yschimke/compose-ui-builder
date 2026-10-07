@@ -4,9 +4,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import ee.schimke.composeai.uibuilder.editor.GuidelinesSection
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
+import ee.schimke.composeai.uibuilder.editor.promptForCopy
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 
@@ -42,6 +44,69 @@ class GuidelinesSectionTest {
     }
 
     override suspend fun picture(document: UiBuilderDocument): String? = null
+
+    var shared: DesignGuidelineRecord? = null
+
+    override suspend fun sharedResult() = shared
+  }
+
+  @Test
+  fun `the prompt is readable without a key, with where it came from`() = runComposeUiTest {
+    val controller = DesignGuidelineController(Host(key = null))
+    setContent { MaterialTheme { GuidelinesSection(controller, document(), {}, {}) } }
+    onNodeWithText("Show the prompt").performScrollTo().performClick()
+    waitUntil(timeoutMillis = 5_000) {
+      onAllNodesWithText("Where this prompt comes from").fetchSemanticsNodes().isNotEmpty()
+    }
+    onNodeWithText("Open the rule set").assertExists()
+    onNodeWithContentDescription("Copy the prompt").assertExists()
+    onNodeWithText("System prompt").assertExists()
+    val request =
+      assertIs<DesignGuidelineController.PromptView.Shown>(controller.prompt.value).request
+    assertTrue("ruleId: wear.layout.responsive-width" in request.userText)
+    onNodeWithText("Hide the prompt").performScrollTo().performClick()
+    onNodeWithText("Where this prompt comes from").assertDoesNotExist()
+  }
+
+  @Test
+  fun `the design's recorded result shows who ran it, and when it is stale`() = runComposeUiTest {
+    val host = Host(key = null)
+    host.shared =
+      DesignGuidelineRecord(
+        revision = 0,
+        model = "anthropic/claude-haiku-5.5",
+        rulesVersion = 3,
+        asked = listOf("wear.layout.responsive-width"),
+        verdicts =
+          DesignGuidelinePrompt.parseVerdicts(
+            """{"verdicts":[{"ruleId":"wear.layout.responsive-width","verdict":"fail",""" +
+              """"confidence":0.9,"nodeIds":["stop"],"reason":"Recorded by an agent."}]}"""
+          ),
+        ranBy = "agent:review-bot",
+      )
+    val controller = DesignGuidelineController(host)
+    setContent { MaterialTheme { GuidelinesSection(controller, document(), {}, {}) } }
+    waitUntil(timeoutMillis = 5_000) {
+      onAllNodesWithText("Recorded by an agent.").fetchSemanticsNodes().isNotEmpty()
+    }
+    onNodeWithText("run by agent:review-bot", substring = true).assertExists()
+    onNodeWithText("Checked an earlier revision", substring = true).assertExists()
+  }
+
+  @Test
+  fun `the copied prompt leaves picture bytes out`() {
+    val request =
+      DesignGuidelinePrompt.prepare(
+        DesignGuidelineRuleSet.Bundled,
+        "workout",
+        1,
+        DesignGuidelineController.encode(document()),
+        "data:image/png;base64,SECRETBYTES",
+        null,
+      )
+    val copied = promptForCopy(request)
+    assertTrue("SECRETBYTES" !in copied)
+    assertTrue("device picture" in copied)
   }
 
   @Test
