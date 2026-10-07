@@ -37,6 +37,7 @@ import ee.schimke.composeai.uibuilder.protocol.UiBuilderRequestV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderResponseV1
 import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
 import ee.schimke.composeai.uibuilder.protocol.UpdatePresenceRequestV1
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -102,10 +103,10 @@ class LocalUiBuilderService(
             "no catalog is available offline: ${failure.message ?: "the browser has not stored one"}",
           )
         }
-      is OpenDesignRequestV1 -> snapshot(request.designId)
-      is GetSnapshotRequestV1 -> snapshot(request.designId)
+      is OpenDesignRequestV1 -> readable(request.designId) { snapshot(request.designId) }
+      is GetSnapshotRequestV1 -> readable(request.designId) { snapshot(request.designId) }
       is CreateDesignRequestV1 -> create(request.document.toUiBuilderDocument())
-      is ApplyOperationRequestV1 -> apply(request)
+      is ApplyOperationRequestV1 -> readable(request.submission.designId()) { apply(request) }
       // Answered rather than refused so the editor's heartbeat is harmless in this mode. There is
       // one actor in a design only this browser holds, and it is the one asking.
       is UpdatePresenceRequestV1 ->
@@ -296,6 +297,30 @@ class LocalUiBuilderService(
       catalogs.catalogs().firstOrNull { it.benchmark.catalogSystemId == catalogSystemId }
     } catch (_: Exception) {
       null
+    }
+
+  /**
+   * [read] answered, or an error naming the stored design as unreadable.
+   *
+   * The stored record decodes loosely — a node's properties are kept as JSON — so a value the
+   * protocol's types do not know (a `"type"` no `UiValueV1` subclass declares) survives the read
+   * and only throws when the session projects the document to the protocol's strict shape. Thrown
+   * out of here, it ended the editor's open coroutine with nothing but a console line and left the
+   * boot screen up forever. As a service error it reaches the editor the way a hosted server's
+   * refusal does, and the editor already shows that.
+   */
+  private inline fun readable(
+    designId: String,
+    read: () -> UiBuilderResponseV1,
+  ): UiBuilderResponseV1 =
+    try {
+      read()
+    } catch (failure: SerializationException) {
+      serviceError(
+        ServiceErrorCodeV1.INTERNAL,
+        "this browser's copy of $designId cannot be read: " +
+          (failure.message?.lineSequence()?.firstOrNull() ?: "it does not match the design format"),
+      )
     }
 
   private fun catalogUnavailable(catalogSystemId: String): ErrorResponseV1 =
