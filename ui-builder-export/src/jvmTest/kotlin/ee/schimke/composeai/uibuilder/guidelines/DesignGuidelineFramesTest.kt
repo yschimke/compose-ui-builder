@@ -9,6 +9,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 
 class DesignGuidelineFramesTest {
   @Test
@@ -63,6 +64,28 @@ class DesignGuidelineFramesTest {
     )
     assertEquals(768, frames[1].heightDp)
     assertTrue(frames[0].environment.isEmpty(), "the device picture is the design as authored")
+  }
+
+  @Test
+  fun `a request carries every planned picture, described in order`() {
+    val document = document("m3", "m3/scaffold", 360, 640)
+    val pictures =
+      DesignGuidelineFrames.plan(document, "mobile").mapIndexed { index, frame ->
+        DesignGuidelinePicture.of(frame, index + 1, "data:image/png;base64,AA")
+      }
+    val request =
+      DesignGuidelinePrompt.prepare(
+        DesignGuidelineRuleSet.Bundled,
+        "d",
+        1,
+        Json.encodeToJsonElement(UiBuilderDocument.serializer(), document).jsonObject,
+        pictures,
+        null,
+      )
+    assertEquals(listOf("phone", "tablet"), request.pictures.map { it.kind })
+    assertTrue(request.rules.asked.any { it.visual }, "with pictures the visual rules are asked")
+    assertTrue("Picture 2 (tablet picture)" in request.userText, request.userText)
+    assertTrue(request.provenance.any { "tablet picture" in it })
   }
 
   private fun document(

@@ -166,22 +166,43 @@ fun DesignGuidelinePrompt.prepare(
   devicePicture: String?,
   source: String?,
 ): DesignGuidelineRequest {
-  val systemId =
-    (document["catalogPin"] as? JsonObject)?.get("systemId")?.let {
-      (it as? kotlinx.serialization.json.JsonPrimitive)?.content
-    }
-  val platform = systemId?.let(::platformOf)
   val environment = document["environment"] as? JsonObject
   fun dim(name: String) =
     (environment?.get(name) as? kotlinx.serialization.json.JsonPrimitive)
       ?.content
       ?.toDoubleOrNull()
       ?.toInt() ?: 0
-  val applicable = platform?.let(rules::forPlatform).orEmpty()
-  val pictures =
+  return prepare(
+    rules,
+    designId,
+    revision,
+    document,
     listOfNotNull(
       devicePicture?.let { DesignGuidelinePicture.device(dim("widthDp"), dim("heightDp"), it) }
-    )
+    ),
+    source,
+  )
+}
+
+/**
+ * A request asking [rules] about [document] with [pictures] attached: the frames
+ * [DesignGuidelineFrames.plan] names, drawn by the host. With no picture the visual rules are left
+ * out, since the model would have nothing to judge them on.
+ */
+fun DesignGuidelinePrompt.prepare(
+  rules: DesignGuidelineRuleSet,
+  designId: String?,
+  revision: Int,
+  document: JsonObject,
+  pictures: List<DesignGuidelinePicture>,
+  source: String?,
+): DesignGuidelineRequest {
+  val systemId =
+    (document["catalogPin"] as? JsonObject)?.get("systemId")?.let {
+      (it as? kotlinx.serialization.json.JsonPrimitive)?.content
+    }
+  val platform = systemId?.let(::platformOf)
+  val applicable = platform?.let(rules::forPlatform).orEmpty()
   val asked = if (pictures.isNotEmpty()) applicable else applicable.filterNot { it.visual }
   return DesignGuidelineRequest(
     designId = designId,
