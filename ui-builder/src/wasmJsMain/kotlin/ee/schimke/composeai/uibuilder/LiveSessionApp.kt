@@ -15,6 +15,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -83,6 +84,8 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.encodeNewDesignStates
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
 import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
+import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineController
+import ee.schimke.composeai.uibuilder.guidelines.LocalDesignGuidelineCheck
 import ee.schimke.composeai.uibuilder.inspector.UiBuilderPageDestination
 import ee.schimke.composeai.uibuilder.local.BrowserStorageEstimate
 import ee.schimke.composeai.uibuilder.local.EditorEditRoute
@@ -1580,402 +1583,431 @@ private fun LiveSessionApp(
           agentHost.prompt(false, ""),
         )
     }
-    UiBuilderEditor(
-      document = loadedDocument,
-      agentHost = agentHost,
-      catalog = loadedCatalog,
-      catalogRecord = catalogRecord,
-      pageDestinations = pageDestinations,
-      onNavigatePage = { pageKey -> navigateToUiBuilderPage(config.catalogSystemId, pageKey) },
-      actorId = config.actorId,
-      clientId = config.clientId,
-      operationIdPrefix = config.operationIdPrefix,
-      sessionLabel = sessionStatus,
-      visibilityLabel =
-        if (localSession != null) "Private · this browser"
-        else if (!config.designVisibilitySupported) null
-        else
-          when (designVisibility?.visibility) {
-            "public" -> "Public (read only) · anyone with the link"
-            "private" -> "Private · invited collaborators only"
-            else -> "Visibility unavailable"
-          },
-      onManageVisibility =
-        if (designVisibility?.canManage == true) ({ openDesignSharing(config.designId) }) else null,
-      // No Reconnect while a revision is pinned. There is no session to reconnect: the pinned page
-      // opened one snapshot and holds no socket, and the button's own handler would fetch the head
-      // and replace the document under a banner still naming the revision — the exact lie the
-      // banner exists to prevent.
-      onReconnect =
-        if (revisionPin?.pinned == true) null
-        else {
-          {
-            updates?.reconnect()
-            refreshSnapshot("Reconnecting…")
-          }
-        },
-      onSubmission = { submission ->
-        // A server design this caller may read but not write: the edit is the moment it becomes
-        // theirs, as a copy in this browser. Nothing is sent to a server that would refuse it.
-        val route =
-          editorEditRoute(
-            keptInBrowser = localSession != null,
-            canWrite = config.canWrite && designVisibility?.canWrite != false,
-            revisionPinned = revisionPin?.pinned == true,
-          )
-        if (route == EditorEditRoute.BrowserCopy) {
-          forkIntoBrowser(submission, null)
-        } else {
-          // Queued rather than sent: the revision this command claims, and the order it reaches
-          // the server in, are the drain loop's to decide.
-          sync.enqueueSubmission()
-          if (submissions.trySend(submission).isFailure) {
-            sync.completeSubmission()
-            sessionStatus = "Live error · the edit queue is closed"
-          }
-        }
-      },
-      authoritativeGeneration = authoritativeGeneration,
-      authoritativeRevisionFor = { nodeId ->
-        authoritativeDocument?.takeIf { it.nodes.containsKey(nodeId) }?.revision
-      },
-      initialSelectedNodeId = selectedNodeId,
-      // `#thread=` wins the panel where a link names both: one dock is open at a time, and a link
-      // that names a conversation is a link to read it. `?node=` still selects the layer, which is
-      // what makes "the thread about this button, beside the button" one URL.
-      initialInspectorMode =
-        if (config.selectors.threadId != null) EditorInspectorMode.Comments
-        else EditorInspectorMode.Properties,
-      initialInspectorOpen = config.selectors.nodeId != null || config.selectors.threadId != null,
-      linkedThreadId = linkedThreadId,
-      threadNavigations = threadNavigations,
-      onSelectedThreadChanged = {
-        openThreadId = it
-        // The fragment stops naming a thread as soon as the reader closes it or opens another, and
-        // the state that mirrors it has to go with it. `replaceState` fires no `hashchange`, so
-        // nothing else would clear this — and a stale value here keeps feeding the panel a
-        // `revealThreadId`, which is what exempts a resolved card from being hidden. The card would
-        // then stay on screen for the rest of the session, after the URL had stopped naming it.
-        if (it != linkedThreadId) {
-          dropDesignUrlFragment()
-          linkedThreadId = null
-        }
-      },
-      revisionPin = revisionPin,
-      // Only where there is somewhere to go. A revision that could not be shown left the page on
-      // the latest design already, and a button offering to take you where you are is a button
-      // that teaches the banner cannot be trusted.
-      onGoToLatest = revisionPin?.takeIf { it.pinned }?.let { { goToLatestRevision() } },
-      openingNotice =
-        listOfNotNull(
-            // First, because it is about the edits being made right now.
-            browserStorageProblem,
-            // A server design this caller may look at but not change. Said once, up front, rather
-            // than discovered as a refused save.
-            readOnlyNotice(config).takeIf { localSession == null },
-            config.copiedBecause,
-            config.copiedFromDesignId?.let {
-              "Editing a copy in this browser. The original ($it) is unchanged, and this copy is " +
-                "kept only in this browser."
+    // The Issues panel's guidelines check, on the person's own OpenRouter key: requests go from
+    // this
+    // page to openrouter.ai, never through the design host. A page OpenRouter's sign-in returned to
+    // carries the code to trade for that key, so it is finished before anything else asks.
+    val guidelines =
+      remember(config.designId, config.localStorage) {
+        DesignGuidelineController(
+          BrowserGuidelineHost(config.designId, hostedByServer = !config.localStorage)
+        )
+      }
+    LaunchedEffect(guidelines) { guidelines.completeSignIn() }
+    CompositionLocalProvider(LocalDesignGuidelineCheck provides guidelines) {
+      UiBuilderEditor(
+        document = loadedDocument,
+        agentHost = agentHost,
+        catalog = loadedCatalog,
+        catalogRecord = catalogRecord,
+        pageDestinations = pageDestinations,
+        onNavigatePage = { pageKey -> navigateToUiBuilderPage(config.catalogSystemId, pageKey) },
+        actorId = config.actorId,
+        clientId = config.clientId,
+        operationIdPrefix = config.operationIdPrefix,
+        sessionLabel = sessionStatus,
+        visibilityLabel =
+          if (localSession != null) "Private · this browser"
+          else if (!config.designVisibilitySupported) null
+          else
+            when (designVisibility?.visibility) {
+              "public" -> "Public (read only) · anyone with the link"
+              "private" -> "Private · invited collaborators only"
+              else -> "Visibility unavailable"
             },
-            config.selectors.nodeId
-              ?.takeIf { !loadedDocument.nodes.containsKey(it) }
-              ?.let { "This link names a layer this design does not have: $it" },
-            staleThreadId?.let { "This link names a conversation this design does not have: $it" },
-          )
-          .takeIf { it.isNotEmpty() }
-          ?.joinToString(" "),
-      openingNoticeAction =
-        (if (changedInAnotherTab) EditorNoticeAction("Reload") { reloadBrowserPage() } else null)
-          ?: config.copiedFromDesignId?.let { source ->
-            EditorNoticeAction("Open original") {
-              navigateTo("/ui-builder/${encodeUriComponent(source)}")
+        onManageVisibility =
+          if (designVisibility?.canManage == true) ({ openDesignSharing(config.designId) })
+          else null,
+        // No Reconnect while a revision is pinned. There is no session to reconnect: the pinned
+        // page
+        // opened one snapshot and holds no socket, and the button's own handler would fetch the
+        // head
+        // and replace the document under a banner still naming the revision — the exact lie the
+        // banner exists to prevent.
+        onReconnect =
+          if (revisionPin?.pinned == true) null
+          else {
+            {
+              updates?.reconnect()
+              refreshSnapshot("Reconnecting…")
             }
-          }
-          ?: config.signInUrl
-            ?.takeIf { localSession == null && !config.canWrite }
-            ?.let { url -> EditorNoticeAction("Sign in") { navigateTo(url) } },
-      // Withheld for a design the path form cannot name. The service stores any id that is not
-      // blank, while this editor refuses to start on a design named in the path unless the id is
-      // path-safe, so such a design is reachable only through the legacy query form — and a link
-      // to it would hand its recipient a page that will not open. See [isDesignUrlPathSafe].
-      onCopyDesignLink =
-        if (!isDesignUrlPathSafe(config.designId)) null
-        else
-          { selectors ->
-            val result = copyDesignLink(designUrlPath(config.designId, selectors))
-            // Only on a copy that landed: a failure message must not read as a sharing hint.
-            if (designVisibility?.visibility == "private" && result.startsWith("Link copied"))
-              "$result · Private: recipients need access from the owner."
-            else result
           },
-      initialCatalogQuery = catalogQuery,
-      initialEnabledPacks = enabledPacks,
-      initialPinnedComponents = pinnedComponents,
-      collaborators = collaborators + activeAgents.orEmpty(),
-      componentDrift = componentDrift,
-      componentLibrary = componentLibrary,
-      loadLibrarySymbol = if (localSession == null) ::loadLibrarySymbol else null,
-      publishLibraryComponent = if (localSession == null) ::publishLibraryComponent else null,
-      onLibraryChanged = { libraryGeneration += 1 },
-      devicePresets = devicePresets,
-      newDesignCatalogs = newDesignCatalogs,
-      onCreateDesign = createDesign,
-      onCreatePublicDesign = createPublicDesign,
-      onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
-      // A fork of the design as it is now, owned by whoever presses it: the copy route reads the
-      // source as the caller, so this lends nothing a reader could not already open.
-      onForkDesign =
-        when {
-          localSession != null -> null
-          config.canWrite -> {
-            { navigateToCopyDesign(config.designId, NewDesignNames.random()) }
-          }
-          // The server would refuse the copy route: the copy is made in this browser instead.
-          else -> {
-            { forkIntoBrowser(null, null) }
-          }
-        },
-      onHelp = ::openUiBuilderGuide,
-      onCopyAiPrompt =
-        if (localSession != null || !isDesignUrlPathSafe(config.designId)) null
-        else {
-          {
-            copyAiPrompt(
-              agentUiBuilderPrompt(
-                mcpEndpoint = "${pageOrigin().trimEnd('/')}/mcp",
-                designUrl = shareableUrl(designUrlPath(config.designId)),
-                designId = config.designId,
-              )
+        onSubmission = { submission ->
+          // A server design this caller may read but not write: the edit is the moment it becomes
+          // theirs, as a copy in this browser. Nothing is sent to a server that would refuse it.
+          val route =
+            editorEditRoute(
+              keptInBrowser = localSession != null,
+              canWrite = config.canWrite && designVisibility?.canWrite != false,
+              revisionPinned = revisionPin?.pinned == true,
             )
+          if (route == EditorEditRoute.BrowserCopy) {
+            forkIntoBrowser(submission, null)
+          } else {
+            // Queued rather than sent: the revision this command claims, and the order it reaches
+            // the server in, are the drain loop's to decide.
+            sync.enqueueSubmission()
+            if (submissions.trySend(submission).isFailure) {
+              sync.completeSubmission()
+              sessionStatus = "Live error · the edit queue is closed"
+            }
           }
         },
-      onTakeOffline = takeOffline,
-      onSyncToServer = syncToServer,
-      onPublishToServer = publishToServer,
-      exportHost = exportHost,
-      onRequestDocumentPreview =
-        if (!documentPreviewAvailable) null
-        else
-          { expected ->
-            if (config.localStorage || authoritativeDocument?.toUiBuilderDocument() != expected) {
-              UiBuilderDocumentPreview.Ready(
-                revision = expected.revision,
-                documentBase64 =
-                  fetchBase64(
-                    "$UI_BUILDER_DOCUMENT_EXPORT_PATH/export.rc",
-                    Json.encodeToString(expected.toDesignDocumentV1()),
-                  ),
-                saved = false,
-              )
-            } else {
-              UiBuilderDocumentPreview.Ready(
-                revision = expected.revision,
-                documentBase64 =
-                  fetchBase64(
-                    "$UI_BUILDER_LIVE_EXPORT_PATH/${encodeUriComponent(expected.id)}/export.rc?revision=${expected.revision}"
-                  ),
-              )
-            }
-          },
-      restoredReference = restoredReference,
-      onPickReference = { references.pickFile() },
-      // The third lane that renders on request, and the one easiest to miss: this one *keeps* what
-      // it renders, as the reference the canvas is traced against. Snapshotting a pinned page
-      // without the revision would lay the head over history and then persist it.
-      onSnapshotDesign = {
-        references.snapshotDesign(revisionPin?.takeIf { it.pinned }?.requested)
-      },
-      onImportReferenceUrl = { url -> references.fetchUrl(url) },
-      referenceStatus = referenceStatus,
-      pastedReference = pastedReference,
-      comments = commentBoard,
-      commentStatus = commentStatus,
-      commentNotifications = commentNotificationsState,
-      onToggleCommentNotifications = {
-        // Undispatched, so the permission request inside runs within this click's handler: the
-        // browser only shows its prompt for a gesture, and Safari checks that strictly.
-        scope.launch(start = CoroutineStart.UNDISPATCHED) { commentNotifications.toggle() }
-      },
-      onPostComment = { draft ->
-        scope.launch { commentStatus = commentHost.post(draft, config.displayName) }
-      },
-      onResolveCommentThread = { threadId, resolved ->
-        scope.launch { commentStatus = commentHost.resolve(threadId, resolved) }
-      },
-      review = review,
-      reviewStatus = reviewStatus,
-      suggestions = suggestions,
-      suggestionStatus = suggestionStatus,
-      onAcceptSuggestion =
-        if (!suggestionsAvailable) null
-        else
-          { id ->
-            suggestions.open
-              .firstOrNull { it.suggestionId == id }
-              ?.let { suggestion ->
-                scope.launch {
-                  when (val result = suggestionHost.accept(suggestion)) {
-                    is BrowserSuggestionHost.Result.Decided -> {
-                      suggestions = suggestions.copy(lastOutcome = result.outcome)
-                      suggestionStatus = null
-                      suggestionsGeneration += 1
-                    }
-                    is BrowserSuggestionHost.Result.Failed -> suggestionStatus = result.reason
-                  }
-                }
-              }
-          },
-      onRejectSuggestion =
-        if (!suggestionsAvailable) null
-        else
-          { id ->
-            suggestions.open
-              .firstOrNull { it.suggestionId == id }
-              ?.let { suggestion ->
-                scope.launch {
-                  when (val result = suggestionHost.reject(suggestion)) {
-                    is BrowserSuggestionHost.Result.Decided -> {
-                      suggestions = suggestions.copy(lastOutcome = result.outcome)
-                      suggestionStatus = null
-                      suggestionsGeneration += 1
-                    }
-                    is BrowserSuggestionHost.Result.Failed -> suggestionStatus = result.reason
-                  }
-                }
-              }
-          },
-      onDecide =
-        if (!reviewAvailable) null
-        else
-          { verdict, note ->
-            val revision = (latestEditorDocument ?: document)?.revision
-            if (revision != null) {
-              scope.launch {
-                when (
-                  val result =
-                    reviewHost.decide(revision.toLong(), verdict, note, config.displayName)
-                ) {
-                  is BrowserReviewHost.Result.Recorded -> {
-                    review = result.review
-                    reviewStatus = null
-                  }
-                  is BrowserReviewHost.Result.Refused -> reviewStatus = result.reason
-                }
-              }
-            }
-          },
-      onStateChanged = {
-        latestEditorDocument = it.document
-        // The address bar stops naming a node the moment the selection moves off it, so a URL
-        // copied later — or restored by the browser tomorrow — cannot point at a layer nobody has
-        // been looking at.
-        if (config.selectors.nodeId != null && it.selectedNodeId != config.selectors.nodeId) {
-          dropDesignUrlQuery(DESIGN_URL_NODE_KEY)
-        }
-        selectedNodeId = it.selectedNodeId
-        inspectorMode = it.inspectorMode
-        catalogQuery = it.catalogQuery
-        if (it.enabledPacks != enabledPacks) {
-          enabledPacks = it.enabledPacks
-          writeEnabledPacks(activeCatalogSystemId, it.enabledPacks)
-        }
-        if (it.pinnedComponents != pinnedComponents) {
-          pinnedComponents = it.pinnedComponents
-          writePinnedComponents(activeCatalogSystemId, it.pinnedComponents)
-        }
-        // Persisted from here rather than from each control, so every route that changes the
-        // overlay — a slider, a stroke, a flatten, a paste — is stored by one path.
-        if (referenceLoaded && it.reference != storedReference) pendingReference = it.reference
-        publishEditorState(it)
-      },
-      onCanvasMetrics = ::publishEditorCanvasMetrics,
-      onCanvasBoundsChanged = ::publishEditorCanvasBounds,
-      onDropTargetChanged = ::publishEditorDropTarget,
-      // `candidate` predates catalog-delivered runtimes. Keep its in-process canvas until every
-      // deployed catalog has been verified through the hosted editor and native-export lanes; it
-      // names no immutable archive, so asking the runtime route for it can only return 404.
-      canvasRenderer =
-        if (
-          loadedDocument.catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull == "candidate"
-        ) {
-          null
-        } else {
-          { rendered, surface, selectedNodeId, selectionEnabled, onNodeSelected, onInspection ->
-            CatalogRuntimeCanvas(
-              rendered,
-              surface,
-              selectedNodeId,
-              selectionEnabled,
-              onNodeSelected,
-              onInspection,
+        authoritativeGeneration = authoritativeGeneration,
+        authoritativeRevisionFor = { nodeId ->
+          authoritativeDocument?.takeIf { it.nodes.containsKey(nodeId) }?.revision
+        },
+        initialSelectedNodeId = selectedNodeId,
+        // `#thread=` wins the panel where a link names both: one dock is open at a time, and a link
+        // that names a conversation is a link to read it. `?node=` still selects the layer, which
+        // is
+        // what makes "the thread about this button, beside the button" one URL.
+        initialInspectorMode =
+          if (config.selectors.threadId != null) EditorInspectorMode.Comments
+          else EditorInspectorMode.Properties,
+        initialInspectorOpen = config.selectors.nodeId != null || config.selectors.threadId != null,
+        linkedThreadId = linkedThreadId,
+        threadNavigations = threadNavigations,
+        onSelectedThreadChanged = {
+          openThreadId = it
+          // The fragment stops naming a thread as soon as the reader closes it or opens another,
+          // and
+          // the state that mirrors it has to go with it. `replaceState` fires no `hashchange`, so
+          // nothing else would clear this — and a stale value here keeps feeding the panel a
+          // `revealThreadId`, which is what exempts a resolved card from being hidden. The card
+          // would
+          // then stay on screen for the rest of the session, after the URL had stopped naming it.
+          if (it != linkedThreadId) {
+            dropDesignUrlFragment()
+            linkedThreadId = null
+          }
+        },
+        revisionPin = revisionPin,
+        // Only where there is somewhere to go. A revision that could not be shown left the page on
+        // the latest design already, and a button offering to take you where you are is a button
+        // that teaches the banner cannot be trusted.
+        onGoToLatest = revisionPin?.takeIf { it.pinned }?.let { { goToLatestRevision() } },
+        openingNotice =
+          listOfNotNull(
+              // First, because it is about the edits being made right now.
+              browserStorageProblem,
+              // A server design this caller may look at but not change. Said once, up front, rather
+              // than discovered as a refused save.
+              readOnlyNotice(config).takeIf { localSession == null },
+              config.copiedBecause,
+              config.copiedFromDesignId?.let {
+                "Editing a copy in this browser. The original ($it) is unchanged, and this copy is " +
+                  "kept only in this browser."
+              },
+              config.selectors.nodeId
+                ?.takeIf { !loadedDocument.nodes.containsKey(it) }
+                ?.let { "This link names a layer this design does not have: $it" },
+              staleThreadId?.let {
+                "This link names a conversation this design does not have: $it"
+              },
             )
-          }
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString(" "),
+        openingNoticeAction =
+          (if (changedInAnotherTab) EditorNoticeAction("Reload") { reloadBrowserPage() } else null)
+            ?: config.copiedFromDesignId?.let { source ->
+              EditorNoticeAction("Open original") {
+                navigateTo("/ui-builder/${encodeUriComponent(source)}")
+              }
+            }
+            ?: config.signInUrl
+              ?.takeIf { localSession == null && !config.canWrite }
+              ?.let { url -> EditorNoticeAction("Sign in") { navigateTo(url) } },
+        // Withheld for a design the path form cannot name. The service stores any id that is not
+        // blank, while this editor refuses to start on a design named in the path unless the id is
+        // path-safe, so such a design is reachable only through the legacy query form — and a link
+        // to it would hand its recipient a page that will not open. See [isDesignUrlPathSafe].
+        onCopyDesignLink =
+          if (!isDesignUrlPathSafe(config.designId)) null
+          else
+            { selectors ->
+              val result = copyDesignLink(designUrlPath(config.designId, selectors))
+              // Only on a copy that landed: a failure message must not read as a sharing hint.
+              if (designVisibility?.visibility == "private" && result.startsWith("Link copied"))
+                "$result · Private: recipients need access from the owner."
+              else result
+            },
+        initialCatalogQuery = catalogQuery,
+        initialEnabledPacks = enabledPacks,
+        initialPinnedComponents = pinnedComponents,
+        collaborators = collaborators + activeAgents.orEmpty(),
+        componentDrift = componentDrift,
+        componentLibrary = componentLibrary,
+        loadLibrarySymbol = if (localSession == null) ::loadLibrarySymbol else null,
+        publishLibraryComponent = if (localSession == null) ::publishLibraryComponent else null,
+        onLibraryChanged = { libraryGeneration += 1 },
+        devicePresets = devicePresets,
+        newDesignCatalogs = newDesignCatalogs,
+        onCreateDesign = createDesign,
+        onCreatePublicDesign = createPublicDesign,
+        onBrowseDesigns = if (localSession == null) ::navigateToDesignsIndex else null,
+        // A fork of the design as it is now, owned by whoever presses it: the copy route reads the
+        // source as the caller, so this lends nothing a reader could not already open.
+        onForkDesign =
+          when {
+            localSession != null -> null
+            config.canWrite -> {
+              { navigateToCopyDesign(config.designId, NewDesignNames.random()) }
+            }
+            // The server would refuse the copy route: the copy is made in this browser instead.
+            else -> {
+              { forkIntoBrowser(null, null) }
+            }
+          },
+        onHelp = ::openUiBuilderGuide,
+        onCopyAiPrompt =
+          if (localSession != null || !isDesignUrlPathSafe(config.designId)) null
+          else {
+            {
+              copyAiPrompt(
+                agentUiBuilderPrompt(
+                  mcpEndpoint = "${pageOrigin().trimEnd('/')}/mcp",
+                  designUrl = shareableUrl(designUrlPath(config.designId)),
+                  designId = config.designId,
+                )
+              )
+            }
+          },
+        onTakeOffline = takeOffline,
+        onSyncToServer = syncToServer,
+        onPublishToServer = publishToServer,
+        exportHost = exportHost,
+        onRequestDocumentPreview =
+          if (!documentPreviewAvailable) null
+          else
+            { expected ->
+              if (config.localStorage || authoritativeDocument?.toUiBuilderDocument() != expected) {
+                UiBuilderDocumentPreview.Ready(
+                  revision = expected.revision,
+                  documentBase64 =
+                    fetchBase64(
+                      "$UI_BUILDER_DOCUMENT_EXPORT_PATH/export.rc",
+                      Json.encodeToString(expected.toDesignDocumentV1()),
+                    ),
+                  saved = false,
+                )
+              } else {
+                UiBuilderDocumentPreview.Ready(
+                  revision = expected.revision,
+                  documentBase64 =
+                    fetchBase64(
+                      "$UI_BUILDER_LIVE_EXPORT_PATH/${encodeUriComponent(expected.id)}/export.rc?revision=${expected.revision}"
+                    ),
+                )
+              }
+            },
+        restoredReference = restoredReference,
+        onPickReference = { references.pickFile() },
+        // The third lane that renders on request, and the one easiest to miss: this one *keeps*
+        // what
+        // it renders, as the reference the canvas is traced against. Snapshotting a pinned page
+        // without the revision would lay the head over history and then persist it.
+        onSnapshotDesign = {
+          references.snapshotDesign(revisionPin?.takeIf { it.pinned }?.requested)
         },
-      onInspectionSnapshot = {
-        inspectionPublisher.publish(it)
-        initialDesignLayout.complete(Unit)
-      },
-      onInspectionInvalidated = { collector ->
-        inspectionPublisher.offer(collector, loadedDocument.revision)
-        initialDesignLayout.complete(Unit)
-      },
-      // The native render is a real Compose render the server performs from the stored design, so
-      // it is the one pane a design this server has never seen cannot fill.
-      //
-      // Where it can, it is pinned like the export lane rather than withheld, which is what it has
-      // to be on a catalog whose Wasm canvas is only a stand-in. Withholding it left `wear-m3`
-      // drawing Material 3 lookalikes under a banner naming a revision — not a rough picture of the
-      // right document but a faithful picture of the wrong component library, which is the one
-      // thing a historical view must not be. The route takes a revision for exactly this.
-      //
-      // The host container shape rides along for the same reason the revision does: the pane has to
-      // draw the frame the canvas beside it is drawing, and a render that picked its own would be
-      // the one disagreement this pane must not invent.
-      // The live half of the same lane. One instance per session: the editor opens it when a
-      // render names a session and closes it when that session changes or the pane goes away.
-      onOpenNativeStream = { live -> BrowserNativeStream(live) },
-      onRequestNativeRender = { hostShape ->
-        if (config.localStorage) UiBuilderNativeRender(failure = LOCAL_NATIVE_RENDER_UNAVAILABLE)
-        else if (!config.canWrite) UiBuilderNativeRender(failure = serverOnlyRefusal(config))
-        else
-          requestNativeRender(
-            config.designId,
-            revisionPin?.takeIf { it.pinned }?.requested,
-            hostShape,
+        onImportReferenceUrl = { url -> references.fetchUrl(url) },
+        referenceStatus = referenceStatus,
+        pastedReference = pastedReference,
+        comments = commentBoard,
+        commentStatus = commentStatus,
+        commentNotifications = commentNotificationsState,
+        onToggleCommentNotifications = {
+          // Undispatched, so the permission request inside runs within this click's handler: the
+          // browser only shows its prompt for a gesture, and Safari checks that strictly.
+          scope.launch(start = CoroutineStart.UNDISPATCHED) { commentNotifications.toggle() }
+        },
+        onPostComment = { draft ->
+          scope.launch { commentStatus = commentHost.post(draft, config.displayName) }
+        },
+        onResolveCommentThread = { threadId, resolved ->
+          scope.launch { commentStatus = commentHost.resolve(threadId, resolved) }
+        },
+        review = review,
+        reviewStatus = reviewStatus,
+        suggestions = suggestions,
+        suggestionStatus = suggestionStatus,
+        onAcceptSuggestion =
+          if (!suggestionsAvailable) null
+          else
+            { id ->
+              suggestions.open
+                .firstOrNull { it.suggestionId == id }
+                ?.let { suggestion ->
+                  scope.launch {
+                    when (val result = suggestionHost.accept(suggestion)) {
+                      is BrowserSuggestionHost.Result.Decided -> {
+                        suggestions = suggestions.copy(lastOutcome = result.outcome)
+                        suggestionStatus = null
+                        suggestionsGeneration += 1
+                      }
+                      is BrowserSuggestionHost.Result.Failed -> suggestionStatus = result.reason
+                    }
+                  }
+                }
+            },
+        onRejectSuggestion =
+          if (!suggestionsAvailable) null
+          else
+            { id ->
+              suggestions.open
+                .firstOrNull { it.suggestionId == id }
+                ?.let { suggestion ->
+                  scope.launch {
+                    when (val result = suggestionHost.reject(suggestion)) {
+                      is BrowserSuggestionHost.Result.Decided -> {
+                        suggestions = suggestions.copy(lastOutcome = result.outcome)
+                        suggestionStatus = null
+                        suggestionsGeneration += 1
+                      }
+                      is BrowserSuggestionHost.Result.Failed -> suggestionStatus = result.reason
+                    }
+                  }
+                }
+            },
+        onDecide =
+          if (!reviewAvailable) null
+          else
+            { verdict, note ->
+              val revision = (latestEditorDocument ?: document)?.revision
+              if (revision != null) {
+                scope.launch {
+                  when (
+                    val result =
+                      reviewHost.decide(revision.toLong(), verdict, note, config.displayName)
+                  ) {
+                    is BrowserReviewHost.Result.Recorded -> {
+                      review = result.review
+                      reviewStatus = null
+                    }
+                    is BrowserReviewHost.Result.Refused -> reviewStatus = result.reason
+                  }
+                }
+              }
+            },
+        onStateChanged = {
+          latestEditorDocument = it.document
+          // The address bar stops naming a node the moment the selection moves off it, so a URL
+          // copied later — or restored by the browser tomorrow — cannot point at a layer nobody has
+          // been looking at.
+          if (config.selectors.nodeId != null && it.selectedNodeId != config.selectors.nodeId) {
+            dropDesignUrlQuery(DESIGN_URL_NODE_KEY)
+          }
+          selectedNodeId = it.selectedNodeId
+          inspectorMode = it.inspectorMode
+          catalogQuery = it.catalogQuery
+          if (it.enabledPacks != enabledPacks) {
+            enabledPacks = it.enabledPacks
+            writeEnabledPacks(activeCatalogSystemId, it.enabledPacks)
+          }
+          if (it.pinnedComponents != pinnedComponents) {
+            pinnedComponents = it.pinnedComponents
+            writePinnedComponents(activeCatalogSystemId, it.pinnedComponents)
+          }
+          // Persisted from here rather than from each control, so every route that changes the
+          // overlay — a slider, a stroke, a flatten, a paste — is stored by one path.
+          if (referenceLoaded && it.reference != storedReference) pendingReference = it.reference
+          publishEditorState(it)
+        },
+        onCanvasMetrics = ::publishEditorCanvasMetrics,
+        onCanvasBoundsChanged = ::publishEditorCanvasBounds,
+        onDropTargetChanged = ::publishEditorDropTarget,
+        // `candidate` predates catalog-delivered runtimes. Keep its in-process canvas until every
+        // deployed catalog has been verified through the hosted editor and native-export lanes; it
+        // names no immutable archive, so asking the runtime route for it can only return 404.
+        canvasRenderer =
+          if (
+            loadedDocument.catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull ==
+              "candidate"
+          ) {
+            null
+          } else {
+            { rendered, surface, selectedNodeId, selectionEnabled, onNodeSelected, onInspection ->
+              CatalogRuntimeCanvas(
+                rendered,
+                surface,
+                selectedNodeId,
+                selectionEnabled,
+                onNodeSelected,
+                onInspection,
+              )
+            }
+          },
+        onInspectionSnapshot = {
+          inspectionPublisher.publish(it)
+          initialDesignLayout.complete(Unit)
+        },
+        onInspectionInvalidated = { collector ->
+          inspectionPublisher.offer(collector, loadedDocument.revision)
+          initialDesignLayout.complete(Unit)
+        },
+        // The native render is a real Compose render the server performs from the stored design, so
+        // it is the one pane a design this server has never seen cannot fill.
+        //
+        // Where it can, it is pinned like the export lane rather than withheld, which is what it
+        // has
+        // to be on a catalog whose Wasm canvas is only a stand-in. Withholding it left `wear-m3`
+        // drawing Material 3 lookalikes under a banner naming a revision — not a rough picture of
+        // the
+        // right document but a faithful picture of the wrong component library, which is the one
+        // thing a historical view must not be. The route takes a revision for exactly this.
+        //
+        // The host container shape rides along for the same reason the revision does: the pane has
+        // to
+        // draw the frame the canvas beside it is drawing, and a render that picked its own would be
+        // the one disagreement this pane must not invent.
+        // The live half of the same lane. One instance per session: the editor opens it when a
+        // render names a session and closes it when that session changes or the pane goes away.
+        onOpenNativeStream = { live -> BrowserNativeStream(live) },
+        onRequestNativeRender = { hostShape ->
+          if (config.localStorage) UiBuilderNativeRender(failure = LOCAL_NATIVE_RENDER_UNAVAILABLE)
+          else if (!config.canWrite) UiBuilderNativeRender(failure = serverOnlyRefusal(config))
+          else
+            requestNativeRender(
+              config.designId,
+              revisionPin?.takeIf { it.pinned }?.requested,
+              hostShape,
+            )
+        },
+        remoteComposeSources = remoteComposeSources,
+        resolveRemoteComposeDocument = { source ->
+          fetchBase64(catalogAssetPath(activeCatalogSystemId, "/render/${source.id}.rc"))
+        },
+        resolveRemoteComposeThumbnail = { source ->
+          val encoded =
+            fetchBase64(catalogAssetPath(activeCatalogSystemId, "/render/${source.id}.png"))
+          Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
+        },
+        // The same fetch, for a URL the *design* names rather than one the palette built. A design
+        // is someone else's data fetched as this viewer, so the URL is held to the routes that
+        // serve
+        // Remote Compose documents ([designReferenceUrl]) before [sameOriginRequestUrl] adds the
+        // token. Another host, or any other route on this one, draws that refusal as the node's own
+        // diagnostic.
+        resolveRemoteComposeUrl = { url ->
+          fetchBase64(designReferenceUrl(url, DesignReferenceKind.RemoteComposeDocument))
+        },
+        // The design's own uploaded pictures, from the route beside the design API that stores
+        // them. Same-origin like everything else here, and read as this page's actor, so a design
+        // one may not open has no pictures one may fetch.
+        resolveDesignAsset = { assetKey ->
+          Base64.decode(
+            fetchBase64("/api/ui-builder/v1/designs/${config.designId}/assets/$assetKey")
           )
-      },
-      remoteComposeSources = remoteComposeSources,
-      resolveRemoteComposeDocument = { source ->
-        fetchBase64(catalogAssetPath(activeCatalogSystemId, "/render/${source.id}.rc"))
-      },
-      resolveRemoteComposeThumbnail = { source ->
-        val encoded =
-          fetchBase64(catalogAssetPath(activeCatalogSystemId, "/render/${source.id}.png"))
-        Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
-      },
-      // The same fetch, for a URL the *design* names rather than one the palette built. A design
-      // is someone else's data fetched as this viewer, so the URL is held to the routes that serve
-      // Remote Compose documents ([designReferenceUrl]) before [sameOriginRequestUrl] adds the
-      // token. Another host, or any other route on this one, draws that refusal as the node's own
-      // diagnostic.
-      resolveRemoteComposeUrl = { url ->
-        fetchBase64(designReferenceUrl(url, DesignReferenceKind.RemoteComposeDocument))
-      },
-      // The design's own uploaded pictures, from the route beside the design API that stores
-      // them. Same-origin like everything else here, and read as this page's actor, so a design
-      // one may not open has no pictures one may fetch.
-      resolveDesignAsset = { assetKey ->
-        Base64.decode(fetchBase64("/api/ui-builder/v1/designs/${config.designId}/assets/$assetKey"))
-      },
-      // Same-origin, and only from the ingested-document route ([designReferenceUrl]): a builder
-      // that made an exception for animation URLs would be a page fetching arbitrary JSON into a
-      // design as this viewer. An animation served from elsewhere is pasted into the element's
-      // `json` instead, which is the same bytes by a route the host can see.
-      loadLottieAnimation = { url ->
-        fetchText(designReferenceUrl(url, DesignReferenceKind.LottieAnimation))
-      },
-    )
+        },
+        // Same-origin, and only from the ingested-document route ([designReferenceUrl]): a builder
+        // that made an exception for animation URLs would be a page fetching arbitrary JSON into a
+        // design as this viewer. An animation served from elsewhere is pasted into the element's
+        // `json` instead, which is the same bytes by a route the host can see.
+        loadLottieAnimation = { url ->
+          fetchText(designReferenceUrl(url, DesignReferenceKind.LottieAnimation))
+        },
+      )
+    }
     LaunchedEffect(loadedDocument.revision) { markReady() }
     // What the URL's selectors resolved to, for the harness and for anybody debugging a link that
     // did not do what its author expected. Published rather than inferred from pixels: "the node

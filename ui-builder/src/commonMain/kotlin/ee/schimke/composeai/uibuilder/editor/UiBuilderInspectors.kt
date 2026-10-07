@@ -95,6 +95,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.guidelines.LocalDesignGuidelineCheck
 import ee.schimke.composeai.uibuilder.inspector.CommentsInspector
 import ee.schimke.composeai.uibuilder.inspector.EventActionsInspector
 import ee.schimke.composeai.uibuilder.inspector.ReviewDecisionSection
@@ -343,6 +344,9 @@ private fun InspectorBody(
 ) {
   Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
     if (state.inspectorMode == EditorInspectorMode.Issues) {
+      LocalDesignGuidelineCheck.current?.let { guidelines ->
+        GuidelinesSection(guidelines, state.document, onTextInputFocusChanged, dispatch)
+      }
       ProblemsInspector(problems, dispatch)
       return@Column
     }
