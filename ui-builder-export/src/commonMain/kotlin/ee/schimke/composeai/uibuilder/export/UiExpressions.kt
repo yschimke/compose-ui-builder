@@ -563,7 +563,7 @@ object UiExpressions {
       Op.MUL -> num(d(0) * d(1))
       Op.DIV ->
         if (integral) (if (d(1) == 0.0) 0 else (d(0) / d(1)).toInt())
-        else if (d(1) == 0.0) 0.0 else d(0) / d(1)
+        else num(if (d(1) == 0.0) 0.0 else d(0) / d(1))
       Op.MOD -> if (d(1) == 0.0) num(0.0) else num(d(0) % d(1))
       Op.NEG -> num(-d(0))
       Op.MIN -> num(minOf(d(0), d(1)))

@@ -176,6 +176,7 @@ class UiExpressionsTest {
   @Test
   fun `the preview computes in Float, as the player does`() {
     assertEquals(true, evaluate("16777216.0 + 1.0 == 16777216.0"))
+    assertEquals(true, evaluate("1.0 / 10.0 == 0.1"))
   }
 
   @Test
