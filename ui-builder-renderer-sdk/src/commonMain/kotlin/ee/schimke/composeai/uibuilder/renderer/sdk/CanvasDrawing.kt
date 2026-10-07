@@ -113,7 +113,7 @@ private fun iterations(repeat: CanvasRenderNode): List<CanvasRenderNode> {
   val until = node.number("until") ?: return emptyList()
   val step = node.number("step") ?: 1f
   if (step <= 0f || !from.isFinite() || !until.isFinite()) return emptyList()
-  val name = UiDrawing.indexName(node)
+  val name = UiDrawing.indexName(repeat.node) ?: return emptyList()
   val children = node.slots[UiDrawing.OPS_SLOT].orEmpty()
   return buildList {
     var index = from

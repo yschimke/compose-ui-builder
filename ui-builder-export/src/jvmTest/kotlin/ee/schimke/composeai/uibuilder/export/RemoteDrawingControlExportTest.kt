@@ -111,6 +111,59 @@ class RemoteDrawingControlExportTest {
       },
       "not a name",
     )
+    // The player cannot check a step it computes, and one that reaches 0 never ends.
+    assertTrue(
+      refusals(dial.withProperties("ticks", "step" to """{"type":"state","variable":"alarmOn"}"""))
+        .any { "ticks.step" in it },
+      "a dynamic step",
+    )
+    // The index names the lambda parameter, so it is fixed when the loop is written.
+    assertTrue(
+      refusals(dial.withProperties("ticks", "index" to """{"type":"state","variable":"alarmOn"}"""))
+        .any { "ticks.index" in it },
+      "a dynamic index",
+    )
+  }
+
+  @Test
+  fun `a clip's ClipOp is fixed when it is written`() {
+    val refused =
+      refusals(
+        document()
+          .withProperties("window", "exclude" to """{"type":"state","variable":"alarmOn"}""")
+      )
+
+    assertTrue(refused.any { "window.exclude" in it }, refused.toString())
+  }
+
+  @Test
+  fun `a loop index never shadows state of the same name`() {
+    val source =
+      exported(
+        document()
+          .let { dial ->
+            dial.copy(
+              stateVariables =
+                JsonObject(
+                  dial.stateVariables +
+                    ("i" to
+                      Json.parseToJsonElement(
+                        """{"type":"value","valueType":"float","initialValue":2,
+                          "nullable":false,"persistence":"session"}"""
+                      ))
+                )
+            )
+          }
+          .withProperties(
+            "mark",
+            "endYDp" to
+              """{"type":"expr","op":"add","args":[{"type":"state","variable":"i"},{"type":"int","value":10}]}""",
+          )
+      )
+
+    assertContains(source, "loop(0.rf, 12.rf, 1.rf) { i_ ->\n")
+    assertContains(source, "rotate((i_ * 30.rf), ")
+    assertContains(source, "(i + 10.rf)")
   }
 
   @Test
