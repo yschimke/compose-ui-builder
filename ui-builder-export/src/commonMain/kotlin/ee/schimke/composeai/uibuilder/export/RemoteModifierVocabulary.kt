@@ -47,7 +47,42 @@ public object RemoteModifierVocabulary {
   public val version: String
     get() = file.source.version
 
-  public val modifiers: Map<String, Modifier> by lazy { file.modifiers.associateBy { it.name } }
+  /** `semantics { … }`: accessibility, its receiver lambda's settable values declared by hand. */
+  public const val SEMANTICS: String = "semantics"
+
+  /** The `androidx.compose.ui.semantics.Role`s the player maps to an accessible role. */
+  public val ROLES: List<String> =
+    listOf("Button", "Checkbox", "Switch", "RadioButton", "Tab", "Image", "DropdownList")
+
+  /**
+   * Calls whose released signature takes a receiver lambda, so the generator leaves them out: their
+   * value-carrying parts are declared here, and the emitter writes the lambda around them.
+   * `semantics` sets what a screen reader says — accessibility, not interaction, which stays an
+   * event binding. `clear` writes `clearAndSetSemantics` instead, replacing the children's.
+   */
+  private val handDeclared: List<Modifier> =
+    listOf(
+      Modifier(
+        SEMANTICS,
+        "androidx.compose.remote.creation.compose.modifier",
+        listOf(
+          Overload(
+            listOf(
+              Parameter("contentDescription", "RemoteString", "string", optional = true),
+              Parameter("stateDescription", "RemoteString", "string", optional = true),
+              Parameter("role", "Role", "string", optional = true),
+              Parameter("enabled", "Boolean", "bool", optional = true),
+              Parameter("mergeDescendants", "Boolean", "bool", optional = true),
+              Parameter("clear", "Boolean", "bool", optional = true),
+            )
+          )
+        ),
+      )
+    )
+
+  public val modifiers: Map<String, Modifier> by lazy {
+    (file.modifiers + handDeclared).associateBy { it.name }
+  }
 
   /**
    * The overload a call naming [arguments] resolves to: every argument is one of its parameters and

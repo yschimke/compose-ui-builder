@@ -32,8 +32,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.DefaultCameraDistance
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -311,6 +314,26 @@ fun Modifier.applyCanvasModifier(
             velocity = plan.args["velocity"]?.dp ?: MarqueeDefaults.Velocity,
           )
         }
+        // The same layer Compose draws, argument for argument; translation is in pixels in both.
+        "graphicsLayer" ->
+          graphicsLayer(
+            scaleX = plan.args["scaleX"] ?: 1f,
+            scaleY = plan.args["scaleY"] ?: 1f,
+            alpha = plan.args["alpha"] ?: 1f,
+            translationX = plan.args["translationX"] ?: 0f,
+            translationY = plan.args["translationY"] ?: 0f,
+            shadowElevation = plan.args["shadowElevation"] ?: 0f,
+            rotationX = plan.args["rotationX"] ?: 0f,
+            rotationY = plan.args["rotationY"] ?: 0f,
+            rotationZ = plan.args["rotationZ"] ?: 0f,
+            cameraDistance = plan.args["cameraDistance"] ?: DefaultCameraDistance,
+            transformOrigin =
+              TransformOrigin(
+                plan.args["transformOriginX"] ?: 0.5f,
+                plan.args["transformOriginY"] ?: 0.5f,
+              ),
+          )
+        // Accessibility, not appearance: the player's screen reader is where it shows.
         else -> this
       }
     null -> this

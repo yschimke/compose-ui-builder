@@ -3719,12 +3719,50 @@ internal class RemoteContentEmitter(
     val arguments =
       overload.parameters.mapNotNull { parameter ->
         val value = args[parameter.name] ?: return@mapNotNull null
-        "${parameter.name} = " +
+        parameter.name to
           (remoteCallArgument(parameter, value, "$where.$name.${parameter.name}")
             ?: return emptyList())
       }
+    if (name == RemoteModifierVocabulary.SEMANTICS) return semanticsCall(arguments.toMap(), where)
     usedComponentImports += "${entry.`package`}.$name"
-    return listOf("$name(${arguments.joinToString()})")
+    return listOf("$name(${arguments.joinToString { (key, value) -> "$key = $value" }})")
+  }
+
+  /**
+   * `semantics(mergeDescendants) { … }` or `clearAndSetSemantics { … }`, with each value the design
+   * states set inside the receiver lambda, as the released API takes them.
+   */
+  private fun semanticsCall(arguments: Map<String, String>, where: String): List<String> {
+    val modifierPackage = "androidx.compose.remote.creation.compose.modifier"
+    val body =
+      listOf("contentDescription", "stateDescription", "role", "enabled").mapNotNull { key ->
+        val value = arguments[key] ?: return@mapNotNull null
+        usedComponentImports += "$modifierPackage.$key"
+        if (key == "role") {
+          val role = value.removeSurrounding("\"")
+          if (role !in RemoteModifierVocabulary.ROLES) {
+            refusals +=
+              "$where.semantics.role: `$role` is not one of ${RemoteModifierVocabulary.ROLES}"
+            return emptyList()
+          }
+          usedComponentImports += "androidx.compose.ui.semantics.Role"
+          "role = Role.$role"
+        } else "$key = $value"
+      }
+    val clear = arguments["clear"] == "true"
+    val merge = arguments["mergeDescendants"] == "true"
+    if (clear && merge) {
+      refusals += "$where.semantics: clearing a node's semantics already replaces its children's"
+      return emptyList()
+    }
+    val head =
+      when {
+        clear -> "clearAndSetSemantics"
+        merge -> "semantics(mergeDescendants = true)"
+        else -> "semantics"
+      }
+    usedComponentImports += "$modifierPackage.${if (clear) "clearAndSetSemantics" else "semantics"}"
+    return listOf("$head { ${body.joinToString("; ")} }")
   }
 
   private fun remoteCallArgument(

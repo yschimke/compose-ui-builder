@@ -51,6 +51,19 @@ From that one file:
   `wrapContentWidth`/`Height`, `basicMarquee`) and leaves the rest to the player, which the device
   preview runs.
 
+`graphicsLayer` is in it too: its value overload was being dropped by the generator because a line
+comment sits inside its parameter list (`cameraDistance: RemoteFloat = 8f.rf, // …`); the generator
+now strips comments before parsing. The canvas draws it with Compose's `graphicsLayer`, argument for
+argument.
+
+`semantics` is declared by hand beside the generated calls, because its released signature is a
+receiver lambda (`semantics(mergeDescendants) { contentDescription = …; role = … }`): the values it
+sets — `contentDescription`, `stateDescription`, `role` (one of the roles the player maps), `enabled`
+— and `mergeDescendants` are its arguments, and `clear` writes `clearAndSetSemantics` instead. It is
+accessibility, not interaction, which stays an event binding. `drawWithContent` is not offered: a
+modifier holds values, not draw operations, and a `layout/box` with a `draw/canvas` behind its
+content draws the same thing as nodes.
+
 ## Where it stood
 
 A property was a literal, a state read or a loop binding, and only text and record parameters could
@@ -66,7 +79,7 @@ behind a compile-time flag.
 | M1 | Computed values: `expr`/`system` wrappers, formula text, canvas evaluation, Remote Kotlin lowering, inspector | Landed |
 | M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint, gradients, clips (box or path), morphs, curved text, conditionals, loops | Landed |
 | M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Long press and double tap landed (`combinedClickable`); the rest planned |
-| M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Landed as `remoteCall` over the generated vocabulary (33 calls); lambda-only calls (`graphicsLayer`, `drawWithContent`) planned |
+| M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Landed as `remoteCall` over the generated vocabulary (33 calls); `graphicsLayer` (its value overload) and `semantics` (hand-declared, written as its lambda) included; `drawWithContent` is a box with a canvas |
 | M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Horizontal and vertical page indicators landed; the rest planned |
 | M6 | Device preview: every published component, and expressions played live | In progress (remote-m3-catalog) |
 
