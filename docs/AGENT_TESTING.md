@@ -210,7 +210,8 @@ What it says:
   in the shipped `uiBuilder.wasm` is over 200 KB (the largest is that 146 KB initialiser); and
   `MEMORY_MAX_TURBOFAN_ZONE_MB=128` makes this harness launch Chromium with
   `--trace-wasm-compilation-times` and fail when one TurboFan compile holds more. CI runs both,
-  the second on the Material 3 screen. To name a function the checks report, rebuild with
+  the second on the Material 3 screen. Pull requests package the module without Binaryen
+  (`-PuiBuilder.wasmOpt=false`), so both can only fail on `main`. To name a function the checks report, rebuild with
   Binaryen's names kept: run `wasm-opt` on `build/compileSync/wasmJs/main/productionExecutable/kotlin/uiBuilder.wasm`
   with the Kotlin plugin's arguments (`BinaryenConfig`) plus the rules and `-g`; function indices
   match the shipped module.

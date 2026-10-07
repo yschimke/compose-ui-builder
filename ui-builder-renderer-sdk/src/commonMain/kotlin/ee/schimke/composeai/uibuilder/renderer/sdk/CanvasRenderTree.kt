@@ -19,7 +19,15 @@ class CanvasRenderTree(
   private val state: Map<String, String?>,
   private val adapterIds: Map<String, String>,
   private val adapterMappings: Map<String, CanvasAdapterMappingV1>,
+  /**
+   * Whether computed values are evaluated to literals before an adapter sees them. A runtime that
+   * lowers them to live player expressions itself, as the Remote device preview does, passes false.
+   */
+  evaluateExpressions: Boolean = true,
 ) {
+  private val expressions: CanvasExpressions? =
+    if (evaluateExpressions) CanvasExpressions.of(document) else null
+
   /** Enter an authored root. Missing roots draw nothing rather than taking down the renderer. */
   fun root(nodeId: String): CanvasRenderNode? =
     resolve(
@@ -43,6 +51,7 @@ class CanvasRenderTree(
         arguments = arguments,
         state = state,
         mapping = adapterMappings[authored.componentId],
+        expressions = expressions,
       )
     return CanvasRenderNode(
       tree = this,

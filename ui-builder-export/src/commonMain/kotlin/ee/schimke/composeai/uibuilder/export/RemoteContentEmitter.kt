@@ -1433,6 +1433,7 @@ internal class RemoteContentEmitter(
     value: JsonElement,
   ): String? {
     val type = (value as? JsonObject)?.plainString("type")
+    if (UiExpressions.isComputed(value)) return remoteValue(node, parameter, value)
     val expected =
       when (parameter.typeFqn) {
         REMOTE_STRING_FQN,
@@ -1479,6 +1480,159 @@ internal class RemoteContentEmitter(
     return expression
   }
 
+  /**
+   * A computed value as the Remote expression the player evaluates, or null with a located refusal.
+   *
+   * [UiExpressions.check] types the tree against the document's declared state first, so nothing
+   * here guesses at what an operand is. State reads go through [remoteState], which is what keeps a
+   * read inside a component body a parameter rather than a closed-over global.
+   */
+  private fun computed(value: JsonElement, expected: UiValueKind, where: String): String? {
+    val checked = UiExpressions.check(value, UiExpressions.Scope.of(document), where)
+    val expr =
+      when (checked) {
+        is UiExpressions.Checked.Issue -> {
+          refusals += checked.message
+          return null
+        }
+        is UiExpressions.Checked.Ok -> checked.expr
+      }
+    val lowered = lower(expr, where) ?: return null
+    return when {
+      expr.kind == expected -> lowered
+      expected == UiValueKind.FLOAT && expr.kind == UiValueKind.INT -> asFloat(expr, lowered)
+      expected == UiValueKind.STRING && expr.kind != UiValueKind.COLOR ->
+        stringOperand(expr.kind, lowered)
+      else -> {
+        refusals += "$where: a ${expr.kind.wire} expression cannot be used as ${expected.wire}"
+        null
+      }
+    }
+  }
+
+  private fun lower(expr: UiExpressions.Expr, where: String): String? =
+    when (expr) {
+      is UiExpressions.Expr.Literal ->
+        when (expr.kind) {
+          UiValueKind.FLOAT -> expr.value.content.toFloat().floatLiteral()
+          UiValueKind.INT -> {
+            usesRemoteInt = true
+            "${expr.value.content.toInt()}.ri"
+          }
+          UiValueKind.BOOL -> {
+            usesRemoteBoolean = true
+            "${expr.value.content.toBoolean()}.rb"
+          }
+          UiValueKind.STRING -> {
+            usesRemoteString = true
+            "\"${expr.value.content.escaped()}\".rs"
+          }
+          UiValueKind.COLOR -> {
+            usesColorLiteral = true
+            "${expr.value.content.argbLiteral()}.rc"
+          }
+        }
+      is UiExpressions.Expr.State ->
+        if (expr.kind == UiValueKind.COLOR) {
+          refusals += "$where: colour state `${expr.variable}` has no Remote state factory"
+          null
+        } else remoteState(expr.variable, expr.kind.wire, where)
+      is UiExpressions.Expr.Binding -> {
+        refusals +=
+          "$where: a row field inside an expression needs a typed loop lowering; bind the field " +
+            "to the property directly"
+        null
+      }
+      is UiExpressions.Expr.System -> {
+        usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteTime"
+        expr.value.remote
+      }
+      is UiExpressions.Expr.Call -> lowerCall(expr, where)
+    }
+
+  private fun lowerCall(expr: UiExpressions.Expr.Call, where: String): String? {
+    val args = expr.args.map { lower(it, where) ?: return null }
+    val kinds = expr.args.map { it.kind }
+    fun f(index: Int): String = asFloat(expr.args[index], args[index])
+    fun math(name: String, vararg operands: String): String {
+      usedComponentImports += "$REMOTE_STATE_PACKAGE.$name"
+      return "$name(${operands.joinToString()})"
+    }
+    val integral = expr.kind == UiValueKind.INT
+    fun infix(symbol: String): String =
+      if (integral) "(${args[0]} $symbol ${args[1]})" else "(${f(0)} $symbol ${f(1)})"
+    fun compare(name: String): String =
+      if (kinds.all { it == UiValueKind.INT } || kinds.all { it == UiValueKind.BOOL })
+        "${args[0]}.$name(${args[1]})"
+      else "${f(0)}.$name(${f(1)})"
+    return when (expr.op) {
+      UiExpressions.Op.ADD -> infix("+")
+      UiExpressions.Op.SUB -> infix("-")
+      UiExpressions.Op.MUL -> infix("*")
+      UiExpressions.Op.DIV -> infix("/")
+      UiExpressions.Op.MOD -> infix("%")
+      UiExpressions.Op.NEG -> "(-${args[0]})"
+      UiExpressions.Op.MIN ->
+        if (integral) math("min", args[0], args[1]) else math("min", f(0), f(1))
+      UiExpressions.Op.MAX ->
+        if (integral) math("max", args[0], args[1]) else math("max", f(0), f(1))
+      // The two overloads disagree on argument order upstream: the Int one takes the bounds first.
+      UiExpressions.Op.CLAMP ->
+        if (integral) math("clamp", args[1], args[2], args[0]) else math("clamp", f(0), f(1), f(2))
+      UiExpressions.Op.ABS -> if (integral) "${args[0]}.absoluteValue" else math("abs", f(0))
+      UiExpressions.Op.FLOOR -> math("floor", f(0))
+      UiExpressions.Op.CEIL -> math("ceil", f(0))
+      UiExpressions.Op.ROUND -> math("round", f(0))
+      UiExpressions.Op.SQRT -> math("sqrt", f(0))
+      UiExpressions.Op.SIN -> math("sin", f(0))
+      UiExpressions.Op.COS -> math("cos", f(0))
+      UiExpressions.Op.TAN -> math("tan", f(0))
+      UiExpressions.Op.POW -> math("pow", f(0), f(1))
+      UiExpressions.Op.LERP -> math("lerp", f(0), f(1), f(2))
+      UiExpressions.Op.TO_INT ->
+        if (kinds[0] == UiValueKind.INT) args[0] else "${args[0]}.toRemoteInt()"
+      UiExpressions.Op.TO_FLOAT -> f(0)
+      UiExpressions.Op.EQ -> compare("isEqualTo")
+      UiExpressions.Op.NE -> compare("isNotEqualTo")
+      UiExpressions.Op.LT -> compare("isLessThan")
+      UiExpressions.Op.LE -> compare("isLessThanOrEqualTo")
+      UiExpressions.Op.GT -> compare("isGreaterThan")
+      UiExpressions.Op.GE -> compare("isGreaterThanOrEqualTo")
+      UiExpressions.Op.AND -> "(${args[0]} and ${args[1]})"
+      UiExpressions.Op.OR -> "(${args[0]} or ${args[1]})"
+      UiExpressions.Op.NOT -> "(!${args[0]})"
+      UiExpressions.Op.SELECT -> {
+        val branch = { index: Int ->
+          if (expr.kind == UiValueKind.FLOAT) asFloat(expr.args[index], args[index])
+          else args[index]
+        }
+        "${args[0]}.select(${branch(1)}, ${branch(2)})"
+      }
+      UiExpressions.Op.CONCAT ->
+        args.indices.joinToString(" + ", "(", ")") { stringOperand(kinds[it], args[it]) }
+      UiExpressions.Op.TO_STRING -> stringOperand(kinds[0], args[0])
+    }
+  }
+
+  /** [lowered] as a `RemoteFloat`: an Int literal is written as the float it is, not converted. */
+  private fun asFloat(expr: UiExpressions.Expr, lowered: String): String =
+    when {
+      expr.kind != UiValueKind.INT -> lowered
+      expr is UiExpressions.Expr.Literal -> expr.value.content.toFloat().floatLiteral()
+      else -> "$lowered.toRemoteFloat()"
+    }
+
+  /** A value of [kind] as a `RemoteString` operand: numbers print as the player formats them. */
+  private fun stringOperand(kind: UiValueKind, lowered: String): String =
+    when (kind) {
+      UiValueKind.STRING -> lowered
+      UiValueKind.BOOL -> {
+        usesRemoteString = true
+        "$lowered.select(\"true\".rs, \"false\".rs)"
+      }
+      else -> "$lowered.toRemoteString()"
+    }
+
   private fun remoteValue(
     node: UiBuilderNode,
     parameter: TargetParameter,
@@ -1488,6 +1642,23 @@ internal class RemoteContentEmitter(
       return bound(value, parameter.typeFqn.orEmpty(), "nodes.${node.id}.${parameter.name}") {
         scopedArgument(node, parameter, it)
       }
+    }
+    if (UiExpressions.isComputed(value)) {
+      val kind =
+        when (parameter.typeFqn) {
+          REMOTE_STRING_FQN -> UiValueKind.STRING
+          REMOTE_BOOLEAN_FQN -> UiValueKind.BOOL
+          REMOTE_FLOAT_FQN -> UiValueKind.FLOAT
+          REMOTE_INT_FQN -> UiValueKind.INT
+          REMOTE_COLOR_FQN -> UiValueKind.COLOR
+          else -> null
+        }
+      if (kind == null) {
+        refusals +=
+          "`${node.id}`.${parameter.name} cannot take a computed value as ${parameter.typeFqn}"
+        return null
+      }
+      return computed(value, kind, "nodes.${node.id}.${parameter.name}")
     }
     if ((value as? JsonObject)?.plainString("type") == "state") {
       val kind =
@@ -1977,10 +2148,17 @@ internal class RemoteContentEmitter(
       else if ((authored as? JsonObject)?.plainString("type") == "state")
         remoteState(authored.plainString("variable").orEmpty(), "string", "`${node.id}`.text")
           ?: "\"\".rs"
+      else if (UiExpressions.isComputed(authored))
+        computed(authored!!, UiValueKind.STRING, "nodes.${node.id}.text") ?: "\"\".rs"
       else "\"${authored?.stringOrNull().orEmpty().escaped()}\".rs"
     val arguments = mutableListOf("text = $expression")
     node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
     node.properties["color"]
+      ?.takeIf(UiExpressions::isComputed)
+      ?.let { computed(it, UiValueKind.COLOR, "nodes.${node.id}.color") }
+      ?.let { arguments += "color = $it" }
+    node.properties["color"]
+      ?.takeUnless(UiExpressions::isComputed)
       ?.stringOrNull()
       ?.takeIf { it.isNotEmpty() }
       ?.let { color ->
@@ -2875,11 +3053,31 @@ internal class RemoteContentEmitter(
       )
       .joinToString()
 
-  private fun JsonObject.dp(name: String, fallback: Float = 0f): String =
-    (this[name]?.numberValue() ?: fallback).dpLiteral()
+  /**
+   * A dp argument: the authored number, or a computed value the player evaluates, read as dp
+   * one-to-one rather than as pixels.
+   */
+  private fun JsonObject.dp(name: String, fallback: Float = 0f): String {
+    val value = this[name]
+    if (UiExpressions.isComputed(value)) {
+      computed(value!!, UiValueKind.FLOAT, "modifiers.${plainString("type")}.$name")?.let {
+        usedComponentImports += "$REMOTE_STATE_PACKAGE.asRemoteDp"
+        return "$it.asRemoteDp()"
+      }
+    }
+    return (value?.numberValue() ?: fallback).dpLiteral()
+  }
 
-  private fun JsonObject.float(name: String, fallback: Float = 0f): String =
-    (this[name]?.numberValue() ?: fallback).floatLiteral()
+  /** A `RemoteFloat` argument: the authored number, or a computed value. */
+  private fun JsonObject.float(name: String, fallback: Float = 0f): String {
+    val value = this[name]
+    if (UiExpressions.isComputed(value)) {
+      computed(value!!, UiValueKind.FLOAT, "modifiers.${plainString("type")}.$name")?.let {
+        return it
+      }
+    }
+    return (value?.numberValue() ?: fallback).floatLiteral()
+  }
 
   /**
    * The colour inside a modifier, which is a `UiValueV1` rather than a bare string.
@@ -3073,6 +3271,8 @@ private const val REMOTE_STRING_FQN = "androidx.compose.remote.creation.compose.
 private const val REMOTE_BOOLEAN_FQN =
   "androidx.compose.remote.creation.compose.state.RemoteBoolean"
 private const val REMOTE_FLOAT_FQN = "androidx.compose.remote.creation.compose.state.RemoteFloat"
+private const val REMOTE_INT_FQN = "androidx.compose.remote.creation.compose.state.RemoteInt"
+private const val REMOTE_STATE_PACKAGE = "androidx.compose.remote.creation.compose.state"
 private const val REMOTE_COLOR_FQN = "androidx.compose.remote.creation.compose.state.RemoteColor"
 /**
  * The published Remote Compose text component, which the borrowed `m3/text` writer also serves.

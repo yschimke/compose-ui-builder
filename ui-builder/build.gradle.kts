@@ -412,8 +412,9 @@ tasks.named("check") { dependsOn("checkWindowSidecarVersion") }
 // on each cold open. `optimized/`, not the sibling `kotlin/`: that one is the production IR before
 // Binaryen has run, and still 61 MB. The development executable is still what
 // `wasmJsBrowserDevelopmentRun` serves for local work.
-val wasmExecutableDir =
-  layout.buildDirectory.dir("compileSync/wasmJs/main/productionExecutable/optimized")
+//
+// `-PuiBuilder.wasmOpt=false` packages `kotlin/` instead; see `ProductionWasm.kt` in build-logic.
+val wasmExecutableDir = productionWasmDir
 
 // Generated lookup tables Binaryen must leave as separate functions. Each entry is called from one
 // place, and Binaryen inlines a one-caller function whatever its size, so it folded all ~100
@@ -456,7 +457,7 @@ val skikoRuntimeDir = layout.buildDirectory.dir("compose/skiko-runtime-processed
 tasks.register<Sync>("wasmFrontendDist") {
   description = "Assemble the standalone Compose UI builder Wasm fixture."
   group = "distribution"
-  dependsOn("compileProductionExecutableKotlinWasmJsOptimize", "processSkikoRuntimeForKWasm")
+  dependsOn(productionWasmTaskName, "processSkikoRuntimeForKWasm")
   dependsOn("wasmJsProcessResources")
   from(wasmExecutableDir) {
     // Source maps point at sources nobody serving the archive has; they are dead weight in it.

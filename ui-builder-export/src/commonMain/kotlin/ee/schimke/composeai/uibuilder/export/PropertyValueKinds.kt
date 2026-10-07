@@ -118,6 +118,9 @@ object PropertyValueKinds {
       // The repetition pair, checked by `inspectUiBuilderArgumentBindings`.
       "list",
       "binding",
+      // Computed values the player evaluates, shaped by `UiExpressions.shapeIssue`.
+      UiExpressions.EXPR,
+      UiExpressions.SYSTEM,
     )
 
   /**

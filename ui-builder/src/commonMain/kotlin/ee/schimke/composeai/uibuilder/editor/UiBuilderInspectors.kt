@@ -588,6 +588,9 @@ private fun InspectorBody(
                 )
               },
               onUnbind = { dispatch(UiBuilderEditorEvent.UnbindProperty(node.id, field.name)) },
+              onFormula = { formula ->
+                dispatch(UiBuilderEditorEvent.BindPropertyToFormula(node.id, field.name, formula))
+              },
               commit = { value ->
                 dispatch(UiBuilderEditorEvent.CommitProperty(node.id, field.name, value))
               },
@@ -781,9 +784,11 @@ private fun PropertyControl(
   onDraftChange: (InspectorPropertyDraft?) -> Unit,
   onBind: (String, String?) -> Unit,
   onUnbind: () -> Unit,
+  onFormula: (String) -> Unit,
   commit: (String) -> Unit,
 ) {
   val bound = field.boundVariable
+  val formula = field.boundFormula
   LocalUiBuilderChrome.current.InspectorProperty(
     UiBuilderInspectorPropertyModel(
       label =
@@ -793,11 +798,13 @@ private fun PropertyControl(
           (if (field.mixed) " · mixed" else ""),
       // A bound property replaces its literal editor and its supporting diagnostics with the
       // binding row, matching the existing inspector behavior.
-      notes = field.notes?.takeIf { bound == null },
+      notes = field.notes?.takeIf { bound == null && formula == null },
       error = field.error?.takeIf { bound == null },
     )
   ) {
-    if (bound != null) {
+    if (formula != null) {
+      FormulaEditor(field, formula, onTextInputFocusChanged, onFormula, onUnbind)
+    } else if (bound != null) {
       // The literal control is not drawn for a bound property, because it does not work: an edit
       // is refused with "cannot be safely edited from its catalog metadata", which is a true
       // message and a poor answer to a control that looks editable. What a bound property needs is
@@ -806,6 +813,9 @@ private fun PropertyControl(
     } else {
       if (stateVariables.isNotEmpty() && field.control != EditorPropertyControl.Unsupported) {
         StateBindMenu(field, stateVariables, needsComparison, onTextInputFocusChanged, onBind)
+      }
+      if (field.formulaAllowed) {
+        FormulaEditor(field, null, onTextInputFocusChanged, onFormula, onUnbind = null)
       }
       // A theme typeface is a family name, and a family name is picked rather than typed: the
       // picker searches the vendored faces and the Google Fonts catalogue and draws each in itself.
@@ -875,6 +885,66 @@ private fun PropertyControl(
 @Composable
 private fun StateBindingRow(variable: String, onUnbind: () -> Unit) {
   LocalUiBuilderChrome.current.InspectorBinding(variable, onUnbind)
+}
+
+/**
+ * A property computed by a formula, or the way to give it one.
+ *
+ * Shown as the formula an author would type — `time.secondOfHour * 6`, `concat(count, " left")` —
+ * and edited the same way: the reducer parses the text into the document's expression tree and
+ * refuses, with the column, what does not parse or does not type. The player evaluates it; the
+ * canvas shows its value at the preview state and the design's fixed time.
+ */
+@Composable
+private fun FormulaEditor(
+  field: EditorPropertyField,
+  current: String?,
+  onTextInputFocusChanged: (Boolean) -> Unit,
+  onFormula: (String) -> Unit,
+  onUnbind: (() -> Unit)?,
+) {
+  var open by remember(field.nodeId, field.name) { mutableStateOf(current != null) }
+  var text by remember(field.nodeId, field.name, current) { mutableStateOf(current.orEmpty()) }
+  if (!open) {
+    LocalUiBuilderChrome.current.InspectorAction(
+      UiBuilderInspectorActionModel(
+        label = "Formula",
+        contentDescription = "Compute ${field.label} with a formula",
+        compactLabel = true,
+        onClick = { open = true },
+      )
+    )
+    return
+  }
+  Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Box(Modifier.weight(1f)) {
+      SearchField(
+        text,
+        placeholder = "e.g. time.secondOfHour * 6",
+        searchLabel = "${field.label} formula",
+        onFocusChanged = onTextInputFocusChanged,
+      ) {
+        text = it
+      }
+    }
+    LocalUiBuilderChrome.current.InspectorAction(
+      UiBuilderInspectorActionModel(
+        label = "Apply",
+        enabled = text.isNotBlank() && text != current,
+        primary = true,
+        onClick = { onFormula(text) },
+      )
+    )
+    if (onUnbind != null) {
+      LocalUiBuilderChrome.current.InspectorAction(
+        UiBuilderInspectorActionModel(
+          label = "Clear",
+          contentDescription = "Give ${field.label} a value of its own again",
+          onClick = onUnbind,
+        )
+      )
+    }
+  }
 }
 
 /**

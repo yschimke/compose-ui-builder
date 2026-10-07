@@ -22,6 +22,7 @@ import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiExpressions
 import ee.schimke.composeai.uibuilder.export.stateSelection
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -49,6 +50,50 @@ internal const val THEME_CORNER_RADIUS = "themeCornerRadiusDp"
  * `state` as a binding would report a chip as unbound and refuse to unbind it.
  */
 internal val STATE_VALUE_TYPES = setOf("state", "stateEquals")
+
+/** Wrappers whose value the player computes; unbinding one restores a literal. */
+internal val COMPUTED_VALUE_TYPES = setOf(UiExpressions.EXPR, UiExpressions.SYSTEM)
+
+/**
+ * One computed value of each scalar kind a property can hold. A property that accepts any of them
+ * offers a formula; which kinds a particular formula may produce is the validator's question.
+ */
+internal val FORMULA_PROBES: List<JsonObject> =
+  listOf(
+    JsonObject(
+      mapOf("type" to JsonPrimitive(UiExpressions.SYSTEM), "value" to JsonPrimitive("time.hour"))
+    ),
+    JsonObject(
+      mapOf(
+        "type" to JsonPrimitive(UiExpressions.EXPR),
+        "op" to JsonPrimitive("not"),
+        "args" to
+          kotlinx.serialization.json.JsonArray(
+            listOf(
+              JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(false)))
+            )
+          ),
+      )
+    ),
+    JsonObject(
+      mapOf(
+        "type" to JsonPrimitive(UiExpressions.EXPR),
+        "op" to JsonPrimitive("select"),
+        "args" to
+          kotlinx.serialization.json.JsonArray(
+            listOf(
+              JsonObject(mapOf("type" to JsonPrimitive("bool"), "value" to JsonPrimitive(true))),
+              JsonObject(
+                mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FFFFFFFF"))
+              ),
+              JsonObject(
+                mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FF000000"))
+              ),
+            )
+          ),
+      )
+    ),
+  )
 
 internal val THEME_PROPERTIES =
   setOf(

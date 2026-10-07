@@ -99,7 +99,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic
-      - run: ./gradlew :ui-builder-web:verifyUiBuilderWebArchive
+      # Binaryen only on `main`: a pull request proves the archive assembles and verifies from the
+      # production link, which is already dead-code eliminated, without the ~6-minute `wasm-opt`
+      # pass whose output only `main` publishes (`ProductionWasm.kt` in build-logic).
+      - run: ./gradlew -PuiBuilder.wasmOpt="${WASM_OPT}" :ui-builder-web:verifyUiBuilderWebArchive
+        env:
+          WASM_OPT: ${{ github.event_name != 'pull_request' }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ui-builder-wasm-dist
@@ -125,7 +130,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic
-      - run: ./gradlew :ui-builder-renderer:verifyRendererRuntime
+      # Binaryen only on `main`, as in `web-archive`. The editor-marker check still holds without it:
+      # dead-code elimination is the production link's, not Binaryen's.
+      - run: ./gradlew -PuiBuilder.wasmOpt="${WASM_OPT}" :ui-builder-renderer:verifyRendererRuntime
+        env:
+          WASM_OPT: ${{ github.event_name != 'pull_request' }}
 
   # The check the ruleset requires. It must run whatever its `needs` did, rather than be skipped,
   # because a skipped required check reads as passing; so it runs unless the workflow was cancelled
@@ -194,13 +203,16 @@ jobs:
       # No function in the shipped module may grow past 200 KB. Binaryen inlined generated tables
       # (Material 3 locale strings, the icon builders) into single 328 KB and 686 KB functions, and
       # V8 held 312 MB for six seconds compiling one; `wasmNoInlinePatterns` in
-      # ui-builder/build.gradle.kts keeps them apart and this fails the day one slips back.
+      # ui-builder/build.gradle.kts keeps them apart and this fails the day one slips back. It bites
+      # on `main` only: pull requests package the module without Binaryen (`WASM_OPT` above), where
+      # nothing is inlined and the largest function is ~100 KB.
       - run: node wasm-functions.mjs ../../ui-builder/build/wasmDist/uiBuilder.wasm
         working-directory: scripts/ui-builder-web-smoke
       - run: npx playwright install --with-deps chromium
         working-directory: scripts/ui-builder-web-smoke
       # The same regression seen from the browser: open a Material 3 design and fail when one Wasm
-      # TurboFan compile holds over 128 MB (86 MB today, 312 MB before the inlining rules).
+      # TurboFan compile holds over 128 MB (86 MB today, 312 MB before the inlining rules). Like the
+      # check above, it can only fail on `main`'s Binaryen-optimised module.
       - run: node memory.mjs ../../ui-builder/build/wasmDist ../../build/web-memory
         working-directory: scripts/ui-builder-web-smoke
         env:
