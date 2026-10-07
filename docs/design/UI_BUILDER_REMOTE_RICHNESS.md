@@ -7,6 +7,15 @@ the whole modifier vocabulary, the remaining layouts and components. It builds o
 values first, because everything else — a clock, a gauge, an animated arc — is a value the player
 computes.
 
+## Authoring target
+
+The builder authors against the **latest released alpha**: `remote-creation-compose` 1.0.0-alpha20
+and `remote-material3` 1.0.0-alpha12 (checked against Google Maven, 2026-10-07). The embedded
+`remote-m3-record-v1.json` matches those signatures. The published catalog's snapshot record is
+ahead of them (`backgroundColor` on the page indicators, `border` on the cards); export never writes
+a snapshot-only parameter, so every exported widget compiles against the alpha. The target moves
+with each new alpha, by refreshing the record and its goldens together.
+
 ## Where it stood
 
 A property was a literal, a state read or a loop binding, and only text and record parameters could
