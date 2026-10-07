@@ -1692,7 +1692,8 @@ internal class RemoteContentEmitter(
         ")"
     val arguments = mutableListOf("state = $state")
     node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
-    listOf("selectedColor", "unselectedColor").forEach { name ->
+    // Every colour the published signature takes, so an authored one is never silently dropped.
+    listOf("selectedColor", "unselectedColor", "backgroundColor").forEach { name ->
       pageIndicatorColor(node, name)?.let { arguments += "$name = $it" }
     }
     return (pad + call(symbol, arguments, pad)).split("\n")

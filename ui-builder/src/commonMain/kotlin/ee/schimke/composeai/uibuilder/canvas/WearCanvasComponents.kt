@@ -17,6 +17,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,6 +58,7 @@ import androidx.wear.compose.material3.OpenOnPhoneDialogDefaults
 import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.OutlinedCard
 import androidx.wear.compose.material3.OutlinedIconButton
+import androidx.wear.compose.material3.PageIndicatorDefaults
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SegmentedCircularProgressIndicator
@@ -528,6 +530,9 @@ internal fun WearCanvasPageIndicator(
   modifier: Modifier = Modifier,
   pageCount: Int = 4,
   selectedPage: Int = 0,
+  selectedColor: Color = Color.Unspecified,
+  unselectedColor: Color = Color.Unspecified,
+  backgroundColor: Color = Color.Unspecified,
 ) {
   val pages = pageCount.coerceAtLeast(1)
   val state = rememberPagerState(initialPage = selectedPage.coerceIn(0, pages - 1)) { pages }
@@ -535,8 +540,25 @@ internal fun WearCanvasPageIndicator(
   androidx.compose.runtime.LaunchedEffect(selectedPage, pages) {
     state.scrollToPage(selectedPage.coerceIn(0, pages - 1))
   }
-  if (vertical) VerticalPageIndicator(pagerState = state, modifier = modifier)
-  else HorizontalPageIndicator(pagerState = state, modifier = modifier)
+  val selected = selectedColor.takeOrElse { PageIndicatorDefaults.selectedColor }
+  val unselected = unselectedColor.takeOrElse { PageIndicatorDefaults.unselectedColor }
+  val background = backgroundColor.takeOrElse { PageIndicatorDefaults.backgroundColor }
+  if (vertical)
+    VerticalPageIndicator(
+      pagerState = state,
+      modifier = modifier,
+      selectedColor = selected,
+      unselectedColor = unselected,
+      backgroundColor = background,
+    )
+  else
+    HorizontalPageIndicator(
+      pagerState = state,
+      modifier = modifier,
+      selectedColor = selected,
+      unselectedColor = unselected,
+      backgroundColor = background,
+    )
 }
 
 /**

@@ -919,6 +919,9 @@ private fun RenderNode(
           modifier = measured,
           pageCount = node.integer("pageCount", 4),
           selectedPage = node.integer("selectedPage", 0),
+          selectedColor = node.authoredWearColor("selectedColor"),
+          unselectedColor = node.authoredWearColor("unselectedColor"),
+          backgroundColor = node.authoredWearColor("backgroundColor"),
         )
       "wear-m3/edge-button" ->
         WearCanvasEdgeButton(
@@ -2642,6 +2645,11 @@ internal fun UiBuilderNode.color(name: String, fallback: Color): Color {
   if (value.isEmpty()) return fallback
   return colorTokenOrNull(value) ?: fallback
 }
+
+/** [wearColor] when the design sets [name]; otherwise unspecified, so the component's default. */
+@Composable
+private fun UiBuilderNode.authoredWearColor(name: String): Color =
+  if (string(name).isEmpty()) Color.Unspecified else wearColor(name)
 
 /** A Wear property's colour: a literal as itself, a role through Wear's own scheme. */
 @Composable
