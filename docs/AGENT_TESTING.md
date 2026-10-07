@@ -165,35 +165,41 @@ memory). Send its output to a file: through a pipe nothing appears until the end
 MEMORY_RUNS=3 node scripts/ui-builder-web-smoke/memory.mjs ui-builder/build/wasmDist build/web-memory > memory.log
 ```
 
-Medians of three runs after settling, 2026-10-06, Chromium 141 headless with SwiftShader, from
+Medians of three runs after settling, 2026-10-06 (after the emoji-font fix below), Chromium 141
+headless with SwiftShader, from
 [`evidence/web-memory/memory.json`](evidence/web-memory/memory.json) (runs agreed within ~2%):
 
 | Viewport | Screen | JS heap | Renderer PSS | GPU PSS | Total PSS |
 | --- | --- | ---: | ---: | ---: | ---: |
-| desktop 1400×900 | `about:blank` (floor) | 0.5 MB | 48 MB | 29 MB | 138 MB |
-| desktop | Designs (home) | 24 MB | 197 MB | 81 MB | 345 MB |
-| desktop | Material 3 · Gmail tablet (158 nodes) | 36 MB | 228 MB | 93 MB | 386 MB |
-| desktop | Wear M3 · Google Home (22 nodes) | 29 MB | 206 MB | 99 MB | 370 MB |
-| desktop | RemoteCompose · Weather widget (5 nodes) | 36 MB | 251 MB | 100 MB | 422 MB |
-| desktop | A2UI · reservation (9 nodes) | 21 MB | 190 MB | 91 MB | 347 MB |
-| mobile 412×915 @2.625 | `about:blank` (floor) | 0.5 MB | 49 MB | 26 MB | 135 MB |
-| mobile | Designs (home) | 24 MB | 210 MB | 97 MB | 373 MB |
-| mobile | Material 3 | 29 MB | 219 MB | 118 MB | 403 MB |
-| mobile | Wear M3 | 26 MB | 209 MB | 121 MB | 395 MB |
-| mobile | RemoteCompose | 32 MB | 214 MB | 109 MB | 394 MB |
-| mobile | A2UI | 21 MB | 199 MB | 123 MB | 388 MB |
+| desktop 1400×900 | `about:blank` (floor) | 0.5 MB | 49 MB | 30 MB | 139 MB |
+| desktop | Designs (home) | 24 MB | 197 MB | 81 MB | 343 MB |
+| desktop | Material 3 · Gmail tablet (158 nodes) | 36 MB | 229 MB | 94 MB | 389 MB |
+| desktop | Wear M3 · Google Home (22 nodes) | 29 MB | 206 MB | 98 MB | 370 MB |
+| desktop | RemoteCompose · Weather widget (5 nodes) | 33 MB | 208 MB | 98 MB | 377 MB |
+| desktop | A2UI · reservation (9 nodes) | 21 MB | 191 MB | 91 MB | 348 MB |
+| mobile 412×915 @2.625 | `about:blank` (floor) | 0.5 MB | 49 MB | 25 MB | 136 MB |
+| mobile | Designs (home) | 24 MB | 210 MB | 98 MB | 373 MB |
+| mobile | Material 3 | 29 MB | 220 MB | 118 MB | 404 MB |
+| mobile | Wear M3 | 26 MB | 209 MB | 121 MB | 397 MB |
+| mobile | RemoteCompose | 32 MB | 214 MB | 108 MB | 393 MB |
+| mobile | A2UI | 20 MB | 199 MB | 123 MB | 388 MB |
 
 What it says:
 
 - The editor costs about 150 MB of renderer memory before any design is open: the home screen is
   already 197 MB against a 48 MB blank page. That is the 30 MB `uiBuilder.wasm` and 8.6 MB
   `skiko.wasm` compiled, plus Skia, not designs.
-- An open design adds 3–77 MB total PSS on top of the home screen. Material 3's Gmail tablet
-  peaks at ~500 MB when it becomes ready (JS heap 47 MB) and falls to 386 MB once it settles; the
-  others are 15–45 MB above their settled figure at ready, except desktop RemoteCompose.
-- RemoteCompose is the largest settled desktop screen despite five nodes, and the only one whose
-  renderer grows between ready and settled (244 → 251 MB): the device previews run the RemoteCompose
-  player.
+- An open design adds 5–46 MB total PSS on top of the home screen. Material 3's Gmail tablet
+  peaks at ~500 MB when it becomes ready (JS heap 47 MB) and falls to 389 MB once it settles; the
+  others are 39–45 MB above their settled figure at ready.
+- RemoteCompose used to be the largest settled desktop screen (422 MB) despite five nodes. Its
+  text "75° ☀️" has a glyph no bundled font carries, so Compose downloads a Noto Color Emoji slice
+  from `fonts.gstatic.com` and installs it in the editor's font resolver. The device previews
+  each ran a scene with a resolver of their own, never saw the font, kept reporting the glyph as
+  unresolved, and the same 200 KB file was fetched 116 times in ten seconds, each copy held.
+  `DeviceSceneHost` now hands its scene the editor's resolver: one download, the emoji draws in
+  the previews too, and the screen settles at 377 MB. Run with `MEMORY_RESOURCES=1` and count
+  the `fonts.gstatic.com` entries to check that it stays one.
 - A2UI draws outline stand-ins on the canvas (there is no Wasm A2UI renderer), so it is the floor
   for an open design rather than a like-for-like comparison.
 - Mobile shifts memory to the GPU process (+20–30 MB): the canvas backing store is 9.9 MB at

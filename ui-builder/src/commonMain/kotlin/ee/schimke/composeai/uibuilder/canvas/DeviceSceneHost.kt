@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.canvas
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,6 +21,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.FrameRecomposer
+import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.scene.CanvasLayersComposeScene
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.unit.Density
@@ -106,9 +108,20 @@ internal fun DeviceSceneHost(
   // composition on every keystroke.
   val latestContent = rememberUpdatedState(content)
   val sceneRoot = LocalDeviceSceneRoot.current
+  // The editor's font resolver, not the scene's own. Bundled fonts are registered with it, and on
+  // the web so is every fallback font Compose downloads for a glyph none of them has (an emoji, a
+  // symbol). A scene with its own resolver never sees that font: its text stays unresolved, the
+  // web's unresolved-symbol registry hears about it again on the next layout, and Compose
+  // downloads the same file again — a weather widget's "☀️" fetched one 200 KB Noto Color Emoji
+  // slice 116 times in ten seconds, held each copy, and still drew a box in all three previews.
+  val fontFamilyResolver = LocalFontFamilyResolver.current
   val holder =
-    remember(key, sizePx, density, layoutDirection) {
-      DeviceScene(sizePx, density, layoutDirection) { sceneRoot { latestContent.value() } }
+    remember(key, sizePx, density, layoutDirection, fontFamilyResolver) {
+      DeviceScene(sizePx, density, layoutDirection) {
+        CompositionLocalProvider(LocalFontFamilyResolver provides fontFamilyResolver) {
+          sceneRoot { latestContent.value() }
+        }
+      }
     }
   DisposableEffect(holder) { onDispose { holder.close() } }
   // The pump asks for frames only while the scene has work: a design that has settled costs a draw,
