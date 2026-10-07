@@ -77,6 +77,7 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     "m3/text",
     "remote-m3/lottie",
     REMOTE_TEXT_COMPONENT_ID,
+    LAUNCHER_WIDGET_TEXT_COMPONENT_ID,
     "shape/linear-gradient",
     "remote-compose/document",
     REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
@@ -152,6 +153,12 @@ internal class RemoteContentEmitter(
    * the root the one layout rule a widget must not skip.
    */
   private val frameFillingRoot: String? = null,
+  /**
+   * Which `RemoteText` a text node is written as. [RemoteTextVocabulary.MATERIAL3] for every Wear
+   * catalog; [RemoteTextVocabulary.CREATION] for a catalog without `remote-material3`, such as
+   * `remote-widgets` ([LauncherWidgetCodeExporter]), which has no theme to read a role from.
+   */
+  private val textVocabulary: RemoteTextVocabulary = RemoteTextVocabulary.MATERIAL3,
 ) {
   /**
    * The caller's record over the Remote Material 3 components this build embeds.
@@ -230,6 +237,19 @@ internal class RemoteContentEmitter(
   }
 
   private var usesMaterialText = false
+
+  /** `remote-creation-compose`'s own `RemoteText`, written under [RemoteTextVocabulary.CREATION]. */
+  private var usesCreationText = false
+
+  /**
+   * Whether the body reached for anything only `remote-material3` provides — a theme colour or type
+   * role, or the ambient text style a feature setting merges into. A catalog without that library
+   * refuses the design rather than export source naming it.
+   */
+  val usesMaterial: Boolean
+    get() = usesTheme || usesLocalTextStyle || usesRemoteColorScheme || usedComponentImports.any {
+      it.startsWith("androidx.wear.compose.remote.material3.")
+    }
   private var usesColumn = false
   private var usesRow = false
   private var usesBox = false
@@ -448,7 +468,8 @@ internal class RemoteContentEmitter(
       // pack components; requiring one here made a saved remote-m3 document refuse in the code
       // pane even though its catalog had offered the component. Catalog validation remains the
       // authority for whether the node may be authored.
-      REMOTE_TEXT_COMPONENT_ID -> (pad + text(node, pad)).split("\n")
+      REMOTE_TEXT_COMPONENT_ID,
+      LAUNCHER_WIDGET_TEXT_COMPONENT_ID -> (pad + text(node, pad)).split("\n")
       "layout/box" -> container(node, depth, "RemoteBox", boxArguments(node, pad))
       "layout/column" -> container(node, depth, "RemoteColumn", columnArguments(node, pad))
       "layout/row" -> container(node, depth, "RemoteRow", rowArguments(node, pad))
@@ -642,7 +663,8 @@ internal class RemoteContentEmitter(
         "layout/column",
         "layout/for-each" -> setOf("verticalSpacingDp")
         "m3/text",
-        REMOTE_TEXT_COMPONENT_ID -> setOf("text")
+        REMOTE_TEXT_COMPONENT_ID,
+        LAUNCHER_WIDGET_TEXT_COMPONENT_ID -> setOf("text")
         else -> components[node.componentId]?.parameters?.map { it.name }?.toSet().orEmpty()
       }
     node.properties.forEach { (key, value) ->
@@ -2792,7 +2814,10 @@ internal class RemoteContentEmitter(
   }
 
   private fun text(node: UiBuilderNode, pad: String = ""): String {
-    usesMaterialText = true
+    when (textVocabulary) {
+      RemoteTextVocabulary.MATERIAL3 -> usesMaterialText = true
+      RemoteTextVocabulary.CREATION -> usesCreationText = true
+    }
     val authored = node.properties["text"]
     val expression =
       if ((authored as? JsonObject)?.plainString("type") == "binding")
@@ -3343,7 +3368,7 @@ internal class RemoteContentEmitter(
     if (usesColorLiteral) imports += "androidx.compose.remote.creation.compose.state.rc"
     if (usesRemoteImage || usesBrushImage)
       imports += "androidx.compose.remote.creation.compose.state.RemoteImageBitmap"
-    if (usesMaterialText || usesRemoteString) {
+    if (usesMaterialText || usesCreationText || usesRemoteString) {
       imports += "androidx.compose.remote.creation.compose.state.rs"
     }
     if (usesSp) imports += "androidx.compose.remote.creation.compose.state.rsp"
@@ -3412,6 +3437,7 @@ internal class RemoteContentEmitter(
     if (usesRemoteFontFamily)
       imports += "androidx.compose.remote.creation.compose.text.RemoteFontFamily"
     if (usesMaterialText) imports += "androidx.wear.compose.remote.material3.RemoteText"
+    if (usesCreationText) imports += "androidx.compose.remote.creation.compose.layout.RemoteText"
     return imports.sorted()
   }
 
@@ -4036,7 +4062,7 @@ private fun String.remoteVertical(): String =
  * transparent `Color(0x2196F3)` (yschimke/compose-preview-server#516). Anything else passes through
  * untouched, since the validator refuses it first.
  */
-private fun String.argbLiteral(): String {
+internal fun String.argbLiteral(): String {
   val digits = removePrefix("#").uppercase()
   val argb = if (SIX_DIGIT_HEX.matches(digits)) "FF$digits" else digits
   return "Color(0x$argb)"
@@ -4093,6 +4119,22 @@ private const val REMOTE_COLOR_FQN = "androidx.compose.remote.creation.compose.s
  * to the record fallback, whose vocabulary is six scalar types and none of those.
  */
 public const val REMOTE_TEXT_COMPONENT_ID: String = "remote-m3/remote-text"
+
+/**
+ * `remote-creation-compose`'s `RemoteText` as the `remote-widgets` catalog publishes it: the same
+ * properties as [REMOTE_TEXT_COMPONENT_ID] less the theme roles, written under
+ * [RemoteTextVocabulary.CREATION].
+ */
+public const val LAUNCHER_WIDGET_TEXT_COMPONENT_ID: String = "remote-widgets/remote-text"
+
+/** Which library a text node's `RemoteText` comes from. */
+internal enum class RemoteTextVocabulary {
+  /** `androidx.wear.compose.remote.material3.RemoteText`, under `RemoteMaterialTheme`. */
+  MATERIAL3,
+
+  /** `androidx.compose.remote.creation.compose.layout.RemoteText`, with no theme at all. */
+  CREATION,
+}
 
 private const val REMOTE_TEXT_UNIT_FQN =
   "androidx.compose.remote.creation.compose.state.RemoteTextUnit"

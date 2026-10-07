@@ -53,6 +53,7 @@ import ee.schimke.composeai.uibuilder.export.WidgetAssetBytes
 import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.export.isWearWidget
 import ee.schimke.composeai.uibuilder.exportRecord
+import ee.schimke.composeai.uibuilder.frameGeometry
 import ee.schimke.composeai.uibuilder.packComponentRecords
 import ee.schimke.composeai.uibuilder.packComponentsById
 import ee.schimke.composeai.uibuilder.reference.PLACED_PIECE_WIDTH_FRACTION
@@ -159,6 +160,7 @@ class UiBuilderEditorReducer(
       collaboration = CollaborationState(document),
       selection = listOfNotNull(selectedNodeId?.takeIf(document.nodes::containsKey)),
       platform = catalog.platform,
+      catalogFrameSizes = catalog.frameGeometry.sizes,
     )
 
   /**

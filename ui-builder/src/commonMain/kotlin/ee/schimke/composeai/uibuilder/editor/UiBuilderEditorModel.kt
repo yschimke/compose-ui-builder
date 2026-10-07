@@ -6,6 +6,7 @@ import ee.schimke.composeai.uibuilder.ComponentDriftFinding
 import ee.schimke.composeai.uibuilder.DesignOperation
 import ee.schimke.composeai.uibuilder.ParentSlot
 import ee.schimke.composeai.uibuilder.RejectionCode
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.codegen.validateDocumentForExport
@@ -428,6 +429,11 @@ data class UiBuilderEditorState(
    * catalog.
    */
   val platform: UiBuilderCatalogPlatform = UiBuilderCatalogPlatform.DEFAULT,
+  /**
+   * The frame sizes the pinned catalog declares (`frame.geometry.sizesDp`), offered first in the
+   * Screen dock's frame picker. Empty for a catalog sized by device.
+   */
+  val catalogFrameSizes: List<UiBuilderFrameGeometry.FrameSize> = emptyList(),
   val catalogQuery: String = "",
   /**
    * Collapsed insert-panel groups. Tracking what is closed means newly added groups arrive open.

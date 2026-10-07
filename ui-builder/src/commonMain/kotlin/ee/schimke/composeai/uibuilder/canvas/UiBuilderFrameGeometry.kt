@@ -36,7 +36,34 @@ data class UiBuilderFrameGeometry(
   val adapter: String = "",
   val seedDevice: String? = null,
   val contentPadding: List<ContentPadding> = emptyList(),
+  /**
+   * The discrete frame sizes the catalog's designs are authored at — `geometry.sizesDp` — in the
+   * order the catalog lists them. A launcher widget catalog names its launcher grid sizes here
+   * (`3x2`, `2x1`); a Wear widget catalog its host containers. Empty for a catalog sized by device,
+   * which is every screen catalog.
+   */
+  val sizes: List<FrameSize> = emptyList(),
 ) {
+  /**
+   * The [sizes] as frame-picker entries at [density], under [CATALOG_SIZES_GROUP]. A catalog size
+   * changes the width and height and keeps the design's density: a grid cell is a dp rectangle,
+   * not a device.
+   */
+  fun sizePresets(density: Double): List<UiBuilderDevicePreset> =
+    sizes.map {
+      UiBuilderDevicePreset(
+        id = "$CATALOG_SIZE_ID_PREFIX${it.label}",
+        label = it.label,
+        group = CATALOG_SIZES_GROUP,
+        widthDp = it.widthDp,
+        heightDp = it.heightDp,
+        density = density,
+      )
+    }
+
+  /** One size the catalog declares: `{ "widthDp": 203, "heightDp": 220, "label": "3x2" }`. */
+  data class FrameSize(val widthDp: Int, val heightDp: Int, val label: String)
+
   /** What a screen of [screenDp] is inset by, interpolated between the measured rows. */
   fun paddingFor(screenDp: Int): ContentPadding =
     when {
@@ -86,6 +113,12 @@ data class UiBuilderFrameGeometry(
 
     val None = UiBuilderFrameGeometry()
 
+    /** The frame-picker section a catalog's own [sizes] are listed under. */
+    const val CATALOG_SIZES_GROUP: String = "Catalog sizes"
+
+    /** Never a `@Preview(device = …)` token: a catalog size is a width and a height, not a device. */
+    const val CATALOG_SIZE_ID_PREFIX: String = "size:"
+
     /**
      * The `frame` block of a served catalog's `statusSemantics`, or [None].
      *
@@ -112,10 +145,27 @@ data class UiBuilderFrameGeometry(
           }
           .orEmpty()
           .sortedBy { it.screenDp }
+      val sizes =
+        geometry
+          ?.get("sizesDp")
+          ?.let { runCatching { it.jsonArray }.getOrNull() }
+          ?.mapNotNull { entry ->
+            val size = runCatching { entry.jsonObject }.getOrNull() ?: return@mapNotNull null
+            val width = size["widthDp"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+            val height = size["heightDp"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+            if (width <= 0 || height <= 0) return@mapNotNull null
+            FrameSize(
+              widthDp = width,
+              heightDp = height,
+              label = size["label"].contentOrEmpty().ifEmpty { "$width × $height dp" },
+            )
+          }
+          .orEmpty()
       return UiBuilderFrameGeometry(
         adapter = frame["adapter"].contentOrEmpty(),
         seedDevice = frame["seedDevice"].contentOrEmpty().takeIf { it.isNotEmpty() },
         contentPadding = rows,
+        sizes = sizes,
       )
     }
   }
