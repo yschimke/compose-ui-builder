@@ -61,3 +61,21 @@ val generateMaterialIconData =
     outputs.dir(output)
     argumentProviders.add(CommandLineArgumentProvider { listOf(output.get().asFile.absolutePath) })
   }
+
+// `MaterialIconCatalogTest` holds every icon the catalog derives from its key to the inventory
+// read from material-icons-extended, which is what the key list was generated from.
+tasks.named<Test>("jvmTest") {
+  val inventory =
+    rootProject.tasks
+      .named<GenerateMaterialIconInventory>("generateMaterialIconInventory")
+      .flatMap { it.output }
+  inputs
+    .file(inventory)
+    .withPropertyName("materialIconInventory")
+    .withPathSensitivity(PathSensitivity.NONE)
+  jvmArgumentProviders.add(
+    CommandLineArgumentProvider {
+      listOf("-DmaterialIconInventory=${inventory.get().asFile.absolutePath}")
+    }
+  )
+}
