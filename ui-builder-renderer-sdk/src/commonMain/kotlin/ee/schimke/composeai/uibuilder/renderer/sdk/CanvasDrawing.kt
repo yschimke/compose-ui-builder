@@ -317,6 +317,8 @@ private sealed interface DrawStep {
             val radius =
               node.number("radiusDp")?.dp(this)
                 ?: (extent.minDimension / 2f - style.fontSize.toPx())
+            // A canvas smaller than its text, or an authored zero, has no circle to read along.
+            if (!(radius > 0f)) return@with
             val center =
               Offset(
                 node.number("centerXDp")?.dp(this) ?: extent.width / 2f,
@@ -342,9 +344,11 @@ private sealed interface DrawStep {
             val measure = PathMeasure().apply { setPath(path, false) }
             val offset = (node.number("offsetDp") ?: 0f).dp(this)
             var distance = (node.number("startDp") ?: 0f).dp(this)
-            glyphs(measurer, node.text("text").orEmpty(), style).forEach { glyph ->
+            for (glyph in glyphs(measurer, node.text("text").orEmpty(), style)) {
               val middle = distance + glyph.size.width / 2f
-              if (middle > measure.length) return@forEach
+              // Past the end: the rest would fall off too, and a narrower glyph must not be drawn
+              // in this one's place.
+              if (middle > measure.length) break
               val tangent = measure.getTangent(middle)
               val angle = atan2(tangent.y, tangent.x)
               // Positive offset is to the path's right: a quarter turn clockwise of its heading.
@@ -385,11 +389,56 @@ private sealed interface DrawStep {
 
 private const val DEGREES_TO_RADIANS = (kotlin.math.PI / 180.0).toFloat()
 
-/** Each character of [text] laid out on its own, so it can be placed and turned separately. */
+/** Each cluster of [text] laid out on its own, so it can be placed and turned separately. */
 private fun glyphs(measurer: TextMeasurer, text: String, style: TextStyle): List<TextLayoutResult> =
-  text.map {
-    measurer.measure(it.toString(), style)
+  clusters(text).map { measurer.measure(it, style) }
+
+/**
+ * [text] split where a reader sees a new character: a surrogate pair stays whole, and combining
+ * marks, variation selectors, emoji skin-tone modifiers and tags, a zero-width joiner with what it
+ * joins, and a flag's second regional indicator stay on the character before them. Not full
+ * UAX #29, and a script shaped across characters (Arabic) still draws its isolated forms; the
+ * player shapes the whole string.
+ */
+internal fun clusters(text: String): List<String> {
+  fun width(at: Int): Int =
+    if (text[at].isHighSurrogate() && at + 1 < text.length && text[at + 1].isLowSurrogate()) 2
+    else 1
+  fun codePoint(at: Int): Int =
+    if (width(at) == 2) 0x10000 + ((text[at].code - 0xD800) shl 10) + (text[at + 1].code - 0xDC00)
+    else text[at].code
+  fun regional(point: Int) = point in 0x1F1E6..0x1F1FF
+  val out = mutableListOf<String>()
+  var index = 0
+  while (index < text.length) {
+    val start = index
+    val first = codePoint(index)
+    index += width(index)
+    var flagOpen = regional(first)
+    while (index < text.length) {
+      val point = codePoint(index)
+      index +=
+        when {
+          point == 0x200D && index + 1 < text.length -> 1 + width(index + 1)
+          text[index].category in COMBINING ||
+            point in 0xFE00..0xFE0F ||
+            point in 0x1F3FB..0x1F3FF ||
+            point in 0xE0020..0xE007F -> width(index)
+          flagOpen && regional(point) -> width(index).also { flagOpen = false }
+          else -> break
+        }
+    }
+    out += text.substring(start, index)
   }
+  return out
+}
+
+private val COMBINING =
+  setOf(
+    CharCategory.NON_SPACING_MARK,
+    CharCategory.COMBINING_SPACING_MARK,
+    CharCategory.ENCLOSING_MARK,
+  )
 
 /** One glyph with its baseline's middle at [point], turned [degrees] clockwise about it. */
 private fun DrawScope.drawGlyph(
