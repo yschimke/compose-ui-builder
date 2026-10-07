@@ -1649,10 +1649,10 @@ class UiBuilderEditorReducer(
     val nodeId = state.selection.singleOrNull() ?: return emptyList()
     val node = state.document.nodes[nodeId] ?: return emptyList()
     val declared = catalog.componentsById[node.componentId]?.modifierCapabilities.orEmpty().toSet()
-    val present = node.modifierTypes()
+    val present = node.modifierKeys()
     val scope = state.document.scopeOf(nodeId)
     return MENU_MODIFIERS.filter { it.type in declared && it.offeredIn(scope) }
-      .map { EditorModifierToggle(it.type, it.label, it.type in present) }
+      .map { EditorModifierToggle(it.key, it.label, it.key in present) }
   }
 
   /**
@@ -1669,9 +1669,10 @@ class UiBuilderEditorReducer(
   ): UiBuilderEditorState {
     val sequence = state.operationSequence + 1
     val node = state.document.nodes[nodeId] ?: return state
-    val menuModifier = MENU_MODIFIERS.firstOrNull { it.type == type } ?: return state
+    // [type] is the menu key: the modifier type, or `remoteCall:<name>` for a Remote call.
+    val menuModifier = MENU_MODIFIERS.firstOrNull { it.key == type } ?: return state
     val declared = catalog.componentsById[node.componentId]?.modifierCapabilities.orEmpty()
-    if (type !in declared) {
+    if (menuModifier.type !in declared) {
       return state.rejected(
         sequence,
         RejectionCode.INVALID_PROPERTY,
@@ -1692,9 +1693,9 @@ class UiBuilderEditorReducer(
         "modifiers",
       )
     }
-    val kept = node.modifiers.filter { (it as? JsonObject)?.optionalStringValue("type") != type }
+    val kept = node.modifiers.filter { (it as? JsonObject)?.let(::modifierKey) != type }
     val chain =
-      if (type in node.modifierTypes()) JsonArray(kept) else JsonArray(kept + menuModifier.build())
+      if (type in node.modifierKeys()) JsonArray(kept) else JsonArray(kept + menuModifier.build())
     return state.apply(
       sequence,
       listOf(DesignOperation.SetModifiers(nodeId, chain)),
@@ -1714,13 +1715,23 @@ class UiBuilderEditorReducer(
     val node = state.document.nodes[nodeId] ?: return emptyList()
     return node.modifiers.flatMapIndexed { index, element ->
       val modifier = element as? JsonObject ?: return@flatMapIndexed emptyList()
-      val type = modifier.optionalStringValue("type") ?: return@flatMapIndexed emptyList()
-      MODIFIER_FIELDS[type].orEmpty().map { field ->
+      val type = modifierKey(modifier) ?: return@flatMapIndexed emptyList()
+      val remote = type.startsWith(REMOTE_CALL_KEY_PREFIX)
+      val fields = if (remote) remoteCallFields(modifier) else MODIFIER_FIELDS[type].orEmpty()
+      fields.map { field ->
+        // A Remote call's arguments are values, so the number is inside its wrapper.
+        val raw =
+          if (remote)
+            (modifier["args"] as? JsonObject)
+              ?.get(field.name)
+              ?.let { it as? JsonObject }
+              ?.get("value")
+          else modifier[field.name]
         EditorModifierField(
           type = type,
           field = field.name,
           label = field.label,
-          value = modifier[field.name]?.primitiveOrNull()?.content.orEmpty(),
+          value = raw?.primitiveOrNull()?.content.orEmpty(),
           choices = field.choices,
           index = index,
         )
@@ -1742,8 +1753,15 @@ class UiBuilderEditorReducer(
   ): UiBuilderEditorState {
     val sequence = state.operationSequence + 1
     val node = state.document.nodes[nodeId] ?: return state
+    val target =
+      modifierIndex?.let { node.modifiers.getOrNull(it) as? JsonObject }
+        ?: node.modifiers.firstNotNullOfOrNull {
+          (it as? JsonObject)?.takeIf { m -> modifierKey(m) == type }
+        }
+    val remote = type.startsWith(REMOTE_CALL_KEY_PREFIX)
     val definition =
-      MODIFIER_FIELDS[type].orEmpty().firstOrNull { it.name == field }
+      (if (remote) target?.let(::remoteCallFields).orEmpty() else MODIFIER_FIELDS[type].orEmpty())
+        .firstOrNull { it.name == field }
         ?: return state.rejected(
           sequence,
           RejectionCode.INVALID_PROPERTY,
@@ -1753,8 +1771,7 @@ class UiBuilderEditorReducer(
         )
     if (
       modifierIndex != null &&
-        (node.modifiers.getOrNull(modifierIndex) as? JsonObject)?.optionalStringValue("type") !=
-          type
+        (node.modifiers.getOrNull(modifierIndex) as? JsonObject)?.let(::modifierKey) != type
     ) {
       return state.rejected(
         sequence,
@@ -1801,12 +1818,27 @@ class UiBuilderEditorReducer(
           val modifier = element as? JsonObject ?: return@mapIndexed element
           if (
             written ||
-              modifier.optionalStringValue("type") != type ||
+              modifierKey(modifier) != type ||
               (modifierIndex != null && index != modifierIndex)
           )
             return@mapIndexed element
           written = true
-          JsonObject(modifier + (field to value))
+          if (remote) {
+            // Into the call's arguments, in the wrapper its parameter kind takes.
+            val name = modifier.optionalStringValue("name").orEmpty()
+            val wrapper = remoteCallArgumentType(name, field) ?: "float"
+            val typed = if (wrapper == "bool") JsonPrimitive(value.content.toBoolean()) else value
+            val args = (modifier["args"] as? JsonObject).orEmpty()
+            JsonObject(
+              modifier +
+                ("args" to
+                  JsonObject(
+                    args +
+                      (field to
+                        JsonObject(mapOf("type" to JsonPrimitive(wrapper), "value" to typed)))
+                  ))
+            )
+          } else JsonObject(modifier + (field to value))
         }
       )
     if (!written) return state

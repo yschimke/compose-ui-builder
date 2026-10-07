@@ -16,6 +16,31 @@ ahead of them (`backgroundColor` on the page indicators, `border` on the cards);
 a snapshot-only parameter, so every exported widget compiles against the alpha. The target moves
 with each new alpha, by refreshing the record and its goldens together.
 
+## Remote modifier vocabulary
+
+A `RemoteModifier` call the typed modifiers do not name is a `remoteCall` modifier: `name` and
+`args`, each argument a value — a literal, a state read or a computed `expr`
+(compose-preview-contracts 3.20.0, #141).
+
+The calls a document may name are not hand-written. `scripts/remote-vocabulary/generate_remote_modifiers.py`
+reads the released `remote-creation-compose` sources and writes
+`docs/design/fixtures/ui-builder/remote-modifiers-v1.json`: every public top-level
+`RemoteModifier.<name>(…)` overload whose required parameters are all plain values, with each
+parameter's type, nullability and whether it is optional. Interaction calls are left out (behaviour
+is event bindings), and so is anything needing a lambda, a transition or scroll state. Regenerate
+it with each new alpha, together with the component record.
+
+From that one file:
+
+- **Export** resolves the overload the arguments pick (fewest parameters, then dp over a bare
+  number, then a `Remote*` type over a plain one), writes named arguments in each parameter's own
+  type, and refuses by name a call, an argument or a computed value the released API cannot take.
+- **The editor** offers every call no typed modifier already writes, keyed `remoteCall:<name>`,
+  added with a starting value per required argument; numbers and booleans edit in the inspector.
+- **The canvas** draws the calls Compose has an honest counterpart for (`defaultMinSize`,
+  `wrapContentWidth`/`Height`, `basicMarquee`) and leaves the rest to the player, which the device
+  preview runs.
+
 ## Where it stood
 
 A property was a literal, a state read or a loop binding, and only text and record parameters could
@@ -31,7 +56,7 @@ behind a compile-time flag.
 | M1 | Computed values: `expr`/`system` wrappers, formula text, canvas evaluation, Remote Kotlin lowering, inspector | Landed |
 | M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint | Landed (clips and loops follow) |
 | M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Long press and double tap landed (`combinedClickable`); the rest planned |
-| M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Planned |
+| M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Landed as `remoteCall` over the generated vocabulary (33 calls); lambda-only calls (`graphicsLayer`, `drawWithContent`) planned |
 | M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Horizontal and vertical page indicators landed; the rest planned |
 | M6 | Device preview: every published component, and expressions played live | In progress (remote-m3-catalog) |
 

@@ -46,6 +46,25 @@ val embedRemoteMaterial3Record =
     )
   }
 
+// The Remote modifier vocabulary, generated from the released `remote-creation-compose` sources by
+// `scripts/remote-vocabulary/generate_remote_modifiers.py`. The released API is authoritative for
+// which `RemoteModifier` calls exist; a `remoteCall` modifier is validated and written against
+// this.
+val embedRemoteModifierVocabulary =
+  tasks.register<EmbedComponentRecord>("embedRemoteModifierVocabulary") {
+    record.set(rootProject.file("docs/design/fixtures/ui-builder/remote-modifiers-v1.json"))
+    constantName.set("EMBEDDED_REMOTE_MODIFIERS_JSON")
+    sourceDescription.set(
+      "docs/design/fixtures/ui-builder/remote-modifiers-v1.json\n" +
+        "// by :ui-builder-export:embedRemoteModifierVocabulary"
+    )
+    output.set(
+      layout.buildDirectory.file(
+        "generated/remoteModifierVocabulary/ee/schimke/composeai/uibuilder/EmbeddedRemoteModifiers.kt"
+      )
+    )
+  }
+
 // The document and mutation JSON Schemas come from the pinned protocol jar, generated there from
 // the serializers; see `ExtractProtocolSchemas`. The JVM jar alone: the attributes pick the JVM
 // variant of the multiplatform root module, and the dependency (not the configuration) is
@@ -121,6 +140,11 @@ kotlin {
       kotlin.srcDir(
         embedRemoteMaterial3Record.map {
           layout.buildDirectory.dir("generated/remoteMaterial3Record")
+        }
+      )
+      kotlin.srcDir(
+        embedRemoteModifierVocabulary.map {
+          layout.buildDirectory.dir("generated/remoteModifierVocabulary")
         }
       )
     }

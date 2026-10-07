@@ -1,0 +1,906 @@
+{
+  "schema": "ui-builder-remote-modifiers/v1",
+  "source": {
+    "group": "androidx.compose.remote",
+    "artifact": "remote-creation-compose",
+    "version": "1.0.0-alpha20"
+  },
+  "modifiers": [
+    {
+      "name": "alignByBaseline",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "name": "alpha",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "alpha",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "animateEnterExit",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "name": "animationSpec",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "animationId",
+              "type": "Int",
+              "nullable": false,
+              "optional": true,
+              "kind": "int"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "animationId",
+              "type": "Int",
+              "nullable": false,
+              "optional": false,
+              "kind": "int"
+            },
+            {
+              "name": "enabled",
+              "type": "Boolean",
+              "nullable": false,
+              "optional": false,
+              "kind": "bool"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "enabled",
+              "type": "Boolean",
+              "nullable": false,
+              "optional": false,
+              "kind": "bool"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "animationId",
+              "type": "Int",
+              "nullable": false,
+              "optional": true,
+              "kind": "int"
+            },
+            {
+              "name": "motionDuration",
+              "type": "Float",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "motionEasingType",
+              "type": "Int",
+              "nullable": false,
+              "optional": true,
+              "kind": "int"
+            },
+            {
+              "name": "visibilityDuration",
+              "type": "Float",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "visibilityEasingType",
+              "type": "Int",
+              "nullable": false,
+              "optional": true,
+              "kind": "int"
+            },
+            {
+              "name": "enabled",
+              "type": "Boolean",
+              "nullable": false,
+              "optional": true,
+              "kind": "bool"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "background",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "color",
+              "type": "RemoteColor",
+              "nullable": false,
+              "optional": false,
+              "kind": "color"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "basicMarquee",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "iterations",
+              "type": "Int",
+              "nullable": false,
+              "optional": true,
+              "kind": "int"
+            },
+            {
+              "name": "animationMode",
+              "type": "Int",
+              "nullable": false,
+              "optional": true,
+              "kind": "int"
+            },
+            {
+              "name": "repeatDelayMillis",
+              "type": "Float",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "initialDelayMillis",
+              "type": "Float",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "spacing",
+              "type": "Float",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "velocity",
+              "type": "Float",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "border",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "width",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": false,
+              "kind": "dp"
+            },
+            {
+              "name": "color",
+              "type": "RemoteColor",
+              "nullable": false,
+              "optional": false,
+              "kind": "color"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "clip",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "name": "defaultMinSize",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "minWidth",
+              "type": "RemoteDp",
+              "nullable": true,
+              "optional": true,
+              "kind": "dp"
+            },
+            {
+              "name": "minHeight",
+              "type": "RemoteDp",
+              "nullable": true,
+              "optional": true,
+              "kind": "dp"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fillMaxHeight",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "fraction",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "fraction",
+              "type": "Float",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fillMaxSize",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "fraction",
+              "type": "Float",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "fraction",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fillMaxWidth",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "fraction",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "fraction",
+              "type": "Float",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fillParentMaxHeight",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "fraction",
+              "type": "Float",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "fraction",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fillParentMaxSize",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "fraction",
+              "type": "Float",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fillParentMaxWidth",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "fraction",
+              "type": "Float",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "fraction",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "height",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "height",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": false,
+              "kind": "dp"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "height",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "height",
+              "type": "Int",
+              "nullable": false,
+              "optional": false,
+              "kind": "int"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "heightIn",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "min",
+              "type": "RemoteDp",
+              "nullable": true,
+              "optional": true,
+              "kind": "dp"
+            },
+            {
+              "name": "max",
+              "type": "RemoteDp",
+              "nullable": true,
+              "optional": true,
+              "kind": "dp"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "includeMacro",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "id",
+              "type": "Int",
+              "nullable": false,
+              "optional": false,
+              "kind": "int"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "offset",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "x",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": false,
+              "kind": "dp"
+            },
+            {
+              "name": "y",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": false,
+              "kind": "dp"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "padding",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "start",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "top",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "end",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "bottom",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "all",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "horizontal",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "vertical",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "all",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": false,
+              "kind": "dp"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "start",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": true,
+              "kind": "dp"
+            },
+            {
+              "name": "top",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": true,
+              "kind": "dp"
+            },
+            {
+              "name": "end",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": true,
+              "kind": "dp"
+            },
+            {
+              "name": "bottom",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": true,
+              "kind": "dp"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "horizontal",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": true,
+              "kind": "dp"
+            },
+            {
+              "name": "vertical",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": true,
+              "kind": "dp"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rippleEffect",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "name": "rotate",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "degrees",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scale",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "scaleX",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            },
+            {
+              "name": "scaleY",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "scale",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sharedBounds",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "key",
+              "type": "Int",
+              "nullable": false,
+              "optional": false,
+              "kind": "int"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sharedElement",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "key",
+              "type": "Int",
+              "nullable": false,
+              "optional": false,
+              "kind": "int"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "size",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "width",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": false,
+              "kind": "dp"
+            },
+            {
+              "name": "height",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": false,
+              "kind": "dp"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "size",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": false,
+              "kind": "dp"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "visibility",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "visible",
+              "type": "RemoteInt",
+              "nullable": false,
+              "optional": false,
+              "kind": "int"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "width",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "width",
+              "type": "RemoteDp",
+              "nullable": false,
+              "optional": false,
+              "kind": "dp"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "width",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        },
+        {
+          "parameters": [
+            {
+              "name": "width",
+              "type": "Int",
+              "nullable": false,
+              "optional": false,
+              "kind": "int"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "widthIn",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "min",
+              "type": "RemoteDp",
+              "nullable": true,
+              "optional": true,
+              "kind": "dp"
+            },
+            {
+              "name": "max",
+              "type": "RemoteDp",
+              "nullable": true,
+              "optional": true,
+              "kind": "dp"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "wrapContentHeight",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "name": "wrapContentSize",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "name": "wrapContentWidth",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "name": "zIndex",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "zIndex",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": false,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

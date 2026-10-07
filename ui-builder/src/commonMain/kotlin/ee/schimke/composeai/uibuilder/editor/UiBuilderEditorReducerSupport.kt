@@ -19,6 +19,8 @@ import ee.schimke.composeai.uibuilder.capability.SlotCapability
 import ee.schimke.composeai.uibuilder.capability.accepts
 import ee.schimke.composeai.uibuilder.componentRootOf
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
+import ee.schimke.composeai.uibuilder.export.REMOTE_CONTENT_MODIFIERS
+import ee.schimke.composeai.uibuilder.export.RemoteModifierVocabulary
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -36,6 +38,7 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 internal const val THEME_PRIMARY = "themePrimaryColor"
 internal const val THEME_BACKGROUND = "themeBackgroundColor"
@@ -1171,84 +1174,87 @@ internal fun UiBuilderDocument.children(parent: ParentSlot?): List<String> =
  * shape, which is a form rather than a row, and `padding` is offered at one typical value the
  * inspector can then change — the same bargain the catalog's default content makes.
  */
-internal val MENU_MODIFIERS: List<MenuModifier> =
+internal val MENU_MODIFIERS: List<MenuModifier> by lazy {
   listOf(
-    MenuModifier("fillMaxSize", "Fill the parent") {
-      buildJsonObject { put("type", "fillMaxSize") }
-    },
-    MenuModifier("fillMaxWidth", "Fill the width") {
-      buildJsonObject { put("type", "fillMaxWidth") }
-    },
-    MenuModifier("fillMaxHeight", "Fill the height") {
-      buildJsonObject { put("type", "fillMaxHeight") }
-    },
-    MenuModifier("matchParentSize", "Match the parent's size") {
-      buildJsonObject { put("type", "matchParentSize") }
-    },
-    MenuModifier("verticalScroll", "Scroll vertically") {
-      buildJsonObject { put("type", "verticalScroll") }
-    },
-    MenuModifier("horizontalScroll", "Scroll horizontally") {
-      buildJsonObject { put("type", "horizontalScroll") }
-    },
-    MenuModifier("padding", "Add padding") {
-      buildJsonObject {
-        put("type", "padding")
-        put("startDp", 16)
-        put("topDp", 16)
-        put("endDp", 16)
-        put("bottomDp", 16)
-      }
-    },
-    MenuModifier("align", "Align in the box", EditorLayoutScope.Box) {
-      buildJsonObject {
-        put("type", "align")
-        put("alignment", "center")
-      }
-    },
-    MenuModifier("alignHorizontal", "Align across the column", EditorLayoutScope.Column) {
-      buildJsonObject {
-        put("type", "alignHorizontal")
-        put("alignment", "centerHorizontally")
-      }
-    },
-    MenuModifier("alignVertical", "Align across the row", EditorLayoutScope.Row) {
-      buildJsonObject {
-        put("type", "alignVertical")
-        put("alignment", "centerVertically")
-      }
-    },
-    MenuModifier(
-      "weight",
-      "Take the leftover space",
-      EditorLayoutScope.Column,
-      EditorLayoutScope.Row,
-      EditorLayoutScope.Collapsible,
-    ) {
-      buildJsonObject {
-        put("type", "weight")
-        put("weight", 1)
-      }
-    },
-    // Remote Compose's collapsible layouts hide the lowest priority first; a child given one is
-    // offered to go before its siblings, which carry none and are kept longest.
-    MenuModifier(
-      "collapsiblePriority",
-      "Hide first when short of room",
-      EditorLayoutScope.Collapsible,
-    ) {
-      buildJsonObject {
-        put("type", "collapsiblePriority")
-        put("priority", 1)
-      }
-    },
-    MenuModifier("sharedElement", "Animate between states") {
-      buildJsonObject {
-        put("type", "sharedElement")
-        put("key", 1)
-      }
-    },
-  )
+      MenuModifier("fillMaxSize", "Fill the parent") {
+        buildJsonObject { put("type", "fillMaxSize") }
+      },
+      MenuModifier("fillMaxWidth", "Fill the width") {
+        buildJsonObject { put("type", "fillMaxWidth") }
+      },
+      MenuModifier("fillMaxHeight", "Fill the height") {
+        buildJsonObject { put("type", "fillMaxHeight") }
+      },
+      MenuModifier("matchParentSize", "Match the parent's size") {
+        buildJsonObject { put("type", "matchParentSize") }
+      },
+      MenuModifier("verticalScroll", "Scroll vertically") {
+        buildJsonObject { put("type", "verticalScroll") }
+      },
+      MenuModifier("horizontalScroll", "Scroll horizontally") {
+        buildJsonObject { put("type", "horizontalScroll") }
+      },
+      MenuModifier("padding", "Add padding") {
+        buildJsonObject {
+          put("type", "padding")
+          put("startDp", 16)
+          put("topDp", 16)
+          put("endDp", 16)
+          put("bottomDp", 16)
+        }
+      },
+      MenuModifier("align", "Align in the box", EditorLayoutScope.Box) {
+        buildJsonObject {
+          put("type", "align")
+          put("alignment", "center")
+        }
+      },
+      MenuModifier("alignHorizontal", "Align across the column", EditorLayoutScope.Column) {
+        buildJsonObject {
+          put("type", "alignHorizontal")
+          put("alignment", "centerHorizontally")
+        }
+      },
+      MenuModifier("alignVertical", "Align across the row", EditorLayoutScope.Row) {
+        buildJsonObject {
+          put("type", "alignVertical")
+          put("alignment", "centerVertically")
+        }
+      },
+      MenuModifier(
+        "weight",
+        "Take the leftover space",
+        EditorLayoutScope.Column,
+        EditorLayoutScope.Row,
+        EditorLayoutScope.Collapsible,
+      ) {
+        buildJsonObject {
+          put("type", "weight")
+          put("weight", 1)
+        }
+      },
+      // Remote Compose's collapsible layouts hide the lowest priority first; a child given one is
+      // offered to go before its siblings, which carry none and are kept longest.
+      MenuModifier(
+        "collapsiblePriority",
+        "Hide first when short of room",
+        EditorLayoutScope.Collapsible,
+      ) {
+        buildJsonObject {
+          put("type", "collapsiblePriority")
+          put("priority", 1)
+        }
+      },
+      MenuModifier("sharedElement", "Animate between states") {
+        buildJsonObject {
+          put("type", "sharedElement")
+          put("key", 1)
+        }
+      },
+    )
+    // Then every Remote call the typed modifiers above do not already write.
+    .let { typed -> typed + remoteCallMenuModifiers(REMOTE_CONTENT_MODIFIERS) }
+}
 
 /**
  * The scope a node's parent puts it in, which is what decides whether an alignment or a weight
@@ -1355,6 +1361,11 @@ internal class MenuModifier(
   val label: String,
   /** The scopes this modifier is offered in, or none where any parent will do. */
   vararg val scopes: EditorLayoutScope,
+  /**
+   * What toggles and fields address it by: the type, except for a `remoteCall`, where many calls
+   * share one type and the key is `remoteCall:<name>` (see [modifierKey]).
+   */
+  val key: String = type,
   val build: () -> JsonObject,
 ) {
   fun offeredIn(scope: EditorLayoutScope?): Boolean = scopes.isEmpty() || scope in scopes
@@ -1363,6 +1374,131 @@ internal class MenuModifier(
 /** The types on a node's chain, for asking whether it already carries one. */
 internal fun UiBuilderNode.modifierTypes(): Set<String> =
   modifiers.mapNotNull { (it as? JsonObject)?.optionalStringValue("type") }.toSet()
+
+/** The menu keys on a node's chain: types, and `remoteCall:<name>` for each Remote call. */
+internal fun UiBuilderNode.modifierKeys(): Set<String> =
+  modifiers.mapNotNull { (it as? JsonObject)?.let(::modifierKey) }.toSet()
+
+/**
+ * A modifier's menu key: its type, or `remoteCall:<name>` for a call from the Remote vocabulary.
+ */
+internal fun modifierKey(modifier: JsonObject): String? {
+  val type = modifier.optionalStringValue("type") ?: return null
+  return if (type == RemoteModifierVocabulary.TYPE)
+    "$REMOTE_CALL_KEY_PREFIX${modifier.optionalStringValue("name").orEmpty()}"
+  else type
+}
+
+internal const val REMOTE_CALL_KEY_PREFIX: String = "remoteCall:"
+
+/**
+ * One menu entry per `RemoteModifier` call in the generated vocabulary that no typed modifier
+ * already writes: the released API decides what is offered, and a new alpha's calls appear by
+ * regenerating the vocabulary. A call is added with its simplest overload and a starting value for
+ * each required argument.
+ */
+private fun remoteCallMenuModifiers(typed: Set<String>): List<MenuModifier> {
+  // Calls that only mean something with context a single node does not have (a lazy list's
+  // parent, a macro, an enter/exit transition pair, a bare `clip` with no authorable shape).
+  val notOffered =
+    setOf(
+      "alignByBaseline",
+      "animateEnterExit",
+      "animationSpec",
+      "clip",
+      "fillParentMaxHeight",
+      "fillParentMaxSize",
+      "fillParentMaxWidth",
+      "includeMacro",
+      "sharedBounds",
+    )
+  return RemoteModifierVocabulary.modifiers.values
+    .filter { it.name !in typed && it.name !in notOffered }
+    .map { call ->
+      val simplest = call.overloads.minBy { o -> o.parameters.count { !it.optional } }
+      MenuModifier(
+        RemoteModifierVocabulary.TYPE,
+        "Remote: ${call.name}",
+        key = "$REMOTE_CALL_KEY_PREFIX${call.name}",
+      ) {
+        buildJsonObject {
+          put("type", RemoteModifierVocabulary.TYPE)
+          put("name", call.name)
+          putJsonObject("args") {
+            simplest.parameters
+              .filterNot { it.optional }
+              .forEach { parameter -> put(parameter.name, remoteCallStartingValue(parameter)) }
+          }
+        }
+      }
+    }
+}
+
+private fun remoteCallStartingValue(parameter: RemoteModifierVocabulary.Parameter): JsonObject =
+  buildJsonObject {
+    when (parameter.kind) {
+      "color" -> {
+        put("type", "colorToken")
+        put("value", "primary")
+      }
+      "bool" -> {
+        put("type", "bool")
+        put("value", true)
+      }
+      "int" -> {
+        put("type", "int")
+        put("value", 0)
+      }
+      "string" -> {
+        put("type", "string")
+        put("value", "")
+      }
+      else -> {
+        put("type", "float")
+        put("value", 1)
+      }
+    }
+  }
+
+/**
+ * The editable arguments of a `remoteCall`, from the overload its arguments resolve to: numbers and
+ * dp as numeric fields, booleans as a choice. Colours and strings have no honest one-line control
+ * here (as [MODIFIER_FIELDS] says of shapes), so they keep their starting value.
+ */
+internal fun remoteCallFields(modifier: JsonObject): List<ModifierField> {
+  val name = modifier.optionalStringValue("name") ?: return emptyList()
+  val args = (modifier["args"] as? JsonObject)?.keys.orEmpty()
+  val overload =
+    RemoteModifierVocabulary.resolve(name, args)
+      ?: RemoteModifierVocabulary.modifiers[name]?.overloads?.firstOrNull()
+      ?: return emptyList()
+  return overload.parameters.mapNotNull { parameter ->
+    when (parameter.kind) {
+      "float",
+      "dp",
+      "int" -> ModifierField(parameter.name, parameter.name.humanLabel())
+      "bool" -> ModifierField(parameter.name, parameter.name.humanLabel(), listOf("true", "false"))
+      else -> null
+    }
+  }
+}
+
+/** The wire wrapper a `remoteCall` argument is written in, by its parameter kind. */
+internal fun remoteCallArgumentType(name: String, parameter: String): String? =
+  RemoteModifierVocabulary.modifiers[name]
+    ?.overloads
+    ?.flatMap { it.parameters }
+    ?.firstOrNull { it.name == parameter }
+    ?.kind
+    ?.let {
+      when (it) {
+        "int" -> "int"
+        "bool" -> "bool"
+        "float",
+        "dp" -> "float"
+        else -> null
+      }
+    }
 
 internal fun JsonObject.optionalStringValue(key: String): String? =
   (this[key] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.contentOrNull

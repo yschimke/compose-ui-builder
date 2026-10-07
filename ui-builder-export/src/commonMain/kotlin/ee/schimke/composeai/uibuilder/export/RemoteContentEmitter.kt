@@ -40,6 +40,7 @@ public val REMOTE_CONTENT_MODIFIERS: Set<String> =
     "horizontalScroll",
     "offset",
     "padding",
+    "remoteCall",
     "rotate",
     "scale",
     "sharedElement",
@@ -3400,11 +3401,114 @@ internal class RemoteContentEmitter(
       "align" -> alignmentConsumedBy("RemoteBox", type, "a box")
       "alignHorizontal" -> alignmentConsumedBy("RemoteColumn", type, "a column")
       "alignVertical" -> alignmentConsumedBy("RemoteRow", type, "a row")
+      RemoteModifierVocabulary.TYPE -> remoteCall(modifier)
       null -> emptyList()
       else -> {
         refusals += "the `$type` modifier on `$id` has no RemoteModifier counterpart here"
         emptyList()
       }
+    }
+  }
+
+  /**
+   * A `remoteCall` modifier: a `RemoteModifier` function named in the generated vocabulary, written
+   * with named arguments. The overload is the one the arguments resolve to
+   * ([RemoteModifierVocabulary.resolve]); a name or an argument the released API does not have is
+   * refused by name, and so is a computed value for a parameter that is a plain Kotlin type.
+   */
+  private fun UiBuilderNode.remoteCall(modifier: JsonObject): List<String> {
+    val name = modifier.plainString("name").orEmpty()
+    val where = "nodes.$id.modifiers.remoteCall"
+    val entry = RemoteModifierVocabulary.modifiers[name]
+    if (entry == null) {
+      refusals +=
+        "$where: `$name` is not a RemoteModifier call in remote-creation-compose " +
+          RemoteModifierVocabulary.version
+      return emptyList()
+    }
+    val args = modifier["args"] as? JsonObject ?: JsonObject(emptyMap())
+    val overload = RemoteModifierVocabulary.resolve(name, args.keys)
+    if (overload == null) {
+      refusals +=
+        "$where: `$name` takes " +
+          entry.overloads.joinToString(" or ") { o ->
+            "(" + o.parameters.joinToString { it.name + if (it.optional) "?" else "" } + ")"
+          } +
+          ", not (${args.keys.joinToString()})"
+      return emptyList()
+    }
+    val arguments =
+      overload.parameters.mapNotNull { parameter ->
+        val value = args[parameter.name] ?: return@mapNotNull null
+        "${parameter.name} = " +
+          (remoteCallArgument(parameter, value, "$where.$name.${parameter.name}")
+            ?: return emptyList())
+      }
+    usedComponentImports += "${entry.`package`}.$name"
+    return listOf("$name(${arguments.joinToString()})")
+  }
+
+  private fun remoteCallArgument(
+    parameter: RemoteModifierVocabulary.Parameter,
+    value: JsonElement,
+    where: String,
+  ): String? {
+    val remote = parameter.type.startsWith("Remote")
+    if (UiExpressions.isComputed(value) || (value as? JsonObject)?.plainString("type") == "state") {
+      if (!remote) {
+        refusals +=
+          "$where: `${parameter.type}` is a plain Kotlin value upstream, so it cannot be a state " +
+            "read or a computed value"
+        return null
+      }
+      val kind =
+        when (parameter.kind) {
+          "int" -> UiValueKind.INT
+          "bool" -> UiValueKind.BOOL
+          "color" -> UiValueKind.COLOR
+          "string" -> UiValueKind.STRING
+          else -> UiValueKind.FLOAT
+        }
+      val expression = computed(value, kind, where) ?: return null
+      return if (parameter.kind == "dp") {
+        usedComponentImports += "$REMOTE_STATE_PACKAGE.asRemoteDp"
+        "$expression.asRemoteDp()"
+      } else expression
+    }
+    val literal = (value as? JsonObject)?.get("value") as? JsonPrimitive
+    fun refuse(): String? {
+      refusals += "$where: expected a ${parameter.kind} value for `${parameter.type}`"
+      return null
+    }
+    return when (parameter.kind) {
+      "float" -> {
+        val number = literal?.floatOrNull ?: return refuse()
+        if (remote) number.floatLiteral() else "${number}f"
+      }
+      "dp" -> (literal?.floatOrNull ?: return refuse()).dpLiteral()
+      "int" -> {
+        val number = literal?.intOrNull ?: return refuse()
+        if (remote) "$number.ri".also { usesRemoteInt = true } else "$number"
+      }
+      "bool" -> {
+        val flag = literal?.booleanOrNull ?: return refuse()
+        if (remote) "$flag.rb".also { usesRemoteBoolean = true } else "$flag"
+      }
+      "color" -> {
+        val color = literal?.contentOrNull?.takeIf { it.isNotEmpty() } ?: return refuse()
+        when {
+          color == TRANSPARENT_TOKEN -> "Color(0x00000000).rc".also { usesColorLiteral = true }
+          color.startsWith("#") -> "${color.argbLiteral()}.rc".also { usesColorLiteral = true }
+          else -> "RemoteMaterialTheme.colorScheme.$color".also { usesTheme = true }
+        }
+      }
+      "string" -> {
+        val text = literal?.contentOrNull ?: return refuse()
+        val quoted =
+          "\"" + text.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$") + "\""
+        if (remote) "$quoted.rs".also { usesRemoteString = true } else quoted
+      }
+      else -> refuse()
     }
   }
 

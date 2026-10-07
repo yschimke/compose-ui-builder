@@ -52,6 +52,7 @@ internal val REMOTE_M3_MODIFIERS =
     "horizontalScroll",
     "offset",
     "padding",
+    "remoteCall",
     "rotate",
     "scale",
     "sharedElement",
@@ -70,10 +71,12 @@ internal val REMOTE_M3_MODIFIERS =
  * Neither is in the borrowed Compose vocabulary, so filtering a borrowed list by
  * [REMOTE_M3_MODIFIERS] can never produce them: they are appended instead. `sharedElement` matches
  * an element across the branches of a "Show by state" box and animates its bounds between them.
- * `collapsiblePriority` is a member of the collapsible scopes; the emitter refuses it anywhere
- * else.
+ * `remoteCall` is any other `RemoteModifier` call the released API has, from the generated
+ * vocabulary (`RemoteModifierVocabulary`), with its arguments as values. `collapsiblePriority` is a
+ * member of the collapsible scopes; the emitter refuses it anywhere else.
  */
-internal val REMOTE_ONLY_MODIFIERS: List<String> = listOf("collapsiblePriority", "sharedElement")
+internal val REMOTE_ONLY_MODIFIERS: List<String> =
+  listOf("collapsiblePriority", "remoteCall", "sharedElement")
 
 /**
  * A borrowed modifier list narrowed to what the Remote emitter writes, plus
