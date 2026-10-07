@@ -87,6 +87,7 @@ import ee.schimke.composeai.uibuilder.canvas.matchingDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.withDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.withScreenFields
 import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_CLICK_COMPONENTS
+import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
@@ -592,8 +593,14 @@ private fun InspectorBody(
                 dispatch(UiBuilderEditorEvent.BindPropertyToFormula(node.id, field.name, formula))
               },
               commit = { value ->
-                dispatch(UiBuilderEditorEvent.CommitProperty(node.id, field.name, value))
+                dispatch(
+                  // A font setting with nothing left in it is no setting: unset, not `""`.
+                  if (value.isBlank() && field.name in FontSettings.PROPERTIES)
+                    UiBuilderEditorEvent.ClearProperty(node.id, field.name)
+                  else UiBuilderEditorEvent.CommitProperty(node.id, field.name, value)
+                )
               },
+              textTypeface = { FontSettings.textTypeface(state.document, field.nodeId) },
             )
           }
           if (tuneTarget != null) TuneFieldButton(tuneTarget, state.tunables, dispatch)
@@ -786,6 +793,8 @@ private fun PropertyControl(
   onUnbind: () -> Unit,
   onFormula: (String) -> Unit,
   commit: (String) -> Unit,
+  /** The face a text field's font settings apply to; read only for those two properties. */
+  textTypeface: () -> FontSettings.TextTypeface? = { null },
 ) {
   val bound = field.boundVariable
   val formula = field.boundFormula
@@ -819,6 +828,11 @@ private fun PropertyControl(
       }
       // A theme typeface is a family name, and a family name is picked rather than typed: the
       // picker searches the vendored faces and the Google Fonts catalogue and draws each in itself.
+      // A text's axes and features are the face's, so they are offered from the face, with the
+      // property's own text field below for a value typed or pasted whole.
+      if (field.name in FontSettings.PROPERTIES && !field.mixed) {
+        FontSettingsEditor(field.name, field.value, textTypeface(), commit)
+      }
       if (field.name in ThemeTypefaces.PROPERTIES) {
         FontFamilyPicker(
           selected = field.value.takeIf { it.isNotBlank() },

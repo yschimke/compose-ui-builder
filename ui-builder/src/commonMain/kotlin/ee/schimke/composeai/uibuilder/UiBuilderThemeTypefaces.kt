@@ -4,11 +4,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.wear.compose.material3.MaterialTheme as WearMaterialTheme
 import androidx.wear.compose.material3.ProvideTextStyle as WearProvideTextStyle
 import androidx.wear.compose.material3.Typography as WearTypography
+import ee.schimke.composeai.uibuilder.canvas.LocalThemeHostProperties
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 
@@ -25,7 +27,8 @@ internal fun ThemeTypefacesHost(read: (String) -> String?, content: @Composable 
   val families = ThemeTypefaces.families(read)
   val textRole = ThemeTextStyle.role(read)
   if (families.isEmpty() && textRole == null) {
-    content()
+    // Still this design's theme host: a text's font settings resolve their typeface against it.
+    CompositionLocalProvider(LocalThemeHostProperties provides read, content = content)
     return
   }
   val m3 = rememberThemeRoleFamilies(families, wear = false)
@@ -35,7 +38,9 @@ internal fun ThemeTypefacesHost(read: (String) -> String?, content: @Composable 
     ProvideThemeTextStyle(textRole) {
       WearMaterialTheme(typography = WearMaterialTheme.typography.withRoleFamilies(wear)) {
         // After the Wear theme, which provides its own `bodyLarge` as the ambient style.
-        ProvideWearThemeTextStyle(textRole, content)
+        CompositionLocalProvider(LocalThemeHostProperties provides read) {
+          ProvideWearThemeTextStyle(textRole, content)
+        }
       }
     }
   }

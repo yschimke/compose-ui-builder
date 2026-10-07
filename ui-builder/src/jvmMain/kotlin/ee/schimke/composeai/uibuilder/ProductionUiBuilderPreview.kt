@@ -45,7 +45,10 @@ internal fun ProductionUiBuilderSurface(
   fonts: Map<String, androidx.compose.ui.text.font.FontFamily> = ProductionFontFamilies.production,
 ) {
   ProvideProductionCatalog(document) {
-    CompositionLocalProvider(LocalUiBuilderFontFamilies provides fonts) {
+    CompositionLocalProvider(
+      LocalUiBuilderFontFamilies provides fonts,
+      LocalUiBuilderFontVariants provides (fonts as? UiBuilderFontVariants),
+    ) {
       UiBuilderSurface(document = document, editorOverlay = false)
     }
   }

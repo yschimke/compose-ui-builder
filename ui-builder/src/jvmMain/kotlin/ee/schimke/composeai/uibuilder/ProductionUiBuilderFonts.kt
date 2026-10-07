@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.platform.Font
+import ee.schimke.composeai.uibuilder.export.FontSettings
 import java.io.File
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
@@ -32,7 +33,7 @@ const val GOOGLE_FONTS_DIRECTORY_PROPERTY: String = "uiBuilder.googleFontsDir"
 internal class ProductionFontFamilies(
   private val readResource: (path: String) -> ByteArray?,
   private val googleFontsDirectory: File?,
-) : AbstractMap<String, FontFamily>() {
+) : AbstractMap<String, FontFamily>(), UiBuilderFontVariants {
   private val manifest: VendoredFontManifest? by lazy {
     readResource("/fonts/fonts.json")?.let {
       runCatching { parseVendoredFontManifest(it.decodeToString()) }.getOrNull()
@@ -40,6 +41,21 @@ internal class ProductionFontFamilies(
   }
 
   private val resolved = ConcurrentHashMap<String, Optional<FontFamily>>()
+  private val files = ConcurrentHashMap<String, Optional<List<UiBuilderFontFile>>>()
+  private val variants = ConcurrentHashMap<Pair<String, List<FontSettings.Axis>>, FontFamily>()
+
+  /** [key]'s family at a text's axes, from the same files [get] reads; see [variableFontFamily]. */
+  override fun variant(name: String, axes: List<FontSettings.Axis>): FontFamily? {
+    if (axes.isEmpty()) return get(name)
+    val loaded = filesOf(name) ?: return null
+    return variants.computeIfAbsent(name to axes) { variableFontFamily(loaded, axes) }
+  }
+
+  override fun hasAxis(name: String, tag: String): Boolean =
+    filesOf(name).orEmpty().any { tag in it.axisTags }
+
+  private fun filesOf(name: String): List<UiBuilderFontFile>? =
+    files.computeIfAbsent(name) { Optional.ofNullable(loadFiles(it)) }.orElse(null)
 
   override val entries: Set<Map.Entry<String, FontFamily>>
     get() =
@@ -52,9 +68,17 @@ internal class ProductionFontFamilies(
   override fun containsKey(key: String): Boolean = get(key) != null
 
   override fun get(key: String): FontFamily? =
-    resolved.computeIfAbsent(key) { Optional.ofNullable(load(it)) }.orElse(null)
+    resolved
+      .computeIfAbsent(key) { name ->
+        Optional.ofNullable(
+          filesOf(name)?.let { loaded ->
+            FontFamily(loaded.map { Font(it.identity, it.data, FontWeight(it.weight)) })
+          }
+        )
+      }
+      .orElse(null)
 
-  private fun load(name: String): FontFamily? {
+  private fun loadFiles(name: String): List<UiBuilderFontFile>? {
     val canonical = canonicalFamilyName(name) ?: return null
     manifest
       ?.families
@@ -63,12 +87,12 @@ internal class ProductionFontFamilies(
         val fonts =
           family.fonts.mapNotNull { file ->
             readResource("/fonts/${file.file}")?.let {
-              Font("ui-builder:${family.name}:${file.weight}", it, FontWeight(file.weight))
+              UiBuilderFontFile("ui-builder:${family.name}:${file.weight}", it, file.weight)
             }
           }
         // A manifest family whose files this classpath lacks is still a Google Fonts family the
         // host may have cached, so it falls through to the cache rather than to the default face.
-        if (fonts.isNotEmpty()) return FontFamily(fonts)
+        if (fonts.isNotEmpty()) return fonts
       }
     if (canonical in GENERIC_FAMILIES) return null
     val directory = googleFontsDirectory ?: return null
@@ -78,10 +102,10 @@ internal class ProductionFontFamilies(
     val fonts = GOOGLE_FONT_WEIGHTS.mapNotNull { weight ->
       File(directory, "${googleFontSlug(family)}-$weight.ttf")
         .takeIf { it.isFile && it.length() > 0 }
-        ?.let { Font("ui-builder:remote:$family:$weight", it.readBytes(), FontWeight(weight)) }
+        ?.let { UiBuilderFontFile("ui-builder:remote:$family:$weight", it.readBytes(), weight) }
         ?: if (weight == FontWeight.Normal.weight) return null else null
     }
-    return FontFamily(fonts)
+    return fonts
   }
 
   companion object {

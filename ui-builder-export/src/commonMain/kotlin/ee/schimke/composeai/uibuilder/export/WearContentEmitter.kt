@@ -82,6 +82,8 @@ internal class WearContentEmitter(
 
   /** Text arguments' own types, by simple name, with their packages in [imports]. */
   private val textImports = mutableSetOf<String>()
+  /** Fully-qualified imports a text's [FontSettings] arguments need. */
+  private val fontImports = mutableSetOf<String>()
 
   private var usesMaterialTheme = false
 
@@ -1800,6 +1802,7 @@ internal class WearContentEmitter(
         }
       )
     }
+    fontImports.forEach(::add)
     layoutImports.forEach { add("androidx.compose.foundation.layout.$it") }
     drawImports.forEach { add("androidx.compose.ui.draw.$it") }
     if (usesZIndex) add("androidx.compose.ui.zIndex")
@@ -1867,23 +1870,35 @@ internal class WearContentEmitter(
     }
 
   private fun textArguments(node: UiBuilderNode): List<String> = buildList {
-    node.stringOrNull("style")?.takeIf(String::isNotEmpty)?.let {
+    val font = FontSettings.composeArguments(document, node.id)
+    fontImports += font.imports
+    val featureCopy = font.styleCopy
+    val role = node.stringOrNull("style")?.takeIf(String::isNotEmpty)
+    if (role != null) {
       usesMaterialTheme = true
-      add("style = MaterialTheme.typography.${wearTypographyRole(it)}")
+      add("style = MaterialTheme.typography.${wearTypographyRole(role)}${featureCopy.orEmpty()}")
+    } else if (featureCopy != null) {
+      fontImports += "androidx.wear.compose.material3.LocalTextStyle"
+      add("style = LocalTextStyle.current$featureCopy")
     }
     colorExpression(node, "color")?.let { add("color = $it") }
-    node.stringOrNull("fontWeight")?.let {
-      textImports += "FontWeight"
-      add(
-        "fontWeight = FontWeight." +
-          when (it) {
-            "medium" -> "Medium"
-            "semiBold" -> "SemiBold"
-            "bold" -> "Bold"
-            else -> "Normal"
-          }
-      )
-    }
+    font.fontFamily?.let { add("fontFamily = $it") }
+    font.fontWeight?.let { add("fontWeight = $it") }
+    node
+      .stringOrNull("fontWeight")
+      ?.takeUnless { font.overridesWeight }
+      ?.let {
+        textImports += "FontWeight"
+        add(
+          "fontWeight = FontWeight." +
+            when (it) {
+              "medium" -> "Medium"
+              "semiBold" -> "SemiBold"
+              "bold" -> "Bold"
+              else -> "Normal"
+            }
+        )
+      }
     node.stringOrNull("fontStyle")?.let {
       textImports += "FontStyle"
       add("fontStyle = FontStyle." + if (it == "italic") "Italic" else "Normal")

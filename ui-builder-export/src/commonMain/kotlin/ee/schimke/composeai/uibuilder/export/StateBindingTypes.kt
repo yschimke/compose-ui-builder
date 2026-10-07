@@ -22,6 +22,12 @@ fun stateBindingMatchesCatalog(
 ): Boolean? {
   val binding = value as? JsonObject ?: return null
   val kind = (binding["type"] as? JsonPrimitive)?.content
+  // A text's axes and features are a literal list every lane parses; none reads one from state.
+  if (
+    propertyName in FontSettings.PROPERTIES &&
+      (kind == "state" || kind == "stateEquals" || UiExpressions.isComputed(binding))
+  )
+    return false
   if (UiExpressions.isComputed(binding))
     return computedMatchesCatalog(binding, jsonType, allowedValues, declarations, propertyName)
   if (kind != "state" && kind != "stateEquals") return null

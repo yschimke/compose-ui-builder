@@ -9,6 +9,7 @@ import ee.schimke.composeai.uibuilder.canvas.isoDateToEpochMillis
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.editor.themeHost
 import ee.schimke.composeai.uibuilder.export.AndroidGoogleFonts
+import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.KOTLIN_HARD_KEYWORDS
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
@@ -904,7 +905,10 @@ internal class ComposeEmitter(
   }
 
   private fun emitText(node: UiBuilderNode, level: Int) {
+    val font = FontSettings.composeArguments(document, node.id)
+    val featureCopy = font.styleCopy.orEmpty()
     val optionalArguments = buildList {
+      font.fontFamily?.let { add("fontFamily = $it") }
       if ("fontStyle" in node.properties) add("fontStyle = ${node.fontStyleExpression()}")
       if ("fontSizeSp" in node.properties)
         add("fontSize = ${node.optionalSpExpression("fontSizeSp")}")
@@ -921,7 +925,7 @@ internal class ComposeEmitter(
       .joinToString(separator = "") { "$it, " }
     line(
       level,
-      "Text(text = ${node.boundStringExpression("text")}, style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}, color = ${node.boundColorExpression("color")}, fontWeight = ${node.fontWeightExpression()}, ${optionalArguments}maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = ${node.textOverflowExpression()}, ${node.modifierArgument()})",
+      "Text(text = ${node.boundStringExpression("text")}, style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}$featureCopy, color = ${node.boundColorExpression("color")}, fontWeight = ${font.fontWeight ?: if (font.overridesWeight) "null" else node.fontWeightExpression()}, ${optionalArguments}maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = ${node.textOverflowExpression()}, ${node.modifierArgument()})",
     )
   }
 
@@ -974,6 +978,9 @@ internal class ComposeEmitter(
       if ("fontStyle" in propertyNames) add("androidx.compose.ui.text.font.FontStyle")
       if ("textAlign" in propertyNames) add("androidx.compose.ui.text.style.TextAlign")
       if ("textDecoration" in propertyNames) add("androidx.compose.ui.text.style.TextDecoration")
+      document.nodes.values
+        .filter { it.componentId == "m3/text" }
+        .forEach { addAll(FontSettings.composeArguments(document, it.id).imports) }
       if (propertyNames.any { it in setOf("fontSizeSp", "lineHeightSp", "letterSpacingSp") }) {
         add("androidx.compose.ui.unit.TextUnit")
         add("androidx.compose.ui.unit.sp")
@@ -3336,7 +3343,7 @@ private val HANDLED_FIELDS =
           "textDecoration",
           "alignment",
           "weight",
-        )
+        ) + FontSettings.PROPERTIES
       ),
     "shape/colour-dot" to HandledFields(setOf("color", "diameterDp")),
     "shape/linear-gradient" to HandledFields(setOf("startColor", "endColor", "direction")),

@@ -1554,6 +1554,20 @@
                     "name": "weight",
                     "notes": null,
                     "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "fontVariationSettings",
+                    "notes": "Variable-font axis coordinates, CSS `font-variation-settings` style with bare tags: `wght 650, wdth 87.5, GRAD -50`. Applies to the typeface the text is set in (its role's theme typeface, or the platform face); an axis that face does not have is ignored, so the inspector offers only the face's own axes with their ranges. Roboto Flex, Wear's own face, has thirteen (wght 100–1000, wdth 25–151, opsz 8–144, GRAD -200–150, …). `wght` set here overrides `fontWeight`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "fontFeatureSettings",
+                    "notes": "OpenType layout features, CSS `font-feature-settings` style with bare tags: `tnum, ss01, liga 0` — a tag alone turns the feature on, `0` turns it off and a larger number picks an alternate. `tnum` gives every figure the same width, which a clock, a timer or a column of numbers needs. A feature the typeface does not have is ignored; the inspector lists the face's own.",
+                    "required": false
                 }
             ],
             "role": "Leaf",
@@ -16976,6 +16990,20 @@
                     "jsonType": "string",
                     "name": "textAlign",
                     "notes": "Written as `textAlign = TextAlign.<Value>`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "fontVariationSettings",
+                    "notes": "Variable-font axis coordinates, CSS `font-variation-settings` style with bare tags: `wght 650, wdth 87.5, GRAD -50`. Applies to the typeface the text is set in (its role's theme typeface, or the platform face); an axis that face does not have is ignored, so the inspector offers only the face's own axes with their ranges. Roboto Flex, Wear's own face, has thirteen (wght 100–1000, wdth 25–151, opsz 8–144, GRAD -200–150, …). `wght` set here overrides `fontWeight`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "fontFeatureSettings",
+                    "notes": "OpenType layout features, CSS `font-feature-settings` style with bare tags: `tnum, ss01, liga 0` — a tag alone turns the feature on, `0` turns it off and a larger number picks an alternate. `tnum` gives every figure the same width, which a clock, a timer or a column of numbers needs. A feature the typeface does not have is ignored; the inspector lists the face's own.",
                     "required": false
                 }
             ],

@@ -11,7 +11,9 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -76,7 +78,7 @@ class UiBuilderFontRegistry(
    * picker to offer; null for a host with no font service, which offers the manifest alone.
    */
   private val readRemoteFamilies: (suspend () -> String)? = null,
-) {
+) : UiBuilderFontVariants {
   /** The manifest's text, for a host that reads it for something else too (Wear's device face). */
   suspend fun readManifestText(): String = readManifest()
 
@@ -108,6 +110,39 @@ class UiBuilderFontRegistry(
 
   /** Families that have finished loading, by name. */
   val loaded: SnapshotStateMap<String, FontFamily> = mutableStateMapOf()
+
+  /**
+   * What each loaded family offers a text's font settings — its variation axes with their ranges
+   * and its layout features — read from the files themselves, under the same key as [loaded].
+   */
+  val typefaces: SnapshotStateMap<String, TypefaceInfo> = mutableStateMapOf()
+
+  /** The files behind each loaded family, kept so [variant] can build an instance at any axes. */
+  private val files = mutableMapOf<String, List<UiBuilderFontFile>>()
+  private val variants = mutableMapOf<Pair<String, List<FontSettings.Axis>>, FontFamily>()
+
+  /**
+   * [name]'s family at the axis coordinates [axes] sets, or the plain family when [axes] is empty;
+   * null until [name] has loaded. One `FontFamily` per name and setting, so a recomposition hands
+   * the text stack the same instance and it does not lay the text out again. See
+   * [variableFontFamily].
+   */
+  override fun hasAxis(name: String, tag: String): Boolean =
+    files[name].orEmpty().any { tag in it.axisTags }
+
+  override fun variant(name: String, axes: List<FontSettings.Axis>): FontFamily? {
+    if (axes.isEmpty()) return loaded[name]
+    val loadedFiles = files[name] ?: return null
+    return variants.getOrPut(name to axes) { variableFontFamily(loadedFiles, axes) }
+  }
+
+  private fun publish(name: String, loadedFiles: List<UiBuilderFontFile>) {
+    files[name] = loadedFiles
+    typefaces[name] =
+      loadedFiles.map { readTypefaceInfo(it.data) }.fold(TypefaceInfo.EMPTY, TypefaceInfo::plus)
+    loaded[name] =
+      FontFamily(loadedFiles.map { platformFont(it.identity, it.data, FontWeight(it.weight)) })
+  }
 
   private val requested = mutableSetOf<String>()
   private var manifestRequested = false
@@ -145,17 +180,15 @@ class UiBuilderFontRegistry(
       family != null ->
         scope.launch {
           runCatching {
-            FontFamily(
-              family.fonts.map { file ->
-                platformFont(
-                  identity = "ui-builder:${family.name}:${file.weight}",
-                  data = readFont(file.file),
-                  weight = FontWeight(file.weight),
-                )
-              }
-            )
+            family.fonts.map { file ->
+              UiBuilderFontFile(
+                identity = "ui-builder:${family.name}:${file.weight}",
+                data = readFont(file.file),
+                weight = file.weight,
+              )
+            }
           }
-            .onSuccess { loaded[name] = it }
+            .onSuccess { publish(name, it) }
         }
       // A generic keyword is the manifest's to answer; no font service has a family called `serif`.
       remote != null && canonical !in GENERIC_FAMILY_NAMES ->
@@ -165,19 +198,62 @@ class UiBuilderFontRegistry(
           // family that has no 700 still loads, and its bold text is synthesised from the 400.
           val fonts = REMOTE_FONT_WEIGHTS.mapNotNull { weight ->
             runCatching {
-              platformFont(
-                identity = "ui-builder:remote:$family:$weight",
-                data = remote(family, weight),
-                weight = FontWeight(weight),
-              )
+              UiBuilderFontFile("ui-builder:remote:$family:$weight", remote(family, weight), weight)
             }
               .getOrNull() ?: if (weight == FontWeight.Normal.weight) return@launch else null
           }
-          loaded[name] = FontFamily(fonts)
+          publish(name, fonts)
         }
     }
   }
 }
+
+/** One font file of a family, as loaded: what a variable instance of it is built from. */
+class UiBuilderFontFile(val identity: String, val data: ByteArray, val weight: Int) {
+  /** The variation axes this file has, by tag; empty for a static face. */
+  val axisTags: Set<String> by lazy { readTypefaceInfo(data).axes.mapTo(mutableSetOf()) { it.tag } }
+}
+
+/**
+ * A family's files at the axis coordinates [axes] sets, for any host that has the bytes.
+ *
+ * A coordinate is passed to the face as given — the font clamps it to its own range, and drops an
+ * axis it does not have — and `wght`, when [axes] leaves it out, stays at each file's own weight,
+ * which is what the plain family draws.
+ */
+fun variableFontFamily(files: List<UiBuilderFontFile>, axes: List<FontSettings.Axis>): FontFamily =
+  FontFamily(
+    files.map { file ->
+      val settings = buildList {
+        if (axes.none { it.tag == "wght" }) add(FontVariation.weight(file.weight))
+        axes.forEach { add(FontVariation.Setting(it.tag, it.value)) }
+      }
+      platformFont(
+        identity = "${file.identity}:" + axes.joinToString(",") { "${it.tag}=${it.value}" },
+        data = file.data,
+        weight = FontWeight(file.weight),
+        variationSettings = FontVariation.Settings(*settings.toTypedArray()),
+      )
+    }
+  )
+
+/**
+ * What builds a family at a text's variation axes, by the family name a document uses: the editor's
+ * [UiBuilderFontRegistry], or a production render's resolved families. Null where the host has no
+ * font bytes, and then a text draws its features and not its axes.
+ */
+interface UiBuilderFontVariants {
+  /** [name]'s family at [axes], or null when [name] is not loaded here. */
+  fun variant(name: String, axes: List<FontSettings.Axis>): FontFamily?
+
+  /**
+   * Whether [name]'s files have the axis [tag], so a setting of it changes what is drawn; false for
+   * a family not loaded here. A static face ignores every axis.
+   */
+  fun hasAxis(name: String, tag: String): Boolean
+}
+
+val LocalUiBuilderFontVariants = staticCompositionLocalOf<UiBuilderFontVariants?> { null }
 
 /** The weights fetched for a family the manifest does not list: the two the vendored ones carry. */
 private val REMOTE_FONT_WEIGHTS = listOf(400, 700)
@@ -199,7 +275,12 @@ fun canonicalFamilyName(name: String): String? =
   remoteFamilyName(name).lowercase().takeIf { it.isNotEmpty() }
 
 /** A font from bytes, which only the platform text stack knows how to build. */
-internal expect fun platformFont(identity: String, data: ByteArray, weight: FontWeight): Font
+internal expect fun platformFont(
+  identity: String,
+  data: ByteArray,
+  weight: FontWeight,
+  variationSettings: FontVariation.Settings? = null,
+): Font
 
 /** The registry the host provides, which the typeface picker lists and the renderer asks. */
 val LocalUiBuilderFontRegistry = staticCompositionLocalOf<UiBuilderFontRegistry?> { null }
@@ -214,6 +295,7 @@ fun ProvideUiBuilderFonts(registry: UiBuilderFontRegistry?, content: @Composable
   CompositionLocalProvider(
     LocalUiBuilderFontRegistry provides registry,
     LocalUiBuilderFontFamilies provides (registry?.loaded ?: emptyMap()),
+    LocalUiBuilderFontVariants provides registry,
     content = content,
   )
 }

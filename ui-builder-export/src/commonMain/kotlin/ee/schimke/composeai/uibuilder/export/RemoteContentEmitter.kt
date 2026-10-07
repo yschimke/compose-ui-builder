@@ -238,6 +238,8 @@ internal class RemoteContentEmitter(
   private var usesAlignment = false
   private var usesDp = false
   private var usesTextAlign = false
+  private var usesFontVariation = false
+  private var usesLocalTextStyle = false
   private var usesRemoteBoolean = false
   private var usesRemoteInt = false
   private var usesLambdaAction = false
@@ -2589,12 +2591,36 @@ internal class RemoteContentEmitter(
       ?.numberOrNull()
       ?.takeIf { it > 0f }
       ?.let { arguments += "fontSize = ${it.spLiteral()}" }
-    node.properties["style"]
-      ?.stringOrNull()
-      ?.takeIf { it.isNotEmpty() }
-      ?.let {
-        usesTheme = true
-        arguments += "style = RemoteMaterialTheme.typography.$it"
+    val role = node.properties["style"]?.stringOrNull()?.takeIf { it.isNotEmpty() }
+    // Features ride on the style: `RemoteText` takes the axes as an argument of its own but has no
+    // feature parameter, and `RemoteTextStyle.merge` writes either into the document.
+    val features =
+      FontSettings.formatFeatures(
+          FontSettings.parseFeatures(node.properties[FontSettings.FEATURE_PROPERTY]?.stringOrNull())
+        )
+        .ifEmpty { null }
+    if (role != null) usesTheme = true
+    val base =
+      if (role != null) "RemoteMaterialTheme.typography.$role"
+      else if (features != null) {
+        usesLocalTextStyle = true
+        "LocalRemoteTextStyle.current"
+      } else null
+    base?.let {
+      arguments +=
+        if (features == null) "style = $it"
+        else "style = $it.merge(fontFeatureSettings = \"${features.escaped()}\")"
+    }
+    FontSettings.parseVariations(node.properties[FontSettings.VARIATION_PROPERTY]?.stringOrNull())
+      .takeIf { it.isNotEmpty() }
+      ?.let { axes ->
+        usesFontVariation = true
+        arguments +=
+          "fontVariationSettings = FontVariation.Settings(" +
+            axes.joinToString(", ") {
+              "FontVariation.Setting(\"${it.tag.escaped()}\", ${FontSettings.number(it.value)}f)"
+            } +
+            ")"
       }
     node.properties["textAlign"]
       ?.stringOrNull()
@@ -3082,6 +3108,8 @@ internal class RemoteContentEmitter(
     if (usesColorLiteral) imports += "androidx.compose.ui.graphics.Color"
     if (usesContentScale) imports += "androidx.compose.ui.layout.ContentScale"
     if (usesTextAlign) imports += "androidx.compose.ui.text.style.TextAlign"
+    if (usesFontVariation) imports += "androidx.compose.ui.text.font.FontVariation"
+    if (usesLocalTextStyle) imports += "androidx.wear.compose.remote.material3.LocalRemoteTextStyle"
     // The widget half. A Wear widget is delivered as a `WearWidgetDocument` and drawn inside the
     // host's container; inline remote content inside a phone or watch *screen* is neither, so it
     // takes the vocabulary above and none of this. Gated rather than always-on for the reason every

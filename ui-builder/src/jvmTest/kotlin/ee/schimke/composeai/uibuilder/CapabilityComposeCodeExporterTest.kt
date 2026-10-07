@@ -7,6 +7,7 @@ import ee.schimke.composeai.uibuilder.codegen.ComposeAssetBinding
 import ee.schimke.composeai.uibuilder.codegen.ComposeAssetRenderer
 import ee.schimke.composeai.uibuilder.codegen.ComposeCodeExporter
 import ee.schimke.composeai.uibuilder.codegen.ComposeExportSeverity
+import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocumentHome
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -467,6 +468,34 @@ class CapabilityComposeCodeExporterTest {
     assertTrue(source.contains("textAlign = TextAlign.End"))
     assertTrue(source.contains("textDecoration = TextDecoration.Underline"))
     assertTrue(source.contains(".align(Alignment.TopCenter)"))
+  }
+
+  @Test
+  fun `a text's features ride on its style and its axes on the face it is set in`() {
+    val title = document.nodes.getValue("detail-podcast-title")
+    val properties =
+      JsonObject(
+        title.properties +
+          mapOf(
+            FontSettings.VARIATION_PROPERTY to property("string", JsonPrimitive("wdth 90")),
+            FontSettings.FEATURE_PROPERTY to property("string", JsonPrimitive("'tnum', 'zero'")),
+          )
+      )
+    val edited =
+      document.copy(nodes = document.nodes + (title.id to title.copy(properties = properties)))
+
+    val source =
+      CapabilityComposeCodeExporter.export(edited, catalog, artworkAdapter).requireSource()
+
+    assertTrue(source.contains(".copy(fontFeatureSettings = \"tnum, zero\")"), source)
+    assertTrue(
+      source.contains(
+        "fontFamily = FontFamily(Font(DeviceFontFamilyName(\"sans-serif\"), variationSettings = " +
+          "FontVariation.Settings(FontVariation.Setting(\"wdth\", 90f))))"
+      ),
+      source,
+    )
+    assertTrue(source.contains("import androidx.compose.ui.text.font.FontVariation"), source)
   }
 
   @Test

@@ -541,6 +541,8 @@ fun UiBuilderSurface(
     LocalDensity provides density,
     LocalLayoutDirection provides layoutDirection,
     LocalUiBuilderTypeScale provides typeScale,
+    LocalThemeHostProperties provides { name: String -> themeHost?.string(name) },
+    LocalDocumentTypeface provides typeface,
     LocalUiBuilderCornerRadius provides cornerRadius,
     LocalUiBuilderNativeOnly provides nativeOnlyComponentIds,
     LocalUiBuilderCatalogComponentIds provides catalogComponentIds,
@@ -968,13 +970,14 @@ private fun RenderNode(
       "wear-m3/icon" -> BuilderIcon(node, measured)
       // Wear's own `Text`, reading the same properties as the mobile branch. The style comes from
       // `wearTextStyle`, which resolves roles against Wear's type scale.
-      "wear-m3/text" ->
+      "wear-m3/text" -> {
+        val font = resolveFontSettings(node, wearTextStyle(node.string("style")), wear = true)
         WearText(
           node.string("text"),
           measured,
           color = node.color("color", Color.Unspecified),
-          style = wearTextStyle(node.string("style")),
-          fontWeight = node.fontWeight(),
+          style = font.style,
+          fontWeight = if (font.setsWeight) null else node.fontWeight(),
           fontStyle = node.fontStyle(),
           fontSize =
             node.float("fontSizeSp").takeIf { it > 0f }?.sp
@@ -993,6 +996,7 @@ private fun RenderNode(
           textAlign = node.textAlign(),
           onTextLayout = { host.recordTextLayout(path, it) },
         )
+      }
       "wear-m3/card" ->
         WearCanvasCard(
           node.string("variant"),
@@ -1854,13 +1858,14 @@ private fun RenderNode(
           color = node.color("color", MaterialTheme.colorScheme.outlineVariant),
         )
       "m3/icon" -> BuilderIcon(node, measured)
-      "m3/text" ->
+      "m3/text" -> {
+        val font = resolveFontSettings(node, node.textStyle(), wear = false)
         Text(
           node.string("text"),
           measured,
           color = node.color("color", Color.Unspecified),
-          style = node.textStyle(),
-          fontWeight = node.fontWeight(),
+          style = font.style,
+          fontWeight = if (font.setsWeight) null else node.fontWeight(),
           fontStyle = node.fontStyle(),
           fontSize =
             node.float("fontSizeSp").takeIf { it > 0f }?.sp
@@ -1879,6 +1884,7 @@ private fun RenderNode(
           textAlign = node.textAlign(),
           onTextLayout = { host.recordTextLayout(path, it) },
         )
+      }
       "asset/image" -> AssetImage(document, node, measured)
       // A drawing: its operations are drawn by the canvas, not entered as nodes of their own.
       // `this.entry`: the node being drawn, not the root this renderer was entered from.
