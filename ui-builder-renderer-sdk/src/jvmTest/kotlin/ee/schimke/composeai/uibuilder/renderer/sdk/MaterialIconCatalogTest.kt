@@ -62,7 +62,19 @@ class MaterialIconCatalogTest {
   fun searchFindsWhatTheLabelFilterFoundWithoutTheCatalog() {
     assertEquals(SelectableGoogleMaterialIcons.size, SelectableGoogleMaterialIconCount)
     assertEquals(SelectableGoogleMaterialIcons.take(80), searchGoogleMaterialIcons("", limit = 80))
-    listOf("arrow", "Arrow back", "outlined", "Auto-mirrored", "10k", "TwoTone", "HOME", "zzzz")
+    listOf(
+        "arrow",
+        "Arrow back",
+        "outlined",
+        "Auto-mirrored",
+        "10k",
+        "TwoTone",
+        "HOME",
+        "zzzz",
+        "Auto-mirrored Outlined",
+        "Arrow Back — Outlined",
+        "d Rot",
+      )
       .forEach { query ->
         val byLabel = SelectableGoogleMaterialIcons.filter {
           it.label.contains(query, ignoreCase = true) || it.key.contains(query, ignoreCase = true)

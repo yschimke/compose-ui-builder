@@ -44,17 +44,17 @@ val SelectableGoogleMaterialIconCount: Int
  * The first [limit] picker icons matching [query], in the catalog's order, built only for the
  * results: a search never holds the whole catalog.
  *
- * Matches against the key, case-insensitively, with spaces and dashes dropped from [query]. Every
- * word a label shows is in its key (`outlined/arrowBack` is "Arrow Back — Outlined"), so this finds
- * whatever the label would, and "arrow back" or "auto-mirrored" match too. A blank query is the
- * catalog's first page.
+ * Every word of [query] (split at spaces and dashes) must appear in the key, case-insensitively and
+ * in any order. Every word a label shows is in its key, though not in the label's order
+ * (`outlined/arrowBack` is "Arrow Back — Outlined"), so this finds whatever the label would,
+ * including a label pasted whole. A blank query is the catalog's first page.
  */
 fun searchGoogleMaterialIcons(query: String, limit: Int): List<GoogleMaterialIcon> {
-  val needle = query.filterNot { it == ' ' || it == '-' || it == '—' }
+  val words = query.split(' ', '-', '—').filter(String::isNotEmpty)
   val results = ArrayList<GoogleMaterialIcon>(minOf(limit, 128))
   for (position in 0 until GoogleMaterialIconKeys.canonicalCount) {
     if (results.size == limit) break
-    if (GoogleMaterialIconKeys.keyContains(position, needle)) {
+    if (words.all { GoogleMaterialIconKeys.keyContains(position, it) }) {
       results += checkNotNull(googleMaterialIconFor(GoogleMaterialIconKeys.keyAt(position)))
     }
   }
