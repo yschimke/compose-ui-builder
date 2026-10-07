@@ -277,9 +277,10 @@ jobs:
       # nothing is inlined and the largest function is ~100 KB.
       - run: node wasm-functions.mjs ../../ui-builder/build/wasmDist/uiBuilder.wasm
         working-directory: scripts/ui-builder-web-smoke
-      # Size budgets for the shipped bundle (`budgets.json`): `uiBuilder.wasm`, `skiko.wasm`, the
-      # scripts and the whole archive, raw and gzipped. `main` only, like the memory budgets below:
-      # a pull request's module is not Binaryen-optimised, so its sizes are not the shipped ones.
+      # Size budgets for the editor bundle (`budgets.json`): `uiBuilder.wasm`, `skiko.wasm`, the
+      # scripts and all of `wasmDist`, raw and gzipped. The web archive adds only its 107-byte
+      # manifest and the 6 KB MCP App shell to that. `main` only, like the memory budgets below: a
+      # pull request's module is not Binaryen-optimised, so its sizes are not the shipped ones.
       - if: github.event_name != 'pull_request'
         run: node budgets.mjs ../../ui-builder/build/wasmDist
         working-directory: scripts/ui-builder-web-smoke
