@@ -523,8 +523,18 @@ internal fun WearCanvasProgressIndicator(
  * from the exported document; this canvas counterpart deliberately shows page one of four.
  */
 @Composable
-internal fun WearCanvasPageIndicator(vertical: Boolean, modifier: Modifier = Modifier) {
-  val state = rememberPagerState(initialPage = 0) { 4 }
+internal fun WearCanvasPageIndicator(
+  vertical: Boolean,
+  modifier: Modifier = Modifier,
+  pageCount: Int = 4,
+  selectedPage: Int = 0,
+) {
+  val pages = pageCount.coerceAtLeast(1)
+  val state = rememberPagerState(initialPage = selectedPage.coerceIn(0, pages - 1)) { pages }
+  // `initialPage` is read once; a preview state that moves the selection moves the pager too.
+  androidx.compose.runtime.LaunchedEffect(selectedPage, pages) {
+    state.scrollToPage(selectedPage.coerceIn(0, pages - 1))
+  }
   if (vertical) VerticalPageIndicator(pagerState = state, modifier = modifier)
   else HorizontalPageIndicator(pagerState = state, modifier = modifier)
 }

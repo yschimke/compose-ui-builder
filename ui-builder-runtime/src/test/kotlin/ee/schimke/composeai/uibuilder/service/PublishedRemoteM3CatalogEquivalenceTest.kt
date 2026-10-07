@@ -800,24 +800,17 @@ class PublishedRemoteM3CatalogEquivalenceTest {
      * moving the wrong way: a number that counts an uncompilable export as a success is what this
      * gate exists to stop.
      *
-     * The other two are a required parameter whose TYPE no design value becomes, and neither is a
-     * mapping the emitter could add without the design model growing a way to say it: the page
-     * indicators want a `RemotePageIndicatorState`, a runtime object rather than a value. The icon
-     * used to be the third, wanting a `RemoteImageVector`; compose-ui-builder now writes it by hand
-     * from a Material icon key (`Icons.<Style>.<Name>.toRemoteImageVector()`), with the catalog's
-     * `addCircle` when the design names none, so it exports (yschimke/remote-m3-catalog#12).
+     * Two more used to be here, and the icon a third: each wanted a required parameter whose TYPE
+     * no design value becomes. compose-ui-builder now writes all three by hand — the icon from a
+     * Material icon key (`Icons.<Style>.<Name>.toRemoteImageVector()`,
+     * yschimke/remote-m3-catalog#12), and the page indicators' `RemotePageIndicatorState` from
+     * `pageCount` and a `selectedPage` that may read Int state — so they export.
      */
     val EXPORT_REFUSALS =
       mapOf(
-        "remote-m3/remote-horizontal-page-indicator" to
-          "`state: RemotePageIndicatorState` and the design carries no value this generator can " +
-            "write as one",
-        "remote-m3/remote-vertical-page-indicator" to
-          "`state: RemotePageIndicatorState` and the design carries no value this generator can " +
-            "write as one",
         "remote-m3/theme-specimen" to
           "`remote-m3/theme-specimen` is not public or internal, so a generated file cannot " +
-            "call it",
+            "call it"
       )
   }
 }

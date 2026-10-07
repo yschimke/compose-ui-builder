@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -57,7 +58,19 @@ fun CanvasRenderNode.prepare(
     val value = encoded as? JsonObject
     if (value != null) measured = applyModifier(measured, value)
   }
-  if (node.eventBindings["click"] != null && !handlesClick) {
+  val longClick = node.eventBindings["longClick"] != null
+  val doubleClick = node.eventBindings["doubleClick"] != null
+  if ((longClick || doubleClick) && !handlesClick) {
+    // Remote Compose's `combinedClickable`: a press, a long press and a double tap, each its own
+    // ordered action list.
+    measured =
+      measured.combinedClickable(
+        enabled = enabled,
+        onClick = activate,
+        onLongClick = if (longClick) ({ dispatch("longClick") }) else null,
+        onDoubleClick = if (doubleClick) ({ dispatch("doubleClick") }) else null,
+      )
+  } else if (node.eventBindings["click"] != null && !handlesClick) {
     measured = measured.clickable(enabled = enabled, onClick = activate)
   }
   return PreparedCanvasNode(measured, enabled, dispatch)

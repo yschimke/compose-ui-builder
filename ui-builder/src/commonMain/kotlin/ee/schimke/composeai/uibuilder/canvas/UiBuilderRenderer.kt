@@ -917,6 +917,8 @@ private fun RenderNode(
         WearCanvasPageIndicator(
           vertical = node.string("variant") == "vertical",
           modifier = measured,
+          pageCount = node.integer("pageCount", 4),
+          selectedPage = node.integer("selectedPage", 0),
         )
       "wear-m3/edge-button" ->
         WearCanvasEdgeButton(

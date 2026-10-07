@@ -4,9 +4,11 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.discovery.TargetParameter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.REMOTE_HORIZONTAL_PAGE_INDICATOR_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_DEFAULT_KEY
 import ee.schimke.composeai.uibuilder.export.REMOTE_TEXT_COMPONENT_ID
+import ee.schimke.composeai.uibuilder.export.REMOTE_VERTICAL_PAGE_INDICATOR_ID
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.export.UiDrawing
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
@@ -402,6 +404,25 @@ private fun statedRemoteProperties(
                 "Unset draws `$REMOTE_ICON_DEFAULT_KEY`, the published catalog's default."
           }
           .build()
+      )
+    // The two inputs of the `RemotePageIndicatorState` the record cannot carry; see
+    // `RemoteMaterial3`. `selectedPage` takes Int state, which is how a pager drives the dots.
+    REMOTE_HORIZONTAL_PAGE_INDICATOR_ID,
+    REMOTE_VERTICAL_PAGE_INDICATOR_ID ->
+      listOf(
+        PropertyCapabilityV1.Builder("pageCount", JsonPrimitive("integer"))
+          .also { it.notes = "How many pages there are; 4 when absent." }
+          .build(),
+        PropertyCapabilityV1.Builder(
+            "selectedPage",
+            JsonArray(listOf(JsonPrimitive("integer"), JsonPrimitive("object"))),
+          )
+          .also {
+            it.notes =
+              "The page shown, from zero; a literal or the design's Int state. The first when " +
+                "absent."
+          }
+          .build(),
       )
     REMOTE_TEXT_COMPONENT_ID ->
       listOf(
