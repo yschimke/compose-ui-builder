@@ -376,8 +376,8 @@ class RemoteScopedSourceExportTest {
   fun `loop and placement events cannot disappear during source lowering`() {
     for (id in listOf("loop", "place")) {
       refused(
-        edit(fixture(), id) { it.copy(eventBindings = obj("""{"longClick":[]}""")) },
-        "nodes.$id.eventBindings.longClick",
+        edit(fixture(), id) { it.copy(eventBindings = obj("""{"swipe":[]}""")) },
+        "nodes.$id.eventBindings.swipe",
       )
       refused(
         edit(fixture(), id) { it.copy(eventBindings = obj("""{"click":{}}""")) },
@@ -391,6 +391,13 @@ class RemoteScopedSourceExportTest {
           )
           .source
       assertContains(source, "clickable(valueChange(page, 10.ri))")
+      val click = fixture().nodes.getValue("red").eventBindings.getValue("click")
+      val longPress =
+        exported(
+            edit(fixture(), id) { it.copy(eventBindings = JsonObject(mapOf("longClick" to click))) }
+          )
+          .source
+      assertContains(longPress, "onLongClick = valueChange(page, 10.ri)")
     }
   }
 
