@@ -183,6 +183,10 @@ sealed interface UiBuilderEditorEvent {
     val equalsValue: String? = null,
   ) : UiBuilderEditorEvent
 
+  /** Compute a property from a formula the player evaluates, parsed into the document's tree. */
+  data class BindPropertyToFormula(val nodeId: String, val property: String, val formula: String) :
+    UiBuilderEditorEvent
+
   /** Give a bound property a literal of its own again. */
   data class UnbindProperty(val nodeId: String, val property: String) : UiBuilderEditorEvent
 
