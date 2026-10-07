@@ -81,7 +81,21 @@ object UiDrawing {
       "How a stroke's ends are drawn.",
     )
   private val alpha = Property.Number("alpha", Unit.FRACTION, "Opacity of the paint, 0 to 1.")
-  private val paint = listOf(color, style, strokeWidth, strokeCap, alpha)
+
+  /** The gradients a paint can be, each laid across the whole canvas as `RemoteBrush` lays it. */
+  val GRADIENTS: List<String> = listOf("horizontal", "vertical", "radial", "sweep")
+
+  private val gradient =
+    listOf(
+      Property.Choice(
+        "gradient",
+        GRADIENTS,
+        "Paint with a gradient from `color` to `gradientColor` across the canvas: left to " +
+          "right, top to bottom, out from the centre, or clockwise round it.",
+      ),
+      Property.Color("gradientColor", "Where the gradient ends. Transparent when absent."),
+    )
+  private val paint = listOf(color, style, strokeWidth, strokeCap, alpha) + gradient
 
   private fun box(what: String) =
     listOf(
@@ -157,7 +171,7 @@ object UiDrawing {
           strokeWidth,
           strokeCap,
           alpha,
-        ),
+        ) + gradient,
       ),
       Operation(
         "draw/path",
@@ -193,7 +207,7 @@ object UiDrawing {
           ),
           color,
           alpha,
-        ),
+        ) + gradient,
       ),
       Operation(
         GROUP,
