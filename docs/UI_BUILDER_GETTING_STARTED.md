@@ -251,13 +251,15 @@ server up and the editor loading, so you find out later than you would like:
   `400 Direct IP access is not allowed`. Run the server, and any `curl 127.0.0.1:…`, outside the
   sandbox, with `curl --noproxy '*'`.
 - **The `?token=` is the operator credential, and it works on the REST routes too** —
-  `PUT /api/ui-builder/v1/designs/{id}`, `…/export.png`, `…/export.svg`, `…/reference` — which is
-  enough to script a design without MCP. Creating a design is `PUT` with `If-None-Match: *`
-  (without it `428`; an id that already exists `412`), and creation never overwrites, so iterate
-  with new ids. To read a design back use `compose-preview-server design get` ([below](#from-a-shell-compose-preview-server-design));
-  the state directory also holds it on disk, as `designs/<hash>/document-*.json`.
+  `PUT` and `GET /api/ui-builder/v1/designs/{id}`, `…/export.png`, `…/export.svg`, `…/reference` —
+  which is enough to script a design without MCP. Creating a design is `PUT` with
+  `If-None-Match: *` (without it `428`; an id that already exists `412`), and creation never
+  overwrites, so iterate with new ids. Reading one back is a `GET` on the same URL
+  (`?revision=N` for an older revision), which returns the document the `PUT` took
+  ([compose-preview-server#1407](https://github.com/yschimke/compose-preview-server/pull/1407);
+  on an older server, `compose-preview-server design get` with MCP on, below).
 - **`/mcp` answers `404` until MCP is switched on.** Anything that goes through it, including
-  `compose-preview design export`, needs the server started with `--agent-grants --catalog-mcp
+  `compose-preview-server design`, needs the server started with `--agent-grants --catalog-mcp
   --agent-grant-capabilities ui-builder-read,ui-builder-write,ui-builder-export`; see
   [Connect an MCP agent](#connect-an-mcp-agent).
 - **`catalogPin` is checked.** A document you write by hand must pin the revision the catalog
@@ -378,11 +380,16 @@ Automation that already holds a document uses the design's own API resource inst
 ```shell
 curl -X PUT --header 'If-None-Match: *' --data @design.json \
   https://<server>/api/ui-builder/v1/designs/my-remote-screen
+curl https://<server>/api/ui-builder/v1/designs/my-remote-screen > design.json
 ```
 
 `If-None-Match: *` is required, because that route creates and never replaces: without it the
 answer is `428`, and against a design that already exists it is `412`. A successful `201` carries
-the editor permalink in `Location`. Credentials are intentionally absent from these examples:
+the editor permalink in `Location`. A `GET` on the same URL reads the document back — the bare
+`DesignDocumentV1`, the same document `ui_builder_get_design` carries at `snapshot.state.document`
+but without the MCP envelope or its `links` and `comments`; `?revision=N` for a retained revision,
+`404` for a design the caller cannot open — with read access only, so it works on a plain `ui`
+server where `/mcp` is not mounted. Credentials are intentionally absent from these examples:
 supply them through the server and client credential facilities, never in a shared URL, shell
 history, or process arguments.
 
@@ -1074,6 +1081,11 @@ compose-preview-server design render my-widget -o cover.png   # or --format svg
 compose-preview-server design export my-widget -o Widget.kt   # the generated Kotlin
 compose-preview-server design get    my-widget > design.json  # the document
 ```
+
+Every verb goes through the server's `/mcp`, which is off unless the server was started with
+`--agent-grants --catalog-mcp`; against one without it, `design` names those flags rather than
+reporting a bare `404`. To read a design there, `GET /api/ui-builder/v1/designs/<id>` with the
+operator token does what `design get` does.
 
 `--server <url>` picks the host (a local one by default, `$COMPOSE_PREVIEW_SERVER` otherwise) and
 `--revision N` pins, exactly as `?revision=` does on the URLs above. Every verb runs the same
