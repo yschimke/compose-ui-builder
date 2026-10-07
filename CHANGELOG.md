@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.92.0](https://github.com/yschimke/compose-ui-builder/compare/v3.91.0...v3.92.0) (2026-10-07)
+
+
+### Features
+
+* **remote:** clip, conditional and repeat drawing containers ([#535](https://github.com/yschimke/compose-ui-builder/issues/535)) ([b700b35](https://github.com/yschimke/compose-ui-builder/commit/b700b3511a7db4621a1f0e1bdf17f29fc9b0c9c9))
+* **remote:** gradient paint for draw operations ([#540](https://github.com/yschimke/compose-ui-builder/issues/540)) ([29f0401](https://github.com/yschimke/compose-ui-builder/commit/29f040181a3e8925c1826b53a16fb8d3dd093a1a))
+* **remote:** path clips and path morphs ([#542](https://github.com/yschimke/compose-ui-builder/issues/542)) ([fcdfcfb](https://github.com/yschimke/compose-ui-builder/commit/fcdfcfbb7ab3688d20bf75d942f8088db2353618))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.14.1 ([#537](https://github.com/yschimke/compose-ui-builder/issues/537)) ([77e3113](https://github.com/yschimke/compose-ui-builder/commit/77e3113f81f5d128adab0f6f44d5fd13e935e85b))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.2.0 ([#538](https://github.com/yschimke/compose-ui-builder/issues/538)) ([3425bf3](https://github.com/yschimke/compose-ui-builder/commit/3425bf3648e80e2596deccfc28b7d197c73c8e3a))
+* **editor:** fail visibly when a local design cannot be decoded ([#545](https://github.com/yschimke/compose-ui-builder/issues/545)) ([6c70623](https://github.com/yschimke/compose-ui-builder/commit/6c70623e7c3e5b5ca7a012ac748241ab42e4ad1c))
+* **remote:** drawing containers refuse what the player cannot fix at write time ([#539](https://github.com/yschimke/compose-ui-builder/issues/539)) ([1fb104d](https://github.com/yschimke/compose-ui-builder/commit/1fb104dde17f755c7d91c707b5e96fa3050b0a48))
+
+
+### Performance Improvements
+
+* **web:** embed the component records as compact JSON ([#541](https://github.com/yschimke/compose-ui-builder/issues/541)) ([3fad2ea](https://github.com/yschimke/compose-ui-builder/commit/3fad2ea8df5a157a3959c44fe8a00bdf730054e1))
+* **web:** keep the Material icon catalog as packed keys, never the full list ([#534](https://github.com/yschimke/compose-ui-builder/issues/534)) ([cf35679](https://github.com/yschimke/compose-ui-builder/commit/cf35679c2e0a14660b768379e7b6a3433e4f17c7))
+
 ## [3.91.0](https://github.com/yschimke/compose-ui-builder/compare/v3.90.0...v3.91.0) (2026-10-07)
 
 
