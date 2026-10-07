@@ -2075,7 +2075,8 @@ internal class RemoteContentEmitter(
     pad: String,
   ): String {
     usedComponentImports += "$REMOTE_STATE_PACKAGE.RemotePaint"
-    val lines = mutableListOf("color = ${drawColor(node, hoisted)}")
+    val colour = drawColor(node, hoisted)
+    val lines = mutableListOf("color = $colour")
     if (stroked || operation.componentId == "draw/line") {
       usedComponentImports += "androidx.compose.ui.graphics.PaintingStyle"
       lines += "style = PaintingStyle.Stroke"
@@ -2088,17 +2089,46 @@ internal class RemoteContentEmitter(
     if (operation.componentId == "draw/text") {
       lines += "textSize = ${node.drawSpPx("textSizeSp") ?: 14f.spLiteral() + ".toPx()"}"
     }
+    drawGradient(node, hoisted, colour)?.let { lines += it }
     return "RemotePaint {\n" + lines.joinToString("\n") { "$pad$INDENT$it" } + "\n$pad}"
   }
 
+  /**
+   * A gradient paint: the `RemoteBrush` from `color` to `gradientColor`, applied to the paint over
+   * the whole canvas, as `RemoteModifier.background(brush)` applies one over its component.
+   */
+  private fun drawGradient(
+    node: UiBuilderNode,
+    hoisted: MutableList<String>,
+    from: String,
+  ): String? {
+    val kind = node.properties["gradient"]?.stringOrNull() ?: return null
+    if (kind !in UiDrawing.GRADIENTS) {
+      refusals += "nodes.${node.id}.gradient: `$kind` is not one of ${UiDrawing.GRADIENTS}"
+      return null
+    }
+    val factory = "${kind}Gradient"
+    usedComponentImports += "androidx.compose.remote.creation.compose.shaders.RemoteBrush"
+    usedComponentImports += "androidx.compose.remote.creation.compose.shaders.$factory"
+    usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteSize"
+    val to = drawColor(node, hoisted, "gradientColor", transparentWhenAbsent = true)
+    return "with(RemoteBrush.$factory(listOf($from, $to))) { " +
+      "applyTo(this@RemotePaint, RemoteSize(${extent.width}, ${extent.height})) }"
+  }
+
   /** A draw colour: a literal, a theme role read above the canvas, or a computed colour. */
-  private fun drawColor(node: UiBuilderNode, hoisted: MutableList<String>): String {
-    val authored = node.properties["color"]
+  private fun drawColor(
+    node: UiBuilderNode,
+    hoisted: MutableList<String>,
+    property: String = "color",
+    transparentWhenAbsent: Boolean = false,
+  ): String {
+    val authored = node.properties[property]
     val alpha = node.drawFloat("alpha")
     val base =
       when {
         authored != null && authored.isDrawComputed() ->
-          computed(authored, UiValueKind.COLOR, "nodes.${node.id}.color")
+          computed(authored, UiValueKind.COLOR, "nodes.${node.id}.$property")
         authored?.stringOrNull()?.startsWith("#") == true -> {
           usesColorLiteral = true
           "${authored.stringOrNull()!!.argbLiteral()}.rc"
@@ -2117,7 +2147,7 @@ internal class RemoteContentEmitter(
       }
         ?: run {
           usesColorLiteral = true
-          "Color(0xFF000000).rc"
+          if (transparentWhenAbsent) "Color(0x00000000).rc" else "Color(0xFF000000).rc"
         }
     return if (alpha == null) base else "$base.copy(alpha = $alpha)"
   }

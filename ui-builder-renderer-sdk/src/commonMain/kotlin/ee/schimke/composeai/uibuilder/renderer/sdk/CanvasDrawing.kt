@@ -6,8 +6,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
@@ -70,13 +72,18 @@ private fun collectSteps(
   resolveColor: @Composable (String) -> Color?,
 ): List<DrawStep> = operations.mapNotNull { operation ->
   val node = operation.node
-  val color =
-    (node.text("color")?.let { resolveColor(it) } ?: Color.Black).let { base ->
-      node.number("alpha")?.let { base.copy(alpha = base.alpha * it.coerceIn(0f, 1f)) } ?: base
-    }
+  fun faded(base: Color) =
+    node.number("alpha")?.let { base.copy(alpha = base.alpha * it.coerceIn(0f, 1f)) } ?: base
+  val color = faded(node.text("color")?.let { resolveColor(it) } ?: Color.Black)
+  val gradient = node.text("gradient")?.takeIf { it in UiDrawing.GRADIENTS }
+  val gradientColor = gradient?.let {
+    faded(node.text("gradientColor")?.let { resolveColor(it) } ?: Color.Transparent)
+  }
   val paint =
     DrawPaint(
       color = color,
+      gradient = gradient,
+      gradientColor = gradientColor,
       stroke = node.text("style") == "stroke" || node.componentId == "draw/line",
       strokeWidthDp = node.number("strokeWidthDp") ?: 1f,
       cap =
@@ -134,10 +141,28 @@ private fun iterations(repeat: CanvasRenderNode): List<CanvasRenderNode> {
 
 private class DrawPaint(
   val color: Color,
+  val gradient: String?,
+  val gradientColor: Color?,
   val stroke: Boolean,
   val strokeWidthDp: Float,
   val cap: StrokeCap,
-)
+) {
+  /**
+   * What the shape is filled or stroked with: its colour, or a gradient from it to [gradientColor]
+   * laid across the whole canvas, as the exported `RemoteBrush` is.
+   */
+  fun brush(extent: Size): Brush {
+    val colors = listOf(color, gradientColor ?: color)
+    val center = Offset(extent.width / 2f, extent.height / 2f)
+    return when (gradient) {
+      "horizontal" -> Brush.horizontalGradient(colors, 0f, extent.width)
+      "vertical" -> Brush.verticalGradient(colors, 0f, extent.height)
+      "radial" -> Brush.radialGradient(colors, center, extent.minDimension / 2f)
+      "sweep" -> Brush.sweepGradient(colors, center)
+      else -> SolidColor(color)
+    }
+  }
+}
 
 private sealed interface DrawStep {
   fun draw(scope: DrawScope, measurer: TextMeasurer, extent: Size)
@@ -202,16 +227,18 @@ private sealed interface DrawStep {
             node.number("heightDp")?.dp(this)
               ?: if (boxStated) extent.height - y else extent.height - inset * 2,
           )
+        val brush = paint.brush(extent)
         when (node.componentId) {
           "draw/rect" -> {
             val radius = node.number("cornerRadiusDp")?.dp(this)
-            if (radius == null) drawRect(paint.color, Offset(x, y), box, style = style)
-            else drawRoundRect(paint.color, Offset(x, y), box, CornerRadius(radius, radius), style)
+            if (radius == null) drawRect(brush, Offset(x, y), box, style = style)
+            else
+              drawRoundRect(brush, Offset(x, y), box, CornerRadius(radius, radius), style = style)
           }
-          "draw/oval" -> drawOval(paint.color, Offset(x, y), box, style = style)
+          "draw/oval" -> drawOval(brush, Offset(x, y), box, style = style)
           "draw/arc" ->
             drawArc(
-              paint.color,
+              brush,
               startAngle = node.number("startAngle") ?: 0f,
               sweepAngle = node.number("sweepAngle") ?: 360f,
               useCenter = node.flag("useCenter"),
@@ -221,7 +248,7 @@ private sealed interface DrawStep {
             )
           "draw/circle" ->
             drawCircle(
-              paint.color,
+              brush,
               radius = node.number("radiusDp")?.dp(this) ?: (extent.minDimension / 2f - inset),
               center =
                 Offset(
@@ -232,7 +259,7 @@ private sealed interface DrawStep {
             )
           "draw/line" ->
             drawLine(
-              paint.color,
+              brush,
               Offset(
                 node.number("startXDp")?.dp(this) ?: 0f,
                 node.number("startYDp")?.dp(this) ?: 0f,
@@ -253,7 +280,7 @@ private sealed interface DrawStep {
               val viewportWidth = node.number("viewportWidth")?.takeIf { it > 0f } ?: 24f
               val viewportHeight = node.number("viewportHeight")?.takeIf { it > 0f } ?: 24f
               scale(extent.width / viewportWidth, extent.height / viewportHeight, Offset.Zero) {
-                drawPath(path, paint.color, style = style)
+                drawPath(path, brush, style = style)
               }
             }
           }
@@ -273,6 +300,7 @@ private sealed interface DrawStep {
             val anchorY = node.number("yDp")?.dp(this) ?: extent.height / 2f
             drawText(
               layout,
+              brush = brush,
               topLeft =
                 Offset(
                   anchorX - layout.size.width * (1f + pan) / 2f,

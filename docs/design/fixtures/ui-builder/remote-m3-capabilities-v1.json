@@ -2102,6 +2102,25 @@
                     "name": "alpha",
                     "notes": "Opacity of the paint, 0 to 1.",
                     "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
                 }
             ],
             "role": "Leaf",
@@ -2205,6 +2224,25 @@
                     ],
                     "name": "alpha",
                     "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
                     "required": false
                 }
             ],
@@ -2319,6 +2357,25 @@
                     ],
                     "name": "alpha",
                     "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
                     "required": false
                 }
             ],
@@ -2461,6 +2518,25 @@
                     "name": "alpha",
                     "notes": "Opacity of the paint, 0 to 1.",
                     "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
                 }
             ],
             "role": "Leaf",
@@ -2565,6 +2641,25 @@
                     "name": "alpha",
                     "notes": "Opacity of the paint, 0 to 1.",
                     "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
                 }
             ],
             "role": "Leaf",
@@ -2666,6 +2761,25 @@
                     "name": "alpha",
                     "notes": "Opacity of the paint, 0 to 1.",
                     "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
                 }
             ],
             "role": "Leaf",
@@ -2756,6 +2870,25 @@
                     ],
                     "name": "alpha",
                     "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
                     "required": false
                 }
             ],

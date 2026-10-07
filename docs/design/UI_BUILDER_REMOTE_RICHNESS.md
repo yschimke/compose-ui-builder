@@ -54,7 +54,7 @@ behind a compile-time flag.
 | | Scope | Status |
 | --- | --- | --- |
 | M1 | Computed values: `expr`/`system` wrappers, formula text, canvas evaluation, Remote Kotlin lowering, inspector | Landed |
-| M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint, clips, conditionals, loops | Landed (gradients follow) |
+| M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint, gradients, clips, conditionals, loops | Landed (path clips, morphs and text on a path follow) |
 | M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Long press and double tap landed (`combinedClickable`); the rest planned |
 | M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Landed as `remoteCall` over the generated vocabulary (33 calls); lambda-only calls (`graphicsLayer`, `drawWithContent`) planned |
 | M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Horizontal and vertical page indicators landed; the rest planned |
@@ -169,7 +169,11 @@ canvas stand-in and the Remote emitter.
 | `draw/repeat` | `from` `until` `step` (unitless), `index` (a name, `i` when absent); its own `ops` | `loop(from, until, step) { i -> … }` |
 
 Paint is `color` (literal, theme role or computed), `style` (`fill`/`stroke`), `strokeWidthDp`,
-`strokeCap` and `alpha`. Rules every lane shares: geometry is dp from the canvas's top-left; an
+`strokeCap` and `alpha`, and optionally a `gradient` (`horizontal`, `vertical`, `radial`, `sweep`)
+from `color` to `gradientColor` (transparent when absent). A gradient is laid across the whole
+canvas, not the shape: the Remote writer applies `RemoteBrush.<kind>Gradient(…)` to the paint over
+the canvas's size, as `RemoteModifier.background(brush)` applies one over its component, so a sweep
+gradient on a ring turns round the canvas centre. `alpha` fades both ends. Rules every lane shares: geometry is dp from the canvas's top-left; an
 absent box is the whole canvas; a stroked shape whose box is defaulted is inset by half its stroke
 so a ring drawn with defaults stays inside; angles are clockwise from three o'clock.
 
@@ -216,7 +220,8 @@ A progress ring and a clock hand, as a document:
 
 - `clipPath`: a path clip needs the path in canvas pixels, and `draw/path` scales its viewport
   with a transform that a clip would carry onto everything it encloses.
-- Gradients and images as paint, path morphs and text on a path.
+- More than two gradient stops, gradient geometry other than the canvas's, and images as paint.
+- Path morphs and text on a path.
 - The device preview in remote-m3-catalog plays the canvas once its renderer adds the case.
 - The regular Compose lane: `Canvas { }` is the same shape, but no catalog that exports regular
   Compose offers the vocabulary yet.
