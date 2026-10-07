@@ -41,6 +41,13 @@ interface DesignGuidelineHost {
   /** A PNG of [document] as a `data:` URL, for the visual rules; null where none can be made. */
   suspend fun picture(document: UiBuilderDocument): String?
 
+  /**
+   * The Jetpack Compose source [document] exports to, shown to the model beside the design tree so
+   * rules about code are judged on the real calls. Null where the host cannot export it, or the
+   * export gate refuses the design; the tree is then all the model sees.
+   */
+  suspend fun source(document: UiBuilderDocument): String? = null
+
   data class Response(val status: Int, val body: String)
 
   sealed interface SignInResult {
@@ -80,6 +87,8 @@ data class DesignGuidelineResult(
   val model: String,
   /** Rules asked about that the model returned no verdict for: unchecked, not passed. */
   val unanswered: List<String> = emptyList(),
+  /** Whether the generated Compose source went to the model with the design tree. */
+  val sourceAttached: Boolean = false,
 )
 
 /**
@@ -178,8 +187,9 @@ class DesignGuidelineController(
     val applicable = rules.forPlatform(platform)
     val picture = if (applicable.any { it.visual }) host.picture(document) else null
     val asked = if (picture != null) applicable else applicable.filterNot { it.visual }
+    val source = host.source(document)
     val body =
-      DesignGuidelinePrompt.requestBody(model, platform, encoded, asked, picture).toString()
+      DesignGuidelinePrompt.requestBody(model, platform, encoded, asked, picture, source).toString()
     val response = host.complete(body, key)
     if (response.status !in 200..299) {
       throw GuidelineCheckFailure(
@@ -210,6 +220,7 @@ class DesignGuidelineController(
       unanswered = asked.map { it.id } - answered.map { it.ruleId }.toSet(),
       visualSkipped = applicable.size - asked.size,
       model = model,
+      sourceAttached = source != null,
     )
   }
 

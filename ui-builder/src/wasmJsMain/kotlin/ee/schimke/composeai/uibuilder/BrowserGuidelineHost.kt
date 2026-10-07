@@ -99,6 +99,34 @@ internal class BrowserGuidelineHost(
     }
   }
 
+  /**
+   * The Compose source this revision exports to, from compose-preview-server's live export. Null
+   * off that host, for a reader without the export grant, and for a design the export gate refuses
+   * (the route answers 422 with the reasons rather than code).
+   */
+  override suspend fun source(document: UiBuilderDocument): String? {
+    if (!hostedByServer) return null
+    val url =
+      try {
+        sameOriginRequestUrl(
+          "/api/ui-builder/v1/designs/${encodeUriComponent(designId)}/export.compose" +
+            "?revision=${document.revision}"
+        )
+      } catch (_: Throwable) {
+        return null
+      }
+    return try {
+      val wire =
+        guidelineJson.decodeFromString(
+          ResponseWire.serializer(),
+          awaitCommentString(commentFetch("GET", url, "", false)),
+        )
+      wire.body.takeIf { wire.status == 200 && it.isNotBlank() }
+    } catch (_: Exception) {
+      null
+    }
+  }
+
   @Serializable
   private data class SignInWire(
     val state: String,

@@ -114,6 +114,10 @@ internal fun GuidelinesSection(
                 " ${result.visualSkipped} visual guideline(s) need a picture of the design, " +
                   "which this host could not provide."
               else "") +
+              (if (result.platform != null && !result.sourceAttached)
+                " Judged from the design tree alone; this host could not export its Compose " +
+                  "source."
+              else "") +
               (if (result.unanswered.isNotEmpty())
                 " The model gave no answer for ${result.unanswered.size} guideline(s); they " +
                   "are unchecked, not passed."

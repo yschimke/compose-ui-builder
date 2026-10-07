@@ -179,6 +179,35 @@ class DesignGuidelinesTest {
   }
 
   @Test
+  fun `the generated source goes with the tree when the host can export it`(): Unit = runBlocking {
+    val host = FakeHost(key = "sk-or-1")
+    var sent = ""
+    host.respond = { body ->
+      sent = body
+      DesignGuidelineHost.Response(
+        200,
+        completion(
+          """{"verdicts":[{"ruleId":"wear.layout.responsive-width","verdict":"pass",""" +
+            """"confidence":0.9,"nodeIds":[],"reason":""}]}"""
+        ),
+      )
+    }
+    val controller = DesignGuidelineController(host)
+    val document = wearDocument()
+
+    controller.check(document, DesignGuidelineController.encode(document))
+    val without = assertIs<DesignGuidelineState.Ready>(controller.state.value).result!!
+    assertFalse(without.sourceAttached)
+    assertFalse("```kotlin" in sent)
+
+    host.sourceText = "@Composable fun Workout() { Button(Modifier.width(80.dp)) {} }"
+    controller.check(document, DesignGuidelineController.encode(document))
+    val with = assertIs<DesignGuidelineState.Ready>(controller.state.value).result!!
+    assertTrue(with.sourceAttached)
+    assertTrue("Modifier.width(80.dp)" in sent, sent)
+  }
+
+  @Test
   fun `a sign-in OpenRouter returned from stores the key`() = runBlocking {
     val host = FakeHost(key = null)
     host.signInResult = DesignGuidelineHost.SignInResult.Signed("sk-or-pkce")
@@ -219,6 +248,10 @@ class DesignGuidelinesTest {
     }
 
     override suspend fun picture(document: UiBuilderDocument): String? = null
+
+    var sourceText: String? = null
+
+    override suspend fun source(document: UiBuilderDocument): String? = sourceText
   }
 
   private fun completion(content: String): String = buildJsonObject {

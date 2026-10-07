@@ -26,8 +26,9 @@ The key is kept in this browser's `localStorage` and is sent only to `openrouter
 key** changes the model (default `typesafe/jev-router`, TypeSafe's Jev decision model; any
 OpenRouter model id works) or forgets the key. A key OpenRouter rejects is forgotten automatically.
 
-When the editor is served by compose-preview-server, the design's thumbnail is sent along, so the
-`visual` rules are judged too. Anywhere else, only the `structure` rules run and the panel says how
+When the editor is served by compose-preview-server, two more things go with the design tree: the
+Jetpack Compose source the design exports to (from `export.compose`), so rules about code are
+judged on the real calls, and the design's thumbnail, so the `visual` rules are judged too. Anywhere else, only the `structure` rules run and the panel says how
 many visual rules were left out.
 
 ## Running it on the server (shared key)
