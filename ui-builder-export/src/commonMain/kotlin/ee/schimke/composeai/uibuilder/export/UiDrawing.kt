@@ -252,12 +252,23 @@ object UiDrawing {
   /** Most iterations a canvas draws for one [REPEAT]; the player has no cap, the preview does. */
   const val MAX_ITERATIONS: Int = 1_000
 
-  /** The index name a [REPEAT] node binds, `i` unless it names another. */
-  fun indexName(node: UiBuilderNode): String {
-    val authored = node.properties["index"]
-    val primitive = (authored as? JsonObject)?.get("value") as? JsonPrimitive ?: authored
-    return (primitive as? JsonPrimitive)?.takeIf { it.isString }?.content?.trim()?.ifEmpty { null }
-      ?: "i"
+  /**
+   * The index name a [REPEAT] node binds: `i` when absent, and null when it is authored as anything
+   * but a literal string. The name decides the scope its operations are checked and exported in, so
+   * it cannot be state or a formula: the export would have no name to give the lambda.
+   */
+  fun indexName(node: UiBuilderNode): String? {
+    val authored = node.properties["index"] ?: return "i"
+    val primitive =
+      when (authored) {
+        is JsonPrimitive -> authored
+        is JsonObject ->
+          authored.takeIf { (it["type"] as? JsonPrimitive)?.content == "string" }?.get("value")
+            as? JsonPrimitive
+        else -> null
+      } ?: return null
+    if (!primitive.isString) return null
+    return primitive.content.trim().ifEmpty { "i" }
   }
 
   /** Whether [name] can be written as a Kotlin lambda parameter, which the export needs. */
@@ -280,7 +291,7 @@ object UiDrawing {
     var current = parents[nodeId]
     while (current != null && seen.add(current)) {
       val node = document.nodes[current] ?: break
-      if (node.componentId == REPEAT) indices.addFirst(indexName(node))
+      if (node.componentId == REPEAT) indexName(node)?.let(indices::addFirst)
       current = parents[current]
     }
     return indices.toList()

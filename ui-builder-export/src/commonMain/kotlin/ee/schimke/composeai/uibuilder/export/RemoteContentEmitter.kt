@@ -1967,7 +1967,15 @@ internal class RemoteContentEmitter(
           }
         val right = far(x, node.drawPx("widthDp"), extent.width)
         val bottom = far(y, node.drawPx("heightDp"), extent.height)
-        val exclude = node.properties["exclude"]?.boolOrNull() == true
+        val authoredExclude = node.properties["exclude"]
+        if (authoredExclude != null && authoredExclude.isDrawComputed()) {
+          // `clipRect` takes its ClipOp at write time; the player has no way to switch it.
+          refusals +=
+            "nodes.${node.id}.exclude: whether a clip excludes is fixed when it is written; " +
+              "give it a literal, or put the operations under a draw/if"
+          return emptyList()
+        }
+        val exclude = authoredExclude?.boolOrNull() == true
         val op =
           if (exclude) {
             usedComponentImports += "androidx.compose.ui.graphics.ClipOp"
@@ -1997,10 +2005,10 @@ internal class RemoteContentEmitter(
       }
       UiDrawing.REPEAT -> {
         val index = UiDrawing.indexName(node)
-        if (!UiDrawing.isIndexName(index) || index in drawBindings.values) {
+        if (index == null || !UiDrawing.isIndexName(index) || index in drawBindings) {
           refusals +=
-            "nodes.${node.id}.index: `$index` must be a name a formula can read, unused by an " +
-              "enclosing repeat"
+            "nodes.${node.id}.index: the index must be a literal name a formula can read, " +
+              "unused by an enclosing repeat"
           return emptyList()
         }
         val until =
@@ -2010,16 +2018,24 @@ internal class RemoteContentEmitter(
               return emptyList()
             }
         val from = node.drawFloat("from") ?: 0f.floatLiteral()
-        val step = node.drawFloat("step") ?: 1f.floatLiteral()
-        node.properties["step"]?.numberOrNull()?.let { literal ->
-          if (literal <= 0f) {
-            refusals += "nodes.${node.id}.step: a repeat's step must be above 0"
-            return emptyList()
+        // A step that reached 0 or below while playing would never end the loop, so it is a
+        // literal, checked here, rather than state or a formula nobody can check.
+        val authoredStep = node.properties["step"]
+        val step =
+          when {
+            authoredStep == null -> 1f.floatLiteral()
+            authoredStep.isDrawComputed() || (authoredStep.numberOrNull() ?: 0f) <= 0f -> {
+              refusals += "nodes.${node.id}.step: a repeat's step must be a number above 0"
+              return emptyList()
+            }
+            else -> node.drawFloat("step")!!
           }
-        }
-        drawBindings[index] = index
+        // The lambda parameter is named apart from every state variable and local, so a formula
+        // reading state `i` inside a loop over `i` still reads the state.
+        val parameter = localName(index)
+        drawBindings[index] = parameter
         try {
-          block("loop($from, $until, $step)", " $index ->")
+          block("loop($from, $until, $step)", " $parameter ->")
         } finally {
           drawBindings.remove(index)
         }
