@@ -4,6 +4,8 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineHost
+import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineRecord
+import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineRequest
 import kotlin.js.JsString
 import kotlin.js.Promise
 import kotlinx.serialization.Serializable
@@ -115,6 +117,73 @@ internal class BrowserGuidelineHost(
       } catch (_: Throwable) {
         return null
       }
+    return try {
+      val wire =
+        guidelineJson.decodeFromString(
+          ResponseWire.serializer(),
+          awaitCommentString(commentFetch("GET", url, "", false)),
+        )
+      wire.body.takeIf { wire.status == 200 && it.isNotBlank() }
+    } catch (_: Exception) {
+      null
+    }
+  }
+
+  /**
+   * The request compose-preview-server builds for this revision — native device and unrolled
+   * pictures, the exported source — so the Prompt view shows exactly what an agent gets from
+   * `ui_builder_guidelines_prompt`. Null off that host, and from a server without the route; the
+   * editor then builds its own.
+   */
+  override suspend fun hostedRequest(document: UiBuilderDocument): DesignGuidelineRequest? =
+    serverGet("/guidelines/prompt?revision=${document.revision}&rendered=true")?.let {
+      guidelineJson.decodeFromString(DesignGuidelineRequest.serializer(), it)
+    }
+
+  override suspend fun sharedResult(): DesignGuidelineRecord? =
+    serverGet("/guidelines")?.let {
+      guidelineJson.decodeFromString(DesignGuidelineRecord.serializer(), it)
+    }
+
+  /**
+   * Posts a run on this person's key to the design's shared record. The server stamps who ran it
+   * and when from the session, and refuses a reader without write access; either way the person
+   * keeps their own result on screen.
+   */
+  override suspend fun recordResult(record: DesignGuidelineRecord): DesignGuidelineRecord? {
+    val url = designUrl("/guidelines") ?: return null
+    return try {
+      val wire =
+        guidelineJson.decodeFromString(
+          ResponseWire.serializer(),
+          awaitCommentString(
+            commentFetch(
+              "POST",
+              url,
+              guidelineJson.encodeToString(DesignGuidelineRecord.serializer(), record),
+              true,
+            )
+          ),
+        )
+      if (wire.status !in 200..299) null
+      else guidelineJson.decodeFromString(DesignGuidelineRecord.serializer(), wire.body)
+    } catch (_: Exception) {
+      null
+    }
+  }
+
+  private fun designUrl(suffix: String): String? {
+    if (!hostedByServer) return null
+    return try {
+      sameOriginRequestUrl("/api/ui-builder/v1/designs/${encodeUriComponent(designId)}$suffix")
+    } catch (_: Throwable) {
+      null
+    }
+  }
+
+  /** A same-origin GET's body when it answers 200, else null. */
+  private suspend fun serverGet(suffix: String): String? {
+    val url = designUrl(suffix) ?: return null
     return try {
       val wire =
         guidelineJson.decodeFromString(

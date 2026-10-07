@@ -118,60 +118,11 @@ object DesignGuidelinePrompt {
       "{\"verdicts\":[{\"ruleId\":…,\"verdict\":…,\"confidence\":…,\"nodeIds\":[…],\"reason\":…}]}, " +
       "one entry per rule."
 
-  fun requestBody(
-    model: String,
-    platform: String,
-    document: JsonObject,
-    rules: List<DesignGuidelineRule>,
-    pngDataUrl: String?,
-    source: String? = null,
-  ): JsonObject = buildJsonObject {
-    put("model", model)
-    put("temperature", 0)
-    putJsonArray("messages") {
-      add(
-        buildJsonObject {
-          put("role", "system")
-          put("content", SYSTEM_PROMPT)
-        }
-      )
-      add(
-        buildJsonObject {
-          put("role", "user")
-          putJsonArray("content") {
-            add(
-              buildJsonObject {
-                put("type", "text")
-                put("text", userText(platform, document, rules, pngDataUrl != null, source))
-              }
-            )
-            if (pngDataUrl != null) {
-              add(
-                buildJsonObject {
-                  put("type", "image_url")
-                  putJsonObject("image_url") { put("url", pngDataUrl) }
-                }
-              )
-            }
-          }
-        }
-      )
-    }
-    putJsonObject("response_format") {
-      put("type", "json_schema")
-      putJsonObject("json_schema") {
-        put("name", "guideline_verdicts")
-        put("strict", true)
-        put("schema", VERDICTS_SCHEMA)
-      }
-    }
-  }
-
   fun userText(
     platform: String,
     document: JsonObject,
     rules: List<DesignGuidelineRule>,
-    hasPicture: Boolean,
+    pictures: List<String> = emptyList(),
     source: String? = null,
   ): String = buildString {
     val environment = document["environment"] as? JsonObject
@@ -185,7 +136,10 @@ object DesignGuidelinePrompt {
     }
     if (theme != null) append(", ").append(theme).append(" theme")
     append('\n')
-    if (hasPicture) append("A rendered picture of the design is attached.\n")
+    if (pictures.isNotEmpty()) {
+      append("Attached pictures, in order:\n")
+      pictures.forEach { append("- ").append(it).append('\n') }
+    }
     append("\nDesign tree (node id, component, properties, modifiers; children by slot):\n")
     append(outline(document))
     if (source != null) {
@@ -380,6 +334,10 @@ object DesignGuidelinePrompt {
 
   const val VERDICT_FAIL: String = "fail"
   const val DEFAULT_MIN_CONFIDENCE: Double = 0.5
+
+  /** The JSON schema a model's reply is held to. */
+  val responseSchema: JsonObject
+    get() = VERDICTS_SCHEMA
 
   private val VERDICTS_SCHEMA: JsonObject = buildJsonObject {
     put("type", "object")

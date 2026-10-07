@@ -48,6 +48,19 @@ interface DesignGuidelineHost {
    */
   suspend fun source(document: UiBuilderDocument): String? = null
 
+  /**
+   * The request the design host builds for [document] — the same one an agent gets from
+   * `ui_builder_guidelines_prompt`, with native device and unrolled pictures. Null where there is
+   * no such host; the editor then builds its own with [picture] and [source].
+   */
+  suspend fun hostedRequest(document: UiBuilderDocument): DesignGuidelineRequest? = null
+
+  /** The design's latest recorded result, whoever ran it; null where the host keeps none. */
+  suspend fun sharedResult(): DesignGuidelineRecord? = null
+
+  /** Records [record] as the design's latest result, so agents and other people see it. */
+  suspend fun recordResult(record: DesignGuidelineRecord): DesignGuidelineRecord? = null
+
   data class Response(val status: Int, val body: String)
 
   sealed interface SignInResult {
@@ -89,6 +102,10 @@ data class DesignGuidelineResult(
   val unanswered: List<String> = emptyList(),
   /** Whether the generated Compose source went to the model with the design tree. */
   val sourceAttached: Boolean = false,
+  /** Exactly what the model was asked; null for a result read back without its prompt. */
+  val request: DesignGuidelineRequest? = null,
+  /** Who ran it, as the host records it (`github:…`, `agent:…`, `server`); null when unknown. */
+  val ranBy: String? = null,
 )
 
 /**
@@ -105,6 +122,71 @@ class DesignGuidelineController(
         ?: DesignGuidelineState.NeedsKey()
     )
   val state: StateFlow<DesignGuidelineState> = _state.asStateFlow()
+
+  private val _prompt = MutableStateFlow<PromptView>(PromptView.Hidden)
+
+  /** The request shown under Prompt: what the model reads, and where each part came from. */
+  val prompt: StateFlow<PromptView> = _prompt.asStateFlow()
+
+  private val _shared = MutableStateFlow<DesignGuidelineResult?>(null)
+
+  /** The design's latest recorded result — from this person, another, or an agent. */
+  val shared: StateFlow<DesignGuidelineResult?> = _shared.asStateFlow()
+
+  sealed interface PromptView {
+    data object Hidden : PromptView
+
+    data object Loading : PromptView
+
+    data class Shown(val request: DesignGuidelineRequest) : PromptView
+
+    data class Failed(val reason: String) : PromptView
+  }
+
+  /** Reads the design's latest recorded result from the host, when it keeps one. */
+  suspend fun loadShared() {
+    val record = runCatching { host.sharedResult() }.getOrNull() ?: return
+    _shared.value = record.toResult(rules)
+  }
+
+  /** Builds the request [document] would send, without sending it — no key needed. */
+  suspend fun preview(document: UiBuilderDocument, encoded: JsonObject) {
+    _prompt.value = PromptView.Loading
+    _prompt.value =
+      try {
+        PromptView.Shown(prepare(document, encoded))
+      } catch (cancelled: CancellationException) {
+        throw cancelled
+      } catch (thrown: Exception) {
+        PromptView.Failed("The prompt could not be built: ${thrown.message}")
+      }
+  }
+
+  fun hidePrompt() {
+    _prompt.value = PromptView.Hidden
+  }
+
+  private suspend fun prepare(
+    document: UiBuilderDocument,
+    encoded: JsonObject,
+  ): DesignGuidelineRequest =
+    runCatching { host.hostedRequest(document) }.getOrNull()
+      ?: run {
+        val platform =
+          (encoded["catalogPin"] as? JsonObject)
+            ?.get("systemId")
+            ?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+            ?.let(DesignGuidelinePrompt::platformOf)
+        val visual = platform != null && rules.forPlatform(platform).any { it.visual }
+        DesignGuidelinePrompt.prepare(
+          rules = rules,
+          designId = document.id,
+          revision = document.revision,
+          document = encoded,
+          devicePicture = if (visual) host.picture(document) else null,
+          source = if (platform != null) host.source(document) else null,
+        )
+      }
 
   val canSignIn: Boolean
     get() = host.signIn != null
@@ -176,21 +258,21 @@ class DesignGuidelineController(
     key: String,
     model: String,
   ): DesignGuidelineResult {
-    val systemId =
-      (encoded["catalogPin"] as? JsonObject)?.get("systemId")?.let {
-        (it as? kotlinx.serialization.json.JsonPrimitive)?.content
-      }
-    val platform = systemId?.let(DesignGuidelinePrompt::platformOf)
-    if (platform == null) {
-      return DesignGuidelineResult(document.revision, null, emptyList(), 0, 0, model)
+    val request = prepare(document, encoded)
+    if (_prompt.value !is PromptView.Hidden) _prompt.value = PromptView.Shown(request)
+    if (request.platform == null) {
+      return DesignGuidelineResult(
+        document.revision,
+        null,
+        emptyList(),
+        0,
+        0,
+        model,
+        request = request,
+      )
     }
-    val applicable = rules.forPlatform(platform)
-    val picture = if (applicable.any { it.visual }) host.picture(document) else null
-    val asked = if (picture != null) applicable else applicable.filterNot { it.visual }
-    val source = host.source(document)
-    val body =
-      DesignGuidelinePrompt.requestBody(model, platform, encoded, asked, picture, source).toString()
-    val response = host.complete(body, key)
+    val asked = request.rules.asked
+    val response = host.complete(DesignGuidelinePrompt.body(request, model).toString(), key)
     if (response.status !in 200..299) {
       throw GuidelineCheckFailure(
         response.status,
@@ -212,16 +294,34 @@ class DesignGuidelineController(
         "$model returned no verdict for any of the ${asked.size} rules. Try another model.",
       )
     }
-    return DesignGuidelineResult(
-      revision = document.revision,
-      platform = platform,
-      findings = DesignGuidelinePrompt.findings(answered, asked, document.nodes.keys),
-      judged = answered.size,
-      unanswered = asked.map { it.id } - answered.map { it.ruleId }.toSet(),
-      visualSkipped = applicable.size - asked.size,
-      model = model,
-      sourceAttached = source != null,
-    )
+    val result =
+      DesignGuidelineResult(
+        revision = document.revision,
+        platform = request.platform,
+        findings = DesignGuidelinePrompt.findings(answered, asked, document.nodes.keys),
+        judged = answered.size,
+        unanswered = asked.map { it.id } - answered.map { it.ruleId }.toSet(),
+        visualSkipped = request.rules.visualSkipped,
+        model = model,
+        sourceAttached = request.sourceAttached,
+        request = request,
+      )
+    // Shared with agents and other people: the design's latest result is whoever ran it last.
+    val recorded = runCatching {
+      host.recordResult(
+        DesignGuidelineRecord(
+          designId = document.id,
+          revision = document.revision,
+          model = model,
+          rulesVersion = request.rules.version,
+          asked = asked.map { it.id },
+          verdicts = answered,
+        )
+      )
+    }
+      .getOrNull()
+    if (recorded != null) _shared.value = recorded.toResult(rules)
+    return result.copy(ranBy = recorded?.ranBy)
   }
 
   private fun currentModel(): String = host.storedModel() ?: DEFAULT_GUIDELINE_MODEL

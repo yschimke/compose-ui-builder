@@ -38,6 +38,21 @@ check runs on the operator's key, only for the GitHub users and organizations th
 See `deploy/image/README.md` → *UI-builder guidelines check* in compose-preview-server. It sends
 the same request built from the same rules.
 
+## Seeing the prompt, and sharing the result
+
+**Show the prompt** in the Issues panel builds the exact request without sending it, so it needs no
+key. It shows the system prompt, the user message, the pictures attached and one sentence on where
+each part comes from, and **Copy prompt** puts the request on the clipboard as JSON without the
+picture bytes. On compose-preview-server the request comes from the server
+(`GET /api/ui-builder/v1/designs/{id}/guidelines/prompt`), with the native device and unrolled
+pictures. It is the same request an agent gets from `ui_builder_guidelines_prompt`.
+
+Each design keeps one shared result: its latest run, whoever ran it. A run on your own key is posted
+back to it. So is a `ui_builder_check_design` run on the server key, and so is an agent's verdict
+list recorded with `ui_builder_record_guidelines` after judging the prompt with its own model. The
+panel shows that result with its model and who ran it, and says when it was checked against an
+earlier revision. The shape is `compose-ui-builder/guidelines-result/v1` (`DesignGuidelineRecord`).
+
 ## The rules
 
 [`android-design-guidelines.json`](android-design-guidelines.json) is the rule set. Each rule has:
