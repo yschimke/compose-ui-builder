@@ -1,9 +1,11 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,7 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -32,6 +36,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import ee.schimke.composeai.uibuilder.export.RemoteModifierVocabulary
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -99,6 +104,13 @@ sealed interface UiBuilderModifierPlan {
   data class AlignVertical(val alignment: String) : UiBuilderModifierPlan
 
   data class Weight(val weight: Float, val fill: Boolean?) : UiBuilderModifierPlan
+
+  /**
+   * A `RemoteModifier` call from the generated vocabulary. The canvas draws the ones Compose has an
+   * honest counterpart for and leaves the rest to the player, which the device preview runs; a name
+   * the released API does not have is not a plan at all, so the write is refused.
+   */
+  data class RemoteCall(val name: String, val args: Map<String, Float>) : UiBuilderModifierPlan
 }
 
 /** Parse one modifier without consulting a catalog theme. Invalid input is ignored, not thrown. */
@@ -196,6 +208,17 @@ fun uiBuilderModifier(value: JsonObject): UiBuilderModifierPlan? =
     "horizontalScroll" -> UiBuilderModifierPlan.HorizontalScroll
     "testTag" ->
       value.string("tag")?.takeIf(String::isNotBlank)?.let(UiBuilderModifierPlan::TestTag)
+    RemoteModifierVocabulary.TYPE ->
+      value
+        .string("name")
+        ?.takeIf { it in RemoteModifierVocabulary.modifiers }
+        ?.let { name ->
+          val args =
+            (value["args"] as? JsonObject).orEmpty().mapNotNull { (argument, wrapped) ->
+              (wrapped as? JsonObject)?.numberOrNull("value")?.let { argument to it }
+            }
+          UiBuilderModifierPlan.RemoteCall(name, args.toMap())
+        }
     else -> null
   }
 
@@ -262,6 +285,18 @@ fun Modifier.applyCanvasModifier(
     UiBuilderModifierPlan.HorizontalScroll ->
       if (unrolledHorizontally) this else horizontalScroll(rememberScrollState())
     is UiBuilderModifierPlan.TestTag -> testTag(plan.tag)
+    is UiBuilderModifierPlan.RemoteCall ->
+      when (plan.name) {
+        "defaultMinSize" ->
+          defaultMinSize(
+            plan.args["minWidth"]?.dp ?: Dp.Unspecified,
+            plan.args["minHeight"]?.dp ?: Dp.Unspecified,
+          )
+        "wrapContentWidth" -> wrapContentWidth()
+        "wrapContentHeight" -> wrapContentHeight()
+        "basicMarquee" -> basicMarquee()
+        else -> this
+      }
     null -> this
   }
 

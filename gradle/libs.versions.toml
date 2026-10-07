@@ -209,7 +209,9 @@ composeai-preview-daemon = "3.14.0"
 # component placement passes keeps the placement's id.
 # 3.18.0 adds the versioned production UID contract and JSON Schema (compose-preview-contracts#137).
 # 3.19.0 adds nullable fallbacks and keyed production component lists (compose-preview-contracts#139).
-composeai-contracts = "3.19.0"
+# 3.20.0 adds the `expr` and `system` values and the `remoteCall` modifier
+# (compose-preview-contracts#141), so a design holding a formula or a Remote call saves and commits.
+composeai-contracts = "3.20.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 rc-players = "2.1.4"

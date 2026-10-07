@@ -31,6 +31,7 @@ import ee.schimke.composeai.uibuilder.protocol.DesignNodeV1
 import ee.schimke.composeai.uibuilder.protocol.DimensionUnitV1
 import ee.schimke.composeai.uibuilder.protocol.DimensionValueV1
 import ee.schimke.composeai.uibuilder.protocol.EnumValueV1
+import ee.schimke.composeai.uibuilder.protocol.ExpressionValueV1
 import ee.schimke.composeai.uibuilder.protocol.FillMaxHeightModifierV1
 import ee.schimke.composeai.uibuilder.protocol.FillMaxSizeModifierV1
 import ee.schimke.composeai.uibuilder.protocol.FillMaxWidthModifierV1
@@ -47,6 +48,7 @@ import ee.schimke.composeai.uibuilder.protocol.ObjectValueV1
 import ee.schimke.composeai.uibuilder.protocol.OffsetModifierV1
 import ee.schimke.composeai.uibuilder.protocol.PaddingModifierV1
 import ee.schimke.composeai.uibuilder.protocol.PaddingValueV1
+import ee.schimke.composeai.uibuilder.protocol.RemoteCallModifierV1
 import ee.schimke.composeai.uibuilder.protocol.ResourceValueV1
 import ee.schimke.composeai.uibuilder.protocol.RotateModifierV1
 import ee.schimke.composeai.uibuilder.protocol.ScaleModifierV1
@@ -61,6 +63,7 @@ import ee.schimke.composeai.uibuilder.protocol.StateValueTypeV1
 import ee.schimke.composeai.uibuilder.protocol.StateValueV1
 import ee.schimke.composeai.uibuilder.protocol.StateVariableV1
 import ee.schimke.composeai.uibuilder.protocol.StringValueV1
+import ee.schimke.composeai.uibuilder.protocol.SystemValueV1
 import ee.schimke.composeai.uibuilder.protocol.TestTagModifierV1
 import ee.schimke.composeai.uibuilder.protocol.ThemeV1
 import ee.schimke.composeai.uibuilder.protocol.ToggleActionV1
@@ -2222,6 +2225,13 @@ object ScreenDocumentProjection {
             }
         VerticalScrollModifierV1 -> scrolls("androidx.compose.foundation.verticalScroll")
         HorizontalScrollModifierV1 -> scrolls("androidx.compose.foundation.horizontalScroll")
+        // A `RemoteModifier` call: only a Remote Compose catalog's exporter writes one.
+        is RemoteCallModifierV1 -> {
+          reasons +=
+            "node `$nodeId` carries the Remote Compose call `${modifier.name}`, which a Compose " +
+              "screen has no Modifier for; export it as a Remote widget"
+          null
+        }
       }
     }
 
@@ -2675,6 +2685,12 @@ object ScreenDocumentProjection {
           refuse("$where is null; leave the property unset instead so the default applies")
         is ListValueV1 -> refuse("$where is a list, which no component parameter accepts directly")
         is ObjectValueV1 -> refuse("$where is an object, which has no Kotlin literal")
+        // Values the Remote player computes. A Compose screen has no player to compute them.
+        is ExpressionValueV1,
+        is SystemValueV1 ->
+          refuse(
+            "$where is a value the Remote Compose player computes; export it as a Remote widget"
+          )
         is ResourceValueV1 ->
           refuse("$where is a resource reference, which needs an Android resource context")
         is AssetKeyValueV1 -> refuse("$where is an asset key, which needs an artwork adapter")

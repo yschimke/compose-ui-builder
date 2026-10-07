@@ -557,6 +557,16 @@ class RemoteContentVocabularyTest {
           "weight" -> put("weight", JsonPrimitive(1))
           "collapsiblePriority" -> put("priority", JsonPrimitive(2))
           "sharedElement" -> put("key", JsonPrimitive(3))
+          // One call from the generated vocabulary, with its arguments as values.
+          "remoteCall" -> {
+            put("name", JsonPrimitive("border"))
+            put(
+              "args",
+              Json.parseToJsonElement(
+                """{"width":{"type":"float","value":2},"color":{"type":"color","value":"#FF1DB954"}}"""
+              ),
+            )
+          }
           "align" -> put("alignment", JsonPrimitive("bottomEnd"))
           "alignHorizontal" -> put("alignment", JsonPrimitive("centerHorizontally"))
           "alignVertical" -> put("alignment", JsonPrimitive("centerVertically"))
