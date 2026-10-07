@@ -1811,6 +1811,20 @@ class UiBuilderEditorReducer(
         }
         JsonPrimitive(choice)
       }
+    // A Remote call's int argument is written in an `int` wrapper, so it has to be whole.
+    if (
+      remote &&
+        remoteCallArgumentType(target?.optionalStringValue("name").orEmpty(), field) == "int" &&
+        value.content.toLongOrNull() == null
+    ) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        "${field.humanLabel()} must be a whole number",
+        nodeId,
+        "modifiers",
+      )
+    }
     var written = false
     val chain =
       JsonArray(

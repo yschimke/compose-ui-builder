@@ -1,5 +1,7 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
+import androidx.compose.foundation.MarqueeDefaults
+import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -294,7 +296,21 @@ fun Modifier.applyCanvasModifier(
           )
         "wrapContentWidth" -> wrapContentWidth()
         "wrapContentHeight" -> wrapContentHeight()
-        "basicMarquee" -> basicMarquee()
+        // The arguments Compose's marquee shares with the Remote one. `animationMode` is a raw
+        // int code upstream, so the canvas keeps Compose's default for it.
+        "basicMarquee" -> {
+          val repeatDelay =
+            plan.args["repeatDelayMillis"]?.toInt() ?: MarqueeDefaults.RepeatDelayMillis
+          basicMarquee(
+            iterations = plan.args["iterations"]?.toInt() ?: MarqueeDefaults.Iterations,
+            repeatDelayMillis = repeatDelay,
+            // Compose's own default: the first delay is the repeat delay.
+            initialDelayMillis = plan.args["initialDelayMillis"]?.toInt() ?: repeatDelay,
+            spacing =
+              plan.args["spacing"]?.let { MarqueeSpacing(it.dp) } ?: MarqueeDefaults.Spacing,
+            velocity = plan.args["velocity"]?.dp ?: MarqueeDefaults.Velocity,
+          )
+        }
         else -> this
       }
     null -> this
