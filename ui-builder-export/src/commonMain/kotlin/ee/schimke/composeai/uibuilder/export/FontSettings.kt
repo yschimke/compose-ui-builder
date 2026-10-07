@@ -211,7 +211,27 @@ object FontSettings {
     val droppedAxes: List<String>,
     /** Fully-qualified imports the expressions need. */
     val imports: Set<String>,
-  )
+    /**
+     * The node's `wght` decides the weight, so its `fontWeight` must not be written: on the device
+     * face an authored weight would be matched or synthesised over the variable instance, which is
+     * not what the canvas draws.
+     */
+    val overridesWeight: Boolean = false,
+  ) {
+    /**
+     * What a generated `Text` appends to its style: `.copy(…)` with the features and, for an
+     * instance whose `wght` is the weight, no synthesis — a synthesised bold over `wght` 800 would
+     * be two bolds. Null when there is nothing to copy.
+     */
+    val styleCopy: String?
+      get() {
+        val arguments = buildList {
+          featureSettings?.let { add("fontFeatureSettings = \"$it\"") }
+          if (overridesWeight && fontFamily != null) add("fontSynthesis = FontSynthesis.None")
+        }
+        return if (arguments.isEmpty()) null else ".copy(${arguments.joinToString(", ")})"
+      }
+  }
 
   fun composeArguments(document: UiBuilderDocument, nodeId: String): ComposeArguments {
     val node = document.nodes[nodeId]
@@ -240,6 +260,7 @@ object FontSettings {
         droppedAxes = axes.map { it.tag }.filter { it != "wght" },
         imports =
           if (weight != null) setOf("androidx.compose.ui.text.font.FontWeight") else emptySet(),
+        overridesWeight = weight != null,
       )
     }
     val settings =
@@ -252,12 +273,14 @@ object FontSettings {
       fontWeight = null,
       droppedAxes = emptyList(),
       imports =
-        setOf(
+        setOfNotNull(
           "androidx.compose.ui.text.font.DeviceFontFamilyName",
           "androidx.compose.ui.text.font.Font",
           "androidx.compose.ui.text.font.FontFamily",
           "androidx.compose.ui.text.font.FontVariation",
+          "androidx.compose.ui.text.font.FontSynthesis".takeIf { axes.any { it.tag == "wght" } },
         ),
+      overridesWeight = axes.any { it.tag == "wght" },
     )
   }
 

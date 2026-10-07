@@ -127,6 +127,9 @@ class UiBuilderFontRegistry(
    * the text stack the same instance and it does not lay the text out again. See
    * [variableFontFamily].
    */
+  override fun hasAxis(name: String, tag: String): Boolean =
+    files[name].orEmpty().any { tag in it.axisTags }
+
   override fun variant(name: String, axes: List<FontSettings.Axis>): FontFamily? {
     if (axes.isEmpty()) return loaded[name]
     val loadedFiles = files[name] ?: return null
@@ -206,7 +209,10 @@ class UiBuilderFontRegistry(
 }
 
 /** One font file of a family, as loaded: what a variable instance of it is built from. */
-class UiBuilderFontFile(val identity: String, val data: ByteArray, val weight: Int)
+class UiBuilderFontFile(val identity: String, val data: ByteArray, val weight: Int) {
+  /** The variation axes this file has, by tag; empty for a static face. */
+  val axisTags: Set<String> by lazy { readTypefaceInfo(data).axes.mapTo(mutableSetOf()) { it.tag } }
+}
 
 /**
  * A family's files at the axis coordinates [axes] sets, for any host that has the bytes.
@@ -236,9 +242,15 @@ fun variableFontFamily(files: List<UiBuilderFontFile>, axes: List<FontSettings.A
  * [UiBuilderFontRegistry], or a production render's resolved families. Null where the host has no
  * font bytes, and then a text draws its features and not its axes.
  */
-fun interface UiBuilderFontVariants {
+interface UiBuilderFontVariants {
   /** [name]'s family at [axes], or null when [name] is not loaded here. */
   fun variant(name: String, axes: List<FontSettings.Axis>): FontFamily?
+
+  /**
+   * Whether [name]'s files have the axis [tag], so a setting of it changes what is drawn; false for
+   * a family not loaded here. A static face ignores every axis.
+   */
+  fun hasAxis(name: String, tag: String): Boolean
 }
 
 val LocalUiBuilderFontVariants = staticCompositionLocalOf<UiBuilderFontVariants?> { null }

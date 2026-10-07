@@ -906,8 +906,7 @@ internal class ComposeEmitter(
 
   private fun emitText(node: UiBuilderNode, level: Int) {
     val font = FontSettings.composeArguments(document, node.id)
-    val featureCopy =
-      font.featureSettings?.let { ".copy(fontFeatureSettings = \"${it.escape()}\")" }.orEmpty()
+    val featureCopy = font.styleCopy.orEmpty()
     val optionalArguments = buildList {
       font.fontFamily?.let { add("fontFamily = $it") }
       if ("fontStyle" in node.properties) add("fontStyle = ${node.fontStyleExpression()}")
@@ -926,7 +925,7 @@ internal class ComposeEmitter(
       .joinToString(separator = "") { "$it, " }
     line(
       level,
-      "Text(text = ${node.boundStringExpression("text")}, style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}$featureCopy, color = ${node.boundColorExpression("color")}, fontWeight = ${font.fontWeight ?: node.fontWeightExpression()}, ${optionalArguments}maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = ${node.textOverflowExpression()}, ${node.modifierArgument()})",
+      "Text(text = ${node.boundStringExpression("text")}, style = MaterialTheme.typography.${node.string("style").ifEmpty { "bodyMedium" }.identifier()}$featureCopy, color = ${node.boundColorExpression("color")}, fontWeight = ${font.fontWeight ?: if (font.overridesWeight) "null" else node.fontWeightExpression()}, ${optionalArguments}maxLines = ${node.integer("maxLines", Int.MAX_VALUE)}, overflow = ${node.textOverflowExpression()}, ${node.modifierArgument()})",
     )
   }
 

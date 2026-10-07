@@ -1872,8 +1872,7 @@ internal class WearContentEmitter(
   private fun textArguments(node: UiBuilderNode): List<String> = buildList {
     val font = FontSettings.composeArguments(document, node.id)
     fontImports += font.imports
-    val featureCopy =
-      font.featureSettings?.let { ".copy(fontFeatureSettings = \"${it.replace("\"", "\\\"")}\")" }
+    val featureCopy = font.styleCopy
     val role = node.stringOrNull("style")?.takeIf(String::isNotEmpty)
     if (role != null) {
       usesMaterialTheme = true
@@ -1887,7 +1886,7 @@ internal class WearContentEmitter(
     font.fontWeight?.let { add("fontWeight = $it") }
     node
       .stringOrNull("fontWeight")
-      ?.takeIf { font.fontWeight == null }
+      ?.takeUnless { font.overridesWeight }
       ?.let {
         textImports += "FontWeight"
         add(

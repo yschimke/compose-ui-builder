@@ -49,6 +49,7 @@ internal fun resolveFontSettings(
       )
       .ifEmpty { null }
   val axes = FontSettings.parseVariations(node.textProperty(FontSettings.VARIATION_PROPERTY))
+  var weightAxis = false
   var resolved = if (features == null) style else style.copy(fontFeatureSettings = features)
   if (axes.isNotEmpty()) {
     val family =
@@ -65,12 +66,16 @@ internal fun resolveFontSettings(
     val families = LocalUiBuilderFontFamilies.current
     val variants = LocalUiBuilderFontVariants.current
     val instance = family?.takeIf { families[it] != null }?.let { variants?.variant(it, axes) }
-    if (instance != null) {
-      // The axes are the weight now; a synthesised bold over a `wght` 800 would be two bolds.
-      resolved = resolved.copy(fontFamily = instance, fontSynthesis = FontSynthesis.None)
+    if (family != null && instance != null) {
+      weightAxis = axes.any { it.tag == "wght" } && variants?.hasAxis(family, "wght") == true
+      resolved = resolved.copy(fontFamily = instance)
+      // The axis is the weight now; a synthesised bold over a `wght` 800 would be two bolds.
+      if (weightAxis) resolved = resolved.copy(fontSynthesis = FontSynthesis.None)
     }
   }
-  return ResolvedFontSettings(resolved, setsWeight = axes.any { it.tag == "wght" })
+  // Only a face that has a `wght` axis takes its weight from it: a static face, one not loaded, or
+  // the platform's own ignores the axis, so the authored `fontWeight` still has to apply.
+  return ResolvedFontSettings(resolved, setsWeight = weightAxis)
 }
 
 private fun UiBuilderNode.textProperty(name: String): String? =

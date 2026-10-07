@@ -21,7 +21,8 @@ class FontSettingsExportTest {
       source,
     )
     assertTrue(
-      "style = LocalTextStyle.current.copy(fontFeatureSettings = \"tnum\")" in source,
+      "style = LocalTextStyle.current.copy(fontFeatureSettings = \"tnum\", " +
+        "fontSynthesis = FontSynthesis.None)" in source,
       source,
     )
     listOf(
@@ -30,6 +31,18 @@ class FontSettingsExportTest {
         "androidx.wear.compose.material3.LocalTextStyle",
       )
       .forEach { assertTrue("import $it" in source, "missing import $it:\n$source") }
+  }
+
+  @Test
+  fun `a weight axis on the device face replaces the authored weight and its synthesis`() {
+    val source = wearSource(text("label", "wear-m3/text", "wght 650", null, fontWeight = "bold"))
+    assertTrue("FontVariation.Setting(\"wght\", 650f)" in source, source)
+    assertTrue("fontWeight = FontWeight.Bold" !in source, source)
+    assertTrue(
+      "style = LocalTextStyle.current.copy(fontSynthesis = FontSynthesis.None)" in source,
+      source,
+    )
+    assertTrue("import androidx.compose.ui.text.font.FontSynthesis" in source, source)
   }
 
   @Test
@@ -114,6 +127,7 @@ class FontSettingsExportTest {
     variations: String?,
     features: String?,
     style: String? = null,
+    fontWeight: String? = null,
   ) =
     UiBuilderNode(
       id = id,
@@ -125,6 +139,7 @@ class FontSettingsExportTest {
             put("value", "12:30")
           }
           style?.let { put("style", string(it)) }
+          fontWeight?.let { put("fontWeight", string(it)) }
           variations?.let { put(FontSettings.VARIATION_PROPERTY, string(it)) }
           features?.let { put(FontSettings.FEATURE_PROPERTY, string(it)) }
         },

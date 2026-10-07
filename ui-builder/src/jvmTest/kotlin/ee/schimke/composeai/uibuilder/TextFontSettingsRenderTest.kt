@@ -47,6 +47,15 @@ class TextFontSettingsRenderTest {
   }
 
   @Test
+  fun `a weight axis the face cannot apply leaves the authored weight in place`() {
+    // Inter is static: `wght` is ignored, so the text is as bold as `fontWeight` says.
+    assertEquals(
+      draw("Inter", "Hamburg", fontWeight = "bold"),
+      draw("Inter", "Hamburg", variations = "wght 300", fontWeight = "bold"),
+    )
+  }
+
+  @Test
   fun `an axis the face lacks draws the face unchanged`() {
     assertEquals(
       draw("Inter", "Hamburg", variations = null),
@@ -68,8 +77,10 @@ class TextFontSettingsRenderTest {
     text: String,
     variations: String? = null,
     features: String? = null,
+    fontWeight: String? = null,
   ): List<Color> {
     val settings = buildString {
+      fontWeight?.let { append(""","fontWeight":{"type":"enum","value":"$it"}""") }
       variations?.let { append(""","fontVariationSettings":{"type":"string","value":"$it"}""") }
       features?.let { append(""","fontFeatureSettings":{"type":"string","value":"$it"}""") }
     }

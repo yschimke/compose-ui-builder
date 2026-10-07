@@ -51,6 +51,9 @@ internal class ProductionFontFamilies(
     return variants.computeIfAbsent(name to axes) { variableFontFamily(loaded, axes) }
   }
 
+  override fun hasAxis(name: String, tag: String): Boolean =
+    filesOf(name).orEmpty().any { tag in it.axisTags }
+
   private fun filesOf(name: String): List<UiBuilderFontFile>? =
     files.computeIfAbsent(name) { Optional.ofNullable(loadFiles(it)) }.orElse(null)
 
