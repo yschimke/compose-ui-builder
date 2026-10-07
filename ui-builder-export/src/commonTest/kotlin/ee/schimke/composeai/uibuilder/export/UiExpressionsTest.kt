@@ -100,9 +100,25 @@ class UiExpressionsTest {
         "clamp(progress, 0.0, 1.0)",
         "(count + 1) * 2",
         "!on || count > 3",
+        "progress ^ 2",
+        "-progress ^ 2",
+        "(-progress) ^ 2",
+        "(-2) ^ 2",
+        "2 ^ 3 ^ 2",
+        "(2 ^ 3) ^ 2",
+        "sqrt(progress ^ 2 + 1) * 2",
       )) {
       assertEquals(text, UiExpressions.format(parse(text)), text)
     }
+  }
+
+  @Test
+  fun `powers bind like maths`() {
+    assertEquals(-4.0, evaluate("-2 ^ 2"))
+    assertEquals(4.0, evaluate("(-2) ^ 2"))
+    assertEquals(512.0, evaluate("2 ^ 3 ^ 2"))
+    assertEquals(0.5, evaluate("2 ^ -1"))
+    assertEquals("pow", parse("count ^ 2")["op"]!!.jsonPrimitive.content)
   }
 
   @Test
