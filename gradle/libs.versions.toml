@@ -182,7 +182,7 @@ composeai-tools = "2.35.0"
 # (compose-preview-daemon#213), the spare-pool churn fix (compose-preview-daemon#215), a desktop
 # Dispatchers.Main (compose-preview-daemon#214), and contracts and rc-players resolved through their
 # BOMs (compose-preview-daemon#211).
-composeai-preview-daemon = "3.14.0"
+composeai-preview-daemon = "3.14.1"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
