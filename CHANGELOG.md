@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.91.0](https://github.com/yschimke/compose-ui-builder/compare/v3.90.0...v3.91.0) (2026-10-07)
+
+
+### Features
+
+* **remote:** page indicators and long-press / double-tap events ([#520](https://github.com/yschimke/compose-ui-builder/issues/520)) ([aaa0f5b](https://github.com/yschimke/compose-ui-builder/commit/aaa0f5ba994d2efbc7af2665b626a17bdacfa897))
+* **remote:** RemoteModifier calls from a vocabulary generated from the released API ([#532](https://github.com/yschimke/compose-ui-builder/issues/532)) ([1cd026f](https://github.com/yschimke/compose-ui-builder/commit/1cd026f05d2ac7785c6eab97227b6a0ea324190c))
+* **ui-builder:** check a design against the Android design guides on your own OpenRouter key ([#519](https://github.com/yschimke/compose-ui-builder/issues/519)) ([394e70e](https://github.com/yschimke/compose-ui-builder/commit/394e70e3595e5b4d9515b86767d8b0e3f57c066c))
+* variable-font axes and OpenType features on every design system's text ([#521](https://github.com/yschimke/compose-ui-builder/issues/521)) ([89508b2](https://github.com/yschimke/compose-ui-builder/commit/89508b2d78163f7789f0afccd4eff7dbb8623f05))
+
+
+### Bug Fixes
+
+* keep italic synthesis when wght decides the weight ([#525](https://github.com/yschimke/compose-ui-builder/issues/525)) ([769ad8d](https://github.com/yschimke/compose-ui-builder/commit/769ad8dc47adeef6cf476e8dd7fa4aebe225a7a9))
+* **remote:** author against the latest alpha; drop the snapshot-only backgroundColor ([#528](https://github.com/yschimke/compose-ui-builder/issues/528)) ([8daedc8](https://github.com/yschimke/compose-ui-builder/commit/8daedc8af3e82f287419d77df47ef4581c6ca055))
+* **remote:** Remote call review follow-ups: whole ints, marquee args, live args on the canvas ([#533](https://github.com/yschimke/compose-ui-builder/issues/533)) ([c246bb2](https://github.com/yschimke/compose-ui-builder/commit/c246bb20093546e228a42645dc4688d1f34d1564))
+* **remote:** review follow-ups for drawing and page indicators; x ^ y in formulas ([#523](https://github.com/yschimke/compose-ui-builder/issues/523)) ([93367ac](https://github.com/yschimke/compose-ui-builder/commit/93367ac29e70729c78064299a3192a9513530de6))
+
+
+### Performance Improvements
+
+* **web:** draw Material icons from data instead of compiled builders ([#522](https://github.com/yschimke/compose-ui-builder/issues/522)) ([2f87ce2](https://github.com/yschimke/compose-ui-builder/commit/2f87ce292ec7e547004ac391f90dec5d408fb4f4))
+* **web:** measure memory over a bare DevTools socket, not Playwright ([#529](https://github.com/yschimke/compose-ui-builder/issues/529)) ([a80e9a7](https://github.com/yschimke/compose-ui-builder/commit/a80e9a75d51a395c2502dd9f8ddee0a78b06db10))
+
 ## [3.90.0](https://github.com/yschimke/compose-ui-builder/compare/v3.89.0...v3.90.0) (2026-10-07)
 
 
