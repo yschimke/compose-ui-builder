@@ -9,7 +9,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -22,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -29,6 +32,9 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -306,6 +312,52 @@ private sealed interface DrawStep {
               }
             }
           }
+          UiDrawing.TEXT_CIRCLE -> {
+            val style = TextStyle(fontSize = (node.number("textSizeSp") ?: 14f).sp)
+            val radius =
+              node.number("radiusDp")?.dp(this)
+                ?: (extent.minDimension / 2f - style.fontSize.toPx())
+            // A canvas smaller than its text, or an authored zero, has no circle to read along.
+            if (!(radius > 0f)) return@with
+            val center =
+              Offset(
+                node.number("centerXDp")?.dp(this) ?: extent.width / 2f,
+                node.number("centerYDp")?.dp(this) ?: extent.height / 2f,
+              )
+            val glyphs = glyphs(measurer, node.text("text").orEmpty(), style)
+            val arc = glyphs.sumOf { it.size.width.toDouble() }.toFloat()
+            // Centred on the angle and read clockwise, baseline on the circle: `drawTextOnCircle`
+            // with CENTER alignment and OUTSIDE placement, as the export writes it.
+            var along = (node.number("angle") ?: 270f) * DEGREES_TO_RADIANS - arc / radius / 2f
+            glyphs.forEach { glyph ->
+              val middle = along + glyph.size.width / 2f / radius
+              val point = Offset(center.x + radius * cos(middle), center.y + radius * sin(middle))
+              drawGlyph(glyph, point, middle / DEGREES_TO_RADIANS + 90f, brush)
+              along += glyph.size.width / radius
+            }
+          }
+          UiDrawing.TEXT_PATH -> {
+            val path = node.text("pathData")?.let(::parsePath) ?: return@with
+            val style = TextStyle(fontSize = (node.number("textSizeSp") ?: 14f).sp)
+            // The path is in dp; measured in pixels, as the export's density scale draws it.
+            path.transform(Matrix().apply { scale(density, density) })
+            val measure = PathMeasure().apply { setPath(path, false) }
+            val offset = (node.number("offsetDp") ?: 0f).dp(this)
+            var distance = (node.number("startDp") ?: 0f).dp(this)
+            for (glyph in glyphs(measurer, node.text("text").orEmpty(), style)) {
+              val middle = distance + glyph.size.width / 2f
+              // Past the end: the rest would fall off too, and a narrower glyph must not be drawn
+              // in this one's place.
+              if (middle > measure.length) break
+              val tangent = measure.getTangent(middle)
+              val angle = atan2(tangent.y, tangent.x)
+              // Positive offset is to the path's right: a quarter turn clockwise of its heading.
+              val point =
+                measure.getPosition(middle) + Offset(-sin(angle) * offset, cos(angle) * offset)
+              drawGlyph(glyph, point, angle / DEGREES_TO_RADIANS, brush)
+              distance += glyph.size.width
+            }
+          }
           "draw/text" -> {
             val layout =
               measurer.measure(
@@ -334,6 +386,74 @@ private sealed interface DrawStep {
       }
   }
 }
+
+private const val DEGREES_TO_RADIANS = (kotlin.math.PI / 180.0).toFloat()
+
+/** Each cluster of [text] laid out on its own, so it can be placed and turned separately. */
+private fun glyphs(measurer: TextMeasurer, text: String, style: TextStyle): List<TextLayoutResult> =
+  clusters(text).map { measurer.measure(it, style) }
+
+/**
+ * [text] split where a reader sees a new character: a surrogate pair stays whole, and combining
+ * marks, variation selectors, emoji skin-tone modifiers and tags, a zero-width joiner with what it
+ * joins, and a flag's second regional indicator stay on the character before them. Not full
+ * UAX #29, and a script shaped across characters (Arabic) still draws its isolated forms; the
+ * player shapes the whole string.
+ */
+internal fun clusters(text: String): List<String> {
+  fun width(at: Int): Int =
+    if (text[at].isHighSurrogate() && at + 1 < text.length && text[at + 1].isLowSurrogate()) 2
+    else 1
+  fun codePoint(at: Int): Int =
+    if (width(at) == 2) 0x10000 + ((text[at].code - 0xD800) shl 10) + (text[at + 1].code - 0xDC00)
+    else text[at].code
+  fun regional(point: Int) = point in 0x1F1E6..0x1F1FF
+  val out = mutableListOf<String>()
+  var index = 0
+  while (index < text.length) {
+    val start = index
+    val first = codePoint(index)
+    index += width(index)
+    var flagOpen = regional(first)
+    while (index < text.length) {
+      val point = codePoint(index)
+      index +=
+        when {
+          point == 0x200D && index + 1 < text.length -> 1 + width(index + 1)
+          text[index].category in COMBINING ||
+            point in 0xFE00..0xFE0F ||
+            point in 0x1F3FB..0x1F3FF ||
+            point in 0xE0020..0xE007F -> width(index)
+          flagOpen && regional(point) -> width(index).also { flagOpen = false }
+          else -> break
+        }
+    }
+    out += text.substring(start, index)
+  }
+  return out
+}
+
+private val COMBINING =
+  setOf(
+    CharCategory.NON_SPACING_MARK,
+    CharCategory.COMBINING_SPACING_MARK,
+    CharCategory.ENCLOSING_MARK,
+  )
+
+/** One glyph with its baseline's middle at [point], turned [degrees] clockwise about it. */
+private fun DrawScope.drawGlyph(
+  glyph: TextLayoutResult,
+  point: Offset,
+  degrees: Float,
+  brush: Brush,
+) =
+  rotate(degrees, point) {
+    drawText(
+      glyph,
+      brush = brush,
+      topLeft = Offset(point.x - glyph.size.width / 2f, point.y - glyph.firstBaseline),
+    )
+  }
 
 private fun parsePath(data: String): Path? = runCatching {
   PathParser().parsePathString(data).toPath()
