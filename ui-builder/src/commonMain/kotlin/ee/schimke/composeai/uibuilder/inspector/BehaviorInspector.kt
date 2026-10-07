@@ -8,6 +8,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.EditorStateAction
 import ee.schimke.composeai.uibuilder.editor.TrackEditorOverlay
@@ -222,7 +223,16 @@ internal fun EventActionsInspector(
   LaunchedEffect(variable, selectedDeclaration) {
     if (kind !in actionKinds.map { it.first }) kind = "set"
   }
-  val events = (listOf("click") + node.eventBindings.keys).distinct()
+  // A Remote Compose layout or canvas also takes a long press and a double tap, which the export
+  // writes as `combinedClickable`; the other platforms' emitters write a plain `clickable`.
+  val remoteLayout =
+    LocalUiBuilderCatalogPlatform.current == "remote-compose" &&
+      (node.componentId.startsWith("layout/") || node.componentId == "draw/canvas")
+  val events =
+    (listOf("click") +
+        (if (remoteLayout) listOf("longClick", "doubleClick") else emptyList()) +
+        node.eventBindings.keys)
+      .distinct()
   var event by remember(node.id) { mutableStateOf("click") }
   TextButton(onClick = { expanded = !expanded }) { Text("Actions") }
   if (!expanded) return
@@ -239,7 +249,16 @@ internal fun EventActionsInspector(
             event = candidate
             editingIndex = null
           },
-          label = { Text(if (candidate == "click") "On click" else candidate) },
+          label = {
+            Text(
+              when (candidate) {
+                "click" -> "On click"
+                "longClick" -> "On long press"
+                "doubleClick" -> "On double tap"
+                else -> candidate
+              }
+            )
+          },
         )
       }
     }

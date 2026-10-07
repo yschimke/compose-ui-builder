@@ -29,9 +29,11 @@ import kotlinx.serialization.json.JsonPrimitive
  *
  * ## What is left out, and why
  *
- * Each of these is published and would be refused by every export, because a required parameter has
- * no value this generator can write: `remote-m3/remote-horizontal-page-indicator` and
- * `remote-m3/remote-vertical-page-indicator` take a pager's state.
+ * Nothing is left out any more. The two page indicators were: each takes a
+ * `RemotePageIndicatorState`, which no property can carry. They are offered now, with the state's
+ * two inputs — `pageCount` and `selectedPage` — as properties, and `RemoteContentEmitter` writes
+ * `rememberRemotePageIndicatorState(pageCount, selectedPage)` by hand ahead of the record fallback,
+ * so `selectedPage` can read a design's Int state and follow it as an action writes it.
  *
  * `remote-m3/remote-icon` takes an `ImageVector` too, and is offered anyway: the vector is chosen
  * by a Material icon key — the same table `m3/icon` and `wear-m3/icon` read — which
@@ -65,6 +67,28 @@ public object RemoteMaterial3 {
 
   public val components: List<Component> =
     listOf(
+      component(
+        id = REMOTE_HORIZONTAL_PAGE_INDICATOR_ID,
+        record =
+          "remote-catalog/androidx.wear.compose.remote.material3.RemotePageIndicatorKt.RemoteHorizontalPageIndicator",
+        displayName = "Horizontal page indicator",
+        group = "Position indicators",
+        canvas = "wear-m3/page-indicator",
+        canvasProperties = emptyMap(),
+        canvasSlots = emptyMap(),
+        canvasDefaults = mapOf("variant" to wrapped("enum", "horizontal")),
+      ),
+      component(
+        id = REMOTE_VERTICAL_PAGE_INDICATOR_ID,
+        record =
+          "remote-catalog/androidx.wear.compose.remote.material3.RemotePageIndicatorKt.RemoteVerticalPageIndicator",
+        displayName = "Vertical page indicator",
+        group = "Position indicators",
+        canvas = "wear-m3/page-indicator",
+        canvasProperties = emptyMap(),
+        canvasSlots = emptyMap(),
+        canvasDefaults = mapOf("variant" to wrapped("enum", "vertical")),
+      ),
       component(
         id = "remote-m3/remote-app-card",
         record =
@@ -385,6 +409,14 @@ public object RemoteMaterial3 {
 
 /** `RemoteIcon`, whose `imageVector` a design names by Material icon key. */
 public const val REMOTE_ICON_COMPONENT_ID: String = "remote-m3/remote-icon"
+
+/** `RemoteHorizontalPageIndicator`, written by hand: its state is built from two properties. */
+public const val REMOTE_HORIZONTAL_PAGE_INDICATOR_ID: String =
+  "remote-m3/remote-horizontal-page-indicator"
+
+/** `RemoteVerticalPageIndicator`; see [REMOTE_HORIZONTAL_PAGE_INDICATOR_ID]. */
+public const val REMOTE_VERTICAL_PAGE_INDICATOR_ID: String =
+  "remote-m3/remote-vertical-page-indicator"
 
 /**
  * The icon a `remote-m3/remote-icon` draws when its design names none: the published catalog's own

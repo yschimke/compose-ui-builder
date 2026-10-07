@@ -540,6 +540,16 @@ object CapabilityCatalogParser {
         )
       } +
       listOf(
+          "remote-m3/remote-horizontal-page-indicator",
+          "remote-m3/remote-vertical-page-indicator",
+        )
+        .flatMap {
+          listOf(
+            (it to "pageCount") to countEditor(1.0, 20.0),
+            (it to "selectedPage") to countEditor(0.0, 19.0),
+          )
+        } +
+      listOf(
         ("remote-m3/remote-circular-progress-indicator" to "startAngle") to angleEditor(),
         ("remote-m3/remote-circular-progress-indicator" to "endAngle") to angleEditor(),
         ("remote-m3/remote-curved-progress-indicator" to "startAngle") to angleEditor(),

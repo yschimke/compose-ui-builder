@@ -21,10 +21,10 @@ behind a compile-time flag.
 | --- | --- | --- |
 | M1 | Computed values: `expr`/`system` wrappers, formula text, canvas evaluation, Remote Kotlin lowering, inspector | Landed |
 | M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint | Landed (clips and loops follow) |
-| M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Planned |
+| M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Long press and double tap landed (`combinedClickable`); the rest planned |
 | M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Planned |
-| M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Planned |
-| M6 | Device preview: every published component, and expressions played live | Planned (remote-m3-catalog) |
+| M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Horizontal and vertical page indicators landed; the rest planned |
+| M6 | Device preview: every published component, and expressions played live | In progress (remote-m3-catalog) |
 
 Each milestone lands across the editor, the canvas, validation, MCP-visible document shape and the
 Remote Kotlin export together. The JSON-to-`.rc` lane follows where it is cheap and never gates one.

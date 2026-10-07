@@ -2855,6 +2855,196 @@
         },
         {
             "code": null,
+            "componentId": "remote-m3/remote-horizontal-page-indicator",
+            "displayName": "Horizontal page indicator",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "selectedColor",
+                    "notes": "`RemoteHorizontalPageIndicator`'s `selectedColor: RemoteColor`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "unselectedColor",
+                    "notes": "`RemoteHorizontalPageIndicator`'s `unselectedColor: RemoteColor`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "pageCount",
+                    "notes": "How many pages there are; 4 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "integer",
+                        "object"
+                    ],
+                    "name": "selectedPage",
+                    "notes": "The page shown, from zero; a literal or the design's Int state. The first when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/page-indicator",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "horizontal"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/page-indicator`, the adapter the published catalog names; the widget plays `RemoteHorizontalPageIndicator` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-vertical-page-indicator",
+            "displayName": "Vertical page indicator",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "selectedColor",
+                    "notes": "`RemoteVerticalPageIndicator`'s `selectedColor: RemoteColor`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "unselectedColor",
+                    "notes": "`RemoteVerticalPageIndicator`'s `unselectedColor: RemoteColor`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "pageCount",
+                    "notes": "How many pages there are; 4 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "integer",
+                        "object"
+                    ],
+                    "name": "selectedPage",
+                    "notes": "The page shown, from zero; a literal or the design's Int state. The first when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/page-indicator",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "vertical"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/page-indicator`, the adapter the published catalog names; the widget plays `RemoteVerticalPageIndicator` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "remote-m3/remote-app-card",
             "displayName": "App card",
             "modifierCapabilities": [
@@ -17209,6 +17399,9 @@
                 "remote-m3/remote-edge-button": {
                     "group": "Edge-hugging buttons"
                 },
+                "remote-m3/remote-horizontal-page-indicator": {
+                    "group": "Position indicators"
+                },
                 "remote-m3/remote-icon": {
                     "group": "Iconography"
                 },
@@ -17251,6 +17444,9 @@
                 "remote-m3/remote-title-card": {
                     "group": "Containment"
                 },
+                "remote-m3/remote-vertical-page-indicator": {
+                    "group": "Position indicators"
+                },
                 "shape/colour-dot": {
                     "group": "Styles"
                 },
@@ -17276,6 +17472,7 @@
                 "Steppers",
                 "Communication",
                 "Text",
+                "Position indicators",
                 "Content",
                 "Iconography",
                 "Styles",

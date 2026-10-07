@@ -489,6 +489,8 @@ internal class RemoteContentEmitter(
       "remote-m3/lottie" -> lottie(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
       // Ahead of the record fallback, which has no spelling for `RemoteIcon`'s `ImageVector`.
       REMOTE_ICON_COMPONENT_ID -> icon(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
+      REMOTE_HORIZONTAL_PAGE_INDICATOR_ID,
+      REMOTE_VERTICAL_PAGE_INDICATOR_ID -> pageIndicator(node, pad)
       "asset/image" -> image(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
       // A gradient is a widget-frame brush rather than Remote Compose content. It stays in the
       // catalog for the container's `background` slot but cannot enter a widget body.
@@ -832,8 +834,10 @@ internal class RemoteContentEmitter(
 
   private fun validateLayoutEvents(node: UiBuilderNode) {
     node.eventBindings.forEach { (event, actions) ->
-      if (event != "click" || actions !is JsonArray)
-        refusals += "nodes.${node.id}.eventBindings.$event: expected a supported click action list"
+      if (event !in LAYOUT_EVENTS || actions !is JsonArray)
+        refusals +=
+          "nodes.${node.id}.eventBindings.$event: expected an action list for one of " +
+            LAYOUT_EVENTS.joinToString()
     }
   }
 
@@ -1652,6 +1656,61 @@ internal class RemoteContentEmitter(
       }
       else -> "$lowered.toRemoteString()"
     }
+
+  /**
+   * A page indicator, with the `RemotePageIndicatorState` its record cannot carry built from the
+   * two properties that make one: a fixed `pageCount` and a `selectedPage` that may read Int state,
+   * so the dots follow a pager an action drives.
+   */
+  private fun pageIndicator(node: UiBuilderNode, pad: String): List<String> {
+    val symbol =
+      if (node.componentId == REMOTE_VERTICAL_PAGE_INDICATOR_ID) "RemoteVerticalPageIndicator"
+      else "RemoteHorizontalPageIndicator"
+    usedComponentImports += "androidx.wear.compose.remote.material3.$symbol"
+    usedComponentImports +=
+      "androidx.wear.compose.remote.material3.rememberRemotePageIndicatorState"
+    val pageCount = node.properties["pageCount"]?.intOrNull() ?: 4
+    if (pageCount < 1) {
+      refusals += "nodes.${node.id}.pageCount: a page indicator needs at least one page"
+      return emptyList()
+    }
+    val authored = node.properties["selectedPage"]
+    val selected =
+      when {
+        authored == null -> null
+        authored.isDrawComputed() ->
+          computed(authored, UiValueKind.INT, "nodes.${node.id}.selectedPage") ?: return emptyList()
+        else ->
+          authored.intOrNull()?.let {
+            usesRemoteInt = true
+            "$it.ri"
+          }
+      }
+    val state =
+      "rememberRemotePageIndicatorState(pageCount = $pageCount" +
+        (selected?.let { ", selectedPage = $it" } ?: "") +
+        ")"
+    val arguments = mutableListOf("state = $state")
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
+    listOf("selectedColor", "unselectedColor").forEach { name ->
+      pageIndicatorColor(node, name)?.let { arguments += "$name = $it" }
+    }
+    return (pad + call(symbol, arguments, pad)).split("\n")
+  }
+
+  private fun pageIndicatorColor(node: UiBuilderNode, name: String): String? {
+    val authored = node.properties[name] ?: return null
+    if (authored.isDrawComputed())
+      return computed(authored, UiValueKind.COLOR, "nodes.${node.id}.$name")
+    val value = authored.stringOrNull()?.takeIf { it.isNotEmpty() } ?: return null
+    return if (value.startsWith("#")) {
+      usesColorLiteral = true
+      "${value.argbLiteral()}.rc"
+    } else {
+      usesTheme = true
+      "RemoteMaterialTheme.colorScheme.$value"
+    }
+  }
 
   /**
    * `RemoteCanvas { … }` with each operation in its `ops` slot as the `RemoteDrawScope` call it is.
@@ -3094,8 +3153,23 @@ internal class RemoteContentEmitter(
     leading: List<String> = emptyList(),
     modifierClick: Boolean = true,
   ): String? {
+    fun bound(event: String) = (eventBindings[event] as? JsonArray)?.isNotEmpty() == true
     val click =
-      if (modifierClick && (eventBindings["click"] as? JsonArray)?.isNotEmpty() == true) {
+      if (modifierClick && (bound("longClick") || bound("doubleClick"))) {
+        // A press, a long press and a double tap, each with its own ordered actions.
+        val arguments =
+          listOf(
+              "click" to "onClick",
+              "longClick" to "onLongClick",
+              "doubleClick" to "onDoubleClick",
+            )
+            .filter { (event, _) -> bound(event) }
+            .map { (_, parameter) ->
+              "$parameter = " +
+                (actionExpression(this, TargetParameter(parameter, "Action")) ?: return null)
+            }
+        modifierCall("combinedClickable(${arguments.joinToString()})")
+      } else if (modifierClick && bound("click")) {
         actionExpression(this, TargetParameter("onClick", "Action"))?.let {
           modifierCall("clickable($it)")
         }
@@ -3600,6 +3674,9 @@ private const val REMOTE_BOOLEAN_FQN =
 private const val REMOTE_FLOAT_FQN = "androidx.compose.remote.creation.compose.state.RemoteFloat"
 private const val REMOTE_INT_FQN = "androidx.compose.remote.creation.compose.state.RemoteInt"
 private const val REMOTE_STATE_PACKAGE = "androidx.compose.remote.creation.compose.state"
+
+/** The events a layout node takes: `RemoteModifier.combinedClickable`'s three. */
+internal val LAYOUT_EVENTS: List<String> = listOf("click", "longClick", "doubleClick")
 
 /** An Int literal in written Remote source, which needs the `ri` import. */
 private val INT_LITERAL = Regex("""\b\d+\.ri\b""")
