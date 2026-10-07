@@ -1821,9 +1821,9 @@ internal suspend fun loadLiveCatalogs(
   }
 
 /**
- * The catalog-owned cutover flag as the host served this page: the shell's
- * `<meta name="ui-builder-catalog-ownership">`, or a `?catalogOwnership=` override (`all`, `none`,
- * or a comma-separated list), default `none`. The host is the one that knows whether it seeds owned
+ * The catalog-owned cutover flag as the host served this page: the shell's `<meta
+ * name="ui-builder-catalog-ownership">`, or a `?catalogOwnership=` override (`all`, `none`, or a
+ * comma-separated list), default `none`. The host is the one that knows whether it seeds owned
  * catalogs from their published templates, so it is the one that sets this; see
  * `docs/design/UI_BUILDER_CATALOG_CUTOVER.md`. A value that does not parse is `none`, because the
  * chooser is the wrong place to fail a page over a flag.
