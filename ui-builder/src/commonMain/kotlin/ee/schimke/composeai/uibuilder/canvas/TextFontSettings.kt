@@ -69,9 +69,9 @@ internal fun resolveFontSettings(
     if (family != null && instance != null) {
       weightAxis = axes.any { it.tag == "wght" } && variants?.hasAxis(family, "wght") == true
       resolved = resolved.copy(fontFamily = instance)
-      // The axis is the weight now; a synthesised bold over a `wght` 800 would be two bolds. Style
-      // synthesis stays, so an italic `fontStyle` on a face with no italic still slants.
-      if (weightAxis) resolved = resolved.copy(fontSynthesis = FontSynthesis.Style)
+      // The axis is the weight now; a synthesised bold over a `wght` 800 would be two bolds.
+      if (weightAxis)
+        resolved = resolved.copy(fontSynthesis = resolved.fontSynthesis.withoutWeight())
     }
   }
   // Only a face that has a `wght` axis takes its weight from it: a static face, one not loaded, or
@@ -81,3 +81,12 @@ internal fun resolveFontSettings(
 
 private fun UiBuilderNode.textProperty(name: String): String? =
   string(name).takeIf { it.isNotBlank() }
+
+/**
+ * This synthesis policy with weight synthesis turned off and style synthesis left as it was: an
+ * italic `fontStyle` on a face with no italic still slants where the style allowed it, and stays
+ * upright where the style had turned that off. Unset is Compose's default, both.
+ */
+internal fun FontSynthesis?.withoutWeight(): FontSynthesis =
+  if (this == null || this == FontSynthesis.All || this == FontSynthesis.Style) FontSynthesis.Style
+  else FontSynthesis.None
