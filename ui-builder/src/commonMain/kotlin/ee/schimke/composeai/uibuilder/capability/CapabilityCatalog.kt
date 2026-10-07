@@ -11,6 +11,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderComponentPacks
 import ee.schimke.composeai.uibuilder.export.UiBuilderPreviewSurfaces
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import ee.schimke.composeai.uibuilder.export.UiRemoteTheme
 import ee.schimke.composeai.uibuilder.export.UiTimeText
 import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
@@ -456,7 +457,8 @@ object CapabilityCatalogParser {
     // A draw operation states what each number measures, so its range comes from there rather than
     // from a name rule: an angle, a fraction and a dp offset are three different controls.
     (UiDrawing.BY_ID[componentId]?.properties
-        ?: UiTimeText.PROPERTIES.takeIf { componentId == UiTimeText.ID })
+        ?: UiTimeText.PROPERTIES.takeIf { componentId == UiTimeText.ID }
+        ?: UiRemoteTheme.PROPERTIES.takeIf { componentId == UiRemoteTheme.ID })
       ?.firstOrNull { it.name == property.name }
       ?.let { declared ->
         when (declared) {

@@ -3698,6 +3698,214 @@
         },
         {
             "code": null,
+            "componentId": "remote-m3/remote-material-theme",
+            "displayName": "Theme",
+            "modifierCapabilities": [
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themePrimaryColor",
+                    "notes": "The `primary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnPrimaryColor",
+                    "notes": "The `onPrimary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themePrimaryContainerColor",
+                    "notes": "The `primaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnPrimaryContainerColor",
+                    "notes": "The `onPrimaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeSecondaryColor",
+                    "notes": "The `secondary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnSecondaryColor",
+                    "notes": "The `onSecondary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeSecondaryContainerColor",
+                    "notes": "The `secondaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnSecondaryContainerColor",
+                    "notes": "The `onSecondaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeTertiaryColor",
+                    "notes": "The `tertiary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnTertiaryColor",
+                    "notes": "The `onTertiary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeTertiaryContainerColor",
+                    "notes": "The `tertiaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnTertiaryContainerColor",
+                    "notes": "The `onTertiaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeSurfaceContainerLowColor",
+                    "notes": "The `surfaceContainerLow` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeSurfaceContainerColor",
+                    "notes": "The `surfaceContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeSurfaceContainerHighColor",
+                    "notes": "The `surfaceContainerHigh` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnSurfaceColor",
+                    "notes": "The `onSurface` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnSurfaceVariantColor",
+                    "notes": "The `onSurfaceVariant` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOutlineColor",
+                    "notes": "The `outline` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOutlineVariantColor",
+                    "notes": "The `outlineVariant` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeBackgroundColor",
+                    "notes": "The `background` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnBackgroundColor",
+                    "notes": "The `onBackground` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeErrorColor",
+                    "notes": "The `error` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnErrorColor",
+                    "notes": "The `onError` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "RemoteMaterialTheme: re-skins the subtree it holds with the colour roles it overrides, reading the enclosing theme for the rest.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "remote-m3/remote-horizontal-page-indicator",
             "displayName": "Horizontal page indicator",
             "modifierCapabilities": [
@@ -18310,6 +18518,9 @@
                 },
                 "remote-m3/remote-linear-progress-indicator": {
                     "group": "Communication"
+                },
+                "remote-m3/remote-material-theme": {
+                    "group": "Layout"
                 },
                 "remote-m3/remote-outlined-card": {
                     "group": "Containment"

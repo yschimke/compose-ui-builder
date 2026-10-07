@@ -177,6 +177,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiDrawing
 import ee.schimke.composeai.uibuilder.export.UiExpressions
+import ee.schimke.composeai.uibuilder.export.UiRemoteTheme
 import ee.schimke.composeai.uibuilder.export.UiTimeText
 import ee.schimke.composeai.uibuilder.export.WearScreenTheme
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
@@ -1902,6 +1903,11 @@ private fun RenderNode(
           "${clock.hour.toString().padStart(2, '0')}:${clock.minute.toString().padStart(2, '0')}"
         UiBuilderTimeText(node, time, measured) { uiBuilderColor(it) }
       }
+      // The scaffold's theme copy, for one child: the role names and properties are the same.
+      UiRemoteTheme.ID ->
+        WearScreenThemed(node) {
+          Box(measured) { slot(UiRemoteTheme.SLOT).forEach { id -> child(id, Modifier) } }
+        }
       in UiDrawing.BY_ID -> Unit
       "shape/linear-gradient" -> Box(measured.background(node.linearGradientBrush()))
       "shape/radial-gradient" -> {

@@ -89,7 +89,8 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     // The drawing vocabulary: a canvas and the operations its `ops` slot holds.
     UiDrawing.COMPONENT_IDS +
     // Remote Material 3 components the record has no row for, written by hand.
-    UiTimeText.ID
+    UiTimeText.ID +
+    UiRemoteTheme.ID
 
 /**
  * Which widget file a [RemoteContentEmitter] body is written into, which decides its imports.
@@ -486,6 +487,7 @@ internal class RemoteContentEmitter(
       "layout/for-each" -> repetition(node, depth)
       UiDrawing.CANVAS -> drawCanvas(node, depth)
       UiTimeText.ID -> timeText(node, pad)?.split("\n") ?: emptyList()
+      UiRemoteTheme.ID -> materialTheme(node, depth)
       in UiDrawing.BY_ID ->
         emptyList<String>().also {
           refusals +=
@@ -1745,6 +1747,33 @@ internal class RemoteContentEmitter(
     }
     pageIndicatorColor(node, "color")?.let { arguments += "color = $it" }
     return pad + call("RemoteTimeText", arguments, pad)
+  }
+
+  /**
+   * `RemoteMaterialTheme(colorScheme = RemoteMaterialTheme.colorScheme.copy(…)) { … }` around the
+   * themed child, with only the roles the design overrides. A role named as a token reads the
+   * scheme around it, as the canvas and the Wear screen's theme do. With no override the wrapper
+   * would change nothing, so the child is written alone.
+   */
+  private fun materialTheme(node: UiBuilderNode, depth: Int): List<String> {
+    val pad = INDENT.repeat(depth)
+    val roles =
+      WearScreenTheme.ROLES.mapNotNull { role ->
+        pageIndicatorColor(node, WearScreenTheme.property(role))?.let { "$role = $it" }
+      }
+    val children = node.slots[UiRemoteTheme.SLOT].orEmpty()
+    if (roles.isEmpty()) return children.flatMap { emit(it, depth) }
+    usesTheme = true
+    val scheme = call("RemoteMaterialTheme.colorScheme.copy", roles, "$pad$INDENT")
+    val head =
+      call("RemoteMaterialTheme", listOf("colorScheme = $scheme"), pad, OPENING_BRACE.length) +
+        OPENING_BRACE
+    // Not a layout: `weight` and the other scoped modifiers have no receiver inside it.
+    val enclosing = scope
+    scope = "RemoteMaterialTheme"
+    val body = children.flatMap { emit(it, depth + 1) }
+    scope = enclosing
+    return (pad + head).split("\n") + body + listOf("$pad}")
   }
 
   private fun pageIndicatorColor(node: UiBuilderNode, name: String): String? {

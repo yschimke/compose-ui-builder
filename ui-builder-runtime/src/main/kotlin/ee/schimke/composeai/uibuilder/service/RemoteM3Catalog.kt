@@ -11,6 +11,7 @@ import ee.schimke.composeai.uibuilder.export.REMOTE_TEXT_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_VERTICAL_PAGE_INDICATOR_ID
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import ee.schimke.composeai.uibuilder.export.UiRemoteTheme
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
@@ -270,7 +271,9 @@ internal fun remoteM3ComponentMenu(base: JsonObject): JsonObject =
               base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content"))
             )
           ) { semantics, id ->
-            JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, "Content")))
+            // A theme wraps a subtree, so it shelves with the layouts; the rest are content.
+            val shelf = if (id == UiRemoteTheme.ID) "Layout" else "Content"
+            JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, shelf)))
           }
         ) { semantics, id ->
           JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, "Layout")))

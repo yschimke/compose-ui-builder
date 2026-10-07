@@ -433,6 +433,7 @@ class ProductionUiBuilderRuntimeTest {
         "asset/image",
         *ee.schimke.composeai.uibuilder.export.UiDrawing.COMPONENT_IDS.toTypedArray(),
         ee.schimke.composeai.uibuilder.export.UiTimeText.ID,
+        ee.schimke.composeai.uibuilder.export.UiRemoteTheme.ID,
       ) + RemoteMaterial3.components.map { it.componentId },
       remoteCatalog.components.map { it.componentId },
     )
