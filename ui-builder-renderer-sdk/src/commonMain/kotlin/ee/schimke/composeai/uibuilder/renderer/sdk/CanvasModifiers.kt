@@ -298,17 +298,19 @@ fun Modifier.applyCanvasModifier(
         "wrapContentHeight" -> wrapContentHeight()
         // The arguments Compose's marquee shares with the Remote one. `animationMode` is a raw
         // int code upstream, so the canvas keeps Compose's default for it.
-        "basicMarquee" ->
+        "basicMarquee" -> {
+          val repeatDelay =
+            plan.args["repeatDelayMillis"]?.toInt() ?: MarqueeDefaults.RepeatDelayMillis
           basicMarquee(
             iterations = plan.args["iterations"]?.toInt() ?: MarqueeDefaults.Iterations,
-            repeatDelayMillis =
-              plan.args["repeatDelayMillis"]?.toInt() ?: MarqueeDefaults.RepeatDelayMillis,
-            initialDelayMillis =
-              plan.args["initialDelayMillis"]?.toInt() ?: MarqueeDefaults.RepeatDelayMillis,
+            repeatDelayMillis = repeatDelay,
+            // Compose's own default: the first delay is the repeat delay.
+            initialDelayMillis = plan.args["initialDelayMillis"]?.toInt() ?: repeatDelay,
             spacing =
               plan.args["spacing"]?.let { MarqueeSpacing(it.dp) } ?: MarqueeDefaults.Spacing,
             velocity = plan.args["velocity"]?.dp ?: MarqueeDefaults.Velocity,
           )
+        }
         else -> this
       }
     null -> this
