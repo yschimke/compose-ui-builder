@@ -1904,6 +1904,957 @@
         },
         {
             "code": null,
+            "componentId": "draw/canvas",
+            "displayName": "Canvas",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "sharedElement"
+            ],
+            "properties": [],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawOperation"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "ops",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "RemoteCanvas: draws its operations in order, in dp from its top-left. Give it a size; an unsized canvas draws in whatever space its parent gives it.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/rect",
+            "displayName": "Rectangle",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "xDp",
+                    "notes": "Left edge of the rectangle. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "yDp",
+                    "notes": "Top edge of the rectangle. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "widthDp",
+                    "notes": "Width of the rectangle. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "heightDp",
+                    "notes": "Height of the rectangle. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "cornerRadiusDp",
+                    "notes": "Rounds the corners; written as drawRoundRect.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawRect` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/circle",
+            "displayName": "Circle",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "centerXDp",
+                    "notes": "Centre across. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "centerYDp",
+                    "notes": "Centre down. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "radiusDp",
+                    "notes": "Radius. Half the canvas's shorter side when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawCircle` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/oval",
+            "displayName": "Oval",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "xDp",
+                    "notes": "Left edge of the oval's bounds. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "yDp",
+                    "notes": "Top edge of the oval's bounds. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "widthDp",
+                    "notes": "Width of the oval's bounds. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "heightDp",
+                    "notes": "Height of the oval's bounds. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawOval` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/arc",
+            "displayName": "Arc",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "xDp",
+                    "notes": "Left edge of the arc's oval. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "yDp",
+                    "notes": "Top edge of the arc's oval. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "widthDp",
+                    "notes": "Width of the arc's oval. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "heightDp",
+                    "notes": "Height of the arc's oval. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "startAngle",
+                    "notes": "Where the arc starts; 0 is three o'clock.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "sweepAngle",
+                    "notes": "How far it sweeps, clockwise.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "useCenter",
+                    "notes": "Close the arc through the centre, as a pie slice.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawArc` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/line",
+            "displayName": "Line",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "startXDp",
+                    "notes": "Start across.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "startYDp",
+                    "notes": "Start down.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "endXDp",
+                    "notes": "End across.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "endYDp",
+                    "notes": "End down.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawLine` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/path",
+            "displayName": "Path",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "pathData",
+                    "notes": "SVG path data, e.g. `M2 12 L12 2 L22 12 Z`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportWidth",
+                    "notes": "The width the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportHeight",
+                    "notes": "The height the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawPath` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/text",
+            "displayName": "Text",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "The text to draw.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "xDp",
+                    "notes": "Anchor across. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "yDp",
+                    "notes": "Anchor down, at the text's middle. Centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "textSizeSp",
+                    "notes": "Text size. 14 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end"
+                    ],
+                    "jsonType": "string",
+                    "name": "align",
+                    "notes": "Which end of the text sits at the anchor.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawAnchoredText` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/group",
+            "displayName": "Transform group",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "translateXDp",
+                    "notes": "Moves its operations across.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "translateYDp",
+                    "notes": "Moves its operations down.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "rotate",
+                    "notes": "Turns its operations about the pivot.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "scale",
+                    "notes": "Scales its operations about the pivot.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "pivotXDp",
+                    "notes": "Pivot across. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "pivotYDp",
+                    "notes": "Pivot down. The canvas centre when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawOperation"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "ops",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `withTransform` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "remote-m3/remote-app-card",
             "displayName": "App card",
             "modifierCapabilities": [
@@ -16056,6 +17007,33 @@
                 "asset/image": {
                     "group": "Content"
                 },
+                "draw/arc": {
+                    "group": "Drawing"
+                },
+                "draw/canvas": {
+                    "group": "Drawing"
+                },
+                "draw/circle": {
+                    "group": "Drawing"
+                },
+                "draw/group": {
+                    "group": "Drawing"
+                },
+                "draw/line": {
+                    "group": "Drawing"
+                },
+                "draw/oval": {
+                    "group": "Drawing"
+                },
+                "draw/path": {
+                    "group": "Drawing"
+                },
+                "draw/rect": {
+                    "group": "Drawing"
+                },
+                "draw/text": {
+                    "group": "Drawing"
+                },
                 "layout/box": {
                     "group": "Layout"
                 },
@@ -16301,7 +17279,8 @@
                 "Content",
                 "Iconography",
                 "Styles",
-                "Embedded"
+                "Embedded",
+                "Drawing"
             ]
         },
         "platform": "remote-compose",

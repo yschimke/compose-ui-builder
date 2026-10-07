@@ -20,7 +20,7 @@ behind a compile-time flag.
 | | Scope | Status |
 | --- | --- | --- |
 | M1 | Computed values: `expr`/`system` wrappers, formula text, canvas evaluation, Remote Kotlin lowering, inspector | Landed |
-| M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, clips, loops, paint | Planned |
+| M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint | Landed (clips and loops follow) |
 | M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Planned |
 | M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Planned |
 | M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Planned |
@@ -110,3 +110,64 @@ only ever stores the tree, so MCP and hand-written fixtures use the same shape t
   the exports read them today, and the inspector offers them the moment the linked contracts can
   decode one (`UiExpressions.wireSupported` asks the serializer). `sharedElement` and
   `collapsiblePriority` are in the same position for modifiers.
+
+## Drawing
+
+A `draw/canvas` is a layout node like any other — it takes modifiers, sits in a widget body, gets a
+size — and its `ops` slot holds **operation nodes**, drawn in order. Operations are nodes rather
+than one opaque blob so selection, comments, MCP edits and the layer tree keep working per shape,
+and so every geometry property is an ordinary property: a literal, a state read or a computed
+value. The vocabulary is declared once, in `UiDrawing`, and read by the catalog declaration, the
+canvas stand-in and the Remote emitter.
+
+| Operation | Properties (dp unless noted) | Remote call |
+| --- | --- | --- |
+| `draw/rect` | `xDp` `yDp` `widthDp` `heightDp` `cornerRadiusDp` + paint | `drawRect` / `drawRoundRect` |
+| `draw/circle` | `centerXDp` `centerYDp` `radiusDp` + paint | `drawCircle` |
+| `draw/oval` | box + paint | `drawOval` |
+| `draw/arc` | box, `startAngle` `sweepAngle` (degrees), `useCenter` + paint | `drawArc` |
+| `draw/line` | `startXDp` `startYDp` `endXDp` `endYDp`, colour, stroke | `drawLine` |
+| `draw/path` | `pathData` (SVG), `viewportWidth` `viewportHeight` + paint | `drawPath(RemotePath(…))`, scaled to the canvas |
+| `draw/text` | `text`, `xDp` `yDp` anchor, `textSizeSp`, `align` | `drawAnchoredText` |
+| `draw/group` | `translateXDp` `translateYDp` `rotate` `scale` `pivotXDp` `pivotYDp`; its own `ops` | `withTransform({ … }) { … }` |
+
+Paint is `color` (literal, theme role or computed), `style` (`fill`/`stroke`), `strokeWidthDp`,
+`strokeCap` and `alpha`. Rules every lane shares: geometry is dp from the canvas's top-left; an
+absent box is the whole canvas; a stroked shape whose box is defaulted is inset by half its stroke
+so a ring drawn with defaults stays inside; angles are clockwise from three o'clock.
+
+- **Palette.** Remote Compose catalogs get a **Drawing** shelf. The canvas slot accepts only the
+  `DrawOperation` trait, which only operations carry, and operations carry no `RemoteAuthorable`, so
+  a button dropped into a canvas, or a rectangle dropped into a column, is refused at the drop.
+- **Canvas.** `UiBuilderDrawCanvas` (renderer SDK) draws the operations with Compose's `Canvas`,
+  after the render tree has evaluated their computed values; the editor's renderer and a catalog's
+  own renderer share it.
+- **Remote Kotlin.** `RemoteCanvas(modifier) { … }`, coordinates as `n.rdp.toPx()`, a computed one
+  as `expression.asRemoteDp().toPx()`, a theme colour read into a local above the canvas because
+  `RemoteMaterialTheme.colorScheme` is a composable read and the draw lambda is not.
+
+A progress ring and a clock hand, as a document:
+
+```json
+"canvas": {"componentId": "draw/canvas", "modifiers": [{"type": "size", "widthDp": 96, "heightDp": 96}],
+           "slots": {"ops": ["track", "sweep", "hand"]}},
+"sweep":  {"componentId": "draw/arc", "properties": {
+             "style": {"type": "enum", "value": "stroke"}, "strokeWidthDp": {"type": "float", "value": 8},
+             "startAngle": {"type": "float", "value": -90},
+             "sweepAngle": {"type": "expr", "op": "mul", "args": [
+               {"type": "state", "variable": "progress"}, {"type": "int", "value": 360}]}}},
+"hand":   {"componentId": "draw/group", "properties": {
+             "rotate": {"type": "expr", "op": "mul", "args": [
+               {"type": "expr", "op": "mod", "args": [
+                 {"type": "system", "value": "time.secondOfHour"}, {"type": "int", "value": 60}]},
+               {"type": "int", "value": 6}]}},
+           "slots": {"ops": ["needle"]}}
+```
+
+### Not yet
+
+- Clips (`clipRect`/`clipPath`), loops (`loop` with an index binding), conditional drawing,
+  gradients and images as paint, path morphs and text on a path.
+- The device preview in remote-m3-catalog plays the canvas once its renderer adds the case.
+- The regular Compose lane: `Canvas { }` is the same shape, but no catalog that exports regular
+  Compose offers the vocabulary yet.

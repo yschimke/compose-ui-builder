@@ -174,22 +174,36 @@ object UiExpressions {
             .toMap()
         )
 
+      /**
+       * The kind of a state variable an expression may read, or null when it may not.
+       *
+       * The player holds a state variable as a typed value with a starting value, so a nullable
+       * declaration, or one whose initial value is absent, null or not of its declared kind, is not
+       * an operand: the Remote writer refuses it, and accepting it here would hand the author a
+       * formula every export then refuses.
+       */
       fun stateKind(declaration: JsonObject?): UiValueKind? {
         declaration ?: return null
-        val declared = (declaration["valueType"] as? JsonPrimitive)?.contentOrNull
-        declared
-          ?.let { UiValueKind.fromWire(it) }
-          ?.let {
-            return it
-          }
+        if ((declaration["nullable"] as? JsonPrimitive)?.booleanOrNull == true) return null
         val initial = declaration["initialValue"] as? JsonPrimitive ?: return null
-        return when {
-          initial is JsonNull -> null
-          initial.isString -> UiValueKind.STRING
-          initial.booleanOrNull != null -> UiValueKind.BOOL
-          initial.content.toLongOrNull() != null -> UiValueKind.INT
-          else -> UiValueKind.FLOAT
-        }
+        if (initial is JsonNull) return null
+        val inferred =
+          when {
+            initial.isString -> UiValueKind.STRING
+            initial.booleanOrNull != null -> UiValueKind.BOOL
+            initial.content.toLongOrNull() != null -> UiValueKind.INT
+            initial.doubleOrNull?.isFinite() == true -> UiValueKind.FLOAT
+            else -> return null
+          }
+        val declared =
+          (declaration["valueType"] as? JsonPrimitive)?.contentOrNull?.let(UiValueKind::fromWire)
+            ?: return inferred
+        val fits =
+          when (declared) {
+            UiValueKind.FLOAT -> inferred == UiValueKind.FLOAT || inferred == UiValueKind.INT
+            else -> declared == inferred
+          }
+        return declared.takeIf { fits }
       }
     }
   }
@@ -468,6 +482,17 @@ object UiExpressions {
       fun of(fixedTime: String?): Clock {
         val match = fixedTime?.let(ISO_INSTANT::matchEntire) ?: return DEFAULT
         val (year, month, day, hour, minute, second) = match.destructured
+        // The service checks only that a fixed time is not blank, so a value that matches the
+        // shape but names no instant — month 13, hour 25 — draws at the default rather than
+        // taking the canvas down.
+        if (
+          month.toInt() !in 1..12 ||
+            day.toInt() !in 1..31 ||
+            hour.toInt() !in 0..23 ||
+            minute.toInt() !in 0..59 ||
+            second.toInt() !in 0..60
+        )
+          return DEFAULT
         return Clock(
           hour = hour.toInt(),
           minute = minute.toInt(),
@@ -504,7 +529,7 @@ object UiExpressions {
     when (expr) {
       is Expr.Literal ->
         when (expr.kind) {
-          UiValueKind.FLOAT -> expr.value.content.toDouble()
+          UiValueKind.FLOAT -> expr.value.content.toFloat().toDouble()
           UiValueKind.INT -> expr.value.content.toInt()
           UiValueKind.BOOL -> expr.value.content.toBoolean()
           UiValueKind.STRING,
@@ -518,7 +543,7 @@ object UiExpressions {
 
   private fun coerce(raw: String?, kind: UiValueKind): Any =
     when (kind) {
-      UiValueKind.FLOAT -> raw?.toDoubleOrNull() ?: 0.0
+      UiValueKind.FLOAT -> raw?.toFloatOrNull()?.toDouble() ?: 0.0
       UiValueKind.INT -> raw?.toDoubleOrNull()?.toInt() ?: 0
       UiValueKind.BOOL -> raw == "true"
       UiValueKind.STRING -> raw.orEmpty()
@@ -526,10 +551,12 @@ object UiExpressions {
     }
 
   private fun call(expr: Expr.Call, values: List<Any>): Any {
-    fun d(i: Int) = (values[i] as Number).toDouble()
+    // The player computes in Float, so every operand and result is rounded to a Float as it is
+    // here: `16777216.0 + 1.0 == 16777216.0` is true on the watch and must be true in the preview.
+    fun d(i: Int) = (values[i] as Number).toFloat().toDouble()
     fun b(i: Int) = values[i] as Boolean
     val integral = expr.kind == UiValueKind.INT
-    fun num(value: Double): Any = if (integral) value.toInt() else value
+    fun num(value: Double): Any = if (integral) value.toInt() else value.toFloat().toDouble()
     return when (expr.op) {
       Op.ADD -> num(d(0) + d(1))
       Op.SUB -> num(d(0) - d(1))
@@ -543,17 +570,17 @@ object UiExpressions {
       Op.MAX -> num(maxOf(d(0), d(1)))
       Op.CLAMP -> num(d(0).coerceIn(minOf(d(1), d(2)), maxOf(d(1), d(2))))
       Op.ABS -> num(abs(d(0)))
-      Op.FLOOR -> floor(d(0))
-      Op.CEIL -> ceil(d(0))
-      Op.ROUND -> round(d(0))
-      Op.SQRT -> sqrt(d(0))
-      Op.POW -> d(0).pow(d(1))
-      Op.SIN -> sin(d(0))
-      Op.COS -> cos(d(0))
-      Op.TAN -> tan(d(0))
-      Op.LERP -> d(0) + (d(1) - d(0)) * d(2)
+      Op.FLOOR -> num(floor(d(0)))
+      Op.CEIL -> num(ceil(d(0)))
+      Op.ROUND -> num(round(d(0)))
+      Op.SQRT -> num(sqrt(d(0)))
+      Op.POW -> num(d(0).pow(d(1)))
+      Op.SIN -> num(sin(d(0)))
+      Op.COS -> num(cos(d(0)))
+      Op.TAN -> num(tan(d(0)))
+      Op.LERP -> num(d(0) + (d(1) - d(0)) * d(2))
       Op.TO_INT -> d(0).toInt()
-      Op.TO_FLOAT -> d(0)
+      Op.TO_FLOAT -> num(d(0))
       Op.EQ -> values[0].normalised() == values[1].normalised()
       Op.NE -> values[0].normalised() != values[1].normalised()
       Op.LT -> d(0) < d(1)

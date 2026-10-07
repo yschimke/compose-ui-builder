@@ -90,7 +90,11 @@ private fun computedMatchesCatalog(
       is JsonPrimitive -> setOf(jsonType.content)
       else -> emptySet()
     }
-  if ("object" in types) return true
+  // `object` is how a catalog admits a binding wrapper beside a scalar — `["number", "object"]` —
+  // so
+  // it says nothing about which kind the property holds. The scalar types beside it do, and a
+  // property that is only `object` (a structural value such as `showByState`) holds none a formula
+  // can produce.
   if (allowedValues.isNotEmpty() || PropertyValueKinds.isAssetKey(propertyName)) return false
   val kind = checked.expr.kind
   if (PropertyValueKinds.isColour(propertyName)) return kind == UiValueKind.COLOR

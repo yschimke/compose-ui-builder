@@ -142,9 +142,12 @@ class WearWidgetContainerCatalogTest {
         "m3/text",
         "remote-compose/custom",
         "remote-m3/lottie",
+        // The canvas, not its operations: those enter only a canvas's `ops` slot.
+        "draw/canvas",
       ) + RemoteMaterial3.components.map { it.componentId },
       accepted,
     )
+    assertTrue("draw/rect" !in accepted)
     assertTrue("m3/surface" !in accepted)
     assertTrue("shape/linear-gradient" !in accepted)
   }

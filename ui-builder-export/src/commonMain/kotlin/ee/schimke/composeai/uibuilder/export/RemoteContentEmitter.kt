@@ -84,7 +84,9 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     // The Remote Material 3 components, written from their embedded record in every lane. The
     // palette offers them (#207), so they have to be here or the `:server` parity test fails on
     // every one of them.
-    RemoteMaterial3.components.map { it.componentId }
+    RemoteMaterial3.components.map { it.componentId } +
+    // The drawing vocabulary: a canvas and the operations its `ops` slot holds.
+    UiDrawing.COMPONENT_IDS
 
 /**
  * Which widget file a [RemoteContentEmitter] body is written into, which decides its imports.
@@ -477,6 +479,13 @@ internal class RemoteContentEmitter(
             collapsibleArguments(node, pad, vertical = false),
           )
       "layout/for-each" -> repetition(node, depth)
+      UiDrawing.CANVAS -> drawCanvas(node, depth)
+      in UiDrawing.BY_ID ->
+        emptyList<String>().also {
+          refusals +=
+            "the draw operation `${node.id}` draws only inside a ${UiDrawing.CANVAS}'s " +
+              "`${UiDrawing.OPS_SLOT}` slot; place it in a canvas"
+        }
       "remote-m3/lottie" -> lottie(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
       // Ahead of the record fallback, which has no spelling for `RemoteIcon`'s `ImageVector`.
       REMOTE_ICON_COMPONENT_ID -> icon(node, pad)?.let { (pad + it).split("\n") } ?: emptyList()
@@ -1498,6 +1507,17 @@ internal class RemoteContentEmitter(
         is UiExpressions.Checked.Ok -> checked.expr
       }
     val lowered = lower(expr, where) ?: return null
+    return computedResult(expr, expected, lowered, where)?.also {
+      if (INT_LITERAL.containsMatchIn(it)) usesRemoteInt = true
+    }
+  }
+
+  private fun computedResult(
+    expr: UiExpressions.Expr,
+    expected: UiValueKind,
+    lowered: String,
+    where: String,
+  ): String? {
     return when {
       expr.kind == expected -> lowered
       expected == UiValueKind.FLOAT && expr.kind == UiValueKind.INT -> asFloat(expr, lowered)
@@ -1515,10 +1535,10 @@ internal class RemoteContentEmitter(
       is UiExpressions.Expr.Literal ->
         when (expr.kind) {
           UiValueKind.FLOAT -> expr.value.content.toFloat().floatLiteral()
-          UiValueKind.INT -> {
-            usesRemoteInt = true
-            "${expr.value.content.toInt()}.ri"
-          }
+          // `usesRemoteInt` is decided on the finished expression in [computed]: an Int literal in
+          // a
+          // Float context is rewritten as a float literal there, and would leave `ri` unused.
+          UiValueKind.INT -> "${expr.value.content.toInt()}.ri"
           UiValueKind.BOOL -> {
             usesRemoteBoolean = true
             "${expr.value.content.toBoolean()}.rb"
@@ -1632,6 +1652,313 @@ internal class RemoteContentEmitter(
       }
       else -> "$lowered.toRemoteString()"
     }
+
+  /**
+   * `RemoteCanvas { … }` with each operation in its `ops` slot as the `RemoteDrawScope` call it is.
+   *
+   * Geometry is authored in dp and drawn in pixels, so every coordinate is written `n.rdp.toPx()`
+   * (or `expression.asRemoteDp().toPx()`), and an absent box is the canvas's own `width` and
+   * `height`. A theme colour is read once above the canvas, because `RemoteMaterialTheme` is a
+   * composable read and the draw lambda is not composable.
+   */
+  private fun drawCanvas(node: UiBuilderNode, depth: Int): List<String> {
+    val pad = INDENT.repeat(depth)
+    usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteCanvas"
+    val hoisted = mutableListOf<String>()
+    val previous = canvasExtent
+    canvasExtent = node.statedExtent()
+    val body =
+      try {
+        node.slots[UiDrawing.OPS_SLOT].orEmpty().flatMap { drawOperation(it, depth + 1, hoisted) }
+      } finally {
+        canvasExtent = previous
+      }
+    val modifier = node.modifierExpression(pad)
+    val head = if (modifier == null) "RemoteCanvas {" else "RemoteCanvas(modifier = $modifier) {"
+    return hoisted.map { pad + it } + listOf(pad + head) + body + listOf("$pad}")
+  }
+
+  /**
+   * The canvas's size as the draw scope reads it.
+   *
+   * `RemoteDrawScope.width`/`height` are the component's measured size, and inside a Glance Wear
+   * widget capture they read as zero — every shape sized from them collapses to a dot at the
+   * origin, while one sized in dp draws. So a canvas that states its size in dp gets that size
+   * written as literals, and only an unsized canvas reads its measured one.
+   */
+  private class CanvasExtent(val width: String, val height: String) {
+    val centerX: String = "($width / 2.rf)"
+    val centerY: String = "($height / 2.rf)"
+    val center: String = "RemoteOffset($centerX, $centerY)"
+  }
+
+  private var canvasExtent: CanvasExtent? = null
+
+  private val extent: CanvasExtent
+    get() = canvasExtent ?: CanvasExtent("width", "height")
+
+  private fun UiBuilderNode.statedExtent(): CanvasExtent {
+    var width: Float? = null
+    var height: Float? = null
+    modifiers.forEach { element ->
+      val modifier = element as? JsonObject ?: return@forEach
+      when (modifier["type"]?.stringValue()) {
+        "size" -> {
+          modifier["widthDp"]?.numberValue()?.let { width = it }
+          modifier["heightDp"]?.numberValue()?.let { height = it }
+        }
+        "width" -> modifier["widthDp"]?.numberValue()?.let { width = it }
+        "height" -> modifier["heightDp"]?.numberValue()?.let { height = it }
+      }
+    }
+    return CanvasExtent(
+      width?.let { "${it.dpLiteral()}.toPx()" } ?: "width",
+      height?.let { "${it.dpLiteral()}.toPx()" } ?: "height",
+    )
+  }
+
+  private fun drawOperation(
+    nodeId: String,
+    depth: Int,
+    hoisted: MutableList<String>,
+  ): List<String> {
+    val pad = INDENT.repeat(depth)
+    val node =
+      document.nodes[nodeId]
+        ?: run {
+          refusals += "nodes.$nodeId: missing node"
+          return emptyList()
+        }
+    val operation =
+      UiDrawing.BY_ID[node.componentId]
+        ?: run {
+          refusals +=
+            "`$nodeId` (${node.componentId}) is not a draw operation; a ${UiDrawing.CANVAS} " +
+              "holds only ${UiDrawing.OPERATIONS.joinToString { it.componentId }}"
+          return emptyList()
+        }
+    usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteOffset"
+    val stroked = node.properties["style"]?.stringOrNull() == "stroke"
+    if (operation.container) {
+      val pivot =
+        if (node.has("pivotXDp") || node.has("pivotYDp"))
+          "RemoteOffset(${node.drawPx("pivotXDp") ?: extent.centerX}, " +
+            "${node.drawPx("pivotYDp") ?: extent.centerY})"
+        else extent.center
+      val transforms =
+        listOfNotNull(
+          if (node.has("translateXDp") || node.has("translateYDp"))
+            "translate(${node.drawPx("translateXDp") ?: "0.rf"}, " +
+              "${node.drawPx("translateYDp") ?: "0.rf"})"
+          else null,
+          node.drawFloat("rotate")?.let { "rotate($it, $pivot)" },
+          node.drawFloat("scale")?.let { "scale($it, $it, $pivot)" },
+        )
+      usesRemoteFloat = true
+      val children =
+        node.slots[UiDrawing.OPS_SLOT].orEmpty().flatMap { drawOperation(it, depth + 1, hoisted) }
+      return listOf("${pad}withTransform({ ${transforms.joinToString("; ")} }) {") +
+        children +
+        listOf("$pad}")
+    }
+    val paint =
+      localName("paint${node.id.remoteIdentifier().replaceFirstChar { it.uppercaseChar() }}")
+    val lines = mutableListOf<String>()
+    lines += "${pad}val $paint = " + drawPaint(node, operation, stroked, hoisted, pad)
+    // The stroke straddles the outline; a box the author did not state is inset by half of it so
+    // a ring drawn with defaults stays inside its canvas.
+    val inset =
+      if (stroked && listOf("xDp", "yDp", "widthDp", "heightDp").none { node.has(it) })
+        node.drawPx("strokeWidthDp")?.let { "($it / 2.rf)" }
+      else null
+    fun box(): Pair<String, String> {
+      val x = node.drawPx("xDp") ?: inset ?: "0.rf"
+      val y = node.drawPx("yDp") ?: inset ?: "0.rf"
+      val w =
+        node.drawPx("widthDp")
+          ?: inset?.let { "(${extent.width} - $it * 2.rf)" }
+          ?: "(${extent.width} - $x)"
+      val h =
+        node.drawPx("heightDp")
+          ?: inset?.let { "(${extent.height} - $it * 2.rf)" }
+          ?: "(${extent.height} - $y)"
+      usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteSize"
+      usesRemoteFloat = true
+      return "RemoteOffset($x, $y)" to "RemoteSize($w, $h)"
+    }
+    fun draw(symbol: String, vararg arguments: String) {
+      lines += pad + call(symbol, arguments.toList(), pad)
+    }
+    when (node.componentId) {
+      "draw/rect" -> {
+        val (topLeft, size) = box()
+        val radius = node.drawPx("cornerRadiusDp")
+        if (radius == null) draw("drawRect", paint, topLeft, size)
+        else draw("drawRoundRect", paint, topLeft, size, "RemoteOffset($radius, $radius)")
+      }
+      "draw/oval" -> {
+        val (topLeft, size) = box()
+        draw("drawOval", paint, topLeft, size)
+      }
+      "draw/arc" -> {
+        val (topLeft, size) = box()
+        val start = node.drawFloat("startAngle") ?: 0f.floatLiteral()
+        val sweep = node.drawFloat("sweepAngle") ?: 360f.floatLiteral()
+        val useCenter = node.properties["useCenter"]?.boolOrNull() ?: false
+        draw(
+          "drawArc",
+          paint,
+          "startAngle = $start",
+          "sweepAngle = $sweep",
+          "useCenter = $useCenter",
+          "topLeft = $topLeft",
+          "size = $size",
+        )
+      }
+      "draw/circle" -> {
+        usedComponentImports += "$REMOTE_STATE_PACKAGE.min"
+        usesRemoteFloat = true
+        val radius =
+          node.drawPx("radiusDp")
+            ?: ("(min(${extent.width}, ${extent.height}) / 2.rf" +
+              (inset?.let { " - $it" } ?: "") +
+              ")")
+        val centre =
+          if (node.has("centerXDp") || node.has("centerYDp"))
+            "RemoteOffset(${node.drawPx("centerXDp") ?: extent.centerX}, " +
+              "${node.drawPx("centerYDp") ?: extent.centerY})"
+          else extent.center
+        draw("drawCircle", paint, "radius = $radius", "center = $centre")
+      }
+      "draw/line" -> {
+        usesRemoteFloat = true
+        val start =
+          "RemoteOffset(${node.drawPx("startXDp") ?: "0.rf"}, ${node.drawPx("startYDp") ?: "0.rf"})"
+        val end =
+          "RemoteOffset(${node.drawPx("endXDp") ?: extent.width}, ${node.drawPx("endYDp") ?: extent.height})"
+        draw("drawLine", paint, "start = $start", "end = $end")
+      }
+      "draw/path" -> {
+        val data = node.properties["pathData"]?.stringOrNull().orEmpty()
+        if (data.isBlank()) {
+          refusals += "nodes.${node.id}.pathData: a path needs SVG path data to draw"
+          return emptyList()
+        }
+        usedComponentImports += "androidx.compose.remote.creation.RemotePath"
+        usesRemoteFloat = true
+        val viewportWidth = node.drawFloat("viewportWidth") ?: 24f.floatLiteral()
+        val viewportHeight = node.drawFloat("viewportHeight") ?: 24f.floatLiteral()
+        lines +=
+          "${pad}withTransform({ scale(${extent.width} / $viewportWidth, ${extent.height} / $viewportHeight, " +
+            "RemoteOffset(0.rf, 0.rf)) }) {"
+        lines += "$pad${INDENT}drawPath(RemotePath(\"${data.escaped()}\"), $paint)"
+        lines += "$pad}"
+      }
+      "draw/text" -> {
+        val authored = node.properties["text"]
+        val text =
+          if (authored != null && authored.isDrawComputed())
+            computed(authored, UiValueKind.STRING, "nodes.${node.id}.text") ?: return emptyList()
+          else {
+            usesRemoteString = true
+            "\"${authored?.stringOrNull().orEmpty().escaped()}\".rs"
+          }
+        val pan =
+          when (node.properties["align"]?.stringOrNull()) {
+            "start" -> "-1"
+            "end" -> "1"
+            else -> "0"
+          }
+        usesRemoteFloat = true
+        draw(
+          "drawAnchoredText",
+          text,
+          node.drawPx("xDp") ?: extent.centerX,
+          node.drawPx("yDp") ?: extent.centerY,
+          paint,
+          "panX = $pan.rf",
+          "panY = 0.rf",
+        )
+      }
+    }
+    return lines
+  }
+
+  /** `RemotePaint { … }` for one operation's colour, style, stroke and alpha. */
+  private fun drawPaint(
+    node: UiBuilderNode,
+    operation: UiDrawing.Operation,
+    stroked: Boolean,
+    hoisted: MutableList<String>,
+    pad: String,
+  ): String {
+    usedComponentImports += "$REMOTE_STATE_PACKAGE.RemotePaint"
+    val lines = mutableListOf("color = ${drawColor(node, hoisted)}")
+    if (stroked || operation.componentId == "draw/line") {
+      usedComponentImports += "androidx.compose.ui.graphics.PaintingStyle"
+      lines += "style = PaintingStyle.Stroke"
+      lines += "strokeWidth = ${node.drawPx("strokeWidthDp") ?: 1f.dpLiteral() + ".toPx()"}"
+    }
+    node.properties["strokeCap"]?.stringOrNull()?.let { cap ->
+      usedComponentImports += "androidx.compose.ui.graphics.StrokeCap"
+      lines += "strokeCap = StrokeCap.${cap.replaceFirstChar { it.uppercaseChar() }}"
+    }
+    if (operation.componentId == "draw/text") {
+      lines += "textSize = ${node.drawPx("textSizeSp") ?: 14f.dpLiteral() + ".toPx()"}"
+    }
+    return "RemotePaint {\n" + lines.joinToString("\n") { "$pad$INDENT$it" } + "\n$pad}"
+  }
+
+  /** A draw colour: a literal, a theme role read above the canvas, or a computed colour. */
+  private fun drawColor(node: UiBuilderNode, hoisted: MutableList<String>): String {
+    val authored = node.properties["color"]
+    val alpha = node.drawFloat("alpha")
+    val base =
+      when {
+        authored != null && authored.isDrawComputed() ->
+          computed(authored, UiValueKind.COLOR, "nodes.${node.id}.color")
+        authored?.stringOrNull()?.startsWith("#") == true -> {
+          usesColorLiteral = true
+          "${authored.stringOrNull()!!.argbLiteral()}.rc"
+        }
+        !authored?.stringOrNull().isNullOrEmpty() -> {
+          usesTheme = true
+          val name = localName("drawColor")
+          hoisted += "val $name = RemoteMaterialTheme.colorScheme.${authored!!.stringOrNull()}"
+          name
+        }
+        else -> null
+      }
+        ?: run {
+          usesColorLiteral = true
+          "Color(0xFF000000).rc"
+        }
+    return if (alpha == null) base else "$base.copy(alpha = $alpha)"
+  }
+
+  private fun UiBuilderNode.has(name: String): Boolean = name in properties
+
+  /** A draw property that the player computes rather than a literal: state or an expression. */
+  private fun JsonElement.isDrawComputed(): Boolean =
+    UiExpressions.isComputed(this) || (this as? JsonObject)?.plainString("type") == "state"
+
+  /** A dp property as pixels, or null when the operation does not state it. */
+  private fun UiBuilderNode.drawPx(name: String): String? {
+    val value = properties[name] ?: return null
+    if (value.isDrawComputed()) {
+      val expression = computed(value, UiValueKind.FLOAT, "nodes.$id.$name") ?: return null
+      usedComponentImports += "$REMOTE_STATE_PACKAGE.asRemoteDp"
+      return "$expression.asRemoteDp().toPx()"
+    }
+    return value.numberOrNull()?.let { "${it.dpLiteral()}.toPx()" }
+  }
+
+  /** A unitless float property — an angle, a scale, an alpha — or null when absent. */
+  private fun UiBuilderNode.drawFloat(name: String): String? {
+    val value = properties[name] ?: return null
+    if (value.isDrawComputed()) return computed(value, UiValueKind.FLOAT, "nodes.$id.$name")
+    return value.numberOrNull()?.floatLiteral()
+  }
 
   private fun remoteValue(
     node: UiBuilderNode,
@@ -3273,6 +3600,9 @@ private const val REMOTE_BOOLEAN_FQN =
 private const val REMOTE_FLOAT_FQN = "androidx.compose.remote.creation.compose.state.RemoteFloat"
 private const val REMOTE_INT_FQN = "androidx.compose.remote.creation.compose.state.RemoteInt"
 private const val REMOTE_STATE_PACKAGE = "androidx.compose.remote.creation.compose.state"
+
+/** An Int literal in written Remote source, which needs the `ri` import. */
+private val INT_LITERAL = Regex("""\b\d+\.ri\b""")
 private const val REMOTE_COLOR_FQN = "androidx.compose.remote.creation.compose.state.RemoteColor"
 /**
  * The published Remote Compose text component, which the borrowed `m3/text` writer also serves.
