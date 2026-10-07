@@ -99,7 +99,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic
-      - run: ./gradlew :ui-builder-web:verifyUiBuilderWebArchive
+      # Binaryen only on `main`: a pull request proves the archive assembles and verifies from the
+      # production link, which is already dead-code eliminated, without the ~6-minute `wasm-opt`
+      # pass whose output only `main` publishes (`ProductionWasm.kt` in build-logic).
+      - run: ./gradlew -PuiBuilder.wasmOpt="${WASM_OPT}" :ui-builder-web:verifyUiBuilderWebArchive
+        env:
+          WASM_OPT: ${{ github.event_name != 'pull_request' }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ui-builder-wasm-dist
@@ -125,7 +130,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-provider: basic
-      - run: ./gradlew :ui-builder-renderer:verifyRendererRuntime
+      # Binaryen only on `main`, as in `web-archive`. The editor-marker check still holds without it:
+      # dead-code elimination is the production link's, not Binaryen's.
+      - run: ./gradlew -PuiBuilder.wasmOpt="${WASM_OPT}" :ui-builder-renderer:verifyRendererRuntime
+        env:
+          WASM_OPT: ${{ github.event_name != 'pull_request' }}
 
   # The check the ruleset requires. It must run whatever its `needs` did, rather than be skipped,
   # because a skipped required check reads as passing; so it runs unless the workflow was cancelled
