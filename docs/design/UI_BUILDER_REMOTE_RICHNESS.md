@@ -54,7 +54,7 @@ behind a compile-time flag.
 | | Scope | Status |
 | --- | --- | --- |
 | M1 | Computed values: `expr`/`system` wrappers, formula text, canvas evaluation, Remote Kotlin lowering, inspector | Landed |
-| M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint, gradients, clips, conditionals, loops | Landed (path clips, morphs and text on a path follow) |
+| M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint, gradients, clips (box or path), morphs, conditionals, loops | Landed (text on a path follows) |
 | M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Long press and double tap landed (`combinedClickable`); the rest planned |
 | M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Landed as `remoteCall` over the generated vocabulary (33 calls); lambda-only calls (`graphicsLayer`, `drawWithContent`) planned |
 | M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Horizontal and vertical page indicators landed; the rest planned |
@@ -164,7 +164,8 @@ canvas stand-in and the Remote emitter.
 | `draw/path` | `pathData` (SVG), `viewportWidth` `viewportHeight` + paint | `drawPath(RemotePath(…))`, scaled to the canvas |
 | `draw/text` | `text`, `xDp` `yDp` anchor, `textSizeSp`, `align` | `drawAnchoredText` |
 | `draw/group` | `translateXDp` `translateYDp` `rotate` `scale` `pivotXDp` `pivotYDp`; its own `ops` | `withTransform({ … }) { … }` |
-| `draw/clip` | box, `exclude`; its own `ops` | `clipRect(l, t, r, b) { … }`, `ClipOp.Difference` when excluding |
+| `draw/clip` | box, or `pathData` in a viewport; `exclude`; its own `ops` | `clipRect(l, t, r, b) { … }`, or `withTransform({ scale(in); clipPath(path); scale(out) }) { … }`; `ClipOp.Difference` when excluding |
+| `draw/morph` | `pathData`, `toPathData`, `progress` (0–1), viewport + paint | `drawTweenPath(from, to, tween = progress, paint)`, scaled to the canvas |
 | `draw/if` | `condition` (a flag, usually state or a formula); its own `ops` | `drawConditionally(condition) { … }` |
 | `draw/repeat` | `from` `until` `step` (unitless), `index` (a name, `i` when absent); its own `ops` | `loop(from, until, step) { i -> … }` |
 
@@ -186,6 +187,12 @@ so a ring drawn with defaults stays inside; angles are clockwise from three o'cl
 - **Remote Kotlin.** `RemoteCanvas(modifier) { … }`, coordinates as `n.rdp.toPx()`, a computed one
   as `expression.asRemoteDp().toPx()`, a theme colour read into a local above the canvas because
   `RemoteMaterialTheme.colorScheme` is a composable read and the draw lambda is not.
+
+A path clip keeps its operations in canvas coordinates: it scales into its viewport, clips, and
+scales back out, all inside the one `withTransform` block, so only the clip has the viewport's shape.
+A morph's two paths must tween — the same commands in order with the same count of numbers — which
+`UiDrawing.tweenPathData` checks for the export and uses to draw the in-between path on the canvas;
+the player interpolates the same numbers pairwise.
 
 The three containers decide whether, where and how often their operations draw. A `draw/repeat`
 runs while its index is below `until`, as the player's `loop` does, and binds the index by name:
@@ -218,10 +225,8 @@ A progress ring and a clock hand, as a document:
 
 ### Not yet
 
-- `clipPath`: a path clip needs the path in canvas pixels, and `draw/path` scales its viewport
-  with a transform that a clip would carry onto everything it encloses.
+- Text on a path (text on a circle is written by `drawTextOnCircle`; see below once it lands).
 - More than two gradient stops, gradient geometry other than the canvas's, and images as paint.
-- Path morphs and text on a path.
 - The device preview in remote-m3-catalog plays the canvas once its renderer adds the case.
 - The regular Compose lane: `Canvas { }` is the same shape, but no catalog that exports regular
   Compose offers the vocabulary yet.

@@ -26,6 +26,7 @@ object UiDrawing {
   const val CLIP: String = "draw/clip"
   const val IF: String = "draw/if"
   const val REPEAT: String = "draw/repeat"
+  const val MORPH: String = "draw/morph"
   const val OPS_SLOT: String = "ops"
 
   /** The slot trait a canvas and a group accept, and only draw operations carry. */
@@ -96,6 +97,19 @@ object UiDrawing {
       Property.Color("gradientColor", "Where the gradient ends. Transparent when absent."),
     )
   private val paint = listOf(color, style, strokeWidth, strokeCap, alpha) + gradient
+
+  private val viewportWidth =
+    Property.Number(
+      "viewportWidth",
+      Unit.VIEWPORT,
+      "The width the path data is drawn in; scaled to the canvas. 24 when absent.",
+    )
+  private val viewportHeight =
+    Property.Number(
+      "viewportHeight",
+      Unit.VIEWPORT,
+      "The height the path data is drawn in; scaled to the canvas. 24 when absent.",
+    )
 
   private fun box(what: String) =
     listOf(
@@ -179,16 +193,27 @@ object UiDrawing {
         "drawPath",
         listOf(
           Property.Text("pathData", "SVG path data, e.g. `M2 12 L12 2 L22 12 Z`."),
-          Property.Number(
-            "viewportWidth",
-            Unit.VIEWPORT,
-            "The width the path data is drawn in; scaled to the canvas. 24 when absent.",
+          viewportWidth,
+          viewportHeight,
+        ) + paint,
+      ),
+      Operation(
+        MORPH,
+        "Path morph",
+        "drawTweenPath",
+        listOf(
+          Property.Text("pathData", "The path at progress 0, as SVG path data."),
+          Property.Text(
+            "toPathData",
+            "The path at progress 1: the same commands as `pathData`, with other numbers.",
           ),
           Property.Number(
-            "viewportHeight",
-            Unit.VIEWPORT,
-            "The height the path data is drawn in; scaled to the canvas. 24 when absent.",
+            "progress",
+            Unit.FRACTION,
+            "How far from the first path to the second, 0 to 1; bind it to state or a formula.",
           ),
+          viewportWidth,
+          viewportHeight,
         ) + paint,
       ),
       Operation(
@@ -228,9 +253,18 @@ object UiDrawing {
         "Clip",
         "clipRect",
         box("clip rectangle") +
-          Property.Flag(
-            "exclude",
-            "Draw everywhere except the rectangle, rather than only inside it.",
+          listOf(
+            Property.Text(
+              "pathData",
+              "Clip to this SVG path, drawn in the viewport and scaled to the canvas, instead of " +
+                "the rectangle.",
+            ),
+            viewportWidth,
+            viewportHeight,
+            Property.Flag(
+              "exclude",
+              "Draw everywhere except the clip, rather than only inside it.",
+            ),
           ),
         container = true,
       ),
@@ -320,6 +354,37 @@ object UiDrawing {
   /** The expression scope at [nodeId]: the document's state plus the loop indices around it. */
   fun expressionScope(document: UiBuilderDocument, nodeId: String): UiExpressions.Scope =
     UiExpressions.Scope(UiExpressions.Scope.of(document).stateKinds, indexKinds(document, nodeId))
+
+  private val PATH_TOKEN = Regex("""[A-Za-z]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?""")
+
+  /**
+   * [from] part way to [to] as SVG path data, or null when the two do not tween: the player's
+   * `drawTweenPath` interpolates the two paths' numbers pairwise, so they must have the same
+   * commands, in order, with the same count of numbers. Commands are kept as written, so a morph
+   * can bend a curve but not turn a line into one.
+   */
+  fun tweenPathData(from: String, to: String, progress: Float): String? {
+    val a = PATH_TOKEN.findAll(from).map { it.value }.toList()
+    val b = PATH_TOKEN.findAll(to).map { it.value }.toList()
+    if (a.isEmpty() || a.size != b.size) return null
+    return buildString {
+      a.indices.forEach { index ->
+        val left = a[index]
+        val right = b[index]
+        val leftNumber = left.toFloatOrNull()
+        val rightNumber = right.toFloatOrNull()
+        when {
+          leftNumber == null && left == right -> append(left)
+          leftNumber != null && rightNumber != null -> {
+            append(leftNumber + (rightNumber - leftNumber) * progress)
+            append(' ')
+          }
+          else -> return null
+        }
+      }
+    }
+      .trim()
+  }
 
   val BY_ID: Map<String, Operation> = OPERATIONS.associateBy { it.componentId }
 

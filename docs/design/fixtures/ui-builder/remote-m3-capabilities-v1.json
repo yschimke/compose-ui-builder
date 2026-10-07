@@ -2803,6 +2803,143 @@
         },
         {
             "code": null,
+            "componentId": "draw/morph",
+            "displayName": "Path morph",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "pathData",
+                    "notes": "The path at progress 0, as SVG path data.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "toPathData",
+                    "notes": "The path at progress 1: the same commands as `pathData`, with other numbers.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "progress",
+                    "notes": "How far from the first path to the second, 0 to 1; bind it to state or a formula.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportWidth",
+                    "notes": "The width the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportHeight",
+                    "notes": "The height the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawTweenPath` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "draw/text",
             "displayName": "Text",
             "modifierCapabilities": [],
@@ -3062,9 +3199,36 @@
                 },
                 {
                     "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "pathData",
+                    "notes": "Clip to this SVG path, drawn in the viewport and scaled to the canvas, instead of the rectangle.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportWidth",
+                    "notes": "The width the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportHeight",
+                    "notes": "The height the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
                     "jsonType": "boolean",
                     "name": "exclude",
-                    "notes": "Draw everywhere except the rectangle, rather than only inside it.",
+                    "notes": "Draw everywhere except the clip, rather than only inside it.",
                     "required": false
                 }
             ],
@@ -17636,6 +17800,9 @@
                     "group": "Drawing"
                 },
                 "draw/line": {
+                    "group": "Drawing"
+                },
+                "draw/morph": {
                     "group": "Drawing"
                 },
                 "draw/oval": {
