@@ -12,12 +12,17 @@
 // HARNESS_CHROMIUM. Write the output to a file, not a pipe: a pipe holds it until the end.
 // For digging into one result: MEMORY_SCENARIOS (comma-separated ids), MEMORY_INFRA (Chromium's
 // per-allocator memory dump), MEMORY_HEAPSNAPSHOT (a .heapsnapshot per scenario), MEMORY_RESOURCES
-// (Resource Timing sizes) and MEMORY_BLOCK (a URL regex to abort, e.g. `fonts\.gstatic\.com`).
+// (Resource Timing sizes), MEMORY_TIMELINE (renderer PSS and JS heap every 250 ms, no forced GC)
+// MEMORY_BLOCK (a URL regex to abort, e.g. `fonts\.gstatic\.com`), MEMORY_FAIL_REQUESTS (service
+// request types the stand-in host answers 503, e.g. `listCatalogs`) and MEMORY_CHROMIUM_ARGS
+// (extra switches, space-separated, e.g. `--js-flags=--no-wasm-tier-up`).
+// MEMORY_MAX_TURBOFAN_ZONE_MB fails the run when one Wasm TurboFan compile holds more than that.
 
 import { createServer } from 'node:http';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
+import { largestTurbofanCompile } from './wasm-functions.mjs';
 
 const dist = resolve(process.argv[2] ?? 'ui-builder/build/wasmDist');
 const out = resolve(process.argv[3] ?? 'build/web-memory');
@@ -156,6 +161,10 @@ const server = createServer(async (request, response) => {
       const chunks = [];
       for await (const chunk of request) chunks.push(chunk);
       const { requestId, request: body } = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      if (process.env.MEMORY_FAIL_REQUESTS?.split(',').includes(body.type)) {
+        response.writeHead(503);
+        return response.end(`${body.type} refused by MEMORY_FAIL_REQUESTS`);
+      }
       return respondJson(response, { schemaVersion: 1, requestId, response: serviceResponse(body) });
     }
     if (path.startsWith('/api/')) {
@@ -308,14 +317,49 @@ async function sample(page, cdp, browser) {
 }
 
 let browserVersion = null;
+// MEMORY_MAX_TURBOFAN_ZONE_MB: V8 logs every Wasm function it compiles, with the most memory the
+// compile held. A generated table that Binaryen inlined into one huge function shows up here as a
+// single TurboFan compile holding hundreds of MB; see `wasmNoInlinePatterns` in
+// ui-builder/build.gradle.kts. The log is on the browser's stdout, which only a launched server
+// exposes, so the guard launches through `launchServer`.
+const turbofanLimitMb = process.env.MEMORY_MAX_TURBOFAN_ZONE_MB
+  ? Number(process.env.MEMORY_MAX_TURBOFAN_ZONE_MB)
+  : null;
+
+function chromiumArgs() {
+  const extra = process.env.MEMORY_CHROMIUM_ARGS ? process.env.MEMORY_CHROMIUM_ARGS.split(' ') : [];
+  // Chromium honours one --js-flags, so the trace flag joins any the caller passed.
+  const jsFlags = extra.filter((a) => a.startsWith('--js-flags=')).map((a) => a.slice('--js-flags='.length));
+  if (turbofanLimitMb !== null) jsFlags.push('--trace-wasm-compilation-times');
+  return [
+    '--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist',
+    ...extra.filter((a) => !a.startsWith('--js-flags=')),
+    ...(jsFlags.length ? [`--js-flags=${jsFlags.join(',')}`] : []),
+  ];
+}
+
 async function launchBrowser() {
-  const browser = await chromium.launch({
-    args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  const options = {
+    args: chromiumArgs(),
     ...(process.env.HARNESS_CHROMIUM ? { executablePath: process.env.HARNESS_CHROMIUM } : {}),
-  });
+  };
+  let browser;
+  if (turbofanLimitMb === null) {
+    browser = await chromium.launch(options);
+    browser.compileLog = () => '';
+  } else {
+    const browserServer = await chromium.launchServer(options);
+    let log = '';
+    browserServer.process().stdout.on('data', (chunk) => { log += chunk; });
+    browser = await chromium.connect(browserServer.wsEndpoint());
+    const close = browser.close.bind(browser);
+    browser.close = async () => { await close(); await browserServer.close(); };
+    browser.compileLog = () => log;
+  }
   browserVersion ??= browser.version();
   return browser;
 }
+
 
 async function measure(scenario, viewportName) {
   const browser = await launchBrowser();
@@ -327,7 +371,33 @@ async function measure(scenario, viewportName) {
     if (process.env.MEMORY_BLOCK) await context.route(new RegExp(process.env.MEMORY_BLOCK), (route) => route.abort());
     const cdp = await context.newCDPSession(page);
     await cdp.send('Performance.enable');
+    if (process.env.MEMORY_TRACE) {
+      await browser.startTracing(page, {
+        path: join(out, `${scenario.id}-${viewportName}.trace.json`),
+        categories: process.env.MEMORY_TRACE.split(','),
+      });
+    }
     const started = Date.now();
+    // MEMORY_TIMELINE: the renderer's PSS and the JS heap every 250 ms, with no forced GC, from
+    // navigation to the end of the settle window — where a spike rises and falls.
+    const timeline = [];
+    let timelineTimer = null;
+    if (process.env.MEMORY_TIMELINE) {
+      const session = await browser.newBrowserCDPSession();
+      const tick = async () => {
+        try {
+          const { processInfo } = await session.send('SystemInfo.getProcessInfo');
+          const renderer = processInfo.find((p) => p.type === 'renderer');
+          const memory = renderer ? await procMemory(renderer.id) : null;
+          const { metrics } = await cdp.send('Performance.getMetrics');
+          const heap = metrics.find((m) => m.name === 'JSHeapUsedSize')?.value ?? 0;
+          const marks = await page.evaluate(() => Object.keys(globalThis.__uiBuilderStartup?.marks ?? {})).catch(() => []);
+          timeline.push({ ms: Date.now() - started, rendererPss: memory?.pss ?? null, jsHeapUsed: heap, marks: marks.length });
+        } catch { /* navigation in flight */ }
+        if (timelineTimer !== false) timelineTimer = setTimeout(tick, 250);
+      };
+      tick();
+    }
     page.on('console', (message) => debug(`console ${message.type()}: ${message.text()}`));
     debug('goto', scenario.path);
     await page.goto(`${base}${scenario.path}`);
@@ -337,6 +407,7 @@ async function measure(scenario, viewportName) {
     const readyMs = Date.now() - started;
     debug('ready', readyMs);
     const atReady = await sample(page, cdp, browser);
+    if (process.env.MEMORY_INFRA) atReady.allocators = await memoryInfra(browser);
     await page.waitForTimeout(settleMs);
     const settled = await sample(page, cdp, browser);
     if (process.env.MEMORY_INFRA) settled.allocators = await memoryInfra(browser);
@@ -350,6 +421,11 @@ async function measure(scenario, viewportName) {
       settled.resources = await page.evaluate(() => performance.getEntriesByType('resource')
         .map((e) => ({ name: e.name.replace(location.origin, ''), size: e.decodedBodySize, type: e.initiatorType })));
     }
+    if (process.env.MEMORY_TRACE) await browser.stopTracing();
+    if (turbofanLimitMb !== null) settled.largestTurbofanCompile = largestTurbofanCompile(browser.compileLog());
+    if (timelineTimer) clearTimeout(timelineTimer);
+    timelineTimer = false;
+    if (timeline.length) settled.timeline = timeline;
     const status = await page.evaluate(() => ({ ...document.documentElement.dataset }));
     await page.screenshot({ path: join(out, `${scenario.id}-${viewportName}.png`) });
     return { readyMs, atReady, settled, errors, status };
@@ -437,5 +513,30 @@ for (const r of report.results) {
   );
 }
 console.log(`\nUnserved requests: ${JSON.stringify(report.unservedRequests)}`);
+let failed = false;
+if (turbofanLimitMb !== null) {
+  const over = [];
+  for (const r of report.results) {
+    for (const sample of r.samples ?? []) {
+      const largest = sample.settled?.largestTurbofanCompile;
+      if (!largest) continue;
+      const mb = largest.maxZoneBytes / 1024 / 1024;
+      console.log(
+        `TurboFan ${r.viewport} ${r.scenario}: largest compile held ${mb.toFixed(0)} MB for ${largest.ms} ms ` +
+          `(function #${largest.functionIndex}, ${largest.bodyBytes} B body, ${largest.compiles} compiles)`,
+      );
+      if (mb > turbofanLimitMb) over.push(`${r.viewport} ${r.scenario}: #${largest.functionIndex} ${mb.toFixed(0)} MB`);
+    }
+  }
+  if (over.length) {
+    console.error(
+      `TurboFan compiles over ${turbofanLimitMb} MB: ${over.join('; ')}. A generated table has probably been ` +
+        'inlined into one function again; see wasmNoInlinePatterns in ui-builder/build.gradle.kts.',
+    );
+    failed = true;
+  }
+}
 console.log(`Report: ${join(out, 'memory.json')}`);
 server.close();
+// Explicit: something in Playwright's connected-browser teardown resets process.exitCode.
+if (failed) process.exit(1);

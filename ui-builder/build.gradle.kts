@@ -415,6 +415,43 @@ tasks.named("check") { dependsOn("checkWindowSidecarVersion") }
 //
 // `-PuiBuilder.wasmOpt=false` packages `kotlin/` instead; see `ProductionWasm.kt` in build-logic.
 val wasmExecutableDir = productionWasmDir
+
+// Generated lookup tables Binaryen must leave as separate functions. Each entry is called from one
+// place, and Binaryen inlines a one-caller function whatever its size, so it folded all ~100
+// Material 3 locale tables into a 328 KB `getTranslation` and every icon builder into a 686 KB
+// `generatedGoogleMaterialIconImageVector`. A Material 3 design calls `getTranslation` often enough
+// for V8 to tier it up, and TurboFan held 312 MB for the 6 s it spent on that one function: the
+// editor peaked near 500 MB on opening a Material 3 design and only fell back once it finished.
+// Kept apart, a lookup costs one call and only the table a design reaches is ever compiled; the
+// longest TurboFan compile on that screen is 0.3 s and the peak is ~315 MB. A global cap
+// (`--one-caller-inline-max-function-size`) is not a substitute: at 1000 it left the icon lookup
+// whole at 697 KB, and V8 then took 2.2 GB and 12 s to compile it. `wasm-opt` matches `*`.
+val wasmNoInlinePatterns =
+  listOf(
+    "androidx.compose.material3.l10n.*",
+    "androidx.compose.foundation.text.l10n.*",
+    "androidx.compose.material.icons.*",
+    "ee.schimke.composeai.uibuilder.renderer.sdk.generated*",
+    "ee.schimke.composeai.uibuilder.export.generatedMaterialIconMembersChunk*",
+  )
+
+// `--no-inline` is a pass, so it has to run before the optimisation passes that inline: appended
+// after them, where `perFileBinaryenArguments` would put it, it changes nothing. The rules go
+// straight after the plugin's own `--no-inline` entries, and a plugin whose defaults no longer
+// have that shape fails here rather than quietly building the 500 MB spike back in.
+tasks.withType<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenExec>().configureEach {
+  val defaults = org.jetbrains.kotlin.gradle.internal.platform.wasm.BinaryenConfig.binaryenArgs
+  val insertAt = defaults.indexOfLast { it.startsWith("--no-inline=") } + 1
+  check(insertAt > 0) {
+    "the Kotlin plugin's Binaryen defaults have no --no-inline entry to place the rules after"
+  }
+  binaryenArguments.set(
+    defaults.subList(0, insertAt) +
+      wasmNoInlinePatterns.map { "--no-inline=$it" } +
+      defaults.subList(insertAt, defaults.size)
+  )
+}
+
 val skikoRuntimeDir = layout.buildDirectory.dir("compose/skiko-runtime-processed-wasmjs")
 
 tasks.register<Sync>("wasmFrontendDist") {
