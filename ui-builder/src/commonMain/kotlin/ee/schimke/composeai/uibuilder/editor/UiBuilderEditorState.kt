@@ -47,6 +47,7 @@ import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiExpressions
 import ee.schimke.composeai.uibuilder.export.WidgetAssetBytes
 import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.export.isWearWidget
@@ -341,6 +342,8 @@ class UiBuilderEditorReducer(
         commitProperty(state, event.nodeId, event.property, event.draft)
       is UiBuilderEditorEvent.BindPropertyToState ->
         bindPropertyToState(state, event.nodeId, event.property, event.variable, event.equalsValue)
+      is UiBuilderEditorEvent.BindPropertyToFormula ->
+        bindPropertyToFormula(state, event.nodeId, event.property, event.formula)
       is UiBuilderEditorEvent.UnbindProperty -> unbindProperty(state, event.nodeId, event.property)
       is UiBuilderEditorEvent.ClearProperty -> clearProperty(state, event.nodeId, event.property)
       is UiBuilderEditorEvent.MakeComponent -> makeComponent(state, event.name)
@@ -769,6 +772,24 @@ class UiBuilderEditorReducer(
         else
           JsonObject(mapOf("type" to JsonPrimitive("state"), "variable" to JsonPrimitive(variable)))
       validator.validate(state.document, nodeId, propertyName, candidate) == null
+    }
+  }
+
+  /**
+   * Whether [propertyName] may hold a computed value: a wire contract that can save one, a Remote
+   * Compose catalog, where the player evaluates it, and a property one of the probe expressions is
+   * accepted on.
+   */
+  fun canBindToFormula(
+    state: UiBuilderEditorState,
+    nodeId: String,
+    propertyName: String,
+  ): Boolean {
+    if (!UiExpressions.wireSupported) return false
+    if (catalog.platform != UiBuilderCatalogPlatform.REMOTE_COMPOSE) return false
+    if (state.document.nodes[nodeId] == null) return false
+    return FORMULA_PROBES.any { probe ->
+      validator.validate(state.document, nodeId, propertyName, probe) == null
     }
   }
 
@@ -1450,6 +1471,16 @@ class UiBuilderEditorReducer(
             numberBounds = numberBounds,
             error = state.propertyErrors[EditorPropertyLocation(node.id, property.name)],
             notes = if (loopRows) "Each row fills the same layout template." else property.notes,
+            boundFormula =
+              nodes
+                .map { other ->
+                  other.properties[property.name]
+                    ?.takeIf(UiExpressions::isComputed)
+                    ?.let(UiExpressions::format)
+                }
+                .distinct()
+                .singleOrNull(),
+            formulaAllowed = nodes.size == 1 && canBindToFormula(state, node.id, property.name),
           )
           .let(::listOf)
       }
@@ -3946,6 +3977,59 @@ class UiBuilderEditorReducer(
   }
 
   /**
+   * Set a property to a formula the player evaluates: `time.secondOfHour * 6`, `count + 1`.
+   *
+   * The text is parsed against the design's state variables into the `expr` tree the document
+   * stores, then validated like any other write, so a formula whose result the property cannot hold
+   * — a number into a colour — is refused here with the reason rather than at export.
+   */
+  private fun bindPropertyToFormula(
+    state: UiBuilderEditorState,
+    nodeId: String,
+    propertyName: String,
+    formula: String,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    if (state.document.nodes[nodeId] == null) return state
+    val encoded =
+      try {
+        UiExpressions.parseFormula(formula, state.document.stateVariables.keys)
+      } catch (failure: UiExpressions.FormulaError) {
+        return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          failure.message.orEmpty(),
+          nodeId,
+          propertyName,
+        )
+      }
+    val checked = UiExpressions.check(encoded, UiExpressions.Scope.of(state.document), propertyName)
+    if (checked is UiExpressions.Checked.Issue) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        checked.message,
+        nodeId,
+        propertyName,
+      )
+    }
+    validator.validate(state.document, nodeId, propertyName, encoded)?.let { issue ->
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_PROPERTY,
+        issue.message,
+        nodeId,
+        propertyName,
+      )
+    }
+    return state.apply(
+      sequence,
+      listOf(DesignOperation.SetProperty(nodeId, propertyName, encoded)),
+      selectionAfter = nodeId,
+    )
+  }
+
+  /**
    * Give a bound property a literal again.
    *
    * Needed because a bound property refuses a typed literal — `commitProperty` will not rewrite a
@@ -3979,7 +4063,7 @@ class UiBuilderEditorReducer(
       catalog.componentsById[node.componentId]?.propertiesByName?.get(propertyName) ?: return state
     val current =
       (node.properties[propertyName] as? JsonObject)?.get("type")?.primitiveOrNull()?.contentOrNull
-    if (current !in STATE_VALUE_TYPES) return state
+    if (current !in STATE_VALUE_TYPES && current !in COMPUTED_VALUE_TYPES) return state
     // Deliberately not `defaultEncodedValue`: for some properties the catalog default *is* a state
     // binding — a text field's `value` defaults to one — so unbinding to the default would leave
     // the property bound, which is a no-op for exactly the properties most likely to be bound.

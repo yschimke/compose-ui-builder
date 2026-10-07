@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiExpressions
 import ee.schimke.composeai.uibuilder.renderer.sdk.uiBuilderModifier
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -791,6 +792,10 @@ internal fun propertyWrapperIssue(type: String, encodedValue: JsonObject): Strin
       )
         null
       else "adaptiveGrid wrapper must contain exactly type and numeric minimumCellWidthDp"
+    // A computed value: its tree's shape here, its types against the document's state at the
+    // catalog check, which is where the declarations are.
+    UiExpressions.EXPR,
+    UiExpressions.SYSTEM -> UiExpressions.shapeIssue(encodedValue)
     // Every name here is in `PropertyValueKinds.WRAPPER_TYPES`; that set is wider, because `list`
     // arrives on inserts this function never sees and is checked by
     // `inspectUiBuilderArgumentBindings` instead. `WrapperVocabularyTest` holds the union against

@@ -603,7 +603,7 @@ private fun JsonElement.unwrapPropertyValue(): JsonElement =
 /**
  * The wrapper spellings that mean "read this from a declared state variable" rather than a value.
  */
-private val STATE_BINDING_WRAPPERS = setOf("state", "stateEquals")
+private val STATE_BINDING_WRAPPERS = setOf("state", "stateEquals", "expr", "system")
 
 /** The wire's own id for a node that places a component defined by the design. */
 private const val DESIGN_COMPONENT_INSTANCE_COMPONENT_ID = "design/component-instance"

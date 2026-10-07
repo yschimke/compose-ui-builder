@@ -43,6 +43,10 @@ data class EditorPropertyField(
   val mixed: Boolean = false,
   /** The state variable this property is bound to, if any. */
   val boundVariable: String? = null,
+  /** The formula this property is computed by, as an author would type it, if it is one. */
+  val boundFormula: String? = null,
+  /** Whether the property may be given a formula at all. */
+  val formulaAllowed: Boolean = false,
   val nodeId: String,
   val name: String,
   val label: String,

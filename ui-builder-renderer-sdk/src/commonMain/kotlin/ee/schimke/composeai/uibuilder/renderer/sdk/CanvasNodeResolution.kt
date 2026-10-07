@@ -1,7 +1,12 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
+import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiExpressions
+import ee.schimke.composeai.uibuilder.export.UiValueKind
 import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -18,7 +23,91 @@ fun resolveCanvasNode(
   arguments: JsonObject,
   state: Map<String, String?>,
   mapping: CanvasAdapterMappingV1?,
-): UiBuilderNode = node.withArguments(arguments).withPreviewState(state).forCanvas(mapping)
+  expressions: CanvasExpressions? = null,
+): UiBuilderNode =
+  node
+    .withArguments(arguments)
+    .let { expressions?.evaluate(it, arguments, state) ?: it }
+    .withPreviewState(state)
+    .forCanvas(mapping)
+
+/**
+ * Computed values (`expr`/`system`) evaluated for one frame of the canvas: at the preview state,
+ * the row or placement arguments in scope, and the document's fixed time.
+ *
+ * Each property and each modifier field holding one is replaced by the literal it evaluates to, so
+ * adapters never see an expression and draw exactly what they drew for a typed literal. An
+ * expression that does not type is left in place, where the adapter ignores it as it ignores any
+ * value it cannot read; the reducer has already refused it at commit.
+ */
+class CanvasExpressions(
+  private val stateKinds: Map<String, UiValueKind>,
+  private val clock: UiExpressions.Clock,
+) {
+  internal fun evaluate(
+    node: UiBuilderNode,
+    arguments: JsonObject,
+    state: Map<String, String?>,
+  ): UiBuilderNode {
+    val computed =
+      node.properties.values.any(UiExpressions::isComputed) ||
+        node.modifiers.any { modifier ->
+          (modifier as? JsonObject)?.values?.any(UiExpressions::isComputed) == true
+        }
+    if (!computed) return node
+    val scope =
+      UiExpressions.Scope(stateKinds) { key ->
+        ((arguments[key] as? JsonObject)?.get("type") as? JsonPrimitive)
+          ?.contentOrNull
+          ?.let(UiValueKind::fromWire)
+      }
+    val environment =
+      UiExpressions.Environment(
+        state = state,
+        bindings = { key -> (arguments[key] as? JsonObject)?.get("value") as? JsonPrimitive },
+        clock = clock,
+      )
+    fun literal(value: JsonElement): JsonObject? =
+      (UiExpressions.check(value, scope) as? UiExpressions.Checked.Ok)?.let {
+        UiExpressions.evaluateWrapped(it.expr, environment)
+      }
+    return node.copy(
+      properties =
+        JsonObject(
+          node.properties.mapValues { (_, value) ->
+            if (UiExpressions.isComputed(value)) literal(value) ?: value else value
+          }
+        ),
+      modifiers =
+        JsonArray(
+          node.modifiers.map { modifier ->
+            val fields = modifier as? JsonObject ?: return@map modifier
+            if (fields.values.none(UiExpressions::isComputed)) return@map modifier
+            // Modifier fields are bare numbers rather than wrappers, so the literal's value goes
+            // in.
+            JsonObject(
+              fields.mapValues { (_, value) ->
+                if (UiExpressions.isComputed(value)) literal(value)?.get("value") ?: value
+                else value
+              }
+            )
+          }
+        ),
+    )
+  }
+
+  companion object {
+    /** The kinds [document] declares and its `environment.fixedTime`. */
+    fun of(document: UiBuilderDocument): CanvasExpressions =
+      CanvasExpressions(
+        stateKinds = UiExpressions.Scope.of(document).stateKinds,
+        clock =
+          UiExpressions.Clock.of(
+            (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull
+          ),
+      )
+  }
+}
 
 private fun UiBuilderNode.forCanvas(mapping: CanvasAdapterMappingV1?): UiBuilderNode {
   if (mapping == null) return this

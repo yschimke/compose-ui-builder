@@ -22,6 +22,8 @@ fun stateBindingMatchesCatalog(
 ): Boolean? {
   val binding = value as? JsonObject ?: return null
   val kind = (binding["type"] as? JsonPrimitive)?.content
+  if (UiExpressions.isComputed(binding))
+    return computedMatchesCatalog(binding, jsonType, allowedValues, declarations, propertyName)
   if (kind != "state" && kind != "stateEquals") return null
   val types =
     when (jsonType) {
@@ -56,4 +58,47 @@ fun stateBindingMatchesCatalog(
     "float" -> "number" in types
     else -> false
   }
+}
+
+/**
+ * Whether a computed value (`expr`/`system`) may fill a property of [jsonType].
+ *
+ * The same question [stateBindingMatchesCatalog] answers for a state read, asked of the type the
+ * expression produces: a number into a number, a Boolean into a flag, anything printable into text,
+ * a colour only into a colour. An expression that does not type against the declared state is not a
+ * match at all — the canvas could not evaluate it.
+ */
+private fun computedMatchesCatalog(
+  value: JsonObject,
+  jsonType: JsonElement,
+  allowedValues: List<JsonElement>,
+  declarations: Map<String, JsonElement>,
+  propertyName: String,
+): Boolean {
+  val scope =
+    UiExpressions.Scope(
+      declarations
+        .mapNotNull { (name, declaration) ->
+          UiExpressions.Scope.stateKind(declaration as? JsonObject)?.let { name to it }
+        }
+        .toMap()
+    )
+  val checked = UiExpressions.check(value, scope) as? UiExpressions.Checked.Ok ?: return false
+  val types =
+    when (jsonType) {
+      is JsonArray -> jsonType.mapNotNull { (it as? JsonPrimitive)?.content }.toSet()
+      is JsonPrimitive -> setOf(jsonType.content)
+      else -> emptySet()
+    }
+  if ("object" in types) return true
+  if (allowedValues.isNotEmpty() || PropertyValueKinds.isAssetKey(propertyName)) return false
+  val kind = checked.expr.kind
+  if (PropertyValueKinds.isColour(propertyName)) return kind == UiValueKind.COLOR
+  return when (kind) {
+    UiValueKind.STRING -> "string" in types
+    UiValueKind.BOOL -> "boolean" in types
+    UiValueKind.INT -> "integer" in types || "number" in types
+    UiValueKind.FLOAT -> "number" in types
+    UiValueKind.COLOR -> false
+  } || ("string" in types && kind != UiValueKind.COLOR)
 }
