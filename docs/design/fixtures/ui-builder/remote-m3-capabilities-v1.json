@@ -3661,10 +3661,7 @@
                 },
                 {
                     "allowedValues": [],
-                    "jsonType": [
-                        "number",
-                        "object"
-                    ],
+                    "jsonType": "number",
                     "name": "textSizeSp",
                     "notes": "Text size. The time text style's when absent.",
                     "required": false

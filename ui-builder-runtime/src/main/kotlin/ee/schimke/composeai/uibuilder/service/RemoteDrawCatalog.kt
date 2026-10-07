@@ -94,7 +94,13 @@ internal fun remoteDrawComponent(
           "text either side. The canvas shows the design's preview time.",
       traits = listOf("RemoteAuthorable"),
       slots = emptyList(),
-      properties = UiTimeText.PROPERTIES.map(::drawProperty),
+      // `textSizeSp` is a literal: `RemoteTextUnit` has no public constructor, so a bound or
+      // computed size has no spelling in the export, which refuses one.
+      properties =
+        UiTimeText.PROPERTIES.map(::drawProperty).map { property ->
+          if (property.name != "textSizeSp") property
+          else property.newBuilder().also { it.jsonType = JsonPrimitive("number") }.build()
+        },
       modifiers = true,
     )
   }

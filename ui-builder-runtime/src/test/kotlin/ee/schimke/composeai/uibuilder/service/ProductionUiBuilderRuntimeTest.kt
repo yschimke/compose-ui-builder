@@ -315,6 +315,32 @@ class ProductionUiBuilderRuntimeTest {
   }
 
   @Test
+  fun `a container image key is refused unless the registry lists it, as an asset key is`() {
+    val catalogs = CurrentM3UiBuilderCatalogExecutor(catalogSystemIds = linkedSetOf("remote-m3"))
+    val catalog = catalogs.listCatalogs().single()
+    fun card(key: UiValueV1) =
+      DesignNodeV1(
+        id = "card",
+        componentId = "remote-m3/remote-card",
+        properties = mapOf("containerImageKey" to key),
+      )
+
+    val unresolved =
+      assertNotNull(
+        catalogs.validateWrite(catalog, card(StringValueV1("avatar-lain")), "containerImageKey")
+      )
+    assertEquals("INVALID_PROPERTY", unresolved.code)
+    assertEquals("containerImageKey", unresolved.field)
+    assertNull(
+      catalogs.validateWrite(
+        catalog,
+        card(AssetKeyValueV1("jetcaster.cover.google-developers-podcast")),
+        "containerImageKey",
+      )
+    )
+  }
+
+  @Test
   fun `an asset key is refused unless the catalog's registry lists it`() {
     val catalogs = CurrentM3UiBuilderCatalogExecutor()
     val catalog = catalogs.listCatalogs().single()
