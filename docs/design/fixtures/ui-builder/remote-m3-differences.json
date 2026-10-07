@@ -162,5 +162,29 @@
       "outlineVariant",
       "transparent"
     ]
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-label-button",
+    "why": "Built-in only, deliberately: `remote-m3/remote-label-button` is declared by hand in ui-builder (`RemoteMaterial3`'s assembled label-overload record, listed in `UNPUBLISHED_REMOTE_M3_IDS`) because the published record holds one overload per symbol and has no row for it, so the published catalog cannot offer it until wear-m3-catalog's `remote-catalog/ui-builder.policy.json` adds one. A design using it opens against the built-in `remote-m3` catalog only. Shelved on `Buttons` here. Delete this entry when the policy gains the row.",
+    "policy": null,
+    "frozen": {
+      "group": "Buttons"
+    }
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-material-theme",
+    "why": "Built-in only, deliberately: `remote-m3/remote-material-theme` is declared by hand in ui-builder (`UiRemoteTheme`) because the published record holds one overload per symbol and has no row for it, so the published catalog cannot offer it until wear-m3-catalog's `remote-catalog/ui-builder.policy.json` adds one. A design using it opens against the built-in `remote-m3` catalog only. Shelved on `Layout` here. Delete this entry when the policy gains the row.",
+    "policy": null,
+    "frozen": {
+      "group": "Layout"
+    }
+  },
+  {
+    "field": "componentMenu.components.remote-m3/remote-time-text",
+    "why": "Built-in only, deliberately: `remote-m3/remote-time-text` is declared by hand in ui-builder (`UiTimeText`) because the published record holds one overload per symbol and has no row for it, so the published catalog cannot offer it until wear-m3-catalog's `remote-catalog/ui-builder.policy.json` adds one. A design using it opens against the built-in `remote-m3` catalog only. Shelved on `Content` here. Delete this entry when the policy gains the row.",
+    "policy": null,
+    "frozen": {
+      "group": "Content"
+    }
   }
 ]
