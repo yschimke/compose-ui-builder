@@ -118,7 +118,7 @@ class RemoteDrawingPathExportTest {
     assertContains(
       source,
       "drawTweenPath(RemotePath(\"M4 12 Q12 12 20 12\"), RemotePath(\"M4 12 Q12 22 20 12\"), " +
-        "tween = open, paint = paintMouth)",
+        "tween = clamp(open, 0.rf, 1.rf), paint = paintMouth)",
     )
   }
 

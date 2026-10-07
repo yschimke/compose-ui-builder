@@ -1921,7 +1921,19 @@ internal class RemoteContentEmitter(
         }
         usedComponentImports += "androidx.compose.remote.creation.RemotePath"
         usesRemoteFloat = true
-        val progress = node.drawFloat("progress") ?: 0f.floatLiteral()
+        // Clamped to 0..1 as the canvas clamps it: the player's tween is `from + (to - from) * t`
+        // and extrapolates past either end.
+        val authoredProgress = node.properties["progress"]
+        val progress =
+          when {
+            authoredProgress == null -> 0f.floatLiteral()
+            authoredProgress.isDrawComputed() -> {
+              val live = node.drawFloat("progress") ?: return emptyList()
+              usedComponentImports += "$REMOTE_STATE_PACKAGE.clamp"
+              "clamp($live, 0.rf, 1.rf)"
+            }
+            else -> (authoredProgress.numberOrNull() ?: 0f).coerceIn(0f, 1f).floatLiteral()
+          }
         val viewportWidth = node.drawFloat("viewportWidth") ?: 24f.floatLiteral()
         val viewportHeight = node.drawFloat("viewportHeight") ?: 24f.floatLiteral()
         lines +=
