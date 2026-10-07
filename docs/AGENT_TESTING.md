@@ -254,6 +254,20 @@ component records, so the editor shows "Disconnected" and those panels are empty
 figures are an upper bound on these. Software GL also means the GPU column is SwiftShader's, not a
 real GPU's.
 
+### Budgets
+
+`scripts/ui-builder-web-smoke/budgets.json` caps what the editor ships and what it holds, and CI
+enforces it on `main` only: pull requests package the module without Binaryen, so neither their
+sizes nor their memory are the shipped ones. Sizes are checked raw and gzipped for
+`uiBuilder.wasm`, `skiko.wasm`, the scripts and all of `wasmDist` (`node budgets.mjs <wasmDist>`;
+the web archive adds only its manifest and the MCP App shell, a few KB);
+memory is the settled median of three runs of the desktop designs screen and Material 3 design,
+renderer PSS and JS heap (`MEMORY_BUDGETS=budgets.json` on `memory.mjs`). An MB there is 2²⁰ bytes,
+as everywhere in these scripts. The caps sit 3% (sizes) and 8–15% (memory) above the 2026-10-07
+figures, so a regression the size of the DevTools buffers above fails and run-to-run noise does
+not. When a change knowingly spends the headroom, raise the cap in the same pull request and say
+why; when one wins memory back, lower it, so the next regression cannot spend the win unseen.
+
 ## 3. The deployed editor
 
 `https://preview.coo.ee/ui-builder/` needs WebGL (Skiko draws through it). When a browser has none,
