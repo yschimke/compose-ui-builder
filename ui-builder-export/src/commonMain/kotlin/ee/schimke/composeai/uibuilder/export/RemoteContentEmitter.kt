@@ -1504,7 +1504,14 @@ internal class RemoteContentEmitter(
    * read inside a component body a parameter rather than a closed-over global.
    */
   private fun computed(value: JsonElement, expected: UiValueKind, where: String): String? {
-    val checked = UiExpressions.check(value, UiExpressions.Scope.of(document), where)
+    val documentScope = UiExpressions.Scope.of(document)
+    val scope =
+      if (drawBindings.isEmpty()) documentScope
+      else
+        UiExpressions.Scope(documentScope.stateKinds) { key ->
+          if (key in drawBindings) UiValueKind.FLOAT else null
+        }
+    val checked = UiExpressions.check(value, scope, where)
     val expr =
       when (checked) {
         is UiExpressions.Checked.Issue -> {
@@ -1564,12 +1571,15 @@ internal class RemoteContentEmitter(
           refusals += "$where: colour state `${expr.variable}` has no Remote state factory"
           null
         } else remoteState(expr.variable, expr.kind.wire, where)
-      is UiExpressions.Expr.Binding -> {
-        refusals +=
-          "$where: a row field inside an expression needs a typed loop lowering; bind the field " +
-            "to the property directly"
-        null
-      }
+      // A draw loop's index is the lambda parameter the loop hands its body.
+      is UiExpressions.Expr.Binding ->
+        drawBindings[expr.key]
+          ?: run {
+            refusals +=
+              "$where: a row field inside an expression needs a typed loop lowering; bind the " +
+                "field to the property directly"
+            null
+          }
       is UiExpressions.Expr.System -> {
         usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteTime"
         expr.value.remote
@@ -1806,28 +1816,7 @@ internal class RemoteContentEmitter(
         }
     usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteOffset"
     val stroked = node.properties["style"]?.stringOrNull() == "stroke"
-    if (operation.container) {
-      val pivot =
-        if (node.has("pivotXDp") || node.has("pivotYDp"))
-          "RemoteOffset(${node.drawPx("pivotXDp") ?: extent.centerX}, " +
-            "${node.drawPx("pivotYDp") ?: extent.centerY})"
-        else extent.center
-      val transforms =
-        listOfNotNull(
-          if (node.has("translateXDp") || node.has("translateYDp"))
-            "translate(${node.drawPx("translateXDp") ?: "0.rf"}, " +
-              "${node.drawPx("translateYDp") ?: "0.rf"})"
-          else null,
-          node.drawFloat("rotate")?.let { "rotate($it, $pivot)" },
-          node.drawFloat("scale")?.let { "scale($it, $it, $pivot)" },
-        )
-      usesRemoteFloat = true
-      val children =
-        node.slots[UiDrawing.OPS_SLOT].orEmpty().flatMap { drawOperation(it, depth + 1, hoisted) }
-      return listOf("${pad}withTransform({ ${transforms.joinToString("; ")} }) {") +
-        children +
-        listOf("$pad}")
-    }
+    if (operation.container) return drawContainer(node, pad, depth, hoisted)
     val paint =
       localName("paint${node.id.remoteIdentifier().replaceFirstChar { it.uppercaseChar() }}")
     val lines = mutableListOf<String>()
@@ -1951,6 +1940,116 @@ internal class RemoteContentEmitter(
     return lines
   }
 
+  /**
+   * A container operation: a transform group, a clip, a conditional or a loop, each the
+   * `RemoteDrawScope` block it is, around its own `ops`.
+   */
+  private fun drawContainer(
+    node: UiBuilderNode,
+    pad: String,
+    depth: Int,
+    hoisted: MutableList<String>,
+  ): List<String> {
+    usesRemoteFloat = true
+    fun children() =
+      node.slots[UiDrawing.OPS_SLOT].orEmpty().flatMap { drawOperation(it, depth + 1, hoisted) }
+    fun block(head: String, parameter: String = "") =
+      listOf("$pad$head {$parameter") + children() + listOf("$pad}")
+    return when (node.componentId) {
+      UiDrawing.CLIP -> {
+        val x = node.drawPx("xDp")
+        val y = node.drawPx("yDp")
+        fun far(near: String?, length: String?, whole: String) =
+          when {
+            length == null -> whole
+            near == null -> length
+            else -> "($near + $length)"
+          }
+        val right = far(x, node.drawPx("widthDp"), extent.width)
+        val bottom = far(y, node.drawPx("heightDp"), extent.height)
+        val exclude = node.properties["exclude"]?.boolOrNull() == true
+        val op =
+          if (exclude) {
+            usedComponentImports += "androidx.compose.ui.graphics.ClipOp"
+            ", clipOp = ClipOp.Difference"
+          } else ""
+        block("clipRect(${x ?: "0.rf"}, ${y ?: "0.rf"}, $right, $bottom$op)")
+      }
+      UiDrawing.IF -> {
+        val authored = node.properties["condition"]
+        val condition =
+          when {
+            authored == null -> {
+              refusals +=
+                "nodes.${node.id}.condition: a ${UiDrawing.IF} needs a condition; bind it to " +
+                  "state or a formula"
+              return emptyList()
+            }
+            authored.isDrawComputed() ->
+              computed(authored, UiValueKind.BOOL, "nodes.${node.id}.condition")
+                ?: return emptyList()
+            else -> {
+              usesRemoteBoolean = true
+              "${authored.boolOrNull() == true}.rb"
+            }
+          }
+        block("drawConditionally($condition)")
+      }
+      UiDrawing.REPEAT -> {
+        val index = UiDrawing.indexName(node)
+        if (!UiDrawing.isIndexName(index) || index in drawBindings.values) {
+          refusals +=
+            "nodes.${node.id}.index: `$index` must be a name a formula can read, unused by an " +
+              "enclosing repeat"
+          return emptyList()
+        }
+        val until =
+          node.drawFloat("until")
+            ?: run {
+              refusals += "nodes.${node.id}.until: a ${UiDrawing.REPEAT} needs `until`"
+              return emptyList()
+            }
+        val from = node.drawFloat("from") ?: 0f.floatLiteral()
+        val step = node.drawFloat("step") ?: 1f.floatLiteral()
+        node.properties["step"]?.numberOrNull()?.let { literal ->
+          if (literal <= 0f) {
+            refusals += "nodes.${node.id}.step: a repeat's step must be above 0"
+            return emptyList()
+          }
+        }
+        drawBindings[index] = index
+        try {
+          block("loop($from, $until, $step)", " $index ->")
+        } finally {
+          drawBindings.remove(index)
+        }
+      }
+      else -> {
+        val pivot =
+          if (node.has("pivotXDp") || node.has("pivotYDp"))
+            "RemoteOffset(${node.drawPx("pivotXDp") ?: extent.centerX}, " +
+              "${node.drawPx("pivotYDp") ?: extent.centerY})"
+          else extent.center
+        val transforms =
+          listOfNotNull(
+            if (node.has("translateXDp") || node.has("translateYDp"))
+              "translate(${node.drawPx("translateXDp") ?: "0.rf"}, " +
+                "${node.drawPx("translateYDp") ?: "0.rf"})"
+            else null,
+            node.drawFloat("rotate")?.let { "rotate($it, $pivot)" },
+            node.drawFloat("scale")?.let { "scale($it, $it, $pivot)" },
+          )
+        block("withTransform({ ${transforms.joinToString("; ")} })")
+      }
+    }
+  }
+
+  /**
+   * The loop indices in scope while a canvas is written, by the name a formula reads them as and
+   * the lambda parameter that holds them.
+   */
+  private val drawBindings = linkedMapOf<String, String>()
+
   /** `RemotePaint { … }` for one operation's colour, style, stroke and alpha. */
   private fun drawPaint(
     node: UiBuilderNode,
@@ -2011,7 +2110,8 @@ internal class RemoteContentEmitter(
 
   /** A draw property that the player computes rather than a literal: state or an expression. */
   private fun JsonElement.isDrawComputed(): Boolean =
-    UiExpressions.isComputed(this) || (this as? JsonObject)?.plainString("type") == "state"
+    UiExpressions.isComputed(this) ||
+      (this as? JsonObject)?.plainString("type").let { it == "state" || it == "binding" }
 
   /** A dp property as pixels, or null when the operation does not state it. */
   private fun UiBuilderNode.drawPx(name: String): String? {

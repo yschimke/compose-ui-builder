@@ -36,6 +36,10 @@ fun inspectUiBuilderArgumentBindings(document: UiBuilderDocument): UiBuilderArgu
   document.nodes.values
     .filter { it.componentId == "layout/for-each" }
     .forEach { pending.addAll(it.slots["template"].orEmpty()) }
+  // A draw loop binds its index, by name, for every operation it draws.
+  document.nodes.values
+    .filter { it.componentId == UiDrawing.REPEAT }
+    .forEach { pending.addAll(it.slots[UiDrawing.OPS_SLOT].orEmpty()) }
   while (pending.isNotEmpty()) {
     val id = pending.removeFirst()
     if (scoped.add(id)) document.nodes[id]?.slots?.values?.forEach(pending::addAll)
@@ -104,6 +108,19 @@ fun inspectUiBuilderArgumentBindings(document: UiBuilderDocument): UiBuilderArgu
           if (count > 10_000) break
           val fields = (row as? JsonObject)?.get("fields") as? JsonObject ?: continue
           visit(template, fields)
+        }
+      } else if (node.componentId == UiDrawing.REPEAT) {
+        // Validation needs one representative index, of the kind the player's loop hands over.
+        val first = (properties["from"] as? JsonObject)?.get("value") ?: JsonPrimitive(0)
+        val index =
+          JsonObject(
+            arguments +
+              (UiDrawing.indexName(node) to
+                JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to first)))
+          )
+        for (child in node.slots[UiDrawing.OPS_SLOT].orEmpty()) {
+          if (count > 10_000) break
+          visit(child, index)
         }
       } else {
         for (child in node.slots.values.flatten()) {

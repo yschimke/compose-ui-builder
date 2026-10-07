@@ -19,6 +19,8 @@ fun stateBindingMatchesCatalog(
   allowedValues: List<JsonElement>,
   declarations: Map<String, JsonElement>,
   propertyName: String,
+  /** The row fields and loop indices in scope, which a computed value may read. */
+  bindingKinds: (String) -> UiValueKind? = { null },
 ): Boolean? {
   val binding = value as? JsonObject ?: return null
   val kind = (binding["type"] as? JsonPrimitive)?.content
@@ -29,7 +31,14 @@ fun stateBindingMatchesCatalog(
   )
     return false
   if (UiExpressions.isComputed(binding))
-    return computedMatchesCatalog(binding, jsonType, allowedValues, declarations, propertyName)
+    return computedMatchesCatalog(
+      binding,
+      jsonType,
+      allowedValues,
+      declarations,
+      propertyName,
+      bindingKinds,
+    )
   if (kind != "state" && kind != "stateEquals") return null
   val types =
     when (jsonType) {
@@ -80,6 +89,7 @@ private fun computedMatchesCatalog(
   allowedValues: List<JsonElement>,
   declarations: Map<String, JsonElement>,
   propertyName: String,
+  bindingKinds: (String) -> UiValueKind?,
 ): Boolean {
   val scope =
     UiExpressions.Scope(
@@ -87,7 +97,8 @@ private fun computedMatchesCatalog(
         .mapNotNull { (name, declaration) ->
           UiExpressions.Scope.stateKind(declaration as? JsonObject)?.let { name to it }
         }
-        .toMap()
+        .toMap(),
+      bindingKinds,
     )
   val checked = UiExpressions.check(value, scope) as? UiExpressions.Checked.Ok ?: return false
   val types =
