@@ -9,6 +9,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -197,6 +198,21 @@ private sealed interface DrawStep {
   class Clip(private val node: UiBuilderNode, private val children: List<DrawStep>) : DrawStep {
     override fun draw(scope: DrawScope, measurer: TextMeasurer, extent: Size) =
       with(scope) {
+        val clipOp = if (node.flag("exclude")) ClipOp.Difference else ClipOp.Intersect
+        val outline = node.text("pathData")?.let(::parsePath)
+        if (outline != null) {
+          // As the export does: scale into the viewport, clip, scale back out.
+          val sx = extent.width / (node.number("viewportWidth")?.takeIf { it > 0f } ?: 24f)
+          val sy = extent.height / (node.number("viewportHeight")?.takeIf { it > 0f } ?: 24f)
+          withTransform({
+            scale(sx, sy, Offset.Zero)
+            clipPath(outline, clipOp)
+            scale(1f / sx, 1f / sy, Offset.Zero)
+          }) {
+            children.forEach { it.draw(this, measurer, extent) }
+          }
+          return@with
+        }
         val x = node.number("xDp")?.dp(this) ?: 0f
         val y = node.number("yDp")?.dp(this) ?: 0f
         clipRect(
@@ -204,7 +220,7 @@ private sealed interface DrawStep {
           top = y,
           right = node.number("widthDp")?.let { x + it.dp(this) } ?: extent.width,
           bottom = node.number("heightDp")?.let { y + it.dp(this) } ?: extent.height,
-          clipOp = if (node.flag("exclude")) ClipOp.Difference else ClipOp.Intersect,
+          clipOp = clipOp,
         ) {
           children.forEach { it.draw(this, measurer, extent) }
         }
@@ -271,11 +287,17 @@ private sealed interface DrawStep {
               strokeWidth = strokePx,
               cap = paint.cap,
             )
-          "draw/path" -> {
-            val path =
-              node.text("pathData")?.let { data ->
-                runCatching { PathParser().parsePathString(data).toPath() }.getOrNull()
-              }
+          "draw/path",
+          UiDrawing.MORPH -> {
+            val data =
+              if (node.componentId == UiDrawing.MORPH)
+                UiDrawing.tweenPathData(
+                  node.text("pathData").orEmpty(),
+                  node.text("toPathData").orEmpty(),
+                  (node.number("progress") ?: 0f).coerceIn(0f, 1f),
+                )
+              else node.text("pathData")
+            val path = data?.let(::parsePath)
             if (path != null) {
               val viewportWidth = node.number("viewportWidth")?.takeIf { it > 0f } ?: 24f
               val viewportHeight = node.number("viewportHeight")?.takeIf { it > 0f } ?: 24f
@@ -312,6 +334,11 @@ private sealed interface DrawStep {
       }
   }
 }
+
+private fun parsePath(data: String): Path? = runCatching {
+  PathParser().parsePathString(data).toPath()
+}
+  .getOrNull()
 
 private fun Float.dp(scope: DrawScope): Float = this * scope.density
 

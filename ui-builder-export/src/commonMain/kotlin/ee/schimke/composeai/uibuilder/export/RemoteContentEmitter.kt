@@ -1910,6 +1910,28 @@ internal class RemoteContentEmitter(
         lines += "$pad${INDENT}drawPath(RemotePath(\"${data.escaped()}\"), $paint)"
         lines += "$pad}"
       }
+      UiDrawing.MORPH -> {
+        val from = node.properties["pathData"]?.stringOrNull().orEmpty()
+        val to = node.properties["toPathData"]?.stringOrNull().orEmpty()
+        if (UiDrawing.tweenPathData(from, to, 0f) == null) {
+          refusals +=
+            "nodes.${node.id}.toPathData: a morph needs two paths with the same commands and " +
+              "the same count of numbers"
+          return emptyList()
+        }
+        usedComponentImports += "androidx.compose.remote.creation.RemotePath"
+        usesRemoteFloat = true
+        val progress = node.drawFloat("progress") ?: 0f.floatLiteral()
+        val viewportWidth = node.drawFloat("viewportWidth") ?: 24f.floatLiteral()
+        val viewportHeight = node.drawFloat("viewportHeight") ?: 24f.floatLiteral()
+        lines +=
+          "${pad}withTransform({ scale(${extent.width} / $viewportWidth, ${extent.height} / $viewportHeight, " +
+            "RemoteOffset(0.rf, 0.rf)) }) {"
+        lines +=
+          "$pad${INDENT}drawTweenPath(RemotePath(\"${from.escaped()}\"), " +
+            "RemotePath(\"${to.escaped()}\"), tween = $progress, paint = $paint)"
+        lines += "$pad}"
+      }
       "draw/text" -> {
         val authored = node.properties["text"]
         val text =
@@ -1976,6 +1998,25 @@ internal class RemoteContentEmitter(
           return emptyList()
         }
         val exclude = authoredExclude?.boolOrNull() == true
+        val clipPath = node.properties["pathData"]?.stringOrNull()?.takeIf { it.isNotBlank() }
+        if (clipPath != null) {
+          // The path is drawn in its viewport: scale into it, clip, and scale back out, so the
+          // clip has the viewport's shape while the operations it encloses keep the canvas's
+          // coordinates.
+          usedComponentImports += "androidx.compose.remote.creation.RemotePath"
+          val viewportWidth = node.drawFloat("viewportWidth") ?: 24f.floatLiteral()
+          val viewportHeight = node.drawFloat("viewportHeight") ?: 24f.floatLiteral()
+          val op =
+            if (exclude) {
+              usedComponentImports += "androidx.compose.ui.graphics.ClipOp"
+              ", ClipOp.Difference"
+            } else ""
+          return block(
+            "withTransform({ scale(${extent.width} / $viewportWidth, ${extent.height} / " +
+              "$viewportHeight); clipPath(RemotePath(\"${clipPath.escaped()}\")$op); " +
+              "scale($viewportWidth / ${extent.width}, $viewportHeight / ${extent.height}) })"
+          )
+        }
         val op =
           if (exclude) {
             usedComponentImports += "androidx.compose.ui.graphics.ClipOp"
