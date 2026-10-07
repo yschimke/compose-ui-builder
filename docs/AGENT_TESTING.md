@@ -165,31 +165,32 @@ memory). Send its output to a file: through a pipe nothing appears until the end
 MEMORY_RUNS=3 node scripts/ui-builder-web-smoke/memory.mjs ui-builder/build/wasmDist build/web-memory > memory.log
 ```
 
-Medians of three runs after settling, 2026-10-07 (after the emoji-font and inlining fixes below),
-Chromium 141 headless with SwiftShader, from
-[`evidence/web-memory/memory.json`](evidence/web-memory/memory.json) (runs agreed within ~2%):
+Medians of three runs after settling, 2026-10-07 (after icons moved to data, #522), Chromium 141
+headless shell with SwiftShader, from [`evidence/web-memory/memory.json`](evidence/web-memory/memory.json)
+(each screen's three renderer figures agreed within 2 MB):
 
 | Viewport | Screen | JS heap | Renderer PSS | GPU PSS | Total PSS |
 | --- | --- | ---: | ---: | ---: | ---: |
-| desktop 1400×900 | `about:blank` (floor) | 0.5 MB | 49 MB | 29 MB | 139 MB |
-| desktop | Designs (home) | 24 MB | 196 MB | 81 MB | 344 MB |
-| desktop | Material 3 · Gmail tablet (158 nodes) | 36 MB | 219 MB | 92 MB | 377 MB |
-| desktop | Wear M3 · Google Home (22 nodes) | 28 MB | 206 MB | 98 MB | 370 MB |
-| desktop | RemoteCompose · Weather widget (5 nodes) | 33 MB | 209 MB | 99 MB | 379 MB |
-| desktop | A2UI · reservation (9 nodes) | 21 MB | 188 MB | 89 MB | 344 MB |
-| mobile 412×915 @2.625 | `about:blank` (floor) | 0.5 MB | 49 MB | 26 MB | 136 MB |
-| mobile | Designs (home) | 24 MB | 210 MB | 97 MB | 373 MB |
-| mobile | Material 3 | 29 MB | 217 MB | 118 MB | 400 MB |
-| mobile | Wear M3 | 26 MB | 210 MB | 121 MB | 397 MB |
-| mobile | RemoteCompose | 32 MB | 215 MB | 109 MB | 395 MB |
-| mobile | A2UI | 21 MB | 200 MB | 122 MB | 388 MB |
+| desktop 1400×900 | `about:blank` (floor) | 0.2 MB | 46 MB | 27 MB | 133 MB |
+| desktop | Designs (home) | 24 MB | 165 MB | 77 MB | 305 MB |
+| desktop | Material 3 · Gmail tablet (158 nodes) | 38 MB | 190 MB | 87 MB | 340 MB |
+| desktop | Wear M3 · Google Home (22 nodes) | 29 MB | 173 MB | 93 MB | 329 MB |
+| desktop | RemoteCompose · Weather widget (5 nodes) | 33 MB | 171 MB | 91 MB | 330 MB |
+| desktop | A2UI · reservation (9 nodes) | 21 MB | 156 MB | 83 MB | 303 MB |
+| mobile 412×915 @2.625 | `about:blank` (floor) | 0.2 MB | 46 MB | 27 MB | 134 MB |
+| mobile | Designs (home) | 24 MB | 180 MB | 95 MB | 338 MB |
+| mobile | Material 3 | 31 MB | 189 MB | 113 MB | 365 MB |
+| mobile | Wear M3 | 26 MB | 181 MB | 116 MB | 359 MB |
+| mobile | RemoteCompose | 32 MB | 183 MB | 103 MB | 354 MB |
+| mobile | A2UI | 20 MB | 170 MB | 117 MB | 351 MB |
 
 What it says:
 
-- The editor costs about 150 MB of renderer memory before any design is open: the home screen is
-  already 197 MB against a 48 MB blank page. That is the 30 MB `uiBuilder.wasm` and 8.6 MB
-  `skiko.wasm` compiled, plus Skia, not designs.
-- An open design adds 0–35 MB total PSS on top of the home screen once it settles.
+- The editor costs about 120 MB of renderer memory before any design is open: the home screen is
+  165 MB against a 46 MB blank page. That is the 15 MB `uiBuilder.wasm` and 8.6 MB `skiko.wasm`
+  compiled, plus Skia, not designs.
+- An open design adds 0–35 MB total PSS on top of the home screen once it settles (A2UI, which
+  draws outline stand-ins, settles just below it).
 - Opening one costs more than that for a few seconds, and that peak is V8, not the editor: the
   memory it holds while TurboFan optimises a hot Wasm function, released when the compile ends.
   Binaryen inlines a one-caller function whatever its size, so it had folded Material 3's ~100
@@ -215,14 +216,16 @@ What it says:
   Binaryen's names kept: run `wasm-opt` on `build/compileSync/wasmJs/main/productionExecutable/kotlin/uiBuilder.wasm`
   with the Kotlin plugin's arguments (`BinaryenConfig`) plus the rules and `-g`; function indices
   match the shipped module.
-- RemoteCompose used to be the largest settled desktop screen (422 MB) despite five nodes. Its
-  text "75° ☀️" has a glyph no bundled font carries, so Compose downloads a Noto Color Emoji slice
-  from `fonts.gstatic.com` and installs it in the editor's font resolver. The device previews
-  each ran a scene with a resolver of their own, never saw the font, kept reporting the glyph as
-  unresolved, and the same 200 KB file was fetched 116 times in ten seconds, each copy held.
+- RemoteCompose used to be the largest settled desktop screen (422 MB total PSS through Playwright)
+  despite five nodes. Its text "75° ☀️" has a glyph no bundled font carries, so Compose downloads a
+  Noto Color Emoji slice from `fonts.gstatic.com` and installs it in the editor's font resolver.
+  The device previews each ran a scene with a resolver of their own, never saw the font, kept
+  reporting the glyph as unresolved, and the same 200 KB file was fetched 116 times in ten
+  seconds, each copy held.
   `DeviceSceneHost` now hands its scene the editor's resolver: one download, the emoji draws in
-  the previews too, and the screen settles at 377 MB. Run with `MEMORY_RESOURCES=1` and count
-  the `fonts.gstatic.com` entries to check that it stays one.
+  the previews too, and the screen settled at 377 MB (330 MB in the table above, measured without
+  DevTools and after the icons moved). Run with `MEMORY_RESOURCES=1` and count the
+  `fonts.gstatic.com` entries to check that it stays one.
 - A2UI draws outline stand-ins on the canvas (there is no Wasm A2UI renderer), so it is the floor
   for an open design rather than a like-for-like comparison.
 - Mobile shifts memory to the GPU process (+20–30 MB): the canvas backing store is 9.9 MB at
@@ -236,12 +239,15 @@ What it says:
   15.0 MB (6.4 → 4.0 MB gzipped); `MaterialIconDataTest` holds every icon's data equal to its
   compiled vector, and the harness screenshots are pixel-identical before and after.
 
-**These Playwright figures include DevTools.** Playwright enables the Network domain on every page,
-and DevTools then keeps each response body under its per-resource limit in the renderer's buffer
-partition: ~16 MB on `main` (`skiko.wasm` and the scripts), and the whole module once it is small
-enough to qualify. Compare builds with the same harness, and check an absolute figure without it: a
-raw-CDP launch (no Network domain) put the designs screen at 175–178 MB of renderer PSS before icons
-moved to data and 160 MB after, against 195–197 MB through Playwright both times.
+**The harness drives Chromium over a bare DevTools socket** (`cdp.mjs`), not Playwright, and
+enables no domain that keeps data on the page's behalf. Playwright enables the Network domain on
+every page, and DevTools then keeps each response body under its per-resource limit in the
+renderer's buffer partition: `skiko.wasm` and the scripts, and the whole module once it is small
+enough to qualify. Measured on the same build, that put 15–20 MB of renderer PSS on every screen
+above (designs 182 MB through Playwright against 165 MB here), and it is why moving the icons to
+data looked neutral through Playwright. The launcher runs the headless shell Playwright would, with
+Playwright's switches, so the two differ by what DevTools retained, not by the browser. Use
+Playwright for driving the editor; use this harness, or `cdp.mjs`, for a figure.
 
 The stand-in host has no WebSockets, comments, reviews, suggestions, folders, thumbnails or
 component records, so the editor shows "Disconnected" and those panels are empty; a real host's

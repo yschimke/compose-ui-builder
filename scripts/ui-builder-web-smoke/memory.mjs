@@ -7,7 +7,9 @@
 // The page talks to a stand-in host here, not compose-preview-server: identity, catalogs, the
 // design list and `openDesign` snapshots of committed `.uid` designs, which is everything those
 // screens read on startup. Each scenario is a fresh Chromium, so one screen's garbage is never
-// charged to the next. Environment: MEMORY_RUNS (default 3), MEMORY_SETTLE_MS (default 8000),
+// charged to the next. Chromium is driven over a bare DevTools socket (`cdp.mjs`), not Playwright:
+// Playwright's Network domain makes DevTools keep response bodies in the renderer, which added
+// ~16 MB to every screen and, under its size limit, a whole copy of `uiBuilder.wasm`. Environment: MEMORY_RUNS (default 3), MEMORY_SETTLE_MS (default 8000),
 // MEMORY_VIEWPORT (`desktop` or `mobile`, default both), MEMORY_DEBUG (page console, progress),
 // HARNESS_CHROMIUM. Write the output to a file, not a pipe: a pipe holds it until the end.
 // For digging into one result: MEMORY_SCENARIOS (comma-separated ids), MEMORY_INFRA (Chromium's
@@ -23,6 +25,7 @@ import { createServer } from 'node:http';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
+import { headlessShellPath, launch } from './cdp.mjs';
 import { largestTurbofanCompile } from './wasm-functions.mjs';
 
 const dist = resolve(process.argv[2] ?? 'ui-builder/build/wasmDist');
@@ -203,8 +206,8 @@ if (process.env.MEMORY_SERVE_ONLY) {
 }
 
 const viewports = {
-  desktop: { viewport: { width: 1400, height: 900 } },
-  mobile: { viewport: { width: 412, height: 915 }, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true },
+  desktop: { width: 1400, height: 900, deviceScaleFactor: 1, mobile: false },
+  mobile: { width: 412, height: 915, deviceScaleFactor: 2.625, mobile: true },
 };
 const scenarios = [
   { id: 'designs', label: 'Designs (home)', path: '/ui-builder/designs' },
@@ -233,41 +236,50 @@ try {
 }
 
 async function processBreakdown(browser) {
-  const session = await browser.newBrowserCDPSession();
-  try {
-    const { processInfo } = await session.send('SystemInfo.getProcessInfo');
-    const byType = {};
-    for (const { type, id } of processInfo) {
-      const memory = await procMemory(id);
-      const entry = (byType[type] ??= { count: 0, unreadable: 0, rss: 0, pss: 0 });
-      entry.count++;
-      if (!memory) {
-        entry.unreadable++;
-        continue;
-      }
-      entry.rss += memory.rss;
-      entry.pss += memory.pss;
+  const { processInfo } = await browser.connection.send('SystemInfo.getProcessInfo');
+  const byType = {};
+  for (const { type, id } of processInfo) {
+    const memory = await procMemory(id);
+    const entry = (byType[type] ??= { count: 0, unreadable: 0, rss: 0, pss: 0 });
+    entry.count++;
+    if (!memory) {
+      entry.unreadable++;
+      continue;
     }
-    return byType;
-  } finally {
-    await session.detach();
+    entry.rss += memory.rss;
+    entry.pss += memory.pss;
   }
+  return byType;
+}
+
+// Browser-wide tracing: every event, gathered until `stop()`.
+async function startTracing(browser, traceConfig) {
+  const events = [];
+  const off = browser.connection.on('Tracing.dataCollected', ({ value }) => events.push(...value));
+  await browser.connection.send('Tracing.start', { traceConfig, transferMode: 'ReportEvents' });
+  return {
+    async stop() {
+      const done = new Promise((resolve) => {
+        const offComplete = browser.connection.on('Tracing.tracingComplete', () => {
+          offComplete();
+          resolve();
+        });
+      });
+      await browser.connection.send('Tracing.end');
+      await done;
+      off();
+      return events;
+    },
+  };
 }
 
 // Chromium's own per-allocator accounting (chrome://tracing's memory-infra), per process type.
 async function memoryInfra(browser) {
-  const session = await browser.newBrowserCDPSession();
-  const events = [];
-  session.on('Tracing.dataCollected', ({ value }) => events.push(...value));
-  const done = new Promise((resolve) => session.once('Tracing.tracingComplete', resolve));
-  await session.send('Tracing.start', {
-    traceConfig: { includedCategories: ['disabled-by-default-memory-infra'], memoryDumpConfig: { triggers: [] } },
-    transferMode: 'ReportEvents',
+  const tracing = await startTracing(browser, {
+    includedCategories: ['disabled-by-default-memory-infra'], memoryDumpConfig: { triggers: [] },
   });
-  await session.send('Tracing.requestMemoryDump', { deterministic: true, levelOfDetail: 'detailed' });
-  await session.send('Tracing.end');
-  await done;
-  await session.detach();
+  await browser.connection.send('Tracing.requestMemoryDump', { deterministic: true, levelOfDetail: 'detailed' });
+  const events = await tracing.stop();
   const names = {};
   for (const e of events) if (e.ph === 'M' && e.name === 'process_name') names[e.pid] = e.args.name;
   const result = {};
@@ -284,13 +296,15 @@ async function memoryInfra(browser) {
   return result;
 }
 
-async function sample(page, cdp, browser) {
-  await cdp.send('HeapProfiler.collectGarbage');
+const metricsOf = async (page) =>
+  Object.fromEntries((await page.send('Performance.getMetrics')).metrics.map(({ name, value }) => [name, value]));
+
+async function sample(page, browser) {
+  await page.send('HeapProfiler.collectGarbage');
   await new Promise((r) => setTimeout(r, 500));
-  const { metrics } = await cdp.send('Performance.getMetrics');
-  const metric = Object.fromEntries(metrics.map(({ name, value }) => [name, value]));
-  const dom = await cdp.send('Memory.getDOMCounters');
-  const page_ = await page.evaluate(async () => {
+  const metric = await metricsOf(page);
+  const dom = await page.send('Memory.getDOMCounters');
+  const page_ = await page.evaluate(`(async () => {
     // Canvases are where Skiko keeps its GPU-backed surfaces; their backing store is GPU memory.
     // Compose mounts its canvas inside a shadow root, so a plain querySelectorAll finds nothing.
     const found = [];
@@ -309,7 +323,7 @@ async function sample(page, cdp, browser) {
       } catch { /* unavailable on this build */ }
     }
     return { canvasBackingBytes: canvases.reduce((a, b) => a + b, 0), canvasCount: canvases.length, uaMemory };
-  });
+  })()`);
   const processes = await processBreakdown(browser);
   const total = (key) => Object.values(processes).reduce((sum, p) => sum + p[key], 0);
   return {
@@ -326,8 +340,7 @@ let browserVersion = null;
 // MEMORY_MAX_TURBOFAN_ZONE_MB: V8 logs every Wasm function it compiles, with the most memory the
 // compile held. A generated table that Binaryen inlined into one huge function shows up here as a
 // single TurboFan compile holding hundreds of MB; see `wasmNoInlinePatterns` in
-// ui-builder/build.gradle.kts. The log is on the browser's stdout, which only a launched server
-// exposes, so the guard launches through `launchServer`.
+// ui-builder/build.gradle.kts. The log is on the browser's stdout.
 const turbofanLimitMb = process.env.MEMORY_MAX_TURBOFAN_ZONE_MB
   ? Number(process.env.MEMORY_MAX_TURBOFAN_ZONE_MB)
   : null;
@@ -344,96 +357,116 @@ function chromiumArgs() {
   ];
 }
 
+const executable = process.env.HARNESS_CHROMIUM ?? headlessShellPath(chromium.executablePath());
+
 async function launchBrowser() {
-  const options = {
-    args: chromiumArgs(),
-    ...(process.env.HARNESS_CHROMIUM ? { executablePath: process.env.HARNESS_CHROMIUM } : {}),
-  };
-  let browser;
-  if (turbofanLimitMb === null) {
-    browser = await chromium.launch(options);
-    browser.compileLog = () => '';
-  } else {
-    const browserServer = await chromium.launchServer(options);
-    let log = '';
-    browserServer.process().stdout.on('data', (chunk) => { log += chunk; });
-    browser = await chromium.connect(browserServer.wsEndpoint());
-    const close = browser.close.bind(browser);
-    browser.close = async () => { await close(); await browserServer.close(); };
-    browser.compileLog = () => log;
-  }
-  browserVersion ??= browser.version();
+  const browser = await launch(executable, chromiumArgs());
+  browserVersion ??= (await browser.connection.send('Browser.getVersion')).product;
   return browser;
 }
 
+// A page sized and localised as Playwright's `newContext({ viewport, locale })` would make it,
+// with nothing enabled that keeps data on the page's behalf. Uncaught errors are collected in the
+// page, so the Runtime domain stays off; MEMORY_DEBUG turns it on for the console.
+async function openPage(browser, viewportName) {
+  const page = await browser.newPage();
+  const { width, height, deviceScaleFactor, mobile } = viewports[viewportName];
+  await page.send('Emulation.setDeviceMetricsOverride', {
+    width, height, deviceScaleFactor, mobile, screenWidth: width, screenHeight: height,
+  });
+  if (mobile) await page.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+  await page.send('Emulation.setFocusEmulationEnabled', { enabled: true });
+  await page.send('Emulation.setLocaleOverride', { locale: 'en-US' });
+  const { userAgent } = await browser.connection.send('Browser.getVersion');
+  await page.send('Emulation.setUserAgentOverride', { userAgent, acceptLanguage: 'en-US' });
+  await page.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `globalThis.__memoryPageErrors = [];
+      addEventListener('error', (e) => __memoryPageErrors.push(String(e.error ?? e.message)));
+      addEventListener('unhandledrejection', (e) => __memoryPageErrors.push(String(e.reason)));`,
+  });
+  if (process.env.MEMORY_DEBUG) {
+    page.on('Runtime.consoleAPICalled', ({ type, args }) =>
+      debug(`console ${type}: ${args.map((a) => a.value ?? a.description).join(' ')}`));
+    await page.send('Runtime.enable');
+  }
+  if (process.env.MEMORY_BLOCK) {
+    const blocked = new RegExp(process.env.MEMORY_BLOCK);
+    page.on('Fetch.requestPaused', ({ requestId, request }) => {
+      const reply = blocked.test(request.url)
+        ? page.send('Fetch.failRequest', { requestId, errorReason: 'BlockedByClient' })
+        : page.send('Fetch.continueRequest', { requestId });
+      reply.catch(() => {});
+    });
+    await page.send('Fetch.enable', { patterns: [{ urlPattern: '*' }] });
+  }
+  await page.send('Performance.enable');
+  return page;
+}
 
 async function measure(scenario, viewportName) {
   const browser = await launchBrowser();
   try {
-    const context = await browser.newContext({ ...viewports[viewportName], locale: 'en-US' });
-    const page = await context.newPage();
-    const errors = [];
-    page.on('pageerror', (error) => errors.push(String(error)));
-    if (process.env.MEMORY_BLOCK) await context.route(new RegExp(process.env.MEMORY_BLOCK), (route) => route.abort());
-    const cdp = await context.newCDPSession(page);
-    await cdp.send('Performance.enable');
-    if (process.env.MEMORY_TRACE) {
-      await browser.startTracing(page, {
-        path: join(out, `${scenario.id}-${viewportName}.trace.json`),
-        categories: process.env.MEMORY_TRACE.split(','),
-      });
-    }
+    const page = await openPage(browser, viewportName);
+    const trace = process.env.MEMORY_TRACE
+      ? await startTracing(browser, { includedCategories: process.env.MEMORY_TRACE.split(',') })
+      : null;
     const started = Date.now();
     // MEMORY_TIMELINE: the renderer's PSS and the JS heap every 250 ms, with no forced GC, from
     // navigation to the end of the settle window — where a spike rises and falls.
     const timeline = [];
     let timelineTimer = null;
     if (process.env.MEMORY_TIMELINE) {
-      const session = await browser.newBrowserCDPSession();
       const tick = async () => {
         try {
-          const { processInfo } = await session.send('SystemInfo.getProcessInfo');
+          const { processInfo } = await browser.connection.send('SystemInfo.getProcessInfo');
           const renderer = processInfo.find((p) => p.type === 'renderer');
           const memory = renderer ? await procMemory(renderer.id) : null;
-          const { metrics } = await cdp.send('Performance.getMetrics');
-          const heap = metrics.find((m) => m.name === 'JSHeapUsedSize')?.value ?? 0;
-          const marks = await page.evaluate(() => Object.keys(globalThis.__uiBuilderStartup?.marks ?? {})).catch(() => []);
-          timeline.push({ ms: Date.now() - started, rendererPss: memory?.pss ?? null, jsHeapUsed: heap, marks: marks.length });
+          const heap = (await metricsOf(page)).JSHeapUsedSize ?? 0;
+          const marks = await page.evaluate('Object.keys(globalThis.__uiBuilderStartup?.marks ?? {}).length')
+            .catch(() => 0);
+          timeline.push({ ms: Date.now() - started, rendererPss: memory?.pss ?? null, jsHeapUsed: heap, marks });
         } catch { /* navigation in flight */ }
         if (timelineTimer !== false) timelineTimer = setTimeout(tick, 250);
       };
       tick();
     }
-    page.on('console', (message) => debug(`console ${message.type()}: ${message.text()}`));
     debug('goto', scenario.path);
-    await page.goto(`${base}${scenario.path}`);
-    debug('loaded');
-    await page.waitForFunction(() => document.documentElement.dataset.uiBuilderReady === 'true', null, { timeout: 120_000 });
-    await page.waitForFunction(() => globalThis.__uiBuilderStartup?.marks?.['editor-paint-opportunity'] !== undefined, null, { timeout: 60_000 });
+    await page.send('Page.navigate', { url: `${base}${scenario.path}` });
+    await page.waitFor("document.documentElement.dataset.uiBuilderReady === 'true'", 120_000, 'data-ui-builder-ready');
+    await page.waitFor(
+      "globalThis.__uiBuilderStartup?.marks?.['editor-paint-opportunity'] !== undefined", 60_000,
+      'editor-paint-opportunity',
+    );
     const readyMs = Date.now() - started;
     debug('ready', readyMs);
-    const atReady = await sample(page, cdp, browser);
+    const atReady = await sample(page, browser);
     if (process.env.MEMORY_INFRA) atReady.allocators = await memoryInfra(browser);
-    await page.waitForTimeout(settleMs);
-    const settled = await sample(page, cdp, browser);
+    await new Promise((r) => setTimeout(r, settleMs));
+    const settled = await sample(page, browser);
     if (process.env.MEMORY_INFRA) settled.allocators = await memoryInfra(browser);
     if (process.env.MEMORY_HEAPSNAPSHOT) {
       const chunks = [];
-      cdp.on('HeapProfiler.addHeapSnapshotChunk', ({ chunk }) => chunks.push(chunk));
-      await cdp.send('HeapProfiler.takeHeapSnapshot', { reportProgress: false });
+      const off = page.on('HeapProfiler.addHeapSnapshotChunk', ({ chunk }) => chunks.push(chunk));
+      await page.send('HeapProfiler.takeHeapSnapshot', { reportProgress: false });
+      off();
       await writeFile(join(out, `${scenario.id}-${viewportName}.heapsnapshot`), chunks.join(''));
     }
     if (process.env.MEMORY_RESOURCES) {
-      settled.resources = await page.evaluate(() => performance.getEntriesByType('resource')
-        .map((e) => ({ name: e.name.replace(location.origin, ''), size: e.decodedBodySize, type: e.initiatorType })));
+      settled.resources = await page.evaluate(`performance.getEntriesByType('resource')
+        .map((e) => ({ name: e.name.replace(location.origin, ''), size: e.decodedBodySize, type: e.initiatorType }))`);
     }
-    if (process.env.MEMORY_TRACE) await browser.stopTracing();
-    if (turbofanLimitMb !== null) settled.largestTurbofanCompile = largestTurbofanCompile(browser.compileLog());
+    if (trace) {
+      const traceEvents = await trace.stop();
+      await writeFile(join(out, `${scenario.id}-${viewportName}.trace.json`), JSON.stringify({ traceEvents }));
+    }
+    if (turbofanLimitMb !== null) settled.largestTurbofanCompile = largestTurbofanCompile(browser.stdout());
     if (timelineTimer) clearTimeout(timelineTimer);
     timelineTimer = false;
     if (timeline.length) settled.timeline = timeline;
-    const status = await page.evaluate(() => ({ ...document.documentElement.dataset }));
-    await page.screenshot({ path: join(out, `${scenario.id}-${viewportName}.png`) });
+    const status = await page.evaluate('({ ...document.documentElement.dataset })');
+    const errors = await page.evaluate('globalThis.__memoryPageErrors ?? []');
+    const { data } = await page.send('Page.captureScreenshot', { format: 'png' });
+    await writeFile(join(out, `${scenario.id}-${viewportName}.png`), Buffer.from(data, 'base64'));
     return { readyMs, atReady, settled, errors, status };
   } finally {
     await browser.close();
@@ -444,13 +477,9 @@ async function measure(scenario, viewportName) {
 async function baseline(viewportName) {
   const browser = await launchBrowser();
   try {
-    const context = await browser.newContext({ ...viewports[viewportName], locale: 'en-US' });
-    const page = await context.newPage();
-    const cdp = await context.newCDPSession(page);
-    await cdp.send('Performance.enable');
-    await page.goto('about:blank');
-    await page.waitForTimeout(1000);
-    return await sample(page, cdp, browser);
+    const page = await openPage(browser, viewportName);
+    await new Promise((r) => setTimeout(r, 1000));
+    return await sample(page, browser);
   } finally {
     await browser.close();
   }
@@ -475,7 +504,7 @@ if (!chosen.length || unknownViewports.length) {
 }
 const report = {
   measuredAt: new Date().toISOString(), runs, settleMs,
-  chromium: process.env.HARNESS_CHROMIUM ?? chromium.executablePath(), browserVersion: null, results: [],
+  chromium: executable, browserVersion: null, results: [],
 };
 for (const viewportName of chosen) {
   const blank = [];
@@ -544,5 +573,4 @@ if (turbofanLimitMb !== null) {
 }
 console.log(`Report: ${join(out, 'memory.json')}`);
 server.close();
-// Explicit: something in Playwright's connected-browser teardown resets process.exitCode.
-if (failed) process.exit(1);
+if (failed) process.exitCode = 1;
