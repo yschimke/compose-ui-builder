@@ -166,6 +166,38 @@ requestedLocalBuilds.forEach { name ->
   includeBuild(directory)
 }
 
+// BuildFetch remote Gradle build cache, beside the local one: the same wiring compose-ai-tools and
+// compose-preview-daemon carry. Off unless a token resolves, so a fork, a developer machine or a
+// repository without the secret builds exactly as before on the local cache alone. Writes only
+// from trusted CI (ON_CI=true, which `.github/actions/buildfetch-cache` sets on pushes to `main`);
+// pull requests read. `-Pcomposeai.remoteCache=off` skips the remote entirely if it misbehaves.
+val onCi = providers.environmentVariable("ON_CI").orElse("false").get().toBoolean()
+
+// Non-blank view of one env var or Gradle property: an unset secret that CI still exports as an
+// empty string neither shadows a later fallback nor enables the cache with an empty credential.
+val nonBlank = { source: Provider<String> -> source.map { it.trim() }.filter { it.isNotEmpty() } }
+val cacheToken =
+  nonBlank(providers.environmentVariable("BUILDFETCH_COMPOSEAI_GRADLE_REMOTE_CACHE_TOKEN"))
+    .orElse(nonBlank(providers.gradleProperty("BUILDFETCH_COMPOSEAI_GRADLE_REMOTE_CACHE_TOKEN")))
+    .orElse(nonBlank(providers.environmentVariable("BUILDFETCH_GRADLE_REMOTE_CACHE_TOKEN")))
+    .orElse(nonBlank(providers.gradleProperty("BUILDFETCH_GRADLE_REMOTE_CACHE_TOKEN")))
+    .orNull
+val remoteCacheDisabled =
+  providers.gradleProperty("composeai.remoteCache").orElse("on").get().trim().lowercase() == "off"
+
+buildCache {
+  local { isEnabled = true }
+  remote<HttpBuildCache> {
+    url = uri("https://cache.eu-central-a.buildfetch.com/8ESz2z/gradle/")
+    credentials {
+      username = "token-auth"
+      password = cacheToken
+    }
+    isPush = onCi && !remoteCacheDisabled
+    isEnabled = cacheToken != null && !remoteCacheDisabled
+  }
+}
+
 rootProject.name = "compose-ui-builder"
 
 // ── The UI builder ─────────────────────────────────────────────────────────────────────────────
