@@ -420,14 +420,12 @@ fun decodeNewDesignStates(encoded: String): List<NewDesignState> {
     .distinctBy(NewDesignState::name)
 }
 
-/** A valid minimal screen for an honest from-scratch browser session. */
-fun blankUiBuilderDocument(
-  designId: String,
-  catalogPin: JsonObject,
-  environment: JsonObject,
-  state: List<NewDesignState> = emptyList(),
-): UiBuilderDocument {
-  require(designId.isNotBlank()) { "blank design id must not be blank" }
+/**
+ * Refuses [state] a new design could never export: two declarations under one name, or names that
+ * collide or become a Kotlin keyword once written as identifiers. Shared by every seed that takes
+ * declarations, so a published template is held to the rule the built-in blank one is.
+ */
+internal fun requireExportableState(state: List<NewDesignState>) {
   require(state.map(NewDesignState::name).distinct().size == state.size) {
     "state variable names must be unique"
   }
@@ -445,6 +443,17 @@ fun blankUiBuilderDocument(
   require(state.map { exportedStateIdentifier(it.name) }.distinct().size == state.size) {
     "state variable names must stay distinct once exported as Kotlin identifiers"
   }
+}
+
+/** A valid minimal screen for an honest from-scratch browser session. */
+fun blankUiBuilderDocument(
+  designId: String,
+  catalogPin: JsonObject,
+  environment: JsonObject,
+  state: List<NewDesignState> = emptyList(),
+): UiBuilderDocument {
+  require(designId.isNotBlank()) { "blank design id must not be blank" }
+  requireExportableState(state)
   val scaffoldId = "screen-scaffold"
   val contentId = "screen-content"
   return UiBuilderDocument(
@@ -582,7 +591,7 @@ fun a2uiUiBuilderDocument(
  * `persistence` is `preview`, the only value a design authored in a browser can honestly claim:
  * anything durable is a promise about a host this document knows nothing about.
  */
-private fun NewDesignState.declaration(): JsonObject =
+internal fun NewDesignState.declaration(): JsonObject =
   JsonObject(
     mapOf(
       "type" to JsonPrimitive(type.wireType),

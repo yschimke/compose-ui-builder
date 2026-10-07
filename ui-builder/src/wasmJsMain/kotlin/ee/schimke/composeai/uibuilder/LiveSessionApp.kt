@@ -75,6 +75,7 @@ import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
 import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs as orderedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.editor.refusing
 import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
+import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
@@ -845,7 +846,13 @@ private fun LiveSessionApp(
       newDesignCatalogs =
         orderedNewDesignCatalogs(
             availableCatalogs,
-            catalogOwnership(),
+            // Only the server seeds a catalog-owned template: it holds the published documents.
+            // A design created in this browser — a local session, or a server that would refuse
+            // this caller's create — is seeded by `createLocalDesign` from the built-in templates,
+            // so it must be offered the built-in cards, or a card would name a template it
+            // cannot honour.
+            if (localSession == null && config.canWrite) catalogOwnership()
+            else CatalogOwnership.NONE,
             NEW_DESIGN_CATALOG_ORDER,
             ::newDesignCatalog,
           )

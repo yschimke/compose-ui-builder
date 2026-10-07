@@ -118,7 +118,7 @@ object UiBuilderNewDesignSeed {
     val fixtureDocument = UiBuilderReducer.replay(fixture).document
     val catalogPin = servedPin(fixtureDocument, catalogSystemId, catalogRevision, nativeRuntimeId)
     published?.get(templateId)?.let {
-      return it.seed(designId, catalogPin)
+      return it.seed(designId, catalogPin).withDeclaredState(state)
     }
     require(templateId == BLANK_TEMPLATE && published?.templates.isNullOrEmpty()) {
       "$catalogSystemId does not publish a `$templateId` template; it publishes " +
@@ -129,6 +129,27 @@ object UiBuilderNewDesignSeed {
       catalogPin = catalogPin,
       environment = mobileScreenEnvironment(fixtureDocument.environment),
       state = state,
+    )
+  }
+
+  /**
+   * [state] added to a published seed's own declarations, under the rule the built-in blank seed
+   * applies, and refused where a requested name is one the template already declares: the person
+   * asked for a variable the design would then silently not have.
+   */
+  private fun UiBuilderDocument.withDeclaredState(state: List<NewDesignState>): UiBuilderDocument {
+    if (state.isEmpty()) return this
+    requireExportableState(state)
+    val clashes = state.map(NewDesignState::name).filter { it in stateVariables }
+    require(clashes.isEmpty()) {
+      "the template already declares ${clashes.joinToString { "`$it`" }}; choose another name"
+    }
+    val names = (stateVariables.keys + state.map(NewDesignState::name)).toList()
+    require(names.map(::exportedStateIdentifier).distinct().size == names.size) {
+      "state variable names must stay distinct once exported as Kotlin identifiers"
+    }
+    return copy(
+      stateVariables = JsonObject(stateVariables + state.associate { it.name to it.declaration() })
     )
   }
 

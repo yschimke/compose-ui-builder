@@ -481,6 +481,20 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
         // read from the frozen table instead; `CatalogCutoverReadinessTest` holds the two equal
         // for as long as the generators exist.
         LegacySynthesisedReferences.forCatalog(systemId).takeIf { catalogOwnership.owns(systemId) },
+        // …and the same pin as a host that configured a runtime for the synthesised catalog
+        // stamped it, with that runtime in place of `candidate`.
+        LegacySynthesisedReferences.forCatalog(systemId)
+          ?.takeIf { catalogOwnership.owns(systemId) }
+          ?.let { legacy ->
+            nativeRuntimeIds[systemId]?.let { runtimeId ->
+              CatalogReferenceV1(
+                systemId = legacy.systemId,
+                catalogRevision = legacy.catalogRevision,
+                capabilityDigest = legacy.capabilityDigest,
+                nativeRuntimeId = runtimeId,
+              )
+            }
+          },
         published[systemId]?.let(::referenceOf),
       )
     }

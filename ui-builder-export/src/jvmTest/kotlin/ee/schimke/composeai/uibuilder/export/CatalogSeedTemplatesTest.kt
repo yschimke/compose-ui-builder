@@ -100,6 +100,40 @@ class CatalogSeedTemplatesTest {
   }
 
   @Test
+  fun `state asked for in the New design form is declared on a published seed too`() {
+    val templates =
+      (read(listOf("ui-builder/designs/screen.json")) as CatalogSeedTemplates.Result.Read).templates
+    val seeded =
+      UiBuilderNewDesignSeed.document(
+        "mine",
+        "watch-kit",
+        "screen",
+        "r",
+        "n",
+        fixture,
+        CatalogOwnership.ALL,
+        templates,
+        state = listOf(NewDesignState("expanded", NewDesignStateType.Flag, JsonPrimitive(true))),
+      )
+    assertEquals(setOf("expanded"), seeded.stateVariables.keys)
+
+    // The rule the built-in blank seed applies: a name that becomes a Kotlin keyword is refused.
+    assertFailsWith<IllegalArgumentException> {
+      UiBuilderNewDesignSeed.document(
+        "mine",
+        "watch-kit",
+        "screen",
+        "r",
+        "n",
+        fixture,
+        CatalogOwnership.ALL,
+        templates,
+        state = listOf(NewDesignState("when", NewDesignStateType.Flag, JsonPrimitive(true))),
+      )
+    }
+  }
+
+  @Test
   fun `an owned catalog is never handed a template it does not publish`() {
     val templates =
       (read(listOf("ui-builder/designs/screen.json")) as CatalogSeedTemplates.Result.Read).templates

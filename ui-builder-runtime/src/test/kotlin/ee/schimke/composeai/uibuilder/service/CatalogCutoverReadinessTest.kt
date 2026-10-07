@@ -139,6 +139,24 @@ class CatalogCutoverReadinessTest {
   }
 
   @Test
+  fun `a legacy pin stamped with a configured runtime still opens once its owner serves it`() {
+    // A host that configured a runtime for the synthesised catalog stamped designs with that
+    // runtime in place of `candidate`; the owned catalog must accept that pin as well.
+    val executor = CatalogCutoverFixtures.executor(ids, CatalogOwnership.ALL)
+    for ((id, legacy) in LegacySynthesisedReferences.all) {
+      val runtime = CatalogCutoverFixtures.rendererRuntimeId(id) ?: continue
+      val stamped =
+        ee.schimke.composeai.uibuilder.protocol.CatalogReferenceV1(
+          systemId = legacy.systemId,
+          catalogRevision = legacy.catalogRevision,
+          capabilityDigest = legacy.capabilityDigest,
+          nativeRuntimeId = runtime,
+        )
+      assertNotNull(executor.resolve(stamped), "$id: $stamped")
+    }
+  }
+
+  @Test
   fun `the frozen legacy pins are exactly what the generators produce`() {
     val executor =
       CurrentM3UiBuilderCatalogExecutor.Builder()
