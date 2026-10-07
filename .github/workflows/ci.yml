@@ -277,17 +277,26 @@ jobs:
       # nothing is inlined and the largest function is ~100 KB.
       - run: node wasm-functions.mjs ../../ui-builder/build/wasmDist/uiBuilder.wasm
         working-directory: scripts/ui-builder-web-smoke
+      # Size budgets for the shipped bundle (`budgets.json`): `uiBuilder.wasm`, `skiko.wasm`, the
+      # scripts and the whole archive, raw and gzipped. `main` only, like the memory budgets below:
+      # a pull request's module is not Binaryen-optimised, so its sizes are not the shipped ones.
+      - if: github.event_name != 'pull_request'
+        run: node budgets.mjs ../../ui-builder/build/wasmDist
+        working-directory: scripts/ui-builder-web-smoke
       - run: npx playwright install --with-deps chromium
         working-directory: scripts/ui-builder-web-smoke
       # The same regression seen from the browser: open a Material 3 design and fail when one Wasm
       # TurboFan compile holds over 128 MB (86 MB today, 312 MB before the inlining rules). Like the
-      # check above, it can only fail on `main`'s Binaryen-optimised module.
+      # check above, it can only fail on `main`'s Binaryen-optimised module. On `main` it also
+      # measures the designs screen, three runs each, against the memory budgets in `budgets.json`
+      # (settled renderer PSS and JS heap); a pull request keeps the one quick run.
       - run: node memory.mjs ../../ui-builder/build/wasmDist ../../build/web-memory
         working-directory: scripts/ui-builder-web-smoke
         env:
           MEMORY_MAX_TURBOFAN_ZONE_MB: '128'
-          MEMORY_SCENARIOS: open-m3-catalog
-          MEMORY_RUNS: '1'
+          MEMORY_SCENARIOS: ${{ github.event_name != 'pull_request' && 'designs,open-m3-catalog' || 'open-m3-catalog' }}
+          MEMORY_RUNS: ${{ github.event_name != 'pull_request' && '3' || '1' }}
+          MEMORY_BUDGETS: ${{ github.event_name != 'pull_request' && 'budgets.json' || '' }}
           MEMORY_VIEWPORT: desktop
       - run: node smoke.mjs ../../ui-builder/build/wasmDist ../../build/web-smoke
         working-directory: scripts/ui-builder-web-smoke

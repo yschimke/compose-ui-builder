@@ -19,12 +19,14 @@
 // request types the stand-in host answers 503, e.g. `listCatalogs`) and MEMORY_CHROMIUM_ARGS
 // (extra switches, space-separated, e.g. `--js-flags=--no-wasm-tier-up`). MEMORY_CACHE_CONTROL sets
 // the bundle's Cache-Control (default `no-cache`; hosts serve it immutable).
-// MEMORY_MAX_TURBOFAN_ZONE_MB fails the run when one Wasm TurboFan compile holds more than that.
+// MEMORY_MAX_TURBOFAN_ZONE_MB fails the run when one Wasm TurboFan compile holds more than that, and
+// MEMORY_BUDGETS (a `budgets.json`) when a screen settles above its memory budget.
 
 import { createServer } from 'node:http';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
+import { checkMemory, readBudgets } from './budgets.mjs';
 import { headlessShellPath, launch } from './cdp.mjs';
 import { largestTurbofanCompile } from './wasm-functions.mjs';
 
@@ -567,6 +569,23 @@ if (turbofanLimitMb !== null) {
     console.error(
       `TurboFan compiles over ${turbofanLimitMb} MB: ${over.join('; ')}. A generated table has probably been ` +
         'inlined into one function again; see wasmNoInlinePatterns in ui-builder/build.gradle.kts.',
+    );
+    failed = true;
+  }
+}
+if (process.env.MEMORY_BUDGETS) {
+  const rows = checkMemory(report, (await readBudgets(process.env.MEMORY_BUDGETS)).memory);
+  for (const { budget, measured, problems } of rows) {
+    const values = Object.entries(budget.maxMb)
+      .map(([metric, max]) => `${metric} ${measured[metric] === undefined ? '?' : mb(measured[metric])} MB (budget ${max})`)
+      .join(', ');
+    console.log(`${problems.length ? 'OVER' : 'ok  '} ${budget.viewport} ${budget.scenario}: ${values}`);
+  }
+  const over = rows.filter((r) => r.problems.length);
+  if (over.length) {
+    console.error(
+      `Memory over budget: ${over.map((r) => `${r.budget.viewport} ${r.budget.scenario}: ${r.problems.join('; ')}`).join('. ')}. ` +
+        'Raise the budget in scripts/ui-builder-web-smoke/budgets.json only if the growth is intended.',
     );
     failed = true;
   }
