@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.90.0](https://github.com/yschimke/compose-ui-builder/compare/v3.89.0...v3.90.0) (2026-10-07)
+
+
+### Features
+
+* **remote:** computed property values the player evaluates ([#514](https://github.com/yschimke/compose-ui-builder/issues/514)) ([fce19b8](https://github.com/yschimke/compose-ui-builder/commit/fce19b8c171c89bdb0dc1f019418bf139852f14e))
+* **remote:** draw/canvas and draw operations, as RemoteCanvas ([#517](https://github.com/yschimke/compose-ui-builder/issues/517)) ([34a53b9](https://github.com/yschimke/compose-ui-builder/commit/34a53b9b78492a3b437c3a232ca6a70ef172d0a6))
+
+
+### Performance Improvements
+
+* **web:** keep generated tables out of line to stop the Material 3 compile spike ([#515](https://github.com/yschimke/compose-ui-builder/issues/515)) ([143cffe](https://github.com/yschimke/compose-ui-builder/commit/143cffe582010d14665e38f550f139741001bb74))
+
 ## [3.89.0](https://github.com/yschimke/compose-ui-builder/compare/v3.88.0...v3.89.0) (2026-10-07)
 
 
