@@ -54,14 +54,11 @@ object MaterialIconData {
    * in the picker are neighbours here, so its first page is one fetch; a hash would have scattered
    * those 80 icons over nearly every file. Null for a key the catalog does not have.
    */
-  fun shardOf(key: String): Int? = catalogPositions[key]?.let { it / SHARD_SIZE }
+  fun shardOf(key: String): Int? =
+    GoogleMaterialIconKeys.positionOf(key).takeIf { it >= 0 }?.let { it / SHARD_SIZE }
 
   val shardCount: Int
-    get() = (GoogleMaterialIcons.size + SHARD_SIZE - 1) / SHARD_SIZE
-
-  private val catalogPositions: Map<String, Int> by lazy {
-    GoogleMaterialIcons.withIndex().associate { (index, icon) -> icon.key to index }
-  }
+    get() = (GoogleMaterialIconKeys.size + SHARD_SIZE - 1) / SHARD_SIZE
 
   fun shardFileName(shard: Int): String = "icons-$shard.json"
 

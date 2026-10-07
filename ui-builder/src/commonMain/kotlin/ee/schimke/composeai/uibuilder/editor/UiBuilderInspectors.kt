@@ -108,10 +108,11 @@ import ee.schimke.composeai.uibuilder.reference.ReferenceImportOutcome
 import ee.schimke.composeai.uibuilder.reference.ReferenceInspector
 import ee.schimke.composeai.uibuilder.reference.ReferencePiece
 import ee.schimke.composeai.uibuilder.reference.ReferenceWorkbench
-import ee.schimke.composeai.uibuilder.renderer.sdk.SelectableGoogleMaterialIcons
+import ee.schimke.composeai.uibuilder.renderer.sdk.SelectableGoogleMaterialIconCount
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.googleMaterialIcon
 import ee.schimke.composeai.uibuilder.renderer.sdk.rememberGoogleMaterialIconVector
+import ee.schimke.composeai.uibuilder.renderer.sdk.searchGoogleMaterialIcons
 import ee.schimke.composeai.uibuilder.role
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -2239,15 +2240,7 @@ internal fun GoogleIconPropertyControl(
   var expanded by remember(field.nodeId, field.name) { mutableStateOf(initiallyExpanded) }
   var query by remember(field.nodeId, field.name) { mutableStateOf(initialQuery) }
   val current = googleMaterialIcon(field.value)
-  val matchingIcons =
-    remember(query) {
-      SelectableGoogleMaterialIcons.filter {
-          query.isBlank() ||
-            it.label.contains(query, ignoreCase = true) ||
-            it.key.contains(query, ignoreCase = true)
-        }
-        .take(80)
-    }
+  val matchingIcons = remember(query) { searchGoogleMaterialIcons(query, limit = 80) }
   Text(
     "Google Material Icons catalog",
     Modifier.padding(top = 7.dp),
@@ -2290,7 +2283,7 @@ internal fun GoogleIconPropertyControl(
         MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
     )
     Text(
-      if (query.isBlank()) "Search ${SelectableGoogleMaterialIcons.size} icons — showing 80"
+      if (query.isBlank()) "Search $SelectableGoogleMaterialIconCount icons — showing 80"
       else "${matchingIcons.size}${if (matchingIcons.size == 80) "+" else ""} matches",
       Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
       color = MaterialTheme.colorScheme.onSurfaceVariant,

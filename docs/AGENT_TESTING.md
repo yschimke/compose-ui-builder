@@ -238,6 +238,13 @@ What it says:
   drawn (`MaterialIconData`, `GoogleMaterialIconVectors`). `uiBuilder.wasm` went from 30.4 MB to
   15.0 MB (6.4 → 4.0 MB gzipped); `MaterialIconDataTest` holds every icon's data equal to its
   compiled vector, and the harness screenshots are pixel-identical before and after.
+  The catalog's own metadata went the same way: it was 11,431 `GoogleMaterialIcon` objects and
+  ~34,000 strings, built whenever anything looked one icon up (every screen that draws a design).
+  Now the build packs the keys into one list in catalog order and an icon's label and `Icons`
+  expression are derived from its key (`MaterialIconCatalogTest` holds all of them to the
+  inventory); a lookup is a hash probe into that text, and the picker's search scans it and builds
+  only the 80 results. `uiBuilder.wasm` 14.38 → 13.32 MB, designs 165 → 159 MB renderer PSS
+  (JS heap 24.2 → 20.9 MB), Material 3 190 → 184 MB (38.2 → 35.2 MB).
 
 **The harness drives Chromium over a bare DevTools socket** (`cdp.mjs`), not Playwright, and
 enables no domain that keeps data on the page's behalf. Playwright enables the Network domain on

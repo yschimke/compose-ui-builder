@@ -195,8 +195,12 @@ abstract class GenerateMaterialIconInventory : DefaultTask() {
 /**
  * The renderer SDK's icon sources, in two directories.
  *
- * [outputDirectory] is every platform's: the key, label, `Icons` expression and canonical flag of
- * each icon, which validation, the picker and code export read. [vectorOutputDirectory] is the
+ * [outputDirectory] is every platform's: every icon key, packed into a few strings in the catalog's
+ * order, and the labels and targets of the original compatibility keys. A canonical icon's label
+ * and `Icons` expression follow from its key (`GoogleMaterialIconCatalog.kt`), so an editor tab
+ * holds one packed list rather than ~11,000 objects and ~34,000 strings until something asks for
+ * the whole catalog; `MaterialIconCatalogTest` holds the derivation to this inventory, and the
+ * browser's icon files follow the same order. [vectorOutputDirectory] is the
  * JVM's alone: the `when` tables that name each icon's `ImageVector` and so pull its builder into
  * the binary. The browser build reads the same vectors as data (`MaterialIconData`) instead, so
  * ~11,000 icon builders are not compiled into every editor tab.
@@ -220,37 +224,6 @@ abstract class GenerateMaterialIconUiSources : DefaultTask() {
     groups.toSortedMap().forEach { (receiver, icons) ->
       val groupName = receiver.removePrefix("Icons.").replace(".", "")
       groupNames += groupName
-      metadataPackage
-        .resolve("GeneratedGoogleMaterialIcons$groupName.kt")
-        .writeText(
-          buildString {
-            appendLine("package ee.schimke.composeai.uibuilder.renderer.sdk")
-            appendLine()
-            appendLine(
-              "// Generated from the shipped material-icons-extended artifact. Do not edit."
-            )
-            icons.chunked(80).forEachIndexed { index, chunk ->
-              appendLine("private fun generated${groupName}Chunk$index() = listOf(")
-              chunk.forEach { icon ->
-                appendLine(
-                  "  GoogleMaterialIcon(${icon.key.quoted()}, ${icon.label.quoted()}, " +
-                    "${icon.expression.quoted()}, ${icon.canonical}),"
-                )
-              }
-              appendLine(")")
-            }
-            appendLine()
-            appendLine(
-              "internal val generated${groupName}GoogleMaterialIcons: List<GoogleMaterialIcon> by lazy {"
-            )
-            appendLine("  buildList {")
-            icons.chunked(80).indices.forEach {
-              appendLine("    addAll(generated${groupName}Chunk$it())")
-            }
-            appendLine("  }")
-            appendLine("}")
-          }
-        )
       vectorPackage
         .resolve("GeneratedGoogleMaterialIconVectors$groupName.kt")
         .writeText(
@@ -296,20 +269,47 @@ abstract class GenerateMaterialIconUiSources : DefaultTask() {
           }
         )
     }
+    // The catalog's order: canonical icons first, then by label and key. `GoogleMaterialIcons`, the
+    // picker and the browser's icon files (`MaterialIconData`) all follow it.
+    val ordered =
+      entries.sortedWith(
+        compareByDescending(MaterialIconEntry::canonical)
+          .thenBy(MaterialIconEntry::label)
+          .thenBy(MaterialIconEntry::key)
+      )
+    check(ordered.none { '|' in it.key }) { "A Material icon key contains the separator '|'" }
     metadataPackage
-      .resolve("GeneratedGoogleMaterialIcons.kt")
+      .resolve("GeneratedGoogleMaterialIconKeys.kt")
       .writeText(
         buildString {
           appendLine("package ee.schimke.composeai.uibuilder.renderer.sdk")
           appendLine()
           appendLine("// Generated from the shipped material-icons-extended artifact. Do not edit.")
+          appendLine()
           appendLine(
-            "internal val GeneratedGoogleMaterialIcons: List<GoogleMaterialIcon> by lazy {"
+            "// Every icon key in the catalog's order, each followed by '|'. Chunked only to keep each"
           )
-          appendLine("  buildList {")
-          groupNames.forEach { appendLine("    addAll(generated${it}GoogleMaterialIcons)") }
+          appendLine("// literal under the JVM's 64 KB constant limit; joined they are one list.")
+          appendLine("internal val GeneratedGoogleMaterialIconKeys: Array<String> =")
+          appendLine("  arrayOf(")
+          ordered.chunked(1_000).forEach { chunk ->
+            appendLine("    " + chunk.joinToString("") { "${it.key}|" }.quoted() + ",")
+          }
+          appendLine("  )")
+          appendLine()
+          appendLine(
+            "// The original compatibility keys: their own label, and the canonical icon they draw."
+          )
+          appendLine("internal fun generatedGoogleMaterialIconAlias(key: String): Pair<String, String>? =")
+          appendLine("  when (key) {")
+          ordered
+            .filterNot(MaterialIconEntry::canonical)
+            .sortedBy(MaterialIconEntry::key)
+            .forEach {
+              appendLine("    ${it.key.quoted()} -> ${it.label.quoted()} to ${it.expression.quoted()}")
+            }
+          appendLine("    else -> null")
           appendLine("  }")
-          appendLine("}")
         }
       )
     vectorPackage
