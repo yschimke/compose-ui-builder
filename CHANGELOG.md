@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.89.0](https://github.com/yschimke/compose-ui-builder/compare/v3.88.0...v3.89.0) (2026-10-07)
+
+
+### Bug Fixes
+
+* **editor:** share the editor's font resolver with device-pane scenes ([#506](https://github.com/yschimke/compose-ui-builder/issues/506)) ([8f1a63a](https://github.com/yschimke/compose-ui-builder/commit/8f1a63a1e76d95dd041eaa5174f570b843fc4e47))
+* **gate:** check a typed map's values, not only that it is an object ([#509](https://github.com/yschimke/compose-ui-builder/issues/509)) ([7900d60](https://github.com/yschimke/compose-ui-builder/commit/7900d6078d436bd4db1a703a502066badbe0ce82))
+
 ## [3.88.0](https://github.com/yschimke/compose-ui-builder/compare/v3.87.0...v3.88.0) (2026-10-06)
 
 
