@@ -3050,6 +3050,212 @@
         },
         {
             "code": null,
+            "componentId": "draw/text-circle",
+            "displayName": "Text on a circle",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "The text to curve.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "centerXDp",
+                    "notes": "Centre across. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "centerYDp",
+                    "notes": "Centre down. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "radiusDp",
+                    "notes": "Where the text's baseline runs. Half the canvas's shorter side, less the text size, when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "angle",
+                    "notes": "Where the text is centred, clockwise from three o'clock. 270 (the top) when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "textSizeSp",
+                    "notes": "Text size. 14 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawTextOnCircle` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/text-path",
+            "displayName": "Text on a path",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "The text to lay along the path.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "pathData",
+                    "notes": "SVG path data in dp from the canvas's top-left; the text runs along it from its start.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "startDp",
+                    "notes": "How far along the path the text starts. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "offsetDp",
+                    "notes": "How far the baseline sits off the path, positive to the path's right. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "textSizeSp",
+                    "notes": "Text size. 14 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawTextOnPath` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "draw/group",
             "displayName": "Transform group",
             "modifierCapabilities": [],
@@ -17818,6 +18024,12 @@
                     "group": "Drawing"
                 },
                 "draw/text": {
+                    "group": "Drawing"
+                },
+                "draw/text-circle": {
+                    "group": "Drawing"
+                },
+                "draw/text-path": {
                     "group": "Drawing"
                 },
                 "layout/box": {

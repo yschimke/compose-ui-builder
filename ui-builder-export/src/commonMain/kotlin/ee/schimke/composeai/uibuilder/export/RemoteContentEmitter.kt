@@ -1933,14 +1933,7 @@ internal class RemoteContentEmitter(
         lines += "$pad}"
       }
       "draw/text" -> {
-        val authored = node.properties["text"]
-        val text =
-          if (authored != null && authored.isDrawComputed())
-            computed(authored, UiValueKind.STRING, "nodes.${node.id}.text") ?: return emptyList()
-          else {
-            usesRemoteString = true
-            "\"${authored?.stringOrNull().orEmpty().escaped()}\".rs"
-          }
+        val text = drawText(node) ?: return emptyList()
         val pan =
           when (node.properties["align"]?.stringOrNull()) {
             "start" -> "-1"
@@ -1958,8 +1951,55 @@ internal class RemoteContentEmitter(
           "panY = 0.rf",
         )
       }
+      UiDrawing.TEXT_CIRCLE -> {
+        val text = drawText(node) ?: return emptyList()
+        usedComponentImports += "$REMOTE_STATE_PACKAGE.min"
+        usesRemoteFloat = true
+        val radius =
+          node.drawPx("radiusDp")
+            ?: ("(min(${extent.width}, ${extent.height}) / 2.rf - " +
+              "${node.drawSpPx("textSizeSp") ?: 14f.spLiteral() + ".toPx()"})")
+        draw(
+          "drawTextOnCircle",
+          text,
+          node.drawPx("centerXDp") ?: extent.centerX,
+          node.drawPx("centerYDp") ?: extent.centerY,
+          radius,
+          node.drawFloat("angle") ?: 270f.floatLiteral(),
+          "0.rf",
+          paint,
+        )
+      }
+      UiDrawing.TEXT_PATH -> {
+        val data = node.properties["pathData"]?.stringOrNull().orEmpty()
+        if (data.isBlank()) {
+          refusals += "nodes.${node.id}.pathData: text on a path needs SVG path data to follow"
+          return emptyList()
+        }
+        val text = drawText(node) ?: return emptyList()
+        usedComponentImports += "androidx.compose.remote.creation.RemotePath"
+        usesRemoteFloat = true
+        // The path is in dp, so the drawing is scaled by one dp's pixels; the paint's text size
+        // is divided by the same, so the glyphs come out the size authored.
+        fun dp(name: String) = node.drawFloat(name) ?: "0.rf"
+        val density = "${1f.dpLiteral()}.toPx()"
+        lines += "${pad}withTransform({ scale($density, $density, RemoteOffset(0.rf, 0.rf)) }) {"
+        lines +=
+          "$pad${INDENT}drawTextOnPath($text, RemotePath(\"${data.escaped()}\"), " +
+            "hOffset = ${dp("startDp")}, vOffset = ${dp("offsetDp")}, paint = $paint)"
+        lines += "$pad}"
+      }
     }
     return lines
+  }
+
+  /** A drawn text: a literal, or a value the player computes. */
+  private fun drawText(node: UiBuilderNode): String? {
+    val authored = node.properties["text"]
+    if (authored != null && authored.isDrawComputed())
+      return computed(authored, UiValueKind.STRING, "nodes.${node.id}.text")
+    usesRemoteString = true
+    return "\"${authored?.stringOrNull().orEmpty().escaped()}\".rs"
   }
 
   /**
@@ -2127,8 +2167,14 @@ internal class RemoteContentEmitter(
       usedComponentImports += "androidx.compose.ui.graphics.StrokeCap"
       lines += "strokeCap = StrokeCap.${cap.replaceFirstChar { it.uppercaseChar() }}"
     }
-    if (operation.componentId == "draw/text") {
-      lines += "textSize = ${node.drawSpPx("textSizeSp") ?: 14f.spLiteral() + ".toPx()"}"
+    when (operation.componentId) {
+      "draw/text",
+      UiDrawing.TEXT_CIRCLE ->
+        lines += "textSize = ${node.drawSpPx("textSizeSp") ?: 14f.spLiteral() + ".toPx()"}"
+      UiDrawing.TEXT_PATH ->
+        lines +=
+          "textSize = ${node.drawSpPx("textSizeSp") ?: 14f.spLiteral() + ".toPx()"} / " +
+            "${1f.dpLiteral()}.toPx()"
     }
     drawGradient(node, hoisted, colour)?.let { lines += it }
     return "RemotePaint {\n" + lines.joinToString("\n") { "$pad$INDENT$it" } + "\n$pad}"

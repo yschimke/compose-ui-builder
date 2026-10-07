@@ -54,7 +54,7 @@ behind a compile-time flag.
 | | Scope | Status |
 | --- | --- | --- |
 | M1 | Computed values: `expr`/`system` wrappers, formula text, canvas evaluation, Remote Kotlin lowering, inspector | Landed |
-| M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint, gradients, clips (box or path), morphs, conditionals, loops | Landed (text on a path follows) |
+| M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint, gradients, clips (box or path), morphs, curved text, conditionals, loops | Landed |
 | M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Long press and double tap landed (`combinedClickable`); the rest planned |
 | M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Landed as `remoteCall` over the generated vocabulary (33 calls); lambda-only calls (`graphicsLayer`, `drawWithContent`) planned |
 | M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Horizontal and vertical page indicators landed; the rest planned |
@@ -165,6 +165,8 @@ canvas stand-in and the Remote emitter.
 | `draw/text` | `text`, `xDp` `yDp` anchor, `textSizeSp`, `align` | `drawAnchoredText` |
 | `draw/group` | `translateXDp` `translateYDp` `rotate` `scale` `pivotXDp` `pivotYDp`; its own `ops` | `withTransform({ … }) { … }` |
 | `draw/clip` | box, or `pathData` in a viewport; `exclude`; its own `ops` | `clipRect(l, t, r, b) { … }`, or `withTransform({ scale(in); clipPath(path); scale(out) }) { … }`; `ClipOp.Difference` when excluding |
+| `draw/text-circle` | `text`, `centerXDp` `centerYDp` `radiusDp`, `angle` (270 is the top), `textSizeSp` + colour | `drawTextOnCircle`, centred on the angle, reading clockwise outside the circle |
+| `draw/text-path` | `text`, `pathData` in dp, `startDp` `offsetDp`, `textSizeSp` + colour | `drawTextOnPath`, inside a one-dp scale so the path is in dp and the glyphs keep their size |
 | `draw/morph` | `pathData`, `toPathData`, `progress` (0–1), viewport + paint | `drawTweenPath(from, to, tween = progress, paint)`, scaled to the canvas |
 | `draw/if` | `condition` (a flag, usually state or a formula); its own `ops` | `drawConditionally(condition) { … }` |
 | `draw/repeat` | `from` `until` `step` (unitless), `index` (a name, `i` when absent); its own `ops` | `loop(from, until, step) { i -> … }` |
@@ -225,7 +227,6 @@ A progress ring and a clock hand, as a document:
 
 ### Not yet
 
-- Text on a path (text on a circle is written by `drawTextOnCircle`; see below once it lands).
 - More than two gradient stops, gradient geometry other than the canvas's, and images as paint.
 - The device preview in remote-m3-catalog plays the canvas once its renderer adds the case.
 - The regular Compose lane: `Canvas { }` is the same shape, but no catalog that exports regular

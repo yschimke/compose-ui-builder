@@ -27,6 +27,8 @@ object UiDrawing {
   const val IF: String = "draw/if"
   const val REPEAT: String = "draw/repeat"
   const val MORPH: String = "draw/morph"
+  const val TEXT_CIRCLE: String = "draw/text-circle"
+  const val TEXT_PATH: String = "draw/text-path"
   const val OPS_SLOT: String = "ops"
 
   /** The slot trait a canvas and a group accept, and only draw operations carry. */
@@ -233,6 +235,55 @@ object UiDrawing {
           color,
           alpha,
         ) + gradient,
+      ),
+      Operation(
+        TEXT_CIRCLE,
+        "Text on a circle",
+        "drawTextOnCircle",
+        listOf(
+          Property.Text("text", "The text to curve."),
+          Property.Number("centerXDp", Unit.DP, "Centre across. The canvas centre when absent."),
+          Property.Number("centerYDp", Unit.DP, "Centre down. The canvas centre when absent."),
+          Property.Number(
+            "radiusDp",
+            Unit.DP,
+            "Where the text's baseline runs. Half the canvas's shorter side, less the text " +
+              "size, when absent.",
+          ),
+          Property.Number(
+            "angle",
+            Unit.DEGREES,
+            "Where the text is centred, clockwise from three o'clock. 270 (the top) when absent.",
+          ),
+          Property.Number("textSizeSp", Unit.SP, "Text size. 14 when absent."),
+          color,
+          alpha,
+        ) + gradient,
+      ),
+      Operation(
+        TEXT_PATH,
+        "Text on a path",
+        "drawTextOnPath",
+        listOf(
+          Property.Text("text", "The text to lay along the path."),
+          Property.Text(
+            "pathData",
+            "SVG path data in dp from the canvas's top-left; the text runs along it from its start.",
+          ),
+          Property.Number(
+            "startDp",
+            Unit.DP,
+            "How far along the path the text starts. 0 when absent.",
+          ),
+          Property.Number(
+            "offsetDp",
+            Unit.DP,
+            "How far the baseline sits off the path, positive to the path's right. 0 when absent.",
+          ),
+          Property.Number("textSizeSp", Unit.SP, "Text size. 14 when absent."),
+          color,
+          alpha,
+        ),
       ),
       Operation(
         GROUP,

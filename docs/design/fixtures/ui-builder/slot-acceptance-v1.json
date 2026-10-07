@@ -1399,7 +1399,9 @@
                 "draw/path",
                 "draw/rect",
                 "draw/repeat",
-                "draw/text"
+                "draw/text",
+                "draw/text-circle",
+                "draw/text-path"
             ],
             "draw/clip.ops": [
                 "draw/arc",
@@ -1413,7 +1415,9 @@
                 "draw/path",
                 "draw/rect",
                 "draw/repeat",
-                "draw/text"
+                "draw/text",
+                "draw/text-circle",
+                "draw/text-path"
             ],
             "draw/group.ops": [
                 "draw/arc",
@@ -1427,7 +1431,9 @@
                 "draw/path",
                 "draw/rect",
                 "draw/repeat",
-                "draw/text"
+                "draw/text",
+                "draw/text-circle",
+                "draw/text-path"
             ],
             "draw/if.ops": [
                 "draw/arc",
@@ -1441,7 +1447,9 @@
                 "draw/path",
                 "draw/rect",
                 "draw/repeat",
-                "draw/text"
+                "draw/text",
+                "draw/text-circle",
+                "draw/text-path"
             ],
             "draw/repeat.ops": [
                 "draw/arc",
@@ -1455,7 +1463,9 @@
                 "draw/path",
                 "draw/rect",
                 "draw/repeat",
-                "draw/text"
+                "draw/text",
+                "draw/text-circle",
+                "draw/text-path"
             ],
             "layout/box.children": [
                 "asset/image",
@@ -1472,6 +1482,8 @@
                 "draw/rect",
                 "draw/repeat",
                 "draw/text",
+                "draw/text-circle",
+                "draw/text-path",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1609,6 +1621,8 @@
                 "draw/rect",
                 "draw/repeat",
                 "draw/text",
+                "draw/text-circle",
+                "draw/text-path",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1746,6 +1760,8 @@
                 "draw/rect",
                 "draw/repeat",
                 "draw/text",
+                "draw/text-circle",
+                "draw/text-path",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1800,6 +1816,8 @@
                 "draw/rect",
                 "draw/repeat",
                 "draw/text",
+                "draw/text-circle",
+                "draw/text-path",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1857,6 +1875,8 @@
                 "draw/rect",
                 "draw/repeat",
                 "draw/text",
+                "draw/text-circle",
+                "draw/text-path",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",

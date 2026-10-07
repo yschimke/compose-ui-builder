@@ -9,7 +9,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -22,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -29,6 +32,9 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -306,6 +312,48 @@ private sealed interface DrawStep {
               }
             }
           }
+          UiDrawing.TEXT_CIRCLE -> {
+            val style = TextStyle(fontSize = (node.number("textSizeSp") ?: 14f).sp)
+            val radius =
+              node.number("radiusDp")?.dp(this)
+                ?: (extent.minDimension / 2f - style.fontSize.toPx())
+            val center =
+              Offset(
+                node.number("centerXDp")?.dp(this) ?: extent.width / 2f,
+                node.number("centerYDp")?.dp(this) ?: extent.height / 2f,
+              )
+            val glyphs = glyphs(measurer, node.text("text").orEmpty(), style)
+            val arc = glyphs.sumOf { it.size.width.toDouble() }.toFloat()
+            // Centred on the angle and read clockwise, baseline on the circle: `drawTextOnCircle`
+            // with CENTER alignment and OUTSIDE placement, as the export writes it.
+            var along = (node.number("angle") ?: 270f) * DEGREES_TO_RADIANS - arc / radius / 2f
+            glyphs.forEach { glyph ->
+              val middle = along + glyph.size.width / 2f / radius
+              val point = Offset(center.x + radius * cos(middle), center.y + radius * sin(middle))
+              drawGlyph(glyph, point, middle / DEGREES_TO_RADIANS + 90f, brush)
+              along += glyph.size.width / radius
+            }
+          }
+          UiDrawing.TEXT_PATH -> {
+            val path = node.text("pathData")?.let(::parsePath) ?: return@with
+            val style = TextStyle(fontSize = (node.number("textSizeSp") ?: 14f).sp)
+            // The path is in dp; measured in pixels, as the export's density scale draws it.
+            path.transform(Matrix().apply { scale(density, density) })
+            val measure = PathMeasure().apply { setPath(path, false) }
+            val offset = (node.number("offsetDp") ?: 0f).dp(this)
+            var distance = (node.number("startDp") ?: 0f).dp(this)
+            glyphs(measurer, node.text("text").orEmpty(), style).forEach { glyph ->
+              val middle = distance + glyph.size.width / 2f
+              if (middle > measure.length) return@forEach
+              val tangent = measure.getTangent(middle)
+              val angle = atan2(tangent.y, tangent.x)
+              // Positive offset is to the path's right: a quarter turn clockwise of its heading.
+              val point =
+                measure.getPosition(middle) + Offset(-sin(angle) * offset, cos(angle) * offset)
+              drawGlyph(glyph, point, angle / DEGREES_TO_RADIANS, brush)
+              distance += glyph.size.width
+            }
+          }
           "draw/text" -> {
             val layout =
               measurer.measure(
@@ -334,6 +382,29 @@ private sealed interface DrawStep {
       }
   }
 }
+
+private const val DEGREES_TO_RADIANS = (kotlin.math.PI / 180.0).toFloat()
+
+/** Each character of [text] laid out on its own, so it can be placed and turned separately. */
+private fun glyphs(measurer: TextMeasurer, text: String, style: TextStyle): List<TextLayoutResult> =
+  text.map {
+    measurer.measure(it.toString(), style)
+  }
+
+/** One glyph with its baseline's middle at [point], turned [degrees] clockwise about it. */
+private fun DrawScope.drawGlyph(
+  glyph: TextLayoutResult,
+  point: Offset,
+  degrees: Float,
+  brush: Brush,
+) =
+  rotate(degrees, point) {
+    drawText(
+      glyph,
+      brush = brush,
+      topLeft = Offset(point.x - glyph.size.width / 2f, point.y - glyph.firstBaseline),
+    )
+  }
 
 private fun parsePath(data: String): Path? = runCatching {
   PathParser().parsePathString(data).toPath()
