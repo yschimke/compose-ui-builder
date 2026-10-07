@@ -220,14 +220,14 @@ object FontSettings {
   ) {
     /**
      * What a generated `Text` appends to its style: `.copy(…)` with the features and, for an
-     * instance whose `wght` is the weight, no synthesis — a synthesised bold over `wght` 800 would
-     * be two bolds. Null when there is nothing to copy.
+     * instance whose `wght` is the weight, no weight synthesis — a synthesised bold over `wght` 800
+     * would be two bolds. Null when there is nothing to copy.
      */
     val styleCopy: String?
       get() {
         val arguments = buildList {
           featureSettings?.let { add("fontFeatureSettings = \"$it\"") }
-          if (overridesWeight && fontFamily != null) add("fontSynthesis = FontSynthesis.None")
+          if (overridesWeight && fontFamily != null) add("fontSynthesis = FontSynthesis.Style")
         }
         return if (arguments.isEmpty()) null else ".copy(${arguments.joinToString(", ")})"
       }

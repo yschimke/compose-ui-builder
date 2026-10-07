@@ -22,7 +22,7 @@ class FontSettingsExportTest {
     )
     assertTrue(
       "style = LocalTextStyle.current.copy(fontFeatureSettings = \"tnum\", " +
-        "fontSynthesis = FontSynthesis.None)" in source,
+        "fontSynthesis = FontSynthesis.Style)" in source,
       source,
     )
     listOf(
@@ -39,7 +39,7 @@ class FontSettingsExportTest {
     assertTrue("FontVariation.Setting(\"wght\", 650f)" in source, source)
     assertTrue("fontWeight = FontWeight.Bold" !in source, source)
     assertTrue(
-      "style = LocalTextStyle.current.copy(fontSynthesis = FontSynthesis.None)" in source,
+      "style = LocalTextStyle.current.copy(fontSynthesis = FontSynthesis.Style)" in source,
       source,
     )
     assertTrue("import androidx.compose.ui.text.font.FontSynthesis" in source, source)
