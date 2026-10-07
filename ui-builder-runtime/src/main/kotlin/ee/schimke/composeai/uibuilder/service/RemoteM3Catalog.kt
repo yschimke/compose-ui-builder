@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_DEFAULT_KEY
 import ee.schimke.composeai.uibuilder.export.REMOTE_TEXT_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.RemoteMaterial3
+import ee.schimke.composeai.uibuilder.export.UiDrawing
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
@@ -221,15 +222,20 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
       it.modifierCapabilities =
         // A brush can only sit in the container's background slot, and `WearWidgetBrush` has no
         // geometry to hang a modifier on — the generator refuses every one it finds there. So the
-        // gradient offers none, rather than eighteen that each end in a refusal.
-        if (componentId == "shape/linear-gradient") emptyList()
+        // gradient offers none, rather than eighteen that each end in a refusal. A draw operation
+        // is a call inside a canvas, not a layout node, and has nothing to hang one on either.
+        if (componentId == "shape/linear-gradient" || componentId in UiDrawing.BY_ID) emptyList()
         else modifierCapabilities.remoteAuthorableModifiers()
       // `RemoteAuthorable` is a capability of the Remote Compose emitter, not a property inherited
       // from a mobile component. The reviewed vocabulary does have an emitter branch (or
       // component-record fallback) and may enter a widget body.
       it.traits =
         (traits - "RemoteAuthorable").let { traits ->
-          if (componentId !in setOf("remote-compose/document", "shape/linear-gradient")) {
+          // A draw operation enters only a canvas's `ops` slot, which asks for DrawOperation.
+          if (
+            componentId !in setOf("remote-compose/document", "shape/linear-gradient") &&
+              componentId !in UiDrawing.BY_ID
+          ) {
             traits + "RemoteAuthorable"
           } else {
             traits
@@ -252,10 +258,14 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
 internal fun remoteM3ComponentMenu(base: JsonObject): JsonObject =
   RemoteMaterial3.components
     .fold(
-      REMOTE_ONLY_LAYOUT_IDS.fold(
-        JsonObject(base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content")))
+      REMOTE_DRAW_IDS.fold(
+        REMOTE_ONLY_LAYOUT_IDS.fold(
+          JsonObject(base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content")))
+        ) { semantics, id ->
+          JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, "Layout")))
+        }
       ) { semantics, id ->
-        JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, "Layout")))
+        JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, "Drawing")))
       }
     ) { semantics, component ->
       JsonObject(
@@ -607,6 +617,7 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       REMOTE_COMPOSE_CUSTOM_COMPONENT_ID,
       "shape/linear-gradient",
       "asset/image",
+      *REMOTE_DRAW_IDS.toTypedArray(),
     )
   return base
     .newBuilder()
@@ -645,7 +656,10 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             // Narrowed to what the generator can write; the published-catalog foundation applies
             // the
             // same function.
-            (components[it] ?: remoteOnlyLayout(it, components) ?: components.getValue(it))
+            (components[it]
+                ?: remoteOnlyLayout(it, components)
+                ?: remoteDrawComponent(it, components)
+                ?: components.getValue(it))
               .narrowedForRemoteAuthoring()
               .withWidgetProfileNote()
           } +

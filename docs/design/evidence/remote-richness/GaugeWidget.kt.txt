@@ -1,0 +1,119 @@
+// Generated from a Compose UI builder design. Do not edit by hand.
+@file:Suppress("RestrictedApi")
+
+package proof.draw
+
+import android.content.Context
+import androidx.compose.remote.creation.compose.layout.RemoteCanvas
+import androidx.compose.remote.creation.compose.layout.RemoteComposable
+import androidx.compose.remote.creation.compose.layout.RemoteOffset
+import androidx.compose.remote.creation.compose.layout.RemoteSize
+import androidx.compose.remote.creation.compose.layout.RemoteTime
+import androidx.compose.remote.creation.compose.modifier.RemoteModifier
+import androidx.compose.remote.creation.compose.modifier.fillMaxSize
+import androidx.compose.remote.creation.compose.modifier.size
+import androidx.compose.remote.creation.compose.state.RemotePaint
+import androidx.compose.remote.creation.compose.state.rc
+import androidx.compose.remote.creation.compose.state.rdp
+import androidx.compose.remote.creation.compose.state.rememberMutableRemoteFloat
+import androidx.compose.remote.creation.compose.state.rf
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PaintingStyle
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.glance.wear.GlanceWearWidget
+import androidx.glance.wear.WearWidgetBrush
+import androidx.glance.wear.WearWidgetData
+import androidx.glance.wear.WearWidgetDocument
+import androidx.glance.wear.core.WearWidgetParams
+import androidx.glance.wear.tooling.preview.RectangularLargeWidgetPreviewParams
+import androidx.glance.wear.tooling.preview.RoundLargeWidgetPreviewParams
+import androidx.glance.wear.tooling.preview.SquircleLargeWidgetPreviewParams
+import androidx.glance.wear.tooling.preview.WearWidgetPreview
+import androidx.wear.compose.remote.material3.RemoteMaterialTheme
+
+@RemoteComposable
+@Composable
+fun GaugeWidgetContent() {
+    val progress = rememberMutableRemoteFloat(0.65f)
+    RemoteMaterialTheme {
+        val drawColor = RemoteMaterialTheme.colorScheme.outlineVariant
+        RemoteCanvas(modifier = RemoteModifier.fillMaxSize().size(96.rdp, 96.rdp)) {
+            val paintTrack = RemotePaint {
+                color = drawColor
+                style = PaintingStyle.Stroke
+                strokeWidth = 8.rdp.toPx()
+            }
+            drawArc(
+                paintTrack,
+                startAngle = 0.rf,
+                sweepAngle = 360.rf,
+                useCenter = false,
+                topLeft = RemoteOffset((8.rdp.toPx() / 2.rf), (8.rdp.toPx() / 2.rf)),
+                size = RemoteSize((96.rdp.toPx() - (8.rdp.toPx() / 2.rf) * 2.rf), (96.rdp.toPx() - (8.rdp.toPx() / 2.rf) * 2.rf)),
+            )
+            val paintSweep = RemotePaint {
+                color = Color(0xFF6750A4).rc
+                style = PaintingStyle.Stroke
+                strokeWidth = 8.rdp.toPx()
+                strokeCap = StrokeCap.Round
+            }
+            drawArc(
+                paintSweep,
+                startAngle = -90.rf,
+                sweepAngle = (progress * 360.rf),
+                useCenter = false,
+                topLeft = RemoteOffset((8.rdp.toPx() / 2.rf), (8.rdp.toPx() / 2.rf)),
+                size = RemoteSize((96.rdp.toPx() - (8.rdp.toPx() / 2.rf) * 2.rf), (96.rdp.toPx() - (8.rdp.toPx() / 2.rf) * 2.rf)),
+            )
+            withTransform({ rotate(((RemoteTime().Seconds() % 60.rf) * 6.rf), RemoteOffset((96.rdp.toPx() / 2.rf), (96.rdp.toPx() / 2.rf))) }) {
+                val paintNeedle = RemotePaint {
+                    color = Color(0xFFFFFFFF).rc
+                    style = PaintingStyle.Stroke
+                    strokeWidth = 2.rdp.toPx()
+                }
+                drawLine(
+                    paintNeedle,
+                    start = RemoteOffset(48.rdp.toPx(), 48.rdp.toPx()),
+                    end = RemoteOffset(48.rdp.toPx(), 12.rdp.toPx()),
+                )
+            }
+        }
+    }
+}
+
+class GaugeWidget : GlanceWearWidget() {
+    override suspend fun provideWidgetData(
+        context: Context,
+        params: WearWidgetParams,
+    ): WearWidgetData {
+        return WearWidgetDocument(background = WearWidgetBrush) {
+            GaugeWidgetContent()
+        }
+    }
+}
+
+@Preview(name = "Rectangular Preview")
+@Composable
+fun GaugeWidgetRectangularPreview() =
+    WearWidgetPreview(
+        GaugeWidget(),
+        RectangularLargeWidgetPreviewParams().values.maxBy { it.widthDp },
+    )
+
+@Preview(name = "Squircle Preview")
+@Composable
+fun GaugeWidgetSquirclePreview() =
+    WearWidgetPreview(
+        GaugeWidget(),
+        SquircleLargeWidgetPreviewParams().values.maxBy { it.widthDp },
+    )
+
+@Preview(name = "Round Preview")
+@Composable
+fun GaugeWidgetRoundPreview() =
+    WearWidgetPreview(
+        GaugeWidget(),
+        RoundLargeWidgetPreviewParams().values.maxBy { it.widthDp },
+    )

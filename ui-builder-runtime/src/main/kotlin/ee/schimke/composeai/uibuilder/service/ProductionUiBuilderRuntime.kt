@@ -980,7 +980,14 @@ internal const val REMOTE_COMPOSE_NAMESPACE: String = "remote-compose/"
  * The id namespaces the builder owns on every shelf, which [composeFoundationCatalog] supplies to
  * published catalogs. An explicit list: widening it widens every published catalog.
  */
-internal val BUILDER_NAMESPACES = FOUNDATION_NAMESPACES + REMOTE_COMPOSE_NAMESPACE
+internal val BUILDER_NAMESPACES = FOUNDATION_NAMESPACES + REMOTE_COMPOSE_NAMESPACE + DRAW_NAMESPACE
+
+/**
+ * The drawing vocabulary's namespace (`draw/canvas`, `draw/rect`, …). Only the Remote Compose
+ * foundation declares any, so naming it here adds them to Remote Compose catalogs and nothing to
+ * the others.
+ */
+internal const val DRAW_NAMESPACE: String = "draw/"
 
 internal val REMOTE_COMPOSE_BORROWED_AS_THEMSELVES =
   setOf(

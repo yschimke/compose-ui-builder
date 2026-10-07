@@ -1345,7 +1345,13 @@ class UiBuilderEditorReducer(
     val field =
       propertyFields(state.copy(selection = listOf(nodeId))).firstOrNull { it.name == "text" }
         ?: return null
-    if (field.control != EditorPropertyControl.Text || field.boundVariable != null) return null
+    // A computed property is bound too: its inline editor would open empty and replace the formula.
+    if (
+      field.control != EditorPropertyControl.Text ||
+        field.boundVariable != null ||
+        field.boundFormula != null
+    )
+      return null
     return field.value
   }
 

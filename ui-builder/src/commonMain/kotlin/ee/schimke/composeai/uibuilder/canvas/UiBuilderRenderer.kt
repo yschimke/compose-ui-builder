@@ -175,6 +175,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiDrawing
 import ee.schimke.composeai.uibuilder.export.WearScreenTheme
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostSpec
@@ -195,6 +196,7 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasMode
 import ee.schimke.composeai.uibuilder.renderer.sdk.CanvasRenderNode
 import ee.schimke.composeai.uibuilder.renderer.sdk.LocalCanvasAdapterRegistry
 import ee.schimke.composeai.uibuilder.renderer.sdk.RenderCanvasNode
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderDrawCanvas
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderModifierPlan
@@ -1873,6 +1875,10 @@ private fun RenderNode(
           onTextLayout = { host.recordTextLayout(path, it) },
         )
       "asset/image" -> AssetImage(document, node, measured)
+      // A drawing: its operations are drawn by the canvas, not entered as nodes of their own.
+      // `this.entry`: the node being drawn, not the root this renderer was entered from.
+      UiDrawing.CANVAS -> UiBuilderDrawCanvas(this.entry, measured) { uiBuilderColor(it) }
+      in UiDrawing.BY_ID -> Unit
       "shape/linear-gradient" -> Box(measured.background(node.linearGradientBrush()))
       "shape/radial-gradient" -> {
         val inner =

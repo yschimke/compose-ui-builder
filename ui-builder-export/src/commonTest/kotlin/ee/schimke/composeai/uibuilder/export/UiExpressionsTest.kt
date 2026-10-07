@@ -156,4 +156,67 @@ class UiExpressionsTest {
     assertEquals("int", evaluated["type"]!!.jsonPrimitive.content)
     assertEquals(42, evaluated["value"]!!.jsonPrimitive.content.toInt())
   }
+
+  @Test
+  fun `the preview computes in Float, as the player does`() {
+    assertEquals(true, evaluate("16777216.0 + 1.0 == 16777216.0"))
+  }
+
+  @Test
+  fun `a fixed time that names no instant draws at the default`() {
+    assertEquals(UiExpressions.Clock.DEFAULT, UiExpressions.Clock.of("2024-13-16T12:00:00Z"))
+    assertEquals(UiExpressions.Clock.DEFAULT, UiExpressions.Clock.of("2024-05-16T25:00:00Z"))
+  }
+
+  @Test
+  fun `nullable or uninitialised state is not an operand`() {
+    fun kind(vararg fields: Pair<String, kotlinx.serialization.json.JsonElement>) =
+      UiExpressions.Scope.stateKind(JsonObject(mapOf(*fields)))
+    assertEquals(
+      null,
+      kind(
+        "valueType" to JsonPrimitive("int"),
+        "initialValue" to JsonPrimitive(1),
+        "nullable" to JsonPrimitive(true),
+      ),
+    )
+    assertEquals(null, kind("valueType" to JsonPrimitive("int")))
+    assertEquals(
+      null,
+      kind("valueType" to JsonPrimitive("int"), "initialValue" to JsonPrimitive("x")),
+    )
+    assertEquals(
+      UiValueKind.FLOAT,
+      kind("valueType" to JsonPrimitive("float"), "initialValue" to JsonPrimitive(1)),
+    )
+  }
+
+  @Test
+  fun `an object type does not stand in for the kind a formula produces`() {
+    val declarations =
+      mapOf(
+        "on" to
+          JsonObject(
+            mapOf("valueType" to JsonPrimitive("bool"), "initialValue" to JsonPrimitive(true))
+          )
+      )
+    val numberOrBinding =
+      kotlinx.serialization.json.JsonArray(listOf(JsonPrimitive("number"), JsonPrimitive("object")))
+    val flag = UiExpressions.parseFormula("!on", setOf("on"))
+    assertEquals(
+      false,
+      stateBindingMatchesCatalog(flag, numberOrBinding, emptyList(), declarations, "progress"),
+    )
+    // A structural value such as `showByState` holds nothing a formula produces.
+    assertEquals(
+      false,
+      stateBindingMatchesCatalog(
+        flag,
+        JsonPrimitive("object"),
+        emptyList(),
+        declarations,
+        "showByState",
+      ),
+    )
+  }
 }

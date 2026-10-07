@@ -431,6 +431,7 @@ class ProductionUiBuilderRuntimeTest {
         "remote-compose/custom",
         "shape/linear-gradient",
         "asset/image",
+        *ee.schimke.composeai.uibuilder.export.UiDrawing.COMPONENT_IDS.toTypedArray(),
       ) + RemoteMaterial3.components.map { it.componentId },
       remoteCatalog.components.map { it.componentId },
     )

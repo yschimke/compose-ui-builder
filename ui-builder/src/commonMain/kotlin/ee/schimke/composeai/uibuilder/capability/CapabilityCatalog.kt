@@ -9,6 +9,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderComponentPacks
 import ee.schimke.composeai.uibuilder.export.UiBuilderPreviewSurfaces
+import ee.schimke.composeai.uibuilder.export.UiDrawing
 import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
 import kotlinx.serialization.SerialName
@@ -422,6 +423,23 @@ object CapabilityCatalogParser {
     EDITOR_OVERRIDES[componentId to property.name]?.let {
       return it
     }
+    // A draw operation states what each number measures, so its range comes from there rather than
+    // from a name rule: an angle, a fraction and a dp offset are three different controls.
+    UiDrawing.BY_ID[componentId]
+      ?.properties
+      ?.firstOrNull { it.name == property.name }
+      ?.let { declared ->
+        when (declared) {
+          is UiDrawing.Property.Number ->
+            return numberEditor(declared.unit.minimum, declared.unit.maximum, declared.unit.step)
+          is UiDrawing.Property.Color -> return colorEditor()
+          is UiDrawing.Property.Text ->
+            return PropertyEditorCapability(control = PropertyEditorControl.TEXT)
+          is UiDrawing.Property.Flag ->
+            return PropertyEditorCapability(control = PropertyEditorControl.BOOLEAN)
+          is UiDrawing.Property.Choice -> Unit
+        }
+      }
     // A Wear component edits like its Material 3 counterpart where the two share a property: a Wear
     // Slider's `value` is the same number in the same units as `m3/slider`'s. Without this every
     // one

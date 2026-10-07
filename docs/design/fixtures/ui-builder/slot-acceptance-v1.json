@@ -1387,8 +1387,37 @@
             ]
         },
         "remote-m3": {
+            "draw/canvas.ops": [
+                "draw/arc",
+                "draw/circle",
+                "draw/group",
+                "draw/line",
+                "draw/oval",
+                "draw/path",
+                "draw/rect",
+                "draw/text"
+            ],
+            "draw/group.ops": [
+                "draw/arc",
+                "draw/circle",
+                "draw/group",
+                "draw/line",
+                "draw/oval",
+                "draw/path",
+                "draw/rect",
+                "draw/text"
+            ],
             "layout/box.children": [
                 "asset/image",
+                "draw/arc",
+                "draw/canvas",
+                "draw/circle",
+                "draw/group",
+                "draw/line",
+                "draw/oval",
+                "draw/path",
+                "draw/rect",
+                "draw/text",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1431,6 +1460,7 @@
             ],
             "layout/collapsible-column.children": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1468,6 +1498,7 @@
             ],
             "layout/collapsible-row.children": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1505,6 +1536,15 @@
             ],
             "layout/column.children": [
                 "asset/image",
+                "draw/arc",
+                "draw/canvas",
+                "draw/circle",
+                "draw/group",
+                "draw/line",
+                "draw/oval",
+                "draw/path",
+                "draw/rect",
+                "draw/text",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1547,6 +1587,7 @@
             ],
             "layout/fit-box.children": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1584,6 +1625,7 @@
             ],
             "layout/flow-row.children": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1621,6 +1663,15 @@
             ],
             "layout/for-each.template": [
                 "asset/image",
+                "draw/arc",
+                "draw/canvas",
+                "draw/circle",
+                "draw/group",
+                "draw/line",
+                "draw/oval",
+                "draw/path",
+                "draw/rect",
+                "draw/text",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1660,6 +1711,15 @@
             ],
             "layout/row.children": [
                 "asset/image",
+                "draw/arc",
+                "draw/canvas",
+                "draw/circle",
+                "draw/group",
+                "draw/line",
+                "draw/oval",
+                "draw/path",
+                "draw/rect",
+                "draw/text",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1702,6 +1762,15 @@
             ],
             "remote-compose/custom.content": [
                 "asset/image",
+                "draw/arc",
+                "draw/canvas",
+                "draw/circle",
+                "draw/group",
+                "draw/line",
+                "draw/oval",
+                "draw/path",
+                "draw/rect",
+                "draw/text",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1744,6 +1813,7 @@
             ],
             "remote-m3/remote-app-card.appImage": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1781,6 +1851,7 @@
             ],
             "remote-m3/remote-app-card.appName": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1818,6 +1889,7 @@
             ],
             "remote-m3/remote-app-card.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1855,6 +1927,7 @@
             ],
             "remote-m3/remote-app-card.time": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1892,6 +1965,7 @@
             ],
             "remote-m3/remote-app-card.title": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1929,6 +2003,7 @@
             ],
             "remote-m3/remote-button-group.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -1966,6 +2041,7 @@
             ],
             "remote-m3/remote-button.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2003,6 +2079,7 @@
             ],
             "remote-m3/remote-card.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2040,6 +2117,7 @@
             ],
             "remote-m3/remote-checkbox-button.icon": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2077,6 +2155,7 @@
             ],
             "remote-m3/remote-checkbox-button.label": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2114,6 +2193,7 @@
             ],
             "remote-m3/remote-checkbox-button.secondaryLabel": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2151,6 +2231,7 @@
             ],
             "remote-m3/remote-compact-button.icon": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2188,6 +2269,7 @@
             ],
             "remote-m3/remote-compact-button.label": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2225,6 +2307,7 @@
             ],
             "remote-m3/remote-edge-button.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2262,6 +2345,7 @@
             ],
             "remote-m3/remote-icon-button.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2299,6 +2383,7 @@
             ],
             "remote-m3/remote-outlined-card.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2336,6 +2421,7 @@
             ],
             "remote-m3/remote-radio-button.icon": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2373,6 +2459,7 @@
             ],
             "remote-m3/remote-radio-button.label": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2410,6 +2497,7 @@
             ],
             "remote-m3/remote-radio-button.secondaryLabel": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2447,6 +2535,7 @@
             ],
             "remote-m3/remote-slider.decreaseIcon": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2484,6 +2573,7 @@
             ],
             "remote-m3/remote-slider.increaseIcon": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2521,6 +2611,7 @@
             ],
             "remote-m3/remote-split-checkbox-button.label": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2558,6 +2649,7 @@
             ],
             "remote-m3/remote-split-checkbox-button.secondaryLabel": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2595,6 +2687,7 @@
             ],
             "remote-m3/remote-split-radio-button.label": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2632,6 +2725,7 @@
             ],
             "remote-m3/remote-split-radio-button.secondaryLabel": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2669,6 +2763,7 @@
             ],
             "remote-m3/remote-split-switch-button.label": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2706,6 +2801,7 @@
             ],
             "remote-m3/remote-split-switch-button.secondaryLabel": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2743,6 +2839,7 @@
             ],
             "remote-m3/remote-stepper.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2780,6 +2877,7 @@
             ],
             "remote-m3/remote-stepper.decreaseIcon": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2817,6 +2915,7 @@
             ],
             "remote-m3/remote-stepper.increaseIcon": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2854,6 +2953,7 @@
             ],
             "remote-m3/remote-switch-button.icon": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2891,6 +2991,7 @@
             ],
             "remote-m3/remote-switch-button.label": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2928,6 +3029,7 @@
             ],
             "remote-m3/remote-switch-button.secondaryLabel": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -2965,6 +3067,7 @@
             ],
             "remote-m3/remote-text-button.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -3002,6 +3105,7 @@
             ],
             "remote-m3/remote-title-card.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -3039,6 +3143,7 @@
             ],
             "remote-m3/remote-title-card.subtitle": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -3076,6 +3181,7 @@
             ],
             "remote-m3/remote-title-card.time": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -3113,6 +3219,7 @@
             ],
             "remote-m3/remote-title-card.title": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -3150,6 +3257,7 @@
             ],
             "remote-m3/widget-container-adaptive.action": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -3191,6 +3299,7 @@
             ],
             "remote-m3/widget-container-adaptive.headline": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -3228,6 +3337,7 @@
             ],
             "remote-m3/widget-container-adaptive.supporting": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -3269,6 +3379,7 @@
             ],
             "remote-m3/widget-container-large.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
@@ -3310,6 +3421,7 @@
             ],
             "remote-m3/widget-container-small.content": [
                 "asset/image",
+                "draw/canvas",
                 "layout/box",
                 "layout/collapsible-column",
                 "layout/collapsible-row",
