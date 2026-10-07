@@ -192,6 +192,15 @@ abstract class GenerateMaterialIconInventory : DefaultTask() {
   }
 }
 
+/**
+ * The renderer SDK's icon sources, in two directories.
+ *
+ * [outputDirectory] is every platform's: the key, label, `Icons` expression and canonical flag of
+ * each icon, which validation, the picker and code export read. [vectorOutputDirectory] is the
+ * JVM's alone: the `when` tables that name each icon's `ImageVector` and so pull its builder into
+ * the binary. The browser build reads the same vectors as data (`MaterialIconData`) instead, so
+ * ~11,000 icon builders are not compiled into every editor tab.
+ */
 abstract class GenerateMaterialIconUiSources : DefaultTask() {
   @get:InputFile
   @get:PathSensitive(PathSensitivity.NONE)
@@ -199,30 +208,23 @@ abstract class GenerateMaterialIconUiSources : DefaultTask() {
 
   @get:OutputDirectory abstract val outputDirectory: DirectoryProperty
 
+  @get:OutputDirectory abstract val vectorOutputDirectory: DirectoryProperty
+
   @TaskAction
   fun generate() {
     val entries = inventory.readInventory()
-    val directory = outputDirectory.get().asFile
-    directory.deleteRecursively()
-    val packageDirectory = directory.resolve("ee/schimke/composeai/uibuilder/renderer/sdk")
-    packageDirectory.mkdirs()
+    val metadataPackage = outputDirectory.get().asFile.cleanPackageDirectory()
+    val vectorPackage = vectorOutputDirectory.get().asFile.cleanPackageDirectory()
     val groups = entries.groupBy { it.expression.substringBeforeLast('.') }
     val groupNames = mutableListOf<String>()
     groups.toSortedMap().forEach { (receiver, icons) ->
       val groupName = receiver.removePrefix("Icons.").replace(".", "")
-      groupNames += "generated${groupName}GoogleMaterialIcons"
-      packageDirectory
+      groupNames += groupName
+      metadataPackage
         .resolve("GeneratedGoogleMaterialIcons$groupName.kt")
         .writeText(
           buildString {
-            appendLine("@file:Suppress(\"DEPRECATION\")")
-            appendLine()
             appendLine("package ee.schimke.composeai.uibuilder.renderer.sdk")
-            appendLine()
-            appendLine("import androidx.compose.material.icons.Icons")
-            icons.map(MaterialIconEntry::importName).distinct().sorted().forEach {
-              appendLine("import $it")
-            }
             appendLine()
             appendLine(
               "// Generated from the shipped material-icons-extended artifact. Do not edit."
@@ -247,7 +249,24 @@ abstract class GenerateMaterialIconUiSources : DefaultTask() {
             }
             appendLine("  }")
             appendLine("}")
+          }
+        )
+      vectorPackage
+        .resolve("GeneratedGoogleMaterialIconVectors$groupName.kt")
+        .writeText(
+          buildString {
+            appendLine("@file:Suppress(\"DEPRECATION\")")
             appendLine()
+            appendLine("package ee.schimke.composeai.uibuilder.renderer.sdk")
+            appendLine()
+            appendLine("import androidx.compose.material.icons.Icons")
+            icons.map(MaterialIconEntry::importName).distinct().sorted().forEach {
+              appendLine("import $it")
+            }
+            appendLine()
+            appendLine(
+              "// Generated from the shipped material-icons-extended artifact. Do not edit."
+            )
             icons
               .groupBy { it.key.hashCode() and 31 }
               .toSortedMap()
@@ -277,7 +296,7 @@ abstract class GenerateMaterialIconUiSources : DefaultTask() {
           }
         )
     }
-    packageDirectory
+    metadataPackage
       .resolve("GeneratedGoogleMaterialIcons.kt")
       .writeText(
         buildString {
@@ -288,21 +307,29 @@ abstract class GenerateMaterialIconUiSources : DefaultTask() {
             "internal val GeneratedGoogleMaterialIcons: List<GoogleMaterialIcon> by lazy {"
           )
           appendLine("  buildList {")
-          groupNames.forEach { appendLine("    addAll($it)") }
+          groupNames.forEach { appendLine("    addAll(generated${it}GoogleMaterialIcons)") }
           appendLine("  }")
           appendLine("}")
+        }
+      )
+    vectorPackage
+      .resolve("GeneratedGoogleMaterialIconVectors.kt")
+      .writeText(
+        buildString {
+          appendLine("package ee.schimke.composeai.uibuilder.renderer.sdk")
           appendLine()
+          appendLine("// Generated from the shipped material-icons-extended artifact. Do not edit.")
           appendLine("internal fun generatedGoogleMaterialIconImageVector(key: String) =")
           appendLine(
-            "  " +
-              groupNames.joinToString(" ?:\n    ") {
-                it.removePrefix("generated").removeSuffix("GoogleMaterialIcons").let { groupName ->
-                  "generated${groupName}ImageVector(key)"
-                }
-              }
+            "  " + groupNames.joinToString(" ?:\n    ") { "generated${it}ImageVector(key)" }
           )
         }
       )
+  }
+
+  private fun java.io.File.cleanPackageDirectory(): java.io.File {
+    deleteRecursively()
+    return resolve("ee/schimke/composeai/uibuilder/renderer/sdk").also { it.mkdirs() }
   }
 }
 

@@ -211,6 +211,7 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.canvasStateWrites
 import ee.schimke.composeai.uibuilder.renderer.sdk.googleMaterialIcon
 import ee.schimke.composeai.uibuilder.renderer.sdk.isResolvableAlignment
 import ee.schimke.composeai.uibuilder.renderer.sdk.reconcileCanvasState
+import ee.schimke.composeai.uibuilder.renderer.sdk.rememberGoogleMaterialIconVector
 import ee.schimke.composeai.uibuilder.renderer.sdk.uiBuilderModifier
 import ee.schimke.composeai.uibuilder.withFontFamily
 import ee.schimke.composeai.uibuilder.withRoleFamilies
@@ -2836,16 +2837,21 @@ private fun UiBuilderNode.verticalAlignment() =
     else -> Alignment.CenterVertically
   }
 
-private fun UiBuilderNode.icon(): ImageVector =
-  googleMaterialIcon(string("iconKey"))?.imageVector
-    ?: error("unsupported Google Material icon '${string("iconKey")}' on $id")
-
 @Composable
 private fun BuilderIcon(node: UiBuilderNode, modifier: Modifier) {
-  val vector = node.icon()
+  val key = node.string("iconKey")
+  checkNotNull(googleMaterialIcon(key)) { "unsupported Google Material icon '$key' on ${node.id}" }
   val description = node.string("contentDescription")
   val tint = node.color("color", LocalContentColor.current)
   val sized = modifier.size(node.float("sizeDp", 24f).dp)
+  // In the browser an icon's vector arrives with its data shard; until then the icon holds its
+  // size and draws nothing, so the layout around it does not move when it appears.
+  val vector =
+    rememberGoogleMaterialIconVector(key)
+      ?: run {
+        Box(sized)
+        return
+      }
   if (!LocalUiBuilderExportStructuredIcons.current) {
     Icon(vector, description.ifEmpty { null }, sized, tint = tint)
     return

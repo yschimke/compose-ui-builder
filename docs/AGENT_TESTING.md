@@ -228,6 +228,21 @@ What it says:
 - Mobile shifts memory to the GPU process (+20–30 MB): the canvas backing store is 9.9 MB at
   device pixel ratio 2.625 against 4.8 MB on desktop.
 
+- Material icons are data in the browser, not code. `material-icons-extended` was 58% of
+  `uiBuilder.wasm`'s code: ~11,400 compiled `ImageVector` builders in every tab. The JVM keeps
+  them; the Wasm build draws the same vectors from `icons/icons-N.json` beside the bundle (64
+  files, 0.8 MB gzipped in all, ~12 KB each), fetching a file the first time one of its icons is
+  drawn (`MaterialIconData`, `GoogleMaterialIconVectors`). `uiBuilder.wasm` went from 30.4 MB to
+  15.0 MB (6.4 → 4.0 MB gzipped); `MaterialIconDataTest` holds every icon's data equal to its
+  compiled vector, and the harness screenshots are pixel-identical before and after.
+
+**These Playwright figures include DevTools.** Playwright enables the Network domain on every page,
+and DevTools then keeps each response body under its per-resource limit in the renderer's buffer
+partition: ~16 MB on `main` (`skiko.wasm` and the scripts), and the whole module once it is small
+enough to qualify. Compare builds with the same harness, and check an absolute figure without it: a
+raw-CDP launch (no Network domain) put the designs screen at 175–178 MB of renderer PSS before icons
+moved to data and 160 MB after, against 195–197 MB through Playwright both times.
+
 The stand-in host has no WebSockets, comments, reviews, suggestions, folders, thumbnails or
 component records, so the editor shows "Disconnected" and those panels are empty; a real host's
 figures are an upper bound on these. Software GL also means the GPU column is SwiftShader's, not a
