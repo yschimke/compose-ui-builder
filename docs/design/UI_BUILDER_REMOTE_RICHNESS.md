@@ -16,6 +16,45 @@ ahead of them (`backgroundColor` on the page indicators, `border` on the cards);
 a snapshot-only parameter, so every exported widget compiles against the alpha. The target moves
 with each new alpha, by refreshing the record and its goldens together.
 
+## Time text
+
+`remote-m3/remote-time-text` is `RemoteTimeText`: the device's time curved along the top of its
+bounds, with optional `leadingText` and `trailingText`, a `separator` (`·` by default), a literal
+`textSizeSp` and a `color`. The embedded record is generated from the catalog's sheets and has no
+row for it, so it is declared by hand in `UiTimeText`, which the palette entry, the canvas stand-in
+and the emitter all read. The time is the player's own, so it is not a property; the canvas curves
+the design's fixed preview time in its place. It is on the Content shelf and is not donated by the
+generic Remote Compose foundation, since it is a Wear Material 3 component.
+
+## Theme node
+
+`remote-m3/remote-material-theme` is `RemoteMaterialTheme` around one child, re-skinning that
+subtree with the colour roles it overrides. The roles and their property names are the Wear screen
+scaffold's (`WearScreenTheme`: `themePrimaryColor`, `themeOnSurfaceColor`, …), so an author who knows
+one knows the other, and every one exists on `RemoteColorScheme`. Each override is a literal, a
+theme role (read from the enclosing scheme) or a computed colour; the exporter writes
+`RemoteMaterialTheme(colorScheme = RemoteMaterialTheme.colorScheme.copy(…)) { … }` with only the
+roles set, and a theme that sets none writes its child alone. The canvas draws the child under the
+same copy the scaffold uses. Declared by hand in `UiRemoteTheme`; on the Layout shelf; no modifiers,
+since `RemoteMaterialTheme` takes none.
+
+## Button and card overloads
+
+The embedded record holds one overload per symbol, and for `RemoteButton` and `RemoteCard` it is
+the plain `content` one. The other two are offered as follows.
+
+- **Label button.** `remote-m3/remote-label-button` is `RemoteButton`'s `label` / `secondaryLabel`
+  / `icon` overload, the Wear button shape most designs want. Its record is assembled in
+  `RemoteMaterial3` from the button's own and `RemoteCheckboxButton`'s slot parameters (the same
+  types), with `label` ahead of the defaulted parameters so it is written named:
+  `RemoteButton(onClick = …) { … }` would match both overloads. The canvas draws the label in Wear's
+  button. The published catalog has no row for it yet (`UNPUBLISHED_REMOTE_M3_IDS`), so a design
+  using it opens only against the built-in catalog.
+- **Container image.** `containerImageKey` on `remote-m3/remote-button`, the label button and
+  `remote-m3/remote-card` is an asset key, validated like `asset/image`'s `assetKey`. Setting it
+  writes the `containerPainter` overload, `containerPainter = painterRemoteImageBitmap(…)`, with the
+  bitmap passed as the image node's is. The canvas draws the plain container.
+
 ## Remote modifier vocabulary
 
 A `RemoteModifier` call the typed modifiers do not name is a `remoteCall` modifier: `name` and
@@ -41,6 +80,19 @@ From that one file:
   `wrapContentWidth`/`Height`, `basicMarquee`) and leaves the rest to the player, which the device
   preview runs.
 
+`graphicsLayer` is in it too: its value overload was being dropped by the generator because a line
+comment sits inside its parameter list (`cameraDistance: RemoteFloat = 8f.rf, // …`); the generator
+now strips comments before parsing. The canvas draws it with Compose's `graphicsLayer`, argument for
+argument.
+
+`semantics` is declared by hand beside the generated calls, because its released signature is a
+receiver lambda (`semantics(mergeDescendants) { contentDescription = …; role = … }`): the values it
+sets — `contentDescription`, `stateDescription`, `role` (one of the roles the player maps), `enabled`
+— and `mergeDescendants` are its arguments, and `clear` writes `clearAndSetSemantics` instead. It is
+accessibility, not interaction, which stays an event binding. `drawWithContent` is not offered: a
+modifier holds values, not draw operations, and a `layout/box` with a `draw/canvas` behind its
+content draws the same thing as nodes.
+
 ## Where it stood
 
 A property was a literal, a state read or a loop binding, and only text and record parameters could
@@ -56,8 +108,8 @@ behind a compile-time flag.
 | M1 | Computed values: `expr`/`system` wrappers, formula text, canvas evaluation, Remote Kotlin lowering, inspector | Landed |
 | M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint, gradients, clips (box or path), morphs, curved text, conditionals, loops | Landed |
 | M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Long press and double tap landed (`combinedClickable`); the rest planned |
-| M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Landed as `remoteCall` over the generated vocabulary (33 calls); lambda-only calls (`graphicsLayer`, `drawWithContent`) planned |
-| M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Horizontal and vertical page indicators landed; the rest planned |
+| M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Landed as `remoteCall` over the generated vocabulary (33 calls); `graphicsLayer` (its value overload) and `semantics` (hand-declared, written as its lambda) included; `drawWithContent` is a box with a canvas |
+| M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Landed: page indicators, `RemoteTimeText`, the theme node, the label button and container images |
 | M6 | Device preview: every published component, and expressions played live | In progress (remote-m3-catalog) |
 
 Each milestone lands across the editor, the canvas, validation, MCP-visible document shape and the

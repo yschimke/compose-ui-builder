@@ -148,6 +148,7 @@ class RemoteMaterial3ExportTest {
         .let { it as JsonObject }
         .getValue("components") as JsonObject
     RemoteMaterial3.components.forEach { component ->
+      if (component.componentId in UNPUBLISHED_REMOTE_M3_IDS) return@forEach
       val row = published[component.componentId] as? JsonObject
       assertEquals(
         component.recordId,

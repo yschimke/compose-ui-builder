@@ -100,7 +100,10 @@ def overloads(sources: zipfile.ZipFile):
         for match in SIGNATURE.finditer(text):
             if match.group(1) in INTERACTION:
                 continue
-            params = [parameter(p) for p in split_parameters(match.group(2))]
+            # A line comment inside the list (`8f.rf, // camera distance`) would otherwise reach
+            # the parameter parser and drop the whole overload; `graphicsLayer` has one.
+            listing = re.sub(r"//[^\n]*", "", match.group(2))
+            params = [parameter(p) for p in split_parameters(listing)]
             if any(p is None for p in params):
                 continue
             kept = []

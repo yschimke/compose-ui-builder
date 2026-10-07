@@ -417,6 +417,100 @@
       ]
     },
     {
+      "name": "graphicsLayer",
+      "package": "androidx.compose.remote.creation.compose.modifier",
+      "overloads": [
+        {
+          "parameters": [
+            {
+              "name": "scaleX",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "scaleY",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "rotationX",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "rotationY",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "rotationZ",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "shadowElevation",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "transformOriginX",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "transformOriginY",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "translationX",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "translationY",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "alpha",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            },
+            {
+              "name": "cameraDistance",
+              "type": "RemoteFloat",
+              "nullable": false,
+              "optional": true,
+              "kind": "float"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "height",
       "package": "androidx.compose.remote.creation.compose.modifier",
       "overloads": [

@@ -795,7 +795,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     } ?: return null
     return when {
       isColourProperty(property) -> colourWriteIssue(node, property, value)
-      property == ASSET_KEY_PROPERTY ->
+      // `assetKey` and every other asset-naming property, `containerImageKey` among them.
+      ee.schimke.composeai.uibuilder.export.PropertyValueKinds.isAssetKey(property) ->
         assetKeyWriteIssue(catalog, node, property, value, pinnedAssetKeys)
       else -> null
     }

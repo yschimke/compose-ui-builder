@@ -3606,6 +3606,303 @@
         },
         {
             "code": null,
+            "componentId": "remote-m3/remote-time-text",
+            "displayName": "Time text",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "leadingText",
+                    "notes": "Text before the time, e.g. a date. None when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "trailingText",
+                    "notes": "Text after the time. None when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "separator",
+                    "notes": "What sits between the time and the text beside it. `·` when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "textSizeSp",
+                    "notes": "Text size. The time text style's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Text colour. The theme's onBackground when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "RemoteTimeText: the device's time curved along the top of its bounds, with optional text either side. The canvas shows the design's preview time.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-material-theme",
+            "displayName": "Theme",
+            "modifierCapabilities": [
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themePrimaryColor",
+                    "notes": "The `primary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnPrimaryColor",
+                    "notes": "The `onPrimary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themePrimaryContainerColor",
+                    "notes": "The `primaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnPrimaryContainerColor",
+                    "notes": "The `onPrimaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeSecondaryColor",
+                    "notes": "The `secondary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnSecondaryColor",
+                    "notes": "The `onSecondary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeSecondaryContainerColor",
+                    "notes": "The `secondaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnSecondaryContainerColor",
+                    "notes": "The `onSecondaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeTertiaryColor",
+                    "notes": "The `tertiary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnTertiaryColor",
+                    "notes": "The `onTertiary` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeTertiaryContainerColor",
+                    "notes": "The `tertiaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnTertiaryContainerColor",
+                    "notes": "The `onTertiaryContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeSurfaceContainerLowColor",
+                    "notes": "The `surfaceContainerLow` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeSurfaceContainerColor",
+                    "notes": "The `surfaceContainer` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeSurfaceContainerHighColor",
+                    "notes": "The `surfaceContainerHigh` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnSurfaceColor",
+                    "notes": "The `onSurface` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnSurfaceVariantColor",
+                    "notes": "The `onSurfaceVariant` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOutlineColor",
+                    "notes": "The `outline` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOutlineVariantColor",
+                    "notes": "The `outlineVariant` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeBackgroundColor",
+                    "notes": "The `background` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnBackgroundColor",
+                    "notes": "The `onBackground` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeErrorColor",
+                    "notes": "The `error` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "themeOnErrorColor",
+                    "notes": "The `onError` role inside this theme. The enclosing theme's when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "RemoteMaterialTheme: re-skins the subtree it holds with the colour roles it overrides, reading the enclosing theme for the rest.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "remote-m3/remote-horizontal-page-indicator",
             "displayName": "Horizontal page indicator",
             "modifierCapabilities": [
@@ -4417,6 +4714,13 @@
                     "name": "borderColor",
                     "notes": "`RemoteButton`'s `borderColor: RemoteColor?`.",
                     "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerImageKey",
+                    "notes": "The key of an asset to fill the container with, as `asset/image`'s `assetKey`: written as the `containerPainter` overload, `containerPainter = painterRemoteImageBitmap(…)`. A plain container when absent.",
+                    "required": false
                 }
             ],
             "role": "Container",
@@ -4460,6 +4764,146 @@
                     },
                     "properties": {},
                     "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/button`, the adapter the published catalog names; the widget plays `RemoteButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-label-button",
+            "displayName": "Label button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "borderColor",
+                    "notes": "`RemoteButton`'s `borderColor: RemoteColor?`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerImageKey",
+                    "notes": "The key of an asset to fill the container with, as `asset/image`'s `assetKey`: written as the `containerPainter` overload, `containerPainter = painterRemoteImageBitmap(…)`. A plain container when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "label",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "secondaryLabel",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "icon",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/button",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "filled"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {
+                        "content": "label"
+                    }
                 },
                 "notes": "Drawn with Wear Material 3's `wear-m3/button`, the adapter the published catalog names; the widget plays `RemoteButton` itself.",
                 "platformSupported": true,
@@ -4625,6 +5069,13 @@
                     ],
                     "name": "enabled",
                     "notes": "`RemoteCard`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerImageKey",
+                    "notes": "The key of an asset to fill the container with, as `asset/image`'s `assetKey`: written as the `containerPainter` overload, `containerPainter = painterRemoteImageBitmap(…)`. A plain container when absent.",
                     "required": false
                 }
             ],
@@ -18216,8 +18667,14 @@
                 "remote-m3/remote-icon-button": {
                     "group": "Buttons"
                 },
+                "remote-m3/remote-label-button": {
+                    "group": "Buttons"
+                },
                 "remote-m3/remote-linear-progress-indicator": {
                     "group": "Communication"
+                },
+                "remote-m3/remote-material-theme": {
+                    "group": "Layout"
                 },
                 "remote-m3/remote-outlined-card": {
                     "group": "Containment"
@@ -18248,6 +18705,9 @@
                 },
                 "remote-m3/remote-text-button": {
                     "group": "Buttons"
+                },
+                "remote-m3/remote-time-text": {
+                    "group": "Content"
                 },
                 "remote-m3/remote-title-card": {
                     "group": "Containment"

@@ -31,7 +31,8 @@ object PropertyValueKinds {
   fun isColour(property: String): Boolean = property == "color" || property.endsWith("Color")
 
   /** Whether [property] names an asset the canvas has to resolve. */
-  fun isAssetKey(property: String): Boolean = property == "assetKey"
+  fun isAssetKey(property: String): Boolean =
+    property == "assetKey" || property == REMOTE_CONTAINER_IMAGE_PROPERTY
 
   /**
    * The theme roles the canvas draws, in one place.
