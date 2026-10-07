@@ -102,6 +102,10 @@ jobs:
       #
       # This is the check that would have caught compose-preview-server's 3.3.0-3.8.0 breakage,
       # where six releases shipped a POM naming an artifact nobody had uploaded.
+      # The in-tree generation the script compares the published consumer's against: a different
+      # absolute checkout must generate the same bytes. `check` used to create it before this step;
+      # on a fresh runner the script would find nothing and skip the comparison without a word.
+      - run: ./gradlew :ui-builder-production-consumer:generateUiBuilderSources
       - name: Verify durable generation from published artifacts
         run: ./scripts/check-ui-builder-production-consumer.sh
       - name: Verify the publishing lane
