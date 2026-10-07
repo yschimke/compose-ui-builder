@@ -109,6 +109,7 @@ import ee.schimke.composeai.uibuilder.reference.ReferenceWorkbench
 import ee.schimke.composeai.uibuilder.renderer.sdk.SelectableGoogleMaterialIcons
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
 import ee.schimke.composeai.uibuilder.renderer.sdk.googleMaterialIcon
+import ee.schimke.composeai.uibuilder.renderer.sdk.rememberGoogleMaterialIconVector
 import ee.schimke.composeai.uibuilder.role
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -2242,7 +2243,7 @@ internal fun GoogleIconPropertyControl(
         contentDescription = "Choose Google icon"
       },
   ) {
-    current?.let { Icon(it.imageVector, null, Modifier.size(20.dp)) }
+    current?.let { GoogleIconGlyph(it.key) }
     Text(current?.label ?: "Choose Google icon", Modifier.padding(start = 8.dp))
   }
   TrackEditorOverlay(expanded)
@@ -2280,7 +2281,7 @@ internal fun GoogleIconPropertyControl(
     matchingIcons.forEach { icon ->
       DropdownMenuItem(
         text = { Text(icon.label) },
-        leadingIcon = { Icon(icon.imageVector, null, Modifier.size(20.dp)) },
+        leadingIcon = { GoogleIconGlyph(icon.key) },
         onClick = {
           expanded = false
           commit(icon.key)
@@ -2288,6 +2289,13 @@ internal fun GoogleIconPropertyControl(
       )
     }
   }
+}
+
+/** A picker icon at 20dp, holding its slot while the browser fetches the vector. */
+@Composable
+private fun GoogleIconGlyph(key: String) {
+  val vector = rememberGoogleMaterialIconVector(key)
+  if (vector == null) Box(Modifier.size(20.dp)) else Icon(vector, null, Modifier.size(20.dp))
 }
 
 private fun Double.editorNumber(integer: Boolean): String =

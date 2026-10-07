@@ -167,6 +167,8 @@ abstract class VerifyUiBuilderWebArchive : DefaultTask() {
           "wear-m3-capabilities-v1.json",
           "remote-m3-capabilities-v1.json",
           "fonts/fonts.json",
+          // Material icon vectors; the browser build draws icons from these, not compiled code.
+          "icons/icons-0.json",
           "ui-builder-web.json",
           // The offline service worker. At the root on purpose: a worker's scope cannot be wider
           // than its own directory without a `Service-Worker-Allowed` header, and the editor's

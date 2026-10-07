@@ -15,7 +15,8 @@
 // (Resource Timing sizes), MEMORY_TIMELINE (renderer PSS and JS heap every 250 ms, no forced GC)
 // MEMORY_BLOCK (a URL regex to abort, e.g. `fonts\.gstatic\.com`), MEMORY_FAIL_REQUESTS (service
 // request types the stand-in host answers 503, e.g. `listCatalogs`) and MEMORY_CHROMIUM_ARGS
-// (extra switches, space-separated, e.g. `--js-flags=--no-wasm-tier-up`).
+// (extra switches, space-separated, e.g. `--js-flags=--no-wasm-tier-up`). MEMORY_CACHE_CONTROL sets
+// the bundle's Cache-Control (default `no-cache`; hosts serve it immutable).
 // MEMORY_MAX_TURBOFAN_ZONE_MB fails the run when one Wasm TurboFan compile holds more than that.
 
 import { createServer } from 'node:http';
@@ -184,7 +185,7 @@ const server = createServer(async (request, response) => {
     if (!relative || !(await stat(file).then((s) => s.isFile(), () => false))) file = join(dist, 'index.html');
     response.writeHead(200, {
       'content-type': types[extname(file)] ?? 'application/octet-stream',
-      'cache-control': 'no-cache',
+      'cache-control': process.env.MEMORY_CACHE_CONTROL ?? 'no-cache',
     });
     response.end(await readFile(file));
   } catch (error) {
@@ -195,6 +196,11 @@ const server = createServer(async (request, response) => {
 await new Promise((ready) => server.listen(0, '127.0.0.1', ready));
 const base = `http://127.0.0.1:${server.address().port}`;
 debug('serving', base);
+// MEMORY_SERVE_ONLY: just the stand-in host, for driving a browser some other way.
+if (process.env.MEMORY_SERVE_ONLY) {
+  console.log(base);
+  await new Promise(() => {});
+}
 
 const viewports = {
   desktop: { viewport: { width: 1400, height: 900 } },
@@ -270,7 +276,7 @@ async function memoryInfra(browser) {
     if (!allocators) continue;
     const proc = (result[names[e.pid] ?? e.pid] ??= {});
     for (const [name, dump] of Object.entries(allocators)) {
-      if (name.split('/').length > 3 || name.includes('0x')) continue;
+      if (!process.env.MEMORY_INFRA_ALL && (name.split('/').length > 3 || name.includes('0x'))) continue;
       const size = dump.attrs?.size?.value;
       if (size) proc[name] = parseInt(size, 16);
     }

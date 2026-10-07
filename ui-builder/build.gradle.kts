@@ -454,6 +454,8 @@ tasks.withType<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenExec>()
 
 val skikoRuntimeDir = layout.buildDirectory.dir("compose/skiko-runtime-processed-wasmjs")
 
+evaluationDependsOn(":ui-builder-renderer-sdk")
+
 tasks.register<Sync>("wasmFrontendDist") {
   description = "Assemble the standalone Compose UI builder Wasm fixture."
   group = "distribution"
@@ -485,6 +487,10 @@ tasks.register<Sync>("wasmFrontendDist") {
   from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {
     include("*.ttf", "fonts.json", "google-fonts.txt", "*OFL.txt", "LICENSE.txt")
     into("fonts")
+  }
+  // Material icon vectors as data, fetched per file on first draw (`GoogleMaterialIconVectors`).
+  from(project(":ui-builder-renderer-sdk").tasks.named("generateMaterialIconData")) {
+    into("icons")
   }
   val distDir = layout.buildDirectory.dir("wasmDist")
   into(distDir)

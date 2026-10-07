@@ -37,6 +37,8 @@ kotlin {
   }
 }
 
+evaluationDependsOn(":ui-builder-renderer-sdk")
+
 val runtimeAssets =
   tasks.register<Sync>("runtimeAssets") {
     dependsOn(productionWasmTaskName, "processSkikoRuntimeForKWasm")
@@ -55,6 +57,9 @@ val runtimeAssets =
     from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {
       include("*.ttf", "fonts.json", "*OFL.txt", "LICENSE.txt")
       into("fonts")
+    }
+    from(project(":ui-builder-renderer-sdk").tasks.named("generateMaterialIconData")) {
+      into("icons")
     }
     into(layout.buildDirectory.dir("runtimeAssets"))
   }
@@ -154,6 +159,8 @@ abstract class VerifyRendererRuntime : DefaultTask() {
           "uiBuilderRenderer.wasm",
           "skiko.mjs",
           "skiko.wasm",
+          // Material icon vectors; the runtime draws icons from these, not compiled code.
+          "icons/icons-0.json",
         )
       check(names.containsAll(required)) { "renderer archive is missing ${required - names}" }
       check(names.none { it.startsWith('/') || it.contains("../") || '\\' in it }) {

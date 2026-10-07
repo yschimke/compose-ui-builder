@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.GoogleMaterialIcon
 import ee.schimke.composeai.uibuilder.renderer.sdk.GoogleMaterialIcons
 import ee.schimke.composeai.uibuilder.renderer.sdk.SelectableGoogleMaterialIcons
 import ee.schimke.composeai.uibuilder.renderer.sdk.googleMaterialIcon
+import ee.schimke.composeai.uibuilder.renderer.sdk.imageVector
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

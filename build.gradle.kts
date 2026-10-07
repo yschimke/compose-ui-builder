@@ -41,6 +41,7 @@ val generateMaterialIconUiSources =
     group = "code generation"
     inventory.set(generateMaterialIconInventory.flatMap { it.output })
     outputDirectory.set(layout.buildDirectory.dir("generated/materialIcons/ui-builder"))
+    vectorOutputDirectory.set(layout.buildDirectory.dir("generated/materialIcons/ui-builder-jvm"))
   }
 
 val generateMaterialIconExportSource =
