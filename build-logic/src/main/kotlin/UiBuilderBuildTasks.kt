@@ -140,7 +140,12 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
   @get:org.gradle.api.tasks.OutputFile abstract val output: org.gradle.api.file.RegularFileProperty
 
   /**
-   * [record] with [foundation]'s components appended, as JSON text.
+   * [record] with [foundation]'s components appended, as compact JSON text.
+   *
+   * Compact because nothing reads the constant but a parser, and every byte of it ships: Kotlin/Wasm
+   * imports each string literal, so the browser creates the whole text when the module starts and
+   * keeps it, and the module's own bytes stay resident beside it. Pretty-printed, a third of it was
+   * indentation.
    *
    * Parsed rather than spliced textually: both files are written by hand and a splice assuming
    * either one's formatting would break the first time somebody reformatted it.
@@ -156,7 +161,7 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
     @Suppress("UNCHECKED_CAST")
     val base = groovy.json.JsonSlurper().parse(record.get().asFile) as MutableMap<String, Any?>
     if (!foundation.isPresent) {
-      return groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(base))
+      return groovy.json.JsonOutput.toJson(base)
     }
     @Suppress("UNCHECKED_CAST")
     val extra = groovy.json.JsonSlurper().parse(foundation.get().asFile) as Map<String, Any?>
@@ -171,7 +176,7 @@ abstract class EmbedComponentRecord : org.gradle.api.DefaultTask() {
           (candidate["componentIds"] as? List<String>).orEmpty().any { it in claimed }
       }
     base["components"] = components + added
-    return groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(base))
+    return groovy.json.JsonOutput.toJson(base)
   }
 
   @org.gradle.api.tasks.TaskAction
