@@ -385,10 +385,11 @@ curl https://<server>/api/ui-builder/v1/designs/my-remote-screen > design.json
 
 `If-None-Match: *` is required, because that route creates and never replaces: without it the
 answer is `428`, and against a design that already exists it is `412`. A successful `201` carries
-the editor permalink in `Location`. A `GET` on the same URL reads the document back — the same JSON
-`ui_builder_get_design` returns, `?revision=N` for a retained revision, `404` for a design the
-caller cannot open — with read access only, so it works on a plain `ui` server where `/mcp` is not
-mounted. Credentials are intentionally absent from these examples:
+the editor permalink in `Location`. A `GET` on the same URL reads the document back — the bare
+`DesignDocumentV1`, the same document `ui_builder_get_design` carries at `snapshot.state.document`
+but without the MCP envelope or its `links` and `comments`; `?revision=N` for a retained revision,
+`404` for a design the caller cannot open — with read access only, so it works on a plain `ui`
+server where `/mcp` is not mounted. Credentials are intentionally absent from these examples:
 supply them through the server and client credential facilities, never in a shared URL, shell
 history, or process arguments.
 
