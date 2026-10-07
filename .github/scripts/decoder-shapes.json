@@ -360,6 +360,25 @@
                 "optional": true,
                 "nullable": true
             },
+            "canvasMapping": {
+                "kind": "object",
+                "members": {
+                    "defaults": {
+                        "kind": "object",
+                        "optional": true
+                    },
+                    "properties": {
+                        "kind": "object",
+                        "optional": true
+                    },
+                    "slots": {
+                        "kind": "object",
+                        "optional": true
+                    }
+                },
+                "optional": true,
+                "nullable": true
+            },
             "catalogId": {
                 "kind": "string",
                 "optional": true,
@@ -453,6 +472,26 @@
             "traits": {
                 "kind": "stringList",
                 "optional": true
+            },
+            "unrolled": {
+                "kind": "object",
+                "members": {
+                    "cellWidthDp": {
+                        "kind": "any",
+                        "optional": true,
+                        "nullable": true
+                    },
+                    "layout": {
+                        "kind": "string"
+                    },
+                    "spacingDp": {
+                        "kind": "any",
+                        "optional": true,
+                        "nullable": true
+                    }
+                },
+                "optional": true,
+                "nullable": true
             }
         }
     }
