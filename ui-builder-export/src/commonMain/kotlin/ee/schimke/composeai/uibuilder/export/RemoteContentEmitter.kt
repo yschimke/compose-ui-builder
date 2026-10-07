@@ -996,6 +996,19 @@ internal class RemoteContentEmitter(
       arguments += "${parameter.name} = $expression"
     }
 
+    // The painter overload: a picture behind the button or card, chosen by naming its parameter.
+    if (node.componentId in REMOTE_CONTAINER_PAINTER_IDS) {
+      node.properties[REMOTE_CONTAINER_IMAGE_PROPERTY]
+        ?.stringOrNull()
+        ?.takeIf { it.isNotBlank() }
+        ?.let { key ->
+          val bitmap =
+            imageBitmap(node, key, "the container image of `${node.id}`") ?: return emptyList()
+          usedComponentImports +=
+            "androidx.compose.remote.creation.compose.painter.painterRemoteImageBitmap"
+          arguments += "containerPainter = painterRemoteImageBitmap($bitmap)"
+        }
+    }
     usedComponentImports += record.symbol.callable
     val symbol = record.symbol.name
     if (blocks.isEmpty()) return (pad + call(symbol, arguments, pad)).split("\n")
@@ -3110,14 +3123,12 @@ internal class RemoteContentEmitter(
     return call("RemoteIcon", arguments, pad)
   }
 
-  private fun image(node: UiBuilderNode, pad: String): String? {
-    val key = node.properties["assetKey"]?.stringOrNull().orEmpty()
-    if (key.isBlank()) {
-      refusals +=
-        "the image `${node.id}` names no asset, and a picture with no key is one nothing can " +
-          "resolve — pick an asset for it in the inspector"
-      return null
-    }
+  /**
+   * The `RemoteImageBitmap` for asset [key], as a captured parameter or — on the native lane — the
+   * bytes themselves. Null, with a refusal naming [what], when the lane needs bytes this host does
+   * not have.
+   */
+  private fun imageBitmap(node: UiBuilderNode, key: String, what: String): String? {
     // The native preview lane wants the bytes here rather than a parameter — see
     // [inlineContentImages]. A key with no bytes on this host is refused by name for the same
     // reason a background one is: the lane has no argument to pass and a picture nothing can
@@ -3128,7 +3139,7 @@ internal class RemoteContentEmitter(
         when (val encoded = assets.base64(key)) {
           null -> {
             refusals +=
-              "the image `${node.id}` draws the asset `$key`, whose bytes this host could not " +
+              "$what draws the asset `$key`, whose bytes this host could not " +
                 "read — a native render carries the picture inside the document, so there is " +
                 "nothing to draw it from"
             return null
@@ -3143,6 +3154,18 @@ internal class RemoteContentEmitter(
       ) {
         bitmap
       }
+    return argument
+  }
+
+  private fun image(node: UiBuilderNode, pad: String): String? {
+    val key = node.properties["assetKey"]?.stringOrNull().orEmpty()
+    if (key.isBlank()) {
+      refusals +=
+        "the image `${node.id}` names no asset, and a picture with no key is one nothing can " +
+          "resolve — pick an asset for it in the inspector"
+      return null
+    }
+    val argument = imageBitmap(node, key, "the image `${node.id}`") ?: return null
     val arguments = mutableListOf("remoteBitmap = $argument")
     val description = node.properties["contentDescription"]?.stringOrNull().orEmpty()
     arguments +=

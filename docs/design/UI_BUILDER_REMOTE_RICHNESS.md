@@ -38,6 +38,23 @@ roles set, and a theme that sets none writes its child alone. The canvas draws t
 same copy the scaffold uses. Declared by hand in `UiRemoteTheme`; on the Layout shelf; no modifiers,
 since `RemoteMaterialTheme` takes none.
 
+## Button and card overloads
+
+The embedded record holds one overload per symbol, and for `RemoteButton` and `RemoteCard` it is
+the plain `content` one. The other two are offered as follows.
+
+- **Label button.** `remote-m3/remote-label-button` is `RemoteButton`'s `label` / `secondaryLabel`
+  / `icon` overload, the Wear button shape most designs want. Its record is assembled in
+  `RemoteMaterial3` from the button's own and `RemoteCheckboxButton`'s slot parameters (the same
+  types), with `label` ahead of the defaulted parameters so it is written named:
+  `RemoteButton(onClick = …) { … }` would match both overloads. The canvas draws the label in Wear's
+  button. The published catalog has no row for it yet (`UNPUBLISHED_REMOTE_M3_IDS`), so a design
+  using it opens only against the built-in catalog.
+- **Container image.** `containerImageKey` on `remote-m3/remote-button`, the label button and
+  `remote-m3/remote-card` is an asset key, validated like `asset/image`'s `assetKey`. Setting it
+  writes the `containerPainter` overload, `containerPainter = painterRemoteImageBitmap(…)`, with the
+  bitmap passed as the image node's is. The canvas draws the plain container.
+
 ## Remote modifier vocabulary
 
 A `RemoteModifier` call the typed modifiers do not name is a `remoteCall` modifier: `name` and
@@ -92,7 +109,7 @@ behind a compile-time flag.
 | M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint, gradients, clips (box or path), morphs, curved text, conditionals, loops | Landed |
 | M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Long press and double tap landed (`combinedClickable`); the rest planned |
 | M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Landed as `remoteCall` over the generated vocabulary (33 calls); `graphicsLayer` (its value overload) and `semantics` (hand-declared, written as its lambda) included; `drawWithContent` is a box with a canvas |
-| M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Page indicators, `RemoteTimeText` and the theme node landed; button and card overloads planned |
+| M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Landed: page indicators, `RemoteTimeText`, the theme node, the label button and container images |
 | M6 | Device preview: every published component, and expressions played live | In progress (remote-m3-catalog) |
 
 Each milestone lands across the editor, the canvas, validation, MCP-visible document shape and the

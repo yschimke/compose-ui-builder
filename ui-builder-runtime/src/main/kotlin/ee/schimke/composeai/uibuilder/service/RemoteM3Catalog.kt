@@ -4,6 +4,8 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.discovery.TargetParameter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.REMOTE_CONTAINER_IMAGE_PROPERTY
+import ee.schimke.composeai.uibuilder.export.REMOTE_CONTAINER_PAINTER_IDS
 import ee.schimke.composeai.uibuilder.export.REMOTE_HORIZONTAL_PAGE_INDICATOR_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_ICON_DEFAULT_KEY
@@ -402,6 +404,19 @@ private fun statedRemoteProperties(
   iconKeys: List<JsonElement>?,
 ): List<PropertyCapabilityV1> =
   when (componentId) {
+    // The picture behind a button or card: `containerPainter`, which the record's overload lacks.
+    in REMOTE_CONTAINER_PAINTER_IDS ->
+      listOf(
+        PropertyCapabilityV1.Builder(REMOTE_CONTAINER_IMAGE_PROPERTY, JsonPrimitive("string"))
+          .also {
+            it.required = false
+            it.notes =
+              "The key of an asset to fill the container with, as `asset/image`'s `assetKey`: " +
+                "written as the `containerPainter` overload, " +
+                "`containerPainter = painterRemoteImageBitmap(…)`. A plain container when absent."
+          }
+          .build()
+      )
     // `imageVector` is an `ImageVector`, which the derivation above cannot carry, so without this
     // the palette offered an icon that could only ever draw its default. Named by the same Material
     // icon key `m3/icon` takes, and taken from that component's own list rather than restated.

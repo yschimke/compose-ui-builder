@@ -4717,6 +4717,13 @@
                     "name": "borderColor",
                     "notes": "`RemoteButton`'s `borderColor: RemoteColor?`.",
                     "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerImageKey",
+                    "notes": "The key of an asset to fill the container with, as `asset/image`'s `assetKey`: written as the `containerPainter` overload, `containerPainter = painterRemoteImageBitmap(…)`. A plain container when absent.",
+                    "required": false
                 }
             ],
             "role": "Container",
@@ -4760,6 +4767,146 @@
                     },
                     "properties": {},
                     "slots": {}
+                },
+                "notes": "Drawn with Wear Material 3's `wear-m3/button`, the adapter the published catalog names; the widget plays `RemoteButton` itself.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-m3/remote-label-button",
+            "displayName": "Label button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "boolean",
+                        "object"
+                    ],
+                    "name": "enabled",
+                    "notes": "`RemoteButton`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "borderColor",
+                    "notes": "`RemoteButton`'s `borderColor: RemoteColor?`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerImageKey",
+                    "notes": "The key of an asset to fill the container with, as `asset/image`'s `assetKey`: written as the `containerPainter` overload, `containerPainter = painterRemoteImageBitmap(…)`. A plain container when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "label",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "secondaryLabel",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "icon",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Remote Material 3 inside a widget body has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "wear-m3/button",
+                "canvasMapping": {
+                    "defaults": {
+                        "variant": {
+                            "type": "enum",
+                            "value": "filled"
+                        }
+                    },
+                    "properties": {},
+                    "slots": {
+                        "content": "label"
+                    }
                 },
                 "notes": "Drawn with Wear Material 3's `wear-m3/button`, the adapter the published catalog names; the widget plays `RemoteButton` itself.",
                 "platformSupported": true,
@@ -4925,6 +5072,13 @@
                     ],
                     "name": "enabled",
                     "notes": "`RemoteCard`'s `enabled: RemoteBoolean`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerImageKey",
+                    "notes": "The key of an asset to fill the container with, as `asset/image`'s `assetKey`: written as the `containerPainter` overload, `containerPainter = painterRemoteImageBitmap(…)`. A plain container when absent.",
                     "required": false
                 }
             ],
@@ -18514,6 +18668,9 @@
                     "group": "Iconography"
                 },
                 "remote-m3/remote-icon-button": {
+                    "group": "Buttons"
+                },
+                "remote-m3/remote-label-button": {
                     "group": "Buttons"
                 },
                 "remote-m3/remote-linear-progress-indicator": {
