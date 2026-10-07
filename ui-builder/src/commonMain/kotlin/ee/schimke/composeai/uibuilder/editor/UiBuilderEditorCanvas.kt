@@ -99,6 +99,7 @@ import ee.schimke.composeai.uibuilder.LocalUiBuilderAssetBitmaps
 import ee.schimke.composeai.uibuilder.LocalUiBuilderAssetBytes
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontFamilies
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
+import ee.schimke.composeai.uibuilder.LocalUiBuilderFontVariants
 import ee.schimke.composeai.uibuilder.canvas.CanvasExtentLayout
 import ee.schimke.composeai.uibuilder.canvas.DeviceSceneHost
 import ee.schimke.composeai.uibuilder.canvas.LocalRemoteComposeDocuments
@@ -1745,6 +1746,7 @@ internal fun ConstrainedFramePane(
               LocalUiBuilderAssetBytes provides assetBytes,
               LocalUiBuilderFontRegistry provides fontRegistry,
               LocalUiBuilderFontFamilies provides fontFamilies,
+              LocalUiBuilderFontVariants provides fontRegistry,
             ) {
               UiBuilderSurface(
                 document = document,

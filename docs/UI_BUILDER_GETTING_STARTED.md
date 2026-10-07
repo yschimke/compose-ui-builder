@@ -641,6 +641,35 @@ the design's tokens as W3C DTCG JSON, which Style Dictionary, Tokens Studio and 
 reads DTCG or a Material Theme Builder export back in as one undoable edit. The details are in
 [`UI_BUILDER_DESIGN_TOKENS.md`](design/UI_BUILDER_DESIGN_TOKENS.md).
 
+### Variable-font axes and OpenType features
+
+Every design system's text — `m3/text`, `wear-m3/text` and `remote-m3/remote-text` — carries two
+more properties, whatever its catalog publishes:
+
+| Property | Example | What it is |
+| --- | --- | --- |
+| `fontVariationSettings` | `wght 650, wdth 87.5, GRAD -50` | Coordinates on the variable font's axes, as CSS `font-variation-settings` with bare tags. `wght` here overrides `fontWeight`. |
+| `fontFeatureSettings` | `tnum, ss01, liga 0` | OpenType layout features, as CSS `font-feature-settings` with bare tags: a tag alone is on, `0` is off, a larger number picks an alternate. |
+
+The inspector reads the face the text is actually set in — its role's theme typeface, the
+document's typeface, or Wear's Roboto Flex — straight from the font file, and offers what that face
+has: a slider per axis over the axis's own range with its default marked (Roboto Flex has thirteen,
+`wght` 100–1000, `wdth` 25–151, `opsz` 8–144, …), and a chip per feature (tap for on, again for
+off, again to unset). A static face says it has no axes; a text in the platform's own face says it
+cannot be inspected. A setting the face lacks is listed as ignored rather than dropped, so nothing
+the design carries is hidden. Quoted CSS tags (`'tnum'`) are read too, and rewritten bare, because
+Compose Desktop and Web drop a quoted tag.
+
+What each export writes:
+
+- **Material 3 and Wear Compose**: features as `style = <role>.copy(fontFeatureSettings = …)`. Axes
+  on a device face — Wear's `roboto-flex`, or `sans-serif` for a Material 3 text with no typeface —
+  as `FontFamily(Font(DeviceFontFamilyName(…), variationSettings = …))`. A text set in a Google
+  Fonts theme typeface cannot carry axes, because the downloadable-font provider serves named
+  instances, so its `wght` becomes `fontWeight = FontWeight(n)` and its other axes are not written.
+- **Remote Compose**: axes as `RemoteText(fontVariationSettings = …)`, which writes them into the
+  document for the player, and features as `style = ….merge(fontFeatureSettings = …)`.
+
 ## Starting from a worked widget
 
 `remote-m3`'s New Widget dialog offers four templates. Two are empty host frames — **Small widget**

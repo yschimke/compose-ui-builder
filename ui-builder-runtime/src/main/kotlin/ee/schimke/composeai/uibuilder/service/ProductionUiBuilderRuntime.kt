@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
@@ -301,7 +302,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   // than an overlay of the synthesised keys, so an id nothing here synthesises is servable — that
   // is the whole point, and an overlay would have quietly kept the set of possible catalogs closed.
   private val availableCatalogs =
-    synthesisedCatalogs + published.mapValues { (_, catalog) -> withBuilderVocabulary(catalog) }
+    (synthesisedCatalogs + published.mapValues { (_, catalog) -> withBuilderVocabulary(catalog) })
+      .mapValues { (_, catalog) -> withFontSettingsVocabulary(catalog) }
   private val catalogs =
     catalogSystemIds
       .also { require(it.isNotEmpty()) { "at least one UI-builder catalog must be enabled" } }
@@ -1199,6 +1201,45 @@ internal fun widgetContainerProperties(): List<PropertyCapabilityV1> =
         it.allowedValues = ThemeTextStyle.WEAR_ROLES.map(::JsonPrimitive)
       }
       .build()
+
+/**
+ * [catalog] with every text component carrying the [FontSettings] pair: a variable font's axes and
+ * OpenType features, which every design system's text draws and every generator writes, so no
+ * catalog has to publish them before a design can use them. Additive, like the rest of the builder
+ * vocabulary: a catalog that declares either name keeps its own declaration.
+ */
+internal fun withFontSettingsVocabulary(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {
+  if (catalog.components.none { it.componentId in FontSettings.TEXT_COMPONENTS }) return catalog
+  return catalog
+    .newBuilder()
+    .also { builder ->
+      builder.components =
+        catalog.components.map { component ->
+          if (component.componentId !in FontSettings.TEXT_COMPONENTS) return@map component
+          val declared = component.properties.mapTo(mutableSetOf()) { it.name }
+          val missing =
+            listOf(
+                FontSettings.VARIATION_PROPERTY to FontSettings.VARIATION_NOTES,
+                FontSettings.FEATURE_PROPERTY to FontSettings.FEATURE_NOTES,
+              )
+              .filter { (name, _) -> name !in declared }
+          if (missing.isEmpty()) return@map component
+          component
+            .newBuilder()
+            .also {
+              it.properties =
+                component.properties +
+                  missing.map { (name, notes) ->
+                    PropertyCapabilityV1.Builder(name, JsonPrimitive("string"))
+                      .also { property -> property.notes = notes }
+                      .build()
+                  }
+            }
+            .build()
+        }
+    }
+    .build()
+}
 
 /** Immutable, renderer-neutral request for one exact saved document revision. */
 public data class UiBuilderRenderRequest(

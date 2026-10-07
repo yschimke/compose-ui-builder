@@ -63,6 +63,8 @@ class WearPropertyReadershipTest {
           "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearScreenTheme.kt",
           // And its typefaces, read the same way.
           "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/ThemeTypefaces.kt",
+          // And a text's axes and features, named there for every lane.
+          "src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/FontSettings.kt",
         )
         .map { moduleFile("ui-builder-export", it) }
 

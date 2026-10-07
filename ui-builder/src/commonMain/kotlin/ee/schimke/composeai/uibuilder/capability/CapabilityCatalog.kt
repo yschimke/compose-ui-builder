@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.capability
 import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_DP_PROPERTIES
 import ee.schimke.composeai.uibuilder.editor.ComponentMenu
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
@@ -344,6 +345,7 @@ object CapabilityCatalogParser {
   fun parse(element: JsonElement): CapabilityCatalog =
     json
       .decodeFromJsonElement<CapabilityCatalog>(element)
+      .withFontSettings()
       .withEditorMetadata()
       .let { catalog ->
         if (UiBuilderBuildFeatures.remoteCompose) catalog
@@ -388,6 +390,33 @@ object CapabilityCatalogParser {
       }
     }
   }
+
+  /**
+   * Every text component's [FontSettings] properties, for a catalog that does not declare them
+   * itself. The server donates the same pair (`withFontSettingsVocabulary`); doing it here as well
+   * keeps a host that reads a catalog file directly from offering less than the server accepts.
+   * Additive: a catalog's own declaration of either name wins.
+   */
+  private fun CapabilityCatalog.withFontSettings(): CapabilityCatalog =
+    copy(
+      components =
+        components.map { component ->
+          if (component.componentId !in FontSettings.TEXT_COMPONENTS) return@map component
+          val declared = component.properties.mapTo(mutableSetOf()) { it.name }
+          component.copy(
+            properties =
+              component.properties +
+                listOf(
+                    FontSettings.VARIATION_PROPERTY to FontSettings.VARIATION_NOTES,
+                    FontSettings.FEATURE_PROPERTY to FontSettings.FEATURE_NOTES,
+                  )
+                  .filter { (name, _) -> name !in declared }
+                  .map { (name, notes) ->
+                    PropertyCapability(name, JsonPrimitive("string"), notes = notes)
+                  }
+          )
+        }
+    )
 
   /**
    * Adds builder-only presentation metadata without adding fields to the released catalog wire

@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.WearScreenTheme
@@ -1404,6 +1405,8 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
             wearNumber("fontSizeSp", "Overrides the role's size."),
             wearNumber("lineHeightSp", "Overrides the role's line height."),
             wearNumber("letterSpacingSp", "Overrides the role's tracking."),
+            wearString(FontSettings.VARIATION_PROPERTY, notes = FontSettings.VARIATION_NOTES),
+            wearString(FontSettings.FEATURE_PROPERTY, notes = FontSettings.FEATURE_NOTES),
             wearInteger("minLines", "The smallest height the text occupies, in lines."),
             wearInteger("maxLines", "How many lines the text may occupy before it truncates."),
             wearBoolean("softWrap", "Whether the text breaks at soft line breaks."),
