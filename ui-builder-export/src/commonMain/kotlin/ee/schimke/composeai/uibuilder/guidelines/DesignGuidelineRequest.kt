@@ -58,10 +58,9 @@ data class DesignGuidelineRequestRules(
 )
 
 /**
- * A picture attached to a guidelines request. [kind] is [DEVICE] (the first frame, as the wearer
- * first sees it) or [UNROLLED] (a canvas tall enough for the whole scrolling list, at its end, so a
- * revealed edge button shows). [dataUrl] is absent where the bytes travel separately, as MCP image
- * blocks do.
+ * A picture attached to a guidelines request: one [DesignGuidelineFrame] drawn. [kind] says which
+ * frame (see the constants), and [description] is how the user message introduces it. [dataUrl] is
+ * absent where the bytes travel separately, as MCP image blocks do.
  */
 @Serializable
 data class DesignGuidelinePicture(
@@ -72,20 +71,36 @@ data class DesignGuidelinePicture(
   val dataUrl: String? = null,
 ) {
   companion object {
+    /** The first frame on the design's own device. */
     const val DEVICE: String = "device"
+
+    /** A scrolling Wear screen on a canvas tall enough for its whole list. */
     const val UNROLLED: String = "unrolled"
 
-    fun device(widthDp: Int, heightDp: Int, dataUrl: String?, index: Int = 1) =
+    /** A phone or tablet design in a compact window. */
+    const val PHONE: String = "phone"
+
+    /** A phone or tablet design in an expanded window. */
+    const val TABLET: String = "tablet"
+
+    /** A Wear widget in Samsung's stadium-shaped launcher container. */
+    const val WIDGET_SAMSUNG: String = "widget-samsung"
+
+    /** A Wear widget in the Pixel Watch's rounded-rectangle launcher container. */
+    const val WIDGET_PIXEL_WATCH: String = "widget-pixel-watch"
+
+    /** [frame] drawn as [dataUrl], as picture [index] of its request. */
+    fun of(frame: DesignGuidelineFrame, index: Int, dataUrl: String?) =
       DesignGuidelinePicture(
-        DEVICE,
-        "Picture $index (device picture): the design on the watch at ${widthDp}×${heightDp}dp, " +
-          "its first frame, scrolled to the top. On a scrolling screen, content running off the " +
-          "bottom continues when the wearer scrolls and is not clipped, and Wear keeps the edge " +
-          "button hidden until the list reaches its end.",
-        widthDp,
-        heightDp,
+        frame.kind,
+        frame.describe(index),
+        frame.widthDp,
+        frame.heightDp,
         dataUrl,
       )
+
+    fun device(widthDp: Int, heightDp: Int, dataUrl: String?, index: Int = 1) =
+      of(DesignGuidelineFrame(DEVICE, widthDp, heightDp, emptyMap()), index, dataUrl)
   }
 }
 
@@ -202,8 +217,8 @@ fun DesignGuidelinePrompt.provenance(
   add(
     "The rules are compose-ui-builder's design-guideline set (version $rulesVersion): " +
       "$forPlatform for this platform, $asked asked here. Each quotes the Android design guidance " +
-      "it comes from (developer.android.com design guides, the Wear Compose Material 3 " +
-      "documentation, the Jetpack Compose Glimmer guidance) and links its source."
+      "it comes from (developer.android.com design guides: Wear OS, adaptive and large-screen " +
+      "layouts, Jetpack Compose Glimmer) and links its source."
   )
   add(
     "The system prompt is fixed: it tells the model to answer each rule's yes/no question from " +
@@ -232,6 +247,19 @@ fun DesignGuidelinePrompt.provenance(
             DesignGuidelinePicture.UNROLLED ->
               "The unrolled picture renders the same design on a canvas tall enough for its whole " +
                 "list, so the end of the list and the revealed edge button are visible."
+            DesignGuidelinePicture.PHONE ->
+              "The phone picture renders the design at ${picture.widthDp}×${picture.heightDp}dp, " +
+                "a compact window, whatever size it was authored at."
+            DesignGuidelinePicture.TABLET ->
+              "The tablet picture renders the same design at " +
+                "${picture.widthDp}×${picture.heightDp}dp, an expanded window, so the adaptive " +
+                "rules can compare the two."
+            DesignGuidelinePicture.WIDGET_SAMSUNG ->
+              "The Samsung picture renders the widget in the stadium-shaped container Samsung's " +
+                "launcher gives it (${picture.widthDp}×${picture.heightDp}dp)."
+            DesignGuidelinePicture.WIDGET_PIXEL_WATCH ->
+              "The Pixel Watch picture renders the widget in the rounded-rectangle container the " +
+                "Pixel Watch launcher gives it (${picture.widthDp}×${picture.heightDp}dp)."
             else -> "A picture of the design is attached."
           }
         )
@@ -263,28 +291,4 @@ data class DesignGuidelineRecord(
   companion object {
     const val SCHEMA: String = "compose-ui-builder/guidelines-result/v1"
   }
-}
-
-/**
- * [this] as a result the panel can show. A verdict on a rule this editor's set does not know (a
- * newer rule set on the host) is kept as its id and reason rather than dropped.
- */
-fun DesignGuidelineRecord.toResult(rules: DesignGuidelineRuleSet): DesignGuidelineResult {
-  val known = rules.rules.associateBy { it.id }
-  val askedRules = asked.map { id ->
-    known[id]
-      ?: DesignGuidelineRule(id, emptyList(), "structure", "info", "", id, GUIDELINE_RULES_URL)
-  }
-  val answered = DesignGuidelinePrompt.answered(verdicts, askedRules)
-  val nodeIds = verdicts.flatMap { it.nodeIds }.toSet()
-  return DesignGuidelineResult(
-    revision = revision,
-    platform = askedRules.firstOrNull()?.platforms?.firstOrNull(),
-    findings = DesignGuidelinePrompt.findings(answered, askedRules, nodeIds),
-    judged = answered.size,
-    visualSkipped = 0,
-    model = model,
-    unanswered = asked - answered.map { it.ruleId }.toSet(),
-    ranBy = ranBy,
-  )
 }

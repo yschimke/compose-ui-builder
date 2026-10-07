@@ -1,7 +1,8 @@
 # Design guidelines check
 
 The editor's **Issues** panel can check the design on screen against the Android design guides for
-its platform: Wear OS for the `wear-m3` and `remote-m3` catalogs, AI glasses for `glimmer`. A model
+its platform: Wear OS for the `wear-m3` and `remote-m3` catalogs, AI glasses for `glimmer`, and
+phones and tablets (adaptive layout) for `m3`. A model
 reached through [OpenRouter](https://openrouter.ai) reads the design and answers one yes/no
 question per rule. Each rule it judges broken is listed with the guidance it comes from and a link
 to that guide. Findings are advice: they never block an export.
@@ -60,7 +61,7 @@ earlier revision. The shape is `compose-ui-builder/guidelines-result/v1` (`Desig
 | Field | Meaning |
 | --- | --- |
 | `id` | Stable name; it is the finding's `code`. |
-| `platforms` | `wear`, `glasses`. |
+| `platforms` | `wear`, `glasses`, `mobile`. |
 | `kind` | `structure`: the design tree is enough evidence. `visual`: the model needs a picture, and the `check` says which one. |
 
 | `severity` | `warning` or `info`. |
@@ -68,21 +69,23 @@ earlier revision. The shape is `compose-ui-builder/guidelines-result/v1` (`Desig
 | `check` | A yes/no question; YES means the design follows the rule. |
 | `source` | The page on developer.android.com, or a `kb://` Android Knowledge Base article. |
 
-### Two pictures for scrolling screens
+### The pictures each design is shown in
 
-A Wear screen whose content scrolls is shown to the model twice:
+`DesignGuidelineFrames.plan` (in `:ui-builder-export`, so the editor and compose-preview-server
+share it) names the frames a design is drawn in. A visual rule's `check` names the picture it is
+judged on.
 
-- the **device picture**: the first frame on the round watch, scrolled to the top. Wear hides the edge button here; `ScreenScaffold` reveals it only when the list reaches its end.
-- the **unrolled picture**: the same design on a tall canvas, so the whole list is visible and the edge button is revealed.
+| Design | Pictures |
+| --- | --- |
+| Wear screen | the **device picture**, its first frame on the watch, scrolled to the top. When a component its catalog marks `ScrollableContent` is on it, also the **unrolled picture**: the same design on a canvas four times as tall, so the whole list shows and `ScreenScaffold` reveals the edge button it hides on the first frame. Content running off the bottom of the device picture continues on scroll, so it is not clipping. |
+| Wear widget | the **Samsung** picture (the stadium-shaped launcher container, fully rounded ends) and the **Pixel Watch** picture (rounded rectangle), at the widget's size from `WearWidgetScaffoldSize.hostSpec`. An adaptive widget is drawn at Large. |
+| Phone or tablet (`m3`) | the **phone picture** at 412×915dp (compact) and the **tablet picture** at 1280×800dp (expanded), whatever size the design was authored at, so the adaptive rules can compare the two. |
+| Anything else | the device picture. |
 
-A visual rule's `check` names the picture it is judged on. Content running off the bottom of the device picture continues on scroll, so it is not counted as clipping.
-
-The file is copied in two places:
-
-- `ui-builder/.../guidelines/AndroidDesignGuidelinesJson.kt` in this repository. `DesignGuidelinesTest`
-  fails when this copy differs from the file.
-- `server/src/main/resources/.../guidelines/android-design-guidelines.json` in
-  compose-preview-server. This copy is updated by hand, in a pull request there.
+The file is the only copy. `:ui-builder-export:embedDesignGuidelines` embeds it at build time as
+`DesignGuidelineRuleSet.Bundled`. The editor reads it from there, and so does compose-preview-server
+through its `ui-builder-export` dependency, so a rule change reaches the server when it next bumps
+`composeai-ui-builder`.
 
 ## Adding rules
 

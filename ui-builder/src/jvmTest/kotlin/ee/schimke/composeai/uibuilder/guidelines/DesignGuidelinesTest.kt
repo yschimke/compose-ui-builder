@@ -23,10 +23,10 @@ class DesignGuidelinesTest {
   @Test
   fun `the embedded rules are the docs file, and every rule is complete and uniquely named`() {
     val file = File("../docs/guidelines/android-design-guidelines.json").readText()
+    // Embedded at build time by :ui-builder-export:embedDesignGuidelines, so they cannot drift.
     assertEquals(
-      Json.parseToJsonElement(file),
-      Json.parseToJsonElement(ANDROID_DESIGN_GUIDELINES_JSON),
-      "paste docs/guidelines/android-design-guidelines.json into AndroidDesignGuidelinesJson.kt",
+      Json { ignoreUnknownKeys = true }.decodeFromString(DesignGuidelineRuleSet.serializer(), file),
+      DesignGuidelineRuleSet.Bundled,
     )
     val rules = DesignGuidelineRuleSet.Bundled.rules
     assertEquals(rules.size, rules.map { it.id }.toSet().size)
@@ -48,7 +48,8 @@ class DesignGuidelinesTest {
     assertEquals("wear", DesignGuidelinePrompt.platformOf("wear-m3"))
     assertEquals("wear", DesignGuidelinePrompt.platformOf("remote-m3"))
     assertEquals("glasses", DesignGuidelinePrompt.platformOf("glimmer"))
-    assertNull(DesignGuidelinePrompt.platformOf("m3"))
+    assertEquals("mobile", DesignGuidelinePrompt.platformOf("m3"))
+    assertNull(DesignGuidelinePrompt.platformOf("compose-foundation"))
   }
 
   @Test
