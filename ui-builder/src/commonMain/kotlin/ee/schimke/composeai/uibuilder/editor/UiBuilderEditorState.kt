@@ -47,6 +47,7 @@ import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiDrawing
 import ee.schimke.composeai.uibuilder.export.UiExpressions
 import ee.schimke.composeai.uibuilder.export.WidgetAssetBytes
 import ee.schimke.composeai.uibuilder.export.isWearScreen
@@ -4055,7 +4056,12 @@ class UiBuilderEditorReducer(
           propertyName,
         )
       }
-    val checked = UiExpressions.check(encoded, UiExpressions.Scope.of(state.document), propertyName)
+    val checked =
+      UiExpressions.check(
+        encoded,
+        UiDrawing.expressionScope(state.document, nodeId),
+        propertyName,
+      )
     if (checked is UiExpressions.Checked.Issue) {
       return state.rejected(
         sequence,

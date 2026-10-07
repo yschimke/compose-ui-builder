@@ -6,12 +6,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
@@ -87,8 +89,46 @@ private fun collectSteps(
   when (node.componentId) {
     UiDrawing.GROUP ->
       DrawStep.Group(node, collectSteps(operation.slot(UiDrawing.OPS_SLOT), resolveColor))
+    UiDrawing.CLIP ->
+      DrawStep.Clip(node, collectSteps(operation.slot(UiDrawing.OPS_SLOT), resolveColor))
+    // The condition arrives evaluated at the preview state, as the player evaluates it per frame.
+    UiDrawing.IF ->
+      if (node.flag("condition"))
+        DrawStep.Sequence(collectSteps(operation.slot(UiDrawing.OPS_SLOT), resolveColor))
+      else null
+    UiDrawing.REPEAT -> DrawStep.Sequence(collectSteps(iterations(operation), resolveColor))
     in UiDrawing.BY_ID -> DrawStep.Shape(node, paint)
     else -> null
+  }
+}
+
+/**
+ * A [UiDrawing.REPEAT]'s operations once per index, each entered with the index bound under the
+ * repeat's name so `@i` (a property bound to it, or a formula reading it) resolves to that pass's
+ * value — the player's `loop(from, until, step)`, which runs while the index is below `until`.
+ */
+private fun iterations(repeat: CanvasRenderNode): List<CanvasRenderNode> {
+  val node = repeat.node
+  val from = node.number("from") ?: 0f
+  val until = node.number("until") ?: return emptyList()
+  val step = node.number("step") ?: 1f
+  if (step <= 0f || !from.isFinite() || !until.isFinite()) return emptyList()
+  val name = UiDrawing.indexName(node)
+  val children = node.slots[UiDrawing.OPS_SLOT].orEmpty()
+  return buildList {
+    var index = from
+    var pass = 0
+    while (index < until && pass < UiDrawing.MAX_ITERATIONS) {
+      val arguments =
+        JsonObject(
+          repeat.bindingArguments +
+            (name to
+              JsonObject(mapOf("type" to JsonPrimitive("float"), "value" to JsonPrimitive(index))))
+        )
+      children.forEach { child -> repeat.occurrenceChild(child, pass, arguments)?.let(::add) }
+      pass++
+      index = from + step * pass
+    }
   }
 }
 
@@ -118,6 +158,29 @@ private sealed interface DrawStep {
           node.number("rotate")?.let { rotate(it, pivot) }
           node.number("scale")?.let { scale(it, it, pivot) }
         }) {
+          children.forEach { it.draw(this, measurer, extent) }
+        }
+      }
+  }
+
+  class Sequence(private val children: List<DrawStep>) : DrawStep {
+    override fun draw(scope: DrawScope, measurer: TextMeasurer, extent: Size) = children.forEach {
+      it.draw(scope, measurer, extent)
+    }
+  }
+
+  class Clip(private val node: UiBuilderNode, private val children: List<DrawStep>) : DrawStep {
+    override fun draw(scope: DrawScope, measurer: TextMeasurer, extent: Size) =
+      with(scope) {
+        val x = node.number("xDp")?.dp(this) ?: 0f
+        val y = node.number("yDp")?.dp(this) ?: 0f
+        clipRect(
+          left = x,
+          top = y,
+          right = node.number("widthDp")?.let { x + it.dp(this) } ?: extent.width,
+          bottom = node.number("heightDp")?.let { y + it.dp(this) } ?: extent.height,
+          clipOp = if (node.flag("exclude")) ClipOp.Difference else ClipOp.Intersect,
+        ) {
           children.forEach { it.draw(this, measurer, extent) }
         }
       }

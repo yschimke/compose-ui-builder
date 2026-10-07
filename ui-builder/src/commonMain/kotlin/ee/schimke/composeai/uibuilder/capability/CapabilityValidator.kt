@@ -5,6 +5,7 @@ import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.UiBuilderArgumentBindings
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiDrawing
 import ee.schimke.composeai.uibuilder.export.inspectUiBuilderArgumentBindings
 import ee.schimke.composeai.uibuilder.export.optionalString
 import ee.schimke.composeai.uibuilder.export.propertyMatches
@@ -388,6 +389,7 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
               property.allowedValues,
               document.stateVariables,
               name,
+              UiDrawing.indexKinds(document, node.id),
             )
         if (bindingMatches == false || (bindingMatches == null && !property.acceptsType(value))) {
           issues +=

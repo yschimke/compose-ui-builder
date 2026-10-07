@@ -1,5 +1,8 @@
 package ee.schimke.composeai.uibuilder.export
 
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+
 /**
  * The drawing vocabulary: a `draw/canvas` node whose `ops` slot holds `draw/…` operation nodes.
  *
@@ -20,6 +23,9 @@ package ee.schimke.composeai.uibuilder.export
 object UiDrawing {
   const val CANVAS: String = "draw/canvas"
   const val GROUP: String = "draw/group"
+  const val CLIP: String = "draw/clip"
+  const val IF: String = "draw/if"
+  const val REPEAT: String = "draw/repeat"
   const val OPS_SLOT: String = "ops"
 
   /** The slot trait a canvas and a group accept, and only draw operations carry. */
@@ -33,6 +39,7 @@ object UiDrawing {
     SCALE(0.0, 16.0, 0.05),
     VIEWPORT(1.0, 4096.0, 1.0),
     SP(1.0, 512.0, 1.0),
+    COUNT(-1024.0, 1024.0, 1.0),
   }
 
   sealed interface Property {
@@ -202,7 +209,92 @@ object UiDrawing {
         ),
         container = true,
       ),
+      Operation(
+        CLIP,
+        "Clip",
+        "clipRect",
+        box("clip rectangle") +
+          Property.Flag(
+            "exclude",
+            "Draw everywhere except the rectangle, rather than only inside it.",
+          ),
+        container = true,
+      ),
+      Operation(
+        IF,
+        "Draw when",
+        "drawConditionally",
+        listOf(
+          Property.Flag(
+            "condition",
+            "Its operations draw only while this is true; bind it to state or a formula.",
+          )
+        ),
+        container = true,
+      ),
+      Operation(
+        REPEAT,
+        "Repeat",
+        "loop",
+        listOf(
+          Property.Number("from", Unit.COUNT, "The first index. 0 when absent."),
+          Property.Number("until", Unit.COUNT, "Repeats while the index is below this. Required."),
+          Property.Number("step", Unit.COUNT, "How much the index grows each time. 1 when absent."),
+          Property.Text(
+            "index",
+            "The name its operations read the index by, as `@i` in a formula. `i` when absent.",
+          ),
+        ),
+        container = true,
+      ),
     )
+
+  /** Most iterations a canvas draws for one [REPEAT]; the player has no cap, the preview does. */
+  const val MAX_ITERATIONS: Int = 1_000
+
+  /** The index name a [REPEAT] node binds, `i` unless it names another. */
+  fun indexName(node: UiBuilderNode): String {
+    val authored = node.properties["index"]
+    val primitive = (authored as? JsonObject)?.get("value") as? JsonPrimitive ?: authored
+    return (primitive as? JsonPrimitive)?.takeIf { it.isString }?.content?.trim()?.ifEmpty { null }
+      ?: "i"
+  }
+
+  /** Whether [name] can be written as a Kotlin lambda parameter, which the export needs. */
+  fun isIndexName(name: String): Boolean = INDEX_NAME.matches(name)
+
+  private val INDEX_NAME = Regex("[A-Za-z_][A-Za-z0-9_]*")
+
+  /**
+   * The loop indices in scope at [nodeId]: the index name of every [REPEAT] it is drawn inside,
+   * outermost first. Each is a float, as the player's loop index is.
+   */
+  fun loopIndices(document: UiBuilderDocument, nodeId: String): List<String> {
+    val parents = HashMap<String, String>()
+    document.nodes.values.forEach { node ->
+      if (isDrawing(node.componentId))
+        node.slots[OPS_SLOT].orEmpty().forEach { child -> parents.getOrPut(child) { node.id } }
+    }
+    val indices = ArrayDeque<String>()
+    val seen = HashSet<String>()
+    var current = parents[nodeId]
+    while (current != null && seen.add(current)) {
+      val node = document.nodes[current] ?: break
+      if (node.componentId == REPEAT) indices.addFirst(indexName(node))
+      current = parents[current]
+    }
+    return indices.toList()
+  }
+
+  /** The kind of each loop index in scope at [nodeId], for an expression's binding operands. */
+  fun indexKinds(document: UiBuilderDocument, nodeId: String): (String) -> UiValueKind? {
+    val indices = loopIndices(document, nodeId).toSet()
+    return { key -> if (key in indices) UiValueKind.FLOAT else null }
+  }
+
+  /** The expression scope at [nodeId]: the document's state plus the loop indices around it. */
+  fun expressionScope(document: UiBuilderDocument, nodeId: String): UiExpressions.Scope =
+    UiExpressions.Scope(UiExpressions.Scope.of(document).stateKinds, indexKinds(document, nodeId))
 
   val BY_ID: Map<String, Operation> = OPERATIONS.associateBy { it.componentId }
 

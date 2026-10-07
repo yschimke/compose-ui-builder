@@ -9,6 +9,7 @@ import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
+import ee.schimke.composeai.uibuilder.export.UiDrawing
 import ee.schimke.composeai.uibuilder.export.inspectUiBuilderArgumentBindings
 import ee.schimke.composeai.uibuilder.export.propertyMatches
 import ee.schimke.composeai.uibuilder.export.stateBindingMatchesCatalog
@@ -469,7 +470,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
     val catalogComponents = components.getValue(systemId)
     val encodedDocument = json.encodeToJsonElement(document).jsonObject
     val encodedNodes = encodedDocument.getValue("nodes").jsonObject
-    val argumentBindings = inspectUiBuilderArgumentBindings(document.toUiBuilderDocument())
+    val uiDocument = document.toUiBuilderDocument()
+    val argumentBindings = inspectUiBuilderArgumentBindings(uiDocument)
     argumentBindings.issues.firstOrNull()?.let {
       return issue("INVALID_ARGUMENT_BINDING", it.message, it.nodeId, it.field)
     }
@@ -568,6 +570,7 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
               capability.allowedValues,
               encodedDocument.objectOrEmpty("stateVariables"),
               name,
+              UiDrawing.indexKinds(uiDocument, nodeId),
             )
         if (
           bindingMatches == false ||

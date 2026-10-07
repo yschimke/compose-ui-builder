@@ -54,7 +54,7 @@ behind a compile-time flag.
 | | Scope | Status |
 | --- | --- | --- |
 | M1 | Computed values: `expr`/`system` wrappers, formula text, canvas evaluation, Remote Kotlin lowering, inspector | Landed |
-| M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint | Landed (clips and loops follow) |
+| M2 | `draw/canvas` and `draw/*` operation nodes: shapes, paths, text, transforms, paint, clips, conditionals, loops | Landed (gradients follow) |
 | M3 | Events and actions: long/double click, touch, scroll actions, expression writes, host actions | Long press and double tap landed (`combinedClickable`); the rest planned |
 | M4 | Remaining `RemoteModifier`s: graphicsLayer, visibility, semantics, marquee, ripple, brushes and shapes as values | Landed as `remoteCall` over the generated vocabulary (33 calls); lambda-only calls (`graphicsLayer`, `drawWithContent`) planned |
 | M5 | Remaining components: `RemoteTimeText`, page indicators, theme node, button and card overloads | Horizontal and vertical page indicators landed; the rest planned |
@@ -164,6 +164,9 @@ canvas stand-in and the Remote emitter.
 | `draw/path` | `pathData` (SVG), `viewportWidth` `viewportHeight` + paint | `drawPath(RemotePath(…))`, scaled to the canvas |
 | `draw/text` | `text`, `xDp` `yDp` anchor, `textSizeSp`, `align` | `drawAnchoredText` |
 | `draw/group` | `translateXDp` `translateYDp` `rotate` `scale` `pivotXDp` `pivotYDp`; its own `ops` | `withTransform({ … }) { … }` |
+| `draw/clip` | box, `exclude`; its own `ops` | `clipRect(l, t, r, b) { … }`, `ClipOp.Difference` when excluding |
+| `draw/if` | `condition` (a flag, usually state or a formula); its own `ops` | `drawConditionally(condition) { … }` |
+| `draw/repeat` | `from` `until` `step` (unitless), `index` (a name, `i` when absent); its own `ops` | `loop(from, until, step) { i -> … }` |
 
 Paint is `color` (literal, theme role or computed), `style` (`fill`/`stroke`), `strokeWidthDp`,
 `strokeCap` and `alpha`. Rules every lane shares: geometry is dp from the canvas's top-left; an
@@ -179,6 +182,17 @@ so a ring drawn with defaults stays inside; angles are clockwise from three o'cl
 - **Remote Kotlin.** `RemoteCanvas(modifier) { … }`, coordinates as `n.rdp.toPx()`, a computed one
   as `expression.asRemoteDp().toPx()`, a theme colour read into a local above the canvas because
   `RemoteMaterialTheme.colorScheme` is a composable read and the draw lambda is not.
+
+The three containers decide whether, where and how often their operations draw. A `draw/repeat`
+runs while its index is below `until`, as the player's `loop` does, and binds the index by name:
+an operation inside reads it as a `binding` wrapper, `{"type": "binding", "value": "i"}`, either as
+a whole property or as an operand of a formula, where the inspector shows it as `@i`. That is the
+wrapper a for-each row field already uses, so the wire needed nothing new; what is new is the scope.
+`UiDrawing.loopIndices` names the indices around an operation, and every reader that checks a
+formula (the editor's commit, both catalog validators, the Remote writer) asks it, so `@i * 30`
+types inside a repeat and is refused, naming `i`, outside one. The canvas enters each pass through
+the render tree's occurrence path with the index bound, so its operations resolve exactly as a
+repeated layout template does; it stops at 1,000 passes, a cap the player does not have.
 
 A progress ring and a clock hand, as a document:
 
@@ -200,8 +214,9 @@ A progress ring and a clock hand, as a document:
 
 ### Not yet
 
-- Clips (`clipRect`/`clipPath`), loops (`loop` with an index binding), conditional drawing,
-  gradients and images as paint, path morphs and text on a path.
+- `clipPath`: a path clip needs the path in canvas pixels, and `draw/path` scales its viewport
+  with a transform that a clip would carry onto everything it encloses.
+- Gradients and images as paint, path morphs and text on a path.
 - The device preview in remote-m3-catalog plays the canvas once its renderer adds the case.
 - The regular Compose lane: `Canvas { }` is the same shape, but no catalog that exports regular
   Compose offers the vocabulary yet.

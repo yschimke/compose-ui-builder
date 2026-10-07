@@ -2883,6 +2883,226 @@
         },
         {
             "code": null,
+            "componentId": "draw/clip",
+            "displayName": "Clip",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "xDp",
+                    "notes": "Left edge of the clip rectangle. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "yDp",
+                    "notes": "Top edge of the clip rectangle. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "widthDp",
+                    "notes": "Width of the clip rectangle. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "heightDp",
+                    "notes": "Height of the clip rectangle. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "exclude",
+                    "notes": "Draw everywhere except the rectangle, rather than only inside it.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawOperation"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "ops",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `clipRect` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/if",
+            "displayName": "Draw when",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "condition",
+                    "notes": "Its operations draw only while this is true; bind it to state or a formula.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawOperation"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "ops",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawConditionally` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/repeat",
+            "displayName": "Repeat",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "from",
+                    "notes": "The first index. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "until",
+                    "notes": "Repeats while the index is below this. Required.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "step",
+                    "notes": "How much the index grows each time. 1 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "index",
+                    "notes": "The name its operations read the index by, as `@i` in a formula. `i` when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawOperation"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "ops",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `loop` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "remote-m3/remote-horizontal-page-indicator",
             "displayName": "Horizontal page indicator",
             "modifierCapabilities": [
@@ -17273,7 +17493,13 @@
                 "draw/circle": {
                     "group": "Drawing"
                 },
+                "draw/clip": {
+                    "group": "Drawing"
+                },
                 "draw/group": {
+                    "group": "Drawing"
+                },
+                "draw/if": {
                     "group": "Drawing"
                 },
                 "draw/line": {
@@ -17286,6 +17512,9 @@
                     "group": "Drawing"
                 },
                 "draw/rect": {
+                    "group": "Drawing"
+                },
+                "draw/repeat": {
                     "group": "Drawing"
                 },
                 "draw/text": {
