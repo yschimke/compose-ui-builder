@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import kotlinx.coroutines.delay
 
 /** One generated Material icon binding shared by validation, rendering, selection and export. */
 data class GoogleMaterialIcon(
@@ -61,12 +62,30 @@ fun googleMaterialIconImageVector(key: String): ImageVector? =
  * Answers in the first composition when the vector is already at hand — always on the JVM, so
  * renders and snapshots there are unchanged — and otherwise recomposes once it arrives. A caller
  * draws nothing, at the icon's size, for the null frames.
+ *
+ * A failed fetch is retried while the icon stays on screen, backing off from one second to
+ * [ICON_RETRY_MAX_MILLIS]: one attempt would leave an icon blank for good after a dropped request,
+ * since nothing else re-runs the effect until the icon leaves composition and comes back.
  */
 @Composable
 fun rememberGoogleMaterialIconVector(key: String): ImageVector? {
   var vector by remember(key) { mutableStateOf(googleMaterialIconImageVector(key)) }
   if (vector == null && googleMaterialIcon(key) != null) {
-    LaunchedEffect(key) { vector = GoogleMaterialIconVectors.load(key) }
+    LaunchedEffect(key) {
+      var wait = ICON_RETRY_FIRST_MILLIS
+      while (true) {
+        val loaded = GoogleMaterialIconVectors.load(key)
+        if (loaded != null) {
+          vector = loaded
+          break
+        }
+        delay(wait)
+        wait = (wait * 2).coerceAtMost(ICON_RETRY_MAX_MILLIS)
+      }
+    }
   }
   return vector
 }
+
+private const val ICON_RETRY_FIRST_MILLIS = 1_000L
+private const val ICON_RETRY_MAX_MILLIS = 30_000L
