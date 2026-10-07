@@ -1122,6 +1122,30 @@ check "a policy value that is not an object is refused" 1 $?
 grep -q 'components\["wear-m3/unused"\] is not an object' "${work}/out" ||
   { echo "FAIL non-object policy value not reported"; failures=$((failures + 1)); }
 
+# 1b. A map whose VALUES the decoder types. `canvasMapping.properties` is a Map<String, String>, so a
+#     number there fails to decode even though the map itself is an object (Codex on #508).
+for value in '7' '"size"'; do
+  cat >"${work}/rec-mapvalue.json" <<JSON
+{ "schema": "compose-ui-builder-catalog/v1", "catalog": { "id": "wear-m3" },
+  "statusSemantics": { "platform": "wear", "componentIdPrefix": "wear-m3/",
+    "components": { "wear-m3/unused": { "canvasMapping": { "properties": { "size": ${value} } } } },
+    "componentMenu": { "groupOrder": ["A"],
+      "components": { "wear-m3/button": { "group": "A" },
+                      "wear-m3/card": { "group": "A" } } } } }
+JSON
+  "${gate}" --policy "${work}/rec-mapvalue.json" --golden "${work}/rec-golden.json" \
+    --catalog-id wear-m3 --component-id-prefix wear-m3/ --record "${work}/rec-ok.json" --strict \
+    >"${work}/out" 2>&1
+  status=$?
+  if [[ "${value}" == '7' ]]; then
+    check "a map value of the wrong type is refused" 1 "${status}"
+    grep -q 'canvasMapping.properties\["size"\] is not a string' "${work}/out" ||
+      { echo "FAIL wrong-typed map value not reported"; failures=$((failures + 1)); }
+  else
+    check "a map value of the right type is accepted" 0 "${status}"
+  fi
+done
+
 # 2. An AUTHORED policy cannot answer the component-id question: per-component ids live in
 #    @BuilderComponent annotations, which only the generator resolves. Deriving from it ignores
 #    every id an annotation overrides, and can agree with the golden by luck.

@@ -369,10 +369,16 @@
                     },
                     "properties": {
                         "kind": "object",
+                        "values": {
+                            "kind": "string"
+                        },
                         "optional": true
                     },
                     "slots": {
                         "kind": "object",
+                        "values": {
+                            "kind": "string"
+                        },
                         "optional": true
                     }
                 },

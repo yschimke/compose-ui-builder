@@ -155,9 +155,24 @@ class DecoderShapeFixtureTest {
         mapOf("kind" to JsonPrimitive("object")) +
           (described["members"]?.let { mapOf("members" to it) } ?: emptyMap())
       }
-      // kotlinx decodes a map only from a JSON object. Its values remain free-form, but the
-      // container itself is not: accepting a scalar here certifies a record the server refuses.
-      StructureKind.MAP -> mapOf("kind" to JsonPrimitive("object"))
+      // kotlinx decodes a map only from a JSON object, and each VALUE through the value type's
+      // own serializer: `canvasMapping.properties` is a `Map<String, String>`, so `{"size": 7}`
+      // fails to decode. The value's shape goes in `values` for the gate to check per entry. A
+      // `JsonElement` value is the exception, free-form by design, so a map of those constrains
+      // only the container: accepting a scalar there certifies a record the server refuses.
+      StructureKind.MAP -> {
+        val value = descriptor.getElementDescriptor(1)
+        val spec = kindOf(value, seen)
+        if (spec["kind"] == JsonPrimitive("any")) mapOf("kind" to JsonPrimitive("object"))
+        else
+          mapOf(
+            "kind" to JsonPrimitive("object"),
+            "values" to
+              JsonObject(
+                if (value.isNullable) spec + ("nullable" to JsonPrimitive(true)) else spec
+              ),
+          )
+      }
       // A free-form JsonElement is carried but not constrained.
       else -> mapOf("kind" to JsonPrimitive("any"))
     }
