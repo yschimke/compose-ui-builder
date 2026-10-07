@@ -144,6 +144,7 @@ class WearWidgetContainerCatalogTest {
         "remote-m3/lottie",
         // The canvas, not its operations: those enter only a canvas's `ops` slot.
         "draw/canvas",
+        "remote-m3/remote-time-text",
       ) + RemoteMaterial3.components.map { it.componentId },
       accepted,
     )

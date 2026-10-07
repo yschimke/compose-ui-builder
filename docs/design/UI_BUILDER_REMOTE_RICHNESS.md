@@ -16,6 +16,16 @@ ahead of them (`backgroundColor` on the page indicators, `border` on the cards);
 a snapshot-only parameter, so every exported widget compiles against the alpha. The target moves
 with each new alpha, by refreshing the record and its goldens together.
 
+## Time text
+
+`remote-m3/remote-time-text` is `RemoteTimeText`: the device's time curved along the top of its
+bounds, with optional `leadingText` and `trailingText`, a `separator` (`·` by default), a literal
+`textSizeSp` and a `color`. The embedded record is generated from the catalog's sheets and has no
+row for it, so it is declared by hand in `UiTimeText`, which the palette entry, the canvas stand-in
+and the emitter all read. The time is the player's own, so it is not a property; the canvas curves
+the design's fixed preview time in its place. It is on the Content shelf and is not donated by the
+generic Remote Compose foundation, since it is a Wear Material 3 component.
+
 ## Remote modifier vocabulary
 
 A `RemoteModifier` call the typed modifiers do not name is a `remoteCall` modifier: `name` and

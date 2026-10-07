@@ -265,7 +265,13 @@ internal fun remoteM3ComponentMenu(base: JsonObject): JsonObject =
     .fold(
       REMOTE_DRAW_IDS.fold(
         REMOTE_ONLY_LAYOUT_IDS.fold(
-          JsonObject(base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content")))
+          REMOTE_HAND_DECLARED_IDS.fold(
+            JsonObject(
+              base + ("componentMenu" to base.withMenuEntry("remote-m3/lottie", "Content"))
+            )
+          ) { semantics, id ->
+            JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, "Content")))
+          }
         ) { semantics, id ->
           JsonObject(semantics + ("componentMenu" to semantics.withMenuEntry(id, "Layout")))
         }
@@ -642,6 +648,7 @@ internal fun remoteM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
       "shape/linear-gradient",
       "asset/image",
       *REMOTE_DRAW_IDS.toTypedArray(),
+      *REMOTE_HAND_DECLARED_IDS.toTypedArray(),
     )
   return base
     .newBuilder()

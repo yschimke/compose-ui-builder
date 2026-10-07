@@ -32,6 +32,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import ee.schimke.composeai.uibuilder.export.UiTimeText
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -70,6 +71,48 @@ fun UiBuilderDrawCanvas(
         stated.second?.let { it * density } ?: size.height,
       )
     steps.forEach { it.draw(this, measurer, extent) }
+  }
+}
+
+/**
+ * A `RemoteTimeText` on the editing canvas: [time] and the text beside it, curved along the top of
+ * the bounds as the player draws it — centred at twelve o'clock on a circle a text size inside the
+ * box, reading clockwise.
+ */
+@Composable
+fun UiBuilderTimeText(
+  node: UiBuilderNode,
+  time: String,
+  modifier: Modifier,
+  resolveColor: @Composable (String) -> Color?,
+) {
+  val colour =
+    node.text("color")?.let { resolveColor(it) } ?: resolveColor("onBackground") ?: Color.White
+  val line =
+    UiTimeText.line(
+      time,
+      node.text("leadingText"),
+      node.text("trailingText"),
+      (node.properties["separator"] as? JsonObject)?.let {
+        node.scalar("separator")?.contentOrNull
+      },
+    )
+  val measurer = rememberTextMeasurer()
+  Canvas(modifier) {
+    val style = TextStyle(fontSize = (node.number("textSizeSp") ?: 14f).sp)
+    val radius = size.width / 2f - style.fontSize.toPx()
+    if (radius <= 0f) return@Canvas
+    val center = Offset(size.width / 2f, size.height / 2f)
+    val glyphs = glyphs(measurer, line, style)
+    val arc = glyphs.sumOf { it.size.width.toDouble() }.toFloat()
+    var along = 270f * DEGREES_TO_RADIANS - arc / radius / 2f
+    val brush = SolidColor(colour)
+    glyphs.forEach { glyph ->
+      val middle = along + glyph.size.width / 2f / radius
+      val point = Offset(center.x + radius * cos(middle), center.y + radius * sin(middle))
+      drawGlyph(glyph, point, middle / DEGREES_TO_RADIANS + 90f, brush)
+      along += glyph.size.width / radius
+    }
   }
 }
 

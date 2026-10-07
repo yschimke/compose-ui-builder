@@ -176,6 +176,8 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import ee.schimke.composeai.uibuilder.export.UiExpressions
+import ee.schimke.composeai.uibuilder.export.UiTimeText
 import ee.schimke.composeai.uibuilder.export.WearScreenTheme
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostSpec
@@ -201,6 +203,7 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionCollector
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderInspectionSnapshot
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderModifierPlan
 import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderSemanticActionController
+import ee.schimke.composeai.uibuilder.renderer.sdk.UiBuilderTimeText
 import ee.schimke.composeai.uibuilder.renderer.sdk.alignmentFor
 import ee.schimke.composeai.uibuilder.renderer.sdk.applyCanvasModifier
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
@@ -1890,6 +1893,15 @@ private fun RenderNode(
       // A drawing: its operations are drawn by the canvas, not entered as nodes of their own.
       // `this.entry`: the node being drawn, not the root this renderer was entered from.
       UiDrawing.CANVAS -> UiBuilderDrawCanvas(this.entry, measured) { uiBuilderColor(it) }
+      UiTimeText.ID -> {
+        val clock =
+          UiExpressions.Clock.of(
+            (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull
+          )
+        val time =
+          "${clock.hour.toString().padStart(2, '0')}:${clock.minute.toString().padStart(2, '0')}"
+        UiBuilderTimeText(node, time, measured) { uiBuilderColor(it) }
+      }
       in UiDrawing.BY_ID -> Unit
       "shape/linear-gradient" -> Box(measured.background(node.linearGradientBrush()))
       "shape/radial-gradient" -> {

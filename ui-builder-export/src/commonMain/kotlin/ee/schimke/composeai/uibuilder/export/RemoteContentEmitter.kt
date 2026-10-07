@@ -87,7 +87,9 @@ public val REMOTE_CONTENT_COMPONENT_IDS: Set<String> =
     // every one of them.
     RemoteMaterial3.components.map { it.componentId } +
     // The drawing vocabulary: a canvas and the operations its `ops` slot holds.
-    UiDrawing.COMPONENT_IDS
+    UiDrawing.COMPONENT_IDS +
+    // Remote Material 3 components the record has no row for, written by hand.
+    UiTimeText.ID
 
 /**
  * Which widget file a [RemoteContentEmitter] body is written into, which decides its imports.
@@ -483,6 +485,7 @@ internal class RemoteContentEmitter(
           )
       "layout/for-each" -> repetition(node, depth)
       UiDrawing.CANVAS -> drawCanvas(node, depth)
+      UiTimeText.ID -> timeText(node, pad)?.split("\n") ?: emptyList()
       in UiDrawing.BY_ID ->
         emptyList<String>().also {
           refusals +=
@@ -1711,6 +1714,37 @@ internal class RemoteContentEmitter(
       pageIndicatorColor(node, name)?.let { arguments += "$name = $it" }
     }
     return (pad + call(symbol, arguments, pad)).split("\n")
+  }
+
+  /**
+   * `RemoteTimeText(…)`: the time is the player's own, so only the text beside it, its size and its
+   * colour are written, each left to the component's default when the design does not state it.
+   */
+  private fun timeText(node: UiBuilderNode, pad: String): String? {
+    usedComponentImports += "androidx.wear.compose.remote.material3.RemoteTimeText"
+    val arguments = mutableListOf<String>()
+    node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
+    listOf("leadingText", "trailingText", "separator").forEach { name ->
+      val authored = node.properties[name] ?: return@forEach
+      val value =
+        if (authored.isDrawComputed())
+          computed(authored, UiValueKind.STRING, "nodes.${node.id}.$name") ?: return null
+        else {
+          usesRemoteString = true
+          "\"${authored.stringOrNull().orEmpty().escaped()}\".rs"
+        }
+      arguments += "$name = $value"
+    }
+    node.properties["textSizeSp"]?.let { authored ->
+      if (authored.isDrawComputed()) {
+        // `RemoteTextUnit`'s constructor is internal: a computed size has no spelling here.
+        refusals += "nodes.${node.id}.textSizeSp: a time text's size is a literal"
+        return null
+      }
+      authored.numberOrNull()?.let { arguments += "fontSize = ${it.spLiteral()}" }
+    }
+    pageIndicatorColor(node, "color")?.let { arguments += "color = $it" }
+    return pad + call("RemoteTimeText", arguments, pad)
   }
 
   private fun pageIndicatorColor(node: UiBuilderNode, name: String): String? {

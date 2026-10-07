@@ -3606,6 +3606,98 @@
         },
         {
             "code": null,
+            "componentId": "remote-m3/remote-time-text",
+            "displayName": "Time text",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "leadingText",
+                    "notes": "Text before the time, e.g. a date. None when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "trailingText",
+                    "notes": "Text after the time. None when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "separator",
+                    "notes": "What sits between the time and the text beside it. `·` when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "textSizeSp",
+                    "notes": "Text size. The time text style's when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Text colour. The theme's onBackground when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "RemoteTimeText: the device's time curved along the top of its bounds, with optional text either side. The canvas shows the design's preview time.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "remote-m3/remote-horizontal-page-indicator",
             "displayName": "Horizontal page indicator",
             "modifierCapabilities": [
@@ -18248,6 +18340,9 @@
                 },
                 "remote-m3/remote-text-button": {
                     "group": "Buttons"
+                },
+                "remote-m3/remote-time-text": {
+                    "group": "Content"
                 },
                 "remote-m3/remote-title-card": {
                     "group": "Containment"

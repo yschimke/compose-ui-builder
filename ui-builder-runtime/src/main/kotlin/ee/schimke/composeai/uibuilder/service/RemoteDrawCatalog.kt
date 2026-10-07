@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.UiDrawing
+import ee.schimke.composeai.uibuilder.export.UiTimeText
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.SlotCapabilityV1
@@ -84,6 +85,18 @@ internal fun remoteDrawComponent(
       modifiers = true,
     )
   }
+  if (componentId == UiTimeText.ID) {
+    return derived(
+      displayName = "Time text",
+      notes =
+        "RemoteTimeText: the device's time curved along the top of its bounds, with optional " +
+          "text either side. The canvas shows the design's preview time.",
+      traits = listOf("RemoteAuthorable"),
+      slots = emptyList(),
+      properties = UiTimeText.PROPERTIES.map(::drawProperty),
+      modifiers = true,
+    )
+  }
   val operation = UiDrawing.BY_ID[componentId] ?: return null
   return derived(
     displayName = operation.displayName,
@@ -118,3 +131,8 @@ private fun drawProperty(property: UiDrawing.Property): PropertyCapabilityV1 {
 
 /** The drawing ids in palette order, the canvas first. */
 internal val REMOTE_DRAW_IDS: List<String> = UiDrawing.COMPONENT_IDS
+
+/**
+ * Remote Material 3 components declared by hand because the embedded record has no row for them.
+ */
+internal val REMOTE_HAND_DECLARED_IDS: List<String> = listOf(UiTimeText.ID)
