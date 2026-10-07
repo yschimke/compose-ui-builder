@@ -69,8 +69,9 @@ internal fun resolveFontSettings(
     if (family != null && instance != null) {
       weightAxis = axes.any { it.tag == "wght" } && variants?.hasAxis(family, "wght") == true
       resolved = resolved.copy(fontFamily = instance)
-      // The axis is the weight now; a synthesised bold over a `wght` 800 would be two bolds.
-      if (weightAxis) resolved = resolved.copy(fontSynthesis = FontSynthesis.None)
+      // The axis is the weight now; a synthesised bold over a `wght` 800 would be two bolds. Style
+      // synthesis stays, so an italic `fontStyle` on a face with no italic still slants.
+      if (weightAxis) resolved = resolved.copy(fontSynthesis = FontSynthesis.Style)
     }
   }
   // Only a face that has a `wght` axis takes its weight from it: a static face, one not loaded, or
