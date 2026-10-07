@@ -1,5 +1,8 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiExpressions
+import ee.schimke.composeai.uibuilder.export.UiValueKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -237,6 +240,64 @@ class UiBuilderModifierPlanTest {
     assertNull(
       uiBuilderModifier(
         modifier("""{"type":"border","color":{"type":"color","value":"#FF000000"}}""")
+      )
+    )
+  }
+}
+
+/**
+ * A `remoteCall` reads into a plan with its numeric arguments, after the canvas has evaluated any
+ * state read or computed value nested in them, the same values Remote export and the player use.
+ */
+class RemoteCallModifierPlanTest {
+  private val node =
+    UiBuilderNode(
+      id = "label",
+      componentId = "remote-m3/remote-text",
+      modifiers =
+        kotlinx.serialization.json.JsonArray(
+          listOf(
+            Json.parseToJsonElement(
+              """{"type":"remoteCall","name":"defaultMinSize","args":{
+                "minWidth":{"type":"expr","op":"mul","args":[
+                  {"type":"state","variable":"size"},{"type":"int","value":2}]},
+                "minHeight":{"type":"state","variable":"size"}}}"""
+            )
+          )
+        ),
+    )
+
+  @Test
+  fun `state and computed arguments are evaluated before the plan is read`() {
+    val expressions =
+      CanvasExpressions(
+        stateKinds = mapOf("size" to UiValueKind.FLOAT),
+        clock = UiExpressions.Clock.DEFAULT,
+      )
+
+    val evaluated =
+      resolveCanvasNode(
+        node,
+        kotlinx.serialization.json.JsonObject(emptyMap()),
+        mapOf("size" to "24"),
+        mapping = null,
+        expressions = expressions,
+      )
+
+    assertEquals(
+      UiBuilderModifierPlan.RemoteCall(
+        "defaultMinSize",
+        mapOf("minWidth" to 48f, "minHeight" to 24f),
+      ),
+      uiBuilderModifier(evaluated.modifiers.single().jsonObject),
+    )
+  }
+
+  @Test
+  fun `a call the released API does not have is not a plan`() {
+    assertNull(
+      uiBuilderModifier(
+        Json.parseToJsonElement("""{"type":"remoteCall","name":"blur","args":{}}""").jsonObject
       )
     )
   }

@@ -65,6 +65,15 @@ class RemoteCallModifierEditingTest {
     assertEquals("int", visible.getValue("type").jsonPrimitive.content)
     assertEquals("2", visible.getValue("value").jsonPrimitive.content)
 
+    // `visible` is a RemoteInt: a fraction would be written as an int it is not.
+    val fractional =
+      reducer.reduce(
+        edited,
+        UiBuilderEditorEvent.SetModifierValue("label", "remoteCall:visibility", "visible", "2.5"),
+      )
+    val refused = assertIs<CommandOutcome.Rejected>(fractional.lastOutcome)
+    assertTrue("whole number" in refused.message, refused.message)
+
     val removed =
       reducer.reduce(edited, UiBuilderEditorEvent.ToggleModifier("label", "remoteCall:visibility"))
     assertTrue(removed.document.nodes.getValue("label").modifiers.isEmpty())

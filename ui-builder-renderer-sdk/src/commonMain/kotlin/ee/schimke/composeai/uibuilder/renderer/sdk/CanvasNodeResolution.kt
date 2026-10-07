@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
+import ee.schimke.composeai.uibuilder.export.RemoteModifierVocabulary
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiExpressions
@@ -52,7 +53,9 @@ class CanvasExpressions(
     val computed =
       node.properties.values.any(UiExpressions::isComputed) ||
         node.modifiers.any { modifier ->
-          (modifier as? JsonObject)?.values?.any(UiExpressions::isComputed) == true
+          val fields = modifier as? JsonObject
+          fields?.values?.any(UiExpressions::isComputed) == true ||
+            fields?.remoteCallArgs()?.values?.any(::isDynamic) == true
         }
     if (!computed) return node
     val scope =
@@ -82,6 +85,18 @@ class CanvasExpressions(
         JsonArray(
           node.modifiers.map { modifier ->
             val fields = modifier as? JsonObject ?: return@map modifier
+            // A Remote call's arguments are value wrappers, so they are evaluated to wrappers.
+            fields.remoteCallArgs()?.let { args ->
+              return@map JsonObject(
+                fields +
+                  ("args" to
+                    JsonObject(
+                      args.mapValues { (_, value) ->
+                        if (isDynamic(value)) literal(value) ?: value else value
+                      }
+                    ))
+              )
+            }
             if (fields.values.none(UiExpressions::isComputed)) return@map modifier
             // Modifier fields are bare numbers rather than wrappers, so the literal's value goes
             // in.
@@ -95,6 +110,15 @@ class CanvasExpressions(
         ),
     )
   }
+
+  private fun JsonObject.remoteCallArgs(): JsonObject? =
+    takeIf { (it["type"] as? JsonPrimitive)?.contentOrNull == RemoteModifierVocabulary.TYPE }
+      ?.get("args") as? JsonObject
+
+  /** A state read or a computed value: what the player evaluates rather than reads as written. */
+  private fun isDynamic(value: JsonElement): Boolean =
+    UiExpressions.isComputed(value) ||
+      ((value as? JsonObject)?.get("type") as? JsonPrimitive)?.contentOrNull == "state"
 
   companion object {
     /** The kinds [document] declares and its `environment.fixedTime`. */
