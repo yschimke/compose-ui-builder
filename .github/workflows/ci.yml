@@ -49,10 +49,51 @@ jobs:
           cache-provider: basic
       - name: Check Markdown links
         run: ./scripts/check-markdown-links.py
+      # The two JVM test suites run in `jvm-tests`: they were the last ~4 minutes of this job,
+      # holding the workers the Wasm browser tests sat waiting for.
       - run: >-
           ./gradlew check ktfmtCheckAll
           -x :ui-builder-web:verifyUiBuilderWebArchive
           -x :ui-builder-renderer:verifyRendererRuntime
+          -x :ui-builder:jvmTest
+          -x :ui-builder-runtime:test
+
+  # `:ui-builder:jvmTest` (~3.5 min) and `:ui-builder-runtime:test` (~4.3 min), split out of
+  # `gradle-check`, which runs the rest of `check` beside them.
+  jvm-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+      - run: ./gradlew :ui-builder:jvmTest :ui-builder-runtime:test
+
+  # The publishing lane, the render bundle and the canvas benchmark: ~3 minutes that ran after
+  # `check` in `gradle-check` and need nothing it built.
+  publishing-lane:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
       # The publishing lane, proven WITHOUT credentials. It stages the derived release set into a
       # throwaway local repository at a snapshot version (so nothing is signed and nothing reaches
       # Maven Central), then resolves it from a synthetic consumer outside this source tree: the
@@ -140,7 +181,7 @@ jobs:
   # because a skipped required check reads as passing; so it runs unless the workflow was cancelled
   # and fails unless every split job succeeded.
   gradle:
-    needs: [gradle-check, web-archive, renderer-runtime]
+    needs: [gradle-check, jvm-tests, publishing-lane, web-archive, renderer-runtime]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
