@@ -80,6 +80,11 @@ object ScreenExportGate {
     document: DesignDocumentV1,
     record: ComponentRecordFile?,
     tagNodes: Boolean = false,
+    /**
+     * The font API a theme's typefaces are written with. The code pane keeps the default, Android's
+     * `GoogleFont`; see [TypefaceTarget] for the desktop form and who asks for it.
+     */
+    typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
   ): Outcome {
     if (record == null) {
       // Named rather than silent: "this host has no record for the catalog" is a different problem
@@ -89,7 +94,10 @@ object ScreenExportGate {
       )
     }
     val resolvable = record.callableAliases()
-    return when (val projected = ScreenDocumentProjection.project(document, tagNodes = tagNodes)) {
+    return when (
+      val projected =
+        ScreenDocumentProjection.project(document, tagNodes = tagNodes, typefaces = typefaces)
+    ) {
       // Both classes, not just the one that failed first. The projection and the generator refuse
       // for unrelated reasons — one cannot express a value, the other cannot prove a call site —
       // and running them in sequence meant the second list was invisible until the first was

@@ -163,6 +163,13 @@ object ScreenDocumentProjection {
       val assetPlaceholders: List<AssetPlaceholder> = emptyList(),
       /** Whether the root is wrapped in the design's theme; see [ScreenTheme]. */
       val themed: Boolean = false,
+      /**
+       * Every typeface family written as a desktop `SystemFont` lookup, in the order the theme
+       * names them — empty unless the projection was asked for [TypefaceTarget.DESKTOP] and the
+       * theme names one. Not a refusal: the caller reports each with [SystemFontLookups], because a
+       * desktop render draws the family only where it is installed.
+       */
+      val systemFontFamilies: List<String> = emptyList(),
     ) : Outcome {
       /**
        * [record] with what this projection's own calls resolve through: the `MaterialTheme` a
@@ -193,7 +200,14 @@ object ScreenDocumentProjection {
      * lets a streamed Android or desktop frame carry selectable regions instead of being a picture.
      */
     tagNodes: Boolean = false,
-  ): Outcome = projectInternal(document, screenName, tagNodes, false, emptyMap())
+    /**
+     * Which font API a theme's typefaces are written with: [TypefaceTarget.ANDROID]'s `GoogleFont`
+     * by default, or [TypefaceTarget.DESKTOP]'s `SystemFont` for a file compiled against a Compose
+     * Multiplatform Desktop classpath, which has no `GoogleFont`. See [TypefaceTarget].
+     */
+    typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
+  ): Outcome =
+    projectInternal(document, screenName, tagNodes, false, emptyMap(), typefaces = typefaces)
 
   /**
    * Opt-in projection for build generation, with declared input reads and checked component calls.
@@ -225,12 +239,13 @@ object ScreenDocumentProjection {
     rootBindings: Boolean,
     nodeOverrides: Map<String, ScreenNode>,
     callbackArguments: Map<String, Map<String, ScreenValue>> = emptyMap(),
+    typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
   ): Outcome {
     // No component record parameter. It was here only so an enum value could be qualified with
     // its parameter's recorded type, and `enum` refuses instead — see its KDoc. A parameter kept
     // "in case" is how a reader starts believing this projection type-checks against the record,
     // which it does not: `ScreenGenerator` does that, once, with the record it is handed.
-    val pass = Pass(document, tagNodes, rootBindings, nodeOverrides, callbackArguments)
+    val pass = Pass(document, tagNodes, rootBindings, nodeOverrides, callbackArguments, typefaces)
     val roots = document.roots
     if (roots.size != 1) {
       // One root is not a limitation of the generator; it is what a `@Composable fun Screen()`
@@ -296,6 +311,7 @@ object ScreenDocumentProjection {
       checkNotNull(projected),
       assetPlaceholders = pass.assetPlaceholders.toList(),
       themed = theme != null,
+      systemFontFamilies = pass.systemFontFamilies.toList(),
     )
   }
 
@@ -341,9 +357,12 @@ object ScreenDocumentProjection {
     rootBindings: Boolean = false,
     val nodeOverrides: Map<String, ScreenNode> = emptyMap(),
     val productionCallbacks: Map<String, Map<String, ScreenValue>> = emptyMap(),
+    val typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
   ) {
     val reasons = mutableListOf<String>()
     val assetPlaceholders = mutableListOf<AssetPlaceholder>()
+    /** The families written as `SystemFont` lookups; see [Outcome.Projected.systemFontFamilies]. */
+    val systemFontFamilies = linkedSetOf<String>()
     val state: Map<String, ScreenState> =
       document.stateVariables
         .mapNotNull { (name, declaration) ->
@@ -2816,7 +2835,8 @@ object ScreenDocumentProjection {
      * [content] inside the `MaterialTheme` [theme] describes, written as up to three private
      * functions so each value is a parameter of the next:
      * - `<Screen>Fonts(provider)`: the Google Fonts provider, built once (only when a typeface is
-     *   named).
+     *   named, and only for [TypefaceTarget.ANDROID]: the desktop form has no provider, and passes
+     *   each family's `SystemFont` lookups straight to the typography function).
      * - `<Screen>Typography(base, display, …)`: the themed type scale (only when type is scaled or
      *   a typeface named).
      * - `<Screen>Theme(colorScheme, typography, shapes)`: `MaterialTheme` around the surface; theme
@@ -2866,6 +2886,13 @@ object ScreenDocumentProjection {
         themeCall(themedTypography(theme, groups) ?: return null) ?: return null,
       )
       if (groups.isEmpty()) return functionCall(typographyName, mapOf("base" to baseline))
+      if (typefaces == TypefaceTarget.DESKTOP) {
+        return functionCall(
+          typographyName,
+          mapOf("base" to baseline) +
+            groups.associate { it.name to systemFontFamily(theme.families.getValue(it)) },
+        )
+      }
       val provider = read("provider", GOOGLE_FONT_PROVIDER) ?: return null
       define(
         fontsName,
@@ -3022,6 +3049,38 @@ object ScreenDocumentProjection {
           },
         typeFqn = FONT_FAMILY,
       )
+
+    /**
+     * `FontFamily(SystemFont("Lobster", FontWeight.Normal), …)`: the same three weights as
+     * [googleFontFamily], each looked up by family name in the desktop font manager — Compose
+     * Multiplatform's `ui-text` on Skiko, which has no `GoogleFont`. An uninstalled family falls
+     * back to the default face rather than failing, and the family is recorded so the caller can
+     * say so ([SystemFontLookups]).
+     *
+     * `SystemFont` is `@ExperimentalTextApi`, an error-level opt-in, so each construct carries the
+     * marker and the generator writes the `@OptIn` on the function that builds it.
+     */
+    private fun systemFontFamily(family: String): ScreenValue {
+      val name = ThemeTypefaces.familyName(family)
+      systemFontFamilies += name
+      return ScreenValue.Construct(
+        callableFqn = FONT_FAMILY,
+        positional =
+          listOf("Normal", "Medium", "Bold").map { weight ->
+            ScreenValue.Construct(
+              callableFqn = SYSTEM_FONT,
+              positional =
+                listOf(
+                  ScreenValue.Text(name),
+                  ScreenValue.Reference(FONT_WEIGHT, listOf(weight), typeFqn = FONT_WEIGHT),
+                ),
+              typeFqn = SYSTEM_FONT,
+              requiredOptIns = listOf(EXPERIMENTAL_TEXT_API),
+            )
+          },
+        typeFqn = FONT_FAMILY,
+      )
+    }
 
     /**
      * Google Play services' font provider, with its two published certificates decoded by
@@ -3231,6 +3290,8 @@ object ScreenDocumentProjection {
   private const val GOOGLE_FONTS = "androidx.compose.ui.text.googlefonts"
   private const val GOOGLE_FONT = "$GOOGLE_FONTS.GoogleFont"
   private const val GOOGLE_FONT_PROVIDER = "$GOOGLE_FONT.Provider"
+  private const val SYSTEM_FONT = "androidx.compose.ui.text.platform.SystemFont"
+  private const val EXPERIMENTAL_TEXT_API = "androidx.compose.ui.text.ExperimentalTextApi"
   private const val BASE64 = "kotlin.io.encoding.Base64"
   private const val LIST_OF = "kotlin.collections.listOf"
   private const val LIST = "kotlin.collections.List"
