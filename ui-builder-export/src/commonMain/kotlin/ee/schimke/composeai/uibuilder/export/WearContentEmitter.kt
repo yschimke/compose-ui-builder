@@ -1706,11 +1706,20 @@ internal class WearContentEmitter(
    */
   private val stateNames = mutableSetOf<String>()
 
+  /**
+   * Every design variable's exported name, kept from the node-local ones whether or not a control
+   * is bound to it yet: a local claimed first — node `wifi`'s `wifiChecked` — would otherwise take
+   * the name of a design variable a later row binds, and which rows share state would depend on
+   * traversal order.
+   */
+  private val documentStateNames: Set<String> =
+    document.stateVariables.keys.mapTo(mutableSetOf(), ::exportedStateIdentifier)
+
   private fun uniqueStateName(nodeId: String, role: String): String {
     val base = nodeId.stateIdentifier(role)
     var name = base
     var index = 2
-    while (!stateNames.add(name)) name = "$base${index++}"
+    while (name in documentStateNames || !stateNames.add(name)) name = "$base${index++}"
     return name
   }
 
@@ -1744,8 +1753,8 @@ internal class WearContentEmitter(
     val value = initial?.booleanOrNull ?: return null
     val name = exportedStateIdentifier(variable)
     if (name !in documentState) {
-      // A node-local that already folded to this name keeps it; this binding falls back to one.
-      if (!stateNames.add(name)) return null
+      // Reserved from the node-locals up front (documentStateNames), so this name is free.
+      stateNames += name
       documentState += name
       usesRememberState = true
       rememberedState += "var $name by remember { mutableStateOf($value) }"

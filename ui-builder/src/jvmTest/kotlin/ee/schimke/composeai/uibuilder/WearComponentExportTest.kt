@@ -187,6 +187,57 @@ class WearComponentExportTest {
     assertTrue("firstChecked" !in source && "secondChecked" !in source, source)
   }
 
+  /**
+   * An unbound row reached first does not take a design variable's name: node `wifi`'s local would
+   * be `wifiChecked`, which is also the design flag a later row binds, and that row must still get
+   * the design's variable rather than a second local.
+   */
+  @Test
+  fun `a node local never takes the name of a design variable`() {
+    val screen =
+      screenWith(
+        UiBuilderNode(
+          id = "wifi",
+          componentId = WearScreenCodeExporter.CHECKBOX_BUTTON,
+          properties = properties("label" to "Wi-Fi", "checked" to false),
+        ),
+        UiBuilderNode(
+          id = "bound",
+          componentId = WearScreenCodeExporter.CHECKBOX_BUTTON,
+          properties =
+            buildJsonObject {
+              putJsonObject("checked") {
+                put("type", "state")
+                put("variable", "wifiChecked")
+              }
+              putJsonObject("label") {
+                put("type", "string")
+                put("value", "Bound")
+              }
+            },
+        ),
+      )
+    val source =
+      export(
+        screen.copy(
+          stateVariables =
+            buildJsonObject {
+              putJsonObject("wifiChecked") {
+                put("type", "value")
+                put("valueType", "bool")
+                put("initialValue", true)
+                put("persistence", "preview")
+              }
+            }
+        )
+      )
+
+    assertTrue("var wifiChecked by remember { mutableStateOf(true) }" in source, source)
+    assertTrue("var wifiChecked2 by remember { mutableStateOf(false) }" in source, source)
+    assertTrue("onCheckedChange = { wifiChecked = it }," in source, source)
+    assertTrue("onCheckedChange = { wifiChecked2 = it }," in source, source)
+  }
+
   /** `RadioButton`'s callback takes no argument, because a radio row selects itself. */
   @Test
   fun `a radio button generates onSelect rather than onCheckedChange`() {

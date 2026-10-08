@@ -845,9 +845,10 @@ private fun RenderNode(
         )
       "wear-m3/switch-button" ->
         WearCanvasSwitchButton(
-          checked = node.bool("checked"),
+          checked = node.resolvedBool("checked", state),
           enabled = node.bool("enabled", true),
           modifier = measured,
+          onCheckedChange = { node.changeBoundFlag("checked", it, host::setState, activate) },
           label = {
             if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
@@ -875,9 +876,10 @@ private fun RenderNode(
         )
       "wear-m3/checkbox-button" ->
         WearCanvasCheckboxButton(
-          checked = node.bool("checked"),
+          checked = node.resolvedBool("checked", state),
           enabled = node.bool("enabled", true),
           modifier = measured,
+          onCheckedChange = { node.changeBoundFlag("checked", it, host::setState, activate) },
           label = {
             if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
@@ -895,9 +897,11 @@ private fun RenderNode(
         )
       "wear-m3/radio-button" ->
         WearCanvasRadioButton(
-          selected = node.bool("selected"),
+          selected = node.resolvedBool("selected", state),
           enabled = node.bool("enabled", true),
           modifier = measured,
+          // A radio row selects itself: its change is always to selected.
+          onSelect = { node.changeBoundFlag("selected", true, host::setState, activate) },
           label = {
             if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
