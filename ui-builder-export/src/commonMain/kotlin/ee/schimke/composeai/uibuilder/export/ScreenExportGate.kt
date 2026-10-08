@@ -132,12 +132,13 @@ object ScreenExportGate {
         ) {
           is ScreenGenerator.Result.Refused -> Outcome.Refused(generated.reasons)
           is ScreenGenerator.Result.Emitted ->
-            withVariableFontTexts(
-              generated.source,
-              projected.variableFontTexts,
-              variableFonts.generator,
-              variableFonts.mode,
-            )
+            when (
+              val joined =
+                variableFonts.join(generated.source, projected.variableFontTexts, PACKAGE_NAME)
+            ) {
+              is VariableFontExport.Joined.Emitted -> Outcome.Emitted(joined.source)
+              is VariableFontExport.Joined.Refused -> Outcome.Refused(joined.reasons)
+            }
         }
     }
   }
@@ -192,43 +193,6 @@ object ScreenExportGate {
             "(${aliased.joinToString(", ") { "`${it.canonicalId}`" }}), so it identifies none of " +
             "them"
       }
-  }
-
-  /**
-   * [source] with the declarations its variable font texts call joined in after it, or the refusals
-   * of any [variableFonts] could not generate. Without a generator the calls stay, with a note
-   * naming what is generated at export.
-   */
-  private fun withVariableFontTexts(
-    source: String,
-    requests: List<VariableFontText.Request>,
-    variableFonts: VariableFontSourceGenerator,
-    mode: VariableFontExportMode,
-  ): Outcome {
-    if (requests.isEmpty()) return Outcome.Emitted(source)
-    val generated = requests.map { variableFonts.generate(it, PACKAGE_NAME, mode) }
-    val refusals = generated.filterIsInstance<VariableFontSource.Refused>().map { it.reason }
-    if (refusals.isNotEmpty()) return Outcome.Refused(refusals.distinct())
-    val files = generated.filterIsInstance<VariableFontSource.Generated>().map { it.source }
-    val pending = requests.filterIndexed { index, _ -> generated[index] == null }
-    val noted = buildString {
-      if (files.isNotEmpty() && mode == VariableFontExportMode.LIBRARY) {
-        appendLine(
-          "// Its variable font text draws through flexpress: " +
-            "implementation(\"ee.schimke.flexpress:flexpress-compose:$FLEXPRESS_VERSION\")."
-        )
-      }
-      append(source.trimEnd())
-      appendLine()
-      pending.forEach {
-        appendLine()
-        appendLine(
-          "// ${it.functionName} draws \"${it.spec.text}\" in ${it.spec.font.family} from the " +
-            "font's outlines (flexpress). It is generated when the design exports."
-        )
-      }
-    }
-    return Outcome.Emitted(joinKotlinFiles(noted, files))
   }
 
   /** Why the export would refuse [document], or empty when it would succeed. */

@@ -82,6 +82,39 @@ class VariableFontTextTest {
   }
 
   @Test
+  fun `join adds each generated declaration, notes a pending one, and refuses as a whole`() {
+    val screen = "package p\n\n@Composable fun Screen() {}\n"
+    val requests = VariableFontText.requests(listOf(spec(), spec("Other")))
+    val generator = VariableFontSourceGenerator { request, packageName, _ ->
+      when (request.spec.text) {
+        "Flex" ->
+          VariableFontSource.Generated(
+            "${request.functionName}.kt",
+            "package $packageName\n\n@Composable internal fun ${request.functionName}() {}\n",
+          )
+        else -> null
+      }
+    }
+
+    val library = VariableFontExport(generator).join(screen, requests, "p")
+    val source = (library as VariableFontExport.Joined.Emitted).source
+    assertTrue(source.startsWith("// Its variable font text draws through flexpress: "), source)
+    assertTrue("internal fun VariableFontTextRobotoFlexFlexWght()" in source, source)
+    assertTrue("// VariableFontTextRobotoFlexOtherWght draws \"Other\"" in source, source)
+
+    val standalone =
+      VariableFontExport(generator, VariableFontExportMode.STANDALONE).join(screen, requests, "p")
+    assertTrue("flexpress-compose" !in (standalone as VariableFontExport.Joined.Emitted).source)
+
+    val refusing = VariableFontExport({ _, _, _ -> VariableFontSource.Refused("no glyph") })
+    assertEquals(
+      VariableFontExport.Joined.Refused(listOf("no glyph")),
+      refusing.join(screen, requests, "p"),
+    )
+    assertEquals(VariableFontExport.Joined.Emitted(screen), refusing.join(screen, emptyList(), "p"))
+  }
+
+  @Test
   fun `joined files keep one package, every import once, and each file's declarations`() {
     val main =
       """

@@ -189,6 +189,57 @@ data class VariableFontExport(
   val generator: VariableFontSourceGenerator,
   val mode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
 ) {
+  /**
+   * [source], a screen's generated file in [packageName], with the declarations its variable font
+   * texts call joined in after it, or the refusals of any [requests] [generator] could not write.
+   *
+   * [requests] are the projection's
+   * (`ScreenDocumentProjection.Outcome.Projected.variableFontTexts`). A request [generator] has no
+   * answer for keeps its call, with a note that the declaration is written at export;
+   * [LIBRARY][VariableFontExportMode.LIBRARY] output names the flexpress dependency it draws
+   * through. Public so a host that runs the projection and the generator itself, rather than
+   * through [ScreenExportGate], writes the same file.
+   */
+  fun join(
+    source: String,
+    requests: List<VariableFontText.Request>,
+    packageName: String,
+  ): Joined {
+    if (requests.isEmpty()) return Joined.Emitted(source)
+    val generated = requests.map { generator.generate(it, packageName, mode) }
+    val refusals = generated.filterIsInstance<VariableFontSource.Refused>().map { it.reason }
+    if (refusals.isNotEmpty()) return Joined.Refused(refusals.distinct())
+    val files = generated.filterIsInstance<VariableFontSource.Generated>().map { it.source }
+    val pending = requests.filterIndexed { index, _ -> generated[index] == null }
+    val noted = buildString {
+      if (files.isNotEmpty() && mode == VariableFontExportMode.LIBRARY) {
+        appendLine(
+          "// Its variable font text draws through flexpress: " +
+            "implementation(\"ee.schimke.flexpress:flexpress-compose:$FLEXPRESS_VERSION\")."
+        )
+      }
+      append(source.trimEnd())
+      appendLine()
+      pending.forEach {
+        appendLine()
+        appendLine(
+          "// ${it.functionName} draws \"${it.spec.text}\" in ${it.spec.font.family} from the " +
+            "font's outlines (flexpress). It is generated when the design exports."
+        )
+      }
+    }
+    return Joined.Emitted(joinKotlinFiles(noted, files))
+  }
+
+  /** What [join] made of a screen's source. */
+  sealed interface Joined {
+    /** The screen's file with every declaration its variable font texts call. */
+    data class Emitted(val source: String) : Joined
+
+    /** Why a variable font text could not be generated: a character the font has no glyph for. */
+    data class Refused(val reasons: List<String>) : Joined
+  }
+
   companion object {
     /** No generator: the calls are written with a note that the declarations come at export. */
     val None: VariableFontExport = VariableFontExport(VariableFontSourceGenerator.Unavailable)
