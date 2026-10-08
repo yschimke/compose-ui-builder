@@ -67,7 +67,8 @@ internal fun RemoteDocumentDesignPreviewPane(
 ) {
   val panes =
     if (exactPanes) variants
-    else document.wearWidgetScaffoldSize()?.let(document::wearWidgetPreviewPanes) ?: variants
+    // Fixed sizes only: each pane here is a render round trip, see [widgetPreviewPanes].
+    else document.widgetPreviewPanes(resizable = false) ?: variants
   var results by
     remember(document.id) { mutableStateOf<Map<String, UiBuilderDocumentPreview>>(emptyMap()) }
   var pending by remember(document.id) { mutableStateOf(false) }

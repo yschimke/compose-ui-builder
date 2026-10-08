@@ -165,6 +165,7 @@ import ee.schimke.composeai.uibuilder.editor.THEME_TYPE_SCALE
 import ee.schimke.composeai.uibuilder.editor.supportingText
 import ee.schimke.composeai.uibuilder.ensureBundledWearDeviceFonts
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.LauncherWidgetCodeExporter
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_CUSTOM_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
@@ -732,6 +733,18 @@ private fun RenderNode(
       }
     }
 
+    // The launcher widget root, by component id whatever adapter its catalog names: a launcher
+    // widget is drawn into the cell the launcher gives it, filled with its own background, and its
+    // one child fills that. It has no host frame of its own — the launcher clips it to its radius.
+    if (node.componentId == LauncherWidgetCodeExporter.ROOT) {
+      Box(
+        measured.background(node.color("background", Color.Transparent)),
+        contentAlignment = Alignment.Center,
+      ) {
+        slot("content").forEach { child(it, Modifier.fillMaxSize()) }
+      }
+      return@RenderCanvasNode
+    }
     when (adapterId) {
       // Both container sizes, framed in whichever host shape is being viewed. The footprint is read
       // from `hostSpec` rather than written here, so this canvas and the native render beside it
@@ -1848,7 +1861,11 @@ private fun RenderNode(
         }
       "m3/button" ->
         BuilderButton(node, measured, activate, enabled) {
-          slot("content").forEach { child(it, Modifier) }
+          val content = slot("content")
+          // A button whose label is a property rather than a child — the `remote-widgets`
+          // `WidgetButton(text = …)` this adapter draws — shows that label, not an empty pill.
+          if (content.isEmpty() && "text" in node.properties) Text(node.string("text"))
+          else content.forEach { child(it, Modifier) }
         }
       "m3/horizontal-floating-toolbar" ->
         CompatibleFloatingToolbar(node, measured) {
