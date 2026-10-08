@@ -216,6 +216,23 @@ edited. The Preview mirrors the saved document in Pixel Watch (squircle), Samsun
 Rectangular hosts. Native renders one selected host at a time; it is a fidelity confirmation, not a
 second multi-variant editor.
 
+Launcher widgets (`remote-widgets`) are sized in grid cells, not devices, so their Preview uses
+cell counts. It shows fixed panes at 2x1, 2x2, 3x2, 4x2 and the design's own count, in
+`LauncherWidgetGrid` reference dp, and one **resizable** pane first.
+
+The resizable pane draws a 5x3 patch of home screen with the widget on it and a handle at its
+corner:
+
+- **While held:** the frame follows the handle continuously, and the design is laid out at the
+  nearest whole cell count. It re-lays out as the frame crosses into the next count, because a
+  launcher never gives a widget a size between two counts.
+- **On release:** the frame springs onto that count.
+- **What animates:** only the frame's clip. The design is composed once per count, not once per
+  frame of the animation.
+
+A Preview drawn from server renders (`RemoteDocumentDesignPreviewPane`) gets only the fixed panes.
+There, each size is a render round trip.
+
 ### The real adaptive components
 
 The rung this sits on, and what each of the three is allowed to lie about, is

@@ -1578,20 +1578,11 @@ fun UiBuilderEditor(
   // comparison-only strip it has always been.
   val previewPanes =
     remember(drawnDocument, variantPanes, availablePanes) {
-      if (EditorPane.Editor in availablePanes || drawnDocument.wearWidgetScaffoldSize() != null) {
+      if (EditorPane.Editor in availablePanes || drawnDocument.widgetPreviewPanes() != null) {
         variantPanes
       } else {
         listOf(drawnDocument.currentFramePane()) + variantPanes
       }
-    }
-  // The compact layout's preview tabs, one frame each (see [MobileViewTabs]). The design's own
-  // frame comes first: the canvas is a tab away rather than beside it, and a design that names no
-  // devices still has a frame to try. A Wear widget's frames are its host shapes, as in
-  // the Preview pane.
-  val mobilePreviewPanes =
-    remember(drawnDocument, variantPanes) {
-      drawnDocument.wearWidgetScaffoldSize()?.let(drawnDocument::wearWidgetPreviewPanes)
-        ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)
     }
   // The read-only pane. The catalog decides whether this is the constrained canvas renderer or an
   // exported artifact played by a browser adapter. No catalog or platform id is interpreted here:
@@ -1601,6 +1592,15 @@ fun UiBuilderEditor(
       it.renderer == BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER &&
         it.format == ExportFormatV1.RC &&
         onRequestDocumentPreview != null
+    }
+  // The compact layout's preview tabs, one frame each (see [MobileViewTabs]). The design's own
+  // frame comes first: the canvas is a tab away rather than beside it, and a design that names no
+  // devices still has a frame to try. A widget's frames are its host shapes or grid sizes, as in
+  // the Preview pane, with the resizable launcher pane only where the frame is a live composition.
+  val mobilePreviewPanes =
+    remember(drawnDocument, variantPanes, documentBackedPreview) {
+      drawnDocument.widgetPreviewPanes(resizable = documentBackedPreview == null)
+        ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)
     }
   val previewPane: @Composable (Modifier) -> Unit = { modifier ->
     if (documentBackedPreview != null) {

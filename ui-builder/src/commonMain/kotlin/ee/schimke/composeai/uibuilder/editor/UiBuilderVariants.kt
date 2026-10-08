@@ -3,10 +3,12 @@ package ee.schimke.composeai.uibuilder.editor
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.LauncherWidgetGrid
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.export.WearWidgetScaffoldSize
 import ee.schimke.composeai.uibuilder.export.hostSpec
+import ee.schimke.composeai.uibuilder.export.isLauncherWidget
 import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.export.isWearWidget
 import kotlinx.serialization.json.JsonObject
@@ -77,7 +79,119 @@ data class UiBuilderVariantPane(
   val document: UiBuilderDocument,
   /** A widget host frame this pane supplies around [document], or the ambient host frame. */
   val wearWidgetHostShape: WearWidgetHostShape? = null,
+  /**
+   * A launcher widget drawn on a patch of home screen and resized across it a cell at a time,
+   * rather than at one fixed size: see [launcherWidgetPreviewPanes]. [widthDp] and [heightDp] are
+   * then the whole patch, [LAUNCHER_RESIZE_MAX], so the strip leaves room for the largest size the
+   * pane reaches and does not reflow around it as it grows.
+   */
+  val launcherGridResizable: Boolean = false,
 )
+
+/**
+ * The preview panes a widget design is drawn in instead of the device and axis strip: a Wear
+ * widget's host shapes, or a launcher widget's grid sizes. Null for any other design.
+ *
+ * [resizable] adds the launcher's animated pane; a host that draws each pane from a fixed render
+ * rather than a live composition leaves it out, since a pane that changes size every second would
+ * be a render request every second.
+ */
+internal fun UiBuilderDocument.widgetPreviewPanes(
+  resizable: Boolean = true
+): List<UiBuilderVariantPane>? =
+  wearWidgetScaffoldSize()?.let(::wearWidgetPreviewPanes)
+    ?: if (isLauncherWidget()) launcherWidgetPreviewPanes(resizable) else null
+
+/**
+ * The fixed grid sizes a launcher widget is previewed at, the sizes a user most often gives a
+ * widget on a phone's home screen: the narrow strip, the square, and the two wide ones. The
+ * design's own size is added when it is none of these, so the size being authored is always on
+ * screen.
+ */
+internal val LAUNCHER_PREVIEW_SIZES: List<LauncherWidgetGrid.Size> =
+  listOf(
+    LauncherWidgetGrid.Size(2, 1),
+    LauncherWidgetGrid.Size(2, 2),
+    LauncherWidgetGrid.Size(3, 2),
+    LauncherWidgetGrid.Size(4, 2),
+  )
+
+/** The largest footprint the resizable pane reaches, and so the patch of home screen it draws. */
+internal val LAUNCHER_RESIZE_MAX: LauncherWidgetGrid.Size = LauncherWidgetGrid.Size(5, 3)
+
+/** The id of the resizable launcher pane; one per strip. */
+internal const val LAUNCHER_RESIZABLE_PANE_ID = "preview-launcher-resizable"
+
+/**
+ * A launcher widget's panes: first the one that resizes across the grid (when [resizable]), then
+ * one per [LAUNCHER_PREVIEW_SIZES] entry, smallest first.
+ *
+ * Each fixed pane is the same document at that size's reference dp, which is what a launcher hands
+ * `Content` when the user drags the widget to that many cells, and the label says both: the cell
+ * count is what the user picked, the dp is what the design lays out in.
+ */
+internal fun UiBuilderDocument.launcherWidgetPreviewPanes(
+  resizable: Boolean = true
+): List<UiBuilderVariantPane> {
+  val own = launcherGridSize()
+  val sizes =
+    (LAUNCHER_PREVIEW_SIZES + listOfNotNull(own))
+      .distinct()
+      .sortedWith(compareBy({ it.columns * it.rows }, { it.columns }))
+  val fixed = sizes.map { size ->
+    UiBuilderVariantPane(
+      id = "$LAUNCHER_PANE_ID_PREFIX${size.label}",
+      label = launcherSizeLabel(size) + if (size == own) " · Current" else "",
+      widthDp = size.widthDp.toFloat(),
+      heightDp = size.heightDp.toFloat(),
+      document = atLauncherSize(size),
+    )
+  }
+  if (!resizable) return fixed
+  val patch = launcherGridPatchDp(LAUNCHER_RESIZE_MAX)
+  return listOf(
+    UiBuilderVariantPane(
+      id = LAUNCHER_RESIZABLE_PANE_ID,
+      label = "Resizable",
+      widthDp = patch.first,
+      heightDp = patch.second,
+      document = this,
+      launcherGridResizable = true,
+    )
+  ) + fixed
+}
+
+/** The cell count this design is sized at, or null when its frame is not a grid size. */
+internal fun UiBuilderDocument.launcherGridSize(): LauncherWidgetGrid.Size? {
+  val settings = screenEnvironmentSettings()
+  return LauncherWidgetGrid.of(settings.widthDp, settings.heightDp)
+}
+
+/** This design at [size]'s reference dp, for a pane to draw. */
+internal fun UiBuilderDocument.atLauncherSize(size: LauncherWidgetGrid.Size): UiBuilderDocument =
+  withEnvironmentOverrides(
+    mapOf("widthDp" to JsonPrimitive(size.widthDp), "heightDp" to JsonPrimitive(size.heightDp))
+  )
+
+/** `3x2 · 203×220dp`. */
+internal fun launcherSizeLabel(size: LauncherWidgetGrid.Size): String =
+  "${size.label} · ${size.widthDp}×${size.heightDp}dp"
+
+/**
+ * The patch of home screen [size] cells cover, in dp: whole cells, margins included, which is the
+ * room a widget of that size sits in. Its own dp ([LauncherWidgetGrid.Size.widthDp]) is this less
+ * one [LauncherWidgetGrid.CELL_MARGIN_DP], half of it on each side.
+ */
+internal fun launcherGridPatchDp(size: LauncherWidgetGrid.Size): Pair<Float, Float> =
+  (LauncherWidgetGrid.CELL_WIDTH_DP * size.columns).toFloat() to
+    (LauncherWidgetGrid.CELL_HEIGHT_DP * size.rows).toFloat()
+
+/** [size] held inside 1x1 … [max]. */
+internal fun clampLauncherSize(
+  size: LauncherWidgetGrid.Size,
+  max: LauncherWidgetGrid.Size = LAUNCHER_RESIZE_MAX,
+): LauncherWidgetGrid.Size =
+  LauncherWidgetGrid.Size(size.columns.coerceIn(1, max.columns), size.rows.coerceIn(1, max.rows))
 
 /**
  * The three launcher hosts a Wear widget export generates previews for.
@@ -128,13 +242,20 @@ private fun wearWidgetPreviewPanes(
  * two tabs apart, and "Rectangular · Small" cut at its separator is "Rectangular · Large" too.
  */
 internal fun UiBuilderVariantPane.mobileTabLabel(): String =
-  if (id == CURRENT_FRAME_PANE_ID || id.startsWith(DEVICE_PANE_ID_PREFIX))
+  if (
+    id == CURRENT_FRAME_PANE_ID ||
+      id.startsWith(DEVICE_PANE_ID_PREFIX) ||
+      id.startsWith(LAUNCHER_PANE_ID_PREFIX)
+  )
     label.substringBefore(" · ")
   else label
 
 private const val CURRENT_FRAME_PANE_ID = "preview-current"
 
 private const val DEVICE_PANE_ID_PREFIX = "variant-device-"
+
+/** A fixed launcher grid size's pane: its tab is the cell count, `3x2`. */
+private const val LAUNCHER_PANE_ID_PREFIX = "preview-launcher-size-"
 
 /**
  * The design at its own frame, as a preview pane: the first frame of a view that has no authoring

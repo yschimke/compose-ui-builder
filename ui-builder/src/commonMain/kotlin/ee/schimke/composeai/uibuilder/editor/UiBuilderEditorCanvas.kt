@@ -1790,6 +1790,10 @@ internal fun VariantPane(
   deviceRenderer: UiBuilderCanvasRenderer? = null,
   positionVersion: Int = 0,
 ) {
+  if (pane.launcherGridResizable) {
+    LauncherWidgetResizablePane(pane, scale, hostDensity, deviceRenderer, positionVersion)
+    return
+  }
   Column(horizontalAlignment = Alignment.CenterHorizontally) {
     Text(
       pane.label,

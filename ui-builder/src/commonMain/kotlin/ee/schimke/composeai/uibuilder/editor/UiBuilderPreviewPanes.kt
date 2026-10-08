@@ -555,9 +555,7 @@ internal fun DesignPreviewPane(
   exactPanes: Boolean = false,
 ) {
   val hostDensity = LocalDensity.current
-  val panes =
-    if (exactPanes) variants
-    else document.wearWidgetScaffoldSize()?.let(document::wearWidgetPreviewPanes) ?: variants
+  val panes = if (exactPanes) variants else document.widgetPreviewPanes() ?: variants
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(Modifier.fillMaxSize().padding(12.dp)) {
       BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
