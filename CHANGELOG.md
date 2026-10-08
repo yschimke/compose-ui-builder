@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.94.0](https://github.com/yschimke/compose-ui-builder/compare/v3.93.0...v3.94.0) (2026-10-08)
+
+
+### Features
+
+* **editor:** launcher widget preview panes in grid cells, with a live-resizable pane ([#567](https://github.com/yschimke/compose-ui-builder/issues/567)) ([510db14](https://github.com/yschimke/compose-ui-builder/commit/510db14d6f0653798907406d6c5afe61d26b4e7c))
+* **remote:** a hello world starter template for remote-widgets ([#562](https://github.com/yschimke/compose-ui-builder/issues/562)) ([c622ed1](https://github.com/yschimke/compose-ui-builder/commit/c622ed1ba49808e9042514cb8abba7609960afc3))
+* **remote:** analog and digital clock templates on RemoteCanvas, with two replica watch previews ([#565](https://github.com/yschimke/compose-ui-builder/issues/565)) ([6fcc14a](https://github.com/yschimke/compose-ui-builder/commit/6fcc14a06816571adeb7e58b71d44a8580526721))
+* **ui-builder:** bring launcher widgets under the catalog-owned cutover ([#561](https://github.com/yschimke/compose-ui-builder/issues/561)) ([0f04df4](https://github.com/yschimke/compose-ui-builder/commit/0f04df48ae5f1d041e74b754a0656df0d1376da9))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.2.1 ([#563](https://github.com/yschimke/compose-ui-builder/issues/563)) ([bb38e2d](https://github.com/yschimke/compose-ui-builder/commit/bb38e2dec66703abd1115354931ba1fe7977b3df))
+* **ui-builder:** expect the launcher seed for remote-widgets off the flag ([#566](https://github.com/yschimke/compose-ui-builder/issues/566)) ([80f9947](https://github.com/yschimke/compose-ui-builder/commit/80f994710e7976059bd7e2458b90580c103427e4))
+
 ## [3.93.0](https://github.com/yschimke/compose-ui-builder/compare/v3.92.0...v3.93.0) (2026-10-08)
 
 
