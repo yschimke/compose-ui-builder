@@ -9,10 +9,10 @@ import java.util.concurrent.ConcurrentHashMap
  * [VariableFontSourceGenerator] on flexpress's own code generator: each request becomes the Kotlin
  * file `VariableFontCodegen` writes for it, its outline worked out now from the font file.
  *
- * The fonts are read through [readFont], by [VariableFontText.Font.file], rather than shipped with
- * this module: they are the vendored `assets/rc-fonts` files (several megabytes), which a host that
- * renders designs already carries. [fromClasspath] reads them where the UI-builder bundle puts
- * them; a font that cannot be read refuses its requests rather than throwing.
+ * The fonts are read through [readFont], by [VariableFontText.Font.file]. [fromClasspath] reads the
+ * copies this module's JVM jar carries (the vendored `assets/rc-fonts` files, staged by the build),
+ * which is what an export host such as compose-preview-server has: it has this jar, not the UI
+ * builder's. A font that cannot be read refuses its requests rather than throwing.
  */
 class FlexpressVariableFontSources(private val readFont: (file: String) -> ByteArray?) :
   VariableFontSourceGenerator {
@@ -75,15 +75,14 @@ class FlexpressVariableFontSources(private val readFont: (file: String) -> ByteA
   companion object {
     private const val FILE_HEADER = "// Written by the Compose UI builder's export."
 
-    /**
-     * The fonts under [prefix] on this class's class loader: `/fonts/`, where `:ui-builder` and the
-     * render bundle copy `assets/rc-fonts`.
-     */
-    fun fromClasspath(prefix: String = "/fonts/"): FlexpressVariableFontSources =
-      FlexpressVariableFontSources { file ->
-        FlexpressVariableFontSources::class.java.getResourceAsStream(prefix + file)?.use {
-          it.readBytes()
-        }
+    /** Where the build stages the fonts in this module's JVM resources. */
+    const val CLASSPATH_FONTS: String = "/ee/schimke/composeai/uibuilder/export/fonts/"
+
+    /** The fonts this module carries, from [CLASSPATH_FONTS] on its own class loader. */
+    fun fromClasspath(): FlexpressVariableFontSources = FlexpressVariableFontSources { file ->
+      FlexpressVariableFontSources::class.java.getResourceAsStream(CLASSPATH_FONTS + file)?.use {
+        it.readBytes()
       }
+    }
   }
 }

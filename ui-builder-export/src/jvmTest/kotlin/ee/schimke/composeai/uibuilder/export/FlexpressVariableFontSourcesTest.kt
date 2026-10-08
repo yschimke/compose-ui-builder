@@ -64,6 +64,37 @@ class FlexpressVariableFontSourcesTest {
     }
   }
 
+  /**
+   * The generator as an export host builds it, with nothing but this module on its classpath: every
+   * font, and its licence, is in the jar's own resources.
+   */
+  @Test
+  fun `the fonts ship in this module's resources`() {
+    Font.entries.forEach { font ->
+      val bundled =
+        checkNotNull(
+          FlexpressVariableFontSources::class
+            .java
+            .getResourceAsStream(FlexpressVariableFontSources.CLASSPATH_FONTS + font.file)
+        ) {
+          "${font.file} is not staged"
+        }
+      assertTrue(bundled.use { it.readBytes() }.contentEquals(File(fonts, font.file).readBytes()))
+    }
+    listOf("RobotoFlex-OFL.txt", "GoogleSansFlex-OFL.txt").forEach {
+      assertTrue(
+        FlexpressVariableFontSources::class
+          .java
+          .getResource(FlexpressVariableFontSources.CLASSPATH_FONTS + it) != null,
+        it,
+      )
+    }
+    val generated =
+      FlexpressVariableFontSources.fromClasspath()
+        .generate(request(font = Font.GoogleSansFlex), PACKAGE, VariableFontExportMode.LIBRARY)
+    assertIs<VariableFontSource.Generated>(generated)
+  }
+
   @Test
   fun `the library form draws through flexpress for each target`() {
     val compose = generated(request(), VariableFontExportMode.LIBRARY)
