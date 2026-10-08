@@ -1270,6 +1270,23 @@ internal class RemoteContentEmitter(
                 "which has no negation"
             return null
           }
+        // `count + 1` is the creation DSL's own `RemoteInt.plus(Int)` / `RemoteFloat.plus(Float)`,
+        // so the sum is computed by the player rather than baked in at export.
+        "increment" -> {
+          val amount = action["amount"] as? JsonPrimitive ?: JsonPrimitive(1)
+          when {
+            amount.isString -> null
+            valueType == "int" -> amount.intOrNull?.let { "$target + $it" }
+            valueType == "float" ->
+              amount.floatOrNull?.takeIf(Float::isFinite)?.let { "$target + ${it}f" }
+            else -> {
+              refusals +=
+                "`${node.id}` increments `$variable` on `$event` and it is declared " +
+                  "`$valueType`, which is not a number"
+              return null
+            }
+          }
+        }
         else -> null
       }
     if (written == null) {

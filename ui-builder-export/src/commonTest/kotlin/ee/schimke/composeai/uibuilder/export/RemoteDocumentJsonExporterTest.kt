@@ -111,6 +111,51 @@ internal fun remoteJsonSelectionFixture(
 }
 
 class RemoteDocumentJsonExporterTest {
+  private fun withClick(
+    document: UiBuilderDocument,
+    vararg actions: JsonObject,
+  ): UiBuilderDocument {
+    val root = document.nodes.getValue("switch")
+    return document.copy(
+      nodes =
+        document.nodes +
+          ("switch" to
+            root.copy(
+              eventBindings = buildJsonObject { put("click", JsonArray(actions.toList())) }
+            ))
+    )
+  }
+
+  private fun increment(amount: Number? = null) = buildJsonObject {
+    put("type", "increment")
+    put("variable", "page")
+    if (amount != null) put("amount", amount)
+  }
+
+  @Test
+  fun `an integer increment counts in the integer expression vocabulary`() {
+    val emitted =
+      assertIs<RemoteDocumentJsonExporter.Result.Emitted>(
+        RemoteDocumentJsonExporter.export(
+          withClick(remoteJsonSelectionFixture(), increment(), increment(-2))
+        )
+      )
+    val text = emitted.source
+    assertContains(text, "@page + 1")
+    assertContains(text, "@page - 2")
+  }
+
+  @Test
+  fun `a decimal or fractional increment is refused`() {
+    val decimal = remoteJsonSelectionFixture(listOf(JsonPrimitive(0.5f), JsonPrimitive(1.5f)))
+    assertIs<RemoteDocumentJsonExporter.Result.Refused>(
+      RemoteDocumentJsonExporter.export(withClick(decimal, increment()))
+    )
+    assertIs<RemoteDocumentJsonExporter.Result.Refused>(
+      RemoteDocumentJsonExporter.export(withClick(remoteJsonSelectionFixture(), increment(0.5)))
+    )
+  }
+
   @Test
   fun `decimal selection uses exact comparisons and the state compiler profile`() {
     val values = listOf(JsonPrimitive(1f), JsonPrimitive(Float.fromBits(1f.toBits() + 1)))

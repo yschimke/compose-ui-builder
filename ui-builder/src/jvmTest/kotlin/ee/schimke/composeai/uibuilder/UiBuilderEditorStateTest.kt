@@ -1682,6 +1682,66 @@ class UiBuilderEditorStateTest {
   }
 
   @Test
+  fun `a counter button increments the canvas value and exports an addition`() {
+    val blank =
+      blankUiBuilderDocument(
+        "counter",
+        document.catalogPin,
+        document.environment,
+        listOf(NewDesignState("count", NewDesignStateType.Number, JsonPrimitive(3))),
+      )
+    val state = reducer.initial(blank, blank.roots.single())
+    val target = requireNotNull(reducer.dropTarget(state, "m3/button"))
+    val inserted =
+      reducer.reduce(
+        state,
+        UiBuilderEditorEvent.InsertComponentWithAction(
+          "m3/button",
+          target,
+          EditorStateAction.Increment("count", "2"),
+        ),
+      )
+    assertIs<CommandOutcome.Accepted>(inserted.lastOutcome, inserted.lastOutcome.toString())
+    val buttonId = assertIs<String>(inserted.selectedNodeId)
+    val action =
+      inserted.document.nodes.getValue(buttonId).eventBindings.getValue("click").jsonArray.single()
+
+    assertEquals("increment", action.jsonObject.getValue("type").jsonPrimitive.content)
+    assertEquals(2, action.jsonObject.getValue("amount").jsonPrimitive.content.toInt())
+    assertEquals("count" to "5", uiBuilderStateWrite(action.jsonObject, mapOf("count" to "3")))
+    val source =
+      ee.schimke.composeai.uibuilder.codegen.CapabilityComposeCodeExporter.export(
+          inserted.document,
+          catalog,
+        )
+        .requireSource()
+    assertTrue("count += 2" in source, source)
+  }
+
+  @Test
+  fun `incrementing something that is not a number is refused`() {
+    val blank =
+      blankUiBuilderDocument(
+        "counter",
+        document.catalogPin,
+        document.environment,
+        listOf(NewDesignState("expanded", NewDesignStateType.Flag, JsonPrimitive(false))),
+      )
+    val state = reducer.initial(blank, blank.roots.single())
+    val target = requireNotNull(reducer.dropTarget(state, "m3/button"))
+    val attempted =
+      reducer.reduce(
+        state,
+        UiBuilderEditorEvent.InsertComponentWithAction(
+          "m3/button",
+          target,
+          EditorStateAction.Increment("expanded"),
+        ),
+      )
+    assertIs<CommandOutcome.Rejected>(attempted.lastOutcome)
+  }
+
+  @Test
   fun `wiring a control to a variable the design does not declare is refused`() {
     val blank = blankUiBuilderDocument("from-scratch", document.catalogPin, document.environment)
     val state = reducer.initial(blank, blank.roots.single())

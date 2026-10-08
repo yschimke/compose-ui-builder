@@ -1603,6 +1603,20 @@ private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String
           declaredType.endsWith("?") -> "$variable = !($variable ?: false)"
           else -> "$variable = !$variable"
         }
+      // `x += 1`, spelled for the type the variable is declared as so `Double` gets `1.0`. A
+      // nullable number counts from zero, as the canvas does when it holds no value.
+      "increment" -> {
+        val amount = action["amount"] ?: kotlinx.serialization.json.JsonPrimitive(1)
+        val bare = declaredType?.removeSuffix("?")?.takeIf { it == "Int" || it == "Double" }
+        when {
+          variable == null || bare == null -> "TODO(\"increment needs a number state variable\")"
+          !bare.holds(amount) ->
+            "TODO(\"${name.orEmpty().escape()} is $declaredType and cannot add ${amount.kotlinLiteral()}\")"
+          declaredType?.endsWith("?") == true ->
+            "$variable = ($variable ?: ${if (bare == "Int") "0" else "0.0"}) + ${amount.literalAs(bare)}"
+          else -> "$variable += ${amount.literalAs(bare)}"
+        }
+      }
       else -> "TODO(\"Unsupported action ${action.optionalString("type")?.escape()}\")"
     }
   }
@@ -3159,7 +3173,7 @@ internal val SUPPORTED_MODIFIERS =
   )
 
 private val SUPPORTED_ACTIONS =
-  setOf("select", "selectOrClear", "setText", "set", "toggle", "navigatePage")
+  setOf("select", "selectOrClear", "setText", "set", "toggle", "increment", "navigatePage")
 
 /**
  * The components whose `click` binding the Compose export actually emits.

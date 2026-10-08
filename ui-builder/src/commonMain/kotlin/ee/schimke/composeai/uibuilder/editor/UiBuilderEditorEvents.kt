@@ -525,6 +525,9 @@ sealed interface EditorStateAction {
 
   /** Write a value, or clear it when it is already selected. */
   data class SelectOrClear(override val variable: String, val value: String) : EditorStateAction
+
+  /** Add [amount] to a number; a negative amount counts down. */
+  data class Increment(override val variable: String, val amount: String = "1") : EditorStateAction
 }
 
 /**
@@ -538,8 +541,12 @@ internal fun EditorStateAction.valueRefusal(declaration: JsonObject?): String? {
       is EditorStateAction.Toggle -> return null
       is EditorStateAction.Set -> value
       is EditorStateAction.SelectOrClear -> value
+      is EditorStateAction.Increment -> amount
     }
   val kind = declaredStateKind(declaration)
+  // `x += amount` and `valueChange(x, x + amount)` need a number on both sides.
+  if (this is EditorStateAction.Increment && kind != StateKind.INTEGER && kind != StateKind.DECIMAL)
+    return "State variable `$variable` is not a number, so it cannot be incremented"
   val parses =
     when (kind) {
       StateKind.BOOLEAN -> raw.toBooleanStrictOrNull() != null
@@ -622,6 +629,14 @@ internal fun EditorStateAction.encoded(declaration: JsonObject?): JsonObject {
           "type" to JsonPrimitive("selectOrClear"),
           "variable" to JsonPrimitive(variable),
           "value" to typed(value),
+        )
+      )
+    is EditorStateAction.Increment ->
+      JsonObject(
+        mapOf(
+          "type" to JsonPrimitive("increment"),
+          "variable" to JsonPrimitive(variable),
+          "amount" to typed(amount),
         )
       )
   }

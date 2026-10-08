@@ -73,12 +73,45 @@ class UiBuilderStateWriteTest {
   }
 
   @Test
+  fun `increment adds its amount and keeps an integer an integer`() {
+    assertEquals(
+      "count" to "4",
+      uiBuilderStateWrite(
+        action("""{"type":"increment","variable":"count"}"""),
+        mapOf("count" to "3"),
+      ),
+    )
+    assertEquals(
+      "count" to "1",
+      uiBuilderStateWrite(
+        action("""{"type":"increment","variable":"count","amount":-2}"""),
+        mapOf("count" to "3"),
+      ),
+    )
+    assertEquals(
+      "level" to "1.0",
+      uiBuilderStateWrite(
+        action("""{"type":"increment","variable":"level","amount":0.5}"""),
+        mapOf("level" to "0.5"),
+      ),
+    )
+    // A missing value counts from zero; one that is not a number writes nothing.
+    assertEquals(
+      "count" to "1",
+      uiBuilderStateWrite(action("""{"type":"increment","variable":"count"}"""), emptyMap()),
+    )
+    assertNull(
+      uiBuilderStateWrite(
+        action("""{"type":"increment","variable":"name"}"""),
+        mapOf("name" to "Ada"),
+      )
+    )
+  }
+
+  @Test
   fun `an unrecognised action writes nothing rather than killing the preview`() {
     // The protocol declares actions this renderer does not implement, and other clients author
     // them. Losing one interaction beats losing the whole screen, including the parts that work.
-    assertNull(
-      uiBuilderStateWrite(action("""{"type":"increment","variable":"count"}"""), emptyMap())
-    )
     assertNull(
       uiBuilderStateWrite(action("""{"type":"navigatePage","pageKey":"next"}"""), emptyMap())
     )

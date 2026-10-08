@@ -214,9 +214,13 @@ internal fun EventActionsInspector(
   val isNullable =
     (selectedDeclaration?.get("nullable") as? JsonPrimitive)?.booleanOrNull
       ?: (initialValue is JsonNull)
+  val isNumber =
+    (selectedDeclaration?.get("valueType") as? JsonPrimitive)?.content in setOf("int", "float") ||
+      (initialValue?.isString == false && initialValue.doubleOrNull != null && !isFlag)
   val stateActionKinds =
     listOf("set" to "Set") +
       (if (isFlag) listOf("toggle" to "Toggle") else emptyList()) +
+      (if (isNumber) listOf("increment" to "Add") else emptyList()) +
       (if (isNullable) listOf("selectOrClear" to "Select / clear") else emptyList())
   val actionKinds =
     stateActionKinds + if (pages.isNotEmpty()) listOf("navigatePage" to "Navigate") else emptyList()
@@ -272,12 +276,21 @@ internal fun EventActionsInspector(
       val actionVariable = (action?.get("variable") as? JsonPrimitive)?.content.orEmpty()
       val actionPage = (action?.get("pageKey") as? JsonPrimitive)?.content.orEmpty()
       Text(
-        "${index + 1}. $actionKind ${actionPage.ifBlank { actionVariable }} ${(action?.get("value") as? JsonPrimitive)?.contentOrNull.orEmpty()}",
+        "${index + 1}. $actionKind ${actionPage.ifBlank { actionVariable }} ${((action?.get("value") ?: action?.get("amount")) as? JsonPrimitive)?.contentOrNull.orEmpty()}",
         style = MaterialTheme.typography.bodySmall,
       )
       Row {
         if (
-          actionKind in setOf("set", "select", "setText", "toggle", "selectOrClear", "navigatePage")
+          actionKind in
+            setOf(
+              "set",
+              "select",
+              "setText",
+              "toggle",
+              "selectOrClear",
+              "increment",
+              "navigatePage",
+            )
         )
           TextButton(
             onClick = {
@@ -286,7 +299,10 @@ internal fun EventActionsInspector(
               if (actionKind == "navigatePage") value = actionPage
               else {
                 variable = actionVariable
-                value = (action?.get("value") as? JsonPrimitive)?.contentOrNull.orEmpty()
+                value =
+                  (action?.get(if (actionKind == "increment") "amount" else "value")
+                      as? JsonPrimitive)
+                    ?.contentOrNull ?: if (actionKind == "increment") "1" else ""
               }
             }
           ) {
@@ -370,7 +386,7 @@ internal fun EventActionsInspector(
           value,
           { value = it },
           Modifier.fillMaxWidth().onFocusChanged { onTextInputFocusChanged(it.hasFocus) },
-          label = { Text("Value") },
+          label = { Text(if (kind == "increment") "Amount" else "Value") },
           singleLine = true,
         )
       TextButton(
@@ -383,6 +399,7 @@ internal fun EventActionsInspector(
               "navigatePage" -> EditorStateAction.Navigate(value)
               "toggle" -> EditorStateAction.Toggle(variable)
               "selectOrClear" -> EditorStateAction.SelectOrClear(variable, value)
+              "increment" -> EditorStateAction.Increment(variable, value.ifBlank { "1" })
               else -> EditorStateAction.Set(variable, value)
             }
           dispatch(UiBuilderEditorEvent.AppendAction(node.id, event, action, editingIndex))
