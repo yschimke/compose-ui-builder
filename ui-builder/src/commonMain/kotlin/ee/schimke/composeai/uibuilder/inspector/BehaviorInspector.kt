@@ -217,10 +217,14 @@ internal fun EventActionsInspector(
   val isNumber =
     (selectedDeclaration?.get("valueType") as? JsonPrimitive)?.content in setOf("int", "float") ||
       (initialValue?.isString == false && initialValue.doubleOrNull != null && !isFlag)
+  val remoteCompose = LocalUiBuilderCatalogPlatform.current == "remote-compose"
   val stateActionKinds =
     listOf("set" to "Set") +
       (if (isFlag) listOf("toggle" to "Toggle") else emptyList()) +
-      (if (isNumber) listOf("increment" to "Add") else emptyList()) +
+      // Only where an export writes it: the Remote Compose lanes count in the player; the screen
+      // generator the Compose export runs has no increment lowering yet, and offering one there
+      // would author a design the export then refuses.
+      (if (isNumber && remoteCompose) listOf("increment" to "Add") else emptyList()) +
       (if (isNullable) listOf("selectOrClear" to "Select / clear") else emptyList())
   val actionKinds =
     stateActionKinds + if (pages.isNotEmpty()) listOf("navigatePage" to "Navigate") else emptyList()

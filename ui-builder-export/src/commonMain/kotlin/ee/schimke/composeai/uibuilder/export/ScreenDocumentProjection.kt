@@ -39,6 +39,7 @@ import ee.schimke.composeai.uibuilder.protocol.HeightInModifierV1
 import ee.schimke.composeai.uibuilder.protocol.HeightModifierV1
 import ee.schimke.composeai.uibuilder.protocol.HorizontalAlignmentV1
 import ee.schimke.composeai.uibuilder.protocol.HorizontalScrollModifierV1
+import ee.schimke.composeai.uibuilder.protocol.IncrementActionV1
 import ee.schimke.composeai.uibuilder.protocol.InsetsValueV1
 import ee.schimke.composeai.uibuilder.protocol.IntegerValueV1
 import ee.schimke.composeai.uibuilder.protocol.ListValueV1
@@ -490,6 +491,14 @@ object ScreenDocumentProjection {
       }
       return when (action) {
         is ToggleActionV1 -> target(action.variable)?.let(ScreenAction::Toggle)
+        // The shared generator writes a handler's `Set` only from a literal: `count.plus(1)` is
+        // refused there as "an expression that names an API", since a callback is not a
+        // composable scope. Counting needs its own shared action lowering first.
+        is IncrementActionV1 ->
+          refuse(
+            "$where increments `${action.variable}`, which needs a shared increment lowering in " +
+              "the screen generator; the Remote Compose export writes it today"
+          )
         is SetValueActionV1 -> assignment(action.variable, action.value)
         is SelectActionV1 -> assignment(action.variable, action.value)
         is SetTextActionV1 ->

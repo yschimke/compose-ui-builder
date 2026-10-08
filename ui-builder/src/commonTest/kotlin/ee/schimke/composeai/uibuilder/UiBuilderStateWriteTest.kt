@@ -95,6 +95,14 @@ class UiBuilderStateWriteTest {
         mapOf("level" to "0.5"),
       ),
     )
+    // `Int` semantics, as the exported `count += 1` has.
+    assertEquals(
+      "count" to Int.MIN_VALUE.toString(),
+      uiBuilderStateWrite(
+        action("""{"type":"increment","variable":"count"}"""),
+        mapOf("count" to Int.MAX_VALUE.toString()),
+      ),
+    )
     // A missing value counts from zero; one that is not a number writes nothing.
     assertEquals(
       "count" to "1",

@@ -188,6 +188,46 @@ class EditorCodePaneTest {
     assertFalse(after.kotlin.contains("children ="), after.kotlin)
   }
 
+  /**
+   * `increment` is refused by name in the screen export until the shared generator can lower it,
+   * rather than by the generic "needs a shared action lowering" catch-all.
+   */
+  @Test
+  fun `a counter button names the missing increment lowering in the screen export`() {
+    org.junit.Assume.assumeTrue(
+      "Enable with -PuiBuilderRemoteCompose=true",
+      UiBuilderBuildFeatures.remoteCompose,
+    )
+    val counter =
+      blankUiBuilderDocument(
+        designId = "counter",
+        catalogPin = jetcaster.catalogPin,
+        environment = jetcaster.environment,
+        state =
+          listOf(
+            ee.schimke.composeai.uibuilder.export.NewDesignState(
+              "count",
+              ee.schimke.composeai.uibuilder.export.NewDesignStateType.Number,
+              JsonPrimitive(3),
+            )
+          ),
+      )
+    val initial = reducer.initial(counter, "screen-content")
+    val target = requireNotNull(reducer.dropTarget(initial, "m3/button"))
+    val inserted =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.InsertComponentWithAction(
+          "m3/button",
+          target,
+          ee.schimke.composeai.uibuilder.editor.EditorStateAction.Increment("count", "2"),
+        ),
+      )
+
+    val code = assertIs<EditorGeneratedCode.Refused>(reducer.generatedCode(inserted.document))
+    assertTrue(code.reasons.any { "increments `count`" in it }, code.reasons.toString())
+  }
+
   @Test
   fun `a design the export refuses shows the reasons where the source would be`() {
     // The flagship fixture does not export — enum values with no Kotlin member, a text callback
