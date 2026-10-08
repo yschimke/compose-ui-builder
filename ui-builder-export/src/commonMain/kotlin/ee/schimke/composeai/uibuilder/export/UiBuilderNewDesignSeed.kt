@@ -54,6 +54,7 @@ object UiBuilderNewDesignSeed {
           WearWidgetSample.entries.map(WearWidgetSample::templateId)
       "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
       A2uiDocumentExporter.CATALOG_SYSTEM_ID -> setOf(A2UI_TEMPLATE)
+      LauncherWidgetTemplates.CATALOG_SYSTEM_ID -> LauncherWidgetTemplates.ids
       "m3-catalog" -> setOf("blank", HELLO_TEMPLATE, DEFAULT_TEMPLATE) + AdaptiveScreenTemplates.ids
       else -> setOf("blank", DEFAULT_TEMPLATE)
     }
@@ -220,6 +221,19 @@ object UiBuilderNewDesignSeed {
           catalogPin = catalogPin,
           environment = mobileScreenEnvironment(environment),
         )
+      // Whatever template was asked for, as with A2UI: a launcher widget never starts on the phone
+      // `blank` scaffold below, which its exporter refuses as a root.
+      catalogSystemId == LauncherWidgetTemplates.CATALOG_SYSTEM_ID ->
+        LauncherWidgetTemplates.document(
+            templateId =
+              templateId.takeIf { it in LauncherWidgetTemplates.ids }
+                ?: LauncherWidgetTemplates.HELLO_TEMPLATE,
+            designId = designId,
+            catalogPin = catalogPin,
+            environment = environment,
+          )
+          // The New design form's state, as the blank and catalog-owned seeds keep it.
+          .withDeclaredState(state)
       catalogSystemId == "remote-m3" && templateId == AdaptiveWearWidget.TEMPLATE_ID ->
         AdaptiveWearWidget.newDocument(
           designId = designId,
