@@ -866,7 +866,9 @@ private fun RenderNode(
           checked = node.resolvedBool("checked", state),
           enabled = node.bool("enabled", true),
           modifier = measured,
-          onCheckedChange = { node.changeBoundFlag("checked", it, host::setState, activate) },
+          onCheckedChange = {
+            node.changeBoundFlag("checked", it, host::setState, prepared::dispatch)
+          },
           label = {
             if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
@@ -897,7 +899,9 @@ private fun RenderNode(
           checked = node.resolvedBool("checked", state),
           enabled = node.bool("enabled", true),
           modifier = measured,
-          onCheckedChange = { node.changeBoundFlag("checked", it, host::setState, activate) },
+          onCheckedChange = {
+            node.changeBoundFlag("checked", it, host::setState, prepared::dispatch)
+          },
           label = {
             if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
@@ -919,7 +923,7 @@ private fun RenderNode(
           enabled = node.bool("enabled", true),
           modifier = measured,
           // A radio row selects itself: its change is always to selected.
-          onSelect = { node.changeBoundFlag("selected", true, host::setState, activate) },
+          onSelect = { node.changeBoundFlag("selected", true, host::setState, prepared::dispatch) },
           label = {
             if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
@@ -1707,14 +1711,18 @@ private fun RenderNode(
       "m3/checkbox" ->
         Checkbox(
           checked = node.resolvedBool("checked", state),
-          onCheckedChange = { node.changeBoundFlag("checked", it, host::setState, activate) },
+          onCheckedChange = {
+            node.changeBoundFlag("checked", it, host::setState, prepared::dispatch)
+          },
           modifier = measured,
           enabled = enabled,
         )
       "m3/switch" ->
         Switch(
           checked = node.resolvedBool("checked", state),
-          onCheckedChange = { node.changeBoundFlag("checked", it, host::setState, activate) },
+          onCheckedChange = {
+            node.changeBoundFlag("checked", it, host::setState, prepared::dispatch)
+          },
           modifier = measured,
           enabled = enabled,
         )
@@ -2525,18 +2533,20 @@ private fun UiBuilderNode.resolvedBool(name: String, state: Map<String, String?>
 
 /**
  * A two-way bound control's change: write [checked] back to the variable [property] reads, then run
- * the `click` actions — unless those actions already write it ([TwoWayStateBinding]).
+ * the property's change event — `checkedChange`, or `select` for a radio row, falling back to a
+ * legacy `click` binding — unless its actions already write it ([TwoWayStateBinding]).
  */
 private fun UiBuilderNode.changeBoundFlag(
   property: String,
   checked: Boolean,
   setState: (String, String?) -> Unit,
-  activate: () -> Unit,
+  dispatch: (String) -> Unit,
 ) {
-  TwoWayStateBinding.writeBackVariable(properties[property], eventBindings["click"])?.let {
+  val event = TwoWayStateBinding.eventFor(property, eventBindings)
+  TwoWayStateBinding.writeBackVariable(properties[property], eventBindings[event])?.let {
     setState(it, checked.toString())
   }
-  activate()
+  dispatch(event)
 }
 
 /**

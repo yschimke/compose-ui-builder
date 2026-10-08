@@ -49,6 +49,49 @@ object TwoWayStateBinding {
     }
 
   /**
+   * The event a control's own change runs, named as every lane names an event: the callback
+   * parameter without `on`. A checked control's `onCheckedChange` is `checkedChange`; a Wear or
+   * Remote radio row's `onSelect` is `select`. Null for a component with no such callback, whose
+   * interaction stays `click` (`onClick`) — an m3 `RadioButton` among them.
+   */
+  fun changeEvent(componentId: String, properties: Set<String>): String? =
+    when {
+      "checked" in properties -> CHECKED_CHANGE
+      componentId in SELECT_COMPONENTS -> SELECT
+      else -> null
+    }
+
+  /**
+   * The event a change of [property] runs on a node carrying [eventBindings].
+   *
+   * Its own change event when the node binds it; otherwise `click` when the node binds that, which
+   * is how designs authored before the names were made consistent wired a checkbox; otherwise the
+   * change event, so a newly authored action lands under the consistent name.
+   */
+  fun eventFor(property: String, eventBindings: Map<String, JsonElement>): String {
+    val candidates = PROPERTY_EVENTS[property].orEmpty()
+    candidates
+      .firstOrNull { it in eventBindings }
+      ?.let {
+        return it
+      }
+    if (CLICK in eventBindings) return CLICK
+    return candidates.firstOrNull() ?: CLICK
+  }
+
+  const val CLICK = "click"
+  const val CHECKED_CHANGE = "checkedChange"
+  const val SELECT = "select"
+
+  /** Each two-way property's change events, preferred first. A split radio row's is its own. */
+  private val PROPERTY_EVENTS: Map<String, List<String>> =
+    mapOf("checked" to listOf(CHECKED_CHANGE), "selected" to listOf(SELECT, "selectionClick"))
+
+  /** The radio rows whose callback is `onSelect` rather than `onClick`. */
+  private val SELECT_COMPONENTS: Set<String> =
+    setOf("wear-m3/radio-button", "remote-m3/remote-radio-button")
+
+  /**
    * The variable a change of [property] should write back to, or null when none should be written:
    * the property is not a bare state read, or the event's [actions] already write that variable.
    */

@@ -444,7 +444,7 @@ properties, the same `onCheckedChange`, the same binding to a declared state var
 risk — that the renderer and the exporter read that binding differently.
 
 Both bind `checked` to a flag through `stateEquals`, exactly as `m3/filter-chip`'s `selected` does,
-and both take a `click` action, so a checkbox wired to a state variable ticks on the canvas *and*
+and both take a `checkedChange` action, so a checkbox wired to a state variable ticks on the canvas *and*
 generates `onCheckedChange = { notify = !notify }`. That is the difference between a control and a
 picture of one, and it is asserted on one document in `SelectionControlTest` so the two projections
 cannot drift apart.
@@ -459,12 +459,20 @@ once. One rule, `TwoWayStateBinding` in `ui-builder-export`, serves every lane:
 
 | Lane | Bound `checked` change |
 | --- | --- |
-| Canvas (host and SDK `CanvasNodeScope.changeBoundState`) | write the new value, then dispatch `click` |
-| Compose export | `onCheckedChange = { notify = it; <click actions> }` |
+| Canvas (host and SDK `CanvasNodeScope.changeBoundState`) | write the new value, then dispatch `checkedChange` |
+| Compose export | `onCheckedChange = { notify = it; <checkedChange actions> }` |
 | Wear export | the design's `var notify by remember { mutableStateOf(…) }`, shared by every row bound to it, and `onCheckedChange = { notify = it }` |
 | Remote Compose export | `val notify = rememberMutableRemoteBoolean(…)` and `onCheckedChange = valueChange(notify, !notify)` ahead of the `checkedChange` actions |
 
 A `stateEquals` comparison is not a variable the control holds and is never written back.
+
+**Event names.** Every lane names an event the same way: the component's callback parameter without
+`on`. A checked control (`Checkbox`, `Switch`, Wear's `CheckboxButton` and `SwitchButton`, their
+Remote twins) runs `checkedChange`; a Wear or Remote radio row (`onSelect`) runs `select`; anything
+whose callback is `onClick` — a button, a chip, an m3 `RadioButton` — runs `click`. The editor offers
+a control its own change event and the reducer inserts a wired control under it. A design authored
+before the names were made consistent carries `click` on a checkbox; every lane still reads it when
+the node binds no `checkedChange` (`TwoWayStateBinding.eventFor`).
 
 They are also the first pair whose **component record** is authored rather than deferred: Material
 declares `onCheckedChange` as `((Boolean) -> Unit)?`, so a call site can write `null` for it, which

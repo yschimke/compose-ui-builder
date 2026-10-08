@@ -180,6 +180,31 @@ class SelectionControlTest {
 
     val source = CapabilityComposeCodeExporter.export(bound.document, catalog).requireSource()
     assertTrue("Switch(checked = notify, onCheckedChange = { notify = !notify }" in source, source)
+    // Inserted under the callback's own name, not `click`.
+    assertEquals(
+      setOf("checkedChange"),
+      bound.document.nodes.getValue(nodeId).eventBindings.keys,
+    )
+  }
+
+  /** A checkbox authored before the names were made consistent carries `click`, and still works. */
+  @Test
+  fun `a legacy click binding on a checkbox still exports its actions`() {
+    val (inserted, nodeId) = insert("m3/checkbox", withFlag)
+    val node = inserted.document.nodes.getValue(nodeId)
+    val legacy =
+      inserted.document.copy(
+        nodes =
+          inserted.document.nodes +
+            (nodeId to
+              node.copy(
+                eventBindings =
+                  Json.parseToJsonElement("""{"click":[{"type":"toggle","variable":"notify"}]}""")
+                    .jsonObject
+              ))
+      )
+    val source = CapabilityComposeCodeExporter.export(legacy, catalog).requireSource()
+    assertTrue("onCheckedChange = { notify = !notify }" in source, source)
   }
 
   private fun exportOf(componentId: String): String {

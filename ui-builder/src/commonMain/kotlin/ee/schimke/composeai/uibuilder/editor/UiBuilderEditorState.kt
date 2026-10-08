@@ -48,6 +48,7 @@ import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
+import ee.schimke.composeai.uibuilder.export.TwoWayStateBinding
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -2555,10 +2556,11 @@ class UiBuilderEditorReducer(
           "This design declares no state variable `${action.variable}`",
         )
       }
-      // Bound to `click` on the inserted root, and `click` alone. It is the one event this
-      // renderer applies to any node — `actionModifier` makes anything carrying a click binding
-      // clickable — while every other event name is implemented per component and the catalog
-      // declares none of them, so offering one would be a guess.
+      // Bound on the inserted root to its own change event when it has one — `checkedChange` for a
+      // checkbox, whose callback is `onCheckedChange` — and to `click` otherwise, the one event
+      // this
+      // renderer applies to any node (`actionModifier` makes anything carrying a click binding
+      // clickable).
       val declaration = state.document.stateVariables[action.variable] as? JsonObject
       // `selectOrClear` writes null when the value is already selected, and the exporter declares
       // each variable from its own `nullable`. Against a non-nullable one the generated assignment
@@ -2586,9 +2588,14 @@ class UiBuilderEditorReducer(
       action.valueRefusal(declaration)?.let { why ->
         return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, why)
       }
-      val bindings = JsonObject(mapOf("click" to JsonArray(listOf(action.encoded(declaration)))))
       val index = operations.indexOfFirst { it is DesignOperation.InsertNode }
       val root = operations[index] as DesignOperation.InsertNode
+      // A control with a change callback takes the action under that callback's name —
+      // `checkedChange` on a checkbox — and everything else under `click` (TwoWayStateBinding).
+      val event =
+        TwoWayStateBinding.changeEvent(componentId, root.node.properties.keys)
+          ?: TwoWayStateBinding.CLICK
+      val bindings = JsonObject(mapOf(event to JsonArray(listOf(action.encoded(declaration)))))
       operations[index] = root.copy(node = root.node.copy(eventBindings = bindings))
     }
     return state.apply(sequence, operations, selectionAfter = nodeId)

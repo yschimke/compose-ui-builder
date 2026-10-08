@@ -195,9 +195,15 @@ class CanvasNodeScope(
    *
    * `Checkbox(onCheckedChange = { changeBoundState("checked", it.toString()) })` is the whole
    * wiring. The write back is skipped when [event]'s actions already write that variable — a hand
-   * authored `toggle` — so a tap changes it once (see [TwoWayStateBinding]).
+   * authored `toggle` — so a tap changes it once (see [TwoWayStateBinding]). [event] defaults to
+   * the property's change event — `checkedChange` for `checked`, `select` for `selected` — falling
+   * back to a `click` binding a design authored before the names were made consistent.
    */
-  fun changeBoundState(property: String, value: String?, event: String = "click") {
+  fun changeBoundState(
+    property: String,
+    value: String?,
+    event: String = TwoWayStateBinding.eventFor(property, node.eventBindings),
+  ) {
     TwoWayStateBinding.writeBackVariable(node.properties[property], node.eventBindings[event])
       ?.let { updateState(it, value) }
     dispatchEvent(event)
