@@ -2,7 +2,6 @@ package ee.schimke.composeai.uibuilder.preview
 
 import ee.schimke.composeai.uibuilder.export.ClockCanvas
 import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.enum
-import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.formula
 import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.num
 import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.text
 import ee.schimke.composeai.uibuilder.export.UiDrawing
@@ -152,7 +151,7 @@ internal fun Number.d(): String {
 }
 
 /** The segments a digit 0–9 lights, as the formula over the digit `$d` that is true when lit. */
-private val SEGMENT_LIT: Map<Char, (String) -> String> =
+internal val SEGMENT_LIT: Map<Char, (String) -> String> =
   mapOf(
     'a' to { d -> "!($d == 1 || $d == 4)" },
     'b' to { d -> "!($d == 5 || $d == 6)" },
@@ -162,68 +161,6 @@ private val SEGMENT_LIT: Map<Char, (String) -> String> =
     'f' to { d -> "!($d == 1 || $d == 2 || $d == 3 || $d == 7)" },
     'g' to { d -> "!($d == 0 || $d == 1 || $d == 7)" },
   )
-
-/**
- * One seven-segment LCD digit in the box ([x], [y], [w], [h]), showing the formula [digit] (a whole
- * number 0–9): each segment a slanted hexagon, lit at full ink and otherwise a faint ghost, as an
- * LCD's unlit segments show. [blankWhenZero] leaves a leading zero unlit.
- */
-internal fun ClockCanvas.segmentDigit(
-  id: String,
-  digit: String,
-  x: Double,
-  y: Double,
-  w: Double,
-  h: Double,
-  thickness: Double,
-  ink: JsonObject,
-  ghost: Double = 0.07,
-  blankWhenZero: Boolean = false,
-  slant: Double = 0.1,
-) {
-  val t = thickness
-  val gap = t * 0.22
-  val left = x + t / 2
-  val right = x + w - t / 2
-  val top = y + t / 2
-  val mid = y + h / 2
-  val bottom = y + h - t / 2
-  val base = y + h
-  fun italic(px: Double, py: Double) = (px + (base - py) * slant) to py
-  fun horizontal(yc: Double, xl: Double, xr: Double) =
-    polygon(
-      italic(xl, yc),
-      italic(xl + t / 2, yc - t / 2),
-      italic(xr - t / 2, yc - t / 2),
-      italic(xr, yc),
-      italic(xr - t / 2, yc + t / 2),
-      italic(xl + t / 2, yc + t / 2),
-    )
-  fun vertical(xc: Double, yt: Double, yb: Double) =
-    polygon(
-      italic(xc, yt),
-      italic(xc + t / 2, yt + t / 2),
-      italic(xc + t / 2, yb - t / 2),
-      italic(xc, yb),
-      italic(xc - t / 2, yb - t / 2),
-      italic(xc - t / 2, yt + t / 2),
-    )
-  val shapes =
-    mapOf(
-      'a' to horizontal(top, left + gap, right - gap),
-      'g' to horizontal(mid, left + gap, right - gap),
-      'd' to horizontal(bottom, left + gap, right - gap),
-      'f' to vertical(left, top + gap, mid - gap),
-      'b' to vertical(right, top + gap, mid - gap),
-      'e' to vertical(left, mid + gap, bottom - gap),
-      'c' to vertical(right, mid + gap, bottom - gap),
-    )
-  shapes.forEach { (segment, shape) ->
-    val lit = SEGMENT_LIT.getValue(segment)("($digit)")
-    val on = if (blankWhenZero) "($digit) != 0 && ($lit)" else lit
-    path("$id-$segment", shape, ink, "alpha" to formula("select($on, 0.92, $ghost)"))
-  }
-}
 
 /** A spline screw head: a disc, its six splines, and the light catching its domed top-left. */
 internal fun ClockCanvas.splineScrew(

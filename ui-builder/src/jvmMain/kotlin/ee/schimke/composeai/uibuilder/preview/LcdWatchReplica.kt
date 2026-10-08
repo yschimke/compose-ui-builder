@@ -2,11 +2,9 @@ package ee.schimke.composeai.uibuilder.preview
 
 import ee.schimke.composeai.uibuilder.export.ClockCanvas
 import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.argb
-import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.dayName
 import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.enum
 import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.formula
 import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.num
-import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.text
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.serialization.json.JsonObject
 
@@ -84,15 +82,15 @@ internal fun lcdWatchReplica(
     path("lcd-face", face, argb(FACE))
     outline("lcd-keyline", 39, 30, 122, 140, 10, 1.2, argb(KEYLINE))
 
-    label("lcd-model", text("F-91W"), 146, 41, 8.5, argb(PRINT), "end")
-    label("lcd-light", text("LIGHT"), 46, 55, 4.6, argb(PRINT_DIM), "start")
-    label("lcd-line", text("ALARM CHRONOGRAPH"), 154, 55, 5.8, argb(PRINT), "end")
+    type("lcd-model", "F-91W", 152.0, 44.0, 28.0, argb(PRINT), "end")
+    type("lcd-light", "LIGHT", 45.0, 57.0, 12.0, argb(PRINT_DIM), "start")
+    type("lcd-line", "ALARM CHRONOGRAPH", 155.0, 57.0, 66.0, argb(PRINT), "end")
 
     lcd()
 
-    label("lcd-mode", text("MODE"), 46, 143, 4.4, argb(PRINT_DIM), "start")
-    label("lcd-alarm", text("ALARM ON·OFF/24HR"), 154, 143, 4.4, argb(PRINT_DIM), "end")
-    label("lcd-water", text("WATER"), 63, 158, 7.6, argb(PRINT))
+    type("lcd-mode", "MODE", 45.0, 145.0, 12.0, argb(PRINT_DIM), "start")
+    type("lcd-alarm", "ALARM ON·OFF/24HR", 155.0, 145.0, 50.0, argb(PRINT_DIM), "end")
+    type("lcd-water", "WATER", 62.0, 160.5, 24.0, argb(PRINT))
     rect(
       "lcd-wr-box",
       88.5,
@@ -104,8 +102,8 @@ internal fun lcdWatchReplica(
       "style" to enum("stroke"),
       "strokeWidthDp" to num(1.2),
     )
-    label("lcd-wr", text("WR"), 100, 158, 7.6, argb(WR_RED))
-    label("lcd-resist", text("RESIST"), 137, 158, 7.6, argb(PRINT))
+    type("lcd-wr", "WR", 100.0, 160.5, 12.0, argb(WR_RED))
+    type("lcd-resist", "RESIST", 138.0, 160.5, 25.0, argb(PRINT))
 
     // The crystal over the face: a wide soft reflection and a thin bright one.
     clipped("lcd-crystal", face) {
@@ -165,12 +163,12 @@ private fun ClockCanvas.buttons() {
     }
 }
 
-/** The display: frame, glass, and the module's digits and indicators. */
+/** The display: frame, glass, and the module's segments, in DSEG's LCD cells. */
 private fun ClockCanvas.lcd() {
-  val frame = roundRectPath(43.0, 62.0, 114.0, 74.0, 4.0)
+  val frame = roundRectPath(41.0, 62.0, 118.0, 74.0, 4.0)
   path("lcd-frame", frame, argb(LCD_FRAME))
-  line("lcd-frame-lip", 46 to 62.7, 154 to 62.7, 0.6, argb(WHITE), "alpha" to num(0.18))
-  val glass = roundRectPath(47.0, 66.0, 106.0, 66.0, 2.0)
+  line("lcd-frame-lip", 43 to 62.7, 157 to 62.7, 0.6, argb(WHITE), "alpha" to num(0.18))
+  val glass = roundRectPath(45.0, 66.0, 110.0, 66.0, 2.0)
   path(
     "lcd-glass",
     glass,
@@ -179,85 +177,127 @@ private fun ClockCanvas.lcd() {
     "gradientColor" to argb(LCD_SHADE),
   )
   clipped("lcd-glass-clip", glass) {
-
-    // Day of the week, as the module's two-letter alphanumerics.
-    label(
-      "lcd-day",
-      formula(dayName(listOf("MO", "TU", "WE", "TH", "FR", "SA", "SU"))),
-      55,
-      77,
-      12,
-      argb(INK),
-      "start",
-    )
-    label(
+    // Day of the week, in two fourteen-segment cells.
+    dayCells(50.0, 70.0, 14.0)
+    type(
       "lcd-pm",
-      text("PM"),
-      51,
-      91,
-      4.5,
+      "PM",
+      50.0,
+      91.5,
+      6.0,
       argb(INK),
       "start",
-      "alpha" to formula("select(time.hour >= 12, 0.9, 0.07)"),
+      "alpha" to formula("select(time.hour >= 12, 0.9, 0.06)"),
     )
-    label("lcd-24h", text("24H"), 51, 99, 4.5, argb(INK), "start", "alpha" to num(0.07))
 
-    // Date, top right.
+    // Date, top right; no leading zero.
     val date = "floor(time.dayOfMonth)"
-    segmentDigit(
-      "lcd-date-tens",
-      "floor($date / 10)",
-      126.0,
-      69.0,
-      8.5,
-      15.0,
-      2.0,
-      argb(INK),
-      blankWhenZero = true,
-    )
-    segmentDigit("lcd-date-ones", "$date % 10", 137.0, 69.0, 8.5, 15.0, 2.0, argb(INK))
+    lcdDigit("lcd-date-tens", "floor($date / 10)", 131.0, 70.0, 14.0, blankWhenZero = true)
+    lcdDigit("lcd-date-ones", "$date % 10", 131.0 + 14 * LcdGlyphs.SEVEN_ADVANCE, 70.0, 14.0)
 
-    // Hours and minutes: twelve-hour, no leading zero on the hour.
+    // Hours and minutes: twelve-hour, no leading zero on the hour, a colon that blinks.
     val hour = "((floor(time.hour) + 11) % 12 + 1)"
     val minute = "floor(time.minuteOfDay % 60)"
     val second = "floor(time.secondOfHour % 60)"
-    segmentDigit(
-      "lcd-hour-tens",
-      "floor($hour / 10)",
-      53.0,
-      92.0,
-      15.0,
-      30.0,
-      3.4,
-      argb(INK),
-      blankWhenZero = true,
-    )
-    segmentDigit("lcd-hour-ones", "$hour % 10", 71.0, 92.0, 15.0, 30.0, 3.4, argb(INK))
-    // The colon blinks: on for the first half of every second.
-    listOf(100.0, 113.0).forEachIndexed { index, y ->
-      rect(
+    val big = 25.0
+    val step = big * LcdGlyphs.SEVEN_ADVANCE
+    lcdDigit("lcd-hour-tens", "floor($hour / 10)", 47.0, 94.0, big, blankWhenZero = true)
+    lcdDigit("lcd-hour-ones", "$hour % 10", 47.0 + step, 94.0, big)
+    LcdGlyphs.COLON.forEachIndexed { index, dot ->
+      path(
         "lcd-colon-$index",
-        90.5 + (122 - y) * 0.1,
-        y - 1.7,
-        3.4,
-        3.4,
+        dot.pathAt(47.0 + 2 * step, 94.0, big),
         argb(INK),
-        0.6,
-        "alpha" to formula("select(floor(time.continuousSecond * 2) % 2 == 0, 0.92, 0.07)"),
+        "alpha" to formula("select(floor(time.continuousSecond * 2) % 2 == 0, 0.9, 0.06)"),
       )
     }
-    segmentDigit("lcd-minute-tens", "floor($minute / 10)", 97.0, 92.0, 15.0, 30.0, 3.4, argb(INK))
-    segmentDigit("lcd-minute-ones", "$minute % 10", 115.0, 92.0, 15.0, 30.0, 3.4, argb(INK))
-    segmentDigit("lcd-second-tens", "floor($second / 10)", 134.0, 106.0, 8.0, 16.0, 2.1, argb(INK))
-    segmentDigit("lcd-second-ones", "$second % 10", 143.5, 106.0, 8.0, 16.0, 2.1, argb(INK))
+    val minutes = 47.0 + 2 * step + big * LcdGlyphs.COLON_ADVANCE
+    lcdDigit("lcd-minute-tens", "floor($minute / 10)", minutes, 94.0, big)
+    lcdDigit("lcd-minute-ones", "$minute % 10", minutes + step, 94.0, big)
+    lcdDigit("lcd-second-tens", "floor($second / 10)", 133.0, 105.0, 14.0)
+    lcdDigit("lcd-second-ones", "$second % 10", 133.0 + 14 * LcdGlyphs.SEVEN_ADVANCE, 105.0, 14.0)
 
     // Light on the glass: one broad pale band, one fine bright edge.
     path(
       "lcd-glass-sheen",
-      polygon(47 to 66, 84 to 66, 64 to 132, 47 to 132),
+      polygon(45 to 66, 84 to 66, 64 to 132, 45 to 132),
       argb(WHITE),
       "alpha" to num(0.10),
     )
     line("lcd-glass-glint", 90 to 66, 70 to 132, 0.5, argb(WHITE), "alpha" to num(0.22))
   }
 }
+
+/** One DSEG7 cell [h] tall at ([x], [y]) showing [digit]: lit segments in ink, the rest ghosted. */
+private fun ClockCanvas.lcdDigit(
+  id: String,
+  digit: String,
+  x: Double,
+  y: Double,
+  h: Double,
+  blankWhenZero: Boolean = false,
+) {
+  LcdGlyphs.SEVEN.forEach { (segment, outline) ->
+    val lit = SEGMENT_LIT.getValue(segment)("($digit)")
+    val on = if (blankWhenZero) "($digit) != 0 && ($lit)" else lit
+    path(
+      "$id-$segment",
+      outline.pathAt(x, y, h),
+      argb(INK),
+      "alpha" to formula("select($on, 0.9, 0.06)"),
+    )
+  }
+}
+
+/** The day's two DSEG14 cells: each segment lit on the days whose letter uses it. */
+private fun ClockCanvas.dayCells(x: Double, y: Double, h: Double) {
+  val days = listOf("MO", "TU", "WE", "TH", "FR", "SA", "SU")
+  (0..1).forEach { position ->
+    LcdGlyphs.FOURTEEN.forEachIndexed { segment, outline ->
+      val lighting =
+        days.indices.filter { segment in LcdGlyphs.FOURTEEN_LETTERS.getValue(days[it][position]) }
+      val alpha =
+        if (lighting.isEmpty()) num(0.06)
+        else
+          formula(
+            "select(" +
+              lighting.joinToString(" || ") { "time.dayOfWeek == ${it + 1}" } +
+              ", 0.9, 0.06)"
+          )
+      path(
+        "lcd-day-$position-$segment",
+        outline.pathAt(x + position * h * LcdGlyphs.FOURTEEN_ADVANCE, y, h),
+        argb(INK),
+        "alpha" to alpha,
+      )
+    }
+  }
+}
+
+/** [label] in Michroma, [width] wide, its baseline at [baseline], anchored at [x] by [align]. */
+private fun ClockCanvas.type(
+  id: String,
+  label: String,
+  x: Double,
+  baseline: Double,
+  width: Double,
+  color: JsonObject,
+  align: String = "center",
+  vararg paint: Pair<String, JsonObject>,
+) {
+  val (ems, outlines) = LcdGlyphs.TYPE.getValue(label)
+  val size = width / ems
+  val start =
+    when (align) {
+      "start" -> x
+      "end" -> x - width
+      else -> x - width / 2
+    }
+  path(id, outlines.joinToString(" ") { it.pathAt(start, baseline, size) }, color, *paint)
+}
+
+/** These points, scaled by [scale] and placed at ([x], [y]), as one closed contour. */
+private fun DoubleArray.pathAt(x: Double, y: Double, scale: Double): String =
+  (indices step 2).joinToString(" ", postfix = " Z") { i ->
+    (if (i == 0) "M" else "L") + "${(x + this[i] * scale).d()} ${(y + this[i + 1] * scale).d()}"
+  }
