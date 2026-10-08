@@ -659,3 +659,18 @@ data class EditorThemeSettings(
   val typeScale: Float = 1f,
   val cornerRadiusDp: Float = 16f,
 )
+
+/**
+ * The node the Theme panel edits — a root `m3/surface`, a Wear screen scaffold, a Remote Material 3
+ * widget container — and what it can hold. See [UiBuilderEditorReducer.themePanelHost].
+ */
+data class EditorThemeHost(
+  val nodeId: String,
+  val componentId: String,
+  /** The Material 3 colour roles the host has a property for, role to property. */
+  val colorProperties: Map<String, String>,
+  /** Whether it is set in Wear's type scale (a Wear or Remote host) rather than Material 3's. */
+  val wearScale: Boolean,
+  /** Whether it carries the Material surface's type scale and corner radius. */
+  val scaleAndShape: Boolean,
+)

@@ -22,6 +22,8 @@ import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import ee.schimke.composeai.uibuilder.export.REMOTE_CONTENT_MODIFIERS
 import ee.schimke.composeai.uibuilder.export.RemoteModifierVocabulary
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
+import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
+import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiExpressions
@@ -107,6 +109,26 @@ internal val THEME_PROPERTIES =
     THEME_TYPE_SCALE,
     THEME_CORNER_RADIUS,
   )
+
+/**
+ * Theme-host properties the Theme panel owns and the Properties inspector leaves out: the typefaces
+ * and the default text style, on every kind of theme host. Left out of the inspector's list only —
+ * [UiBuilderEditorReducer.propertyFields] still returns them, because a `CommitProperty` from an
+ * agent or the protocol is validated against that list.
+ */
+internal val THEME_PANEL_PROPERTIES: Set<String> =
+  ThemeTypefaces.PROPERTIES + ThemeTextStyle.PROPERTY
+
+/** [fields] as the Properties inspector lists them: without [THEME_PANEL_PROPERTIES]. */
+internal fun inspectorPropertyFields(fields: List<EditorPropertyField>): List<EditorPropertyField> =
+  fields.filterNot {
+    it.name in THEME_PANEL_PROPERTIES
+  }
+
+/** Whether [fields] belong to a theme host, whose typefaces the Theme panel sets. */
+internal fun ownsThemePanelProperties(fields: List<EditorPropertyField>): Boolean = fields.any {
+  it.name in THEME_PANEL_PROPERTIES
+}
 
 /**
  * The `m3/surface` this design hangs its theme on, or null.

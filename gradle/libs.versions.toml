@@ -242,6 +242,10 @@ json-schema-validator = "3.0.7"
 # must not reach `java-server`'s lane, and `:server:checkServerJvmFloor` is what says so rather
 # than a comment.
 snipme-highlights = "1.1.0"
+# Material You colour schemes from a seed colour, for the Theme panel's generator. Its Compose
+# dependencies are the same Material 3 alpha this build pins (`material3-compose`); keep the two in
+# step when either moves.
+materialkolor = "5.0.1"
 
 [libraries]
 composeai-common-web-escaping = { module = "ee.schimke.composeai:common-web-escaping" }
@@ -338,6 +342,7 @@ okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", version.ref = "okio" }
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
 snipme-highlights = { module = "dev.snipme:highlights", version.ref = "snipme-highlights" }
+materialkolor = { module = "com.materialkolor:material-kolor", version.ref = "materialkolor" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "json-schema-validator" }
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }

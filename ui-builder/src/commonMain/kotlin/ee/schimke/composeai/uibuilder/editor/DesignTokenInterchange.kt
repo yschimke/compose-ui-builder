@@ -157,17 +157,58 @@ fun importDesignTokens(
   if (schemes != null) themeBuilder(schemes, byId, scheme) else dtcg(root, byId)
 }
 
+/** One colour scheme out of a Material Theme Builder export. */
+data class ThemeBuilderScheme(
+  /** The scheme's name in the file: `light`, `dark`, `light-medium-contrast`, … */
+  val name: String,
+  /** Role to `#RRGGBB`, for every role whose value is a colour literal. */
+  val roles: Map<String, String>,
+  /** The scheme names the file carries, for a light/dark choice. */
+  val available: List<String>,
+)
+
+/**
+ * The [preferred] scheme of a Material Theme Builder export, falling back to the first the file
+ * has. Fails when [text] is not one; see [isThemeBuilderExport].
+ */
+fun readThemeBuilderScheme(text: String, preferred: String = "light"): Result<ThemeBuilderScheme> =
+  runCatching {
+    val root =
+      runCatching { Json.parseToJsonElement(text) }.getOrNull() as? JsonObject
+        ?: error("This is not a JSON object")
+    val schemes =
+      root["schemes"] as? JsonObject
+        ?: error("This is not a Material Theme Builder export: it has no \"schemes\"")
+    val (name, roles) = themeBuilderScheme(schemes, preferred)
+    ThemeBuilderScheme(
+      name,
+      roles.entries
+        .mapNotNull { (role, value) ->
+          (value as? JsonPrimitive)
+            ?.takeIf { it.isString }
+            ?.contentOrNull
+            ?.trim()
+            ?.takeIf { it.isArgbColor() }
+            ?.let { role to it.uppercase() }
+        }
+        .toMap(),
+      schemes.entries.filter { it.value is JsonObject }.map { it.key },
+    )
+  }
+
+private fun themeBuilderScheme(schemes: JsonObject, preferred: String): Pair<String, JsonObject> =
+  (schemes[preferred] as? JsonObject)?.let { preferred to it }
+    ?: schemes.entries.firstNotNullOfOrNull { (key, value) ->
+      (value as? JsonObject)?.let { key to it }
+    }
+    ?: error("The Theme Builder file has no colour scheme")
+
 private fun themeBuilder(
   schemes: JsonObject,
   byId: Map<String, DesignToken>,
   preferred: String,
 ): DesignTokenImport {
-  val (name, roles) =
-    (schemes[preferred] as? JsonObject)?.let { preferred to it }
-      ?: schemes.entries.firstNotNullOfOrNull { (key, value) ->
-        (value as? JsonObject)?.let { key to it }
-      }
-      ?: error("The Theme Builder file has no colour scheme")
+  val (name, roles) = themeBuilderScheme(schemes, preferred)
   val values = linkedMapOf<String, String>()
   val unknown = mutableListOf<String>()
   val invalid = mutableListOf<Pair<String, String>>()
