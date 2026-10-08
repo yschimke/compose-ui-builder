@@ -17,6 +17,7 @@ import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyCapability
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
 import ee.schimke.composeai.uibuilder.capability.accepts
+import ee.schimke.composeai.uibuilder.capability.acceptsSeedValue
 import ee.schimke.composeai.uibuilder.capability.insertContent
 import ee.schimke.composeai.uibuilder.capability.textComponentFor
 import ee.schimke.composeai.uibuilder.componentRootOf
@@ -503,8 +504,14 @@ internal fun ComponentCapability.appendDefaultSubtree(
         ?: if (seedStarterContent)
           StarterNode(
             componentId,
-            catalog.insertContent(componentId)?.properties?.takeIf { it.isNotEmpty() }
-              ?: StarterContent.propertiesFor(componentId),
+            catalog.insertContent(componentId)?.properties?.takeIf { published ->
+              // All or nothing: a published seed with one value this component cannot take is
+              // not the catalog's intent half-applied, so the table answers instead.
+              published.isNotEmpty() &&
+                published.all { (name, encoded) ->
+                  propertiesByName[name]?.acceptsSeedValue(encoded) == true
+                }
+            } ?: StarterContent.propertiesFor(componentId),
           )
         else null)
       .withPresets(componentId, presetProperties)
@@ -631,7 +638,10 @@ private fun UiBuilderNode.withStarterProperties(
       // A structured value — an `object` or `list` wrapper — has no single `value` to check
       // against an allowed set, and a property with such a set is never structured.
       val value = encoded["value"] ?: return@filter property.allowedValues.isEmpty()
-      property.allowedValues.isEmpty() || value in property.allowedValues
+      // The validator's own type rule as well, so a seed value of the wrong type — a catalog's
+      // published seed, or a child of one — is dropped here rather than refusing the insert.
+      (property.allowedValues.isEmpty() || value in property.allowedValues) &&
+        property.acceptsSeedValue(encoded)
     }
   if (seeded.isNullOrEmpty()) return this
   return copy(properties = JsonObject(properties + seeded))

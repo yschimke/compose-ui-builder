@@ -651,6 +651,17 @@ private fun PropertyCapability.typeNames(): Set<String> =
     else -> setOf(jsonType.jsonPrimitive.content)
   }
 
+/**
+ * Whether [encoded] is a literal value [this] property accepts, by the rule [CapabilityValidator]
+ * applies to a document: its type, and its allowed values when the property has any. A state
+ * binding is not a literal, so it is not a value an insert can seed.
+ */
+internal fun PropertyCapability.acceptsSeedValue(encoded: JsonObject): Boolean {
+  if ((encoded["type"] as? JsonPrimitive)?.contentOrNull in STATE_BINDING_WRAPPERS) return false
+  val value = encoded.unwrapPropertyValue()
+  return acceptsType(value) && (allowedValues.isEmpty() || value in allowedValues)
+}
+
 private fun PropertyCapability.acceptsType(value: JsonElement): Boolean =
   typeNames().any { type ->
     when (type) {

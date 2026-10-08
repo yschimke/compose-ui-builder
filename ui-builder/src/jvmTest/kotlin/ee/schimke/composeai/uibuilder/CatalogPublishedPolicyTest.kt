@@ -14,6 +14,7 @@ import ee.schimke.composeai.uibuilder.editor.isVerticalScroller
 import ee.schimke.composeai.uibuilder.editor.scrollingContainerOf
 import ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles
 import ee.schimke.composeai.uibuilder.export.FontSettings
+import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -115,6 +116,48 @@ class CatalogPublishedPolicyTest {
   }
 
   @Test
+  fun `an object editor this build cannot draw falls back to the builder's own`() {
+    val builtIn = catalog.editorOf("layout/lazy-column", "contentPadding")
+    assertEquals("padding", builtIn.objectKind)
+
+    val misspelt =
+      publishing(
+        "layout/lazy-column" to
+          policy(propertyEditor("contentPadding", """{"objectKind":"pading"}"""))
+      )
+    assertEquals(builtIn, misspelt.editorOf("layout/lazy-column", "contentPadding"))
+  }
+
+  @Test
+  fun `a published seed value of the wrong type is dropped, not the insert`() {
+    val published =
+      publishing(
+        "m3/button" to
+          JsonObject(
+            mapOf(
+              "insertContent" to
+                Json.parseToJsonElement(
+                  """
+                  {"properties": {"enabled": {"type": "string", "value": "yes"}},
+                   "slots": {"content": [
+                     {"componentId": "m3/text",
+                      "properties": {"text": {"type": "number", "value": 3}}}
+                   ]}}
+                  """
+                )
+            )
+          )
+      )
+
+    val (root, label) = inserted(published)
+    assertFalse("enabled" in root.properties, "${root.properties}")
+    assertFalse(
+      label.properties["text"]?.jsonObject?.get("value")?.jsonPrimitive?.isString == false,
+      "${label.properties}",
+    )
+  }
+
+  @Test
   fun `published insert content is what the component arrives holding`() {
     val published =
       publishing(
@@ -197,7 +240,18 @@ class CatalogPublishedPolicyTest {
       componentsById.getValue(componentId).properties.single { it.name == property }.editor
     )
 
-  private fun insertedLabel(catalog: CapabilityCatalog): String {
+  private fun insertedLabel(catalog: CapabilityCatalog): String =
+    inserted(catalog)
+      .second
+      .properties
+      .getValue("text")
+      .jsonObject
+      .getValue("value")
+      .jsonPrimitive
+      .content
+
+  /** An `m3/button` inserted from the palette: its node and the one child in `content`. */
+  private fun inserted(catalog: CapabilityCatalog): Pair<UiBuilderNode, UiBuilderNode> {
     val reducer = UiBuilderEditorReducer(catalog)
     val initial = reducer.initial(document, selectedNodeId = "main-background")
     val target = requireNotNull(reducer.dropTarget(initial, "m3/button"))
@@ -205,8 +259,7 @@ class CatalogPublishedPolicyTest {
       reducer.reduce(initial, UiBuilderEditorEvent.InsertComponent("m3/button", target))
     assertIs<CommandOutcome.Accepted>(inserted.lastOutcome, inserted.lastOutcome.toString())
     val root = inserted.document.nodes.getValue(assertNotNull(inserted.selectedNodeId))
-    val label = inserted.document.nodes.getValue(root.slots.getValue("content").single())
-    return label.properties.getValue("text").jsonObject.getValue("value").jsonPrimitive.content
+    return root to inserted.document.nodes.getValue(root.slots.getValue("content").single())
   }
 
   /** The packaged catalog, with [policies] published under `statusSemantics.components`. */

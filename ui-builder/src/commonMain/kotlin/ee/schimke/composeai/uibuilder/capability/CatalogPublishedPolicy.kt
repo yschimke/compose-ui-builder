@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.capability
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import ee.schimke.composeai.uibuilder.StarterNode
+import ee.schimke.composeai.uibuilder.editor.EDITOR_OBJECT_VALUE_EDGES
 import ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -60,6 +61,9 @@ internal object CatalogPublishedPolicy {
 
   private fun PropertyEditorCapability.isHonourable(): Boolean {
     if (control == null && objectKind == null) return false
+    // Only the object shapes this build's inspector can edit; a newer or misspelt kind would turn
+    // a property it can edit today into one it cannot.
+    if (objectKind != null && objectKind !in EDITOR_OBJECT_VALUE_EDGES) return false
     if (control != PropertyEditorControl.NUMBER) return true
     val min = minimum ?: return false
     val max = maximum ?: return false
