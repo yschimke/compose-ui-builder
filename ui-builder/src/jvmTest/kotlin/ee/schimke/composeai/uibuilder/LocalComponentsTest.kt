@@ -127,7 +127,7 @@ class LocalComponentsTest {
     val bodyText = made.copy(selection = listOf("email-1-sender"))
 
     val field = reducer.propertyFields(bodyText).first { it.name == "text" }
-    assertTrue(field.notes.orEmpty().contains("sender"), "${field.notes}")
+    assertTrue(field.supporting.orEmpty().contains("sender"), "${field.supporting}")
     val refused =
       reducer.reduce(bodyText, UiBuilderEditorEvent.CommitProperty("email-1-sender", "text", "x"))
     assertIs<CommandOutcome.Rejected>(refused.lastOutcome)
