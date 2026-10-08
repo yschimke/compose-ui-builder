@@ -13,6 +13,7 @@ import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.KOTLIN_HARD_KEYWORDS
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
+import ee.schimke.composeai.uibuilder.export.TwoWayStateBinding
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.canonicalJson
@@ -401,14 +402,17 @@ internal class ComposeEmitter(
       "m3/search-bar" -> emitSearchBar(node, bodyLevel)
       "m3/search-input-field" -> emitSearchInput(node, bodyLevel)
       "m3/snackbar-host" ->
-        line(bodyLevel, "BuilderSnackbarHost(visible = ${node.boolExpression("visible")})")
+        line(
+          bodyLevel,
+          "BuilderSnackbarHost(visible = ${node.boolExpression("visible", stateKotlinTypes)})",
+        )
       "m3/surface" -> emitSurface(node, bodyLevel)
       "m3/card" -> emitCard(node, bodyLevel)
       "m3/checkbox" -> emitToggle(node, bodyLevel, "Checkbox")
       "m3/radio-button" ->
         line(
           bodyLevel,
-          "RadioButton(selected = ${node.boolExpression("selected")}, onClick = ${node.actionLambda("click", stateKotlinTypes)}, enabled = ${node.boolValue("enabled", true)}, ${node.modifierArgument()})",
+          "RadioButton(selected = ${node.boolExpression("selected", stateKotlinTypes)}, onClick = ${node.actionLambda("click", stateKotlinTypes)}, enabled = ${node.boolValue("enabled", true)}, ${node.modifierArgument()})",
         )
       "m3/text-field" -> emitTextField(node, bodyLevel)
       "m3/slider" -> emitSlider(node, bodyLevel)
@@ -460,7 +464,7 @@ internal class ComposeEmitter(
           bodyLevel,
           "Tab",
           "text",
-          "selected = ${node.boolExpression("selected")}, onClick = ${node.actionLambda("click", stateKotlinTypes)}",
+          "selected = ${node.boolExpression("selected", stateKotlinTypes)}, onClick = ${node.actionLambda("click", stateKotlinTypes)}",
         )
       "m3/navigation-suite-scaffold" -> emitNavigationSuite(node, bodyLevel)
       // An item's click is its selection, exactly as a tab's is: the binding the renderer
@@ -671,7 +675,7 @@ internal class ComposeEmitter(
   private fun emitNavigationSuiteItem(node: UiBuilderNode, level: Int) {
     emittedNavigationSuite = true
     line(level, "NavigationSuiteItem(")
-    line(level + 1, "selected = ${node.boolExpression("selected")},")
+    line(level + 1, "selected = ${node.boolExpression("selected", stateKotlinTypes)},")
     line(level + 1, "onClick = ${node.actionLambda("click", stateKotlinTypes)},")
     line(level + 1, "icon = {")
     emitChildren(node.slot("icon"), level + 2)
@@ -883,7 +887,7 @@ internal class ComposeEmitter(
 
   private fun emitFilterChip(node: UiBuilderNode, level: Int) {
     line(level, "FilterChip(")
-    line(level + 1, "selected = ${node.boolExpression("selected")},")
+    line(level + 1, "selected = ${node.boolExpression("selected", stateKotlinTypes)},")
     line(
       level + 1,
       "onClick = ${node.actionLambda("click", stateKotlinTypes)},",
@@ -1248,7 +1252,7 @@ internal class ComposeEmitter(
   private fun emitToggle(node: UiBuilderNode, level: Int, symbol: String) {
     line(
       level,
-      "$symbol(checked = ${node.boolExpression("checked")}, onCheckedChange = ${node.actionLambda("click", stateKotlinTypes)}, enabled = ${node.boolValue("enabled", true)}, ${node.modifierArgument()})",
+      "$symbol(checked = ${node.boolExpression("checked", stateKotlinTypes)}, onCheckedChange = ${node.checkedChangeLambda(stateKotlinTypes)}, enabled = ${node.boolValue("enabled", true)}, ${node.modifierArgument()})",
     )
   }
 
@@ -1477,14 +1481,53 @@ private fun UiBuilderNode.integerExpression(name: String, stateTypes: Map<String
 private fun UiBuilderNode.boolValue(name: String, fallback: Boolean = false): Boolean =
   obj(name)["value"]?.jsonPrimitive?.booleanOrNull ?: fallback
 
-private fun UiBuilderNode.boolExpression(name: String): String {
+/**
+ * A Boolean property: a literal, a `stateEquals` comparison, or a flag read whole.
+ *
+ * A whole read is what "Bind to state" writes for a Boolean variable, and it used to export as
+ * `false` whatever the variable held. With [stateTypes] it reads a `Boolean` as itself and a
+ * `Boolean?` as `== true`, the way the canvas reads a missing value as not-true; without them — a
+ * semantics modifier, which has no emitter in reach — `== true` compiles for either.
+ */
+private fun UiBuilderNode.boolExpression(
+  name: String,
+  stateTypes: Map<String, String>? = null,
+): String {
   val value = obj(name)
-  return if (value.optionalString("type") == "stateEquals") {
-    val variable = value.optionalString("variable")?.identifier() ?: "missingState"
-    "$variable == ${value["value"].kotlinLiteral()}"
-  } else {
-    (value["value"]?.jsonPrimitive?.booleanOrNull ?: false).toString()
+  return when (value.optionalString("type")) {
+    "stateEquals" -> {
+      val variable = value.optionalString("variable")?.identifier() ?: "missingState"
+      "$variable == ${value["value"].kotlinLiteral()}"
+    }
+    "state" -> {
+      val stateName = value.optionalString("variable") ?: return "TODO(\"Missing state variable\")"
+      val variable = stateName.identifier()
+      when (val declared = stateTypes?.get(stateName)) {
+        "Boolean" -> variable
+        "Boolean?" -> "$variable == true"
+        null ->
+          if (stateTypes == null) "$variable == true"
+          else "TODO(\"Undeclared state variable ${stateName.escape()}\")"
+        else -> "TODO(\"State variable ${stateName.escape()} is declared $declared, not Boolean\")"
+      }
+    }
+    else -> (value["value"]?.jsonPrimitive?.booleanOrNull ?: false).toString()
   }
+}
+
+/**
+ * `onCheckedChange` for a two-way bound control: the reported value written back to the variable
+ * `checked` reads, then the `click` actions — or the actions alone when they already write it
+ * ([TwoWayStateBinding]), or when `checked` is not a whole read of a declared flag.
+ */
+private fun UiBuilderNode.checkedChangeLambda(stateTypes: Map<String, String>): String {
+  val actions = actionExpression("click", stateTypes)
+  val variable =
+    TwoWayStateBinding.writeBackVariable(properties["checked"], eventBindings["click"])?.takeIf {
+      stateTypes[it]?.removeSuffix("?") == "Boolean"
+    } ?: return if (actions.isEmpty()) "{}" else "{ $actions }"
+  val writeBack = "${variable.identifier()} = it"
+  return if (actions.isEmpty()) "{ $writeBack }" else "{ $writeBack; $actions }"
 }
 
 /**

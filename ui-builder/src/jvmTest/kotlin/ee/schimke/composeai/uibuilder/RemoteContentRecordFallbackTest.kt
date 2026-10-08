@@ -8,6 +8,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.WearWidgetCodeExporter
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonArray
@@ -279,6 +280,68 @@ class RemoteContentRecordFallbackTest {
     )
     // The absent-binding default is gone from this widget: nothing here binds nothing.
     assertTrue("lambdaAction" !in source, source)
+  }
+
+  private val remoteCheckboxButton =
+    record(
+      "RemoteCheckboxButton",
+      parameter("checked", "androidx.compose.remote.creation.compose.state.RemoteBoolean"),
+      parameter("onCheckedChange", "androidx.compose.remote.creation.compose.action.Action"),
+    )
+
+  private fun checkboxSource(eventBindings: JsonObject): String =
+    assertIs<WearWidgetCodeExporter.Result.Emitted>(
+        WearWidgetCodeExporter.export(
+          widget(
+            mapOf(
+              "box" to
+                UiBuilderNode(
+                  id = "box",
+                  componentId = "remote-m3/checkbox-button",
+                  properties =
+                    buildJsonObject {
+                      put(
+                        "checked",
+                        buildJsonObject {
+                          put("type", JsonPrimitive("state"))
+                          put("variable", JsonPrimitive("notify"))
+                        },
+                      )
+                    },
+                  eventBindings = eventBindings,
+                )
+            ),
+            childId = "box",
+            state = buildJsonObject { put("notify", stateVariable("bool", JsonPrimitive(true))) },
+          ),
+          components = mapOf("remote-m3/checkbox-button" to remoteCheckboxButton),
+        )
+      )
+      .source
+
+  /**
+   * `checked` read whole is two-way bound: its change negates the flag, the Remote spelling of
+   * `onCheckedChange = { notify = it }`, with nothing authored on `checkedChange`.
+   */
+  @Test
+  fun `a checkbox bound to a flag writes it back on change`() {
+    val source = checkboxSource(JsonObject(emptyMap()))
+
+    assertTrue("val notify = rememberMutableRemoteBoolean(true)" in source, source)
+    assertTrue("checked = notify" in source, source)
+    assertTrue("onCheckedChange = valueChange(notify, !notify)" in source, source)
+    assertTrue("lambdaAction" !in source, source)
+  }
+
+  /** An authored write of the bound flag stands alone; the write back does not double it. */
+  @Test
+  fun `an authored toggle of the bound flag is written once`() {
+    val source =
+      checkboxSource(
+        buildJsonObject { put("checkedChange", JsonArray(listOf(action("toggle", "notify")))) }
+      )
+    assertTrue("combinedAction" !in source, source)
+    assertEquals(1, Regex("valueChange\\(notify, !notify\\)").findAll(source).count(), source)
   }
 
   /** An assignment carries the design's value as a Remote value of the declared type. */

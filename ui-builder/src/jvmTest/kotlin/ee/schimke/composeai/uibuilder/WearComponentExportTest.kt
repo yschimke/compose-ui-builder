@@ -133,6 +133,60 @@ class WearComponentExportTest {
     assertTrue("onCheckedChange = { notifyChecked = it }," in source, source)
   }
 
+  /**
+   * Two controls bound to one design flag share the design's own variable: declared once from its
+   * initial value, read by both, and written back by each control's own callback.
+   */
+  @Test
+  fun `checkbox buttons bound to a design flag share it two-way`() {
+    val bound = buildJsonObject {
+      putJsonObject("checked") {
+        put("type", "state")
+        put("variable", "notify")
+      }
+      putJsonObject("label") {
+        put("type", "string")
+        put("value", "Notifications")
+      }
+    }
+    val screen =
+      screenWith(
+        UiBuilderNode(
+          id = "first",
+          componentId = WearScreenCodeExporter.CHECKBOX_BUTTON,
+          properties = bound,
+        ),
+        UiBuilderNode(
+          id = "second",
+          componentId = WearScreenCodeExporter.SWITCH_BUTTON,
+          properties = bound,
+        ),
+      )
+    val source =
+      export(
+        screen.copy(
+          stateVariables =
+            buildJsonObject {
+              putJsonObject("notify") {
+                put("type", "value")
+                put("valueType", "bool")
+                put("initialValue", true)
+                put("persistence", "preview")
+              }
+            }
+        )
+      )
+
+    assertEquals(
+      1,
+      Regex("var notify by remember \\{ mutableStateOf\\(true\\) }").findAll(source).count(),
+      source,
+    )
+    assertEquals(2, Regex("checked = notify,").findAll(source).count(), source)
+    assertEquals(2, Regex("onCheckedChange = \\{ notify = it },").findAll(source).count(), source)
+    assertTrue("firstChecked" !in source && "secondChecked" !in source, source)
+  }
+
   /** `RadioButton`'s callback takes no argument, because a radio row selects itself. */
   @Test
   fun `a radio button generates onSelect rather than onCheckedChange`() {

@@ -1000,10 +1000,11 @@ internal class RemoteContentEmitter(
           authored != null -> remoteValue(node, parameter, authored)
           parameter.typeFqn == ACTION_FQN &&
             (!parameter.hasDefault ||
-              (node.eventBindings[
-                    parameter.name.removePrefix("on").replaceFirstChar { it.lowercaseChar() }]
-                  as? JsonArray)
-                ?.isNotEmpty() == true) -> actionExpression(node, parameter)
+              eventActions(
+                  node,
+                  parameter.name.removePrefix("on").replaceFirstChar { it.lowercaseChar() },
+                )
+                .isNotEmpty()) -> actionExpression(node, parameter)
           parameter.hasDefault -> null
           // Nullable and no default: optional to the design, mandatory to Kotlin. Omitting it
           // does not compile and refusing it would reject a design that legitimately left it
@@ -1092,8 +1093,10 @@ internal class RemoteContentEmitter(
    */
   private fun actionExpression(node: UiBuilderNode, parameter: TargetParameter): String? {
     val event = parameter.name.removePrefix("on").replaceFirstChar { it.lowercaseChar() }
-    val actions = (node.eventBindings[event] as? JsonArray).orEmpty()
+    val actions = eventActions(node, event)
     if (actions.isEmpty()) return lambdaActionExpression()
+    // A two-way write back leads the authored actions; paths still name the authored index.
+    val leading = actions.size - (node.eventBindings[event] as? JsonArray).orEmpty().size
     val operands = linkedMapOf<Int, ActionOperand>()
     actions.forEachIndexed { index, element ->
       val action = element as? JsonObject ?: return@forEachIndexed
@@ -1101,10 +1104,10 @@ internal class RemoteContentEmitter(
       if (value.plainString("type") != "binding") return@forEachIndexed
       if (!UiBuilderBuildFeatures.remoteCompose) {
         refusals +=
-          "nodes.${node.id}.eventBindings.$event[$index]: bound actions are disabled in this build"
+          "nodes.${node.id}.eventBindings.$event[${index - leading}]: bound actions are disabled in this build"
         return null
       }
-      val where = "nodes.${node.id}.eventBindings.$event[$index].value"
+      val where = "nodes.${node.id}.eventBindings.$event[${index - leading}].value"
       val variable = action.plainString("variable")
       val kind = (document.stateVariables[variable] as? JsonObject)?.plainString("valueType")
       val type =
@@ -1138,6 +1141,31 @@ internal class RemoteContentEmitter(
       actions,
       operands.mapValues { (_, operand) -> remoteOperand(operand.kind, operand.expression) },
     )
+  }
+
+  /**
+   * [event]'s authored actions, led by the write back of a two-way bound flag.
+   *
+   * `checkedChange` pairs with `checked`: when `checked` reads a declared `bool` whole and the
+   * authored actions do not already write it ([TwoWayStateBinding]), the change negates it first. A
+   * Remote action carries no event value, and for a flag the only change there is is to its
+   * negation, so `valueChange(checked, !checked)` is the write back `onCheckedChange = { x = it }`
+   * is in the Compose lane — without it a bound `RemoteCheckboxButton` drew the variable and never
+   * changed it.
+   */
+  private fun eventActions(node: UiBuilderNode, event: String): List<JsonElement> {
+    val authored = (node.eventBindings[event] as? JsonArray).orEmpty()
+    if (!event.endsWith("Change")) return authored
+    val variable =
+      TwoWayStateBinding.writeBackVariable(
+        node.properties[event.removeSuffix("Change")],
+        node.eventBindings[event],
+      ) ?: return authored
+    val declaration = document.stateVariables[variable] as? JsonObject ?: return authored
+    if (declaration.plainString("valueType") != "bool") return authored
+    val writeBack =
+      JsonObject(mapOf("type" to JsonPrimitive("toggle"), "variable" to JsonPrimitive(variable)))
+    return listOf(writeBack) + authored
   }
 
   private class ActionOperand(

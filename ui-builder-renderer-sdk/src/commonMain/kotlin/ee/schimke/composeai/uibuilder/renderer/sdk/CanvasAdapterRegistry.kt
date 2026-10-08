@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextLayoutResult
+import ee.schimke.composeai.uibuilder.export.TwoWayStateBinding
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -186,6 +187,20 @@ class CanvasNodeScope(
     if ((wrapper["type"] as? JsonPrimitive)?.contentOrNull != "state") return
     val variable = (wrapper["variable"] as? JsonPrimitive)?.contentOrNull ?: return
     updateState(variable, value)
+  }
+
+  /**
+   * A control's own change callback, two-way bound: write [value] back to the variable [property]
+   * reads, then run [event]'s actions.
+   *
+   * `Checkbox(onCheckedChange = { changeBoundState("checked", it.toString()) })` is the whole
+   * wiring. The write back is skipped when [event]'s actions already write that variable — a hand
+   * authored `toggle` — so a tap changes it once (see [TwoWayStateBinding]).
+   */
+  fun changeBoundState(property: String, value: String?, event: String = "click") {
+    TwoWayStateBinding.writeBackVariable(node.properties[property], node.eventBindings[event])
+      ?.let { updateState(it, value) }
+    dispatchEvent(event)
   }
 
   fun recordTextLayout(result: TextLayoutResult) = recordText(result)

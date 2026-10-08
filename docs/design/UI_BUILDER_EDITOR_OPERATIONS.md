@@ -449,6 +449,23 @@ generates `onCheckedChange = { notify = !notify }`. That is the difference betwe
 picture of one, and it is asserted on one document in `SelectionControlTest` so the two projections
 cannot drift apart.
 
+**Two-way binding.** `checked` can also read a flag whole (`{"type": "state", "variable":
+"notify"}`, what "Bind to state" writes for a Boolean variable), and then it is two-way bound: the
+control's own change writes the reported value back before the `click` actions run, so no
+hand-authored `toggle` is needed — `Checkbox(checked = notify, onCheckedChange = { notify = it })`.
+That is the shape `Slider` and `TextField` already had. An authored action that writes the same
+variable wins and the write back steps aside, so an older design carrying both still writes the flag
+once. One rule, `TwoWayStateBinding` in `ui-builder-export`, serves every lane:
+
+| Lane | Bound `checked` change |
+| --- | --- |
+| Canvas (host and SDK `CanvasNodeScope.changeBoundState`) | write the new value, then dispatch `click` |
+| Compose export | `onCheckedChange = { notify = it; <click actions> }` |
+| Wear export | the design's `var notify by remember { mutableStateOf(…) }`, shared by every row bound to it, and `onCheckedChange = { notify = it }` |
+| Remote Compose export | `val notify = rememberMutableRemoteBoolean(…)` and `onCheckedChange = valueChange(notify, !notify)` ahead of the `checkedChange` actions |
+
+A `stateEquals` comparison is not a variable the control holds and is never written back.
+
 They are also the first pair whose **component record** is authored rather than deferred: Material
 declares `onCheckedChange` as `((Boolean) -> Unit)?`, so a call site can write `null` for it, which
 is the case `ComponentSnippets` documents as the reason `Checkbox`, `RadioButton` and `Switch` get

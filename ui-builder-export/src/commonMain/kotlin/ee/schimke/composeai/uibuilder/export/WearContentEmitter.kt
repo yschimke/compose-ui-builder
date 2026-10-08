@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.export
 import ee.schimke.composeai.discovery.ComponentRecord
 import ee.schimke.composeai.discovery.TargetParameter
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
@@ -1539,11 +1540,12 @@ internal class WearContentEmitter(
     usesText = true
     val callback = if (flag == "selected") "onSelect" else "onCheckedChange"
     val state =
-      rememberedBoolean(
-        nodeId,
-        flag.replaceFirstChar(Char::uppercaseChar),
-        node.boolean(flag) ?: false,
-      )
+      documentFlag(node, flag)
+        ?: rememberedBoolean(
+          nodeId,
+          flag.replaceFirstChar(Char::uppercaseChar),
+          node.boolean(flag) ?: false,
+        )
     val secondary = node.string("secondaryLabel")
     return listOf("${pad}$symbol(") +
       listOf(
@@ -1716,6 +1718,38 @@ internal class WearContentEmitter(
     val name = uniqueStateName(nodeId, role)
     usesRememberState = true
     rememberedState += "var $name by remember { mutableFloatStateOf(${initial.dp()}f) }"
+    return name
+  }
+
+  /** Document state variables already declared, by exported identifier. */
+  private val documentState = mutableSetOf<String>()
+
+  /**
+   * The design's own state variable [flag] is two-way bound to, declared once at the top of the
+   * screen, or null when [flag] is not a whole read of a non-null `bool` with a Boolean initial
+   * value — the cases the per-node local still covers.
+   *
+   * Two controls bound to one variable then share it, which is what binding them meant: ticking one
+   * ticks the other, as it does on the canvas. The change callback writes the reported value back
+   * ([TwoWayStateBinding]); this screen does not lower `eventBindings`, so an authored `toggle` of
+   * the same variable and the write back are the same single write.
+   */
+  private fun documentFlag(node: UiBuilderNode, flag: String): String? {
+    val variable = TwoWayStateBinding.boundVariable(node.properties[flag]) ?: return null
+    val declaration = document.stateVariables[variable] as? JsonObject ?: return null
+    val initial = (declaration["initialValue"] as? JsonPrimitive)?.takeUnless { it.isString }
+    val valueType = (declaration["valueType"] as? JsonPrimitive)?.contentOrNull
+    if ((declaration["nullable"] as? JsonPrimitive)?.booleanOrNull == true) return null
+    if (valueType != null && valueType != "bool") return null
+    val value = initial?.booleanOrNull ?: return null
+    val name = exportedStateIdentifier(variable)
+    if (name !in documentState) {
+      // A node-local that already folded to this name keeps it; this binding falls back to one.
+      if (!stateNames.add(name)) return null
+      documentState += name
+      usesRememberState = true
+      rememberedState += "var $name by remember { mutableStateOf($value) }"
+    }
     return name
   }
 

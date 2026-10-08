@@ -131,6 +131,57 @@ class SelectionControlTest {
     assertTrue("m3/switch" in COMPOSE_EMITTED_CLICK_COMPONENTS)
   }
 
+  /**
+   * A bare read is what "Bind to state" writes for a Boolean variable, and it is two-way: the
+   * control's own `onCheckedChange` writes the value back, so no hand-authored `toggle` is needed.
+   * Before this, the exporter wrote `checked = false` for it whatever the variable held.
+   */
+  @Test
+  fun `a checkbox bound whole to a flag is two-way bound in the export`() {
+    val (inserted, nodeId) = insert("m3/checkbox", withFlag)
+    val bound =
+      reducer.reduce(
+        inserted,
+        UiBuilderEditorEvent.BindPropertyToState(nodeId, "checked", "notify"),
+      )
+    assertIs<CommandOutcome.Accepted>(bound.lastOutcome, bound.lastOutcome.toString())
+    assertEquals(
+      "state",
+      (bound.document.nodes.getValue(nodeId).properties.getValue("checked") as JsonObject)
+        .getValue("type")
+        .jsonPrimitive
+        .content,
+    )
+
+    val source = CapabilityComposeCodeExporter.export(bound.document, catalog).requireSource()
+    assertTrue("Checkbox(checked = notify, onCheckedChange = { notify = it }" in source, source)
+  }
+
+  /** A `toggle` the author already added writes the flag once; the write back steps aside. */
+  @Test
+  fun `an authored toggle of the bound flag is not doubled by the write back`() {
+    val initial = reducer.initial(withFlag, selectedNodeId = "main-background")
+    val target = requireNotNull(reducer.dropTarget(initial, "m3/switch"))
+    val inserted =
+      reducer.reduce(
+        initial,
+        UiBuilderEditorEvent.InsertComponentWithAction(
+          componentId = "m3/switch",
+          target = target,
+          action = EditorStateAction.Toggle("notify"),
+        ),
+      )
+    val nodeId = assertNotNull(inserted.selectedNodeId)
+    val bound =
+      reducer.reduce(
+        inserted,
+        UiBuilderEditorEvent.BindPropertyToState(nodeId, "checked", "notify"),
+      )
+
+    val source = CapabilityComposeCodeExporter.export(bound.document, catalog).requireSource()
+    assertTrue("Switch(checked = notify, onCheckedChange = { notify = !notify }" in source, source)
+  }
+
   private fun exportOf(componentId: String): String {
     val (state, _) = insert(componentId, document)
     return CapabilityComposeCodeExporter.export(state.document, catalog).requireSource()
