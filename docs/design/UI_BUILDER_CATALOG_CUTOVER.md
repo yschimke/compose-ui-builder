@@ -108,6 +108,7 @@ As captured on 2026-10-07. Each line is work in a catalog repository, not here.
 | `a2ui-catalog` | the same, and it publishes no seed templates; the generic blank is the builder's layout vocabulary, which an A2UI client cannot draw | `{"adapter": "a2ui-program", "version": 1}`, and publish today's `a2ui-column` seed as `ui-builder/designs/a2ui-column.json` |
 | `glimmer-catalog` | declares no export and publishes no templates | glimmer has no emitter in this build at all; it gets the generic blank and no export until it publishes a seed and an emitter exists for it |
 | `m3-catalog` | the published `adaptive-navigation` seed holds `m3/icon` nodes without an `imageVector`, which the generic export refuses | give the template's icons a vector (the Kotlin `AdaptiveScreenTemplates` seed exports), or export icons from the asset registry |
+| `remote-widgets` | has no delivery branch, so there is no `ui-builder.json` to serve it from; when it has one, it declares no `composeSourceExport` either | add a `remote-widgets` lane to remote-m3-catalog's `design-artifacts.yml` (its own `REMOTE_WIDGETS_UI_BUILDER.md` lists this), register it on the preview server, then declare `{"adapter": "remote-compose-launcher-widget", "version": 1}` with the same ordering as the rows above |
 
 `declaring the export route, and A2UI publishing its seed, is all the export half needs` proves the
 first three rows are the whole fix: with the declarations added and A2UI's built-in seed frozen to a
@@ -122,6 +123,37 @@ Also not in the ledger, and still true: the policy's `templates` entries are bar
 chooser card names a template after its file rather than the label and supporting text the built-in
 table carries. Object-shaped entries (`UI_BUILDER_SEED_TEMPLATES.md`) fix it; until then it is
 copy, not correctness.
+
+## Launcher widgets: `remote-widgets`
+
+`remote-widgets` is the phone launcher widget design system remote-m3-catalog publishes from
+`:widget-catalog` (its `docs/design/REMOTE_WIDGETS_UI_BUILDER.md`), with
+`LauncherWidgetCodeExporter` and catalog-declared frame sizes on this side (compose-ui-builder#556). It arrived after
+the flag and is the catalog the cutover fits best:
+
+- **Nothing here synthesises it**, so its definition was only ever its own published file. It has
+  no Kotlin catalog to delete and no legacy pin to freeze.
+- **Its sizes are already catalog data.** `frame.geometry.sizesDp` is the launcher grid (`1x1` …
+  `5x2`), read by `UiBuilderFrameGeometry.sizes` for the frame picker. Under the flag the exporter
+  names its preview from the same block (`CatalogExportRouting.frameSizes`) instead of
+  `LauncherWidgetGrid`, the Kotlin copy of the table.
+- **It publishes its own seeds** (`launcher-widget-2x1`, `counter-widget`). Off the flag it is
+  offered the builder's mobile `blank` and `jetcaster` seeds, which are not launcher widgets at
+  all; this is the one catalog where the flag fixes the seeds, not just moves them.
+- **Its export is the last id-routed emitter.** Off the flag `RecordFreeExport` reaches the launcher
+  emitter only because the root is spelled `remote-widgets/launcher-widget`
+  (`isLauncherWidget()`). Under the flag the catalog declares
+  `CatalogExportRouting.LAUNCHER_WIDGET` (`remote-compose-launcher-widget` v1) and
+  `RecordFreeExport.generate(document, route, frameSizes)` writes the widget around whatever screen
+  root the catalog publishes. `LauncherWidgetCutoverTest` renames the root to one this build has
+  never seen and shows it still exports declared, and does not when routed by id.
+
+`LauncherWidgetCutoverTest` holds all of this against the policy and templates the repository wrote,
+captured by `scripts/capture-catalog-cutover-fixtures.sh` from the source repository with
+`"published": false` until the delivery branch exists. The ledger row above is the branch.
+
+**Recommendation: flip `remote-widgets` first.** It has nothing to fall back to and nothing to
+delete, so owning it is only gain, and it is the smallest proof of the whole path on a real box.
 
 ## Switching over
 
@@ -154,6 +186,7 @@ readiness test is green with that catalog owned, and `ledger empty for it` is th
 | `UiBuilderNewDesignSeed`'s `when`s, `newDesignCatalog`'s table, `NEW_DESIGN_CATALOG_ORDER`, the home screen's three-id list | ~250 | the catalog-owned readers above | all catalogs owned |
 | `synthesisers`, `LEGACY_*` fallbacks in `ProductionUiBuilderRuntime` | — | — | all catalogs owned; `LegacySynthesisedReferences` **stays** (it is the only record of those pins) |
 | `docs/design/fixtures/ui-builder/{wear-m3,remote-m3,a2ui-catalog}-capabilities-v1.json` goldens and their `--strict` gates | — | the catalog-cutover fixtures | together with their generator, as contract phase 5 says |
+| `isLauncherWidget()`'s root-id test, in `RecordFreeExport` and in the editor model's minimum frame size, and `LauncherWidgetGrid`'s cell table | ~60 | `remote-widgets`' `composeSourceExport` declaration and `frame.geometry.sizesDp` | `remote-widgets` owned; the editor's minimum then reads "this catalog declares sizes" from the frame block it already parses |
 
 `blankUiBuilderDocument`, `ComposeFoundationCatalog` and the packaged `m3-catalog` capability stay:
 they are the builder's floor, not knowledge of somebody else's catalog.

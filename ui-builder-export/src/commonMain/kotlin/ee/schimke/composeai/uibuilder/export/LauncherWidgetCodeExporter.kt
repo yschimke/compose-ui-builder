@@ -53,19 +53,28 @@ object LauncherWidgetCodeExporter {
    * @param packageName the package the file declares, or null for the Code pane's snippet.
    * @param components the catalog's own records — `WidgetButton` and the rest — which the body's
    *   record-driven fallback writes from.
+   * @param rootComponentId the component a design's root must be. [ROOT] while the export is routed
+   *   by component id; under the catalog-owned cutover it is whatever screen root the declaring
+   *   catalog publishes, because the catalog chose this emitter by its `composeSourceExport`
+   *   declaration rather than by the name of its root (`CatalogExportRouting.LAUNCHER_WIDGET`).
+   * @param frameSizes the catalog's own `frame.geometry.sizesDp`, label by `width x height`, which
+   *   name the preview. Null reads the [LauncherWidgetGrid] reference table, which is the same
+   *   table `remote-widgets` publishes.
    */
   fun export(
     document: UiBuilderDocument,
     packageName: String? = null,
     components: Map<String, ComponentRecord> = emptyMap(),
+    rootComponentId: String = ROOT,
+    frameSizes: List<CatalogFrameSize>? = null,
   ): Result {
     val rootId =
       document.roots.singleOrNull() ?: return Result.Refused(listOf("a widget design has one root"))
     val root =
       document.nodes[rootId] ?: return Result.Refused(listOf("the root node `$rootId` is missing"))
-    if (root.componentId != ROOT) {
+    if (root.componentId != rootComponentId) {
       return Result.Refused(
-        listOf("the root is `${root.componentId}`, not a launcher widget (`$ROOT`)")
+        listOf("the root is `${root.componentId}`, not a launcher widget (`$rootComponentId`)")
       )
     }
     val contentIds = root.slots["content"].orEmpty()
@@ -114,13 +123,22 @@ object LauncherWidgetCodeExporter {
         }
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
 
-    val widthDp = document.environmentDp("widthDp") ?: LauncherWidgetGrid.DEFAULT.widthDp
-    val heightDp = document.environmentDp("heightDp") ?: LauncherWidgetGrid.DEFAULT.heightDp
+    val widthDp =
+      document.environmentDp("widthDp")
+        ?: frameSizes?.firstOrNull()?.widthDp
+        ?: LauncherWidgetGrid.DEFAULT.widthDp
+    val heightDp =
+      document.environmentDp("heightDp")
+        ?: frameSizes?.firstOrNull()?.heightDp
+        ?: LauncherWidgetGrid.DEFAULT.heightDp
     // Off the grid is still a widget — a launcher's cells are not the reference ones — so it is
     // previewed at the size it was drawn at, named by dp rather than by a cell count it does not
     // have.
-    val size = LauncherWidgetGrid.of(widthDp, heightDp)
-    val previewLabel = size?.label ?: "${widthDp}x${heightDp}dp"
+    val catalogLabel =
+      frameSizes?.firstOrNull { it.widthDp == widthDp && it.heightDp == heightDp }?.label
+    val previewLabel =
+      if (frameSizes != null) catalogLabel ?: "${widthDp}x${heightDp}dp"
+      else LauncherWidgetGrid.of(widthDp, heightDp)?.label ?: "${widthDp}x${heightDp}dp"
     val source = buildString {
       appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
       appendLine("@file:Suppress(\"RestrictedApi\")")

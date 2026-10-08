@@ -1,6 +1,11 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 
 /**
  * Which Kotlin emitter a catalog's designs export through.
@@ -30,6 +35,14 @@ public object CatalogExportRouting {
   /** An A2UI surface: the A2UI messages and the Kotlin program that sends them. */
   public const val A2UI: String = "a2ui-program"
 
+  /**
+   * A phone launcher widget: `LauncherWidgetCodeExporter`'s `RemoteComposeWidget`, rooted on the
+   * catalog's own screen root and previewed at the catalog's own `frame.geometry.sizesDp`. Routing
+   * by this declaration is what lets a launcher widget catalog name its root anything: routed by
+   * component id, only `remote-widgets/launcher-widget` reaches this emitter.
+   */
+  public const val LAUNCHER_WIDGET: String = "remote-compose-launcher-widget"
+
   /** The first version of each record-free lane. */
   public const val V1: Int = 1
 
@@ -38,6 +51,7 @@ public object CatalogExportRouting {
       (WEAR_SCREEN to V1) to UiBuilderCatalogPlatform.WEAR,
       (REMOTE_COMPOSE to V1) to UiBuilderCatalogPlatform.REMOTE_COMPOSE,
       (A2UI to V1) to UiBuilderCatalogPlatform.A2UI,
+      (LAUNCHER_WIDGET to V1) to UiBuilderCatalogPlatform.REMOTE_COMPOSE,
     )
 
   /** Where a catalog's designs export. */
@@ -106,4 +120,40 @@ public object CatalogExportRouting {
       Route.NotDeclared,
       is Route.Unsupported -> null
     }
+
+  /**
+   * [catalog]'s `statusSemantics.frame.geometry.sizesDp`, in its order, or empty for a catalog
+   * sized by device. A row this build cannot read is a size it does not offer, never an exception;
+   * the editor's `UiBuilderFrameGeometry.sizes` reads the same block the same way.
+   */
+  public fun frameSizes(catalog: CatalogCapabilityV1): List<CatalogFrameSize> =
+    frameSizes(catalog.statusSemantics)
+
+  /** [frameSizes] read from a `statusSemantics` block, or a policy file of the same shape. */
+  public fun frameSizes(statusSemantics: JsonObject): List<CatalogFrameSize> {
+    val geometry =
+      ((statusSemantics["frame"] as? JsonObject)?.get("geometry") as? JsonObject)
+        ?: return emptyList()
+    val rows = geometry["sizesDp"] as? JsonArray ?: return emptyList()
+    return rows.mapNotNull { row ->
+      val size = row as? JsonObject ?: return@mapNotNull null
+      val width = (size["widthDp"] as? JsonPrimitive)?.intOrNull ?: return@mapNotNull null
+      val height = (size["heightDp"] as? JsonPrimitive)?.intOrNull ?: return@mapNotNull null
+      if (width <= 0 || height <= 0) return@mapNotNull null
+      CatalogFrameSize(
+        widthDp = width,
+        heightDp = height,
+        label =
+          (size["label"] as? JsonPrimitive)?.contentOrNull?.takeIf(String::isNotBlank)
+            ?: "${width}x${height}dp",
+      )
+    }
+  }
 }
+
+/** One size a catalog declares its designs are authored at: `{widthDp, heightDp, label}`. */
+public data class CatalogFrameSize(
+  public val widthDp: Int,
+  public val heightDp: Int,
+  public val label: String,
+)

@@ -11,6 +11,50 @@ import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
  */
 object RecordFreeExport {
 
+  /**
+   * Record-free export under the catalog-owned cutover: [route] is what
+   * `CatalogExportRouting.route` resolved from the catalog's `composeSourceExport` declaration.
+   *
+   * A declared launcher widget reaches [LauncherWidgetCodeExporter] whatever its root is called,
+   * previewed at the catalog's [frameSizes]; every other record-free route is the platform-routed
+   * [generate] below, asked as the platform its declaration names. A route that offers no
+   * record-free export (an undeclared or unsupported one, or the record projection) is null, as a
+   * design the record-driven generator owns always was.
+   */
+  fun generate(
+    document: UiBuilderDocument,
+    route: CatalogExportRouting.Route,
+    frameSizes: List<CatalogFrameSize> = emptyList(),
+    packageName: String? = null,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+  ): Generated? {
+    if (
+      route is CatalogExportRouting.Route.RecordFree &&
+        route.adapter == CatalogExportRouting.LAUNCHER_WIDGET
+    ) {
+      if (!UiBuilderBuildFeatures.remoteCompose) return null
+      val root =
+        document.roots.singleOrNull()?.let(document.nodes::get)
+          ?: return Generated.Refused(listOf("a widget design has one root"))
+      return when (
+        val result =
+          LauncherWidgetCodeExporter.export(
+            document,
+            packageName,
+            packComponents,
+            rootComponentId = root.componentId,
+            frameSizes = frameSizes.takeIf { it.isNotEmpty() },
+          )
+      ) {
+        is LauncherWidgetCodeExporter.Result.Emitted -> Generated.Emitted(result.source)
+        is LauncherWidgetCodeExporter.Result.Refused -> Generated.Refused(result.reasons)
+      }
+    }
+    val platform = CatalogExportRouting.recordFreePlatform(route) ?: return null
+    return generate(document, platform, packageName, packComponents, assets)
+  }
+
   /** Catalog-directed source export; ordinary Remote roots need no Wear widget scaffold. */
   fun generate(
     document: UiBuilderDocument,
