@@ -64,6 +64,7 @@ import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetTemplates
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NewDesignState
+import ee.schimke.composeai.uibuilder.export.RemoteClockTemplate
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
@@ -1930,7 +1931,13 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
                 label = it.label,
                 supportingText = it.supportingText,
               )
-            },
+            } +
+            // Not a widget: Remote content whose canvas animates with the time.
+            UiBuilderNewDesignTemplate(
+              id = RemoteClockTemplate.TEMPLATE_ID,
+              label = RemoteClockTemplate.LABEL,
+              supportingText = RemoteClockTemplate.SUPPORTING_TEXT,
+            ),
       )
     "wear-m3" ->
       UiBuilderNewDesignCatalog(

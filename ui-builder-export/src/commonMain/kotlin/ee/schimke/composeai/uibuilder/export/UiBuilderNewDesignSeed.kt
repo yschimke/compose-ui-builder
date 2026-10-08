@@ -51,7 +51,8 @@ object UiBuilderNewDesignSeed {
     when (catalogSystemId) {
       "remote-m3" ->
         setOf("wear-widget-small", "wear-widget-large", AdaptiveWearWidget.TEMPLATE_ID) +
-          WearWidgetSample.entries.map(WearWidgetSample::templateId)
+          WearWidgetSample.entries.map(WearWidgetSample::templateId) +
+          RemoteClockTemplate.TEMPLATE_ID
       "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
       A2uiDocumentExporter.CATALOG_SYSTEM_ID -> setOf(A2UI_TEMPLATE)
       LauncherWidgetTemplates.CATALOG_SYSTEM_ID -> LauncherWidgetTemplates.ids
@@ -234,6 +235,13 @@ object UiBuilderNewDesignSeed {
           )
           // The New design form's state, as the blank and catalog-owned seeds keep it.
           .withDeclaredState(state)
+      // Remote content rather than a widget: its root is a box, so it opens on no host frame.
+      catalogSystemId == "remote-m3" && templateId == RemoteClockTemplate.TEMPLATE_ID ->
+        RemoteClockTemplate.document(
+          designId = designId,
+          catalogPin = catalogPin,
+          environment = environment,
+        )
       catalogSystemId == "remote-m3" && templateId == AdaptiveWearWidget.TEMPLATE_ID ->
         AdaptiveWearWidget.newDocument(
           designId = designId,
