@@ -15,7 +15,6 @@ import ee.schimke.composeai.uibuilder.export.ClockCanvas.Companion.twoDigits
 import ee.schimke.composeai.uibuilder.export.RemoteClockTemplates
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 
 /*
  * The clock designs as the editor canvas draws them, at 10:10:30 on a Thursday rather than the
@@ -60,8 +59,8 @@ private const val ID = "clock-preview"
 
 private val PIN = wearWidgetSampleCatalogPin
 
-private val CLOCK_TIME =
-  JsonObject(wearWidgetSampleEnvironment + ("fixedTime" to JsonPrimitive("2024-05-16T10:10:30Z")))
+/** The shared environment; the clocks set their own 10:10:30 ([ClockCanvas.PREVIEW_TIME]). */
+private val CLOCK_TIME = wearWidgetSampleEnvironment
 
 private const val RESIN = "#FF1C1D1F"
 private const val STRAP = "#FF141414"

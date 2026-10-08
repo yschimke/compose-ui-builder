@@ -6,7 +6,10 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 
 /**
  * The clock templates are Remote content that animates on its own: loops draw their repeated marks,
@@ -82,6 +85,45 @@ class RemoteClockTemplatesTest {
     assertEquals("THU 16", evaluate(clock, "digital-date"))
     assertEquals("+0", evaluate(clock, "digital-utc"))
     assertEquals(listOf("s"), UiDrawing.loopIndices(clock, "digital-second-mark"))
+  }
+
+  @Test
+  fun `every clock opens at 10 10 30, whatever time the environment it is given names`() {
+    RemoteClockTemplates.entries.forEach {
+      val clock =
+        it.document(
+          it.templateId,
+          JsonObject(emptyMap()),
+          JsonObject(mapOf("fixedTime" to JsonPrimitive("2024-05-16T12:00:00Z"))),
+        )
+      assertEquals(JsonPrimitive(ClockCanvas.PREVIEW_TIME), clock.environment["fixedTime"])
+    }
+  }
+
+  @Test
+  fun `a clock seed keeps the state the New design form declared`() {
+    if (!UiBuilderBuildFeatures.remoteCompose) return
+    val declared = NewDesignState("alarmOn", NewDesignStateType.Flag, JsonPrimitive(false))
+    val root =
+      generateSequence(File(".").absoluteFile) { it.parentFile }
+        .first { File(it, "docs/design/fixtures/ui-builder").isDirectory }
+    val fixture =
+      Json.parseToJsonElement(
+          File(root, "docs/design/fixtures/ui-builder/jetcaster-discover-operations-v1.json")
+            .readText()
+        )
+        .jsonObject
+    val seeded =
+      UiBuilderNewDesignSeed.document(
+        catalogSystemId = "remote-m3",
+        templateId = RemoteClockTemplates.Analog.templateId,
+        designId = "clock",
+        catalogRevision = "candidate",
+        nativeRuntimeId = "candidate",
+        fixture = fixture,
+        state = listOf(declared),
+      )
+    assertTrue("alarmOn" in seeded.stateVariables, seeded.stateVariables.toString())
   }
 
   @Test

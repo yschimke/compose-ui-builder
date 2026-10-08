@@ -239,11 +239,10 @@ object UiBuilderNewDesignSeed {
           .withDeclaredState(state)
       // Remote content rather than a widget: its root is a box, so it opens on no host frame.
       catalogSystemId == "remote-m3" && clock != null ->
-        clock.document(
-          designId = designId,
-          catalogPin = catalogPin,
-          environment = environment,
-        )
+        clock
+          .document(designId = designId, catalogPin = catalogPin, environment = environment)
+          // The New design form's state, as the blank and launcher seeds keep it.
+          .withDeclaredState(state)
       catalogSystemId == "remote-m3" && templateId == AdaptiveWearWidget.TEMPLATE_ID ->
         AdaptiveWearWidget.newDocument(
           designId = designId,

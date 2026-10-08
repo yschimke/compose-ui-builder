@@ -168,6 +168,9 @@ class ClockCanvas private constructor(private val sizeDp: Int) {
   }
 
   companion object {
+    /** The instant a clock opens at in the editor: Thursday 16 May 2024, 10:10:30 UTC. */
+    const val PREVIEW_TIME: String = "2024-05-16T10:10:30Z"
+
     /** The frame and canvas side every clock is drawn at. */
     const val SIZE_DP: Int = 200
 
@@ -226,7 +229,13 @@ class ClockCanvas private constructor(private val sizeDp: Int) {
         environment =
           JsonObject(
             environment +
-              mapOf("widthDp" to JsonPrimitive(sizeDp), "heightDp" to JsonPrimitive(sizeDp))
+              mapOf(
+                "widthDp" to JsonPrimitive(sizeDp),
+                "heightDp" to JsonPrimitive(sizeDp),
+                // 10:10:30, the watch-face convention: at a fixture's noon every hand stacks on
+                // twelve, and the picture cannot show that each turns by its own formula.
+                "fixedTime" to JsonPrimitive(PREVIEW_TIME),
+              )
           ),
         stateVariables = JsonObject(emptyMap()),
         roots = listOf(rootId),
