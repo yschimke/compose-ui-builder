@@ -70,14 +70,15 @@ load from a sandbox, and the Gradle/JDK gotchas that cost hours are written down
 that repository, in any direction, for any reason.
 
 They are released to Maven Central (the web archive as a GitHub release asset), and the server pins
-a release through the BOM. The CI job `server-against-checkout` builds compose-preview-server's
-`main` against this checkout (`-PcomposeUiBuilderDir`) and runs its `:server` and `:mcp` tests, so
-**a change to a seam module that breaks the server goes red here.** Don't make that job pass by
-weakening it: a deliberate seam break, like a package move, has to land together with the matching
-compose-preview-server change. Push that change to a compose-preview-server branch named exactly
-like this pull request's branch and the job builds it instead of the server's `main`. The server
-branch then merges with the release that carries the break, bumping its pin in the same commit.
-Until it does, the job is red on `main` here, so cut that release promptly.
+a release through the BOM. Nothing here builds or tests the server: a change that breaks it surfaces
+on the server's next `composeai-ui-builder` bump, which is where the fix lands anyway. A
+`server-against-checkout` job here used to run the server's tests against this checkout. It was
+removed because nearly every red it raised was a server test restating this repository's behaviour
+(which guideline rules are asked, what an export refuses), which no pull request here can fix, and
+one merged red left `main` red for every pull request after it. A check whose join both sides see —
+the catalog and the export, say — belongs here as a test (`RemoteM3VocabularyParityTest` is one). A
+deliberate seam break, like a package move, ships in a release whose notes say so, and the server's
+bump carries the matching change.
 
 Three more modules leave this repository, but as **test fixtures, not seams**:
 `:ui-builder-renderer`, `:ui-builder-reference-jetcaster` and `:ui-builder-generated-jetcaster`
