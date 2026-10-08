@@ -64,6 +64,7 @@ import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetTemplates
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NewDesignState
+import ee.schimke.composeai.uibuilder.export.RemoteClockTemplates
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
@@ -1840,6 +1841,9 @@ internal fun catalogOwnership(): CatalogOwnership = runCatching {
 )
 private external fun catalogOwnershipParameter(): String
 
+/** The heading `remote-m3`'s widget templates sit under, apart from its plain Remote content. */
+private const val WIDGET_GROUP = "Wear widget"
+
 /** The chooser's order. Anything not named here (there is nothing today) sorts first. */
 internal val NEW_DESIGN_CATALOG_ORDER =
   listOf(
@@ -1907,11 +1911,13 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
               id = "wear-widget-small",
               label = "Blank small widget",
               supportingText = "216×76dp host with a single content slot.",
+              group = WIDGET_GROUP,
             ),
             UiBuilderNewDesignTemplate(
               id = "wear-widget-large",
               label = "Blank large widget",
               supportingText = "216×124dp host with a single content slot.",
+              group = WIDGET_GROUP,
             ),
             UiBuilderNewDesignTemplate(
               id = AdaptiveWearWidget.TEMPLATE_ID,
@@ -1919,6 +1925,7 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
               supportingText =
                 "A starting point: headline, supporting and action slots, laid out for both " +
                   "sizes. Small drops the supporting line.",
+              group = WIDGET_GROUP,
             ),
           ) +
             // The two worked samples, after the empty scaffolds rather than before them: a blank
@@ -1929,6 +1936,16 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
                 id = it.templateId,
                 label = it.label,
                 supportingText = it.supportingText,
+                group = WIDGET_GROUP,
+              )
+            } +
+            // Not widgets: Remote content whose canvas animates with the time.
+            RemoteClockTemplates.offered.map {
+              UiBuilderNewDesignTemplate(
+                id = it.templateId,
+                label = it.label,
+                supportingText = it.supportingText,
+                group = "Remote content",
               )
             },
       )
