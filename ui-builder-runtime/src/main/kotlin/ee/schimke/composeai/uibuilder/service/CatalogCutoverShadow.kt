@@ -37,7 +37,8 @@ public object CatalogCutoverShadow {
    * as this build serves it today (with the builder vocabulary and font settings it adds), and the
    * published one as served owned. Comparing the raw published file instead would report the
    * builder's own layout components as lost, which no flip loses. [Report.differences] is null for
-   * a catalog this build synthesises nothing for, which has nothing to lose.
+   * a catalog this build synthesises nothing for, which has nothing to lose, and for one that
+   * cannot be owned at all because it declares no platform.
    */
   public fun report(
     catalogId: String,
@@ -48,6 +49,11 @@ public object CatalogCutoverShadow {
     exportRecord: ComponentRecordFile? = null,
     nativeRuntimeId: String? = null,
   ): Report {
+    // Owning a catalog that names no platform is refused outright, so there is no owned catalog to
+    // compare: the finding says why, and there are no differences to report.
+    if (published.declaredPlatform == null) {
+      return Report(catalogId, listOf(noPlatform(catalogId)), differences = null)
+    }
     val owned = servedCatalog(catalogId, mapOf(catalogId to published), owned = true)
     val kotlin =
       owned.second.synthesisedCatalog(catalogId)?.let {
@@ -119,6 +125,7 @@ public object CatalogCutoverShadow {
     exportRecord: ComponentRecordFile? = null,
     nativeRuntimeId: String? = null,
   ): List<String> {
+    if (published.declaredPlatform == null) return listOf(noPlatform(catalogId))
     val ownership = CatalogOwnership.of(setOf(catalogId))
     val executor =
       CurrentM3UiBuilderCatalogExecutor.Builder()
@@ -236,12 +243,22 @@ public object CatalogCutoverShadow {
     }
   }
 
+  private fun noPlatform(catalogId: String): String =
+    "$catalogId: its published file declares no platform (statusSemantics.platform), which an " +
+      "owned catalog cannot borrow from the Kotlin one"
+
   private fun componentDifferences(
     kotlin: ComponentCapabilityV1,
     published: ComponentCapabilityV1,
   ): List<String> = buildList {
     if (kotlin.role != published.role) add("role ${kotlin.role} -> ${published.role}")
     differ("traits", kotlin.traits.toSet(), published.traits.toSet())?.let(::add)
+    differ(
+        "modifiers",
+        kotlin.modifierCapabilities.toSet(),
+        published.modifierCapabilities.toSet(),
+      )
+      ?.let(::add)
     val kotlinProperties = kotlin.properties.associateBy { it.name }
     val publishedProperties = published.properties.associateBy { it.name }
     differ("properties", kotlinProperties.keys, publishedProperties.keys)?.let(::add)

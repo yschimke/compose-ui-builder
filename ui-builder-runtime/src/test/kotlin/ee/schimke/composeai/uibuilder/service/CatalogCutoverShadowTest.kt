@@ -4,9 +4,11 @@ import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.JsonObject
 
 /**
  * [CatalogCutoverShadow]: the check a deployment runs for a catalog it shadows before flipping it.
@@ -118,5 +120,54 @@ class CatalogCutoverShadowTest {
         fixture = CatalogCutoverProbe.fixture,
       )
     assertNull(report.differences)
+  }
+
+  /** Owning a catalog with no platform is refused, so shadow reports that rather than throwing. */
+  @Test
+  fun `a published catalog that declares no platform is a finding, not a crash`() {
+    val wear = CatalogCutoverFixtures.catalog("wear-m3")
+    val unplatformed =
+      wear
+        .newBuilder()
+        .also {
+          it.statusSemantics =
+            JsonObject(wear.statusSemantics - CurrentM3UiBuilderCatalogExecutor.PLATFORM_KEY)
+        }
+        .build()
+    val report =
+      CatalogCutoverShadow.report(
+        catalogId = "wear-m3",
+        published = unplatformed,
+        templates = CatalogCutoverFixtures.templates("wear-m3"),
+        fixture = CatalogCutoverProbe.fixture,
+      )
+    assertFalse(report.ready)
+    assertTrue(
+      report.findings.single().contains("declares no platform"),
+      report.findings.toString(),
+    )
+    assertNull(report.differences)
+  }
+
+  @Test
+  fun `a component whose modifiers change is reported`() {
+    val kotlin = assertNotNull(executor.synthesisedCatalog("wear-m3"))
+    val modified = kotlin.components.first { it.modifierCapabilities.isNotEmpty() }
+    val published =
+      kotlin
+        .newBuilder()
+        .also { builder ->
+          builder.components =
+            kotlin.components.map {
+              if (it.componentId != modified.componentId) it
+              else it.newBuilder().also { c -> c.modifierCapabilities = emptyList() }.build()
+            }
+        }
+        .build()
+    assertTrue(
+      CatalogCutoverShadow.catalogDifferences(kotlin, published).any {
+        it.startsWith("wear-m3/${modified.componentId}: modifiers: loses")
+      }
+    )
   }
 }
