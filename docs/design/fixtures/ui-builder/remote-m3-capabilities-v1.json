@@ -18619,6 +18619,9 @@
                     "group": "Selection",
                     "variantProperty": "mode"
                 },
+                "m3/variable-font-text": {
+                    "group": "Content"
+                },
                 "remote-compose/custom": {
                     "group": "Embedded"
                 },

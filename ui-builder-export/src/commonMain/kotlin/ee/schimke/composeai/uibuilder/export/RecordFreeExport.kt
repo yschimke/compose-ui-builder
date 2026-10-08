@@ -320,6 +320,8 @@ object RecordFreeExport {
     previews: Boolean = !tagNodes,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    variableFonts: VariableFontSourceGenerator = VariableFontSourceGenerator.Unavailable,
+    variableFontMode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
   ): Generated? =
     when {
       // A widget takes no [tagNodes]: it generates a `WearWidgetDocument` of Remote Compose, whose
@@ -335,7 +337,15 @@ object RecordFreeExport {
         // publishes.
         WearWidgetCodeExporter.export(document, packageName, assets, packComponents).generated()
       document.isWearScreen() ->
-        WearScreenCodeExporter.export(document, packageName, tagNodes, previews, packComponents)
+        WearScreenCodeExporter.export(
+            document,
+            packageName,
+            tagNodes,
+            previews,
+            packComponents,
+            variableFonts,
+            variableFontMode,
+          )
           .generated()
       else -> null
     }
@@ -364,6 +374,8 @@ object RecordFreeExport {
     previews: Boolean = !tagNodes,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    variableFonts: VariableFontSourceGenerator = VariableFontSourceGenerator.Unavailable,
+    variableFontMode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
   ): Generated? {
     if (!document.isRecordFree()) return null
     return runCatching {
@@ -374,6 +386,8 @@ object RecordFreeExport {
         previews,
         packComponents,
         assets,
+        variableFonts,
+        variableFontMode,
       )
     }
       .getOrElse { failure ->

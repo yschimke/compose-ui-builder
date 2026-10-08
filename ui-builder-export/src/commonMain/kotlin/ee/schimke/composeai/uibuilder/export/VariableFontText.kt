@@ -70,9 +70,12 @@ object VariableFontText {
     }
   }
 
-  /** The axis properties any [Font] has, in the order a catalog lists them. */
-  val AXIS_PROPERTIES: List<String> =
-    Font.entries.flatMap { font -> font.axes.map { it.property } }.distinct()
+  /**
+   * The axis properties any [Font] has, in the order a catalog lists them. Spelled out rather than
+   * derived from [Font.axes], because they are catalog property names that the Wear lane's
+   * readership check looks for by name; `VariableFontTextTest` holds the two equal.
+   */
+  val AXIS_PROPERTIES: List<String> = listOf("wght", "wdth", "slnt", "rond")
 
   /** What the generated composable draws with. */
   enum class Target {

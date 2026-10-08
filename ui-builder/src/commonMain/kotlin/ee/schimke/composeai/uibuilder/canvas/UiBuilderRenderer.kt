@@ -1009,6 +1009,16 @@ private fun RenderNode(
       // structured-path export the SVG lane needs. Drawing it twice would be two answers to one
       // question.
       "wear-m3/icon" -> BuilderIcon(node, measured)
+      // flexpress's text, stood in for by Wear's `Text` in the same variable font at the same
+      // axes; see `variableFontTextStyle`.
+      "wear-m3/variable-font-text" ->
+        WearText(
+          node.string("text"),
+          measured,
+          color = node.color("color", Color.Unspecified),
+          style = variableFontTextStyle(node, wearTextStyle("")),
+          onTextLayout = { host.recordTextLayout(path, it) },
+        )
       // Wear's own `Text`, reading the same properties as the mobile branch. The style comes from
       // `wearTextStyle`, which resolves roles against Wear's type scale.
       "wear-m3/text" -> {
@@ -1903,6 +1913,15 @@ private fun RenderNode(
           color = node.color("color", MaterialTheme.colorScheme.outlineVariant),
         )
       "m3/icon" -> BuilderIcon(node, measured)
+      // flexpress's text, stood in for by Material's `Text`; see `variableFontTextStyle`.
+      "m3/variable-font-text" ->
+        Text(
+          node.string("text"),
+          measured,
+          color = node.color("color", Color.Unspecified),
+          style = variableFontTextStyle(node, LocalTextStyle.current),
+          onTextLayout = { host.recordTextLayout(path, it) },
+        )
       "m3/text" -> {
         val font = resolveFontSettings(node, node.textStyle(), wear = false)
         Text(

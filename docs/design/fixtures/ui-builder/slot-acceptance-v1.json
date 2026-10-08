@@ -207,6 +207,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -256,6 +257,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -301,6 +303,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -346,6 +349,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -394,6 +398,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -439,6 +444,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -484,6 +490,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -638,6 +645,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -799,6 +807,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -844,6 +853,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -852,7 +862,8 @@
                 "shape/radial-gradient"
             ],
             "m3/center-aligned-top-app-bar.title": [
-                "m3/text"
+                "m3/text",
+                "m3/variable-font-text"
             ],
             "m3/dialog.confirmButton": [
                 "m3/button",
@@ -903,6 +914,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -911,10 +923,12 @@
                 "shape/radial-gradient"
             ],
             "m3/dialog.title": [
-                "m3/text"
+                "m3/text",
+                "m3/variable-font-text"
             ],
             "m3/filter-chip.label": [
-                "m3/text"
+                "m3/text",
+                "m3/variable-font-text"
             ],
             "m3/filter-chip.leadingIcon": [
                 "asset/image",
@@ -928,6 +942,7 @@
                 "m3/switch",
                 "m3/text",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "shape/colour-dot",
                 "shape/linear-gradient",
                 "shape/radial-gradient"
@@ -940,7 +955,8 @@
                 "m3/icon"
             ],
             "m3/list-item.headline": [
-                "m3/text"
+                "m3/text",
+                "m3/variable-font-text"
             ],
             "m3/list-item.supporting": [
                 "asset/image",
@@ -980,6 +996,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -1025,6 +1042,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -1044,12 +1062,14 @@
                 "m3/switch",
                 "m3/text",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "shape/colour-dot",
                 "shape/linear-gradient",
                 "shape/radial-gradient"
             ],
             "m3/navigation-suite-item.label": [
-                "m3/text"
+                "m3/text",
+                "m3/variable-font-text"
             ],
             "m3/navigation-suite-scaffold.content": [
                 "asset/image",
@@ -1093,6 +1113,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -1141,6 +1162,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -1197,7 +1219,8 @@
                 "m3/switch"
             ],
             "m3/search-input-field.placeholder": [
-                "m3/text"
+                "m3/text",
+                "m3/variable-font-text"
             ],
             "m3/search-input-field.trailingIcon": [
                 "m3/button",
@@ -1245,6 +1268,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -1294,6 +1318,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -1302,10 +1327,12 @@
                 "shape/radial-gradient"
             ],
             "m3/tab.text": [
-                "m3/text"
+                "m3/text",
+                "m3/variable-font-text"
             ],
             "m3/text-field.label": [
-                "m3/text"
+                "m3/text",
+                "m3/variable-font-text"
             ],
             "m3/text-field.leadingIcon": [
                 "m3/button",
@@ -1316,10 +1343,12 @@
                 "m3/switch"
             ],
             "m3/text-field.placeholder": [
-                "m3/text"
+                "m3/text",
+                "m3/variable-font-text"
             ],
             "m3/text-field.supportingText": [
-                "m3/text"
+                "m3/text",
+                "m3/variable-font-text"
             ],
             "m3/text-field.trailingIcon": [
                 "m3/button",
@@ -1371,6 +1400,7 @@
                 "m3/text",
                 "m3/text-field",
                 "m3/time-picker",
+                "m3/variable-font-text",
                 "remote-compose/custom",
                 "remote-compose/document",
                 "remote-compose/inline",
@@ -4027,7 +4057,8 @@
                 "wear-m3/text",
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
-                "wear-m3/transforming-lazy-column"
+                "wear-m3/transforming-lazy-column",
+                "wear-m3/variable-font-text"
             ],
             "layout/column.children": [
                 "asset/image",
@@ -4056,7 +4087,8 @@
                 "wear-m3/text",
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
-                "wear-m3/transforming-lazy-column"
+                "wear-m3/transforming-lazy-column",
+                "wear-m3/variable-font-text"
             ],
             "layout/row.children": [
                 "asset/image",
@@ -4085,7 +4117,8 @@
                 "wear-m3/text",
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
-                "wear-m3/transforming-lazy-column"
+                "wear-m3/transforming-lazy-column",
+                "wear-m3/variable-font-text"
             ],
             "wear-m3/alert-dialog.confirmButton": [
                 "wear-m3/button",
@@ -4120,7 +4153,8 @@
                 "wear-m3/text",
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
-                "wear-m3/transforming-lazy-column"
+                "wear-m3/transforming-lazy-column",
+                "wear-m3/variable-font-text"
             ],
             "wear-m3/alert-dialog.dismissButton": [
                 "wear-m3/button",
@@ -4160,7 +4194,8 @@
                 "wear-m3/text",
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
-                "wear-m3/transforming-lazy-column"
+                "wear-m3/transforming-lazy-column",
+                "wear-m3/variable-font-text"
             ],
             "wear-m3/card.content": [
                 "asset/image",
@@ -4188,7 +4223,8 @@
                 "wear-m3/text",
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
-                "wear-m3/transforming-lazy-column"
+                "wear-m3/transforming-lazy-column",
+                "wear-m3/variable-font-text"
             ],
             "wear-m3/edge-button.content": [
                 "asset/image",
@@ -4217,7 +4253,8 @@
                 "wear-m3/text",
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
-                "wear-m3/transforming-lazy-column"
+                "wear-m3/transforming-lazy-column",
+                "wear-m3/variable-font-text"
             ],
             "wear-m3/icon-button.content": [
                 "wear-m3/icon"
@@ -4249,7 +4286,8 @@
                 "wear-m3/text",
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
-                "wear-m3/transforming-lazy-column"
+                "wear-m3/transforming-lazy-column",
+                "wear-m3/variable-font-text"
             ],
             "wear-m3/screen-scaffold.edgeButton": [
                 "wear-m3/button",
@@ -4289,7 +4327,8 @@
                 "wear-m3/text",
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
-                "wear-m3/transforming-lazy-column"
+                "wear-m3/transforming-lazy-column",
+                "wear-m3/variable-font-text"
             ],
             "wear-m3/text-button.content": [
                 "asset/image",
@@ -4318,7 +4357,8 @@
                 "wear-m3/text",
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
-                "wear-m3/transforming-lazy-column"
+                "wear-m3/transforming-lazy-column",
+                "wear-m3/variable-font-text"
             ],
             "wear-m3/transforming-lazy-column.items": [
                 "asset/image",
@@ -4346,7 +4386,8 @@
                 "wear-m3/text",
                 "wear-m3/text-button",
                 "wear-m3/time-picker",
-                "wear-m3/transforming-lazy-column"
+                "wear-m3/transforming-lazy-column",
+                "wear-m3/variable-font-text"
             ]
         }
     }

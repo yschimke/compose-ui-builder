@@ -85,6 +85,13 @@ object ScreenExportGate {
      * `GoogleFont`; see [TypefaceTarget] for the desktop form and who asks for it.
      */
     typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
+    /**
+     * Writes the declaration each variable font text calls, joined into the screen's file after it.
+     * [VariableFontSourceGenerator.Unavailable] (the wasm editor's code pane) leaves the calls with
+     * a note that the declarations come at export.
+     */
+    variableFonts: VariableFontSourceGenerator = VariableFontSourceGenerator.Unavailable,
+    variableFontMode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
   ): Outcome {
     if (record == null) {
       // Named rather than silent: "this host has no record for the catalog" is a different problem
@@ -117,7 +124,13 @@ object ScreenExportGate {
             )
         ) {
           is ScreenGenerator.Result.Refused -> Outcome.Refused(generated.reasons)
-          is ScreenGenerator.Result.Emitted -> Outcome.Emitted(generated.source)
+          is ScreenGenerator.Result.Emitted ->
+            withVariableFontTexts(
+              generated.source,
+              projected.variableFontTexts,
+              variableFonts,
+              variableFontMode,
+            )
         }
     }
   }
@@ -149,7 +162,13 @@ object ScreenExportGate {
     // Document order, deduplicated: one line per component, not one per node. A design with 29
     // icons in it has one icon problem.
     return document.nodes.values
-      .filter { it.component == null && it.componentId != "layout/for-each" }
+      // A variable font text calls a declaration generated at export, which the projection
+      // records itself; see `VariableFontTextRecord`.
+      .filter {
+        it.component == null &&
+          it.componentId != "layout/for-each" &&
+          it.componentId != VariableFontText.M3_ID
+      }
       .map { it.componentId }
       .distinct()
       .mapNotNull { id ->
@@ -166,6 +185,43 @@ object ScreenExportGate {
             "(${aliased.joinToString(", ") { "`${it.canonicalId}`" }}), so it identifies none of " +
             "them"
       }
+  }
+
+  /**
+   * [source] with the declarations its variable font texts call joined in after it, or the refusals
+   * of any [variableFonts] could not generate. Without a generator the calls stay, with a note
+   * naming what is generated at export.
+   */
+  private fun withVariableFontTexts(
+    source: String,
+    requests: List<VariableFontText.Request>,
+    variableFonts: VariableFontSourceGenerator,
+    mode: VariableFontExportMode,
+  ): Outcome {
+    if (requests.isEmpty()) return Outcome.Emitted(source)
+    val generated = requests.map { variableFonts.generate(it, PACKAGE_NAME, mode) }
+    val refusals = generated.filterIsInstance<VariableFontSource.Refused>().map { it.reason }
+    if (refusals.isNotEmpty()) return Outcome.Refused(refusals.distinct())
+    val files = generated.filterIsInstance<VariableFontSource.Generated>().map { it.source }
+    val pending = requests.filterIndexed { index, _ -> generated[index] == null }
+    val noted = buildString {
+      if (files.isNotEmpty() && mode == VariableFontExportMode.LIBRARY) {
+        appendLine(
+          "// Its variable font text draws through flexpress: " +
+            "implementation(\"ee.schimke.flexpress:flexpress-compose:$FLEXPRESS_VERSION\")."
+        )
+      }
+      append(source.trimEnd())
+      appendLine()
+      pending.forEach {
+        appendLine()
+        appendLine(
+          "// ${it.functionName} draws \"${it.spec.text}\" in ${it.spec.font.family} from the " +
+            "font's outlines (flexpress). It is generated when the design exports."
+        )
+      }
+    }
+    return Outcome.Emitted(joinKotlinFiles(noted, files))
   }
 
   /** Why the export would refuse [document], or empty when it would succeed. */

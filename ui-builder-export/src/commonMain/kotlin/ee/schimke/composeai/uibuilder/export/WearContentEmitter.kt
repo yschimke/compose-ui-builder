@@ -105,6 +105,13 @@ internal class WearContentEmitter(
   /** The hoisted state declarations, in the order their nodes were reached. */
   fun stateDeclarations(): List<String> = rememberedState.toList()
 
+  /** The variable font texts this screen draws, in the order their nodes were reached. */
+  private val variableFontSpecs = mutableListOf<VariableFontText.Spec>()
+
+  /** The declarations [variableFontSpecs] need generated, one per distinct text. */
+  fun variableFontRequests(): List<VariableFontText.Request> =
+    VariableFontText.requests(variableFontSpecs)
+
   /**
    * The scaffold's content, as `TransformingLazyColumn` item bodies.
    *
@@ -212,6 +219,7 @@ internal class WearContentEmitter(
     val node = document.nodes[nodeId] ?: return refused("node `$nodeId` is missing")
     val pad = indent(depth)
     return when (node.componentId) {
+      VariableFontText.WEAR_ID -> variableFontText(node, nodeId, pad, transformed)
       WearScreenCodeExporter.TEXT -> {
         usesText = true
         // `SurfaceTransformation` is a *surface* treatment — upstream applies it to `ListHeader`,
@@ -1516,6 +1524,58 @@ internal class WearContentEmitter(
   private fun refused(reason: String): List<String> {
     refusals += reason
     return emptyList()
+  }
+
+  /**
+   * A call to the composable flexpress generates for [node]'s text: its font, its text and its axes
+   * are the declaration's, generated at export (see [WearScreenCodeExporter.export]), and the call
+   * carries the rest. Every axis the design sets is held at its value; an axis bound to state or
+   * computed is refused until this generator declares a design's state, and the text has to be
+   * literal because the outline is worked out from it ahead of time.
+   */
+  private fun variableFontText(
+    node: UiBuilderNode,
+    nodeId: String,
+    pad: String,
+    transformed: Boolean,
+  ): List<String> {
+    val label = "`${node.componentId}` (node `$nodeId`)"
+    val fontName = node.stringOrNull("font")?.takeIf(String::isNotEmpty)
+    val font =
+      if (fontName == null) VariableFontText.Font.RobotoFlex
+      else
+        VariableFontText.Font.fromWire(fontName)
+          ?: return refused("$label names the font `$fontName`, which is not one it draws in")
+    val text = node.stringOrNull("text") ?: return refused("$label has no literal text to draw")
+    val bound =
+      VariableFontText.AXIS_PROPERTIES.filter { it in node.properties && node.number(it) == null }
+    if (bound.isNotEmpty()) {
+      return refused(
+        "$label binds ${bound.joinToString { "`$it`" }}: a Wear screen exports a variable font " +
+          "text's axes as literals until its generator declares the design's state"
+      )
+    }
+    val location =
+      VariableFontText.AXIS_PROPERTIES.mapNotNull { property ->
+          node.number(property)?.let { (font.axis(property)?.tag ?: property) to it }
+        }
+        .toMap()
+    val spec =
+      VariableFontText.Spec(font, text, emptyList(), location, VariableFontText.Target.COMPOSE_UI)
+    val problems = VariableFontText.problems(spec)
+    if (problems.isNotEmpty()) return problems.flatMap { refused("$label: $it") }
+    variableFontSpecs += spec
+    val name = with(VariableFontText) { requests(variableFontSpecs).of(spec).functionName }
+    textImports += "sp"
+    val arguments =
+      listOf("fontSize = ${(node.number("fontSizeSp")?.takeIf { it > 0f } ?: 32f).dp()}.sp") +
+        listOfNotNull(
+          modifierChain(nodeId, textPropertyModifier(node), transformedHeight(transformed))?.let {
+            "modifier = $it"
+          },
+          colorExpression(node, "color")?.let { "color = $it" },
+        )
+    return listOf("${pad}$name(") + arguments.map { "${pad}${INDENT}$it," } + listOf("${pad})")
   }
 
   /**

@@ -94,6 +94,11 @@ object WearScreenCodeExporter {
    *   change to one repository. A caller that has to say `tagNodes = true, previews = false` is a
    *   caller that cannot compile until this module publishes, which is a two-repository release for
    *   one flag.
+   *
+   * @param variableFonts writes the declaration each variable font text calls, which is joined into
+   *   this file after the screen. [VariableFontSourceGenerator.Unavailable] (the wasm editor's Code
+   *   pane) writes the calls with a note that the declarations come at export.
+   * @param variableFontMode whether those declarations draw through flexpress or by themselves.
    */
   fun export(
     document: UiBuilderDocument,
@@ -101,6 +106,8 @@ object WearScreenCodeExporter {
     tagNodes: Boolean = false,
     previews: Boolean = !tagNodes,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
+    variableFonts: VariableFontSourceGenerator = VariableFontSourceGenerator.Unavailable,
+    variableFontMode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
   ): Result {
     val rootId = document.roots.singleOrNull() ?: return refuse("a screen design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
@@ -143,7 +150,19 @@ object WearScreenCodeExporter {
     val typography = emitter.themeTypography(rootId, fonts, depth = 2)
     // The role text with no `style` is set in, as the canvas provides it; see [ThemeTextStyle].
     val textRole = ThemeTextStyle.role(root)?.let(ThemeTextStyle::wearRole)
+    val variableFontRequests = emitter.variableFontRequests()
+    val variableFontSources = variableFontRequests.map {
+      variableFonts.generate(it, packageName ?: VARIABLE_FONT_PACKAGE, variableFontMode)
+    }
+    variableFontSources.filterIsInstance<VariableFontSource.Refused>().forEach {
+      refusals += it.reason
+    }
     if (refusals.isNotEmpty()) return Result.Refused(refusals.distinct())
+    val variableFontFiles =
+      variableFontSources.filterIsInstance<VariableFontSource.Generated>().map { it.source }
+    val variableFontsPending = variableFontRequests.filterIndexed { index, _ ->
+      variableFontSources[index] == null
+    }
 
     val name = document.screenIdentifier()
     val timeText = root.text("timeText")
@@ -153,145 +172,160 @@ object WearScreenCodeExporter {
     // modes, and the source it compiles is never one a person keeps. An export keeps the body
     // under the design's name and its previews wrap it.
     val screenFunction = if (previews) name else "${name}Content"
+    val screenSource = buildString {
+      appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
+      if (variableFontFiles.isNotEmpty() && variableFontMode == VariableFontExportMode.LIBRARY) {
+        appendLine(
+          "// Its variable font text draws through flexpress: " +
+            "implementation(\"ee.schimke.flexpress:flexpress-compose:$FLEXPRESS_VERSION\")."
+        )
+      }
+      appendLine()
+      if (packageName != null) {
+        appendLine("package $packageName")
+        appendLine()
+      }
+      (emitter.imports(timeText != null, previews) +
+          fonts.imports +
+          if (textRole != null)
+            listOf(
+              "androidx.wear.compose.material3.MaterialTheme",
+              "androidx.wear.compose.material3.ProvideTextStyle",
+            )
+          else emptyList())
+        .distinct()
+        .sorted()
+        .forEach { appendLine("import $it") }
+      appendLine()
+      appendLine("@Composable")
+      appendLine("fun $screenFunction() {")
+      appendLine("${INDENT}val listState = rememberTransformingLazyColumnState()")
+      appendLine("${INDENT}val spec = rememberTransformationSpec()")
+      // A slider, a stepper, a selection control and a dialog are all controlled: they take a
+      // value and hand back a new one. Hoisting that here is what an author would write, and it
+      // is the difference between a generated screen you can run and one you have to finish.
+      emitter.stateDeclarations().forEach { appendLine("${INDENT}$it") }
+      // No `AppScaffold` here. It belongs once at the app's root, around the navigation host,
+      // with `ScreenScaffold` per destination — which is how ComposeStarter's `WearApp` is
+      // built. A screen that brought its own nested one inside every destination it was
+      // dropped into, and its `TimeText` froze the clock at the design's `10:10` in shipping
+      // code. The previews below supply both, which is where a frozen time belongs.
+      // The screen's theme wraps the scaffold and its dialogs, which is everything the design
+      // draws, so a re-skinned primary reaches the edge button and the progress ring as well
+      // as the rows that name a colour. Written as an indented block around the unchanged
+      // screen rather than threaded through every emitter's depth.
+      val screen = StringBuilder()
+      with(screen) {
+        append("${INDENT}ScreenScaffold(scrollState = listState")
+        emitter.rootModifier(rootId)?.let { append(", modifier = $it") }
+        appendLine(",")
+        // The indicator is the design's choice, and the capture guard is not. The guard stays
+        // on both arms: a long screenshot composites many frames into one image, and an
+        // indicator painted at a different offset in every slice lands as a column of dashes
+        // down the edge. `LocalScrollCaptureInProgress` is the platform's own signal for that —
+        // Android's system long-screenshot sets it — so reading it is app behaviour rather than
+        // a preview concession.
+        if (root.flag("scrollIndicator") ?: true) {
+          appendLine(
+            "${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
+          )
+        } else {
+          appendLine("${INDENT}${INDENT}scrollIndicator = null,")
+        }
+        if (edgeButton != null) {
+          appendLine("${INDENT}${INDENT}edgeButton = {")
+          edgeButton.forEach { appendLine(it) }
+          appendLine("${INDENT}${INDENT}},")
+        }
+        appendLine("${INDENT}) { contentPadding ->")
+        body.forEach { appendLine(it) }
+        appendLine("${INDENT}}")
+        overlays.forEach { appendLine(it) }
+      }
+      if (textRole != null) {
+        // Inside the theme, so the role is the themed one; around everything the screen draws.
+        val provided = screen.lines().dropLast(1)
+        screen.clear()
+        screen.appendLine("${INDENT}ProvideTextStyle(MaterialTheme.typography.$textRole) {")
+        provided.forEach { screen.appendLine(if (it.isEmpty()) it else INDENT + it) }
+        screen.appendLine("${INDENT}}")
+      }
+      if (colorScheme == null && typography == null) append(screen)
+      else {
+        if (typography == null) appendLine("${INDENT}MaterialTheme(colorScheme = $colorScheme) {")
+        else {
+          // The typefaces as well as the colours: one theme, so the scaffold's text and every
+          // row inside it read the same type scale the canvas drew.
+          appendLine("${INDENT}MaterialTheme(")
+          colorScheme?.let { appendLine("$INDENT${INDENT}colorScheme = $it,") }
+          typography.forEach(::appendLine)
+          appendLine("$INDENT) {")
+        }
+        screen.lines().dropLast(1).forEach { appendLine(if (it.isEmpty()) it else INDENT + it) }
+        appendLine("${INDENT}}")
+      }
+      appendLine("}")
+      fonts.declarations.forEach {
+        appendLine()
+        appendLine(it)
+      }
+      // `AppScaffold` owns the status strip — `ScreenScaffold` has no `timeText` argument — so
+      // a design that declares one gets the pair, frozen, around the screen.
+      val appScaffold =
+        if (timeText != null)
+          "AppScaffold(timeText = { TimeText { timeTextCurvedText(${timeText.quoted()}) } }) { $screenFunction() }"
+        else "AppScaffold { $screenFunction() }"
+      if (previews) {
+        appendLine()
+        // Every round size, because a Wear screen that only ever rendered at one is a screen
+        // whose list has not been seen wrap. `WearPreviewDevices` is the shipped provider for
+        // exactly this.
+        appendLine("@WearPreviewDevices")
+        appendLine("@Composable")
+        appendLine("fun ${name}Preview() {")
+        appendLine("${INDENT}$appScaffold")
+        appendLine("}")
+        appendLine()
+        // The second preview is the one that answers "is the canvas telling the truth?".
+        //
+        // `ScrollMode.LONG` stitches the whole scroll into one tall PNG **with the row
+        // transformation off**, which is exactly what the builder's stadium draws — so this
+        // render and the design as it appeared on the canvas are the same picture, and a
+        // difference between them is a bug in one of the two. The multipreview above cannot
+        // carry it: `LONG` on five devices is five stitched captures to answer a question one
+        // answers, and the parity claim is about the small round screen a design is authored
+        // on.
+        appendLine(
+          "@Preview(device = ${WEAR_PARITY_DEVICE.quoted()}, showBackground = true, backgroundColor = 0xFF000000)"
+        )
+        appendLine("@ScrollingPreview(modes = [ScrollMode.LONG])")
+        appendLine("@Composable")
+        appendLine("fun ${name}LongPreview() {")
+        appendLine("${INDENT}$appScaffold")
+        appendLine("}")
+      } else {
+        appendLine()
+        appendLine("@Composable")
+        appendLine("fun $name() {")
+        appendLine("${INDENT}$appScaffold")
+        appendLine("}")
+      }
+      variableFontsPending.forEach {
+        appendLine()
+        appendLine(
+          "// ${it.functionName} draws \"${it.spec.text}\" in ${it.spec.font.family} " +
+            "from the font's outlines (flexpress). It is generated when the design exports."
+        )
+      }
+    }
     return Result.Emitted(
       screenName = name,
-      source =
-        buildString {
-          appendLine("// Generated from a Compose UI builder design. Do not edit by hand.")
-          appendLine()
-          if (packageName != null) {
-            appendLine("package $packageName")
-            appendLine()
-          }
-          (emitter.imports(timeText != null, previews) +
-              fonts.imports +
-              if (textRole != null)
-                listOf(
-                  "androidx.wear.compose.material3.MaterialTheme",
-                  "androidx.wear.compose.material3.ProvideTextStyle",
-                )
-              else emptyList())
-            .distinct()
-            .sorted()
-            .forEach { appendLine("import $it") }
-          appendLine()
-          appendLine("@Composable")
-          appendLine("fun $screenFunction() {")
-          appendLine("${INDENT}val listState = rememberTransformingLazyColumnState()")
-          appendLine("${INDENT}val spec = rememberTransformationSpec()")
-          // A slider, a stepper, a selection control and a dialog are all controlled: they take a
-          // value and hand back a new one. Hoisting that here is what an author would write, and it
-          // is the difference between a generated screen you can run and one you have to finish.
-          emitter.stateDeclarations().forEach { appendLine("${INDENT}$it") }
-          // No `AppScaffold` here. It belongs once at the app's root, around the navigation host,
-          // with `ScreenScaffold` per destination — which is how ComposeStarter's `WearApp` is
-          // built. A screen that brought its own nested one inside every destination it was
-          // dropped into, and its `TimeText` froze the clock at the design's `10:10` in shipping
-          // code. The previews below supply both, which is where a frozen time belongs.
-          // The screen's theme wraps the scaffold and its dialogs, which is everything the design
-          // draws, so a re-skinned primary reaches the edge button and the progress ring as well
-          // as the rows that name a colour. Written as an indented block around the unchanged
-          // screen rather than threaded through every emitter's depth.
-          val screen = StringBuilder()
-          with(screen) {
-            append("${INDENT}ScreenScaffold(scrollState = listState")
-            emitter.rootModifier(rootId)?.let { append(", modifier = $it") }
-            appendLine(",")
-            // The indicator is the design's choice, and the capture guard is not. The guard stays
-            // on both arms: a long screenshot composites many frames into one image, and an
-            // indicator painted at a different offset in every slice lands as a column of dashes
-            // down the edge. `LocalScrollCaptureInProgress` is the platform's own signal for that —
-            // Android's system long-screenshot sets it — so reading it is app behaviour rather than
-            // a preview concession.
-            if (root.flag("scrollIndicator") ?: true) {
-              appendLine(
-                "${INDENT}${INDENT}scrollIndicator = { if (!LocalScrollCaptureInProgress.current) ScrollIndicator(listState) },"
-              )
-            } else {
-              appendLine("${INDENT}${INDENT}scrollIndicator = null,")
-            }
-            if (edgeButton != null) {
-              appendLine("${INDENT}${INDENT}edgeButton = {")
-              edgeButton.forEach { appendLine(it) }
-              appendLine("${INDENT}${INDENT}},")
-            }
-            appendLine("${INDENT}) { contentPadding ->")
-            body.forEach { appendLine(it) }
-            appendLine("${INDENT}}")
-            overlays.forEach { appendLine(it) }
-          }
-          if (textRole != null) {
-            // Inside the theme, so the role is the themed one; around everything the screen draws.
-            val provided = screen.lines().dropLast(1)
-            screen.clear()
-            screen.appendLine("${INDENT}ProvideTextStyle(MaterialTheme.typography.$textRole) {")
-            provided.forEach { screen.appendLine(if (it.isEmpty()) it else INDENT + it) }
-            screen.appendLine("${INDENT}}")
-          }
-          if (colorScheme == null && typography == null) append(screen)
-          else {
-            if (typography == null)
-              appendLine("${INDENT}MaterialTheme(colorScheme = $colorScheme) {")
-            else {
-              // The typefaces as well as the colours: one theme, so the scaffold's text and every
-              // row inside it read the same type scale the canvas drew.
-              appendLine("${INDENT}MaterialTheme(")
-              colorScheme?.let { appendLine("$INDENT${INDENT}colorScheme = $it,") }
-              typography.forEach(::appendLine)
-              appendLine("$INDENT) {")
-            }
-            screen.lines().dropLast(1).forEach { appendLine(if (it.isEmpty()) it else INDENT + it) }
-            appendLine("${INDENT}}")
-          }
-          appendLine("}")
-          fonts.declarations.forEach {
-            appendLine()
-            appendLine(it)
-          }
-          // `AppScaffold` owns the status strip — `ScreenScaffold` has no `timeText` argument — so
-          // a design that declares one gets the pair, frozen, around the screen.
-          val appScaffold =
-            if (timeText != null)
-              "AppScaffold(timeText = { TimeText { timeTextCurvedText(${timeText.quoted()}) } }) { $screenFunction() }"
-            else "AppScaffold { $screenFunction() }"
-          if (previews) {
-            appendLine()
-            // Every round size, because a Wear screen that only ever rendered at one is a screen
-            // whose list has not been seen wrap. `WearPreviewDevices` is the shipped provider for
-            // exactly this.
-            appendLine("@WearPreviewDevices")
-            appendLine("@Composable")
-            appendLine("fun ${name}Preview() {")
-            appendLine("${INDENT}$appScaffold")
-            appendLine("}")
-            appendLine()
-            // The second preview is the one that answers "is the canvas telling the truth?".
-            //
-            // `ScrollMode.LONG` stitches the whole scroll into one tall PNG **with the row
-            // transformation off**, which is exactly what the builder's stadium draws — so this
-            // render and the design as it appeared on the canvas are the same picture, and a
-            // difference between them is a bug in one of the two. The multipreview above cannot
-            // carry it: `LONG` on five devices is five stitched captures to answer a question one
-            // answers, and the parity claim is about the small round screen a design is authored
-            // on.
-            appendLine(
-              "@Preview(device = ${WEAR_PARITY_DEVICE.quoted()}, showBackground = true, backgroundColor = 0xFF000000)"
-            )
-            appendLine("@ScrollingPreview(modes = [ScrollMode.LONG])")
-            appendLine("@Composable")
-            appendLine("fun ${name}LongPreview() {")
-            appendLine("${INDENT}$appScaffold")
-            appendLine("}")
-          } else {
-            appendLine()
-            appendLine("@Composable")
-            appendLine("fun $name() {")
-            appendLine("${INDENT}$appScaffold")
-            appendLine("}")
-          }
-        },
+      source = joinKotlinFiles(screenSource, variableFontFiles),
     )
   }
+
+  /** The package a variable font text's declaration takes when the screen has none (a snippet). */
+  private const val VARIABLE_FONT_PACKAGE = "generated.uibuilder"
 
   private fun refuse(reason: String) = Result.Refused(listOf(reason))
 

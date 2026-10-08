@@ -728,5 +728,13 @@
       "outlineVariant",
       "transparent"
     ]
+  },
+  {
+    "field": "componentMenu.components.wear-m3/variable-font-text",
+    "why": "Built-in only, for now: `wear-m3/variable-font-text` is flexpress's variable font text (`VariableFontText`), declared by ui-builder rather than published by wear-m3-catalog, which has no flexpress dependency yet. The builder draws a stand-in on the canvas and exports the call with the declaration flexpress generates (`FlexpressVariableFontSources`). Shelved on `Content` beside the text it is a kind of. Delete this entry when wear-m3-catalog publishes the component.",
+    "policy": null,
+    "frozen": {
+      "group": "Content"
+    }
   }
 ]

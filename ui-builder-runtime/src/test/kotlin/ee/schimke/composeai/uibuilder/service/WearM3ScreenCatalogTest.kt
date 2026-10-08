@@ -337,6 +337,7 @@ class WearM3ScreenCatalogTest {
               "wear-m3/transforming-lazy-column",
               "wear-m3/list-header",
               "wear-m3/text",
+              "wear-m3/variable-font-text",
               "wear-m3/card",
               "wear-m3/button",
             )
