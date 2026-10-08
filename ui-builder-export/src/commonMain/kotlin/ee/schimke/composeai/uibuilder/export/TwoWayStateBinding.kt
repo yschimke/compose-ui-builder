@@ -51,14 +51,14 @@ object TwoWayStateBinding {
   /**
    * The event a control's own change runs, named as every lane names an event: the callback
    * parameter without `on`. A checked control's `onCheckedChange` is `checkedChange`; a Wear or
-   * Remote radio row's `onSelect` is `select`. Null for a component with no such callback, whose
-   * interaction stays `click` (`onClick`) — an m3 `RadioButton` among them.
+   * Remote radio row's `onSelect` is `select`; Remote's split radio row's `onSelectionClick` is
+   * `selectionClick`. Null for a component with no such callback, whose interaction stays `click`
+   * (`onClick`) — an m3 `RadioButton` among them.
    */
   fun changeEvent(componentId: String, properties: Set<String>): String? =
     when {
       "checked" in properties -> CHECKED_CHANGE
-      componentId in SELECT_COMPONENTS -> SELECT
-      else -> null
+      else -> SELECTION_EVENTS[componentId]
     }
 
   /**
@@ -82,14 +82,22 @@ object TwoWayStateBinding {
   const val CLICK = "click"
   const val CHECKED_CHANGE = "checkedChange"
   const val SELECT = "select"
+  const val SELECTION_CLICK = "selectionClick"
 
   /** Each two-way property's change events, preferred first. A split radio row's is its own. */
   private val PROPERTY_EVENTS: Map<String, List<String>> =
-    mapOf("checked" to listOf(CHECKED_CHANGE), "selected" to listOf(SELECT, "selectionClick"))
+    mapOf("checked" to listOf(CHECKED_CHANGE), "selected" to listOf(SELECT, SELECTION_CLICK))
 
-  /** The radio rows whose callback is `onSelect` rather than `onClick`. */
-  private val SELECT_COMPONENTS: Set<String> =
-    setOf("wear-m3/radio-button", "remote-m3/remote-radio-button")
+  /**
+   * The radio rows whose selection callback is not `onClick`, by the event it names. No catalog
+   * publishes a component's callbacks yet, so the builder has to know these.
+   */
+  private val SELECTION_EVENTS: Map<String, String> =
+    mapOf(
+      "wear-m3/radio-button" to SELECT,
+      "remote-m3/remote-radio-button" to SELECT,
+      "remote-m3/remote-split-radio-button" to SELECTION_CLICK,
+    )
 
   /**
    * The variable a change of [property] should write back to, or null when none should be written:

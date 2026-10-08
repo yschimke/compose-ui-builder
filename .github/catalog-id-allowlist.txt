@@ -8,7 +8,7 @@
 1 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/LauncherWidgetTemplates.kt
 4 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/RemoteContentEmitter.kt
 53 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/RemoteMaterial3.kt
-2 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/TwoWayStateBinding.kt
+3 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/TwoWayStateBinding.kt
 1 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderCatalogPlatform.kt
 8 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderNewDesignSeed.kt
 10 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderTemplates.kt

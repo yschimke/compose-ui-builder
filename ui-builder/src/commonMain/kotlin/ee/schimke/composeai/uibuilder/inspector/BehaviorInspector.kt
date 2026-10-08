@@ -268,6 +268,7 @@ internal fun EventActionsInspector(
                 "click" -> "On click"
                 "checkedChange" -> "On change"
                 "select" -> "On select"
+                "selectionClick" -> "On select"
                 "longClick" -> "On long press"
                 "doubleClick" -> "On double tap"
                 else -> candidate

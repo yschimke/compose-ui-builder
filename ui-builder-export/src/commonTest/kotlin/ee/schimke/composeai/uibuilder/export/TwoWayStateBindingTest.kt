@@ -65,6 +65,10 @@ class TwoWayStateBindingTest {
       "select",
       TwoWayStateBinding.changeEvent("wear-m3/radio-button", setOf("selected")),
     )
+    assertEquals(
+      "selectionClick",
+      TwoWayStateBinding.changeEvent("remote-m3/remote-split-radio-button", setOf("selected")),
+    )
     // An m3 RadioButton's callback is `onClick`, so it keeps `click`.
     assertNull(TwoWayStateBinding.changeEvent("m3/radio-button", setOf("selected")))
     assertNull(TwoWayStateBinding.changeEvent("m3/button", emptySet()))
