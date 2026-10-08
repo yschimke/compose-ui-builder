@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.guidelines
 
 import ee.schimke.composeai.uibuilder.EMBEDDED_ANDROID_DESIGN_GUIDELINES_JSON
+import ee.schimke.composeai.uibuilder.export.WEAR_WIDGET_CONTAINER_IDS
 import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -33,12 +34,23 @@ data class DesignGuidelineRule(
   val guidance: String,
   val check: String,
   val source: String,
+  /**
+   * The surfaces of its platform this rule is about, [SURFACE_SCREEN] or [SURFACE_WIDGET]; empty
+   * for every surface. A widget is not asked about scaffolds and edge buttons, nor a screen about
+   * widget containers: a rule that cannot apply costs tokens and only ever answers
+   * `not_applicable`.
+   */
+  val surfaces: List<String> = emptyList(),
 ) {
   val visual: Boolean
     get() = kind == KIND_VISUAL
 
+  fun appliesTo(surface: String): Boolean = surfaces.isEmpty() || surface in surfaces
+
   companion object {
     const val KIND_VISUAL: String = "visual"
+    const val SURFACE_SCREEN: String = "screen"
+    const val SURFACE_WIDGET: String = "widget"
   }
 }
 
@@ -52,6 +64,10 @@ data class DesignGuidelineRuleSet(
   fun forPlatform(platform: String): List<DesignGuidelineRule> = rules.filter {
     platform in it.platforms
   }
+
+  /** The rules for [platform] that apply to a design of [surface]. */
+  fun forPlatform(platform: String, surface: String): List<DesignGuidelineRule> =
+    forPlatform(platform).filter { it.appliesTo(surface) }
 
   companion object {
     /**
@@ -106,6 +122,21 @@ object DesignGuidelinePrompt {
       id == "m3" || id.startsWith("m3-") || "material3" in id -> "mobile"
       else -> null
     }
+  }
+
+  /**
+   * Whether [document] (the protocol's JSON) is a [DesignGuidelineRule.SURFACE_WIDGET] — its one
+   * root a Wear widget container — or a [DesignGuidelineRule.SURFACE_SCREEN].
+   */
+  fun surfaceOf(document: JsonObject): String {
+    val roots = document["roots"] as? JsonArray
+    val root = (roots?.singleOrNull() as? JsonPrimitive)?.contentOrNull
+    val componentId =
+      root
+        ?.let { ((document["nodes"] as? JsonObject)?.get(it) as? JsonObject)?.get("componentId") }
+        ?.let { (it as? JsonPrimitive)?.contentOrNull }
+    return if (componentId in WEAR_WIDGET_CONTAINER_IDS) DesignGuidelineRule.SURFACE_WIDGET
+    else DesignGuidelineRule.SURFACE_SCREEN
   }
 
   /** How much generated source a request carries; a screen's export is well under this. */

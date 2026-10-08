@@ -1,12 +1,15 @@
 {
   "schema": "compose-ui-builder/design-guidelines/v1",
-  "version": 4,
-  "about": "Design rules a model checks a UI-builder design against. Each rule quotes the guidance it comes from and links its source on developer.android.com (or the Android Knowledge Base for agent skills). `check` is a yes/no question where YES means the design follows the rule. `kind` is `structure` when the design tree is enough evidence, `visual` when it needs a picture of the design. Candidates are extracted with scripts/guidelines/extract-guidance.mjs and reviewed by a person before they are added here. Visual rules say which picture to judge: the device picture (the first frame on the watch) or the unrolled picture (the whole scrolling content, scrolled to the end so a revealed edge button shows).",
+  "version": 5,
+  "about": "Design rules a model checks a UI-builder design against. Each rule quotes the guidance it comes from and links its source on developer.android.com (or the Android Knowledge Base for agent skills). `check` is a yes/no question where YES means the design follows the rule. `kind` is `structure` when the design tree is enough evidence, `visual` when it needs a picture of the design. Candidates are extracted with scripts/guidelines/extract-guidance.mjs and reviewed by a person before they are added here. Visual rules say which picture to judge: the device picture (the first frame on the watch) or the unrolled picture (the whole scrolling content, scrolled to the end so a revealed edge button shows). `surfaces` (optional) narrows a rule to `screen` or `widget` designs on its platform; a rule without it applies to every surface.",
   "rules": [
     {
       "id": "wear.layout.time-text-clear",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen"
       ],
       "kind": "visual",
       "severity": "warning",
@@ -19,6 +22,9 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen"
+      ],
       "kind": "structure",
       "severity": "info",
       "guidance": "To reinforce that the device is a watch, we recommend showing the time text even when in an app journey (optional, but recommended).",
@@ -30,16 +36,23 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen",
+        "widget"
+      ],
       "kind": "visual",
       "severity": "warning",
       "guidance": "Margins should be defined in percentages to avoid clipping and provide proportional scaling of elements.",
-      "check": "Judge round-edge clipping on the device picture (the first frame, as the wearer first sees it). Judge clipping inside components on the unrolled picture (the whole scrolling content) when one is attached. Is every piece of text, icon and control fully visible, with nothing cut off by the round edge or by its own container? Content that continues below the bottom of the device picture in a scrolling list is not clipped.",
+      "check": "For a screen, judge round-edge clipping on the device picture (the first frame, as the wearer first sees it), and clipping inside components on the unrolled picture when one is attached; content that continues below the bottom of the device picture in a scrolling list is not clipped. For a widget, judge it on both container pictures: nothing may be cut by the Samsung container's fully rounded ends or the Pixel Watch container's corners. Is every piece of text, icon and control fully visible, with nothing cut off by the edge or by its own container?",
       "source": "https://developer.android.com/design/ui/wear/guides/foundations/adaptive-design"
     },
     {
       "id": "wear.layout.responsive-width",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen"
       ],
       "kind": "structure",
       "severity": "warning",
@@ -52,6 +65,9 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen"
+      ],
       "kind": "structure",
       "severity": "warning",
       "guidance": "Use a Column as a direct child of ScreenScaffold only if the screen will never scroll, even with the largest system font.",
@@ -62,6 +78,9 @@
       "id": "wear.dialog.dedicated-task",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen"
       ],
       "kind": "structure",
       "severity": "warning",
@@ -74,6 +93,10 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen",
+        "widget"
+      ],
       "kind": "structure",
       "severity": "warning",
       "guidance": "Reserves at least 48.dp in size to disambiguate touch interactions if the element would measure smaller. Smaller visual sizes, such as compact and extra-small buttons, are padded out to a 48dp touch target.",
@@ -84,6 +107,10 @@
       "id": "wear.color.role-pairs",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen",
+        "widget"
       ],
       "kind": "structure",
       "severity": "warning",
@@ -96,6 +123,10 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen",
+        "widget"
+      ],
       "kind": "structure",
       "severity": "info",
       "guidance": "All empty states should have a clear call-to-action so the user knows what to do to fix a potential issue, or find out more information.",
@@ -106,6 +137,10 @@
       "id": "wear.gestures.no-hidden-actions",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen",
+        "widget"
       ],
       "kind": "structure",
       "severity": "warning",
@@ -118,6 +153,9 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "widget"
+      ],
       "kind": "structure",
       "severity": "warning",
       "guidance": "Always supply your widget's background brush directly to WearWidgetDocument so the host system can paint and mask the background to the native OEM container shape. Setting a transparent or black canvas and drawing a custom rounded container inside the layout can cause floating box and letterboxing defects on some devices.",
@@ -128,6 +166,9 @@
       "id": "wear.widgets.content-fills-container",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "widget"
       ],
       "kind": "structure",
       "severity": "warning",
@@ -140,6 +181,9 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "widget"
+      ],
       "kind": "structure",
       "severity": "info",
       "guidance": "Tiles should feel focused, concise, and purpose-driven. Avoid providing a superfluous amount of functionality, and refrain from using more than one interactive component to trigger a specific action. (Tiles guidance; widgets replace Tiles.)",
@@ -150,6 +194,9 @@
       "id": "wear.widgets.containers-have-actions",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "widget"
       ],
       "kind": "structure",
       "severity": "info",
@@ -261,6 +308,9 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen"
+      ],
       "kind": "structure",
       "severity": "warning",
       "guidance": "This button represents the most important action on the screen, and must take the whole width of the screen as well as being anchored to the screen bottom.",
@@ -271,6 +321,9 @@
       "id": "wear.edge-button.content-fits-size",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen"
       ],
       "kind": "structure",
       "severity": "info",
@@ -283,6 +336,9 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen"
+      ],
       "kind": "structure",
       "severity": "info",
       "guidance": "This is a high-emphasis button for the primary, most important or most common action on a screen.",
@@ -293,6 +349,9 @@
       "id": "wear.button.child-not-primary",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen"
       ],
       "kind": "structure",
       "severity": "info",
@@ -305,6 +364,10 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen",
+        "widget"
+      ],
       "kind": "structure",
       "severity": "info",
       "guidance": "Title styles are not recommended for interactive components, rather page headings or sub headings. Label styles are applied to interactive components.",
@@ -315,6 +378,10 @@
       "id": "wear.type.numerals-digits-only",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen",
+        "widget"
       ],
       "kind": "structure",
       "severity": "info",
@@ -327,6 +394,10 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen",
+        "widget"
+      ],
       "kind": "structure",
       "severity": "warning",
       "guidance": "Do NOT hard-code text sizes, use typography from MaterialTheme. Do NOT hard-code colors, use colorScheme.",
@@ -337,6 +408,9 @@
       "id": "wear.scroll-indicator-matches",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen"
       ],
       "kind": "structure",
       "severity": "warning",
@@ -349,6 +423,9 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen"
+      ],
       "kind": "structure",
       "severity": "info",
       "guidance": "Don't display the time on a temporary dialog, confirmation overlay or a picker.",
@@ -359,6 +436,10 @@
       "id": "wear.actions-labelled",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen",
+        "widget"
       ],
       "kind": "structure",
       "severity": "info",
@@ -371,6 +452,10 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen",
+        "widget"
+      ],
       "kind": "structure",
       "severity": "warning",
       "guidance": "Container roles are used as a fill color for foreground elements like buttons. They shouldn't be used for text or icons.",
@@ -381,6 +466,9 @@
       "id": "wear.card.text-budget",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen"
       ],
       "kind": "structure",
       "severity": "info",
@@ -393,6 +481,9 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen"
+      ],
       "kind": "structure",
       "severity": "warning",
       "guidance": "It should be used when the user will be presented with a binary decision. Where user input is not required, such as displaying a transient success or failure message, use ConfirmationDialog. The title should not exceed 3 lines.",
@@ -403,6 +494,9 @@
       "id": "wear.slider.segment-limit",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "screen"
       ],
       "kind": "structure",
       "severity": "info",
@@ -415,6 +509,9 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "screen"
+      ],
       "kind": "structure",
       "severity": "info",
       "guidance": "ListHeaders are typically expected to be a few words of text on a single line.",
@@ -425,6 +522,9 @@
       "id": "wear.widgets.no-edge-button",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "widget"
       ],
       "kind": "structure",
       "severity": "warning",
@@ -437,6 +537,9 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "widget"
+      ],
       "kind": "visual",
       "severity": "info",
       "guidance": "Rather than porting a dense, full-screen Tile layout one-to-one, streamline your design to emphasize primary information within the main content area.",
@@ -448,6 +551,9 @@
       "platforms": [
         "wear"
       ],
+      "surfaces": [
+        "widget"
+      ],
       "kind": "structure",
       "severity": "warning",
       "guidance": "The actions in this Tile are unclear: where does the container with the album art take the user, and is that different from the Play button?",
@@ -458,6 +564,9 @@
       "id": "wear.widgets.small-single-row",
       "platforms": [
         "wear"
+      ],
+      "surfaces": [
+        "widget"
       ],
       "kind": "structure",
       "severity": "warning",

@@ -202,7 +202,8 @@ fun DesignGuidelinePrompt.prepare(
       (it as? kotlinx.serialization.json.JsonPrimitive)?.content
     }
   val platform = systemId?.let(::platformOf)
-  val applicable = platform?.let(rules::forPlatform).orEmpty()
+  val surface = surfaceOf(document)
+  val applicable = platform?.let { rules.forPlatform(it, surface) }.orEmpty()
   val asked = if (pictures.isNotEmpty()) applicable else applicable.filterNot { it.visual }
   return DesignGuidelineRequest(
     designId = designId,
@@ -237,7 +238,7 @@ fun DesignGuidelinePrompt.provenance(
 ): List<String> = buildList {
   add(
     "The rules are compose-ui-builder's design-guideline set (version $rulesVersion): " +
-      "$forPlatform for this platform, $asked asked here. Each quotes the Android design guidance " +
+      "$forPlatform for this platform and kind of design, $asked asked here. Each quotes the Android design guidance " +
       "it comes from (developer.android.com design guides: Wear OS, adaptive and large-screen " +
       "layouts, Jetpack Compose Glimmer) and links its source."
   )

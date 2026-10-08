@@ -62,6 +62,7 @@ earlier revision. The shape is `compose-ui-builder/guidelines-result/v1` (`Desig
 | --- | --- |
 | `id` | Stable name; it is the finding's `code`. |
 | `platforms` | `wear`, `glasses`, `mobile`. |
+| `surfaces` | Optional: `screen` or `widget`. A Wear widget (its root is a widget container) is asked only rules for widgets, and a screen only rules for screens; a rule without `surfaces` applies to both. Leave a rule out of a surface it can only ever answer `not_applicable` for. |
 | `kind` | `structure`: the design tree is enough evidence. `visual`: the model needs a picture, and the `check` says which one. |
 
 | `severity` | `warning` or `info`. |
