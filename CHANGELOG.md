@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.93.0](https://github.com/yschimke/compose-ui-builder/compare/v3.92.0...v3.93.0) (2026-10-08)
+
+
+### Features
+
+* **guidelines:** share the rules and picture plan with the server; phone/tablet and widget-host pictures; adaptive rules ([#555](https://github.com/yschimke/compose-ui-builder/issues/555)) ([84221df](https://github.com/yschimke/compose-ui-builder/commit/84221df10349b88612e2142852132f274697b056))
+* **guidelines:** show the prompt and where it comes from, and share the latest result ([#552](https://github.com/yschimke/compose-ui-builder/issues/552)) ([6d2b74d](https://github.com/yschimke/compose-ui-builder/commit/6d2b74d258ad93dc5dfdaeb9cd25fb3d91976e16))
+* **remote:** launcher widget export and catalog-declared frame sizes ([#556](https://github.com/yschimke/compose-ui-builder/issues/556)) ([e957dbf](https://github.com/yschimke/compose-ui-builder/commit/e957dbfe195f83dd7b313897639c17d87a2a29c4))
+* **remote:** text on a circle and along a path ([#546](https://github.com/yschimke/compose-ui-builder/issues/546)) ([48d5fbd](https://github.com/yschimke/compose-ui-builder/commit/48d5fbda1cf4dd893feb080c114d24d243e10a15))
+* **remote:** time text, layer and semantics calls, theme node, button and card overloads ([#551](https://github.com/yschimke/compose-ui-builder/issues/551)) ([c666cb1](https://github.com/yschimke/compose-ui-builder/commit/c666cb196ecfe03375b42670cdc976986a2f2695))
+* **ui-builder:** 30 design-guidance rules, and fixes from a live audit ([#553](https://github.com/yschimke/compose-ui-builder/issues/553)) ([43e4f8a](https://github.com/yschimke/compose-ui-builder/commit/43e4f8a22df51c31f7f62d44a6109b01f40125aa))
+* **ui-builder:** stage the catalog-owned cutover behind one flag ([#558](https://github.com/yschimke/compose-ui-builder/issues/558)) ([b88bec3](https://github.com/yschimke/compose-ui-builder/commit/b88bec3d117a7cb704ba49e44adb4917b938dedd))
+* **ui-builder:** tidy the Theme panel, import Material Theme Builder files, generate schemes from a seed ([#559](https://github.com/yschimke/compose-ui-builder/issues/559)) ([e18de8a](https://github.com/yschimke/compose-ui-builder/commit/e18de8a6c01b2a79b40fcac5e6233b66baa2110a))
+
+
+### Bug Fixes
+
+* **export:** declare the Google Fonts provider before the families that read it ([#550](https://github.com/yschimke/compose-ui-builder/issues/550)) ([377a867](https://github.com/yschimke/compose-ui-builder/commit/377a867ad1c5e62463b6068d885f46711b5a3e14))
+* **export:** write desktop font lookups for Google Fonts on a desktop catalog ([#557](https://github.com/yschimke/compose-ui-builder/issues/557)) ([c090d64](https://github.com/yschimke/compose-ui-builder/commit/c090d6461c029a20f602ffaaec086402eddbc571))
+* pin the server design workflow to [#1368](https://github.com/yschimke/compose-ui-builder/issues/1368)'s squash commit ([#549](https://github.com/yschimke/compose-ui-builder/issues/549)) ([39cbca3](https://github.com/yschimke/compose-ui-builder/commit/39cbca3de74a72c872856ebb3e2031265027083d))
+* **ui-builder:** guideline rules ask only what a design can contain ([#547](https://github.com/yschimke/compose-ui-builder/issues/547)) ([5fcdd9f](https://github.com/yschimke/compose-ui-builder/commit/5fcdd9f5792fe2bd147a46aef543fa4e99ceefec))
+
 ## [3.92.0](https://github.com/yschimke/compose-ui-builder/compare/v3.91.0...v3.92.0) (2026-10-07)
 
 
