@@ -758,7 +758,8 @@ private fun RenderNode(
         fontSize =
           node.float("fontSize").takeIf { it > 0f }?.sp
             ?: androidx.compose.ui.unit.TextUnit.Unspecified,
-        maxLines = node.integer("maxLines", Int.MAX_VALUE),
+        maxLines = node.lineCount("maxLines"),
+        onTextLayout = { host.recordTextLayout(path, it) },
       )
       return@RenderCanvasNode
     }

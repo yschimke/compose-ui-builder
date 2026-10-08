@@ -40,6 +40,8 @@ class WearTextComponentTest {
     // mapped it onto `m3/text`; with the table gone it has to be named, or Wear text silently
     // stops reporting its layout to the inspector.
     assertTrue("wear-m3/text".isUiBuilderTextComponent())
+    // A launcher widget's text, which the canvas draws by id: no catalog names an adapter for it.
+    assertTrue("remote-widgets/remote-text".isUiBuilderTextComponent())
   }
 
   @Test
