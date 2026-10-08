@@ -36,8 +36,8 @@ import ee.schimke.composeai.uibuilder.export.FontSettings
  * field: one slider per variation axis over the axis's real range, or a chip per layout feature.
  *
  * The face is read from its file ([TypefaceInfo]), so the list is the face's and not a guess:
- * Roboto Flex shows its thirteen axes, Inter shows none and says it is static, and a text in the
- * platform's own face says that face cannot be inspected. A setting the face does not have is
+ * Roboto Flex shows its thirteen axes, Lobster Two shows none and says it is static, and a text in
+ * the platform's own face says that face cannot be inspected. A setting the face does not have is
  * listed as ignored rather than hidden, so nothing the design carries is invisible here.
  */
 @Composable

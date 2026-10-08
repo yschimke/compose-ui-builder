@@ -47,11 +47,29 @@ class TextFontSettingsRenderTest {
   }
 
   @Test
-  fun `a weight axis the face cannot apply leaves the authored weight in place`() {
-    // Inter is static: `wght` is ignored, so the text is as bold as `fontWeight` says.
-    assertEquals(
+  fun `a variable face listed at several weights draws each of them`() {
+    // One variable file at 400 and 700: without a `wght` setting per weight both drew the default
+    // instance, and bold text came out regular.
+    assertNotEquals(
+      draw("Inter", "Hamburg", fontWeight = "normal"),
+      draw("Inter", "Hamburg", fontWeight = "bold"),
+    )
+  }
+
+  @Test
+  fun `a weight axis overrides the authored weight on a variable face`() {
+    assertNotEquals(
       draw("Inter", "Hamburg", fontWeight = "bold"),
       draw("Inter", "Hamburg", variations = "wght 300", fontWeight = "bold"),
+    )
+  }
+
+  @Test
+  fun `a weight axis the face cannot apply leaves the authored weight in place`() {
+    // Lobster Two is static: `wght` is ignored, so the text is as bold as `fontWeight` says.
+    assertEquals(
+      draw("Lobster Two", "Hamburg", fontWeight = "bold"),
+      draw("Lobster Two", "Hamburg", variations = "wght 300", fontWeight = "bold"),
     )
   }
 
@@ -64,7 +82,7 @@ class TextFontSettingsRenderTest {
   }
 
   @Test
-  fun `a feature reshapes a static face's text`() {
+  fun `a feature reshapes the face's text`() {
     // `frac` turns 1/2 into one fraction glyph, which no amount of spacing could imitate.
     assertNotEquals(
       draw("Inter", "1/2 3/4", features = null),

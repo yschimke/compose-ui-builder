@@ -180,10 +180,12 @@ class UiBuilderFontRegistry(
       family != null ->
         scope.launch {
           runCatching {
+            // A variable family lists one file at several weights; fetch each file once.
+            val data = family.fonts.map { it.file }.distinct().associateWith { readFont(it) }
             family.fonts.map { file ->
               UiBuilderFontFile(
                 identity = "ui-builder:${family.name}:${file.weight}",
-                data = readFont(file.file),
+                data = data.getValue(file.file),
                 weight = file.weight,
               )
             }
@@ -274,7 +276,13 @@ fun remoteFamilyName(name: String): String =
 fun canonicalFamilyName(name: String): String? =
   remoteFamilyName(name).lowercase().takeIf { it.isNotEmpty() }
 
-/** A font from bytes, which only the platform text stack knows how to build. */
+/**
+ * A font from bytes, which only the platform text stack knows how to build.
+ *
+ * Null [variationSettings] still sets `wght` to [weight]: the platform's overload without settings
+ * draws a variable file at its default instance whatever weight it is declared at, so a family that
+ * lists one variable file at several weights would draw every one of them alike.
+ */
 internal expect fun platformFont(
   identity: String,
   data: ByteArray,

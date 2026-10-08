@@ -1,51 +1,35 @@
 # Catalog fonts (vendored)
 
-All files are extracted from `org.robolectric:nativeruntime-dist-compat:1.0.19` (`fonts/`
-inside the jar, Maven Central), i.e. **the exact font files the Android snapshot renderer
-rasterizes with** under Robolectric's native graphics. Using the same bytes is what makes the
-in-browser Wasm tier's text wrap, truncate, and measure identically to the baked catalog PNGs;
-classic Roboto 2.x and CMP's bundled default both differ measurably (see PR history).
+Every family is a **variable** font except Lobster Two, which has no variable release. A variable
+file is listed in [`fonts.json`](fonts.json) once per weight it covers (`100`…`900`, clipped to
+its `wght` range), every row naming the same file: the loaders read each file once and build each
+weight as an instance of it (`FontVariation.weight`), so `FontWeight.Medium` is the 500 instance
+rather than the nearest static, and a text's own variation settings reach the same bytes.
 
-- `Roboto-Regular.ttf` + `Roboto-Medium.ttf` — the two weights Material 3's type scale uses
-  (`role: "default"`; applied to the whole M3 `Typography`).
-- `NotoSerif-Regular.ttf` + `DroidSansMono.ttf` — what Android's system font table
-  (`fonts.xml`) maps the generic `serif` / `monospace` families to (`role: "generic"`;
-  consumed by `genericFontFamily(...)` lookups in catalog components — CMP's
-  `FontFamily.Resolver` is sealed, so resolver-level interception isn't available to apps).
-- `orbitron-400.ttf` + `orbitron-700.ttf` — a downloadable **GoogleFont** (`role: "named"`), the
-  faces the `text-branded` specimen resolves via `namedFontFamily("Orbitron")`. Filenames follow
-  the `<slug>-<weight>.ttf` scheme the manifest generator expects (`GoogleFontKey.slugify`); the
-  export regenerates the `role: "named"` entry from the recorded `Font(GoogleFont("Orbitron"), …)`
-  usage. Downloaded from Google Fonts, SIL OFL-1.1 — see [Orbitron-OFL.txt](Orbitron-OFL.txt).
+The variable files are subset to the code points the static files they replaced covered (all
+axes and all layout features kept), so nothing that drew before falls back now.
 
-- `google-sans-flex-400.ttf` + `google-sans-flex-700.ttf` — a downloadable **GoogleFont**
-  (`role: "named"`), the face the `remote-m3` catalog's **Google Sans Flex** typeface
-  theme names as `google:Google Sans Flex`. This lane is *manifest-only* — it never fetches — so
-  without the face vendored here the themed document fails `RcComposeSupport.fontFamilyIssue`'s
-  availability check instead of rendering, while the other four player lanes resolve it. Fetched
-  from the same CSS2 endpoint as the others (`wght@100..1000`, the 400 and 700 instances of the
-  variable file).
-
-  **Licensing — read before forking.** Unlike every other face here, Google Sans Flex is in **no
-  license directory** of the [google/fonts](https://github.com/google/fonts) corpus, so its terms
-  can't be read off the corpus; the CSS2 endpoint serves it regardless. It is committed because
-  the project owner confirmed redistribution is cleared, the same clearance
-  [`deploy/image/README.md`](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/deploy/image/README.md) records for baking it into
-  the runtime image. **A fork does not inherit that clearance** — re-check it, or drop this family
-  from `fonts.json` and delete the two files. Dropping it only costs the Wasm lane's rendering of
-  that one theme.
-
-- `inter-400.ttf` + `inter-700.ttf` — a downloadable **GoogleFont** (`role: "named"`), the face the
-  `remote-m3` catalog's four conference theme specimens name as `google:Inter` — AndroidMakers,
-  ConfettiDefault, Droidcon and KotlinConf. Without it vendored those four did not render on the
-  manifest-only lane at all: the CMP player refused the document with
-  `CoreText[21]: custom font family google:Inter (47) has no DataFont`, recorded in that branch's
-  `rc-cmp-wasm-errors/`, which is the availability check this whole `role: "named"` section exists
-  to satisfy. Fetched from the same CSS2 endpoint as the others (`wght@400` and `wght@700`).
-
-  Licensing is the ordinary case rather than Google Sans Flex's: Inter **is** in the corpus, under
-  SIL OFL-1.1, so its terms are readable there and a fork inherits them — see
-  [Inter-OFL.txt](Inter-OFL.txt), taken from `ofl/inter/OFL.txt`.
+- `RobotoFlex.ttf` — the default face (`role: "default"`; applied to the whole M3 `Typography`)
+  and Wear's `roboto-flex`. SIL OFL-1.1 — see [RobotoFlex-OFL.txt](RobotoFlex-OFL.txt).
+- `NotoSerif-Variable.ttf` + `NotoSansMono-Variable.ttf` — the generic `serif` / `monospace`
+  families (`role: "generic"`; consumed by `genericFontFamily(...)` lookups in catalog components —
+  CMP's `FontFamily.Resolver` is sealed, so resolver-level interception isn't available to apps).
+  Noto Serif is what Android's `fonts.xml` maps `serif` to; Noto Sans Mono replaces Droid Sans
+  Mono, which has no variable release. Both from google/fonts, SIL OFL-1.1 — see
+  [NotoSerif-OFL.txt](NotoSerif-OFL.txt) and [NotoSansMono-OFL.txt](NotoSansMono-OFL.txt).
+  These were Robolectric's static files; the variable ones draw slightly differently from the
+  Android snapshot bakes.
+- `orbitron-variable.ttf`, `space-grotesk-variable.ttf`, `jetbrains-mono-variable.ttf`,
+  `inter-variable.ttf`, `google-sans-flex-variable.ttf` — downloadable **GoogleFont**s
+  (`role: "named"`), the faces catalog themes and specimens name as `google:<Family>`: Orbitron for
+  the `text-branded` specimen, Google Sans Flex for the `remote-m3` catalog's typeface theme, Inter
+  for its four conference themes (AndroidMakers, ConfettiDefault, Droidcon, KotlinConf). The
+  `remote-m3` lane is *manifest-only* — it never fetches — so a named face missing here fails
+  `RcComposeSupport.fontFamilyIssue`'s availability check instead of rendering. Each is the
+  google/fonts variable file, SIL OFL-1.1 — see the matching `*-OFL.txt`; Google Sans Flex's is
+  [GoogleSansFlex-OFL.txt](GoogleSansFlex-OFL.txt), from `ofl/googlesansflex/OFL.txt`.
+- `LobsterTwo-Regular.ttf` + `LobsterTwo-Bold.ttf` — static, the one family with no variable
+  release. SIL OFL-1.1 — see [LobsterTwo-OFL.txt](LobsterTwo-OFL.txt).
 
 The committed [`fonts.json`](fonts.json) is the **dev-time default**; the design-catalog export
 regenerates it from the per-preview `fonts/used` records (`previews/<id>.fonts.json` in the packed
@@ -58,8 +42,7 @@ otherwise drop them — leaving the published viewer's font-override picks falli
 
 Loading is driven by [`fonts.json`](fonts.json): each `role: "default"` family's files are
 fetched **by URL** and become the app's whole M3 type scale (`Main.kt` → `loadCatalogFonts()`,
-default base `./fonts/`, overridable via `?fontsBase=`; a base without a manifest falls back to
-the fixed Roboto pair). Self-hosted beside the app so the bundle stays offline-clean behind an
+default base `./fonts/`, overridable via `?fontsBase=`). Self-hosted beside the app so the bundle stays offline-clean behind an
 egress proxy; on the public server the serve process is the cache — it fetches these files once
 from the trusted `design-artifacts` branch and serves them locally. A fetch failure or timeout
 degrades to the CMP bundled font.
@@ -72,8 +55,4 @@ partition, so the embedding viewer page cannot warm fonts for it.
 The manifest is additive: future roles (named families, generic-family mappings like `serif`)
 can be declared per family without breaking older apps, which only consume `role: "default"`.
 
-License: Apache 2.0 (Roboto / Noto Serif / Droid Sans Mono, Google) — see [LICENSE.txt](LICENSE.txt);
-Orbitron is SIL OFL-1.1 — see [Orbitron-OFL.txt](Orbitron-OFL.txt); Inter is SIL OFL-1.1 — see
-[Inter-OFL.txt](Inter-OFL.txt). Google Sans Flex carries no
-corpus license file and ships under the owner's explicit redistribution clearance — see its bullet
-above before forking.
+License: every face here is SIL OFL-1.1; each family's `*-OFL.txt` sits beside it.

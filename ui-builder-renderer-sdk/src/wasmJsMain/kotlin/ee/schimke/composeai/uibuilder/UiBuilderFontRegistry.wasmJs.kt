@@ -11,12 +11,10 @@ internal actual fun platformFont(
   weight: FontWeight,
   variationSettings: FontVariation.Settings?,
 ): Font =
-  if (variationSettings == null) androidx.compose.ui.text.platform.Font(identity, data, weight)
-  else
-    androidx.compose.ui.text.platform.Font(
-      identity,
-      data,
-      weight,
-      FontStyle.Normal,
-      variationSettings,
-    )
+  androidx.compose.ui.text.platform.Font(
+    identity,
+    data,
+    weight,
+    FontStyle.Normal,
+    variationSettings ?: FontVariation.Settings(FontVariation.weight(weight.weight)),
+  )
