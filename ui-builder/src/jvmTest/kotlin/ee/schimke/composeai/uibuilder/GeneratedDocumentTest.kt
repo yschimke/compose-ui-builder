@@ -13,6 +13,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.VariableFontText
 import ee.schimke.composeai.uibuilder.export.blankUiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -301,8 +302,11 @@ class GeneratedDocumentTest {
     // to refuse and must NOT be exempted the way the vocabulary gate exempts it — otherwise this
     // helper demands source from a document the product has already declined to generate.
     val withheldByBuild = !UiBuilderBuildFeatures.remoteCompose && used.contains("layout/for-each")
+    // A variable font text has no catalog record and still exports: the projection records the
+    // declaration flexpress generates for it (`VariableFontTextRecord`).
     val expected =
       used -
+        VariableFontText.M3_ID -
         recordedComponentIds -
         if (repetitions && !withheldByBuild) setOf("layout/for-each") else emptySet()
     val generated = reducer.generatedCode(document)

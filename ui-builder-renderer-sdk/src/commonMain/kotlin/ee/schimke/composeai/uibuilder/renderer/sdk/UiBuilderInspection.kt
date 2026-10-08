@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.VariableFontText
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererInspectionGenerationV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererInspectionV1
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererNodeInspectionV1
@@ -61,7 +62,10 @@ fun String.isUiBuilderTextComponent(): Boolean =
   this == "material3/Text" ||
     this == "m3/text" ||
     this == "wear-m3/text" ||
-    this == "remote-widgets/remote-text"
+    this == "remote-widgets/remote-text" ||
+    // The canvas draws a variable font text's stand-in as `Text`; see `variableFontTextStyle`.
+    this == VariableFontText.M3_ID ||
+    this == VariableFontText.WEAR_ID
 
 /** Mutable layout collector whose snapshots are stable regardless of measurement callback order. */
 class UiBuilderInspectionCollector(

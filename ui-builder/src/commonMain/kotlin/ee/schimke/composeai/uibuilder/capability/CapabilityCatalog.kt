@@ -14,6 +14,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderPreviewSurfaces
 import ee.schimke.composeai.uibuilder.export.UiDrawing
 import ee.schimke.composeai.uibuilder.export.UiRemoteTheme
 import ee.schimke.composeai.uibuilder.export.UiTimeText
+import ee.schimke.composeai.uibuilder.export.VariableFontText
 import ee.schimke.composeai.uibuilder.protocol.BrowserPreviewCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
 import kotlinx.serialization.SerialName
@@ -561,6 +562,24 @@ object CapabilityCatalogParser {
   private const val MAXIMUM_AUTHORED_VALUE = 1_000_000.0
 
   /**
+   * A variable font text's axes, each over the widest range any of its fonts gives it (the font
+   * clamps a value to its own), and its size on `m3/text`'s range. An axis is declared
+   * `["number","object"]` so it can be bound to state, which no type rule reads as a number.
+   */
+  private val VARIABLE_FONT_TEXT_EDITORS =
+    listOf(VariableFontText.M3_ID, VariableFontText.WEAR_ID).flatMap { id ->
+      VariableFontText.AXIS_PROPERTIES.map { property ->
+        val axes = VariableFontText.Font.entries.mapNotNull { it.axis(property) }
+        (id to property) to
+          numberEditor(
+            axes.minOf { it.min }.toDouble(),
+            axes.maxOf { it.max }.toDouble(),
+            if (property == "slnt") 0.5 else 1.0,
+          )
+      } + listOf((id to "fontSizeSp") to numberEditor(1.0, 512.0, 1.0))
+    }
+
+  /**
    * The Remote Material 3 numbers, which no type rule can bound.
    *
    * They are declared `["number", "object"]` — a literal or a state read — and none is a `…Dp`, so
@@ -745,7 +764,8 @@ object CapabilityCatalogParser {
         numberEditor(-MAXIMUM_AUTHORED_VALUE, MAXIMUM_AUTHORED_VALUE, 0.1),
     ) +
       WEAR_WIDGET_CONTAINER_IDS.flatMap(::widgetContainerEditors) +
-      REMOTE_MATERIAL_3_NUMBER_EDITORS
+      REMOTE_MATERIAL_3_NUMBER_EDITORS +
+      VARIABLE_FONT_TEXT_EDITORS
 
   /**
    * The editor for the container's `background`, which the type rules cannot supply.

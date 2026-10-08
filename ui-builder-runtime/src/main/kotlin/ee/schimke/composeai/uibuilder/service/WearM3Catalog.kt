@@ -5,6 +5,7 @@ package ee.schimke.composeai.uibuilder.service
 import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
+import ee.schimke.composeai.uibuilder.export.VariableFontText
 import ee.schimke.composeai.uibuilder.export.WearScreenTheme
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
@@ -200,7 +201,7 @@ internal fun wearComponentMenu(): JsonObject {
           "wear-m3/open-on-phone-dialog",
         ),
       "Communication" to listOf("wear-m3/progress-indicator"),
-      "Content" to listOf("wear-m3/text", "wear-m3/icon", "asset/image"),
+      "Content" to listOf("wear-m3/text", VariableFontText.WEAR_ID, "wear-m3/icon", "asset/image"),
       // The "Embedded" shelf held the three Remote Compose seams and is gone with them. It comes
       // back when they do; a shelf with nothing on it is a heading an author opens for nothing.
     )
@@ -387,6 +388,19 @@ private fun wearColor(name: String = "color"): PropertyCapabilityV1 =
         "statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is " +
         "rejected rather than guessed at.",
   )
+
+/** What an axis property of a variable font text says: its range, and how it is set. */
+private fun variableAxisNotes(property: String): String {
+  val ranges =
+    VariableFontText.Font.entries.mapNotNull { font ->
+      font.axis(property)?.let { "${it.min.text()}–${it.max.text()} in ${font.family}" }
+    }
+  val axis = VariableFontText.Font.entries.firstNotNullOf { it.axis(property) }
+  return "The `${axis.tag}` axis: ${ranges.joinToString(", ")}. A literal holds it; a `state` " +
+    "read of a decimal variable animates it. Unset is the font's own ${axis.default.text()}."
+}
+
+private fun Float.text(): String = if (this == toInt().toFloat()) toInt().toString() else toString()
 
 /** One content slot holding a single child, for the components whose API takes one lambda. */
 private fun singleSlot(name: String, traits: List<String>, min: Int = 0): SlotCapabilityV1 =
@@ -1438,6 +1452,55 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
         text.newBuilder().also { it.svg = recordedTextSvg }.build()
       }
 
+  // flexpress's `VariableFontText`, not a Wear Material 3 component: text drawn from a variable
+  // font's outlines with its axes free to move. Its properties are `VariableFontText`'s, the same
+  // ones m3-catalog's `m3/variable-font-text` lists; the canvas draws a stand-in, since flexpress
+  // runs on the JVM alone.
+  val wearVariableFontText =
+    wearComponent(
+        componentId = VariableFontText.WEAR_ID,
+        displayName = "Variable font text",
+        role = "Leaf",
+        composable = "VariableFontText",
+        traits = listOf("TextContent"),
+        modifierCapabilities = WEAR_MODIFIERS,
+        properties =
+          listOf(
+            wearString(
+              "text",
+              required = true,
+              notes =
+                "A literal: the outline is worked out from the font when the design exports, so " +
+                  "the text cannot change at run time.",
+            ),
+            wearString(
+              "font",
+              allowed = VariableFontText.Font.entries.map { it.wire },
+              notes = "The variable font the text is drawn from. Absent is Roboto Flex.",
+            ),
+          ) +
+            VariableFontText.AXIS_PROPERTIES.map { wearBindableNumber(it, variableAxisNotes(it)) } +
+            listOf(wearNumber("fontSizeSp", "The text's size. Absent is 32."), wearColor()),
+      )
+      .let { text ->
+        text
+          .newBuilder()
+          .also {
+            it.wasm =
+              text.wasm
+                .newBuilder()
+                .also { wasm ->
+                  wasm.notes =
+                    "flexpress's VariableFontText draws the text from the font's outlines, its " +
+                      "axes free to move. flexpress runs on the JVM only, so the canvas draws a " +
+                      "stand-in: Text in the vendored variable font, instanced at the same axes."
+                }
+                .build()
+            it.svg = recordedTextSvg
+          }
+          .build()
+      }
+
   val wearCard =
     wearComponent(
       componentId = "wear-m3/card",
@@ -1676,9 +1739,15 @@ internal fun wearM3Catalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
           }
           .build()
       it.components =
-        listOf(scaffold, transformingLazyColumn, listHeader, wearText, wearCard, wearButton) +
-          wearOnly +
-          sharedFoundation
+        listOf(
+          scaffold,
+          transformingLazyColumn,
+          listHeader,
+          wearText,
+          wearVariableFontText,
+          wearCard,
+          wearButton,
+        ) + wearOnly + sharedFoundation
     }
     .build()
 }

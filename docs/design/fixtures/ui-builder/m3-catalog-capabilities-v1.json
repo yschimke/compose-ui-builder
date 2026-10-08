@@ -84,6 +84,7 @@
         "m3/text": { "group": "Content" },
         "m3/text-field": { "group": "Text inputs", "variantProperty": "variant" },
         "m3/time-picker": { "group": "Selection", "variantProperty": "mode" },
+        "m3/variable-font-text": { "group": "Content" },
         "remote-compose/document": { "group": "Embedded" },
         "remote-compose/inline": { "group": "Embedded" },
         "remote-compose/custom": { "group": "Embedded" },
@@ -1169,6 +1170,27 @@
       "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "Material's own TimePicker and TimeInput, with hour and minute pinned by the document rather than taken from the clock." },
       "code": { "symbol": "TimePicker", "imports": ["androidx.compose.material3.TimePicker", "androidx.compose.material3.TimeInput", "androidx.compose.material3.rememberTimePickerState"] },
       "svg": { "status": "verified", "fallback": "none", "blocksExport": false }
+    },
+    {
+      "componentId": "m3/variable-font-text",
+      "displayName": "Variable font text",
+      "role": "Leaf",
+      "traits": ["TextContent"],
+      "slots": [],
+      "properties": [
+        { "name": "text", "jsonType": "string", "required": true, "notes": "A literal: the outline is worked out from the font when the design exports, so the text cannot change at run time." },
+        { "name": "font", "jsonType": "string", "required": false, "allowedValues": ["robotoFlex", "googleSansFlex"], "notes": "The variable font the text is drawn from. Absent is Roboto Flex." },
+        { "name": "wght", "jsonType": ["number", "object"], "required": false, "notes": "The `wght` axis: weight, 100–1000 in Roboto Flex and 1–1000 in Google Sans Flex. A literal holds it; a `state` read of a decimal variable animates it. Unset is the font's own 400." },
+        { "name": "wdth", "jsonType": ["number", "object"], "required": false, "notes": "The `wdth` axis: width, 25–151 (100 is normal). A literal or a `state` read of a decimal variable. Unset is 100." },
+        { "name": "slnt", "jsonType": ["number", "object"], "required": false, "notes": "The `slnt` axis: slant, -10–0 degrees. A literal or a `state` read of a decimal variable. Unset is upright." },
+        { "name": "rond", "jsonType": ["number", "object"], "required": false, "notes": "The `ROND` axis: roundness, 0–100, which only Google Sans Flex has. A literal or a `state` read of a decimal variable. Unset is 0." },
+        { "name": "fontSizeSp", "jsonType": "number", "required": false, "notes": "The text's size. Absent is 32." },
+        { "name": "color", "jsonType": "string", "required": false, "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit." }
+      ],
+      "modifierCapabilities": ["size", "fillMaxWidth", "padding", "alpha", "offset", "rotate", "scale", "zIndex", "testTag", "width", "height", "widthIn", "heightIn", "aspectRatio", "align", "alignHorizontal", "alignVertical", "weight"],
+      "wasm": { "platformSupported": true, "adapterStatus": "supported", "notes": "flexpress's VariableFontText draws the text from the font's outlines, its axes free to move. flexpress runs on the JVM only, so the canvas draws a stand-in: Text in the vendored variable font, instanced at the same axes." },
+      "code": { "symbol": "VariableFontText", "imports": ["ee.schimke.flexpress.compose.VariableFontText"] },
+      "svg": { "status": "verified", "fallback": "none", "blocksExport": false, "notes": "The recorder keeps the canvas stand-in's text, in the variable font at the design's axes." }
     },
     {
       "componentId": "remote-compose/custom",

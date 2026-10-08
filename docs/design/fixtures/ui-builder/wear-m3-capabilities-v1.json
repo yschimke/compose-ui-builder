@@ -669,6 +669,122 @@
         },
         {
             "code": null,
+            "componentId": "wear-m3/variable-font-text",
+            "displayName": "Variable font text",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "A literal: the outline is worked out from the font when the design exports, so the text cannot change at run time.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [
+                        "robotoFlex",
+                        "googleSansFlex"
+                    ],
+                    "jsonType": "string",
+                    "name": "font",
+                    "notes": "The variable font the text is drawn from. Absent is Roboto Flex.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "wght",
+                    "notes": "The `wght` axis: 100–1000 in Roboto Flex, 1–1000 in Google Sans Flex. A literal holds it; a `state` read of a decimal variable animates it. Unset is the font's own 400.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "wdth",
+                    "notes": "The `wdth` axis: 25–151 in Roboto Flex, 25–151 in Google Sans Flex. A literal holds it; a `state` read of a decimal variable animates it. Unset is the font's own 100.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "slnt",
+                    "notes": "The `slnt` axis: -10–0 in Roboto Flex, -10–0 in Google Sans Flex. A literal holds it; a `state` read of a decimal variable animates it. Unset is the font's own 0.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "rond",
+                    "notes": "The `ROND` axis: 0–100 in Google Sans Flex. A literal holds it; a `state` read of a decimal variable animates it. Unset is the font's own 0.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "fontSizeSp",
+                    "notes": "The text's size. Absent is 32.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is rejected rather than guessed at.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "The pinned same-runtime recorder retains text; font embedding and Figma text metrics remain a separate release gate.",
+                "status": "verified"
+            },
+            "traits": [
+                "TextContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "flexpress's VariableFontText draws the text from the font's outlines, its axes free to move. flexpress runs on the JVM only, so the canvas draws a stand-in: Text in the vendored variable font, instanced at the same axes.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
             "componentId": "wear-m3/card",
             "displayName": "Card",
             "modifierCapabilities": [
@@ -13887,6 +14003,9 @@
                 },
                 "wear-m3/transforming-lazy-column": {
                     "group": "Lists"
+                },
+                "wear-m3/variable-font-text": {
+                    "group": "Content"
                 }
             },
             "groupOrder": [

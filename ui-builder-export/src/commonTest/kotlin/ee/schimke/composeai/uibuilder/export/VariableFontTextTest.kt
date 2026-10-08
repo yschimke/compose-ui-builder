@@ -75,7 +75,10 @@ class VariableFontTextTest {
     assertNull(Font.fromWire("Google Sans Flex"))
     assertEquals("ROND", Font.GoogleSansFlex.axis("rond")?.tag)
     assertNull(Font.RobotoFlex.axis("rond"))
-    assertEquals(listOf("wght", "wdth", "slnt", "rond"), VariableFontText.AXIS_PROPERTIES)
+    assertEquals(
+      Font.entries.flatMap { font -> font.axes.map { it.property } }.distinct(),
+      VariableFontText.AXIS_PROPERTIES,
+    )
   }
 
   @Test

@@ -70,9 +70,12 @@ object VariableFontText {
     }
   }
 
-  /** The axis properties any [Font] has, in the order a catalog lists them. */
-  val AXIS_PROPERTIES: List<String> =
-    Font.entries.flatMap { font -> font.axes.map { it.property } }.distinct()
+  /**
+   * The axis properties any [Font] has, in the order a catalog lists them. Spelled out rather than
+   * derived from [Font.axes], because they are catalog property names that the Wear lane's
+   * readership check looks for by name; `VariableFontTextTest` holds the two equal.
+   */
+  val AXIS_PROPERTIES: List<String> = listOf("wght", "wdth", "slnt", "rond")
 
   /** What the generated composable draws with. */
   enum class Target {
@@ -175,6 +178,21 @@ enum class VariableFontExportMode {
 
   /** The generated code decodes and draws the outline itself: Compose alone, no flexpress. */
   STANDALONE,
+}
+
+/**
+ * How an export writes variable font text: [generator] for the declarations, in [mode]. A single
+ * value so each export entry point takes one more parameter rather than two, in an overload of its
+ * own beside the published one.
+ */
+data class VariableFontExport(
+  val generator: VariableFontSourceGenerator,
+  val mode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
+) {
+  companion object {
+    /** No generator: the calls are written with a note that the declarations come at export. */
+    val None: VariableFontExport = VariableFontExport(VariableFontSourceGenerator.Unavailable)
+  }
 }
 
 /** What a [VariableFontSourceGenerator] gives back for one request. */

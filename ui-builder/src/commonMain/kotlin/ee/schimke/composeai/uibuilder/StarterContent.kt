@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.VariableFontText
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -145,10 +146,19 @@ internal object StarterContent {
         ),
     )
 
+  private val VARIABLE_FONT_TEXT_STARTER: Map<String, JsonObject> =
+    mapOf(
+      "text" to starterLiteral("string", "Flex"),
+      "font" to starterLiteral("enum", VariableFontText.Font.RobotoFlex.wire),
+    )
+
   private val PROPERTY_TABLE: Map<String, Map<String, JsonObject>> =
     mapOf(
       "shape/colour-dot" to
         mapOf("color" to starterLiteral("color", "#FF6750A4"), "diameterDp" to starterNumber(8)),
+      // A word to see the axes move on, rather than an empty outline.
+      VariableFontText.M3_ID to VARIABLE_FONT_TEXT_STARTER,
+      VariableFontText.WEAR_ID to VARIABLE_FONT_TEXT_STARTER,
       // Ticked and on. Material draws an unchecked box as an empty square and an off switch as a
       // grey pill, and a palette drop that looks like neither a checkbox nor a switch is the case
       // starter content exists for. Turning one off is a click.

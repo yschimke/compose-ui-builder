@@ -16,6 +16,7 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.export.VariableFontText
 import ee.schimke.composeai.uibuilder.export.WearScreenCodeExporter
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -80,6 +81,7 @@ class StarterContentTest {
                 WearScreenCodeExporter.BUTTON,
                 WearScreenCodeExporter.LIST_HEADER,
                 WearScreenCodeExporter.TRANSFORMING_LAZY_COLUMN,
+                VariableFontText.WEAR_ID,
               ),
           "$componentId is seeded and no Wear generator writes it",
         )
