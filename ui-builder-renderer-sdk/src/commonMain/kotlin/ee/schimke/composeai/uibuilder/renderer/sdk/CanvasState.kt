@@ -54,6 +54,30 @@ fun canvasStateWrite(
     "set" -> variable to value
     "selectOrClear" -> variable to if (state[variable] == value) null else value
     "toggle" -> variable to (state[variable]?.toBooleanStrictOrNull() != true).toString()
+    "increment" -> canvasIncrement(state[variable], action["amount"])?.let { variable to it }
     else -> null
   }
+}
+
+/**
+ * [held] plus [amount] (1 when absent), in the spelling the variable already uses: integers stay
+ * `Int`s, wrapping at the bounds as the exported `Int` does — `"3"` and `1` make `"4"`, which
+ * `stateEquals 4` and an `Int` index still read — and anything fractional on either side is added
+ * as a decimal. A missing value counts from 0, as the export's `(x ?: 0) + 1` does for a nullable
+ * number; a value that is not a number writes nothing.
+ */
+private fun canvasIncrement(
+  held: String?,
+  amount: kotlinx.serialization.json.JsonElement?,
+): String? {
+  val step = (amount ?: JsonPrimitive(1)) as? JsonPrimitive ?: return null
+  if (step.isString) return null
+  val base = held ?: "0"
+  // `Int` arithmetic, so a counter at Int.MAX_VALUE wraps as the exported `count += 1` does.
+  val wholeBase = base.toIntOrNull()
+  val wholeStep = step.contentOrNull?.toIntOrNull()
+  if (wholeBase != null && wholeStep != null) return (wholeBase + wholeStep).toString()
+  val sum =
+    (base.toDoubleOrNull() ?: return null) + (step.contentOrNull?.toDoubleOrNull() ?: return null)
+  return sum.takeIf(Double::isFinite)?.toString()
 }

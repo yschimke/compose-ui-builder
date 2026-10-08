@@ -95,6 +95,22 @@ internal fun UiBuilderDocument.behaviorIssue(): BehaviorIssue? {
         if (type == "toggle" && declaration.stateType() != "bool") {
           return BehaviorIssue("$variable is not a flag and cannot be toggled", node.id, field)
         }
+        if (type == "increment") {
+          if (declaration.stateType() !in setOf("int", "float"))
+            return BehaviorIssue(
+              "$variable is not a number and cannot be incremented",
+              node.id,
+              field,
+            )
+          action["amount"]?.let { amount ->
+            if (amount is JsonNull || !declaration.acceptsStateValue(amount))
+              return BehaviorIssue(
+                "Increment amount does not match state $variable",
+                node.id,
+                field,
+              )
+          }
+        }
         if (type == "selectOrClear" && !declaration.nullableState()) {
           return BehaviorIssue("$variable is not nullable and cannot be cleared", node.id, field)
         }

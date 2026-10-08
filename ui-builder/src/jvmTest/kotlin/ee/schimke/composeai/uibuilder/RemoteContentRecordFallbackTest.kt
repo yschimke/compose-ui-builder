@@ -344,6 +344,60 @@ class RemoteContentRecordFallbackTest {
     assertEquals(1, Regex("valueChange\\(notify, !notify\\)").findAll(source).count(), source)
   }
 
+  /** `increment` adds in the player: `count + 1` is `RemoteInt.plus`, not a baked-in literal. */
+  @Test
+  fun `an increment counts in the player`() {
+    fun sourceFor(valueType: String, initial: JsonPrimitive, amount: JsonPrimitive?) =
+      assertIs<WearWidgetCodeExporter.Result.Emitted>(
+          WearWidgetCodeExporter.export(
+            widget(
+              mapOf(
+                "button" to
+                  UiBuilderNode(
+                    id = "button",
+                    componentId = "remote-m3/remote-button",
+                    slots = mapOf("children" to listOf("label")),
+                    eventBindings =
+                      buildJsonObject {
+                        put(
+                          "click",
+                          JsonArray(
+                            listOf(
+                              buildJsonObject {
+                                put("type", JsonPrimitive("increment"))
+                                put("variable", JsonPrimitive("count"))
+                                if (amount != null) put("amount", amount)
+                              }
+                            )
+                          ),
+                        )
+                      },
+                  ),
+                "label" to
+                  UiBuilderNode(
+                    id = "label",
+                    componentId = "remote-m3/remote-text",
+                    properties = buildJsonObject { put("text", value("Add")) },
+                  ),
+              ),
+              childId = "button",
+              state = buildJsonObject { put("count", stateVariable(valueType, initial)) },
+            ),
+            components =
+              mapOf(
+                "remote-m3/remote-button" to remoteButton,
+                "remote-m3/remote-text" to remoteText,
+              ),
+          )
+        )
+        .source
+
+    val ints = sourceFor("int", JsonPrimitive(0), null)
+    assertTrue("RemoteButton(onClick = valueChange(count, count + 1)) {" in ints, ints)
+    val floats = sourceFor("float", JsonPrimitive(0.5), JsonPrimitive(0.25))
+    assertTrue("valueChange(count, count + 0.25f)" in floats, floats)
+  }
+
   /** An assignment carries the design's value as a Remote value of the declared type. */
   @Test
   fun `a set action assigns the value the design carries`() {

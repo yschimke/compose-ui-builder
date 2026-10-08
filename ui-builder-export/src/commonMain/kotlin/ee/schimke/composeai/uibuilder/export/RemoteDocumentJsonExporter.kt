@@ -618,6 +618,25 @@ object RemoteDocumentJsonExporter {
           put("target", "@$variable")
           put("expression", "1 - @$variable")
         }
+      // An integer counts in the same expression vocabulary as `toggle`'s `1 - @v`. A negative step
+      // is written as a subtraction rather than relying on a unary minus in the expression.
+      if (type == "increment") {
+        val step =
+          (action["amount"] as? JsonPrimitive ?: JsonPrimitive(1)).takeUnless { it.isString }
+        val whole = step?.intOrNull
+        if (kind != "int" || whole == null) {
+          errors += "$path: increment needs a declared int and a whole amount"
+          return null
+        }
+        return buildJsonObject {
+          put("type", "valueIntegerExpressionChange")
+          put("target", "@$variable")
+          put(
+            "expression",
+            if (whole < 0) "@$variable - ${-whole.toLong()}" else "@$variable + $whole",
+          )
+        }
+      }
       if (type !in setOf("set", "select") || !matches(value, kind)) {
         errors += "$path: $type needs a non-null $kind literal"
         return null
