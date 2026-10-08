@@ -1,13 +1,6 @@
 package ee.schimke.composeai.uibuilder.service
 
-import ee.schimke.composeai.uibuilder.export.CatalogExportRouting
-import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.CatalogSeedTemplates
-import ee.schimke.composeai.uibuilder.export.RecordFreeExport
-import ee.schimke.composeai.uibuilder.export.ScreenExportGate
-import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
-import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
-import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import java.io.File
 import kotlinx.serialization.json.Json
@@ -38,83 +31,19 @@ internal object CatalogCutoverProbe {
     published: Map<String, CatalogCapabilityV1> =
       CatalogCutoverFixtures.catalogIds.associateWith(CatalogCutoverFixtures::catalog),
     templates: (String) -> CatalogSeedTemplates = CatalogCutoverFixtures::templates,
-  ): List<String> {
-    val ownership = CatalogOwnership.ALL
-    val executor = CatalogCutoverFixtures.executor(published, ownership)
-    val served = executor.listCatalogs().associateBy { it.benchmark.catalogSystemId }
-    return published.keys.flatMap { id ->
-      val catalog = served.getValue(id)
-      val templates = templates(id)
-      val route = CatalogExportRouting.route(catalog, ownership)
-      buildList {
-        if (templates.templates.isEmpty()) add("$id: publishes no seed templates")
-        if (route is CatalogExportRouting.Route.NotDeclared)
-          add("$id: declares no composeSourceExport, so no export is offered")
-        if (route is CatalogExportRouting.Route.Unsupported)
-          add("$id: declares ${route.adapter}/v${route.version}, which this build does not ship")
-        UiBuilderNewDesignSeed.templateIds(id, ownership, templates).forEach { templateId ->
-          val document =
-            UiBuilderNewDesignSeed.document(
-                designId = "probe",
-                catalogSystemId = id,
-                templateId = templateId,
-                catalogRevision = catalog.benchmark.catalogRevision,
-                nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
-                fixture = fixture,
-                ownership = ownership,
-                published = templates,
-              )
-              .toDesignDocumentV1()
-          executor.validate(document, catalog)?.let {
-            add("$id/$templateId: does not validate: ${it.code} ${it.nodeId ?: ""} ${it.message}")
-          }
-          // A launcher widget is routed by its declaration alone, through the catalog-aware entry
-          // the server calls under the flag, previewed at the catalog's own sizes.
-          if (
-            route is CatalogExportRouting.Route.RecordFree &&
-              route.adapter == CatalogExportRouting.LAUNCHER_WIDGET
-          ) {
-            when (
-              val launcher =
-                RecordFreeExport.generate(
-                  document.toUiBuilderDocument(),
-                  route,
-                  CatalogExportRouting.frameSizes(catalog),
-                  CatalogExportRouting.launcherRoots(catalog),
-                  packComponents = CatalogCutoverFixtures.composed(id).records,
-                )
-            ) {
-              is RecordFreeExport.Generated.Refused ->
-                add("$id/$templateId: export refused: ${launcher.reasons.take(3)}")
-              else -> Unit
-            }
-            return@forEach
-          }
-          val platform = CatalogExportRouting.recordFreePlatform(route) ?: return@forEach
-          val recordFree =
-            RecordFreeExport.generate(
-              document,
-              platform,
-              packComponents = CatalogCutoverFixtures.composed(id).records,
-            )
-          when (recordFree) {
-            is RecordFreeExport.Generated.Emitted -> Unit
-            is RecordFreeExport.Generated.Refused ->
-              add("$id/$templateId: export refused: ${recordFree.reasons.take(3)}")
-            null ->
-              when (
-                val generic =
-                  ScreenExportGate.export(document, CatalogCutoverFixtures.exportRecord(id))
-              ) {
-                is ScreenExportGate.Outcome.Emitted -> Unit
-                is ScreenExportGate.Outcome.Refused ->
-                  add("$id/$templateId: export refused: ${generic.reasons.take(3)}")
-              }
-          }
-        }
-      }
+  ): List<String> =
+    // The same check a deployment runs in shadow, so the ledger and a box's report agree.
+    published.flatMap { (id, catalog) ->
+      CatalogCutoverShadow.ownedFindings(
+        catalogId = id,
+        published = catalog,
+        templates = templates(id),
+        fixture = fixture,
+        packComponents = CatalogCutoverFixtures.composed(id).records,
+        exportRecord = CatalogCutoverFixtures.exportRecord(id),
+        nativeRuntimeId = CatalogCutoverFixtures.rendererRuntimeId(id),
+      )
     }
-  }
 
   /**
    * One line per catalog whose repository has written a policy but publishes no delivery branch: it
