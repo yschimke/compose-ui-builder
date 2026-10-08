@@ -176,7 +176,7 @@ private fun NewDesignTypePicker(form: NewDesignFormState) {
         when (catalog.systemId) {
           "m3-catalog" -> "Mobile app" to "Phone & tablet"
           "wear-m3" -> "Wear app" to "Watch screens"
-          else -> "Wear widget" to "Watch widgets"
+          else -> "Remote Compose" to "Watch widgets & clocks"
         }
       val isSelected = form.selectedCatalogId == catalog.systemId
       Surface(
@@ -276,7 +276,22 @@ private fun NewDesignFormFields(form: NewDesignFormState, onSubmit: () -> Unit) 
       modifier = Modifier.selectableGroup(),
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      form.selectedCatalog.templates.forEach { template ->
+      val templates = form.selectedCatalog.templates
+      // Headed only when the catalog offers more than one kind of thing, in the catalog's order.
+      val headed = templates.mapNotNull { it.group }.distinct().size > 1
+      templates.forEachIndexed { index, template ->
+        if (
+          headed &&
+            template.group != null &&
+            template.group != templates.getOrNull(index - 1)?.group
+        ) {
+          Text(
+            template.group,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = if (index == 0) 0.dp else 4.dp),
+          )
+        }
         key(form.selectedCatalogId, template.id) {
           NewDesignChoice(
             selected = template.id == form.selectedTemplate.id,

@@ -26,6 +26,11 @@ data class UiBuilderNewDesignTemplate(
   val supportingText: String,
   /** The exact starting document, rendered as a thumbnail in the chooser. */
   val previewDocument: UiBuilderDocument? = null,
+  /**
+   * The heading the chooser lists this under, when a catalog offers more than one kind of thing:
+   * `remote-m3` offers Wear widgets and plain Remote content. Null lists it under no heading.
+   */
+  val group: String? = null,
 )
 
 data class UiBuilderNewDesignCatalog(

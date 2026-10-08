@@ -363,7 +363,7 @@ class UiBuilderHomeScreenTest {
       onNodeWithText("Activity list").performScrollTo().performClick()
       onNodeWithContentDescription("Create design").performScrollTo().performClick()
       assertEquals("wear-m3" to "wear-list", created)
-      onNodeWithText("Wear widget").performScrollTo().performClick()
+      onNodeWithText("Remote Compose").performScrollTo().performClick()
       onNodeWithText("Activity list").assertDoesNotExist()
       capture("wear-widget")
       onNodeWithText("Weather").performScrollTo().performClick()
