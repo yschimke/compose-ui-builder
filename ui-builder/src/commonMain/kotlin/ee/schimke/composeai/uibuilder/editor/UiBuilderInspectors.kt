@@ -80,6 +80,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.LocalUiBuilderFontRegistry
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset
+import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.canvas.boardItemCount
 import ee.schimke.composeai.uibuilder.canvas.forPlatform
 import ee.schimke.composeai.uibuilder.canvas.isBoard
@@ -445,6 +446,7 @@ private fun InspectorBody(
         ScreenEnvironmentInspector(
           document = state.document,
           devicePresets = devicePresets,
+          catalogFrameSizes = state.catalogFrameSizes,
           platform = state.platform,
           variantAxes = state.variantAxes,
           variantsDrawn = variantsDrawn,
@@ -1570,6 +1572,8 @@ private fun EditorOperationStanding.marker(): String? =
 private fun ScreenEnvironmentInspector(
   document: UiBuilderDocument,
   devicePresets: List<UiBuilderDevicePreset>,
+  /** The sizes the catalog declares, listed ahead of the devices — see [UiBuilderFrameGeometry]. */
+  catalogFrameSizes: List<UiBuilderFrameGeometry.FrameSize>,
   /** The design's catalog platform, which decides which device families the pickers open on. */
   platform: UiBuilderCatalogPlatform,
   /** The unstored axes the strip is drawing — see [UiBuilderEditorState.variantAxes]. */
@@ -1626,7 +1630,11 @@ private fun ScreenEnvironmentInspector(
     )
     HorizontalDivider(Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline)
   }
-  if (devicePresets.isNotEmpty()) {
+  // The catalog's own sizes lead the frame menu and are all it opens on (`forPlatform`); they never
+  // reach the export-device picker below, which writes `@Preview(device = …)` tokens a size is not.
+  val framePresets =
+    UiBuilderFrameGeometry(sizes = catalogFrameSizes).sizePresets(current.density) + devicePresets
+  if (framePresets.isNotEmpty()) {
     // The dock holds three controls that all name devices, and until now nothing said how they
     // differ: one frame the design is measured in, a set of others to look at it on, and three
     // ways of looking that are not devices at all. Three sibling headings and no sentence between
@@ -1638,8 +1646,8 @@ private fun ScreenEnvironmentInspector(
       modifier = Modifier.padding(bottom = 8.dp),
     )
     DevicePresetPicker(
-      presets = devicePresets,
-      selected = current.matchingDevicePreset(devicePresets),
+      presets = framePresets,
+      selected = current.matchingDevicePreset(framePresets),
       platform = platform,
       onPick = { preset ->
         // Width, height and density move together, in one dispatch, so the frame is one undoable

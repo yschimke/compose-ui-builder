@@ -145,6 +145,11 @@ fun List<UiBuilderDevicePreset>.forPlatform(
   platform: UiBuilderCatalogPlatform,
   keep: Collection<String> = emptyList(),
 ): List<UiBuilderDevicePreset> {
-  val groups = platform.relevantDeviceGroups()
+  // A catalog that declares its own sizes has said what its designs are measured in — a launcher
+  // widget's grid cells — and no device family is the better default for it.
+  val groups =
+    if (any { it.group == UiBuilderFrameGeometry.CATALOG_SIZES_GROUP })
+      listOf(UiBuilderFrameGeometry.CATALOG_SIZES_GROUP)
+    else platform.relevantDeviceGroups()
   return filter { it.group in groups || it.id in keep }
 }

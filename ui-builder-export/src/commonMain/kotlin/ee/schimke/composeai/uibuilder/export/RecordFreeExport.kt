@@ -44,6 +44,16 @@ object RecordFreeExport {
       !UiBuilderBuildFeatures.remoteCompose || platform != UiBuilderCatalogPlatform.REMOTE_COMPOSE
     )
       return null
+    // A launcher widget is a Remote Compose root with a scaffold of its own: the
+    // `RemoteComposeWidget` class around the body, which the inline exporter below never writes.
+    if (document.isLauncherWidget()) {
+      return when (
+        val result = LauncherWidgetCodeExporter.export(document, packageName, packComponents)
+      ) {
+        is LauncherWidgetCodeExporter.Result.Emitted -> Generated.Emitted(result.source)
+        is LauncherWidgetCodeExporter.Result.Refused -> Generated.Refused(result.reasons)
+      }
+    }
     return when (
       val result =
         InlineRemoteContentExporter.exportRoots(document, packageName, packComponents, assets)
