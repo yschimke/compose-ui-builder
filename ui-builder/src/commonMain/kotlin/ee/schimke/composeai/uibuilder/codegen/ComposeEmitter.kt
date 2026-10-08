@@ -1521,9 +1521,11 @@ private fun UiBuilderNode.boolExpression(
  * ([TwoWayStateBinding]), or when `checked` is not a whole read of a declared flag.
  */
 private fun UiBuilderNode.checkedChangeLambda(stateTypes: Map<String, String>): String {
-  val actions = actionExpression("click", stateTypes)
+  // `checkedChange`, the callback's own name, or a legacy `click` binding (TwoWayStateBinding).
+  val event = TwoWayStateBinding.eventFor("checked", eventBindings)
+  val actions = actionExpression(event, stateTypes)
   val variable =
-    TwoWayStateBinding.writeBackVariable(properties["checked"], eventBindings["click"])?.takeIf {
+    TwoWayStateBinding.writeBackVariable(properties["checked"], eventBindings[event])?.takeIf {
       stateTypes[it]?.removeSuffix("?") == "Boolean"
     } ?: return if (actions.isEmpty()) "{}" else "{ $actions }"
   val writeBack = "${variable.identifier()} = it"
@@ -3313,7 +3315,10 @@ private val HANDLED_FIELDS =
         setOf("containerColor", "scrolledContainerColor", "scrollBehavior"),
         setOf("title"),
       ),
-    "m3/checkbox" to HandledFields(setOf("checked", "enabled"), events = setOf("click")),
+    "m3/checkbox" to
+      // `checkedChange` is the callback's own name; `click` is what designs authored before the
+      // names were made consistent carry, and still emits.
+      HandledFields(setOf("checked", "enabled"), events = setOf("checkedChange", "click")),
     "m3/date-picker" to HandledFields(setOf("mode", "selectedDate", "showModeToggle")),
     "m3/dialog" to
       HandledFields(
@@ -3372,7 +3377,10 @@ private val HANDLED_FIELDS =
           ThemeTextStyle.PROPERTY,
         setOf("content"),
       ),
-    "m3/switch" to HandledFields(setOf("checked", "enabled"), events = setOf("click")),
+    "m3/switch" to
+      // `checkedChange` is the callback's own name; `click` is what designs authored before the
+      // names were made consistent carry, and still emits.
+      HandledFields(setOf("checked", "enabled"), events = setOf("checkedChange", "click")),
     "m3/tab" to HandledFields(setOf("selected"), setOf("text"), setOf("click")),
     "m3/text-field" to
       HandledFields(

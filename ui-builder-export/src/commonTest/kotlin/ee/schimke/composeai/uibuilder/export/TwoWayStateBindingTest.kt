@@ -53,4 +53,45 @@ class TwoWayStateBindingTest {
       ),
     )
   }
+
+  @Test
+  fun `a control's change event is its callback without on`() {
+    assertEquals("checkedChange", TwoWayStateBinding.changeEvent("m3/checkbox", setOf("checked")))
+    assertEquals(
+      "checkedChange",
+      TwoWayStateBinding.changeEvent("wear-m3/switch-button", setOf("checked", "label")),
+    )
+    assertEquals(
+      "select",
+      TwoWayStateBinding.changeEvent("wear-m3/radio-button", setOf("selected")),
+    )
+    assertEquals(
+      "selectionClick",
+      TwoWayStateBinding.changeEvent("remote-m3/remote-split-radio-button", setOf("selected")),
+    )
+    // An m3 RadioButton's callback is `onClick`, so it keeps `click`.
+    assertNull(TwoWayStateBinding.changeEvent("m3/radio-button", setOf("selected")))
+    assertNull(TwoWayStateBinding.changeEvent("m3/button", emptySet()))
+  }
+
+  @Test
+  fun `the change event is read first, a legacy click second`() {
+    val toggle = json("""[{"type":"toggle","variable":"notify"}]""")
+    assertEquals("checkedChange", TwoWayStateBinding.eventFor("checked", emptyMap()))
+    assertEquals(
+      "checkedChange",
+      TwoWayStateBinding.eventFor("checked", mapOf("checkedChange" to toggle)),
+    )
+    assertEquals("click", TwoWayStateBinding.eventFor("checked", mapOf("click" to toggle)))
+    assertEquals(
+      "checkedChange",
+      TwoWayStateBinding.eventFor("checked", mapOf("click" to toggle, "checkedChange" to toggle)),
+    )
+    assertEquals("select", TwoWayStateBinding.eventFor("selected", emptyMap()))
+    assertEquals(
+      "selectionClick",
+      TwoWayStateBinding.eventFor("selected", mapOf("selectionClick" to toggle)),
+    )
+    assertEquals("click", TwoWayStateBinding.eventFor("label", emptyMap()))
+  }
 }

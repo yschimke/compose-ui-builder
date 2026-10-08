@@ -88,6 +88,7 @@ import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_CLICK_COMPONENTS
 import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
+import ee.schimke.composeai.uibuilder.export.TwoWayStateBinding
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -662,7 +663,10 @@ private fun InspectorBody(
       }
       if (
         UiBuilderBuildFeatures.remoteCompose &&
-          (node.componentId in COMPOSE_EMITTED_CLICK_COMPONENTS || node.eventBindings.isNotEmpty())
+          (node.componentId in COMPOSE_EMITTED_CLICK_COMPONENTS ||
+            node.eventBindings.isNotEmpty() ||
+            // A Wear or Remote selection row, whose change event the catalog adapters run.
+            TwoWayStateBinding.changeEvent(node.componentId, node.properties.keys) != null)
       ) {
         item { EventActionsInspector(state.document, node, onTextInputFocusChanged, dispatch) }
       }

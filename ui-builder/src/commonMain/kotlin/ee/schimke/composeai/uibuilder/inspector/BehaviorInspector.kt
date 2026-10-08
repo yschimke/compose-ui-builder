@@ -16,6 +16,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_STATE_NAME
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.StateSelection
+import ee.schimke.composeai.uibuilder.export.TwoWayStateBinding
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.stateSelection
@@ -236,12 +237,16 @@ internal fun EventActionsInspector(
   val remoteLayout =
     LocalUiBuilderCatalogPlatform.current == "remote-compose" &&
       (node.componentId.startsWith("layout/") || node.componentId == "draw/canvas")
+  // A control with its own change callback is wired under that callback's name — `checkedChange`
+  // for a checkbox or switch, `select` for a Wear or Remote radio row — as every lane names it.
+  val changeEvent = TwoWayStateBinding.changeEvent(node.componentId, node.properties.keys)
   val events =
-    (listOf("click") +
+    (listOfNotNull(changeEvent) +
+        (if (changeEvent == null) listOf("click") else emptyList()) +
         (if (remoteLayout) listOf("longClick", "doubleClick") else emptyList()) +
         node.eventBindings.keys)
       .distinct()
-  var event by remember(node.id) { mutableStateOf("click") }
+  var event by remember(node.id) { mutableStateOf(changeEvent ?: "click") }
   TextButton(onClick = { expanded = !expanded }) { Text("Actions") }
   if (!expanded) return
   Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -261,6 +266,9 @@ internal fun EventActionsInspector(
             Text(
               when (candidate) {
                 "click" -> "On click"
+                "checkedChange" -> "On change"
+                "select" -> "On select"
+                "selectionClick" -> "On select"
                 "longClick" -> "On long press"
                 "doubleClick" -> "On double tap"
                 else -> candidate
