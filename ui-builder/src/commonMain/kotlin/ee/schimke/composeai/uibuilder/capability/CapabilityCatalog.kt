@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.capability
 import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_DP_PROPERTIES
 import ee.schimke.composeai.uibuilder.editor.ComponentMenu
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles
 import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
@@ -404,7 +405,9 @@ object CapabilityCatalogParser {
     copy(
       components =
         components.map { component ->
-          if (component.componentId !in FontSettings.TEXT_COMPONENTS) return@map component
+          if (!CatalogBuilderRoles.isText(component.componentId, component.traits)) {
+            return@map component
+          }
           val declared = component.properties.mapTo(mutableSetOf()) { it.name }
           component.copy(
             properties =
@@ -438,7 +441,14 @@ object CapabilityCatalogParser {
                 else null,
             properties =
               component.properties.map { property ->
-                property.copy(editor = editorMetadata(component.componentId, property))
+                property.copy(
+                  editor =
+                    CatalogPublishedPolicy.editorFor(
+                      statusSemantics,
+                      component.componentId,
+                      property.name,
+                    ) ?: editorMetadata(component.componentId, property)
+                )
               },
           )
         }

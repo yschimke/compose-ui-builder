@@ -337,6 +337,72 @@ Until compose-preview-contracts can carry the fields, `platform`, `previewSurfac
 them into typed fields on `CatalogCapabilityV1` is a contracts change and the right one, sequenced
 below; it is not a prerequisite, because every reader already reads `statusSemantics`.
 
+### Catalog-published editor policy
+
+Three things the editor still answers from Kotlin tables have a published form, read out of the
+policy in `statusSemantics` like the fields above. Each reader asks the catalog **first** and falls
+back to the table it replaces, so a catalog that publishes none of this — every catalog today — is
+edited exactly as before. `CatalogPublishedPolicyTest` holds both halves.
+
+| Contract | Where a catalog writes it | Replaces | Reader |
+| --- | --- | --- | --- |
+| **Builder roles** | `traits` on the component (`@BuilderComponent(traits = …)` or the policy file) | `FontSettings.TEXT_COMPONENTS`, `CanvasPopOut`'s scroller ids, the reducer's `a2ui/Text`, the launcher root id | `CatalogBuilderRoles` (`:ui-builder-export`) |
+| **Editor ranges** | `propertyCapabilities[].editor` in the policy file's `components` | `CapabilityCatalogParser.EDITOR_OVERRIDES` and its remote-m3 number lists | `CatalogPublishedPolicy.editorFor` |
+| **Insert content** | `components.<id>.insertContent` (a builtin's `builtins.<id>.insertContent`) | `StarterContent`'s table | `CatalogPublishedPolicy.insertContentFor` |
+
+**Builder roles** are a closed vocabulary — `UiBuilderText`, `UiBuilderVerticalScroller`,
+`UiBuilderHorizontalScroller`, and `LauncherWidgetHost`, which predates the prefix. A catalog's other
+traits stay its own; these are the only ones the builder compares across catalogs. A role is read
+*beside* the legacy id, never instead of it: `UiBuilderText` gives a component the `FontSettings`
+pair and makes it what a text slot is filled with (the slot owner's namespace first), and the
+scroller roles make a container pop out beside the frame.
+
+**Editor ranges** are `PropertyEditorCapability`'s shape, on the property they edit:
+
+```jsonc
+"components": { "remote-m3/remote-slider": { "propertyCapabilities": [
+  { "name": "value", "jsonType": ["number", "object"],
+    "editor": { "control": "number", "minimum": 0, "maximum": 1, "step": 0.05 } }
+] } }
+```
+
+`control` is `text`, `boolean`, `number`, `enum` or `color`; a number needs finite `minimum` ≤
+`maximum` and a positive `step`, and may set `integer`. `objectKind` and `suggestedValues` are as in
+the type. A declaration this build cannot honour is ignored and the property keeps the range it had,
+so a bad editor costs the catalog its range, never the property. `propertyCapabilities` entries are
+raw JSON in compose-ai-tools' policy schema already, so this needs no generator change.
+
+**Insert content** is what a component arrives holding when it is inserted from the palette —
+`StarterContent`'s two tables in one shape:
+
+```jsonc
+"insertContent": {
+  "properties": { "checked": { "type": "boolean", "value": true } },
+  "slots": { "label": [ { "componentId": "wear-m3/text",
+                          "properties": { "text": { "type": "string", "value": "Checkbox" } } } ] }
+}
+```
+
+Property values are encoded as a document node holds them. A child may carry its own `slots`; a
+slot it names is authored exactly, one it leaves out gets that child's own insert content. A seed
+that does not decode, or does not fit the slot, degrades to the table and then to the required-slot
+fill, never to a refused insert. This is not `@BuilderComponent(starter = …)`, which is call-site
+argument text for the export. Publishing it needs compose-ai-tools to carry the field (its policy
+schema closes `components` to unknown keys).
+
+One gap is upstream of all three: a policy entry joins a component only through the published
+record, and the record holds the sheet's own composables and the libraries it wraps. A component a
+catalog uses straight from another library — `remote-widgets/remote-text`, `remote-creation-compose`'s
+`RemoteText` — joins nothing (`component.policy.orphaned`), so nothing it publishes about that
+component, roles and insert content included, reaches the editor. compose-ai-tools recording those
+library calls, or a wrapper in the catalog, is the fix; until then the builder keeps that id.
+
+Still without a contract, and so still Kotlin here: the chooser's labels and descriptions
+(`platformLabel` covers only the group heading), the web archive's bundled catalog list, the
+structural screen emitters (§ Structural code cannot be printed from a signature), and the JVM
+canvas adapters. `.github/scripts/catalog-id-ratchet.sh` counts the catalog-id literals that
+remain, per file, and fails CI if any count moves without the allowlist moving with it.
+
 ### What the server reads
 
 `ServeCatalogStore` stages `ui-builder.json` beside `components.json` on every load and offers it
@@ -972,7 +1038,8 @@ indirection is not obvious from either end of it.
 ## Success criteria
 
 - No catalog id and no platform word appears in main sources of the builder or the server, other
-  than the packaged fallback's, and CI says so.
+  than the packaged fallback's, and CI says so. `.github/scripts/catalog-id-ratchet.sh` is the
+  builder's half: it records the count per file and only lets it go down.
 - A catalog's frame geometry lives beside the test that measures it, and nowhere else.
 - The New design chooser, the palette, the Code pane, the export and the native lane read one file
   per catalog, and that file is generated from inputs the catalog repository owns.
