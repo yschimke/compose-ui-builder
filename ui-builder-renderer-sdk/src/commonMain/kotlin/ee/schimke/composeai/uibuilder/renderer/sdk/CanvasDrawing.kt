@@ -352,9 +352,15 @@ private sealed interface DrawStep {
               val viewportHeight = node.number("viewportHeight")?.takeIf { it > 0f } ?: 24f
               // The scale applies to the shader too, so a gradient spans the viewport.
               val viewportBrush = paint.brush(Size(viewportWidth, viewportHeight))
-              scale(extent.width / viewportWidth, extent.height / viewportHeight, Offset.Zero) {
-                drawPath(path, viewportBrush, style = style)
-              }
+              val sx = extent.width / viewportWidth
+              val sy = extent.height / viewportHeight
+              // It applies to the stroke as well, so the width is divided back out: strokeWidthDp
+              // is dp on the canvas whatever the viewport, as on every other operation. The export
+              // divides by the same mean scale, which is exact when the viewport keeps its aspect.
+              val pathStyle =
+                if (paint.stroke) Stroke(width = strokePx / ((sx + sy) / 2f), cap = paint.cap)
+                else style
+              scale(sx, sy, Offset.Zero) { drawPath(path, viewportBrush, style = pathStyle) }
             }
           }
           UiDrawing.TEXT_CIRCLE -> {

@@ -2276,7 +2276,17 @@ internal class RemoteContentEmitter(
     if (stroked || operation.componentId == "draw/line") {
       usedComponentImports += "androidx.compose.ui.graphics.PaintingStyle"
       lines += "style = PaintingStyle.Stroke"
-      lines += "strokeWidth = ${node.drawPx("strokeWidthDp") ?: 1f.dpLiteral() + ".toPx()"}"
+      val width = node.drawPx("strokeWidthDp") ?: (1f.dpLiteral() + ".toPx()")
+      lines +=
+        if (operation.componentId == "draw/path" || operation.componentId == UiDrawing.MORPH) {
+          // A path is drawn under its viewport-to-canvas scale, which scales the stroke too: divide
+          // it back out so strokeWidthDp is dp on the canvas, as on every other operation. The
+          // mean of the two axes is exact when the viewport keeps the canvas's aspect.
+          val viewportWidth = node.drawFloat("viewportWidth") ?: 24f.floatLiteral()
+          val viewportHeight = node.drawFloat("viewportHeight") ?: 24f.floatLiteral()
+          "strokeWidth = ($width / ((${extent.width} / $viewportWidth + " +
+            "${extent.height} / $viewportHeight) / 2.rf))"
+        } else "strokeWidth = $width"
     }
     node.properties["strokeCap"]?.stringOrNull()?.let { cap ->
       usedComponentImports += "androidx.compose.ui.graphics.StrokeCap"
