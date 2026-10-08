@@ -59,7 +59,7 @@ class DesignGuidelinesTest {
     assertTrue("- screen: wear-m3/screen-scaffold {timeText=\"10:10\"}" in outline, outline)
     assertTrue("- stop: wear-m3/button {label=\"Stop\"} modifiers[width(value=80)]" in outline)
 
-    val rules = DesignGuidelineRuleSet.Bundled.forPlatform("wear").filterNot { it.visual }
+    val rules = DesignGuidelineRuleSet.Bundled.forPlatform("wear", "screen").filterNot { it.visual }
     val request =
       DesignGuidelinePrompt.prepare(
         DesignGuidelineRuleSet.Bundled,
@@ -124,14 +124,15 @@ class DesignGuidelinesTest {
 
     val ready = assertIs<DesignGuidelineState.Ready>(controller.state.value)
     val result = ready.result!!
-    val visual = DesignGuidelineRuleSet.Bundled.forPlatform("wear").filter { it.visual }
+    val visual = DesignGuidelineRuleSet.Bundled.forPlatform("wear", "screen").filter { it.visual }
     assertEquals(visual.size, result.visualSkipped)
     visual.forEach { assertFalse(it.id in sent, it.id) }
     assertEquals("sk-or-1", host.lastKey)
     assertEquals(DEFAULT_GUIDELINE_MODEL, result.model)
     // One rule answered: the rest are unanswered, which is unchecked rather than passed.
     assertEquals(1, result.judged)
-    val structural = DesignGuidelineRuleSet.Bundled.forPlatform("wear").filterNot { it.visual }
+    val structural =
+      DesignGuidelineRuleSet.Bundled.forPlatform("wear", "screen").filterNot { it.visual }
     assertEquals(structural.size - 1, result.unanswered.size)
 
     // No verdict for any rule asked is a failure, not a clean result.

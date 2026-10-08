@@ -88,6 +88,29 @@ class DesignGuidelineFramesTest {
     assertTrue(request.provenance.any { "tablet picture" in it })
   }
 
+  @Test
+  fun `a widget is asked only the rules for widgets, and a screen only those for screens`() {
+    fun asked(root: String) =
+      DesignGuidelinePrompt.prepare(
+          DesignGuidelineRuleSet.Bundled,
+          "d",
+          1,
+          Json.encodeToJsonElement(UiBuilderDocument.serializer(), document("wear-m3", root))
+            .jsonObject,
+          listOf(DesignGuidelinePicture.device(192, 192, "data:image/png;base64,AA")),
+          null,
+        )
+        .rules
+        .asked
+        .map { it.id }
+    val widget = asked(WearWidgetScaffoldSize.Small.componentId)
+    val screen = asked("wear-m3/screen-scaffold")
+    assertTrue("wear.widgets.focused" in widget && "wear.widgets.focused" !in screen)
+    assertTrue("wear.edge-button.in-slot" in screen && "wear.edge-button.in-slot" !in widget)
+    assertTrue("wear.touch-target-48dp" in widget && "wear.touch-target-48dp" in screen)
+    assertTrue(widget.size < 20 && screen.size < 30, "widget ${widget.size}, screen ${screen.size}")
+  }
+
   private fun document(
     systemId: String,
     root: String,
