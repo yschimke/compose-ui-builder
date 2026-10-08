@@ -13,6 +13,22 @@ public final class ee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilder
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class ee/schimke/composeai/uibuilder/service/CatalogCutoverShadow {
+	public static final field INSTANCE Lee/schimke/composeai/uibuilder/service/CatalogCutoverShadow;
+	public final fun catalogDifferences (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Ljava/util/List;
+	public final fun ownedFindings (Ljava/lang/String;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/export/CatalogSeedTemplates;Lkotlinx/serialization/json/JsonObject;Ljava/util/Map;Lee/schimke/composeai/discovery/ComponentRecordFile;Ljava/lang/String;)Ljava/util/List;
+	public static synthetic fun ownedFindings$default (Lee/schimke/composeai/uibuilder/service/CatalogCutoverShadow;Ljava/lang/String;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/export/CatalogSeedTemplates;Lkotlinx/serialization/json/JsonObject;Ljava/util/Map;Lee/schimke/composeai/discovery/ComponentRecordFile;Ljava/lang/String;ILjava/lang/Object;)Ljava/util/List;
+	public final fun report (Ljava/lang/String;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/export/CatalogSeedTemplates;Lkotlinx/serialization/json/JsonObject;Ljava/util/Map;Lee/schimke/composeai/discovery/ComponentRecordFile;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/CatalogCutoverShadow$Report;
+	public static synthetic fun report$default (Lee/schimke/composeai/uibuilder/service/CatalogCutoverShadow;Ljava/lang/String;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/export/CatalogSeedTemplates;Lkotlinx/serialization/json/JsonObject;Ljava/util/Map;Lee/schimke/composeai/discovery/ComponentRecordFile;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/CatalogCutoverShadow$Report;
+}
+
+public final class ee/schimke/composeai/uibuilder/service/CatalogCutoverShadow$Report {
+	public final fun getCatalogId ()Ljava/lang/String;
+	public final fun getDifferences ()Ljava/util/List;
+	public final fun getFindings ()Ljava/util/List;
+	public final fun getReady ()Z
+}
+
 public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCatalogExecutor : ee/schimke/composeai/uibuilder/service/UiBuilderCatalogExecutor {
 	public static final field A2UI_CATALOG_SYSTEM_ID Ljava/lang/String;
 	public static final field ASSET_KEY_PROPERTY Ljava/lang/String;
@@ -35,6 +51,7 @@ public final class ee/schimke/composeai/uibuilder/service/CurrentM3UiBuilderCata
 	public fun listCatalogs ()Ljava/util/List;
 	public fun reference (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;
 	public fun resolve (Lee/schimke/composeai/uibuilder/protocol/CatalogReferenceV1;)Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;
+	public final fun synthesisedCatalog (Ljava/lang/String;)Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;
 	public fun validate (Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
 	public fun validateWrite (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/protocol/DesignDocumentV1;Lee/schimke/composeai/uibuilder/protocol/DesignNodeV1;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;
 	public final fun validateWrite (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/protocol/DesignNodeV1;Ljava/lang/String;)Lee/schimke/composeai/uibuilder/service/UiBuilderCatalogIssue;

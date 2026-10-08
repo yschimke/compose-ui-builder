@@ -158,6 +158,28 @@ captured by `scripts/capture-catalog-cutover-fixtures.sh` from the source reposi
 **Recommendation: flip `remote-widgets` first.** It has nothing to fall back to and nothing to
 delete, so owning it is only gain, and it is the smallest proof of the whole path on a real box.
 
+## Shadow mode: measuring a flip on the box before making it
+
+`CatalogCutoverShadow` (`:ui-builder-runtime`) is the readiness check as a library call, so a
+deployment can run it against what a catalog publishes *today* instead of against fixtures captured
+on one day. `CatalogCutoverProbe` delegates to it, so the gap ledger above and a box's report are
+the same measurement.
+
+`CatalogCutoverShadow.report(catalogId, published, templates, …)` answers two questions and changes
+nothing served:
+
+- **`findings`**: would serving the catalog owned work? Seeds it publishes, that they validate,
+  its declared export route, and that every seed exports through it. Empty means ready.
+- **`differences`**: what would an editor see change if the Kotlin catalog were deleted? The Kotlin
+  catalog as this build serves it, against the published one as served owned (both with the
+  builder vocabulary added, so that is never reported as lost), component by component: role,
+  traits, properties and slots. Null for a catalog nothing here synthesises.
+
+On compose-preview-server it is a per-catalog `"shadow": true` beside `"owned"` in `catalogs.json`'s
+`uiBuilder` block: the box keeps serving what `owned` says, logs the report at startup and serves it
+from the admin config route. Flip a catalog when its shadow report has been clean for long enough to
+trust, not when a capture happened to be.
+
 ## Switching over
 
 Not done, and deliberately not by this change. When the ledger rows for a catalog are closed and the

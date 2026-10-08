@@ -222,6 +222,15 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
       .filterKeys { !catalogOwnership.owns(it) }
       .mapValues { (_, synthesise) -> synthesise() }
 
+  /**
+   * The Kotlin catalog this build would synthesise for [systemId], built on demand whatever this
+   * executor serves, or null for an id it synthesises nothing for. For a shadow comparison
+   * ([CatalogCutoverShadow.catalogDifferences]): it changes nothing served, and an owned catalog's
+   * generator still never runs at construction.
+   */
+  public fun synthesisedCatalog(systemId: String): CatalogCapabilityV1? =
+    synthesisers[systemId]?.invoke()
+
   /** Which Kotlin catalog generators this executor ran: none for a catalog it does not own. */
   internal val synthesisedCatalogIds: Set<String>
     get() = synthesisedCatalogs.keys
