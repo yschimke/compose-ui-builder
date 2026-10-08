@@ -225,13 +225,15 @@ object UiBuilderNewDesignSeed {
       // `blank` scaffold below, which its exporter refuses as a root.
       catalogSystemId == LauncherWidgetTemplates.CATALOG_SYSTEM_ID ->
         LauncherWidgetTemplates.document(
-          templateId =
-            templateId.takeIf { it in LauncherWidgetTemplates.ids }
-              ?: LauncherWidgetTemplates.HELLO_TEMPLATE,
-          designId = designId,
-          catalogPin = catalogPin,
-          environment = environment,
-        )
+            templateId =
+              templateId.takeIf { it in LauncherWidgetTemplates.ids }
+                ?: LauncherWidgetTemplates.HELLO_TEMPLATE,
+            designId = designId,
+            catalogPin = catalogPin,
+            environment = environment,
+          )
+          // The New design form's state, as the blank and catalog-owned seeds keep it.
+          .withDeclaredState(state)
       catalogSystemId == "remote-m3" && templateId == AdaptiveWearWidget.TEMPLATE_ID ->
         AdaptiveWearWidget.newDocument(
           designId = designId,

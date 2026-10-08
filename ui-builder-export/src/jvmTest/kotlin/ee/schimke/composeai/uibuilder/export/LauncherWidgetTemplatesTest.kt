@@ -1,13 +1,16 @@
 package ee.schimke.composeai.uibuilder.export
 
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
@@ -83,5 +86,38 @@ class LauncherWidgetTemplatesTest {
     assertContains(source, "@Preview(name = \"3x1\", widthDp = 203, heightDp = 102)")
     assertContains(source, "import androidx.compose.remote.creation.compose.layout.RemoteText")
     assertFalse("RemoteMaterialTheme" in source, source)
+  }
+
+  /**
+   * The Jetcaster operations fixture every host seeds from, as `CatalogSeedTemplatesTest` reads it.
+   */
+  private val fixture: JsonObject by lazy {
+    val root =
+      generateSequence(File(".").absoluteFile) { it.parentFile }
+        .first { File(it, "docs/design/fixtures/ui-builder").isDirectory }
+    Json.parseToJsonElement(
+        File(root, "docs/design/fixtures/ui-builder/jetcaster-discover-operations-v1.json")
+          .readText()
+      )
+      .jsonObject
+  }
+
+  @Test
+  fun `state asked for in the New design form is declared on the hello seed`() {
+    val seeded =
+      UiBuilderNewDesignSeed.document(
+        designId = "mine",
+        catalogSystemId = LauncherWidgetTemplates.CATALOG_SYSTEM_ID,
+        templateId = LauncherWidgetTemplates.HELLO_TEMPLATE,
+        catalogRevision = "r",
+        nativeRuntimeId = "n",
+        fixture = fixture,
+        state = listOf(NewDesignState("greeting", NewDesignStateType.Text, JsonPrimitive("Hi"))),
+      )
+    assertEquals(setOf("greeting"), seeded.stateVariables.keys)
+    assertEquals(
+      LauncherWidgetCodeExporter.ROOT,
+      seeded.nodes.getValue(seeded.roots.single()).componentId,
+    )
   }
 }
