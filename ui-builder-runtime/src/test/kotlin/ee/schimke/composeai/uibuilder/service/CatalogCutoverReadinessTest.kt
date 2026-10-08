@@ -225,8 +225,9 @@ class CatalogCutoverReadinessTest {
         "a2ui-catalog: declares no composeSourceExport, so no export is offered",
         "glimmer-catalog: publishes no seed templates",
         "glimmer-catalog: declares no composeSourceExport, so no export is offered",
+        "remote-widgets: has no delivery branch, so there is no ui-builder.json to serve it from",
       ),
-      CatalogCutoverProbe.findings(),
+      CatalogCutoverProbe.findings() + CatalogCutoverProbe.unpublishedFindings(),
     )
   }
 

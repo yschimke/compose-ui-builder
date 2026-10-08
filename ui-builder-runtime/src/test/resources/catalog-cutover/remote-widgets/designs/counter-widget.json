@@ -1,0 +1,124 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "counter-widget",
+  "title": "Counter widget · 3x2 (203×220dp)",
+  "revision": 0,
+  "template": "counter-widget",
+  "catalogPin": {
+    "systemId": "remote-widgets",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 203,
+    "heightDp": 220,
+    "density": 2.75,
+    "theme": "light",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false
+  },
+  "stateVariables": {},
+  "roots": [
+    "launcher-widget"
+  ],
+  "nodes": {
+    "launcher-widget": {
+      "id": "launcher-widget",
+      "componentId": "remote-widgets/launcher-widget",
+      "properties": {
+        "background": {
+          "type": "string",
+          "value": "#FFF3EDF7"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "counter-row"
+        ]
+      }
+    },
+    "counter-row": {
+      "id": "counter-row",
+      "componentId": "layout/row",
+      "properties": {
+        "verticalAlignment": {
+          "type": "string",
+          "value": "centerVertically"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "children": [
+          "minus",
+          "count",
+          "plus"
+        ]
+      }
+    },
+    "minus": {
+      "id": "minus",
+      "componentId": "remote-widgets/widget-button",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "-"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {}
+    },
+    "count": {
+      "id": "count",
+      "componentId": "remote-widgets/remote-text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "0"
+        },
+        "fontSize": {
+          "type": "float",
+          "value": 48
+        },
+        "color": {
+          "type": "string",
+          "value": "#FF1D1B20"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "plus": {
+      "id": "plus",
+      "componentId": "remote-widgets/widget-button",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "+"
+        }
+      },
+      "modifiers": [
+        {
+          "type": "weight",
+          "weight": 1
+        }
+      ],
+      "slots": {}
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "launcher-widget-2x1",
+  "title": "Launcher widget · 2x1 (130×102dp)",
+  "revision": 0,
+  "template": "launcher-widget-2x1",
+  "catalogPin": {
+    "systemId": "remote-widgets",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 130,
+    "heightDp": 102,
+    "density": 2.75,
+    "theme": "light",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false
+  },
+  "stateVariables": {},
+  "roots": [
+    "launcher-widget"
+  ],
+  "nodes": {
+    "launcher-widget": {
+      "id": "launcher-widget",
+      "componentId": "remote-widgets/launcher-widget",
+      "properties": {
+        "background": {
+          "type": "string",
+          "value": "#FFF3EDF7"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "content"
+        ]
+      }
+    },
+    "content": {
+      "id": "content",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {}
+    }
+  }
+}

@@ -85,6 +85,58 @@ class LauncherWidgetExportTest {
     assertNull(LauncherWidgetGrid.parse("0x2"))
   }
 
+  @Test
+  fun `a catalog's size label is escaped in the generated preview name`() {
+    val generated =
+      LauncherWidgetCodeExporter.export(
+        counter(),
+        components = records,
+        frameSizes = listOf(CatalogFrameSize(203, 220, "3\"x\$2")),
+      )
+    val source = assertIs<LauncherWidgetCodeExporter.Result.Emitted>(generated).source
+    assertContains(source, "@Preview(name = \"3\\\"x\\\$2\", widthDp = 203, heightDp = 220)")
+  }
+
+  @Test
+  fun `the routed service-document export refuses what conversion would drop`() {
+    val route =
+      CatalogExportRouting.Route.RecordFree(
+        CatalogExportRouting.LAUNCHER_WIDGET,
+        UiBuilderCatalogPlatform.REMOTE_COMPOSE,
+      )
+    val document = counter().toDesignDocumentV1()
+    val first = document.roots.single()
+    val guarded =
+      document.copy(
+        nodes =
+          document.nodes +
+            (first to
+              document.nodes
+                .getValue(first)
+                .copy(
+                  predicate = ee.schimke.composeai.uibuilder.protocol.StateTruthyPredicateV1("on")
+                ))
+      )
+    val refused =
+      assertIs<RecordFreeExport.Generated.Refused>(
+        RecordFreeExport.generate(
+          guarded,
+          route,
+          launcherRoots = setOf(LauncherWidgetCodeExporter.ROOT),
+          packComponents = records,
+        )
+      )
+    assertTrue(refused.reasons.any { "predicate" in it }, refused.reasons.toString())
+    assertIs<RecordFreeExport.Generated.Emitted>(
+      RecordFreeExport.generate(
+        document,
+        route,
+        launcherRoots = setOf(LauncherWidgetCodeExporter.ROOT),
+        packComponents = records,
+      )
+    )
+  }
+
   /** `WidgetButton`, as the catalog's record names it. */
   private val records =
     mapOf(

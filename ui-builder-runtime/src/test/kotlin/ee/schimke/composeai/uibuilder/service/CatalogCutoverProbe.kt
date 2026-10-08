@@ -7,6 +7,7 @@ import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.toDesignDocumentV1
+import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import java.io.File
 import kotlinx.serialization.json.Json
@@ -67,6 +68,28 @@ internal object CatalogCutoverProbe {
           executor.validate(document, catalog)?.let {
             add("$id/$templateId: does not validate: ${it.code} ${it.nodeId ?: ""} ${it.message}")
           }
+          // A launcher widget is routed by its declaration alone, through the catalog-aware entry
+          // the server calls under the flag, previewed at the catalog's own sizes.
+          if (
+            route is CatalogExportRouting.Route.RecordFree &&
+              route.adapter == CatalogExportRouting.LAUNCHER_WIDGET
+          ) {
+            when (
+              val launcher =
+                RecordFreeExport.generate(
+                  document.toUiBuilderDocument(),
+                  route,
+                  CatalogExportRouting.frameSizes(catalog),
+                  CatalogExportRouting.launcherRoots(catalog),
+                  packComponents = CatalogCutoverFixtures.composed(id).records,
+                )
+            ) {
+              is RecordFreeExport.Generated.Refused ->
+                add("$id/$templateId: export refused: ${launcher.reasons.take(3)}")
+              else -> Unit
+            }
+            return@forEach
+          }
           val platform = CatalogExportRouting.recordFreePlatform(route) ?: return@forEach
           val recordFree =
             RecordFreeExport.generate(
@@ -92,4 +115,13 @@ internal object CatalogCutoverProbe {
       }
     }
   }
+
+  /**
+   * One line per catalog whose repository has written a policy but publishes no delivery branch: it
+   * cannot be served at all, flag or no flag, until it does.
+   */
+  fun unpublishedFindings(): List<String> =
+    CatalogCutoverFixtures.unpublishedIds.map { id ->
+      "$id: has no delivery branch, so there is no ui-builder.json to serve it from"
+    }
 }
