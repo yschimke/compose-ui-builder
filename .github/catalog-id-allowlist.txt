@@ -13,6 +13,7 @@
 10 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiBuilderTemplates.kt
 1 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiRemoteTheme.kt
 1 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/UiTimeText.kt
+2 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/VariableFontText.kt
 23 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/export/WearScreenCodeExporter.kt
 1 ui-builder-export/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/guidelines/DesignGuidelines.kt
 2 ui-builder-host-jvm/src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/host/OfflineUiBuilderSession.kt
@@ -23,7 +24,7 @@
 62 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/WearM3Catalog.kt
 1 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/RemoteComposeSources.kt
 38 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/StarterContent.kt
-27 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt
+28 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/canvas/UiBuilderRenderer.kt
 30 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/capability/CapabilityCatalog.kt
 1 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/capability/DesignTokens.kt
 1 ui-builder/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/editor/CanvasPopOut.kt
