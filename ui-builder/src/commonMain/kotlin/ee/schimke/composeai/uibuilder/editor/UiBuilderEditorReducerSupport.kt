@@ -17,6 +17,8 @@ import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyCapability
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
 import ee.schimke.composeai.uibuilder.capability.accepts
+import ee.schimke.composeai.uibuilder.capability.insertContent
+import ee.schimke.composeai.uibuilder.capability.textComponentFor
 import ee.schimke.composeai.uibuilder.componentRootOf
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import ee.schimke.composeai.uibuilder.export.REMOTE_CONTENT_MODIFIERS
@@ -499,7 +501,11 @@ internal fun ComponentCapability.appendDefaultSubtree(
   val seededProperties =
     (starter
         ?: if (seedStarterContent)
-          StarterNode(componentId, StarterContent.propertiesFor(componentId))
+          StarterNode(
+            componentId,
+            catalog.insertContent(componentId)?.properties?.takeIf { it.isNotEmpty() }
+              ?: StarterContent.propertiesFor(componentId),
+          )
         else null)
       .withPresets(componentId, presetProperties)
   operations +=
@@ -570,11 +576,16 @@ private fun ComponentCapability.plannedChildren(
     }
   }
   if (seedStarterContent && starter?.slots?.containsKey(slot.name) != true) {
-    StarterContent.forComponent(componentId)[slot.name]?.let { seeded ->
-      resolveStarterChildren(seeded, slot, catalog)?.let {
+    // The catalog's own seed first, then this build's table: a published seed that does not fit
+    // the slot degrades to the table's, exactly as a stale table entry degrades to the fill.
+    listOfNotNull(
+        catalog.insertContent(componentId)?.slots?.get(slot.name),
+        StarterContent.forComponent(componentId)[slot.name],
+      )
+      .firstNotNullOfOrNull { seeded -> resolveStarterChildren(seeded, slot, catalog) }
+      ?.let {
         return it
       }
-    }
   }
   if (slot.cardinality.min == 0) return emptyList()
   val child = defaultChildFor(slot, catalog, componentId) ?: return null
@@ -640,11 +651,18 @@ private fun defaultChildFor(
       // An A2UI slot takes A2UI components and nothing else, and a text is what an agent puts
       // in a button, a card or a modal first. Its own id, since A2UI names are not lower-case.
       A2UI_COMPONENT_TRAIT in slot.acceptedTraits ->
-        return catalog.componentsById[A2UI_TEXT]?.takeIf(slot::accepts)
+        return catalog.textComponentFor(slot, ownerId)
+          ?: catalog.componentsById[A2UI_TEXT]?.takeIf(slot::accepts)
       "SearchInput" in slot.acceptedTraits -> "search-input-field"
-      "TextContent" in slot.acceptedTraits -> "text"
+      "TextContent" in slot.acceptedTraits ->
+        catalog.textComponentFor(slot, ownerId)?.let {
+          return it
+        } ?: "text"
       "IconContent" in slot.acceptedTraits -> "icon"
-      "Leaf" in slot.acceptedRoles -> "text"
+      "Leaf" in slot.acceptedRoles ->
+        catalog.textComponentFor(slot, ownerId)?.let {
+          return it
+        } ?: "text"
       else -> return catalog.componentsById["layout/box"]?.takeIf(slot::accepts)
     }
   // The owner's own namespace first: a Wear slot is filled with `wear-m3/text`, which is the only

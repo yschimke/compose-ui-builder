@@ -79,6 +79,8 @@ import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
 import ee.schimke.composeai.uibuilder.canvasAdapterIds
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
+import ee.schimke.composeai.uibuilder.capability.LocalUiBuilderCatalogScrollers
+import ee.schimke.composeai.uibuilder.capability.scrollers
 import ee.schimke.composeai.uibuilder.componentDriftProblems
 import ee.schimke.composeai.uibuilder.decodeUiBuilderAssetBitmap
 import ee.schimke.composeai.uibuilder.designUrlPath
@@ -2564,6 +2566,8 @@ fun UiBuilderEditor(
     LocalUiBuilderChrome provides chrome,
     LocalUiBuilderNativeOnly provides catalog.nativeOnlyComponentIds,
     LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,
+    // The catalog's own scrolling containers, by role, read beside the ids the canvas knew.
+    LocalUiBuilderCatalogScrollers provides catalog.scrollers,
     // From the catalog for the same reason as the two lines above: which adapter draws a component
     // is the catalog's statement, not this build's. Empty for every catalog today.
     LocalUiBuilderCanvasAdapters provides catalog.canvasAdapterIds,

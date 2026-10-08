@@ -49,6 +49,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderUnrolledHorizontal
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvas.renderDensity
 import ee.schimke.composeai.uibuilder.canvas.selectionChain
+import ee.schimke.composeai.uibuilder.capability.CatalogScrollers
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
 import ee.schimke.composeai.uibuilder.renderer.sdk.CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL
@@ -71,7 +72,10 @@ internal data class ScrollingContainer(val nodeId: String, val horizontal: Boole
  * Innermost, because that is the viewport clipping the selection: a chip in a lazy row inside a
  * lazy column is hidden by the row long before the column has anything to say about it.
  */
-internal fun UiBuilderDocument.scrollingContainerOf(nodeId: String?): ScrollingContainer? =
+internal fun UiBuilderDocument.scrollingContainerOf(
+  nodeId: String?,
+  scrollers: CatalogScrollers = CatalogScrollers.NONE,
+): ScrollingContainer? =
   selectionChain(nodeId).firstNotNullOfOrNull { id ->
     val node = nodes[id] ?: return@firstNotNullOfOrNull null
     val scrolls =
@@ -79,8 +83,10 @@ internal fun UiBuilderDocument.scrollingContainerOf(nodeId: String?): ScrollingC
         ((it as? JsonObject)?.get("type") as? JsonPrimitive)?.contentOrNull
       }
     when {
-      node.componentId in VERTICAL_SCROLLERS -> ScrollingContainer(id, horizontal = false)
-      node.componentId in HORIZONTAL_SCROLLERS -> ScrollingContainer(id, horizontal = true)
+      node.componentId in VERTICAL_SCROLLERS || node.componentId in scrollers.vertical ->
+        ScrollingContainer(id, horizontal = false)
+      node.componentId in HORIZONTAL_SCROLLERS || node.componentId in scrollers.horizontal ->
+        ScrollingContainer(id, horizontal = true)
       "verticalScroll" in scrolls -> ScrollingContainer(id, horizontal = false)
       "horizontalScroll" in scrolls -> ScrollingContainer(id, horizontal = true)
       else -> null
@@ -90,14 +96,23 @@ internal fun UiBuilderDocument.scrollingContainerOf(nodeId: String?): ScrollingC
 /**
  * Whether [nodeId] is a container whose content scrolls vertically — what a wheel over it moves.
  */
-internal fun UiBuilderDocument.isVerticalScroller(nodeId: String): Boolean {
+internal fun UiBuilderDocument.isVerticalScroller(
+  nodeId: String,
+  scrollers: CatalogScrollers = CatalogScrollers.NONE,
+): Boolean {
   val node = nodes[nodeId] ?: return false
   return node.componentId in VERTICAL_SCROLLERS ||
+    node.componentId in scrollers.vertical ||
     node.modifiers.any {
       ((it as? JsonObject)?.get("type") as? JsonPrimitive)?.contentOrNull == "verticalScroll"
     }
 }
 
+/**
+ * The ids this build knew scroll before catalogs could say so with
+ * [ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles.VERTICAL_SCROLLER]. Read beside the
+ * catalog's own [CatalogScrollers], never instead of them, until every catalog publishes the role.
+ */
 private val VERTICAL_SCROLLERS =
   setOf("layout/lazy-column", "layout/lazy-grid", "wear-m3/transforming-lazy-column")
 

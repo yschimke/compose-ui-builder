@@ -114,6 +114,7 @@ import ee.schimke.composeai.uibuilder.canvas.LocalWearWidgetHostShape
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.canvas.renderDensity
 import ee.schimke.composeai.uibuilder.canvasAdapterMappings
+import ee.schimke.composeai.uibuilder.capability.LocalUiBuilderCatalogScrollers
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
@@ -304,10 +305,12 @@ internal fun PinnedDesignCanvas(
     deviceView && LocalUiBuilderCatalogPlatform.current == UiBuilderCatalogPlatform.WEAR.wireValue
   // The container the selection scrolls inside, which is what comes out beside the frame. It
   // follows the selection and nothing else: select outside it and it goes back in.
+  val scrollers = LocalUiBuilderCatalogScrollers.current
   val popOut =
-    remember(document, selectedNodeId, deviceView, showSelectionOverlay) {
-      if (deviceView && showSelectionOverlay) document.scrollingContainerOf(selectedNodeId)
-      else null
+    remember(document, selectedNodeId, deviceView, showSelectionOverlay, scrollers) {
+      if (deviceView && showSelectionOverlay) {
+        document.scrollingContainerOf(selectedNodeId, scrollers)
+      } else null
     }
   BoxWithConstraints(modifier.clipToBounds(), contentAlignment = contentAlignment) {
     // What "fit" means: the largest scale at which the whole frame is on screen. It is no longer
@@ -854,7 +857,7 @@ internal fun PinnedDesignCanvas(
                                   inspection
                                     ?.nodes
                                     .orEmpty()
-                                    .filter { document.isVerticalScroller(it.nodeId) }
+                                    .filter { document.isVerticalScroller(it.nodeId, scrollers) }
                                     .mapNotNull { node -> node.bounds?.let { node.nodeId to it } }
                                     .filter { (_, bounds) ->
                                       point.x >= bounds.x &&

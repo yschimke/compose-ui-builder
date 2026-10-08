@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder.service
 
+import ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
@@ -1281,13 +1282,17 @@ internal fun widgetContainerProperties(): List<PropertyCapabilityV1> =
  * vocabulary: a catalog that declares either name keeps its own declaration.
  */
 internal fun withFontSettingsVocabulary(catalog: CatalogCapabilityV1): CatalogCapabilityV1 {
-  if (catalog.components.none { it.componentId in FontSettings.TEXT_COMPONENTS }) return catalog
+  if (catalog.components.none { CatalogBuilderRoles.isText(it.componentId, it.traits) }) {
+    return catalog
+  }
   return catalog
     .newBuilder()
     .also { builder ->
       builder.components =
         catalog.components.map { component ->
-          if (component.componentId !in FontSettings.TEXT_COMPONENTS) return@map component
+          if (!CatalogBuilderRoles.isText(component.componentId, component.traits)) {
+            return@map component
+          }
           val declared = component.properties.mapTo(mutableSetOf()) { it.name }
           val missing =
             listOf(
