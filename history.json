@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "64ba7428ddb114cb05af8995350ce2ca6b1eb9b9",
+    "generatedFrom": "9b0981adfc80bde86096d68c1d07792f7ffcf21c",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -1513,6 +1513,13 @@
             "path": "renders/ui-builder/LcdWatchReplicaPreview-4029f9ba.png",
             "versions": [
                 {
+                    "blob": "482fd7b1dee58b9c0646778bc3aa508ed7c554d2",
+                    "commit": "9b0981adfc80bde86096d68c1d07792f7ffcf21c",
+                    "date": "2026-10-08T08:59:50Z",
+                    "sourceSha": "d71615aa",
+                    "commits": 1
+                },
+                {
                     "blob": "1475c79998b83f916a1ca166429adadb53f4bcec",
                     "commit": "695bbe81f6af0c37ff1c257f1cd056fd0b40bf7f",
                     "date": "2026-10-08T07:22:30Z",
@@ -1520,13 +1527,20 @@
                     "commits": 1
                 }
             ],
-            "observations": 1,
+            "observations": 2,
             "unstable": false,
             "flapCount": 0
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.RemoteClockPreviewsKt.RacingChronographReplicaPreview": {
             "path": "renders/ui-builder/RacingChronographReplicaPreview-05ec0220.png",
             "versions": [
+                {
+                    "blob": "99b1dc90aba581275aca59d30b3f1648c485b70d",
+                    "commit": "9b0981adfc80bde86096d68c1d07792f7ffcf21c",
+                    "date": "2026-10-08T08:59:50Z",
+                    "sourceSha": "d71615aa",
+                    "commits": 1
+                },
                 {
                     "blob": "a5b6599e954ba86674ce6d88e588b40f15ce5716",
                     "commit": "695bbe81f6af0c37ff1c257f1cd056fd0b40bf7f",
@@ -1535,7 +1549,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 1,
+            "observations": 2,
             "unstable": false,
             "flapCount": 0
         },
@@ -3701,6 +3715,15 @@
             "path": "renders/ui-builder/UiBuilderUnexportablePalettePreview-2c6c35dc.png",
             "versions": [
                 {
+                    "blob": "1d85b3e37cffb1d39701288682a6fa42d7fd51c0",
+                    "commit": "9b0981adfc80bde86096d68c1d07792f7ffcf21c",
+                    "date": "2026-10-08T08:59:50Z",
+                    "sourceSha": "d71615aa",
+                    "sinceCommit": "6babbd37a5e81a893f46d8b6712cfb3f2b9471a1",
+                    "commits": 5,
+                    "occurrences": 5
+                },
+                {
                     "blob": "8e38f45c8c28f7346c282d23ffb5fb720f40fc13",
                     "commit": "64ba7428ddb114cb05af8995350ce2ca6b1eb9b9",
                     "date": "2026-10-08T07:44:51Z",
@@ -3733,15 +3756,6 @@
                     "date": "2026-10-07T23:20:58Z",
                     "sourceSha": "84221df1",
                     "commits": 1
-                },
-                {
-                    "blob": "1d85b3e37cffb1d39701288682a6fa42d7fd51c0",
-                    "commit": "a8b2a78b1acce10547669fb8ae608bec13126af6",
-                    "date": "2026-10-07T20:27:55Z",
-                    "sourceSha": "3425bf36",
-                    "sinceCommit": "6babbd37a5e81a893f46d8b6712cfb3f2b9471a1",
-                    "commits": 4,
-                    "occurrences": 4
                 },
                 {
                     "blob": "8f8f13cd7888a8cd770df74bb14dcd9eedceb09f",
@@ -3913,9 +3927,9 @@
                     "commits": 1
                 }
             ],
-            "observations": 77,
+            "observations": 78,
             "unstable": true,
-            "flapCount": 51
+            "flapCount": 52
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderVariantStripPreview": {
             "path": "renders/ui-builder/UiBuilderVariantStripPreview-f5ba4732.png",
