@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.CatalogExportRouting
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
+import ee.schimke.composeai.uibuilder.export.LauncherWidgetTemplates
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
@@ -26,9 +27,8 @@ import kotlinx.serialization.json.jsonObject
  * It is the catalog the cutover fits best, and the one that most needs it: the builder synthesises
  * nothing for it, so its definition was only ever its own; its frame sizes are already catalog data
  * (`frame.geometry.sizesDp`); and it publishes its own seed templates. Off the flag it gets the
- * builder's mobile `blank` and `jetcaster` seeds, which are not launcher widgets at all, and its
- * export reaches `LauncherWidgetCodeExporter` only because its root is spelled
- * `remote-widgets/launcher-widget`.
+ * builder's Kotlin copy of a launcher seed (`LauncherWidgetTemplates`), and its export reaches
+ * `LauncherWidgetCodeExporter` only because its root is spelled `remote-widgets/launcher-widget`.
  *
  * Its delivery branch does not exist yet, so these read its policy and templates as its repository
  * wrote them ([CatalogCutoverFixtures.unpublishedIds]); the readiness ledger carries the missing
@@ -79,10 +79,16 @@ class LauncherWidgetCutoverTest {
     )
 
   @Test
-  fun `off the flag it is offered the builder's mobile seeds, on it its own`() {
+  fun `off the flag it is offered the builder's launcher seed, on it its own`() {
+    assertEquals(LauncherWidgetTemplates.ids, UiBuilderNewDesignSeed.templateIds(id))
     assertEquals(
-      setOf("blank", UiBuilderNewDesignSeed.DEFAULT_TEMPLATE),
-      UiBuilderNewDesignSeed.templateIds(id),
+      LauncherWidgetTemplates.ids,
+      UiBuilderNewDesignSeed.templateIds(
+        id,
+        CatalogOwnership.NONE,
+        CatalogCutoverFixtures.templates(id),
+      ),
+      "the flag off ignores what the catalog publishes",
     )
     assertEquals(
       listOf("launcher-widget-2x1", "counter-widget"),

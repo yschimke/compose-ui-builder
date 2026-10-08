@@ -138,8 +138,9 @@ the flag and is the catalog the cutover fits best:
   names its preview from the same block (`CatalogExportRouting.frameSizes`) instead of
   `LauncherWidgetGrid`, the Kotlin copy of the table.
 - **It publishes its own seeds** (`launcher-widget-2x1`, `counter-widget`). Off the flag it is
-  offered the builder's mobile `blank` and `jetcaster` seeds, which are not launcher widgets at
-  all; this is the one catalog where the flag fixes the seeds, not just moves them.
+  offered `hello-widget`, the builder's Kotlin launcher seed (`LauncherWidgetTemplates`,
+  compose-ui-builder#562); under the flag it is offered the catalog's own, and the Kotlin seed is
+  one more copy to delete.
 - **Its export is the last id-routed emitter.** Off the flag `RecordFreeExport` reaches the launcher
   emitter only because the root is spelled `remote-widgets/launcher-widget`
   (`isLauncherWidget()`). Under the flag the catalog declares
@@ -186,6 +187,7 @@ readiness test is green with that catalog owned, and `ledger empty for it` is th
 | `UiBuilderNewDesignSeed`'s `when`s, `newDesignCatalog`'s table, `NEW_DESIGN_CATALOG_ORDER`, the home screen's three-id list | ~250 | the catalog-owned readers above | all catalogs owned |
 | `synthesisers`, `LEGACY_*` fallbacks in `ProductionUiBuilderRuntime` | — | — | all catalogs owned; `LegacySynthesisedReferences` **stays** (it is the only record of those pins) |
 | `docs/design/fixtures/ui-builder/{wear-m3,remote-m3,a2ui-catalog}-capabilities-v1.json` goldens and their `--strict` gates | — | the catalog-cutover fixtures | together with their generator, as contract phase 5 says |
+| `LauncherWidgetTemplates` and its `UiBuilderNewDesignSeed` branches | ~145 | remote-m3-catalog's `widget-catalog/ui-builder/designs/*.json` | `remote-widgets` owned; move `hello-widget` into that directory first if it should stay on offer |
 | `isLauncherWidget()`'s root-id test, in `RecordFreeExport` and in the editor model's minimum frame size, and `LauncherWidgetGrid`'s cell table | ~60 | `remote-widgets`' `composeSourceExport` declaration and `frame.geometry.sizesDp` | `remote-widgets` owned; the editor's minimum then reads "this catalog declares sizes" from the frame block it already parses |
 
 `blankUiBuilderDocument`, `ComposeFoundationCatalog` and the packaged `m3-catalog` capability stay:
