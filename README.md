@@ -105,13 +105,9 @@ and a version skew between them does not fail resolution — it produces an expo
 between the browser and the service.
 
 compose-preview-server pins a release through the BOM (`composeai-ui-builder` in its version
-catalog). A pin only moves on a bump, so a seam change here would otherwise surface there one
-release late. CI closes that gap: the `server-against-checkout` job checks out
-compose-preview-server's `main` and runs its `:server` and `:mcp` tests against this checkout
-through `-PcomposeUiBuilderDir`, so a change that breaks the server's build or tests goes red on the
-pull request that makes it. A deliberate seam break, a re-package for example, lands together with
-the matching compose-preview-server change: push it to a server branch named like this pull
-request's branch and the job builds that branch instead of `main`.
+catalog). A pin only moves on a bump, so a change here that breaks the server surfaces on that bump,
+in the server's own CI, and is fixed there. A deliberate seam break, a re-package for example, says
+so in its release notes; why there is no cross-repository job for it is in AGENTS.md, "The seams".
 
 ### Publishing a release
 
