@@ -50,11 +50,22 @@ class RemoteClockDesignsTest {
   }
 
   @Test
-  fun `the racing movement runs under the dial`() {
+  fun `the racing movement runs under the dial and the hands`() {
     val racing = designs.getValue("Racing")
     val ops = racing.nodes.getValue("racing-canvas").slots.getValue(UiDrawing.OPS_SLOT)
 
-    assertTrue(ops.indexOf("racing-movement") < ops.indexOf("racing-dial-cut"), ops.toString())
+    assertTrue(ops.indexOf("racing-skeleton") < ops.indexOf("racing-numeral-12"), ops.toString())
+    assertTrue(ops.indexOf("racing-skeleton") < ops.indexOf("racing-hour"), ops.toString())
+    assertTrue(ops.indexOf("racing-crystal") == ops.lastIndex - 1, ops.toString())
+  }
+
+  @Test
+  fun `the LCD draws every segment of every digit, lit or ghosted by the clock`() {
+    val lcd = designs.getValue("Lcd")
+    val segments =
+      lcd.nodes.keys.filter { Regex("lcd-(hour|minute|second|date)-(tens|ones)-[a-g]").matches(it) }
+
+    assertTrue(segments.size == 8 * 7, segments.toString())
   }
 
   @Test
