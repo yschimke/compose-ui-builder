@@ -1,0 +1,212 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "supporting-pane",
+  "title": "Supporting pane",
+  "revision": 0,
+  "catalogPin": {
+    "systemId": "m3-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 412,
+    "heightDp": 915,
+    "density": 1,
+    "theme": "light",
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_6",
+      "spec:width=700dp,height=900dp,dpi=160",
+      "spec:width=1200dp,height=800dp,dpi=160"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "screen"
+  ],
+  "nodes": {
+    "panes": {
+      "id": "panes",
+      "componentId": "layout/supporting-pane-scaffold",
+      "properties": {
+        "layoutMode": {
+          "type": "enum",
+          "value": "adaptive"
+        },
+        "mainPaneVisible": {
+          "type": "bool",
+          "value": true
+        },
+        "supportingPaneVisible": {
+          "type": "bool",
+          "value": true
+        },
+        "supportingPanePreferredWidthDp": {
+          "type": "float",
+          "value": 360
+        },
+        "paneSpacingDp": {
+          "type": "float",
+          "value": 16
+        },
+        "paneSizing": {
+          "type": "enum",
+          "value": "fixedEnd"
+        },
+        "fixedPaneWidthDp": {
+          "type": "float",
+          "value": 360
+        }
+      },
+      "slots": {
+        "mainPane": [
+          "main"
+        ],
+        "supportingPane": [
+          "support"
+        ]
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "eventBindings": {}
+    },
+    "main": {
+      "id": "main",
+      "componentId": "layout/column",
+      "properties": {},
+      "slots": {
+        "children": [
+          "main-title",
+          "main-copy"
+        ]
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 24,
+          "endDp": 24,
+          "bottomDp": 24
+        }
+      ],
+      "eventBindings": {}
+    },
+    "main-title": {
+      "id": "main-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Main content"
+        },
+        "style": {
+          "type": "enum",
+          "value": "headlineMedium"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "main-copy": {
+      "id": "main-copy",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Replace this with your primary content."
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyLarge"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "support": {
+      "id": "support",
+      "componentId": "layout/column",
+      "properties": {},
+      "slots": {
+        "children": [
+          "support-title",
+          "support-copy"
+        ]
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 24,
+          "endDp": 24,
+          "bottomDp": 24
+        }
+      ],
+      "eventBindings": {}
+    },
+    "support-title": {
+      "id": "support-title",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Related content"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleLarge"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "support-copy": {
+      "id": "support-copy",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Add context or tools for the main content here."
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyLarge"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "screen": {
+      "id": "screen",
+      "componentId": "layout/scaffold",
+      "properties": {},
+      "slots": {
+        "content": [
+          "panes"
+        ]
+      },
+      "modifiers": [],
+      "eventBindings": {}
+    }
+  },
+  "assets": {}
+}

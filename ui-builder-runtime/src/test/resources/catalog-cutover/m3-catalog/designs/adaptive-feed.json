@@ -1,0 +1,291 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "adaptive-feed",
+  "title": "Adaptive feed",
+  "revision": 0,
+  "catalogPin": {
+    "systemId": "m3-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 412,
+    "heightDp": 915,
+    "density": 1,
+    "theme": "light",
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_6",
+      "spec:width=700dp,height=900dp,dpi=160",
+      "spec:width=1200dp,height=800dp,dpi=160"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "screen"
+  ],
+  "nodes": {
+    "screen": {
+      "id": "screen",
+      "componentId": "layout/scaffold",
+      "properties": {},
+      "slots": {
+        "content": [
+          "feed"
+        ]
+      },
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "feed": {
+      "id": "feed",
+      "componentId": "layout/lazy-grid",
+      "properties": {
+        "columns": {
+          "type": "adaptiveGrid",
+          "minimumCellWidthDp": 280
+        },
+        "scrollStateKey": {
+          "type": "string",
+          "value": "feed-scroll"
+        },
+        "horizontalSpacingDp": {
+          "type": "float",
+          "value": 16
+        },
+        "verticalSpacingDp": {
+          "type": "float",
+          "value": 16
+        }
+      },
+      "slots": {
+        "items": [
+          "card-1",
+          "card-2",
+          "card-3"
+        ]
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 24,
+          "endDp": 24,
+          "bottomDp": 24
+        }
+      ],
+      "eventBindings": {}
+    },
+    "card-1": {
+      "id": "card-1",
+      "componentId": "m3/card",
+      "properties": {},
+      "slots": {
+        "content": [
+          "card-body-1"
+        ]
+      },
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "card-body-1": {
+      "id": "card-body-1",
+      "componentId": "layout/column",
+      "properties": {},
+      "slots": {
+        "children": [
+          "card-title-1",
+          "card-copy-1"
+        ]
+      },
+      "modifiers": [
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 24,
+          "endDp": 24,
+          "bottomDp": 24
+        }
+      ],
+      "eventBindings": {}
+    },
+    "card-title-1": {
+      "id": "card-title-1",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Item 1"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleLarge"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "card-copy-1": {
+      "id": "card-copy-1",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Replace this with feed content."
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyLarge"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "card-2": {
+      "id": "card-2",
+      "componentId": "m3/card",
+      "properties": {},
+      "slots": {
+        "content": [
+          "card-body-2"
+        ]
+      },
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "card-body-2": {
+      "id": "card-body-2",
+      "componentId": "layout/column",
+      "properties": {},
+      "slots": {
+        "children": [
+          "card-title-2",
+          "card-copy-2"
+        ]
+      },
+      "modifiers": [
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 24,
+          "endDp": 24,
+          "bottomDp": 24
+        }
+      ],
+      "eventBindings": {}
+    },
+    "card-title-2": {
+      "id": "card-title-2",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Item 2"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleLarge"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "card-copy-2": {
+      "id": "card-copy-2",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Replace this with feed content."
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyLarge"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "card-3": {
+      "id": "card-3",
+      "componentId": "m3/card",
+      "properties": {},
+      "slots": {
+        "content": [
+          "card-body-3"
+        ]
+      },
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "card-body-3": {
+      "id": "card-body-3",
+      "componentId": "layout/column",
+      "properties": {},
+      "slots": {
+        "children": [
+          "card-title-3",
+          "card-copy-3"
+        ]
+      },
+      "modifiers": [
+        {
+          "type": "padding",
+          "startDp": 24,
+          "topDp": 24,
+          "endDp": 24,
+          "bottomDp": 24
+        }
+      ],
+      "eventBindings": {}
+    },
+    "card-title-3": {
+      "id": "card-title-3",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Item 3"
+        },
+        "style": {
+          "type": "enum",
+          "value": "titleLarge"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "card-copy-3": {
+      "id": "card-copy-3",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Replace this with feed content."
+        },
+        "style": {
+          "type": "enum",
+          "value": "bodyLarge"
+        }
+      },
+      "slots": {},
+      "modifiers": [],
+      "eventBindings": {}
+    }
+  },
+  "assets": {}
+}

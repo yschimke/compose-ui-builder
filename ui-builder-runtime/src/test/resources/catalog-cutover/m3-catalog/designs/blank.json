@@ -1,0 +1,62 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "blank",
+  "title": "Blank screen",
+  "revision": 0,
+  "catalogPin": {
+    "systemId": "m3-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 412,
+    "heightDp": 915,
+    "density": 1,
+    "theme": "light",
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_6",
+      "spec:width=700dp,height=900dp,dpi=160",
+      "spec:width=1200dp,height=800dp,dpi=160"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "screen"
+  ],
+  "nodes": {
+    "screen": {
+      "id": "screen",
+      "componentId": "layout/scaffold",
+      "properties": {},
+      "slots": {
+        "content": [
+          "body"
+        ]
+      },
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "body": {
+      "id": "body",
+      "componentId": "layout/box",
+      "properties": {},
+      "slots": {
+        "children": []
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "eventBindings": {}
+    }
+  },
+  "assets": {}
+}

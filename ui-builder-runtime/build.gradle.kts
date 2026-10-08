@@ -50,7 +50,9 @@ dependencies {
   api(libs.composeai.screen.model)
   implementation(libs.kotlinx.serialization.json)
   // Shared binding semantics: the browser and persistent service must accept the same state reads.
-  implementation(project(":ui-builder-export"))
+  // `api`: the executor's Builder names `CatalogOwnership`, so a host compiling against this module
+  // needs the type that defines it.
+  api(project(":ui-builder-export"))
 
   // The packaged render bundle `PackagedUiBuilderRenderBundle.copyTo` materializes, as a sibling
   // artifact rather than bytes in this jar.

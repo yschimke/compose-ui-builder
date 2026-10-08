@@ -72,8 +72,10 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderPresenceState
 import ee.schimke.composeai.uibuilder.editor.UiBuilderUnavailableScreen
 import ee.schimke.composeai.uibuilder.editor.catalogRecoveryCommand
 import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
+import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs as orderedNewDesignCatalogs
 import ee.schimke.composeai.uibuilder.editor.refusing
 import ee.schimke.composeai.uibuilder.editor.withTemplatePreviews
+import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.NewDesignNames
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.RemoteDocumentExportSupport
@@ -842,13 +844,29 @@ private fun LiveSessionApp(
         .getOrNull()
       catalogCapabilities = availableCatalogs
       newDesignCatalogs =
-        availableCatalogs
-          .mapNotNull { capability ->
-            newDesignCatalog(capability)?.let { choice ->
+        orderedNewDesignCatalogs(
+            availableCatalogs,
+            // Only the server seeds a catalog-owned template: it holds the published documents.
+            // A design created in this browser — a local session, or a server that would refuse
+            // this caller's create — is seeded by `createLocalDesign` from the built-in templates,
+            // so it must be offered the built-in cards, or a card would name a template it
+            // cannot honour.
+            if (localSession == null && config.canWrite) catalogOwnership()
+            else CatalogOwnership.NONE,
+            NEW_DESIGN_CATALOG_ORDER,
+            ::newDesignCatalog,
+          )
+          .map { choice ->
+            val capability = availableCatalogs.first {
+              it.benchmark.catalogSystemId == choice.systemId
+            }
+            run {
               // The previews are decoration on the chooser. One catalog whose record fails the
               // parser's validation keeps its plain entry rather than taking the whole list —
-              // and, beside an open, the design being opened — down with it.
-              if (fixture == null) choice
+              // and, beside an open, the design being opened — down with it. A catalog-owned card
+              // has none: its seeds are the catalog's documents, which the server holds and this
+              // page does not, and a thumbnail drawn from a built-in seed would show the wrong one.
+              if (fixture == null || choice.catalogOwned) choice
               else
                 runCatching {
                     choice.withTemplatePreviews(
@@ -866,7 +884,6 @@ private fun LiveSessionApp(
                   .getOrDefault(choice)
             }
           }
-          .sortedBy { NEW_DESIGN_CATALOG_ORDER.indexOf(it.systemId) }
     }
     if (config.localStorage || config.startWithNewDesign) {
       // A local session can be asked for a catalog this browser has never seen — the first visit
