@@ -22,6 +22,7 @@ import ee.schimke.composeai.uibuilder.reference.ReferenceUrl
 import ee.schimke.composeai.uibuilder.reference.RestoredReference
 import ee.schimke.composeai.uibuilder.reference.parseReferenceUrl
 import ee.schimke.composeai.uibuilder.reference.referenceImportRefusal
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.js.JsString
@@ -223,6 +224,12 @@ internal class BrowserReferenceHost(
     val encoded =
       try {
         awaitJsString(source())
+      } catch (e: CancellationException) {
+        // Not a picture that could not be read: whoever was waiting has gone. Answering `Refused`
+        // here turned the paste loop in `LiveSessionApp` — `while (true)` around this call — into
+        // a loop that never suspends once its effect is cancelled, which froze the tab the moment
+        // the home page's session made way for a new design.
+        throw e
       } catch (_: Exception) {
         return ReferenceImportOutcome.Refused("the picture could not be read")
       }
@@ -267,6 +274,8 @@ internal class BrowserReferenceHost(
     val encoded =
       try {
         awaitJsString(referenceFetch(method, sameOriginRequestUrl(url), body ?: "", body != null))
+      } catch (e: CancellationException) {
+        throw e
       } catch (_: Exception) {
         return ReferenceHttpResponse(0, "")
       }
