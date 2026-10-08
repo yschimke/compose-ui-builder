@@ -246,6 +246,11 @@ snipme-highlights = "1.1.0"
 # dependencies are the same Material 3 alpha this build pins (`material3-compose`); keep the two in
 # step when either moves.
 materialkolor = "5.0.1"
+# flexpress: variable-font text drawn from the font's own outlines. `:ui-builder-export`'s JVM side
+# runs its code generator (`FlexpressVariableFontSources`) to write a design's variable font text as
+# Kotlin; the generated code needs `flexpress-compose` / `flexpress-remote` at this version, unless
+# it is generated standalone. JVM only, so nothing reaches the wasm editor.
+flexpress = "0.2.0"
 
 [libraries]
 composeai-common-web-escaping = { module = "ee.schimke.composeai:common-web-escaping" }
@@ -327,6 +332,7 @@ composeai-rc-player-compose = { module = "ee.schimke.composeai:rc-player-compose
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlin-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin" }
+kotlin-compose-compiler-plugin-embeddable = { module = "org.jetbrains.kotlin:kotlin-compose-compiler-plugin-embeddable", version.ref = "kotlin" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
@@ -345,6 +351,8 @@ snipme-highlights = { module = "dev.snipme:highlights", version.ref = "snipme-hi
 materialkolor = { module = "com.materialkolor:material-kolor", version.ref = "materialkolor" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "json-schema-validator" }
+flexpress-core = { module = "ee.schimke.flexpress:flexpress-core", version.ref = "flexpress" }
+flexpress-codegen = { module = "ee.schimke.flexpress:flexpress-codegen", version.ref = "flexpress" }
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3-compose" }
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
