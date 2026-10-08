@@ -7,7 +7,15 @@ weight as an instance of it (`FontVariation.weight`), so `FontWeight.Medium` is 
 rather than the nearest static, and a text's own variation settings reach the same bytes.
 
 The variable files are subset to the code points the static files they replaced covered (all
-axes and all layout features kept), so nothing that drew before falls back now.
+axes and all layout features kept). Two have gaps their variable sources do not fill, so those
+characters fall back to the platform's face:
+
+- Noto Serif (112 code points, from Robolectric's static): Coptic letters U+03E2–03EF, arrows
+  (`←↑→↓↔↕↨`), math operators (`∂∆∏∑∕∙√∞∟∩∫≈≠≡≤≥`), box drawing and blocks U+2500–25FF, and a few
+  miscellaneous symbols. Serif text rarely carries them; set a `monospace` or default face for
+  diagrams.
+- Noto Sans Mono (8, from Droid Sans Mono): the soft hyphen, `∏∑∫` and the `ﬁ ﬂ ﬃ ﬄ`
+  presentation forms (the plain letters still shape).
 
 - `RobotoFlex.ttf` — the default face (`role: "default"`; applied to the whole M3 `Typography`)
   and Wear's `roboto-flex`. SIL OFL-1.1 — see [RobotoFlex-OFL.txt](RobotoFlex-OFL.txt).
