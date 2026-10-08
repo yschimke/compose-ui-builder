@@ -137,6 +137,48 @@ val extractProtocolSchemas =
     output.set(layout.buildDirectory.dir("generated/protocolSchemas"))
   }
 
+// The flexpress release the generated code is written for, from the version catalog, so the note an
+// export carries (`implementation("ee.schimke.flexpress:flexpress-compose:…")`) names the version
+// the JVM side generated with and moves when Renovate moves it.
+val generateFlexpressVersion =
+  tasks.register("generateFlexpressVersion") {
+    val version = libs.versions.flexpress
+    val output = layout.buildDirectory.dir("generated/flexpressVersion")
+    inputs.property("flexpress", version)
+    outputs.dir(output)
+    doLast {
+      output
+        .get()
+        .asFile
+        .resolve("FlexpressVersion.kt")
+        .apply { parentFile.mkdirs() }
+        .writeText(
+          "package ee.schimke.composeai.uibuilder.export\n\n" +
+            "/** The flexpress release variable font text is generated for. */\n" +
+            "const val FLEXPRESS_VERSION: String = \"${version.get()}\"\n"
+        )
+    }
+  }
+
+// The variable fonts `FlexpressVariableFontSources` generates from, in this module's own JVM
+// resources: compose-preview-server puts this jar on its classpath but not `:ui-builder`'s, and
+// the render bundle is an opaque PNG there, so neither of the copies the canvas draws from is
+// readable where an export runs. The files `VariableFontText.Font` names, with their licences;
+// `FlexpressVariableFontSourcesTest` fails if one is missing.
+val stageFlexpressFonts =
+  tasks.register<Sync>("stageFlexpressFonts") {
+    from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {
+      include(
+        "RobotoFlex.ttf",
+        "RobotoFlex-OFL.txt",
+        "google-sans-flex-variable.ttf",
+        "GoogleSansFlex-OFL.txt",
+      )
+      into("ee/schimke/composeai/uibuilder/export/fonts")
+    }
+    into(layout.buildDirectory.dir("generated/flexpressFonts"))
+  }
+
 ktfmt { googleStyle() }
 
 kotlin {
@@ -168,6 +210,7 @@ kotlin {
           layout.buildDirectory.dir("generated/remoteModifierVocabulary")
         }
       )
+      kotlin.srcDir(generateFlexpressVersion)
     }
     commonMain.dependencies {
       // Both coordinates carry no version of their own; these platforms supply them (see the
@@ -179,6 +222,13 @@ kotlin {
       api(libs.composeai.screen.model)
       api(libs.composeai.ui.builder.protocol)
       implementation(libs.kotlinx.serialization.json)
+    }
+    // flexpress's code generator, for `FlexpressVariableFontSources`. Plain Kotlin on the JVM at
+    // Java 17, like this side; the wasm editor has no generator and says so.
+    jvmMain { resources.srcDir(stageFlexpressFonts) }
+    jvmMain.dependencies {
+      implementation(libs.flexpress.core)
+      implementation(libs.flexpress.codegen)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
     jvmTest.dependencies {
@@ -210,16 +260,38 @@ val desktopComposeClasspath =
     }
   }
 
-dependencies { desktopComposeClasspath(libs.compose.material3) }
+// The Compose compiler plugin, for `FlexpressVariableFontSourcesTest`: a standalone variable font
+// text calls `remember`, an inline composable the compiler cannot inline without the plugin's
+// lowering. Non-transitive; the embeddable compiler it plugs into is already on the test classpath.
+val composeCompilerPlugin =
+  configurations.create("composeCompilerPlugin") {
+    isCanBeConsumed = false
+    isTransitive = false
+  }
+
+dependencies {
+  desktopComposeClasspath(libs.compose.material3)
+  composeCompilerPlugin(libs.kotlin.compose.compiler.plugin.embeddable)
+}
 
 tasks.named<Test>("jvmTest") {
   val classpath = desktopComposeClasspath.incoming.files
+  val plugin = composeCompilerPlugin.incoming.files
   inputs
     .files(classpath)
     .withPropertyName("desktopComposeClasspath")
     .withNormalizer(ClasspathNormalizer::class)
+  inputs
+    .files(plugin)
+    .withPropertyName("composeCompilerPlugin")
+    .withNormalizer(ClasspathNormalizer::class)
   jvmArgumentProviders.add(
-    CommandLineArgumentProvider { listOf("-DdesktopCompose.classpath=${classpath.asPath}") }
+    CommandLineArgumentProvider {
+      listOf(
+        "-DdesktopCompose.classpath=${classpath.asPath}",
+        "-DcomposeCompiler.plugin=${plugin.asPath}",
+      )
+    }
   )
 }
 
