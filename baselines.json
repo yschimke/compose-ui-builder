@@ -503,6 +503,38 @@
     "sha256": "10a2e2d3e96dd08efd0c4c5d1eae1cd1ec73b71a8ec410146d5f67f54859b87b",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/MaterialIconPickerPreview.kt"
   },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.RemoteClockPreviewsKt.AnalogClockPreview": {
+    "captureLabel": "",
+    "functionName": "AnalogClockPreview",
+    "module": "ui-builder",
+    "renderBasename": "AnalogClockPreview-6e3f1c00.png",
+    "sha256": "ea6462a393f0fab6a2fd850c0dea39aa16dac249aacc72ffe838c96dee8a5299",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/RemoteClockPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.RemoteClockPreviewsKt.DigitalClockPreview": {
+    "captureLabel": "",
+    "functionName": "DigitalClockPreview",
+    "module": "ui-builder",
+    "renderBasename": "DigitalClockPreview-560f27e8.png",
+    "sha256": "4df237b52453f74840c7f2eb5a862db8a6e46bbb2bb0a3e27275ca61b1b1ee95",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/RemoteClockPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.RemoteClockPreviewsKt.LcdWatchReplicaPreview": {
+    "captureLabel": "",
+    "functionName": "LcdWatchReplicaPreview",
+    "module": "ui-builder",
+    "renderBasename": "LcdWatchReplicaPreview-4029f9ba.png",
+    "sha256": "0693c3e230ccdfa042cd3319ed96624b3fba930cd2dafeb39e8731c07db99608",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/RemoteClockPreviews.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.RemoteClockPreviewsKt.RacingChronographReplicaPreview": {
+    "captureLabel": "",
+    "functionName": "RacingChronographReplicaPreview",
+    "module": "ui-builder",
+    "renderBasename": "RacingChronographReplicaPreview-05ec0220.png",
+    "sha256": "47b44d593b30f65ce6fa3dec5b13b824f69b6459ed8316cfa74d95246d90b25e",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/RemoteClockPreviews.kt"
+  },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.SelectionControlPreviewKt.CatalogSelectionControlsPreview": {
     "captureLabel": "",
     "functionName": "CatalogSelectionControlsPreview",
@@ -804,7 +836,7 @@
     "functionName": "UiBuilderNewDesignPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderNewDesignPreview-7e7db055.png",
-    "sha256": "b3662be15cf339efd1958b648e4a53894ddbf01f8f2a2009e8c55050d620492a",
+    "sha256": "f98728336ce1387e8be78f251d45f3b7fba68004ae8827b22c4bd6250126c9e4",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderPreviewModePreview": {

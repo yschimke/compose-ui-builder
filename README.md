@@ -62,6 +62,10 @@ Auto-generated from `main`. Browse inline or compare against PR branches.
 | `PlayedInlineRemoteContentPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/PlayedInlineRemoteContentPreview-576985e6.png" width="150" /> |
 | `UnresolvedRemoteComposeUrlPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UnresolvedRemoteComposeUrlPreview-db381cb1.png" width="150" /> |
 | `MaterialIconPickerPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/MaterialIconPickerPreview-fc692b43.png" width="150" /> |
+| `AnalogClockPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/AnalogClockPreview-6e3f1c00.png" width="150" /> |
+| `DigitalClockPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/DigitalClockPreview-560f27e8.png" width="150" /> |
+| `LcdWatchReplicaPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/LcdWatchReplicaPreview-4029f9ba.png" width="150" /> |
+| `RacingChronographReplicaPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/RacingChronographReplicaPreview-05ec0220.png" width="150" /> |
 | `CatalogSelectionControlsPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/CatalogSelectionControlsPreview-43e15ea1.png" width="150" /> |
 | `CatalogSliderProgressPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/CatalogSliderProgressPreview-1e973dfc.png" width="150" /> |
 | `StarterContentInsertPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/StarterContentInsertPreview-ab777e7e.png" width="150" /> |
