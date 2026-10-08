@@ -190,6 +190,39 @@ kotlin {
   }
 }
 
+// Compose Multiplatform Desktop, as a compile classpath for generated source and nothing else:
+// `DesktopTypefacesCompileTest` compiles the desktop typeface form (`TypefaceTarget.DESKTOP`)
+// against the real `ui-text` and Material 3 a desktop catalog like m3-catalog builds with, so
+// `SystemFont`'s signature and its opt-in are the library's rather than a stand-in's. A
+// configuration of its own rather than a test dependency, so no other test's stand-ins for
+// `androidx.compose` classes are shadowed by the real ones, and the module keeps no Compose
+// dependency at all (see the header).
+val desktopComposeClasspath =
+  configurations.create("desktopComposeClasspath") {
+    isCanBeConsumed = false
+    attributes {
+      attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_API))
+      attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+      attribute(
+        org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.attribute,
+        org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.jvm,
+      )
+    }
+  }
+
+dependencies { desktopComposeClasspath(libs.compose.material3) }
+
+tasks.named<Test>("jvmTest") {
+  val classpath = desktopComposeClasspath.incoming.files
+  inputs
+    .files(classpath)
+    .withPropertyName("desktopComposeClasspath")
+    .withNormalizer(ClasspathNormalizer::class)
+  jvmArgumentProviders.add(
+    CommandLineArgumentProvider { listOf("-DdesktopCompose.classpath=${classpath.asPath}") }
+  )
+}
+
 composeAiMavenPublishing {
   coordinates(
     displayName = "Compose UI Builder — Export",
