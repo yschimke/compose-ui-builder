@@ -1916,7 +1916,7 @@ fun UiBuilderEditor(
                 // would write. A hovering card is the last place to list what a component *could*
                 // have.
                 fields =
-                  reducer.propertyFields(state).filter { field ->
+                  inspectorPropertyFields(reducer.propertyFields(state)).filter { field ->
                     field.written ||
                       field.required ||
                       field.boundVariable != null ||
@@ -2553,6 +2553,7 @@ fun UiBuilderEditor(
       dispatch = ::dispatch,
       modifier = modifier,
       designTokens = remember(state.document) { reducer.designTokenRows(state) },
+      themeHost = remember(state.document, state.selectedNodeId) { reducer.themePanelHost(state) },
     )
   }
 

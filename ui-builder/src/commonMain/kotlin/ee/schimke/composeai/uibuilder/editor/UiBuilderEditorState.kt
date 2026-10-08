@@ -1379,7 +1379,7 @@ class UiBuilderEditorReducer(
       val parameter = anchor.properties[field.name]?.bindingKey() ?: return@map field
       field.copy(
         value = "",
-        notes = "Parameter `$parameter` of $ownerName — each placement sets it",
+        supporting = "Parameter `$parameter` of $ownerName — each placement sets it",
       )
     }
   }

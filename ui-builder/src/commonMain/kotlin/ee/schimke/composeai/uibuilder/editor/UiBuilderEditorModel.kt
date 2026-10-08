@@ -61,7 +61,10 @@ data class EditorPropertyField(
   val choices: List<String> = emptyList(),
   val numberBounds: EditorNumberBounds? = null,
   val error: String? = null,
+  /** The catalog's notes on the property, written for agents; the inspector folds them away. */
   val notes: String? = null,
+  /** A short line the inspector always shows under the control, such as what a parameter is. */
+  val supporting: String? = null,
 )
 
 data class EditorPropertyLocation(val nodeId: String, val property: String)

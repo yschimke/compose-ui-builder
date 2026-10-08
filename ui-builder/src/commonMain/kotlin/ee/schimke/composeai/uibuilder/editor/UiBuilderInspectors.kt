@@ -31,7 +31,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
@@ -43,9 +42,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -90,8 +87,6 @@ import ee.schimke.composeai.uibuilder.codegen.COMPOSE_EMITTED_CLICK_COMPONENTS
 import ee.schimke.composeai.uibuilder.export.FontSettings
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.STATE_SELECTION_CONTAINER
-import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
-import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -190,6 +185,8 @@ internal fun PropertyInspector(
   modifier: Modifier = Modifier.width(INSPECTOR_WIDTH).fillMaxHeight(),
   /** The catalog's design tokens as this design reads them, for the Theme panel. */
   designTokens: List<EditorDesignTokenRow> = emptyList(),
+  /** The theme host the Theme panel edits; see [UiBuilderEditorReducer.themePanelHost]. */
+  themeHost: EditorThemeHost? = null,
 ) {
   val node = state.selectedNodeId?.let(state.document.nodes::get)
   val propertyDrafts =
@@ -230,7 +227,7 @@ internal fun PropertyInspector(
               if (propertyDrafts.isEmpty()) node?.id ?: "Nothing selected"
               else
                 "${propertyDrafts.size} uncommitted edit${if (propertyDrafts.size == 1) "" else "s"} retained"
-            EditorInspectorMode.Theme -> "Applies to the whole design"
+            EditorInspectorMode.Theme -> "Colours, type and shape for the whole design"
             EditorInspectorMode.Screen -> "Frame, density and reference"
             EditorInspectorMode.Issues -> "What the export would refuse"
             EditorInspectorMode.Comments -> "What people and agents have said"
@@ -286,6 +283,7 @@ internal fun PropertyInspector(
           propertyDrafts = propertyDrafts,
           dispatch = dispatch,
           designTokens = designTokens,
+          themeHost = themeHost,
         )
       }
     }
@@ -344,6 +342,7 @@ private fun InspectorBody(
   propertyDrafts: MutableMap<InspectorPropertyDraftKey, InspectorPropertyDraft>,
   dispatch: (UiBuilderEditorEvent) -> Unit,
   designTokens: List<EditorDesignTokenRow>,
+  themeHost: EditorThemeHost?,
 ) {
   Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
     if (state.inspectorMode == EditorInspectorMode.Issues) {
@@ -413,24 +412,14 @@ private fun InspectorBody(
       return@Column
     }
     if (state.inspectorMode == EditorInspectorMode.Theme) {
-      // Scrolled for the reason the Screen tab is: the typeface pickers below the colour fields
-      // run past a short panel.
-      Column(Modifier.verticalScroll(rememberScrollState())) {
-        // The design system's own tokens first: on a catalog that declares them they are the theme,
-        // and the builder below is the Material 3 surface's.
-        if (designTokens.isNotEmpty()) {
-          DesignTokensSection(
-            designTokens,
-            state.tunables,
-            onTextInputFocusChanged,
-            dispatch,
-            preferredScheme =
-              if (state.platform == UiBuilderCatalogPlatform.WEAR) "dark" else "light",
-          )
-          HorizontalDivider(Modifier.padding(vertical = 14.dp))
-        }
-        ThemeBuilder(themeSettings, state.document.themeHost(), onTextInputFocusChanged, dispatch)
-      }
+      ThemePanel(
+        state = state,
+        settings = themeSettings,
+        host = themeHost,
+        designTokens = designTokens,
+        onTextInputFocusChanged = onTextInputFocusChanged,
+        dispatch = dispatch,
+      )
       return@Column
     }
     if (state.inspectorMode == EditorInspectorMode.Screen) {
@@ -502,8 +491,13 @@ private fun InspectorBody(
     // What the export would write, plus what it would refuse without: the panel opens on the node
     // as the code has it. A bound property counts as written, and so does one being complained
     // about, because hiding the field an error names is how an error becomes unfixable.
+    // A theme host's typefaces and default text style are the Theme panel's: listed there once,
+    // with its pickers, rather than here as well. `fields` itself keeps them, so an agent's
+    // CommitProperty on the host is validated as before.
+    val themePanelOwned = ownsThemePanelProperties(fields)
+    val listedFields = inspectorPropertyFields(fields)
     val shownFields =
-      fields
+      listedFields
         .filter { it.name != SHOW_BY_STATE }
         .filter {
           it.written ||
@@ -521,7 +515,7 @@ private fun InspectorBody(
     // Everything the component allows and this node has not been given. Offered, never listed: a
     // search reaches it in one word, and until then it is thirty controls nobody asked for.
     val addableFields =
-      fields.filterNot { it.name in shownNames || it.name == SHOW_BY_STATE }.filter(::matches)
+      listedFields.filterNot { it.name in shownNames || it.name == SHOW_BY_STATE }.filter(::matches)
     // Open the drawer whenever a search is running, so typing a property's name finds it whether
     // or not the node already has one.
     val addOpen = addingProperty || propertyQuery.isNotBlank()
@@ -551,6 +545,13 @@ private fun InspectorBody(
       }
     }
     LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+      if (themePanelOwned) {
+        item(key = "theme-panel-pointer") {
+          ThemePanelPointer {
+            dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Theme))
+          }
+        }
+      }
       itemsIndexed(visibleFields, key = { _, field -> field.name }) { _, field ->
         // A plain number on one node can be handed to a tunable; see [DesignTunable].
         val tuneTarget =
@@ -777,6 +778,31 @@ private fun InspectorBody(
   }
 }
 
+/**
+ * What a theme host's property list says in place of its typefaces and default text style: one line
+ * and the way to the panel that sets them.
+ */
+@Composable
+private fun ThemePanelPointer(onOpenTheme: () -> Unit) {
+  Row(
+    Modifier.fillMaxWidth().padding(bottom = 10.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Text(
+      "Typefaces and the default text style are set in Theme.",
+      Modifier.weight(1f),
+      style = MaterialTheme.typography.bodySmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    TextButton(
+      onClick = onOpenTheme,
+      modifier = Modifier.semantics { contentDescription = "Open Theme panel" },
+    ) {
+      Text("Open Theme")
+    }
+  }
+}
+
 /** One property the node does not have yet, and the press that puts its control on the panel. */
 @Composable
 private fun AddPropertyRow(field: EditorPropertyField, onAdd: () -> Unit) {
@@ -815,6 +841,7 @@ private fun PropertyControl(
       // binding row, matching the existing inspector behavior.
       notes = field.notes?.takeIf { bound == null && formula == null },
       error = field.error?.takeIf { bound == null },
+      supporting = field.supporting?.takeIf { bound == null && formula == null },
     )
   ) {
     if (formula != null) {
@@ -832,54 +859,34 @@ private fun PropertyControl(
       if (field.formulaAllowed) {
         FormulaEditor(field, null, onTextInputFocusChanged, onFormula, onUnbind = null)
       }
-      // A theme typeface is a family name, and a family name is picked rather than typed: the
-      // picker searches the vendored faces and the Google Fonts catalogue and draws each in itself.
       // A text's axes and features are the face's, so they are offered from the face, with the
-      // property's own text field below for a value typed or pasted whole.
+      // property's own text field below for a value typed or pasted whole. (A theme host's
+      // typefaces are not listed here at all; the Theme panel has their pickers.)
       if (field.name in FontSettings.PROPERTIES && !field.mixed) {
         FontSettingsEditor(field.name, field.value, textTypeface(), commit)
       }
-      if (field.name in ThemeTypefaces.PROPERTIES) {
-        FontFamilyPicker(
-          selected = field.value.takeIf { it.isNotBlank() },
-          contentDescription = field.label,
-          onTextInputFocusChanged = onTextInputFocusChanged,
-        ) {
-          commit(it.orEmpty())
-        }
-      } else
-        when (field.control) {
-          EditorPropertyControl.Boolean -> {
-            val checked = field.value.toBooleanStrictOrNull() ?: false
-            LocalUiBuilderChrome.current.InspectorBooleanProperty(field.label, checked) {
-              commit(it.toString())
-            }
+      when (field.control) {
+        EditorPropertyControl.Boolean -> {
+          val checked = field.value.toBooleanStrictOrNull() ?: false
+          LocalUiBuilderChrome.current.InspectorBooleanProperty(field.label, checked) {
+            commit(it.toString())
           }
-          EditorPropertyControl.Enum ->
-            if (field.name in ICON_KEY_PROPERTIES)
-              GoogleIconPropertyControl(field, onTextInputFocusChanged, commit)
-            else EnumPropertyControl(field, commit)
-          EditorPropertyControl.Number ->
-            DraftPropertyControl(
-              field,
-              onTextInputFocusChanged,
-              draft,
-              onDraftChange,
-              commit,
-              showSteppers = true,
-            )
-          EditorPropertyControl.Color ->
-            ColorPropertyControl(field, commit) {
-              DraftPropertyControl(
-                field,
-                onTextInputFocusChanged,
-                draft,
-                onDraftChange,
-                commit,
-                showSteppers = false,
-              )
-            }
-          EditorPropertyControl.Text ->
+        }
+        EditorPropertyControl.Enum ->
+          if (field.name in ICON_KEY_PROPERTIES)
+            GoogleIconPropertyControl(field, onTextInputFocusChanged, commit)
+          else EnumPropertyControl(field, commit)
+        EditorPropertyControl.Number ->
+          DraftPropertyControl(
+            field,
+            onTextInputFocusChanged,
+            draft,
+            onDraftChange,
+            commit,
+            showSteppers = true,
+          )
+        EditorPropertyControl.Color ->
+          ColorPropertyControl(field, commit) {
             DraftPropertyControl(
               field,
               onTextInputFocusChanged,
@@ -888,9 +895,19 @@ private fun PropertyControl(
               commit,
               showSteppers = false,
             )
-          EditorPropertyControl.Unsupported ->
-            LocalUiBuilderChrome.current.InspectorMessage(field.value.ifEmpty { "Not set" })
-        }
+          }
+        EditorPropertyControl.Text ->
+          DraftPropertyControl(
+            field,
+            onTextInputFocusChanged,
+            draft,
+            onDraftChange,
+            commit,
+            showSteppers = false,
+          )
+        EditorPropertyControl.Unsupported ->
+          LocalUiBuilderChrome.current.InspectorMessage(field.value.ifEmpty { "Not set" })
+      }
     }
   }
 }
@@ -2326,190 +2343,6 @@ private fun EnvironmentTextField(
       value = value,
       style = UiBuilderInspectorValueFieldStyle.Screen,
       modifier = modifier,
-      onFocusChanged = onFocusChanged,
-      onValueChange = onValueChange,
-    )
-  )
-}
-
-@Composable
-private fun ThemeBuilder(
-  settings: EditorThemeSettings,
-  host: UiBuilderNode?,
-  onTextInputFocusChanged: (Boolean) -> Unit,
-  dispatch: (UiBuilderEditorEvent) -> Unit,
-) {
-  var primary by remember(settings) { mutableStateOf(settings.primaryColor) }
-  var background by remember(settings) { mutableStateOf(settings.backgroundColor) }
-  var surface by remember(settings) { mutableStateOf(settings.surfaceColor) }
-  var content by remember(settings) { mutableStateOf(settings.contentColor) }
-  var typeScale by remember(settings) { mutableStateOf(settings.typeScale.toString()) }
-  var cornerRadius by remember(settings) { mutableStateOf(settings.cornerRadiusDp.toString()) }
-
-  LocalUiBuilderChrome.current.InspectorFormHeader(
-    "Theme builder",
-    "Design-wide colours, typography and shapes",
-  )
-  ThemeField("Primary colour", primary, onTextInputFocusChanged) { primary = it }
-  ThemeField("Background colour", background, onTextInputFocusChanged) { background = it }
-  ThemeField("Surface colour", surface, onTextInputFocusChanged) { surface = it }
-  ThemeField("Content colour", content, onTextInputFocusChanged) { content = it }
-  ThemeField("Type scale (0.75–1.5)", typeScale, onTextInputFocusChanged) { typeScale = it }
-  ThemeField("Corner radius (0–48dp)", cornerRadius, onTextInputFocusChanged) { cornerRadius = it }
-  LocalUiBuilderChrome.current.InspectorAction(
-    UiBuilderInspectorActionModel(
-      label = "Apply theme",
-      primary = true,
-      filled = true,
-      modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
-      onClick = {
-        dispatch(
-          UiBuilderEditorEvent.ApplyTheme(
-            EditorThemeSettings(
-              primaryColor = primary,
-              backgroundColor = background,
-              surfaceColor = surface,
-              contentColor = content,
-              typeScale = typeScale.toFloatOrNull() ?: Float.NaN,
-              cornerRadiusDp = cornerRadius.toFloatOrNull() ?: Float.NaN,
-            )
-          )
-        )
-      },
-    )
-  )
-  ThemeTypefacePickers(host, onTextInputFocusChanged, dispatch)
-}
-
-/**
- * The theme host's typefaces, one picker per group of type-scale roles (see [ThemeTypefaces]).
- *
- * Commits on pick, unlike the fields above: a family is one choice, and the thing to do after
- * making it is to look at the canvas. Each writes the host's property directly, which is also what
- * the same picker in the property list does.
- */
-@Composable
-private fun ThemeTypefacePickers(
-  host: UiBuilderNode?,
-  onTextInputFocusChanged: (Boolean) -> Unit,
-  dispatch: (UiBuilderEditorEvent) -> Unit,
-) {
-  Text(
-    "Typefaces",
-    style = MaterialTheme.typography.titleSmall,
-    fontWeight = FontWeight.Bold,
-    modifier = Modifier.padding(top = 16.dp),
-  )
-  if (host == null) {
-    Text(
-      "A root Material surface carries the theme; add one to set its typefaces.",
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      style = MaterialTheme.typography.bodySmall,
-    )
-    return
-  }
-  Text(
-    "A family for each group of type roles. Unset keeps the platform's face.",
-    color = MaterialTheme.colorScheme.onSurfaceVariant,
-    style = MaterialTheme.typography.bodySmall,
-  )
-  ThemeTypefaces.GROUPS.forEach { group ->
-    Text(
-      group.name.replaceFirstChar { it.uppercase() },
-      style = MaterialTheme.typography.labelMedium,
-      modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-    )
-    FontFamilyPicker(
-      selected = host.propertyText(group.property).takeIf { it.isNotBlank() },
-      contentDescription = "${group.name.replaceFirstChar { it.uppercase() }} typeface",
-      onTextInputFocusChanged = onTextInputFocusChanged,
-    ) { family ->
-      dispatch(UiBuilderEditorEvent.CommitProperty(host.id, group.property, family.orEmpty()))
-    }
-  }
-  Text(
-    "Default text style",
-    style = MaterialTheme.typography.labelMedium,
-    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-  )
-  TextRolePicker(
-    selected = host.propertyText(ThemeTextStyle.PROPERTY).takeIf { it.isNotBlank() },
-    roles = ThemeTextStyle.M3_ROLES,
-  ) { role ->
-    dispatch(
-      if (role == null) UiBuilderEditorEvent.ClearProperty(host.id, ThemeTextStyle.PROPERTY)
-      else UiBuilderEditorEvent.CommitProperty(host.id, ThemeTextStyle.PROPERTY, role)
-    )
-  }
-}
-
-/**
- * The type role text with no `style` of its own is set in ([ThemeTextStyle]), picked from [roles]
- * with each drawn in itself — under the theme the panel is editing, so a role shows the size and
- * the face the canvas will use. [onPick] gets null for the default, which unsets the property.
- */
-@Composable
-private fun TextRolePicker(selected: String?, roles: List<String>, onPick: (String?) -> Unit) {
-  var expanded by remember { mutableStateOf(false) }
-  Box(Modifier.fillMaxWidth()) {
-    OutlinedButton(
-      onClick = { expanded = true },
-      modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Default text style" },
-    ) {
-      Text(
-        selected ?: "${ThemeTextStyle.DEFAULT} (default)",
-        maxLines = 1,
-        modifier = Modifier.weight(1f),
-      )
-      Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
-    }
-    TrackEditorOverlay(expanded)
-    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-      fun pick(role: String?) {
-        expanded = false
-        onPick(role)
-      }
-      DropdownMenuItem(
-        text = { Text("${ThemeTextStyle.DEFAULT} (default)") },
-        trailingIcon =
-          if (selected == null) {
-            { Icon(Icons.Filled.Check, contentDescription = "Current text style") }
-          } else null,
-        onClick = { pick(null) },
-      )
-      roles.forEach { role ->
-        DropdownMenuItem(
-          text = {
-            Text(
-              role,
-              style = MaterialTheme.typography.role(role) ?: LocalTextStyle.current,
-              maxLines = 1,
-            )
-          },
-          trailingIcon =
-            if (role == selected) {
-              { Icon(Icons.Filled.Check, contentDescription = "Current text style") }
-            } else null,
-          modifier = Modifier.semantics { this.selected = role == selected },
-          onClick = { pick(role) },
-        )
-      }
-    }
-  }
-}
-
-@Composable
-private fun ThemeField(
-  label: String,
-  value: String,
-  onFocusChanged: (Boolean) -> Unit,
-  onValueChange: (String) -> Unit,
-) {
-  LocalUiBuilderChrome.current.InspectorValueField(
-    UiBuilderInspectorValueFieldModel(
-      label = label,
-      value = value,
-      modifier = Modifier.fillMaxWidth(),
       onFocusChanged = onFocusChanged,
       onValueChange = onValueChange,
     )
