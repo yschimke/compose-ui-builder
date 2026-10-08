@@ -21,6 +21,8 @@ import ee.schimke.composeai.uibuilder.UndoCommand
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderBoard
 import ee.schimke.composeai.uibuilder.canvas.boardRootId
 import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
+import ee.schimke.composeai.uibuilder.canvas.selectionChain
+import ee.schimke.composeai.uibuilder.canvas.topLevelNodes
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
@@ -44,6 +46,8 @@ import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.RootSurfaceGround
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
+import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
+import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -440,6 +444,7 @@ class UiBuilderEditorReducer(
         )
       is UiBuilderEditorEvent.ShowInspector -> state.copy(inspectorMode = event.mode)
       is UiBuilderEditorEvent.ApplyTheme -> applyTheme(state, event.settings)
+      is UiBuilderEditorEvent.ApplyColorScheme -> applyColorScheme(state, event.roles)
       UiBuilderEditorEvent.DeleteSelected -> deleteSelected(state)
       UiBuilderEditorEvent.DuplicateSelected -> duplicateSelected(state)
       is UiBuilderEditorEvent.ToggleNode -> toggleNode(state, event.nodeId)
@@ -1377,7 +1382,7 @@ class UiBuilderEditorReducer(
       val parameter = anchor.properties[field.name]?.bindingKey() ?: return@map field
       field.copy(
         value = "",
-        notes = "Parameter `$parameter` of $ownerName — each placement sets it",
+        supporting = "Parameter `$parameter` of $ownerName — each placement sets it",
       )
     }
   }
@@ -2216,6 +2221,40 @@ class UiBuilderEditorReducer(
           componentId = null,
         )
       }
+  }
+
+  /**
+   * The theme host the Theme panel edits, or null when the design has none.
+   *
+   * A Material 3 design's theme is its root `m3/surface` ([themeHost]); an `m3/surface` further
+   * down is just a surface. A Wear screen or a Remote widget is its own theme host, so the one that
+   * holds the selection is the one edited, and otherwise the first at the top of the design.
+   */
+  fun themePanelHost(state: UiBuilderEditorState): EditorThemeHost? {
+    val document = state.document
+    val root = document.themeHost()
+    fun declared(node: UiBuilderNode): Set<String>? =
+      catalog.componentsById[node.componentId]?.propertiesByName?.keys?.takeIf {
+        ThemeTextStyle.PROPERTY in it || THEME_PRIMARY in it
+      }
+    fun isHost(node: UiBuilderNode): Boolean =
+      declared(node) != null && (node.componentId != "m3/surface" || node.id == root?.id)
+    val node =
+      document.selectionChain(state.selectedNodeId).mapNotNull(document.nodes::get).firstOrNull {
+        isHost(it)
+      } ?: root?.takeIf(::isHost) ?: document.topLevelNodes.firstOrNull(::isHost) ?: return null
+    val properties = declared(node).orEmpty()
+    return EditorThemeHost(
+      nodeId = node.id,
+      componentId = node.componentId,
+      colorProperties = ThemeSchemes.hostColorProperties(properties),
+      wearScale = node.componentId != "m3/surface",
+      scaleAndShape = THEME_TYPE_SCALE in properties && THEME_CORNER_RADIUS in properties,
+      typographyProperties =
+        properties.filterTo(mutableSetOf()) {
+          it in ThemeTypefaces.PROPERTIES || it == ThemeTextStyle.PROPERTY
+        },
+    )
   }
 
   fun themeSettings(state: UiBuilderEditorState): EditorThemeSettings {
@@ -3484,6 +3523,58 @@ class UiBuilderEditorReducer(
           literal("float", JsonPrimitive(settings.cornerRadiusDp)),
         )
     return state.apply(sequence, operations, selectionAfter = state.selectedNodeId)
+  }
+
+  /**
+   * [roles] onto the theme host's colour properties and the catalog's `color.*` tokens, as one
+   * edit. Tokens first, so where a token and the host name the same property the host's write — the
+   * same value — is the one kept.
+   */
+  private fun applyColorScheme(
+    state: UiBuilderEditorState,
+    roles: Map<String, String>,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    roles.entries
+      .firstOrNull { !it.value.isArgbColor() }
+      ?.let { (role, value) ->
+        return state.rejected(
+          sequence,
+          RejectionCode.INVALID_PROPERTY,
+          "$role must be #RRGGBB or #AARRGGBB; received '$value'",
+        )
+      }
+    val host = themePanelHost(state)
+    val tokenValues = ThemeSchemes.tokenValues(roles, catalog.designTokens)
+    val tokens = catalog.designTokens.associateBy { it.id }
+    val operations = mutableListOf<DesignOperation>()
+    tokenValues.forEach { (id, value) ->
+      val token = tokens.getValue(id)
+      token.parse(value).onSuccess { operations += token.writes(state.document, catalog, it) }
+    }
+    if (host != null) {
+      ThemeSchemes.hostWrites(roles, host.colorProperties).forEach { (property, value) ->
+        operations +=
+          DesignOperation.SetProperty(host.nodeId, property, literal("color", JsonPrimitive(value)))
+      }
+    }
+    // One write per property: the last, as applying them in turn would leave it.
+    val last =
+      operations.asReversed().distinctBy { operation ->
+        when (operation) {
+          is DesignOperation.SetProperty -> operation.nodeId to operation.property
+          is DesignOperation.RemoveNodeProperty -> operation.nodeId to operation.property
+          else -> operation
+        }
+      }
+    if (last.isEmpty()) {
+      return state.rejected(
+        sequence,
+        RejectionCode.INVALID_DOCUMENT,
+        "Nothing in this design holds a theme colour: add a theme host or use a catalog with colour tokens",
+      )
+    }
+    return state.apply(sequence, last.asReversed(), selectionAfter = state.selectedNodeId)
   }
 
   /**

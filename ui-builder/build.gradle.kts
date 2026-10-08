@@ -143,6 +143,9 @@ kotlin {
       // Kotlin syntax highlighting for the Code pane. See `UiBuilderCodeHighlighting.kt` for why a
       // Compose-native tokenizer rather than the playground's CodeMirror.
       implementation(libs.snipme.highlights)
+      // The Theme panel's "Generate from a seed colour": the Material colour utilities, for JVM and
+      // wasmJs alike. See `ThemeSchemes.kt`.
+      implementation(libs.materialkolor)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
     getByName("jvmTest").dependencies {

@@ -51,10 +51,6 @@ internal fun DesignTokensSection(
   preferredScheme: String = "light",
 ) {
   if (rows.isEmpty()) return
-  LocalUiBuilderChrome.current.InspectorFormHeader(
-    "Design tokens",
-    "The values this design system lets a design re-skin. Unset draws the system's own.",
-  )
   val (themed, components) = rows.partition { it.token.themed }
   listOf("Theme" to themed, "Components" to components).forEach { (heading, group) ->
     if (group.isEmpty()) return@forEach
@@ -103,8 +99,7 @@ private fun DesignTokenExchange(
   }
   if (!open) return
   Text(
-    "Export writes the tokens this design sets as W3C DTCG JSON. Import reads DTCG or a Material " +
-      "Theme Builder export, and applies what matches as one undoable edit.",
+    "DTCG JSON out; DTCG or Material Theme Builder JSON in, as one undoable edit.",
     style = MaterialTheme.typography.bodySmall,
     color = MaterialTheme.colorScheme.onSurfaceVariant,
   )
@@ -223,7 +218,13 @@ private fun DesignTokenRow(
         TokenSwatch(shown)
         Box(Modifier.size(8.dp))
       }
-      Text(token.label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+      // The catalog's notes on a token are written for agents; they wait behind the info button.
+      LabelWithNotes(
+        token.label,
+        token.notes,
+        MaterialTheme.typography.bodyMedium,
+        Modifier.weight(1f),
+      )
       Text(
         when (row.value) {
           DesignTokenValue.Unset ->
@@ -238,12 +239,8 @@ private fun DesignTokenRow(
       )
     }
     Text(
-      when (row.targetCount) {
-        0 -> "Nothing in this design uses it yet."
-        1 -> "Writes 1 property."
-        else -> "Writes ${row.targetCount} properties."
-      } + (token.notes?.let { " $it" } ?: ""),
-      style = MaterialTheme.typography.bodySmall,
+      if (row.targetCount == 0) "Not used yet" else "Used by ${row.targetCount}",
+      style = MaterialTheme.typography.labelSmall,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -255,13 +252,10 @@ private fun DesignTokenRow(
         isError = parsed?.isFailure == true,
         textStyle = MaterialTheme.typography.bodySmall,
         placeholder = {
-          Text(
-            when (token.kind) {
-              DesignTokenKind.Number ->
-                "${formatTunableValue(token.minimum ?: 0.0)}–${formatTunableValue(token.maximum ?: 0.0)}"
-              DesignTokenKind.Color -> "#RRGGBB or a role"
-            }
-          )
+          if (token.kind == DesignTokenKind.Number)
+            Text(
+              "${formatTunableValue(token.minimum ?: 0.0)}–${formatTunableValue(token.maximum ?: 0.0)}"
+            )
         },
       )
     }

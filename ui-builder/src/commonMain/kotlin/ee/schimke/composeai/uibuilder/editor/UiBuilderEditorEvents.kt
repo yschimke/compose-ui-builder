@@ -348,6 +348,14 @@ sealed interface UiBuilderEditorEvent {
 
   data class ApplyTheme(val settings: EditorThemeSettings) : UiBuilderEditorEvent
 
+  /**
+   * Write a colour scheme — Material role to `#RRGGBB`, from the seed generator or a Material Theme
+   * Builder file — onto the theme host's colour properties and the catalog's matching `color.*`
+   * design tokens, as one edit. A role nothing in the design can hold is left out; see
+   * [ThemeSchemes.hostColorProperties].
+   */
+  data class ApplyColorScheme(val roles: Map<String, String>) : UiBuilderEditorEvent
+
   data object DeleteSelected : UiBuilderEditorEvent
 
   data object DuplicateSelected : UiBuilderEditorEvent

@@ -384,8 +384,8 @@ class EditorDesktopPointerInteractionTest {
       }
       waitForIdle()
 
-      onNodeWithContentDescription("Primary colour").performTextReplacement("#ff123456")
-      onNodeWithContentDescription("Apply theme").performClick()
+      onNodeWithContentDescription("Primary").performTextReplacement("#ff123456")
+      onNodeWithContentDescription("Apply colours").performClick()
       waitForIdle()
 
       runOnIdle {

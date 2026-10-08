@@ -249,8 +249,11 @@ data class UiBuilderRailItemModel(
 
 data class UiBuilderInspectorPropertyModel(
   val label: String,
+  /** The catalog's notes, written for agents: a host shows them on request, not by default. */
   val notes: String? = null,
   val error: String? = null,
+  /** A short line always shown under the control. */
+  val supporting: String? = null,
 )
 
 data class UiBuilderInspectorTextFieldModel(
@@ -930,9 +933,10 @@ object MaterialUiBuilderChrome : UiBuilderChrome {
     content: @Composable () -> Unit,
   ) {
     Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
-      Text(model.label, style = MaterialTheme.typography.labelLarge)
+      // The notes are the catalog's, written for agents; they wait behind the label's info button.
+      LabelWithNotes(model.label, model.notes, MaterialTheme.typography.labelLarge)
       content()
-      model.notes?.let {
+      model.supporting?.let {
         Text(
           it,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
