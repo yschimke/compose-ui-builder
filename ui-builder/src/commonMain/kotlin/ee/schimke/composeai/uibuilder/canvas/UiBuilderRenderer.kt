@@ -172,6 +172,7 @@ import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
 import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
+import ee.schimke.composeai.uibuilder.export.TwoWayStateBinding
 import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -862,9 +863,10 @@ private fun RenderNode(
         )
       "wear-m3/switch-button" ->
         WearCanvasSwitchButton(
-          checked = node.bool("checked"),
+          checked = node.resolvedBool("checked", state),
           enabled = node.bool("enabled", true),
           modifier = measured,
+          onCheckedChange = { node.changeBoundFlag("checked", it, host::setState, activate) },
           label = {
             if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
@@ -892,9 +894,10 @@ private fun RenderNode(
         )
       "wear-m3/checkbox-button" ->
         WearCanvasCheckboxButton(
-          checked = node.bool("checked"),
+          checked = node.resolvedBool("checked", state),
           enabled = node.bool("enabled", true),
           modifier = measured,
+          onCheckedChange = { node.changeBoundFlag("checked", it, host::setState, activate) },
           label = {
             if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
@@ -912,9 +915,11 @@ private fun RenderNode(
         )
       "wear-m3/radio-button" ->
         WearCanvasRadioButton(
-          selected = node.bool("selected"),
+          selected = node.resolvedBool("selected", state),
           enabled = node.bool("enabled", true),
           modifier = measured,
+          // A radio row selects itself: its change is always to selected.
+          onSelect = { node.changeBoundFlag("selected", true, host::setState, activate) },
           label = {
             if (slot("label").isEmpty()) WearText(node.string("label"))
             else slot("label").forEach { wearChild(it, Modifier) }
@@ -1702,14 +1707,14 @@ private fun RenderNode(
       "m3/checkbox" ->
         Checkbox(
           checked = node.resolvedBool("checked", state),
-          onCheckedChange = { activate() },
+          onCheckedChange = { node.changeBoundFlag("checked", it, host::setState, activate) },
           modifier = measured,
           enabled = enabled,
         )
       "m3/switch" ->
         Switch(
           checked = node.resolvedBool("checked", state),
-          onCheckedChange = { activate() },
+          onCheckedChange = { node.changeBoundFlag("checked", it, host::setState, activate) },
           modifier = measured,
           enabled = enabled,
         )
@@ -2508,12 +2513,30 @@ private fun UiBuilderNode.resolvedInteger(
 
 private fun UiBuilderNode.resolvedBool(name: String, state: Map<String, String?>): Boolean {
   val value = obj(name)
-  return if (value.wrapperType() == "stateEquals") {
-    uiBuilderStateEquals(
-      state[(value["variable"] as? JsonPrimitive)?.contentOrNull],
-      value["value"],
-    )
-  } else (value["value"] as? JsonPrimitive)?.booleanOrNull ?: false
+  val variable = (value["variable"] as? JsonPrimitive)?.contentOrNull
+  return when (value.wrapperType()) {
+    "stateEquals" -> uiBuilderStateEquals(state[variable], value["value"])
+    // A flag read whole, which is what "Bind to state" writes for a Boolean variable. It used to
+    // fall through to the literal branch and draw `false` whatever the variable held.
+    "state" -> state[variable]?.toBooleanStrictOrNull() == true
+    else -> (value["value"] as? JsonPrimitive)?.booleanOrNull ?: false
+  }
+}
+
+/**
+ * A two-way bound control's change: write [checked] back to the variable [property] reads, then run
+ * the `click` actions — unless those actions already write it ([TwoWayStateBinding]).
+ */
+private fun UiBuilderNode.changeBoundFlag(
+  property: String,
+  checked: Boolean,
+  setState: (String, String?) -> Unit,
+  activate: () -> Unit,
+) {
+  TwoWayStateBinding.writeBackVariable(properties[property], eventBindings["click"])?.let {
+    setState(it, checked.toString())
+  }
+  activate()
 }
 
 /**

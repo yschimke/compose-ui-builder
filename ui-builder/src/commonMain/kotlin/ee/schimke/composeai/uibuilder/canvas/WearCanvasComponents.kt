@@ -155,9 +155,8 @@ internal fun WearCanvasListSubHeader(
  * Wear's `SwitchButton` — a component with no Material 3 counterpart, and therefore one the canvas
  * previously could not draw at any fidelity. `google-home-wear` uses eleven of them.
  *
- * `onCheckedChange` is empty rather than wired to the document: the canvas draws a design, it does
- * not run it, so the toggle reflects the authored `checked` and nothing moves when it is clicked.
- * That matches how every other stateful component behaves here.
+ * [onCheckedChange] is the renderer's two-way binding: a `checked` read from a design flag is
+ * written back when the row is tapped, as `m3/switch` does; an authored `checked` stays put.
  */
 @Composable
 internal fun WearCanvasSwitchButton(
@@ -166,12 +165,13 @@ internal fun WearCanvasSwitchButton(
   modifier: Modifier = Modifier,
   label: @Composable RowScope.() -> Unit,
   secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
+  onCheckedChange: (Boolean) -> Unit = {},
 ) {
   val transformation = wearRowTransformation()
   OutsideWearRow {
     SwitchButton(
       checked = checked,
-      onCheckedChange = {},
+      onCheckedChange = onCheckedChange,
       modifier = modifier.fillMaxWidth(),
       enabled = enabled,
       label = label,
@@ -380,9 +380,9 @@ internal fun OutsideWearRow(content: @Composable () -> Unit) {
 // are read off the catalog's own declared properties, so a component drawing here and a component
 // exporting there are answering from the same contract.
 //
-// Callbacks are empty throughout. The canvas draws a design, it does not run one — a control shows
-// its authored state and nothing moves when it is clicked, which is how every other stateful
-// component on this surface behaves.
+// Callbacks are empty unless the renderer passes one. The selection rows take the renderer's
+// two-way binding, so a row bound to a design flag ticks on the canvas as its export does; a row
+// with an authored literal shows it and nothing moves when it is clicked.
 
 /** Wear's `CheckboxButton`: a full-width labelled row, not the mobile 20dp square. */
 @Composable
@@ -392,12 +392,13 @@ internal fun WearCanvasCheckboxButton(
   modifier: Modifier = Modifier,
   label: @Composable RowScope.() -> Unit,
   secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
+  onCheckedChange: (Boolean) -> Unit = {},
 ) {
   val transformation = wearRowTransformation()
   OutsideWearRow {
     CheckboxButton(
       checked = checked,
-      onCheckedChange = {},
+      onCheckedChange = onCheckedChange,
       modifier = modifier.fillMaxWidth(),
       enabled = enabled,
       label = label,
@@ -415,12 +416,13 @@ internal fun WearCanvasRadioButton(
   modifier: Modifier = Modifier,
   label: @Composable RowScope.() -> Unit,
   secondaryLabel: (@Composable RowScope.() -> Unit)? = null,
+  onSelect: () -> Unit = {},
 ) {
   val transformation = wearRowTransformation()
   OutsideWearRow {
     RadioButton(
       selected = selected,
-      onSelect = {},
+      onSelect = onSelect,
       modifier = modifier.fillMaxWidth(),
       enabled = enabled,
       label = label,
