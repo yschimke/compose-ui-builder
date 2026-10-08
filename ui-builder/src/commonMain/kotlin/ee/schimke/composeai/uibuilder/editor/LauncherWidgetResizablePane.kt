@@ -70,10 +70,7 @@ internal fun LauncherWidgetResizablePane(
   positionVersion: Int = 0,
 ) {
   val document = pane.document
-  val start =
-    remember(document.id) {
-      clampLauncherSize(document.launcherGridSize() ?: LauncherWidgetGrid.DEFAULT)
-    }
+  val start = remember(document.id) { document.nearestLauncherGridSize() }
   // The cell count the design is laid out at, and the frame's own extent in fractional cells.
   var size by remember(document.id) { mutableStateOf(start) }
   val columns = remember(document.id) { Animatable(start.columns.toFloat()) }

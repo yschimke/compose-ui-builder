@@ -11,6 +11,7 @@ import ee.schimke.composeai.uibuilder.export.hostSpec
 import ee.schimke.composeai.uibuilder.export.isLauncherWidget
 import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.export.isWearWidget
+import kotlin.math.roundToInt
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -147,7 +148,23 @@ internal fun UiBuilderDocument.launcherWidgetPreviewPanes(
       document = atLauncherSize(size),
     )
   }
-  if (!resizable) return fixed
+  // A frame off the grid is still a frame the export writes (`LauncherWidgetCodeExporter` keeps
+  // the authored dp), so the size being authored is shown as it is rather than dropped.
+  val offGrid =
+    if (own != null) emptyList()
+    else
+      screenEnvironmentSettings().let { settings ->
+        listOf(
+          UiBuilderVariantPane(
+            id = CURRENT_FRAME_PANE_ID,
+            label = "Current · ${settings.widthDp}×${settings.heightDp}dp",
+            widthDp = settings.widthDp.toFloat(),
+            heightDp = settings.heightDp.toFloat(),
+            document = this,
+          )
+        )
+      }
+  if (!resizable) return offGrid + fixed
   val patch = launcherGridPatchDp(LAUNCHER_RESIZE_MAX)
   return listOf(
     UiBuilderVariantPane(
@@ -158,13 +175,33 @@ internal fun UiBuilderDocument.launcherWidgetPreviewPanes(
       document = this,
       launcherGridResizable = true,
     )
-  ) + fixed
+  ) + offGrid + fixed
 }
 
 /** The cell count this design is sized at, or null when its frame is not a grid size. */
 internal fun UiBuilderDocument.launcherGridSize(): LauncherWidgetGrid.Size? {
   val settings = screenEnvironmentSettings()
   return LauncherWidgetGrid.of(settings.widthDp, settings.heightDp)
+}
+
+/**
+ * The cell count nearest this design's frame, on the grid or off it: where the resizable pane
+ * starts, so an off-grid design starts beside its own size rather than at an unrelated default.
+ */
+internal fun UiBuilderDocument.nearestLauncherGridSize(): LauncherWidgetGrid.Size {
+  val settings = screenEnvironmentSettings()
+  return clampLauncherSize(
+    LauncherWidgetGrid.Size(
+      ((settings.widthDp + LauncherWidgetGrid.CELL_MARGIN_DP).toFloat() /
+          LauncherWidgetGrid.CELL_WIDTH_DP)
+        .roundToInt()
+        .coerceAtLeast(1),
+      ((settings.heightDp + LauncherWidgetGrid.CELL_MARGIN_DP).toFloat() /
+          LauncherWidgetGrid.CELL_HEIGHT_DP)
+        .roundToInt()
+        .coerceAtLeast(1),
+    )
+  )
 }
 
 /** This design at [size]'s reference dp, for a pane to draw. */

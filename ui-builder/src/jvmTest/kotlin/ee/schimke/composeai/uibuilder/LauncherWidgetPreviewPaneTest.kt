@@ -3,8 +3,10 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.composeai.uibuilder.editor.LAUNCHER_RESIZE_MAX
 import ee.schimke.composeai.uibuilder.editor.launcherSizeAfterDrag
 import ee.schimke.composeai.uibuilder.editor.mobileTabLabel
+import ee.schimke.composeai.uibuilder.editor.nearestLauncherGridSize
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.editor.widgetPreviewPanes
+import ee.schimke.composeai.uibuilder.editor.withEnvironmentOverrides
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetGrid
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetTemplates
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -66,6 +68,22 @@ class LauncherWidgetPreviewPaneTest {
     val panes = hello().widgetPreviewPanes(resizable = false)!!
     assertTrue(panes.none { it.launcherGridResizable })
     assertEquals("3x2", panes.first { it.widthDp == 203f && it.heightDp == 220f }.mobileTabLabel())
+  }
+
+  @Test
+  fun `an off-grid frame keeps its own pane, and the resizable pane starts beside it`() {
+    val offGrid =
+      hello()
+        .withEnvironmentOverrides(
+          mapOf("widthDp" to JsonPrimitive(216), "heightDp" to JsonPrimitive(76))
+        )
+    val panes = offGrid.widgetPreviewPanes()!!
+
+    val current = panes[1]
+    assertEquals("Current · 216×76dp", current.label)
+    assertEquals(216f to 76f, current.widthDp to current.heightDp)
+    // 216dp is nearest three columns (203dp), 76dp nearest one row (102dp).
+    assertEquals(LauncherWidgetGrid.Size(3, 1), offGrid.nearestLauncherGridSize())
   }
 
   @Test
