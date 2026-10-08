@@ -73,7 +73,7 @@ internal object CatalogPublishedPolicy {
    * ```json
    * "insertContent": {
    *   "properties": { "checked": {"type": "boolean", "value": true} },
-   *   "slots": { "label": [ {"componentId": "wear-m3/text",
+   *   "slots": { "label": [ {"componentId": "acme/text",
    *                          "properties": {"text": {"type": "string", "value": "Checkbox"}}} ] }
    * }
    * ```
