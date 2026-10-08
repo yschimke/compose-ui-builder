@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.95.0](https://github.com/yschimke/compose-ui-builder/compare/v3.94.0...v3.95.0) (2026-10-08)
+
+
+### Features
+
+* author, preview and export the increment action ([#579](https://github.com/yschimke/compose-ui-builder/issues/579)) ([7a63658](https://github.com/yschimke/compose-ui-builder/commit/7a6365889a78e781e3312566575141250bf16896))
+* **export:** flexpress variable-font source generation ([#580](https://github.com/yschimke/compose-ui-builder/issues/580)) ([c9bb4d2](https://github.com/yschimke/compose-ui-builder/commit/c9bb4d2c3caa845245bd88682662329d02d1241c))
+* **export:** join variable font declarations into a screen from outside the gate ([#585](https://github.com/yschimke/compose-ui-builder/issues/585)) ([e0e68fb](https://github.com/yschimke/compose-ui-builder/commit/e0e68fbfd2bd44b03d27db18037b0f4154b0fafb))
+* **fonts:** vendor variable fonts everywhere, Lobster Two aside ([#570](https://github.com/yschimke/compose-ui-builder/issues/570)) ([9406bc2](https://github.com/yschimke/compose-ui-builder/commit/9406bc2acfb5e59f584c154510c1b55a954791cf))
+* **guidelines:** ask a widget only widget rules and a screen only screen rules ([#574](https://github.com/yschimke/compose-ui-builder/issues/574)) ([2fe145b](https://github.com/yschimke/compose-ui-builder/commit/2fe145b08c8fc8cc40941fbecd60fcb70f18e2bc))
+* name a control's change event after its callback in every lane ([#582](https://github.com/yschimke/compose-ui-builder/issues/582)) ([c5a2453](https://github.com/yschimke/compose-ui-builder/commit/c5a245386e24366f3c789a9398f599bff86fa744))
+* two-way bind a control's checked state to a design flag ([#572](https://github.com/yschimke/compose-ui-builder/issues/572)) ([c566423](https://github.com/yschimke/compose-ui-builder/commit/c566423a043c4c48998fd66427a352ce0f94486d))
+* **ui-builder:** a shadow report for a catalog-owned flip, from what it publishes now ([#583](https://github.com/yschimke/compose-ui-builder/issues/583)) ([644cedc](https://github.com/yschimke/compose-ui-builder/commit/644cedc1c2ac4ef9fb159aa8d0a7b197d1a241c9))
+* **ui-builder:** catalog-published roles, editor ranges and insert content ([#575](https://github.com/yschimke/compose-ui-builder/issues/575)) ([638210e](https://github.com/yschimke/compose-ui-builder/commit/638210ee8e180f4d6fdf20e784e3ca1125c7e86d))
+* **ui-builder:** polish the LCD and racing chronograph replicas from reference photos ([#573](https://github.com/yschimke/compose-ui-builder/issues/573)) ([d71615a](https://github.com/yschimke/compose-ui-builder/commit/d71615aab0bf458a2289d903d0259cefc92ed080))
+* **ui-builder:** variable font text for m3 and wear-m3 ([#581](https://github.com/yschimke/compose-ui-builder/issues/581)) ([a10b1fe](https://github.com/yschimke/compose-ui-builder/commit/a10b1fe9226694c70e281e713d563f17a82f23ff))
+
+
+### Bug Fixes
+
+* **canvas:** draw a launcher widget's RemoteText by component id ([#568](https://github.com/yschimke/compose-ui-builder/issues/568)) ([8308cf9](https://github.com/yschimke/compose-ui-builder/commit/8308cf9e2cf2ec80e73ed7a123ddb3e3c3327f9a))
+* **ui-builder:** draw a path's stroke at its strokeWidthDp ([#576](https://github.com/yschimke/compose-ui-builder/issues/576)) ([5a2935f](https://github.com/yschimke/compose-ui-builder/commit/5a2935f5b048c4a5f516e52296229790ff64dbea))
+
 ## [3.94.0](https://github.com/yschimke/compose-ui-builder/compare/v3.93.0...v3.94.0) (2026-10-08)
 
 
