@@ -50,9 +50,18 @@ typealias UiBuilderTextInspection = UiBuilderRendererTextInspectionV1
 
 typealias UiBuilderSemanticsInspection = UiBuilderRendererSemanticsInspectionV1
 
-/** Whether a catalog adapter draws one of the protocol's native text node kinds. */
+/**
+ * Whether a catalog adapter draws one of the protocol's native text node kinds.
+ *
+ * `remote-widgets/remote-text` is a component id the canvas draws as text by id, because the
+ * published `remote-widgets` record cannot carry `remote-creation-compose`'s `RemoteText` and so no
+ * catalog names an adapter for it; with no adapter, its id is what this is asked about.
+ */
 fun String.isUiBuilderTextComponent(): Boolean =
-  this == "material3/Text" || this == "m3/text" || this == "wear-m3/text"
+  this == "material3/Text" ||
+    this == "m3/text" ||
+    this == "wear-m3/text" ||
+    this == "remote-widgets/remote-text"
 
 /** Mutable layout collector whose snapshots are stable regardless of measurement callback order. */
 class UiBuilderInspectionCollector(

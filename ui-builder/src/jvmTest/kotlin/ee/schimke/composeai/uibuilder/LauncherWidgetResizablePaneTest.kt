@@ -182,7 +182,6 @@ class LauncherWidgetResizablePaneTest {
   private val catalogCanvas =
     mapOf(
       "remote-widgets/launcher-widget" to "layout/box",
-      "remote-widgets/remote-text" to "m3/text",
       "remote-widgets/widget-surface" to "layout/box",
       "remote-widgets/widget-button" to "m3/button",
       "remote-widgets/widget-title" to "m3/text",
@@ -195,7 +194,6 @@ class LauncherWidgetResizablePaneTest {
    */
   private val catalogMappings =
     listOf(
-        "remote-widgets/remote-text",
         "remote-widgets/widget-title",
         "remote-widgets/widget-label",
       )

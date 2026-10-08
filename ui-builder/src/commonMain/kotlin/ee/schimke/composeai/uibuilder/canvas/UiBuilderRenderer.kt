@@ -165,6 +165,7 @@ import ee.schimke.composeai.uibuilder.editor.THEME_TYPE_SCALE
 import ee.schimke.composeai.uibuilder.editor.supportingText
 import ee.schimke.composeai.uibuilder.ensureBundledWearDeviceFonts
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
+import ee.schimke.composeai.uibuilder.export.LAUNCHER_WIDGET_TEXT_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetCodeExporter
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_CUSTOM_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
@@ -743,6 +744,23 @@ private fun RenderNode(
       ) {
         slot("content").forEach { child(it, Modifier.fillMaxSize()) }
       }
+      return@RenderCanvasNode
+    }
+    // A launcher widget's text, by component id for the same reason: `remote-creation-compose`'s
+    // `RemoteText` is a library call the published catalog record does not carry, so no catalog
+    // can name an adapter for it, and without this every launcher design's text drew as an
+    // unsupported component. Its own names (`fontSize`, `color`, `maxLines`), as it exports them.
+    if (node.componentId == LAUNCHER_WIDGET_TEXT_COMPONENT_ID) {
+      Text(
+        node.string("text"),
+        measured,
+        color = node.color("color", Color.Unspecified),
+        fontSize =
+          node.float("fontSize").takeIf { it > 0f }?.sp
+            ?: androidx.compose.ui.unit.TextUnit.Unspecified,
+        maxLines = node.lineCount("maxLines"),
+        onTextLayout = { host.recordTextLayout(path, it) },
+      )
       return@RenderCanvasNode
     }
     when (adapterId) {
