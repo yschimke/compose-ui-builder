@@ -157,6 +157,51 @@ class ThemeSchemesTest {
   }
 
   @Test
+  fun `typography pickers follow what the theme host declares`() {
+    val remote =
+      UiBuilderEditorReducer(
+        CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
+      )
+    val widget =
+      wearScreen.copy(
+        roots = listOf("widget"),
+        nodes =
+          mapOf(
+            "widget" to
+              UiBuilderNode(
+                id = "widget",
+                componentId = "remote-m3/widget-container-small",
+                slots = mapOf("content" to listOf("theme")),
+              ),
+            "theme" to
+              UiBuilderNode(
+                id = "theme",
+                componentId = "remote-m3/remote-material-theme",
+                slots = mapOf("children" to listOf("label")),
+              ),
+            "label" to UiBuilderNode(id = "label", componentId = "remote-m3/remote-text"),
+          ),
+      )
+
+    // A text inside a Remote theme node: the theme node holds colours only, so no typeface pickers
+    // are offered there — their commits would be refused as undeclared.
+    val colourOnly = assertNotNull(remote.themePanelHost(remote.initial(widget, "label")))
+    assertEquals("theme", colourOnly.nodeId)
+    assertTrue(colourOnly.colorProperties.isNotEmpty())
+    assertEquals(emptySet(), colourOnly.typographyProperties)
+
+    // The widget container carries the typefaces and the default text style.
+    val container = assertNotNull(remote.themePanelHost(remote.initial(widget, "widget")))
+    assertEquals("widget", container.nodeId)
+    assertTrue(ThemeTextStyle.PROPERTY in container.typographyProperties)
+    assertTrue(
+      container.typographyProperties.all {
+        it in ThemeTypefaces.PROPERTIES || it == ThemeTextStyle.PROPERTY
+      }
+    )
+  }
+
+  @Test
   fun `a Theme Builder scheme lands on the Material surface as one undoable edit`() {
     val dark = readThemeBuilderScheme(export, "dark").getOrThrow()
     assertEquals("dark", dark.name)

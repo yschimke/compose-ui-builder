@@ -676,4 +676,8 @@ data class EditorThemeHost(
   val wearScale: Boolean,
   /** Whether it carries the Material surface's type scale and corner radius. */
   val scaleAndShape: Boolean,
+  /**
+   * The typeface and default-text-style properties the host declares; empty on a colour-only host.
+   */
+  val typographyProperties: Set<String> = emptySet(),
 )

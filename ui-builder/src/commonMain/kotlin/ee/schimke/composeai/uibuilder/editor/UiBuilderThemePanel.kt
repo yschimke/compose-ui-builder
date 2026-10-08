@@ -122,7 +122,13 @@ internal fun ThemePanel(
     if (hostNode == null || host == null) {
       ThemeNote("Add a theme host — a root Material surface, a Wear screen or a widget — first.")
     } else {
-      ThemeTypefacePickers(hostNode, host.wearScale, onTextInputFocusChanged, dispatch)
+      ThemeTypefacePickers(
+        hostNode,
+        host.wearScale,
+        host.typographyProperties,
+        onTextInputFocusChanged,
+        dispatch,
+      )
     }
 
     if (host?.scaleAndShape == true) {
@@ -288,7 +294,11 @@ private fun ThemeBuilderImport(
     )
   }
   val found = read.getOrNull() ?: return
-  SchemeChoice(found.available.ifEmpty { listOf(found.name) }, found.name) { scheme = it }
+  SchemeChoice(found.available.ifEmpty { listOf(found.name) }, found.name) {
+    // Another scheme of the same file is another edit, so it can be applied too.
+    if (it != scheme) applied = false
+    scheme = it
+  }
   SchemeSwatches(found.roles)
   ThemeNote(target.summary(found.roles))
   OutlinedButton(
@@ -589,10 +599,20 @@ private fun String.toRrggbb(): String =
 private fun ThemeTypefacePickers(
   host: UiBuilderNode,
   wear: Boolean,
+  declared: Set<String>,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
-  val groups = if (wear) ThemeTypefaces.WEAR_GROUPS else ThemeTypefaces.GROUPS
+  // Only what the host declares: a commit to anything else is refused as undeclared. A colour-only
+  // host (Remote's `remote-material-theme`) has none, and its widget container carries them.
+  if (declared.isEmpty()) {
+    ThemeNote("This theme host carries no typefaces; select the widget around it to set them.")
+    return
+  }
+  val groups =
+    (if (wear) ThemeTypefaces.WEAR_GROUPS else ThemeTypefaces.GROUPS).filter {
+      it.property in declared
+    }
   groups.forEach { group ->
     val name = group.name.replaceFirstChar { it.uppercase() }
     Text(
@@ -608,6 +628,7 @@ private fun ThemeTypefacePickers(
       dispatch(UiBuilderEditorEvent.CommitProperty(host.id, group.property, family.orEmpty()))
     }
   }
+  if (ThemeTextStyle.PROPERTY !in declared) return
   Text(
     "Default text style",
     style = MaterialTheme.typography.labelMedium,

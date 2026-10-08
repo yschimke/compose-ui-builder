@@ -47,6 +47,7 @@ import ee.schimke.composeai.uibuilder.export.RootSurfaceGround
 import ee.schimke.composeai.uibuilder.export.SHOW_BY_STATE
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
 import ee.schimke.composeai.uibuilder.export.ThemeTextStyle
+import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -2247,6 +2248,10 @@ class UiBuilderEditorReducer(
       colorProperties = ThemeSchemes.hostColorProperties(properties),
       wearScale = node.componentId != "m3/surface",
       scaleAndShape = THEME_TYPE_SCALE in properties && THEME_CORNER_RADIUS in properties,
+      typographyProperties =
+        properties.filterTo(mutableSetOf()) {
+          it in ThemeTypefaces.PROPERTIES || it == ThemeTextStyle.PROPERTY
+        },
     )
   }
 
