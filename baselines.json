@@ -524,7 +524,7 @@
     "functionName": "LcdWatchReplicaPreview",
     "module": "ui-builder",
     "renderBasename": "LcdWatchReplicaPreview-4029f9ba.png",
-    "sha256": "0693c3e230ccdfa042cd3319ed96624b3fba930cd2dafeb39e8731c07db99608",
+    "sha256": "fb6f0efb86c7fe36a0900377428394429529a03139e96cd2a64e52eb1d27911c",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/RemoteClockPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.RemoteClockPreviewsKt.RacingChronographReplicaPreview": {
@@ -532,7 +532,7 @@
     "functionName": "RacingChronographReplicaPreview",
     "module": "ui-builder",
     "renderBasename": "RacingChronographReplicaPreview-05ec0220.png",
-    "sha256": "47b44d593b30f65ce6fa3dec5b13b824f69b6459ed8316cfa74d95246d90b25e",
+    "sha256": "3f64c33ff7f2fa9aa2019829056b995b467c79b42b69f7ce2c671b4acd52f733",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/RemoteClockPreviews.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.SelectionControlPreviewKt.CatalogSelectionControlsPreview": {
@@ -892,7 +892,7 @@
     "functionName": "UiBuilderUnexportablePalettePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderUnexportablePalettePreview-2c6c35dc.png",
-    "sha256": "126cd30b6ef0fb031be84d08517b0a156429bb63fa9154be99b042016ddba269",
+    "sha256": "409bb76c0a508dcc49f483e623ca4f7a4cde564ec6ce24be005db2147ba75cc7",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderVariantStripPreview": {
