@@ -90,7 +90,10 @@ internal fun ThemePanel(
   Column(Modifier.verticalScroll(rememberScrollState())) {
     ThemeSection("Colours", "Import, generate or type the design's colour roles.", first = true)
     if (schemeTarget.isEmpty) {
-      ThemeNote("Add a root Material surface to hold the theme's colours.")
+      ThemeNote(
+        if (host == null) "Add a root Material surface to hold the theme's colours."
+        else "This theme host carries no colours of its own."
+      )
     } else {
       ThemeBuilderImport(schemeTarget, preferredScheme, onTextInputFocusChanged, dispatch)
       SeedSchemeGenerator(
