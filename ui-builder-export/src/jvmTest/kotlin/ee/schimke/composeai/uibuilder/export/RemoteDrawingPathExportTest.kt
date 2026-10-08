@@ -173,4 +173,30 @@ class RemoteDrawingPathExportTest {
     assertNull(UiDrawing.tweenPathData("M4 12 L20 12", "M4 12 Q12 22 20 12", 0.5f))
     assertNull(UiDrawing.tweenPathData("M4 12 L20 12", "M4 12 C20 12", 0.5f))
   }
+
+  /**
+   * A path's stroke divides its viewport-to-canvas scale back out, so strokeWidthDp is dp on the
+   * canvas as on every other operation, rather than scaled with the path.
+   */
+  @Test
+  fun `a stroked path divides its viewport scale out of its stroke`() {
+    val source =
+      exported(
+        document(
+          """
+          "outline":{"id":"outline","componentId":"draw/path","properties":{
+            "pathData":{"type":"string","value":"M2 2 L22 22"},
+            "style":{"type":"enum","value":"stroke"},
+            "strokeWidthDp":{"type":"float","value":2}}}
+          """,
+          "\"outline\"",
+        ),
+        "StrokedPath",
+      )
+
+    assertContains(
+      source,
+      "strokeWidth = (2.rdp.toPx() / ((96.rdp.toPx() / 24.rf + 96.rdp.toPx() / 24.rf) / 2.rf))",
+    )
+  }
 }

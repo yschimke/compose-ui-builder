@@ -76,6 +76,37 @@ class DrawPathCanvasRenderTest {
     assertTrue(abs(half * 4 - full) <= full / 6, "half $half, full $full")
   }
 
+  /**
+   * A stroked path is as wide as a line of the same strokeWidthDp: the path is drawn under its
+   * viewport-to-canvas scale, which would otherwise scale its stroke too, several times over.
+   */
+  @Test
+  fun `a stroked path is as wide as a line of the same width`() {
+    val line =
+      red(
+        "\"line\"",
+        """"line":{"id":"line","componentId":"draw/line","properties":{
+          "startXDp":{"type":"float","value":0},"startYDp":{"type":"float","value":8},
+          "endXDp":{"type":"float","value":80},"endYDp":{"type":"float","value":8},
+          "strokeWidthDp":{"type":"float","value":4},
+          "color":{"type":"color","value":"#FFFF0000"}},
+          "modifiers":[],"slots":{},"eventBindings":{}}""",
+      )
+    val path =
+      red(
+        "\"path\"",
+        """"path":{"id":"path","componentId":"draw/path","properties":{
+          "pathData":{"type":"string","value":"M0 2.4 L24 2.4"},
+          "style":{"type":"enum","value":"stroke"},
+          "strokeWidthDp":{"type":"float","value":4},
+          "color":{"type":"color","value":"#FFFF0000"}},
+          "modifiers":[],"slots":{},"eventBindings":{}}""",
+      )
+
+    assertTrue(line > 20, "the line is missing ($line samples)")
+    assertTrue(abs(path - line) <= line / 4, "line $line, path $path")
+  }
+
   private fun document(ops: String, nodes: String): String =
     """
     {"schema":"compose-ui-builder-document/v1-candidate","id":"paths","title":"Paths",

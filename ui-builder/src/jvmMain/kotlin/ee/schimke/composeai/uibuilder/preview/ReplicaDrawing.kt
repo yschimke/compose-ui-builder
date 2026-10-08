@@ -32,12 +32,11 @@ internal fun ClockCanvas.path(
   )
 
 /**
- * A curve [width] wide through [points], as a filled ribbon rather than a stroked path.
+ * A curve [width] wide through [points], as a filled ribbon.
  *
- * A stroked `draw/path` scales its stroke with the path's viewport as well as the density, so a
- * hairline comes out several times too thick; a filled shape scales exactly. Every curved line on
- * these watches — a glint along a bevel, a layer of the carbon case — is therefore one of these.
- * [taper] narrows both ends to points, as a reflection fades at its ends.
+ * Every curved line on these watches — a glint along a bevel, a layer of the carbon case — is one
+ * of these rather than a stroked path, because a ribbon can taper: [taper] narrows both ends to
+ * points, as a reflection fades at its ends.
  */
 internal fun ClockCanvas.band(
   id: String,
