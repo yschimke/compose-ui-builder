@@ -312,6 +312,36 @@ private fun superellipsePath(rx: Double, ry: Double, n: Double = 3.2): String =
     .mapIndexed { index, (x, y) -> (if (index == 0) "M" else "L") + "${x.d()} ${y.d()}" }
     .joinToString(" ", postfix = " Z")
 
+/**
+ * The point [inset] in from the crystal's edge, on the ray from the centre at [degrees] clockwise
+ * from twelve.
+ *
+ * Found on [CRYSTAL_OUTLINE] itself, so whatever sits on the flange follows the opening it is seen
+ * through: a curve fitted to the opening instead drifted out over the bezel at the corners. The
+ * inset is measured square to the edge, not along the ray, so it holds at the corners too.
+ */
+private fun onCrystal(degrees: Double, inset: Double): Pair<Double, Double> {
+  val a = degrees * PI / 180
+  val dx = sin(a)
+  val dy = -cos(a)
+  var best = Double.MAX_VALUE
+  var slope = 1.0
+  CRYSTAL_OUTLINE.zipWithNext().forEach { (p, q) ->
+    val ex = q.first - p.first
+    val ey = q.second - p.second
+    val det = dx * ey - dy * ex
+    if (abs(det) < 1e-9) return@forEach
+    val t = ((p.first - C) * ey - (p.second - C) * ex) / det
+    val u = ((p.first - C) * dy - (p.second - C) * dx) / det
+    if (t > 0 && u in 0.0..1.0 && t < best) {
+      best = t
+      slope = abs(dx * ey - dy * ex) / hypot(ex, ey)
+    }
+  }
+  val along = inset / slope.coerceAtLeast(0.45)
+  return (C + dx * (best - along)) to (C + dy * (best - along))
+}
+
 private fun ClockCanvas.flange() {
   path("racing-flange", CRYSTAL, argb(FLANGE))
   band("racing-flange-bevel", CRYSTAL_OUTLINE, 2.4, argb("#FF3B3E43"), taper = false)
@@ -319,8 +349,8 @@ private fun ClockCanvas.flange() {
   // Minute track: sixty ticks round the tonneau, longer at the fives.
   (0 until 60).forEach { tick ->
     val major = tick % 5 == 0
-    val (x1, y1) = onTonneau(tick * 6.0, 52.0, 62.0)
-    val (x2, y2) = onTonneau(tick * 6.0, if (major) 48.5 else 50.0, if (major) 58.0 else 60.0)
+    val (x1, y1) = onCrystal(tick * 6.0, 11.0)
+    val (x2, y2) = onCrystal(tick * 6.0, if (major) 15.0 else 13.5)
     line(
       "racing-track-$tick",
       x1 to y1,
@@ -334,11 +364,12 @@ private fun ClockCanvas.flange() {
   listOf(700, 400, 300, 240, 200, 180, 165, 150, 140, 120, 105, 100, 95, 90, 85, 80, 75, 70, 65)
     .forEach { speed ->
       val seconds = 3600.0 / speed
-      val (x, y) = onTonneau(seconds * 6, 57.0, 67.0)
+      val (x, y) = onCrystal(seconds * 6, 6.2)
       label("racing-tachy-$speed", text("$speed"), x, y, 3.8, argb(TACHY))
     }
-  turned("racing-tachymeter-words", "36", 128.0, 44.0) {
-    label("racing-tachymeter", text("TACHYMETER"), 128, 44, 3.2, argb(TACHY))
+  val (wordsX, wordsY) = onCrystal(16.0, 6.2)
+  turned("racing-tachymeter-words", "10", wordsX, wordsY) {
+    label("racing-tachymeter", text("TACHYMETER"), wordsX, wordsY, 3.2, argb(TACHY))
   }
   label(
     "racing-swiss",
@@ -352,7 +383,7 @@ private fun ClockCanvas.flange() {
   )
   // Lume plots at the hours, pointing in.
   (0 until 12).forEach { hour ->
-    val (px, py) = onTonneau(hour * 30.0, 46.0, 55.0)
+    val (px, py) = onCrystal(hour * 30.0, 18.5)
     val length = hypot(C - px, C - py)
     val dx = (C - px) / length
     val dy = (C - py) / length
