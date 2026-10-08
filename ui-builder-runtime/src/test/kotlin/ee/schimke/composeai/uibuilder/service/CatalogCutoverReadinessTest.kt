@@ -221,9 +221,6 @@ class CatalogCutoverReadinessTest {
           "`imageVector: ImageVector`]",
         "wear-m3: declares no composeSourceExport, so no export is offered",
         "remote-m3: declares no composeSourceExport, so no export is offered",
-        "a2ui-catalog: publishes no seed templates",
-        "a2ui-catalog: declares no composeSourceExport, so no export is offered",
-        "glimmer-catalog: publishes no seed templates",
         "glimmer-catalog: declares no composeSourceExport, so no export is offered",
         "remote-widgets: has no delivery branch, so there is no ui-builder.json to serve it from",
       ),
@@ -234,15 +231,11 @@ class CatalogCutoverReadinessTest {
   /**
    * The export half of the ledger is one line of policy per catalog, and this proves it: with the
    * declaration each catalog would add, every seed it publishes exports through the emitter it
-   * reaches today by id. If this fails, the ledger line is not the whole fix.
-   *
-   * A2UI is the one catalog whose seed has to move too: the generic blank screen an owned catalog
-   * falls back to is the builder's own layout vocabulary, which no A2UI client can draw, so it
-   * refuses to export. Publishing the document today's Kotlin `a2ui-column` builder writes — the
-   * phase-3a freeze, done here the way the catalog repository would do it — is the whole fix.
+   * reaches today by id. If this fails, the ledger line is not the whole fix. A2UI already
+   * publishes its declaration, so declaring it again here is a no-op for that catalog.
    */
   @Test
-  fun `declaring the export route, and A2UI publishing its seed, is all the export half needs`() {
+  fun `declaring the export route is all the export half needs`() {
     val declared =
       mapOf(
         "wear-m3" to CatalogExportRouting.WEAR_SCREEN,
@@ -253,22 +246,23 @@ class CatalogCutoverReadinessTest {
       CatalogCutoverFixtures.catalog(id).declaring(adapter)
     }
 
-    assertEquals(
-      listOf(
-        "a2ui-catalog: publishes no seed templates",
-        "a2ui-catalog/blank: export refused: [nodes.screen-scaffold: `layout/scaffold` is not an " +
-          "A2UI component (expected `a2ui/<Component>`), nodes.screen-content: `layout/box` is " +
-          "not an A2UI component (expected `a2ui/<Component>`)]",
-      ),
-      CatalogCutoverProbe.findings(published),
-    )
-    assertEquals(
-      emptyList(),
-      CatalogCutoverProbe.findings(published) { id ->
-        if (id == "a2ui-catalog") frozenBuiltInTemplates(id)
-        else CatalogCutoverFixtures.templates(id)
-      },
-    )
+    assertEquals(emptyList(), CatalogCutoverProbe.findings(published))
+  }
+
+  /**
+   * A2UI's published `a2ui-column` is the phase-3a freeze of the Kotlin `a2ui-column` builder, so a
+   * design created either side of the cutover starts as the same tree. The environment is the
+   * catalog's to choose and is not compared.
+   */
+  @Test
+  fun `a2ui-catalog's published a2ui-column is the built-in seed it replaces`() {
+    val id = "a2ui-catalog"
+    val builtIn = assertNotNull(frozenBuiltInTemplates(id)["a2ui-column"]).document
+    val published = assertNotNull(CatalogCutoverFixtures.templates(id)["a2ui-column"]).document
+    assertEquals(builtIn.title, published.title)
+    assertEquals(builtIn.roots, published.roots)
+    assertEquals(builtIn.nodes, published.nodes)
+    assertEquals(builtIn.stateVariables, published.stateVariables)
   }
 
   /**

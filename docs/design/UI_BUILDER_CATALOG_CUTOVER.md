@@ -99,20 +99,22 @@ And it asserts the **gap ledger** exactly, so the list can only shrink deliberat
 
 ## The gap ledger
 
-As captured on 2026-10-07. Each line is work in a catalog repository, not here.
+As captured on 2026-10-07, with `a2ui-catalog` and `glimmer-catalog` re-captured on 2026-10-08. Each
+line is work in a catalog repository, not here.
 
 | Catalog | Gap | Fix, in that repository |
 | --- | --- | --- |
 | `wear-m3` | declares no `composeSourceExport`, so an owned Wear catalog offers no export | add `"composeSourceExport": {"adapter": "wear-compose-screen", "version": 1}` to `ui-builder.policy.json`, **after** the server that serves it ships `CatalogExportRouting` (a server that does not know the id refuses the catalog's exports) |
 | `remote-m3` | the same | `{"adapter": "remote-compose", "version": 1}`, same ordering |
-| `a2ui-catalog` | the same, and it publishes no seed templates; the generic blank is the builder's layout vocabulary, which an A2UI client cannot draw | `{"adapter": "a2ui-program", "version": 1}`, and publish today's `a2ui-column` seed as `ui-builder/designs/a2ui-column.json` |
-| `glimmer-catalog` | declares no export and publishes no templates | glimmer has no emitter in this build at all; it gets the generic blank and no export until it publishes a seed and an emitter exists for it |
+| `glimmer-catalog` | declares no `composeSourceExport` | glimmer has no emitter in this build at all, so an owned glimmer catalog offers no export until one exists here and the catalog declares it. Its seeds (`glasses-card`, `glasses-list`, `glasses-prompt`) are published |
 | `m3-catalog` | the published `adaptive-navigation` seed holds `m3/icon` nodes without an `imageVector`, which the generic export refuses | give the template's icons a vector (the Kotlin `AdaptiveScreenTemplates` seed exports), or export icons from the asset registry |
 | `remote-widgets` | has no delivery branch, so there is no `ui-builder.json` to serve it from; when it has one, it declares no `composeSourceExport` either | add a `remote-widgets` lane to remote-m3-catalog's `design-artifacts.yml` (its own `REMOTE_WIDGETS_UI_BUILDER.md` lists this), register it on the preview server, then declare `{"adapter": "remote-compose-launcher-widget", "version": 1}` with the same ordering as the rows above |
 
-`declaring the export route, and A2UI publishing its seed, is all the export half needs` proves the
-first three rows are the whole fix: with the declarations added and A2UI's built-in seed frozen to a
-document, every published seed of those catalogs exports through the emitter it reaches today by id.
+`declaring the export route is all the export half needs` proves the first two rows are the whole
+fix: with the declarations added, every published seed of those catalogs exports through the
+emitter it reaches today by id. `a2ui-catalog` closed its rows by publishing both: the
+`a2ui-program` declaration and its seeds, whose `a2ui-column` is held equal to the Kotlin built-in
+by `a2ui-catalog's published a2ui-column is the built-in seed it replaces`.
 
 Not in the ledger, because the flag keeps them and they are the builder's own: the packaged
 `compose-foundation-components-v1.json` record (layout, shape and asset call sites). m3-catalog's
