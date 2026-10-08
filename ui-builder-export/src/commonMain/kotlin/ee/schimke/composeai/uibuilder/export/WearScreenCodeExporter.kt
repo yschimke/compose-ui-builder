@@ -94,11 +94,6 @@ object WearScreenCodeExporter {
    *   change to one repository. A caller that has to say `tagNodes = true, previews = false` is a
    *   caller that cannot compile until this module publishes, which is a two-repository release for
    *   one flag.
-   *
-   * @param variableFonts writes the declaration each variable font text calls, which is joined into
-   *   this file after the screen. [VariableFontSourceGenerator.Unavailable] (the wasm editor's Code
-   *   pane) writes the calls with a note that the declarations come at export.
-   * @param variableFontMode whether those declarations draw through flexpress or by themselves.
    */
   fun export(
     document: UiBuilderDocument,
@@ -106,8 +101,21 @@ object WearScreenCodeExporter {
     tagNodes: Boolean = false,
     previews: Boolean = !tagNodes,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
-    variableFonts: VariableFontSourceGenerator = VariableFontSourceGenerator.Unavailable,
-    variableFontMode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
+  ): Result =
+    export(document, packageName, tagNodes, previews, packComponents, VariableFontExport.None)
+
+  /**
+   * [export], writing each variable font text's declaration with [variableFonts] and joining it
+   * into this file after the screen. An overload of its own, not a default argument, to keep the
+   * published JVM descriptor above.
+   */
+  fun export(
+    document: UiBuilderDocument,
+    packageName: String? = null,
+    tagNodes: Boolean = false,
+    previews: Boolean = !tagNodes,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    variableFonts: VariableFontExport,
   ): Result {
     val rootId = document.roots.singleOrNull() ?: return refuse("a screen design has one root")
     val root = document.nodes[rootId] ?: return refuse("the root node `$rootId` is missing")
@@ -151,8 +159,9 @@ object WearScreenCodeExporter {
     // The role text with no `style` is set in, as the canvas provides it; see [ThemeTextStyle].
     val textRole = ThemeTextStyle.role(root)?.let(ThemeTextStyle::wearRole)
     val variableFontRequests = emitter.variableFontRequests()
+    val variableFontMode = variableFonts.mode
     val variableFontSources = variableFontRequests.map {
-      variableFonts.generate(it, packageName ?: VARIABLE_FONT_PACKAGE, variableFontMode)
+      variableFonts.generator.generate(it, packageName ?: VARIABLE_FONT_PACKAGE, variableFontMode)
     }
     variableFontSources.filterIsInstance<VariableFontSource.Refused>().forEach {
       refusals += it.reason

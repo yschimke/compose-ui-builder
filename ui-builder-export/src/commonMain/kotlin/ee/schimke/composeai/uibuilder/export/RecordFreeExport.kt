@@ -32,13 +32,39 @@ object RecordFreeExport {
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
   ): Generated? =
+    generate(
+      document,
+      route,
+      frameSizes,
+      launcherRoots,
+      packageName,
+      packComponents,
+      assets,
+      VariableFontExport.None,
+    )
+
+  /**
+   * The route-aware [generate], writing variable font text's declarations with [variableFonts].
+   * Every export entry point takes it as an overload of its own beside the published one, not a
+   * default argument, to keep the published JVM descriptors (see [nativePreview]).
+   */
+  fun generate(
+    document: UiBuilderDocument,
+    route: CatalogExportRouting.Route,
+    frameSizes: List<CatalogFrameSize> = emptyList(),
+    launcherRoots: Set<String> = emptySet(),
+    packageName: String? = null,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    variableFonts: VariableFontExport,
+  ): Generated? =
     when (route) {
       is CatalogExportRouting.Route.RecordFree ->
         if (route.adapter == CatalogExportRouting.LAUNCHER_WIDGET)
           launcherWidget(document, frameSizes, launcherRoots, packageName, packComponents)
-        else generate(document, route.platform, packageName, packComponents, assets)
+        else generate(document, route.platform, packageName, packComponents, assets, variableFonts)
       is CatalogExportRouting.Route.BuiltIn ->
-        generate(document, route.platform, packageName, packComponents, assets)
+        generate(document, route.platform, packageName, packComponents, assets, variableFonts)
       is CatalogExportRouting.Route.ComponentRecords,
       CatalogExportRouting.Route.NotDeclared,
       is CatalogExportRouting.Route.Unsupported -> null
@@ -58,6 +84,28 @@ object RecordFreeExport {
     packageName: String? = null,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
+  ): Generated? =
+    generate(
+      document,
+      route,
+      frameSizes,
+      launcherRoots,
+      packageName,
+      packComponents,
+      assets,
+      VariableFontExport.None,
+    )
+
+  /** As above, writing variable font text's declarations with [variableFonts]. */
+  fun generate(
+    document: DesignDocumentV1,
+    route: CatalogExportRouting.Route,
+    frameSizes: List<CatalogFrameSize> = emptyList(),
+    launcherRoots: Set<String> = emptySet(),
+    packageName: String? = null,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    variableFonts: VariableFontExport,
   ): Generated? =
     when (route) {
       is CatalogExportRouting.Route.RecordFree ->
@@ -81,9 +129,10 @@ object RecordFreeExport {
                     )
                   )
                 }
-        } else generate(document, route.platform, packageName, packComponents, assets)
+        } else
+          generate(document, route.platform, packageName, packComponents, assets, variableFonts)
       is CatalogExportRouting.Route.BuiltIn ->
-        generate(document, route.platform, packageName, packComponents, assets)
+        generate(document, route.platform, packageName, packComponents, assets, variableFonts)
       is CatalogExportRouting.Route.ComponentRecords,
       CatalogExportRouting.Route.NotDeclared,
       is CatalogExportRouting.Route.Unsupported -> null
@@ -130,6 +179,17 @@ object RecordFreeExport {
     packageName: String? = null,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
+  ): Generated? =
+    generate(document, platform, packageName, packComponents, assets, VariableFontExport.None)
+
+  /** As above, writing variable font text's declarations with [variableFonts]. */
+  fun generate(
+    document: UiBuilderDocument,
+    platform: UiBuilderCatalogPlatform,
+    packageName: String? = null,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    variableFonts: VariableFontExport,
   ): Generated? {
     // An A2UI design is never a widget or a Wear screen, and every one of its designs has Kotlin:
     // the app-side program that sends its payload to AndroidX's A2UI processor. Asked first so a
@@ -143,9 +203,16 @@ object RecordFreeExport {
         is A2uiComposeExporter.Result.Refused -> Generated.Refused(result.reasons)
       }
     }
-    generate(document, packageName, packComponents = packComponents, assets = assets)?.let {
-      return it
-    }
+    generate(
+        document,
+        packageName,
+        packComponents = packComponents,
+        assets = assets,
+        variableFonts = variableFonts,
+      )
+      ?.let {
+        return it
+      }
     wearRootRefusal(platform, document.roots, document.nodes.values.map { it.componentId }) {
         document.nodes[it]?.componentId
       }
@@ -182,6 +249,17 @@ object RecordFreeExport {
     packageName: String? = null,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
+  ): Generated? =
+    generate(document, platform, packageName, packComponents, assets, VariableFontExport.None)
+
+  /** As above, writing variable font text's declarations with [variableFonts]. */
+  fun generate(
+    document: DesignDocumentV1,
+    platform: UiBuilderCatalogPlatform,
+    packageName: String? = null,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    variableFonts: VariableFontExport,
   ): Generated? {
     if (!applies(document, platform)) return null
     wearRootRefusal(platform, document.roots, document.nodes.values.map { it.componentId }) {
@@ -216,7 +294,14 @@ object RecordFreeExport {
       if (unsupported.isNotEmpty()) return Generated.Refused(unsupported)
     }
     return runCatching {
-      generate(document.toUiBuilderDocument(), platform, packageName, packComponents, assets)
+      generate(
+        document.toUiBuilderDocument(),
+        platform,
+        packageName,
+        packComponents,
+        assets,
+        variableFonts,
+      )
     }
       .getOrElse {
         Generated.Refused(
@@ -320,8 +405,26 @@ object RecordFreeExport {
     previews: Boolean = !tagNodes,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
-    variableFonts: VariableFontSourceGenerator = VariableFontSourceGenerator.Unavailable,
-    variableFontMode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
+  ): Generated? =
+    generate(
+      document,
+      packageName,
+      tagNodes,
+      previews,
+      packComponents,
+      assets,
+      variableFonts = VariableFontExport.None,
+    )
+
+  /** As above, writing variable font text's declarations with [variableFonts]. */
+  fun generate(
+    document: UiBuilderDocument,
+    packageName: String? = null,
+    tagNodes: Boolean = false,
+    previews: Boolean = !tagNodes,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    variableFonts: VariableFontExport,
   ): Generated? =
     when {
       // A widget takes no [tagNodes]: it generates a `WearWidgetDocument` of Remote Compose, whose
@@ -344,7 +447,6 @@ object RecordFreeExport {
             previews,
             packComponents,
             variableFonts,
-            variableFontMode,
           )
           .generated()
       else -> null
@@ -374,8 +476,26 @@ object RecordFreeExport {
     previews: Boolean = !tagNodes,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
-    variableFonts: VariableFontSourceGenerator = VariableFontSourceGenerator.Unavailable,
-    variableFontMode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
+  ): Generated? =
+    generate(
+      document,
+      packageName,
+      tagNodes,
+      previews,
+      packComponents,
+      assets,
+      variableFonts = VariableFontExport.None,
+    )
+
+  /** As above, writing variable font text's declarations with [variableFonts]. */
+  fun generate(
+    document: DesignDocumentV1,
+    packageName: String? = null,
+    tagNodes: Boolean = false,
+    previews: Boolean = !tagNodes,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    variableFonts: VariableFontExport,
   ): Generated? {
     if (!document.isRecordFree()) return null
     return runCatching {
@@ -386,8 +506,7 @@ object RecordFreeExport {
         previews,
         packComponents,
         assets,
-        variableFonts,
-        variableFontMode,
+        variableFonts = variableFonts,
       )
     }
       .getOrElse { failure ->
@@ -414,7 +533,37 @@ object RecordFreeExport {
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
     platform: UiBuilderCatalogPlatform?,
   ): Generated? =
-    generate(document, packageName, tagNodes, previews, packComponents, assets)
+    generate(
+      document,
+      packageName,
+      tagNodes,
+      previews,
+      packComponents,
+      assets,
+      platform,
+      VariableFontExport.None,
+    )
+
+  /** As above, writing variable font text's declarations with [variableFonts]. */
+  fun generate(
+    document: UiBuilderDocument,
+    packageName: String? = null,
+    tagNodes: Boolean = false,
+    previews: Boolean = !tagNodes,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    platform: UiBuilderCatalogPlatform?,
+    variableFonts: VariableFontExport,
+  ): Generated? =
+    generate(
+      document,
+      packageName,
+      tagNodes,
+      previews,
+      packComponents,
+      assets,
+      variableFonts = variableFonts,
+    )
       ?: platform?.let {
         wearRootRefusal(
           it,
@@ -435,7 +584,37 @@ object RecordFreeExport {
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
     platform: UiBuilderCatalogPlatform?,
   ): Generated? =
-    generate(document, packageName, tagNodes, previews, packComponents, assets)
+    generate(
+      document,
+      packageName,
+      tagNodes,
+      previews,
+      packComponents,
+      assets,
+      platform,
+      VariableFontExport.None,
+    )
+
+  /** As above, writing variable font text's declarations with [variableFonts]. */
+  fun generate(
+    document: DesignDocumentV1,
+    packageName: String? = null,
+    tagNodes: Boolean = false,
+    previews: Boolean = !tagNodes,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+    platform: UiBuilderCatalogPlatform?,
+    variableFonts: VariableFontExport,
+  ): Generated? =
+    generate(
+      document,
+      packageName,
+      tagNodes,
+      previews,
+      packComponents,
+      assets,
+      variableFonts = variableFonts,
+    )
       ?: platform?.let {
         wearRootRefusal(
           it,

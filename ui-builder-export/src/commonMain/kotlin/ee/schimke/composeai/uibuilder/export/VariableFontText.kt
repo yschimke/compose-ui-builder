@@ -180,6 +180,21 @@ enum class VariableFontExportMode {
   STANDALONE,
 }
 
+/**
+ * How an export writes variable font text: [generator] for the declarations, in [mode]. A single
+ * value so each export entry point takes one more parameter rather than two, in an overload of its
+ * own beside the published one.
+ */
+data class VariableFontExport(
+  val generator: VariableFontSourceGenerator,
+  val mode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
+) {
+  companion object {
+    /** No generator: the calls are written with a note that the declarations come at export. */
+    val None: VariableFontExport = VariableFontExport(VariableFontSourceGenerator.Unavailable)
+  }
+}
+
 /** What a [VariableFontSourceGenerator] gives back for one request. */
 sealed interface VariableFontSource {
   /**

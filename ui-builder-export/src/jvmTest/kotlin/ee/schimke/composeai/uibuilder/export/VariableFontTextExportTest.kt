@@ -76,7 +76,7 @@ class VariableFontTextExportTest {
     document: DesignDocumentV1,
     mode: VariableFontExportMode = VariableFontExportMode.STANDALONE,
     generator: VariableFontSourceGenerator = fonts,
-  ) = ScreenExportGate.export(document, record, variableFonts = generator, variableFontMode = mode)
+  ) = ScreenExportGate.export(document, record, variableFonts = VariableFontExport(generator, mode))
 
   private fun emitted(outcome: ScreenExportGate.Outcome): String =
     when (outcome) {
@@ -225,8 +225,7 @@ class VariableFontTextExportTest {
       WearScreenCodeExporter.export(
         wearDesign(held),
         packageName = "generated.wear",
-        variableFonts = fonts,
-        variableFontMode = VariableFontExportMode.STANDALONE,
+        variableFonts = VariableFontExport(fonts, VariableFontExportMode.STANDALONE),
       )
     val source = assertIs<WearScreenCodeExporter.Result.Emitted>(outcome).source
     assertTrue("VariableFontTextRobotoFlexFlex(" in source, source)
@@ -237,6 +236,33 @@ class VariableFontTextExportTest {
   }
 
   @Test
+  fun `a size of zero or less is the default, as the canvas draws it`() {
+    val source =
+      emitted(
+        export(
+          m3Design(
+            """{"text": {"type": "string", "value": "Flex"},
+                "fontSizeSp": {"type": "float", "value": 0}}"""
+          )
+        )
+      )
+    assertTrue("fontSize = 32.sp" in source, source)
+  }
+
+  @Test
+  fun `a routed Wear export carries the generator to the declaration`() {
+    val generated =
+      RecordFreeExport.generate(
+        wearDesign(held),
+        UiBuilderCatalogPlatform.WEAR,
+        packageName = "generated.wear",
+        variableFonts = VariableFontExport(fonts, VariableFontExportMode.STANDALONE),
+      )
+    val source = assertIs<RecordFreeExport.Generated.Emitted>(generated).source
+    assertTrue("private object VariableFontTextRobotoFlexFlexOutline" in source, source)
+  }
+
+  @Test
   fun `a Wear screen refuses an axis bound to state until it declares a design's state`() {
     val outcome =
       WearScreenCodeExporter.export(
@@ -244,7 +270,7 @@ class VariableFontTextExportTest {
           """{"text": {"type": "string", "value": "Flex"},
               "wght": {"type": "state", "variable": "weight"}}"""
         ),
-        variableFonts = fonts,
+        variableFonts = VariableFontExport(fonts),
       )
     val refused = assertIs<WearScreenCodeExporter.Result.Refused>(outcome)
     assertTrue(refused.reasons.any { "binds `wght`" in it }, "$refused")

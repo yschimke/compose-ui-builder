@@ -85,13 +85,20 @@ object ScreenExportGate {
      * `GoogleFont`; see [TypefaceTarget] for the desktop form and who asks for it.
      */
     typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
-    /**
-     * Writes the declaration each variable font text calls, joined into the screen's file after it.
-     * [VariableFontSourceGenerator.Unavailable] (the wasm editor's code pane) leaves the calls with
-     * a note that the declarations come at export.
-     */
-    variableFonts: VariableFontSourceGenerator = VariableFontSourceGenerator.Unavailable,
-    variableFontMode: VariableFontExportMode = VariableFontExportMode.LIBRARY,
+  ): Outcome = export(document, record, tagNodes, typefaces, VariableFontExport.None)
+
+  /**
+   * [export], writing each variable font text's declaration with [variableFonts] and joining it
+   * into the screen's file after it. [VariableFontExport.None] (the wasm editor's code pane) leaves
+   * the calls with a note that the declarations come at export. An overload of its own, not a
+   * default argument, to keep the published JVM descriptor above.
+   */
+  fun export(
+    document: DesignDocumentV1,
+    record: ComponentRecordFile?,
+    tagNodes: Boolean = false,
+    typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
+    variableFonts: VariableFontExport,
   ): Outcome {
     if (record == null) {
       // Named rather than silent: "this host has no record for the catalog" is a different problem
@@ -128,8 +135,8 @@ object ScreenExportGate {
             withVariableFontTexts(
               generated.source,
               projected.variableFontTexts,
-              variableFonts,
-              variableFontMode,
+              variableFonts.generator,
+              variableFonts.mode,
             )
         }
     }

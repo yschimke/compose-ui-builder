@@ -1061,13 +1061,15 @@ object ScreenDocumentProjection {
       }
       variableFontSpecs += spec
       val name = with(VariableFontText) { requests(variableFontSpecs).of(spec).functionName }
+      // A size of zero or less is the default, as the canvas and the Wear lane read it, so the
+      // export draws what the preview did.
       val size =
         when (val value = node.properties["fontSizeSp"]) {
           is DecimalValueV1 -> value.value
           is IntegerValueV1 -> value.value.toDouble()
           null -> VariableFontTextRecord.DEFAULT_SIZE_SP
           else -> return refuse("$where.`fontSizeSp` is a literal number")
-        }
+        }.takeIf { it > 0.0 } ?: VariableFontTextRecord.DEFAULT_SIZE_SP
       arguments["fontSize"] =
         ScreenValue.Chain(
           receiver = unitReceiver(size) ?: return refuse("$where.`fontSizeSp` is $size"),

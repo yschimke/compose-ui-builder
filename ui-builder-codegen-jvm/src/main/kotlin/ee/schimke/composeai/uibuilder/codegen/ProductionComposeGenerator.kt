@@ -196,6 +196,12 @@ object ProductionComposeGenerator {
       )
       projected as ScreenDocumentProjection.Outcome.Projected
       check(projected.assetPlaceholders.isEmpty(), "asset placeholders are not production output")
+      // A variable font text calls a declaration flexpress generates at export, which this lane
+      // does not write; refused by name rather than emitted as a call to nothing.
+      check(projected.variableFontTexts.isEmpty()) {
+        "variable font text is not production output yet: " +
+          projected.variableFontTexts.joinToString { it.functionName }
+      }
       check(
         projected.document.state.isEmpty() && projected.document.functions.isEmpty(),
         "stateful or implicit supporting functions are not supported",
