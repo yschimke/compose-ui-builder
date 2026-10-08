@@ -43,6 +43,14 @@ public object CatalogExportRouting {
    */
   public const val LAUNCHER_WIDGET: String = "remote-compose-launcher-widget"
 
+  /**
+   * The trait a catalog gives the component its launcher widgets are rooted on. Under
+   * [LAUNCHER_WIDGET] a design's root must carry it: the declaration chooses the emitter, and this
+   * says which of the catalog's components that emitter writes as the widget itself, so a design
+   * rooted on a button is refused rather than written as an empty widget.
+   */
+  public const val LAUNCHER_HOST_TRAIT: String = "LauncherWidgetHost"
+
   /** The first version of each record-free lane. */
   public const val V1: Int = 1
 
@@ -149,6 +157,26 @@ public object CatalogExportRouting {
       )
     }
   }
+
+  /** The components of [catalog] that carry [LAUNCHER_HOST_TRAIT]. */
+  public fun launcherRoots(catalog: CatalogCapabilityV1): Set<String> =
+    catalog.components
+      .filter { LAUNCHER_HOST_TRAIT in it.traits }
+      .mapTo(linkedSetOf()) { it.componentId }
+
+  /**
+   * [launcherRoots] read from a policy's `builtins`, for a catalog not yet composed into a
+   * capability — the shape its repository writes.
+   */
+  public fun launcherRoots(policy: JsonObject): Set<String> =
+    (policy["builtins"] as? JsonObject)
+      .orEmpty()
+      .filterValues { builtin ->
+        ((builtin as? JsonObject)?.get("traits") as? JsonArray).orEmpty().any {
+          (it as? JsonPrimitive)?.contentOrNull == LAUNCHER_HOST_TRAIT
+        }
+      }
+      .keys
 }
 
 /** One size a catalog declares its designs are authored at: `{widthDp, heightDp, label}`. */

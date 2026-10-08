@@ -183,7 +183,10 @@ object LauncherWidgetCodeExporter {
       appendLine("$INDENT}")
       appendLine("}")
       appendLine()
-      appendLine("@Preview(name = \"$previewLabel\", widthDp = $widthDp, heightDp = $heightDp)")
+      // A catalog's label is authored text, so it is escaped like any other string the file writes.
+      appendLine(
+        "@Preview(name = ${previewLabel.quoted()}, widthDp = $widthDp, heightDp = $heightDp)"
+      )
       appendLine("@Composable")
       appendLine("fun ${name}Preview() =")
       appendLine("${INDENT}RemoteContentPreview(profile = RcPlatformProfiles.WIDGETS_V6) {")

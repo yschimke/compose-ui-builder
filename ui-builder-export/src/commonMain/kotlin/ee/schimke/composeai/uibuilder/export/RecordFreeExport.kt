@@ -16,43 +16,111 @@ object RecordFreeExport {
    * `CatalogExportRouting.route` resolved from the catalog's `composeSourceExport` declaration.
    *
    * A declared launcher widget reaches [LauncherWidgetCodeExporter] whatever its root is called,
-   * previewed at the catalog's [frameSizes]; every other record-free route is the platform-routed
-   * [generate] below, asked as the platform its declaration names. A route that offers no
-   * record-free export (an undeclared or unsupported one, or the record projection) is null, as a
-   * design the record-driven generator owns always was.
+   * provided the root is one of the catalog's [launcherRoots]
+   * (`CatalogExportRouting.launcherRoots`, the components it marks `LauncherWidgetHost`), previewed
+   * at the catalog's [frameSizes]. Every other record-free route is the platform-routed [generate]
+   * below, asked as the platform its declaration names. The record projection and an undeclared or
+   * unsupported route are null: the record-driven generator owns those designs, and nothing
+   * record-free may answer for them first.
    */
   fun generate(
     document: UiBuilderDocument,
     route: CatalogExportRouting.Route,
     frameSizes: List<CatalogFrameSize> = emptyList(),
+    launcherRoots: Set<String> = emptySet(),
     packageName: String? = null,
     packComponents: Map<String, ComponentRecord> = emptyMap(),
     assets: WidgetAssetBytes = WidgetAssetBytes { null },
-  ): Generated? {
-    if (
-      route is CatalogExportRouting.Route.RecordFree &&
-        route.adapter == CatalogExportRouting.LAUNCHER_WIDGET
-    ) {
-      if (!UiBuilderBuildFeatures.remoteCompose) return null
-      val root =
-        document.roots.singleOrNull()?.let(document.nodes::get)
-          ?: return Generated.Refused(listOf("a widget design has one root"))
-      return when (
-        val result =
-          LauncherWidgetCodeExporter.export(
-            document,
-            packageName,
-            packComponents,
-            rootComponentId = root.componentId,
-            frameSizes = frameSizes.takeIf { it.isNotEmpty() },
-          )
-      ) {
-        is LauncherWidgetCodeExporter.Result.Emitted -> Generated.Emitted(result.source)
-        is LauncherWidgetCodeExporter.Result.Refused -> Generated.Refused(result.reasons)
-      }
+  ): Generated? =
+    when (route) {
+      is CatalogExportRouting.Route.RecordFree ->
+        if (route.adapter == CatalogExportRouting.LAUNCHER_WIDGET)
+          launcherWidget(document, frameSizes, launcherRoots, packageName, packComponents)
+        else generate(document, route.platform, packageName, packComponents, assets)
+      is CatalogExportRouting.Route.BuiltIn ->
+        generate(document, route.platform, packageName, packComponents, assets)
+      is CatalogExportRouting.Route.ComponentRecords,
+      CatalogExportRouting.Route.NotDeclared,
+      is CatalogExportRouting.Route.Unsupported -> null
     }
-    val platform = CatalogExportRouting.recordFreePlatform(route) ?: return null
-    return generate(document, platform, packageName, packComponents, assets)
+
+  /**
+   * The route-aware [generate] for the service's document, with the refusals the platform overload
+   * below applies: the candidate document drops `predicate`, `accessibility` and the token and
+   * asset bindings, so a route that converts must refuse a design holding them rather than lose
+   * them.
+   */
+  fun generate(
+    document: DesignDocumentV1,
+    route: CatalogExportRouting.Route,
+    frameSizes: List<CatalogFrameSize> = emptyList(),
+    launcherRoots: Set<String> = emptySet(),
+    packageName: String? = null,
+    packComponents: Map<String, ComponentRecord> = emptyMap(),
+    assets: WidgetAssetBytes = WidgetAssetBytes { null },
+  ): Generated? =
+    when (route) {
+      is CatalogExportRouting.Route.RecordFree ->
+        if (route.adapter == CatalogExportRouting.LAUNCHER_WIDGET) {
+          if (!UiBuilderBuildFeatures.remoteCompose) null
+          else
+            remoteKotlinUnsupported(document).takeIf { it.isNotEmpty() }?.let(Generated::Refused)
+              ?: runCatching {
+                launcherWidget(
+                  document.toUiBuilderDocument(),
+                  frameSizes,
+                  launcherRoots,
+                  packageName,
+                  packComponents,
+                )
+              }
+                .getOrElse {
+                  Generated.Refused(
+                    listOf(
+                      "document: Remote source export could not read the design: ${it.message}"
+                    )
+                  )
+                }
+        } else generate(document, route.platform, packageName, packComponents, assets)
+      is CatalogExportRouting.Route.BuiltIn ->
+        generate(document, route.platform, packageName, packComponents, assets)
+      is CatalogExportRouting.Route.ComponentRecords,
+      CatalogExportRouting.Route.NotDeclared,
+      is CatalogExportRouting.Route.Unsupported -> null
+    }
+
+  private fun launcherWidget(
+    document: UiBuilderDocument,
+    frameSizes: List<CatalogFrameSize>,
+    launcherRoots: Set<String>,
+    packageName: String?,
+    packComponents: Map<String, ComponentRecord>,
+  ): Generated? {
+    if (!UiBuilderBuildFeatures.remoteCompose) return null
+    val root =
+      document.roots.singleOrNull()?.let(document.nodes::get)
+        ?: return Generated.Refused(listOf("a widget design has one root"))
+    if (root.componentId !in launcherRoots) {
+      return Generated.Refused(
+        listOf(
+          "the root is `${root.componentId}`, which this catalog does not mark as a launcher " +
+            "widget (`${CatalogExportRouting.LAUNCHER_HOST_TRAIT}`)"
+        )
+      )
+    }
+    return when (
+      val result =
+        LauncherWidgetCodeExporter.export(
+          document,
+          packageName,
+          packComponents,
+          rootComponentId = root.componentId,
+          frameSizes = frameSizes.takeIf { it.isNotEmpty() },
+        )
+    ) {
+      is LauncherWidgetCodeExporter.Result.Emitted -> Generated.Emitted(result.source)
+      is LauncherWidgetCodeExporter.Result.Refused -> Generated.Refused(result.reasons)
+    }
   }
 
   /** Catalog-directed source export; ordinary Remote roots need no Wear widget scaffold. */
@@ -144,20 +212,7 @@ object RecordFreeExport {
       }
       if (unsupported.isNotEmpty()) return Generated.Refused(unsupported)
     } else if (!document.isRecordFree()) {
-      val unsupported = buildList {
-        if (document.tokenBindings.isNotEmpty())
-          add("tokenBindings: resolve catalog tokens before Remote Kotlin export")
-        document.nodes.forEach { (id, node) ->
-          if (node.predicate != null)
-            add("nodes.$id.predicate: Remote Kotlin predicate lowering is not available")
-          if (node.accessibility != null)
-            add("nodes.$id.accessibility: Remote Kotlin semantics lowering is not available")
-          if (node.assetBindings.isNotEmpty())
-            add("nodes.$id.assetBindings: Remote Kotlin asset binding lowering is not available")
-          if (node.tokenBindings.isNotEmpty())
-            add("nodes.$id.tokenBindings: resolve catalog tokens before Remote Kotlin export")
-        }
-      }
+      val unsupported = remoteKotlinUnsupported(document)
       if (unsupported.isNotEmpty()) return Generated.Refused(unsupported)
     }
     return runCatching {
@@ -168,6 +223,22 @@ object RecordFreeExport {
           listOf("document: Remote source export could not read the design: ${it.message}")
         )
       }
+  }
+
+  /** What the candidate document cannot carry into Remote Kotlin, one line per field. */
+  private fun remoteKotlinUnsupported(document: DesignDocumentV1): List<String> = buildList {
+    if (document.tokenBindings.isNotEmpty())
+      add("tokenBindings: resolve catalog tokens before Remote Kotlin export")
+    document.nodes.forEach { (id, node) ->
+      if (node.predicate != null)
+        add("nodes.$id.predicate: Remote Kotlin predicate lowering is not available")
+      if (node.accessibility != null)
+        add("nodes.$id.accessibility: Remote Kotlin semantics lowering is not available")
+      if (node.assetBindings.isNotEmpty())
+        add("nodes.$id.assetBindings: Remote Kotlin asset binding lowering is not available")
+      if (node.tokenBindings.isNotEmpty())
+        add("nodes.$id.tokenBindings: resolve catalog tokens before Remote Kotlin export")
+    }
   }
 
   fun applies(document: DesignDocumentV1, platform: UiBuilderCatalogPlatform): Boolean =

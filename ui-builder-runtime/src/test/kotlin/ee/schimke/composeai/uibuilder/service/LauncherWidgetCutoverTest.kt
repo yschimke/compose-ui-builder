@@ -17,6 +17,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 
 /**
  * `remote-widgets`, the phone launcher widget design system remote-m3-catalog publishes from
@@ -129,6 +130,7 @@ class LauncherWidgetCutoverTest {
         seed("launcher-widget-2x1"),
         CatalogExportRouting.route(catalog, CatalogOwnership.ALL),
         CatalogExportRouting.frameSizes(catalog),
+        CatalogExportRouting.launcherRoots(policy),
       )
     val source = assertIs<RecordFreeExport.Generated.Emitted>(generated, "$generated").source
     assertContains(source, ": RemoteComposeWidget() {")
@@ -136,8 +138,10 @@ class LauncherWidgetCutoverTest {
   }
 
   /**
-   * The property routing by declaration buys: a launcher widget catalog may call its root anything.
-   * Routed by component id the same design is not recognised as a launcher widget at all.
+   * The property routing by declaration buys: a launcher widget catalog may call its root anything,
+   * so long as it marks that root `LauncherWidgetHost`. Here the catalog is the same policy with
+   * its root renamed. Routed by component id the same design is not recognised as a launcher widget
+   * at all.
    */
   @Test
   fun `a renamed root still exports when the catalog declares the route`() {
@@ -153,12 +157,22 @@ class LauncherWidgetCutoverTest {
           .replace("remote-widgets/launcher-widget", "acme-widgets/home-widget"),
       )
     val catalog = declared()
+    val renamedPolicy =
+      Json.parseToJsonElement(
+          policy.toString().replace("remote-widgets/launcher-widget", "acme-widgets/home-widget")
+        )
+        .jsonObject
+    assertEquals(
+      setOf("acme-widgets/home-widget"),
+      CatalogExportRouting.launcherRoots(renamedPolicy),
+    )
 
     val owned =
       RecordFreeExport.generate(
         renamed,
         CatalogExportRouting.route(catalog, CatalogOwnership.ALL),
         CatalogExportRouting.frameSizes(catalog),
+        CatalogExportRouting.launcherRoots(renamedPolicy),
       )
     assertContains(
       assertIs<RecordFreeExport.Generated.Emitted>(owned, "$owned").source,
@@ -172,6 +186,54 @@ class LauncherWidgetCutoverTest {
         .orEmpty()
         .contains("RemoteComposeWidget"),
       "routed by component id, a launcher root under another name is not a launcher widget",
+    )
+  }
+
+  @Test
+  fun `a declared route refuses a root the catalog does not mark as a launcher widget`() {
+    org.junit.jupiter.api.Assumptions.assumeTrue(
+      UiBuilderBuildFeatures.remoteCompose,
+      "needs -PuiBuilderRemoteCompose=true",
+    )
+    val buttonRooted =
+      json.decodeFromString(
+        UiBuilderDocument.serializer(),
+        json
+          .encodeToString(UiBuilderDocument.serializer(), seed("launcher-widget-2x1"))
+          .replace("remote-widgets/launcher-widget", "remote-widgets/widget-button"),
+      )
+    val catalog = declared()
+    val generated =
+      RecordFreeExport.generate(
+        buttonRooted,
+        CatalogExportRouting.route(catalog, CatalogOwnership.ALL),
+        CatalogExportRouting.frameSizes(catalog),
+        CatalogExportRouting.launcherRoots(policy),
+      )
+    val refused = assertIs<RecordFreeExport.Generated.Refused>(generated, "$generated")
+    assertContains(refused.reasons.single(), CatalogExportRouting.LAUNCHER_HOST_TRAIT)
+  }
+
+  @Test
+  fun `the launcher widget root is the one the catalog marks as its host`() {
+    assertEquals(
+      setOf("remote-widgets/launcher-widget"),
+      CatalogExportRouting.launcherRoots(policy),
+    )
+  }
+
+  @Test
+  fun `a record-driven route is never answered by a record-free emitter`() {
+    val catalog =
+      declared(
+        ee.schimke.composeai.uibuilder.export.CatalogComposeSourceExportAdapters.COMPOSE_MATERIAL3
+      )
+    assertEquals(
+      null,
+      RecordFreeExport.generate(
+        seed("launcher-widget-2x1"),
+        CatalogExportRouting.route(catalog, CatalogOwnership.ALL),
+      ),
     )
   }
 }

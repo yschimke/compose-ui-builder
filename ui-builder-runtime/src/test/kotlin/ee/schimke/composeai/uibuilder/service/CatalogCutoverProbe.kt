@@ -80,6 +80,7 @@ internal object CatalogCutoverProbe {
                   document.toUiBuilderDocument(),
                   route,
                   CatalogExportRouting.frameSizes(catalog),
+                  CatalogExportRouting.launcherRoots(catalog),
                   packComponents = CatalogCutoverFixtures.composed(id).records,
                 )
             ) {
