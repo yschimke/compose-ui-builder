@@ -100,7 +100,7 @@ class ThemeTypefacesTest {
           scope = scope,
           readManifest = { File(fontsDir, "fonts.json").readText() },
           readFont = { File(fontsDir, it).readBytes() },
-          readRemoteFont = { _, weight -> File(fontsDir, "orbitron-$weight.ttf").readBytes() },
+          readRemoteFont = { _, _ -> File(fontsDir, "orbitron-variable.ttf").readBytes() },
         )
       ProvideUiBuilderFonts(registry) {
         WearMaterialTheme {

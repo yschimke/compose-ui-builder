@@ -55,7 +55,7 @@ val runtimeAssets =
     from(layout.projectDirectory.dir("src/wasmJsMain/resources")) { include("index.html") }
     from(rootProject.layout.projectDirectory.dir("assets/js-joda")) { include("js-joda.esm.js") }
     from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {
-      include("*.ttf", "fonts.json", "*OFL.txt", "LICENSE.txt")
+      include("*.ttf", "fonts.json", "*OFL.txt")
       into("fonts")
     }
     from(project(":ui-builder-renderer-sdk").tasks.named("generateMaterialIconData")) {

@@ -112,7 +112,7 @@ class TypefacePickerTest {
     registry.request("Orbitron")
     withTimeout(10_000) { while ("Orbitron" !in registry.loaded) yield() }
     assertEquals(1, manifestReads)
-    assertEquals(2, fontReads, "Orbitron ships a 400 and a 700")
+    assertEquals(1, fontReads, "Orbitron is one variable file, whatever weights it is listed at")
   }
 
   @Test
@@ -142,7 +142,7 @@ class TypefacePickerTest {
         readFont = { File(fontsDir, it).readBytes() },
         readRemoteFont = { family, weight ->
           asked += family to weight
-          File(fontsDir, "space-grotesk-$weight.ttf").readBytes()
+          File(fontsDir, "space-grotesk-variable.ttf").readBytes()
         },
       )
     registry.request("google:Playfair  Display")
@@ -169,7 +169,7 @@ class TypefacePickerTest {
           readRemoteFont = { family, weight ->
             when {
               family == "Regular Only" && weight == 400 ->
-                File(fontsDir, "space-grotesk-400.ttf").readBytes()
+                File(fontsDir, "space-grotesk-variable.ttf").readBytes()
               else -> error("HTTP 404")
             }
           },
@@ -309,7 +309,7 @@ class TypefacePickerTest {
       scope = scope,
       readManifest = { File(fontsDir, "fonts.json").readText() },
       readFont = { File(fontsDir, it).readBytes() },
-      readRemoteFont = { _, weight -> File(fontsDir, "orbitron-$weight.ttf").readBytes() },
+      readRemoteFont = { _, _ -> File(fontsDir, "orbitron-variable.ttf").readBytes() },
       readRemoteFamilies = { "# test catalogue\nExo 2\nMichroma\nInter\nMajor Mono Display\n" },
     )
 

@@ -32,8 +32,17 @@ class TypefaceInfoTest {
 
   @Test
   fun aStaticFaceHasFeaturesAndNoAxes() {
-    val info = readTypefaceInfo(vendored("inter-400.ttf"))
+    val info = readTypefaceInfo(vendored("LobsterTwo-Regular.ttf"))
     assertFalse(info.isVariable)
+    assertTrue("liga" in info.features)
+    assertTrue("salt" in info.features)
+  }
+
+  @Test
+  fun interIsVariableWithItsFigureFeatures() {
+    val info = readTypefaceInfo(vendored("inter-variable.ttf"))
+    assertTrue(info.isVariable)
+    assertEquals(listOf("opsz", "wght"), info.axes.map { it.tag })
     assertTrue("tnum" in info.features)
     assertTrue("frac" in info.features)
   }

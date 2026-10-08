@@ -1,6 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.platform.Font
 import ee.schimke.composeai.uibuilder.export.FontSettings
@@ -72,7 +74,19 @@ internal class ProductionFontFamilies(
       .computeIfAbsent(key) { name ->
         Optional.ofNullable(
           filesOf(name)?.let { loaded ->
-            FontFamily(loaded.map { Font(it.identity, it.data, FontWeight(it.weight)) })
+            // With its weight as a `wght` setting: without one a variable file draws its
+            // default instance at every weight the manifest lists it at.
+            FontFamily(
+              loaded.map {
+                Font(
+                  it.identity,
+                  it.data,
+                  FontWeight(it.weight),
+                  FontStyle.Normal,
+                  FontVariation.Settings(FontVariation.weight(it.weight)),
+                )
+              }
+            )
           }
         )
       }
@@ -84,9 +98,11 @@ internal class ProductionFontFamilies(
       ?.families
       ?.firstOrNull { canonicalFamilyName(it.name) == canonical }
       ?.let { family ->
+        val data =
+          family.fonts.map { it.file }.distinct().associateWith { readResource("/fonts/$it") }
         val fonts =
           family.fonts.mapNotNull { file ->
-            readResource("/fonts/${file.file}")?.let {
+            data[file.file]?.let {
               UiBuilderFontFile("ui-builder:${family.name}:${file.weight}", it, file.weight)
             }
           }

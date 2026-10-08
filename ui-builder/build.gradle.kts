@@ -488,7 +488,7 @@ tasks.register<Sync>("wasmFrontendDist") {
     )
   }
   from(rootProject.layout.projectDirectory.dir("assets/rc-fonts")) {
-    include("*.ttf", "fonts.json", "google-fonts.txt", "*OFL.txt", "LICENSE.txt")
+    include("*.ttf", "fonts.json", "google-fonts.txt", "*OFL.txt")
     into("fonts")
   }
   // Material icon vectors as data, fetched per file on first draw (`GoogleMaterialIconVectors`).
