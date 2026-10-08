@@ -1,0 +1,280 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "glasses-list",
+  "title": "Glasses list",
+  "revision": 0,
+  "template": "glasses-list",
+  "catalogPin": {
+    "systemId": "glimmer-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 960,
+    "heightDp": 720,
+    "density": 1,
+    "theme": "dark",
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false
+  },
+  "stateVariables": {},
+  "roots": [
+    "screen"
+  ],
+  "nodes": {
+    "screen": {
+      "id": "screen",
+      "componentId": "layout/column",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "padding",
+          "startDp": 48,
+          "topDp": 48,
+          "endDp": 48,
+          "bottomDp": 48
+        }
+      ],
+      "slots": {
+        "children": [
+          "title",
+          "list"
+        ]
+      }
+    },
+    "title": {
+      "id": "title",
+      "componentId": "glimmer/title-chip",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "leadingIcon": [
+          "title-icon"
+        ],
+        "content": [
+          "title-text"
+        ]
+      }
+    },
+    "title-icon": {
+      "id": "title-icon",
+      "componentId": "glimmer/icon",
+      "properties": {
+        "iconKey": {
+          "type": "string",
+          "value": "filled/schedule"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Schedule"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "title-text": {
+      "id": "title-text",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Up next"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "list": {
+      "id": "list",
+      "componentId": "layout/column",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "directions",
+          "message",
+          "event"
+        ]
+      }
+    },
+    "directions": {
+      "id": "directions",
+      "componentId": "glimmer/list-item",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "leadingIcon": [
+          "directions-icon"
+        ],
+        "content": [
+          "directions-text"
+        ],
+        "supportingLabel": [
+          "directions-support"
+        ]
+      }
+    },
+    "directions-icon": {
+      "id": "directions-icon",
+      "componentId": "glimmer/icon",
+      "properties": {
+        "iconKey": {
+          "type": "string",
+          "value": "filled/navigation"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Head north on Market St"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "directions-text": {
+      "id": "directions-text",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Head north on Market St"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "directions-support": {
+      "id": "directions-support",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "200 m"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "message": {
+      "id": "message",
+      "componentId": "glimmer/list-item",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "leadingIcon": [
+          "message-icon"
+        ],
+        "content": [
+          "message-text"
+        ],
+        "supportingLabel": [
+          "message-support"
+        ]
+      }
+    },
+    "message-icon": {
+      "id": "message-icon",
+      "componentId": "glimmer/icon",
+      "properties": {
+        "iconKey": {
+          "type": "string",
+          "value": "filled/chat"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Message from Sam"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "message-text": {
+      "id": "message-text",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Message from Sam"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "message-support": {
+      "id": "message-support",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "On my way, 5 minutes"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "event": {
+      "id": "event",
+      "componentId": "glimmer/list-item",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "leadingIcon": [
+          "event-icon"
+        ],
+        "content": [
+          "event-text"
+        ],
+        "supportingLabel": [
+          "event-support"
+        ]
+      }
+    },
+    "event-icon": {
+      "id": "event-icon",
+      "componentId": "glimmer/icon",
+      "properties": {
+        "iconKey": {
+          "type": "string",
+          "value": "filled/event"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Design review"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "event-text": {
+      "id": "event-text",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Design review"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "event-support": {
+      "id": "event-support",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "In 15 minutes, Room 4"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    }
+  }
+}

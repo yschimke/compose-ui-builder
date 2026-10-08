@@ -1,0 +1,299 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "booking-card",
+  "title": "Booking card",
+  "revision": 0,
+  "template": "booking-card",
+  "catalogPin": {
+    "systemId": "a2ui-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 411,
+    "heightDp": 914,
+    "density": 2.625,
+    "theme": "light",
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_4a",
+      "id:pixel_9",
+      "id:pixel_9_pro_xl",
+      "id:pixel_9_pro_fold",
+      "id:pixel_tablet"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "booking"
+  ],
+  "nodes": {
+    "booking": {
+      "id": "booking",
+      "componentId": "a2ui/Column",
+      "properties": {
+        "align": {
+          "type": "enum",
+          "value": "stretch"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "booking-card"
+        ]
+      }
+    },
+    "booking-card": {
+      "id": "booking-card",
+      "componentId": "a2ui/Card",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "child": [
+          "booking-body"
+        ]
+      }
+    },
+    "booking-body": {
+      "id": "booking-body",
+      "componentId": "a2ui/Column",
+      "properties": {
+        "align": {
+          "type": "enum",
+          "value": "stretch"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "booking-title",
+          "booking-when",
+          "booking-where",
+          "booking-divider",
+          "booking-actions"
+        ]
+      }
+    },
+    "booking-title": {
+      "id": "booking-title",
+      "componentId": "a2ui/Text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Table for two"
+        },
+        "variant": {
+          "type": "enum",
+          "value": "h3"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "booking-when": {
+      "id": "booking-when",
+      "componentId": "a2ui/Row",
+      "properties": {
+        "align": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "booking-when-icon",
+          "booking-when-text"
+        ]
+      }
+    },
+    "booking-when-icon": {
+      "id": "booking-when-icon",
+      "componentId": "a2ui/Icon",
+      "properties": {
+        "name": {
+          "type": "enum",
+          "value": "calendarToday"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "booking-when-text": {
+      "id": "booking-when-text",
+      "componentId": "a2ui/Text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Friday, 19:30"
+        },
+        "variant": {
+          "type": "enum",
+          "value": "body"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "booking-where": {
+      "id": "booking-where",
+      "componentId": "a2ui/Row",
+      "properties": {
+        "align": {
+          "type": "enum",
+          "value": "center"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "booking-where-icon",
+          "booking-where-text"
+        ]
+      }
+    },
+    "booking-where-icon": {
+      "id": "booking-where-icon",
+      "componentId": "a2ui/Icon",
+      "properties": {
+        "name": {
+          "type": "enum",
+          "value": "locationOn"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "booking-where-text": {
+      "id": "booking-where-text",
+      "componentId": "a2ui/Text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Bistro Lumière, 12 Rue des Arts"
+        },
+        "variant": {
+          "type": "enum",
+          "value": "body"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "booking-divider": {
+      "id": "booking-divider",
+      "componentId": "a2ui/Divider",
+      "properties": {},
+      "modifiers": [],
+      "slots": {}
+    },
+    "booking-actions": {
+      "id": "booking-actions",
+      "componentId": "a2ui/Row",
+      "properties": {
+        "justify": {
+          "type": "enum",
+          "value": "end"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "booking-details",
+          "booking-book"
+        ]
+      }
+    },
+    "booking-details": {
+      "id": "booking-details",
+      "componentId": "a2ui/Button",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "borderless"
+        },
+        "action": {
+          "type": "object",
+          "fields": {
+            "event": {
+              "type": "object",
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "value": "details"
+                }
+              }
+            }
+          }
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "child": [
+          "booking-details-label"
+        ]
+      }
+    },
+    "booking-details-label": {
+      "id": "booking-details-label",
+      "componentId": "a2ui/Text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Details"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "booking-book": {
+      "id": "booking-book",
+      "componentId": "a2ui/Button",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "primary"
+        },
+        "action": {
+          "type": "object",
+          "fields": {
+            "event": {
+              "type": "object",
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "value": "book"
+                }
+              }
+            }
+          }
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "child": [
+          "booking-book-label"
+        ]
+      }
+    },
+    "booking-book-label": {
+      "id": "booking-book-label",
+      "componentId": "a2ui/Text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Book"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    }
+  }
+}
