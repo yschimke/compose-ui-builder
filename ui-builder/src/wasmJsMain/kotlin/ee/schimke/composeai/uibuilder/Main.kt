@@ -61,6 +61,7 @@ import ee.schimke.composeai.uibuilder.editor.supportingText
 import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
+import ee.schimke.composeai.uibuilder.export.LauncherWidgetTemplates
 import ee.schimke.composeai.uibuilder.export.NEW_DESIGN_ID
 import ee.schimke.composeai.uibuilder.export.NewDesignState
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
@@ -1841,7 +1842,13 @@ private external fun catalogOwnershipParameter(): String
 
 /** The chooser's order. Anything not named here (there is nothing today) sorts first. */
 internal val NEW_DESIGN_CATALOG_ORDER =
-  listOf("m3-catalog", "wear-m3", "remote-m3", A2uiDocumentExporter.CATALOG_SYSTEM_ID)
+  listOf(
+    "m3-catalog",
+    "wear-m3",
+    "remote-m3",
+    LauncherWidgetTemplates.CATALOG_SYSTEM_ID,
+    A2uiDocumentExporter.CATALOG_SYSTEM_ID,
+  )
 
 /**
  * Labelled by what a person is making — a phone screen, a watch screen, a RemoteCompose widget —
@@ -1947,6 +1954,22 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
               label = "Activity list",
               supportingText = "Six title cards under a list header, row for row the reference's.",
             ),
+          ),
+      )
+    LauncherWidgetTemplates.CATALOG_SYSTEM_ID ->
+      UiBuilderNewDesignCatalog(
+        systemId = LauncherWidgetTemplates.CATALOG_SYSTEM_ID,
+        label = "Launcher widget",
+        platform = UiBuilderCatalogPlatform.from(catalog.statusSemantics),
+        templates =
+          listOf(
+            UiBuilderNewDesignTemplate(
+              id = LauncherWidgetTemplates.HELLO_TEMPLATE,
+              label = "Hello widget",
+              supportingText =
+                "\"Hello, World!\" centred on a 3x1 home-screen widget; exports as a " +
+                  "RemoteComposeWidget.",
+            )
           ),
       )
     A2uiDocumentExporter.CATALOG_SYSTEM_ID ->
