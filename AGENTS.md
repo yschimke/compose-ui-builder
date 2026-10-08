@@ -79,6 +79,14 @@ like this pull request's branch and the job builds it instead of the server's `m
 branch then merges with the release that carries the break, bumping its pin in the same commit.
 Until it does, the job is red on `main` here, so cut that release promptly.
 
+The job is not a required check, so nothing but this paragraph stops a red one merging. Red on a
+pull request is that pull request's, even when no seam moved: most breaks are a server test that
+restated this repository's behaviour (which guideline rules are asked, what an export refuses).
+Fix that test in compose-preview-server so it compiles and passes against both the pinned release
+and this checkout, merge it there first, and this pull request goes green against the server's
+`main` with no branch pairing. Red on `main` is the same fix, not a reason to call every later
+pull request's red "not mine".
+
 Three more modules leave this repository, but as **test fixtures, not seams**:
 `:ui-builder-renderer`, `:ui-builder-reference-jetcaster` and `:ui-builder-generated-jetcaster`
 are attached to each release as `compose-preview-ui-builder-<module>-<v>.zip` (`harness-dists` in
