@@ -41,7 +41,12 @@ class VariableFontTextExportTest {
         File(root, "docs/design/fixtures/ui-builder/$name").readText()
       )
     val m3 = read("m3-catalog-components-v1.json")
-    m3.copy(components = m3.components + read("compose-foundation-components-v1.json").components)
+    m3
+      .newBuilder()
+      .also { b ->
+        b.components = m3.components + read("compose-foundation-components-v1.json").components
+      }
+      .build()
   }
 
   private fun m3Design(

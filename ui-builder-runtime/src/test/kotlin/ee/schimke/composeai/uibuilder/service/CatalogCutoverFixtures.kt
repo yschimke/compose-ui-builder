@@ -85,14 +85,21 @@ internal object CatalogCutoverFixtures {
     for ((builderId, component) in composed(id).records) {
       aliases.getOrPut(component.canonicalId) { mutableListOf() }.add(builderId)
     }
-    return record.copy(
-      components =
-        record.components.map { component ->
-          val added = aliases[component.canonicalId]?.filterNot { it in component.componentIds }
-          if (added.isNullOrEmpty()) component
-          else component.copy(componentIds = component.componentIds + added)
-        }
-    )
+    return record
+      .newBuilder()
+      .also { builder_ ->
+        builder_.components =
+          record.components.map { component ->
+            val added = aliases[component.canonicalId]?.filterNot { it in component.componentIds }
+            if (added.isNullOrEmpty()) component
+            else
+              component
+                .newBuilder()
+                .also { b -> b.componentIds = component.componentIds + added }
+                .build()
+          }
+      }
+      .build()
   }
 
   /**
@@ -119,7 +126,7 @@ internal object CatalogCutoverFixtures {
       packagedFoundationRecord.components.filterNot { candidate ->
         candidate.canonicalId in taken || candidate.componentIds.any { it in claimed }
       }
-    return record.copy(components = record.components + extra)
+    return record.newBuilder().also { b -> b.components = record.components + extra }.build()
   }
 
   private val composed = mutableMapOf<String, PublishedUiBuilderCatalog.Result.Composed>()

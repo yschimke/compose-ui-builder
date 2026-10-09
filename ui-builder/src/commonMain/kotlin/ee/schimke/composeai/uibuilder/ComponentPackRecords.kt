@@ -59,7 +59,7 @@ internal fun CapabilityCatalog.packComponentsById(): Map<String, ComponentRecord
 internal fun CapabilityCatalog.exportRecord(embedded: ComponentRecordFile?): ComponentRecordFile? {
   val packs = packComponentRecords()
   if (packs.isEmpty()) return embedded
-  return embedded?.copy(components = embedded.components + packs)
+  return embedded?.newBuilder()?.also { b -> b.components = embedded.components + packs }?.build()
 }
 
 /**
@@ -111,40 +111,50 @@ private fun packComponentRecord(packId: String, component: ComponentCapability):
   val parameters =
     component.properties.map { property ->
       val typeFqn = typeFqnOf(property.jsonType)
-      TargetParameter(
-        name = property.name,
-        type = typeFqn?.substringAfterLast('.') ?: "Any",
-        typeFqn = typeFqn,
-        hasDefault = !property.required,
-      )
+      TargetParameter.Builder(
+          name = property.name,
+          type = typeFqn?.substringAfterLast('.') ?: "Any",
+        )
+        .also { b ->
+          b.typeFqn = typeFqn
+          b.hasDefault = !property.required
+        }
+        .build()
     } +
       component.slots.map { slot ->
-        TargetParameter(
-          name = slot.name,
-          type = "@Composable () -> Unit",
-          hasDefault = true,
-          composableSlot = true,
-        )
+        TargetParameter.Builder(name = slot.name, type = "@Composable () -> Unit")
+          .also { b ->
+            b.hasDefault = true
+            b.composableSlot = true
+          }
+          .build()
       }
-  return ComponentRecord(
-    canonicalId = "$packId/$callable",
-    componentIds = listOf(component.componentId),
-    symbol =
-      ComponentSymbol(
-        jvmOwner = "${callable}Kt",
-        callable = callable,
-        name = name,
-        origin = ComponentOrigin.PROJECT,
-      ),
-    parameters = parameters.filter { it.composableSlot || it.name !in slotNames },
-    slots = component.slots.map { ComponentSlot(name = it.name, required = false) },
-    code =
-      ComponentCode(
-        call = "$name()",
-        imports = component.code.imports.ifEmpty { listOf(callable) },
-      ),
-    signatureKnown = true,
-  )
+  return ComponentRecord.Builder(
+      canonicalId = "$packId/$callable",
+      symbol =
+        ComponentSymbol.Builder(
+            jvmOwner = "${callable}Kt",
+            callable = callable,
+            name = name,
+            origin = ComponentOrigin.PROJECT,
+          )
+          .build(),
+    )
+    .also { builder_ ->
+      builder_.componentIds = listOf(component.componentId)
+      builder_.parameters = parameters.filter { it.composableSlot || it.name !in slotNames }
+      builder_.slots =
+        component.slots.map { ComponentSlot.Builder(name = it.name, required = false).build() }
+      builder_.code =
+        ComponentCode.Builder()
+          .also { b ->
+            b.call = "$name()"
+            b.imports = component.code.imports.ifEmpty { listOf(callable) }
+          }
+          .build()
+      builder_.signatureKnown = true
+    }
+    .build()
 }
 
 /** The Kotlin classifier a projected property's JSON type came from. */

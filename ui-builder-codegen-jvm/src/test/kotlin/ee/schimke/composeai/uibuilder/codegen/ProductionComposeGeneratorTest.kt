@@ -32,7 +32,11 @@ class ProductionComposeGeneratorTest {
       val decoded = records.map {
         json.decodeFromString(ComponentRecordFile.serializer(), Files.readString(it))
       }
-      decoded.first().copy(components = decoded.flatMap { it.components })
+      decoded
+        .first()
+        .newBuilder()
+        .also { b -> b.components = decoded.flatMap { it.components } }
+        .build()
     }
 
   private fun generate(inputs: List<ProductionInput> = this.inputs, digest: String = this.digest) =

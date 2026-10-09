@@ -133,29 +133,35 @@ class LauncherWidgetExportTest {
   private val records =
     mapOf(
       "remote-widgets/widget-button" to
-        ComponentRecord(
-          canonicalId = "widget-catalog/ee.schimke.remotewidgets.WidgetComponentsKt.WidgetButton",
-          componentIds = listOf("remote-widgets/widget-button"),
-          symbol =
-            ComponentSymbol(
-              jvmOwner = "ee.schimke.remotewidgets.WidgetComponentsKt",
-              callable = "ee.schimke.remotewidgets.WidgetButton",
-              name = "WidgetButton",
-              origin = ComponentOrigin.LIBRARY,
-            ),
-          parameters =
-            listOf(
-              TargetParameter(name = "text", type = "String", typeFqn = "kotlin.String"),
-              TargetParameter(
-                name = "modifier",
-                type = "RemoteModifier",
-                typeFqn = "androidx.compose.remote.creation.compose.modifier.RemoteModifier",
-                hasDefault = true,
-              ),
-            ),
-          slots = emptyList(),
-          signatureKnown = true,
-        )
+        ComponentRecord.Builder(
+            canonicalId = "widget-catalog/ee.schimke.remotewidgets.WidgetComponentsKt.WidgetButton",
+            symbol =
+              ComponentSymbol.Builder(
+                  jvmOwner = "ee.schimke.remotewidgets.WidgetComponentsKt",
+                  callable = "ee.schimke.remotewidgets.WidgetButton",
+                  name = "WidgetButton",
+                  origin = ComponentOrigin.LIBRARY,
+                )
+                .build(),
+          )
+          .also { builder_ ->
+            builder_.componentIds = listOf("remote-widgets/widget-button")
+            builder_.parameters =
+              listOf(
+                TargetParameter.Builder(name = "text", type = "String")
+                  .also { b -> b.typeFqn = "kotlin.String" }
+                  .build(),
+                TargetParameter.Builder(name = "modifier", type = "RemoteModifier")
+                  .also { b ->
+                    b.typeFqn = "androidx.compose.remote.creation.compose.modifier.RemoteModifier"
+                    b.hasDefault = true
+                  }
+                  .build(),
+              )
+            builder_.slots = emptyList()
+            builder_.signatureKnown = true
+          }
+          .build()
     )
 
   private companion object {
