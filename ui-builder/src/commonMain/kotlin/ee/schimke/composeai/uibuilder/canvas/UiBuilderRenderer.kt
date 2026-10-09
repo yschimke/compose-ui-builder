@@ -166,6 +166,7 @@ import ee.schimke.composeai.uibuilder.editor.supportingText
 import ee.schimke.composeai.uibuilder.ensureBundledWearDeviceFonts
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.LAUNCHER_WIDGET_TEXT_COMPONENT_ID
+import ee.schimke.composeai.uibuilder.export.LauncherAdaptiveLayout
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetCodeExporter
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_CUSTOM_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
@@ -761,6 +762,23 @@ private fun RenderNode(
         maxLines = node.lineCount("maxLines"),
         onTextLayout = { host.recordTextLayout(path, it) },
       )
+      return@RenderCanvasNode
+    }
+    // A launcher widget's adaptive layout, by component id like the root: of its slots, the one
+    // the widget would show in the frame being viewed, so a launcher pane resized to the next
+    // breakpoint draws that breakpoint's layout. The rule is the catalog's; see
+    // [LauncherAdaptiveLayout].
+    if (node.componentId == LauncherAdaptiveLayout.COMPONENT_ID) {
+      val shown =
+        LauncherAdaptiveLayout.visibleSlot(
+          widthDp = document.environmentScale("widthDp") ?: 0f,
+          heightDp = document.environmentScale("heightDp") ?: 0f,
+          sizeLabel = { node.string(it).takeIf(String::isNotBlank) },
+          filled = { slot(it).isNotEmpty() },
+        )
+      Box(measured, contentAlignment = Alignment.Center) {
+        slot(shown).forEach { child(it, Modifier.fillMaxSize()) }
+      }
       return@RenderCanvasNode
     }
     when (adapterId) {
