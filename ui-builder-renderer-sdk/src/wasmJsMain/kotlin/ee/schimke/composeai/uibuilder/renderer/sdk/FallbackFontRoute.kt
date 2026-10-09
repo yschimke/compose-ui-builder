@@ -15,9 +15,9 @@ package ee.schimke.composeai.uibuilder.renderer.sdk
  *
  * Idempotent, and called by both font registries' factories so every editor and runtime page has it
  * before its first frame lays out text. Every other request goes to the native `fetch` with its
- * arguments and its `Response` untouched, which keeps Chromium's compiled-Wasm cache (a wrapper that
- * rebuilt Responses lost it); the wrapper carries that function as `uiBuilderNativeFetch`, which is
- * what the web smoke test checks it against.
+ * arguments and its `Response` untouched, which keeps Chromium's compiled-Wasm cache (a wrapper
+ * that rebuilt Responses lost it); the wrapper carries that function as `uiBuilderNativeFetch`,
+ * which is what the web smoke test checks it against.
  */
 fun routeFallbackFontsThroughHost() {
   installFallbackFontRoute(GSTATIC_FALLBACK_BASE, "$NOTO_FALLBACK_ROUTE/")
