@@ -56,10 +56,9 @@ class CanvasTimeTest {
   }
 
   @Test
-  fun `only a design that could move has motion`() {
-    assertFalse(document(node("a")).hasMotion)
-    assertTrue(document(node("t", UiTimeText.ID)).hasMotion)
-    assertTrue(document(node("l", "remote-m3/lottie")).hasMotion)
+  fun `a design reads the clock when anything in it does`() {
+    assertFalse(document(node("a")).readsClock)
+    assertTrue(document(node("t", UiTimeText.ID)).readsClock)
   }
 
   @Test

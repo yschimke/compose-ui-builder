@@ -27,7 +27,6 @@ import ee.schimke.composeai.uibuilder.canvas.decodeRemoteComposeDocument
 import ee.schimke.composeai.uibuilder.canvas.renderDensity
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.hostSpec
-import ee.schimke.composeai.uibuilder.renderer.sdk.hasMotion
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.contentOrNull
@@ -114,10 +113,10 @@ internal fun RemoteDocumentDesignPreviewPane(
     }
   }
 
-  val hasMotion = remember(document.nodes) { document.hasMotion }
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(Modifier.fillMaxSize().padding(12.dp)) {
-      if (onTimeRunningChange != null && hasMotion) {
+      // A played document can animate whatever it holds, so time is always offered here.
+      if (onTimeRunningChange != null) {
         PreviewTimeToggle(timeRunning, onTimeRunningChange, Modifier.align(Alignment.End))
       }
       if (pending) {

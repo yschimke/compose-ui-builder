@@ -72,7 +72,7 @@ import ee.schimke.composeai.uibuilder.codegen.rememberCodePaneSyntaxTheme
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderPreviewSurfaces
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
-import ee.schimke.composeai.uibuilder.renderer.sdk.hasMotion
+import ee.schimke.composeai.uibuilder.renderer.sdk.readsClock
 import ee.schimke.composeai.uibuilder.renderer.sdk.withTimeRunning
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -570,7 +570,9 @@ internal fun DesignPreviewPane(
         it.copy(document = it.document.withTimeRunning(timeRunning))
       }
     }
-  val hasMotion = remember(document.nodes) { document.hasMotion }
+  // A catalog runtime may animate anything it draws; the canvas renderer moves only with the clock.
+  val readsClock = remember(document.nodes) { document.readsClock }
+  val hasMotion = deviceRenderer != null || readsClock
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(Modifier.fillMaxSize().padding(12.dp)) {
       if (onTimeRunningChange != null && hasMotion) {
