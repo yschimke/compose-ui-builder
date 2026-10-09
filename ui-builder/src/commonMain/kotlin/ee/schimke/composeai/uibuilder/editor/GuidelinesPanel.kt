@@ -4,11 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,14 +58,8 @@ internal fun GuidelinesSection(
   val state by controller.state.collectAsState()
   val scope = rememberCoroutineScope()
   var settingsOpen by remember { mutableStateOf(false) }
-  // Bounded and scrolled on its own, so a long list of findings stays reachable and the export
-  // problems under it keep their room.
-  Column(
-    Modifier.fillMaxWidth()
-      .heightIn(max = GUIDELINES_MAX_HEIGHT)
-      .verticalScroll(rememberScrollState())
-      .padding(bottom = 12.dp)
-  ) {
+  // The first item of the Issues list, which scrolls as one; no inner scroll box of its own.
+  Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
     Text("Design guidelines", style = MaterialTheme.typography.labelLarge)
     val prompt by controller.prompt.collectAsState()
     val shared by controller.shared.collectAsState()
@@ -149,7 +140,7 @@ private fun KeySetup(
   Text(
     "Check this design against the Android design guides (developer.android.com) with a model " +
       "of your choice. It runs on your own OpenRouter account: connect it below, or create a key " +
-      "at openrouter.ai → Settings → Keys and paste it here. The key stays in this browser and is " +
+      "on openrouter.ai (Settings, then Keys) and paste it here. The key stays in this browser and is " +
       "sent only to openrouter.ai.",
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     style = MaterialTheme.typography.bodySmall,
@@ -260,9 +251,6 @@ private fun GuidelineFindingRow(
     }
   }
 }
-
-/** How tall the guidelines section may grow before it scrolls. */
-private val GUIDELINES_MAX_HEIGHT = 320.dp
 
 @Composable
 private fun ResultSummary(
