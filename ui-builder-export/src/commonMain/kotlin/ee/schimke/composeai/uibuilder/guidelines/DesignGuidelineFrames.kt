@@ -42,12 +42,15 @@ data class DesignGuidelineFrame(
         "Picture $index (tablet picture): the same design in an expanded window, a tablet in " +
           "landscape at $size. Judge the adaptive rules by comparing it with the phone picture."
       DesignGuidelinePicture.WIDGET_SAMSUNG ->
+        // Neutral on purpose: saying the ends cut content made models report clipping that the
+        // picture does not show (the live Golden Tiles Timer, 3 of 3 runs).
         "Picture $index (Samsung widget picture): the widget in the container Samsung's Wear " +
-          "launcher gives it, $size with fully rounded ends, so content near the left and right " +
-          "edges is cut by the curve."
+          "launcher gives it, $size with semicircular ends. Content is cut only where it " +
+          "actually reaches into those ends; look before you judge."
       DesignGuidelinePicture.WIDGET_PIXEL_WATCH ->
         "Picture $index (Pixel Watch widget picture): the widget in the container the Pixel " +
-          "Watch launcher gives it, $size with rounded corners."
+          "Watch launcher gives it, $size with rounded corners. Content is cut only where it " +
+          "actually reaches into those corners."
       else -> "Picture $index: the design at $size."
     }
   }
