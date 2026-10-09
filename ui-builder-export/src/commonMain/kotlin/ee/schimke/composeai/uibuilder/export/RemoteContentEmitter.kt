@@ -28,6 +28,7 @@ public val REMOTE_CONTENT_MODIFIERS: Set<String> =
     "alignHorizontal",
     "alignVertical",
     "alpha",
+    "animateEnterExit",
     "background",
     "border",
     "clip",
@@ -3817,14 +3818,14 @@ internal class RemoteContentEmitter(
       "weight" -> weightCall(modifier)
       "collapsiblePriority" -> collapsiblePriorityCall(modifier)
       // A shared element is matched across the branches of a state layout by its key, and its
-      // bounds and paint animate between them. Written as `animationSpec(animationId, enabled)`
-      // rather than as `sharedElement(key)`: both lower to the same `AnimationSpec` operation, but
-      // `sharedElement` is newer than `remote-creation-compose` 1.0.0-alpha19, which is what the
-      // native lane compiles against, and this overload exists on both sides of that line with the
-      // same 300ms standard motion `sharedElement`'s default `remoteTween()` has. Positional,
-      // because
-      // a shared element sits two lambdas deeper than its state layout and the named form runs
-      // past the column budget there; `(Int, Boolean)` matches no other overload on either line.
+      // bounds and paint animate between them. With only a key it is written as
+      // `animationSpec(animationId, enabled)` rather than as `sharedElement(key)`: both lower to
+      // the
+      // same `AnimationSpec` operation, and this overload exists on every line back to alpha19 with
+      // the same 300ms standard motion `sharedElement`'s default `remoteTween()` has. Positional,
+      // because a shared element sits two lambdas deeper than its state layout and the named form
+      // runs past the column budget there; `(Int, Boolean)` matches no other overload on either
+      // line. A timing or a way in and out is `sharedElement`'s own overload, from alpha20.
       "sharedElement" -> {
         val key = modifier["key"]?.numberValue()
         if (key == null || key % 1f != 0f || key < 1f) {
@@ -3832,8 +3833,22 @@ internal class RemoteContentEmitter(
             "the `sharedElement` modifier on `$id` needs a whole-number `key` of at least one; " +
               "the key is what matches this element to its counterpart in the other states"
           emptyList()
-        } else listOf(modifierCall("animationSpec(${key.toInt()}, true)"))
+        } else if (!modifier.hasMotionOptions()) {
+          listOf(modifierCall("animationSpec(${key.toInt()}, true)"))
+        } else {
+          motionArguments(modifier)?.let { (spec, enter, exit) ->
+            listOf(modifierCall("sharedElement(${key.toInt()}, $spec, $enter, $exit)"))
+          } ?: emptyList()
+        }
       }
+      // A way in and out for a component that comes and goes: a state layout's branch switching,
+      // or a `visibility` change. Not the creation library's `animateEnterExit`, which writes
+      // animation id 0 — the id every player reads as "animation disabled", so its transitions
+      // never play. `-1` is the unset id: enabled, and matched to nothing across branches.
+      "animateEnterExit" ->
+        motionArguments(modifier)?.let { (spec, enter, exit) ->
+          listOf(modifierCall("animationSpec(-1, $spec, $spec, $enter, $exit)"))
+        } ?: emptyList()
       // Everything below is in the catalog's modifier vocabulary and has no `RemoteModifier`
       // counterpart at `remote-creation-compose` 1.0.0-alpha18. Each says which, and what to
       // reach for instead, rather than sharing one "no counterpart" sentence: an author who is
@@ -4104,6 +4119,55 @@ internal class RemoteContentEmitter(
    * Every modifier upstream is an extension function in its own file, so the import is the call's
    * name — which is why this pairs the two rather than letting [imports] guess from the chain.
    */
+  /** Whether a motion modifier names more than its key: a timing, or a way in or out. */
+  private fun JsonObject.hasMotionOptions(): Boolean = MOTION_FIELDS.any {
+    (this[it] as? JsonPrimitive)?.contentOrNull?.isNotBlank() == true
+  }
+
+  /**
+   * A motion modifier's `remoteTween`, enter and exit, as the creation API spells them, or null
+   * (with the refusal recorded) when one names something the API has not got.
+   */
+  private fun UiBuilderNode.motionArguments(modifier: JsonObject): Triple<String, String, String>? {
+    fun text(name: String) =
+      (modifier[name] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+    val duration = modifier["durationMs"]?.numberValue() ?: 300f
+    if (duration % 1f != 0f || duration < 0f) {
+      refusals +=
+        "the `${modifier.type()}` modifier on `$id` needs a whole number of milliseconds, " +
+          "not $duration"
+      return null
+    }
+    val easing = text("easing") ?: "standard"
+    val enter = text("enter") ?: "fadeIn"
+    val exit = text("exit") ?: "fadeOut"
+    val unknown =
+      listOfNotNull(
+        easing.takeIf { it !in UiExpressions.EASINGS }?.let { "easing `$it`" },
+        enter.takeIf { it !in MOTION_ENTERS }?.let { "enter `$it`" },
+        exit.takeIf { it !in MOTION_EXITS }?.let { "exit `$it`" },
+      )
+    if (unknown.isNotEmpty()) {
+      refusals +=
+        "the `${modifier.type()}` modifier on `$id` names ${unknown.joinToString(" and ")}; " +
+          "the creation API has ${MOTION_ENTERS.joinToString()} in and " +
+          "${MOTION_EXITS.joinToString()} out"
+      return null
+    }
+    usedComponentImports += "$REMOTE_STATE_PACKAGE.remoteTween"
+    usedComponentImports += "$REMOTE_STATE_PACKAGE.RemoteEasing"
+    usedComponentImports += "$REMOTE_MODIFIER_PACKAGE.RemoteEnterTransition"
+    usedComponentImports += "$REMOTE_MODIFIER_PACKAGE.RemoteExitTransition"
+    val easingName = easing.replaceFirstChar { it.uppercase() }
+    return Triple(
+      "remoteTween(${duration.toInt()}, RemoteEasing.$easingName)",
+      "RemoteEnterTransition.${enter.replaceFirstChar { it.uppercase() }}",
+      "RemoteExitTransition.${exit.replaceFirstChar { it.uppercase() }}",
+    )
+  }
+
+  private fun JsonObject.type(): String = (this["type"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+
   private fun modifierCall(call: String): String {
     usedModifierImports += call.substringBefore('(')
     return call
@@ -4337,6 +4401,19 @@ private const val REMOTE_BOOLEAN_FQN =
 private const val REMOTE_FLOAT_FQN = "androidx.compose.remote.creation.compose.state.RemoteFloat"
 private const val REMOTE_INT_FQN = "androidx.compose.remote.creation.compose.state.RemoteInt"
 private const val REMOTE_STATE_PACKAGE = "androidx.compose.remote.creation.compose.state"
+
+private const val REMOTE_MODIFIER_PACKAGE = "androidx.compose.remote.creation.compose.modifier"
+
+/** The fields a motion modifier (`sharedElement`, `animateEnterExit`) may carry past its key. */
+private val MOTION_FIELDS = listOf("durationMs", "easing", "enter", "exit")
+
+/** `RemoteEnterTransition`'s named transitions, as the design stores them. */
+public val MOTION_ENTERS: List<String> =
+  listOf("fadeIn", "slideInLeft", "slideInRight", "slideInTop", "slideInBottom", "rotate")
+
+/** `RemoteExitTransition`'s named transitions, as the design stores them. */
+public val MOTION_EXITS: List<String> =
+  listOf("fadeOut", "slideOutLeft", "slideOutRight", "slideOutTop", "slideOutBottom", "rotate")
 
 /** The colour editor's `transparent`: not a Material scheme role, so written as a literal. */
 private const val TRANSPARENT_TOKEN = "transparent"

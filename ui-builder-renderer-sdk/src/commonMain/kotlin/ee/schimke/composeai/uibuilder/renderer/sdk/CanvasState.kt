@@ -7,15 +7,20 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
-/** Later actions observe earlier writes even when a host applies callbacks after dispatch. */
+/**
+ * Later actions observe earlier writes even when a host applies callbacks after dispatch. A formula
+ * value or amount needs [scope], as [canvasStateWrite] does; without one it writes nothing.
+ */
 fun canvasStateWrites(
   actions: JsonArray,
   state: Map<String, String?>,
+  scope: UiExpressions.Scope? = null,
+  clock: UiExpressions.Clock = UiExpressions.Clock.DEFAULT,
 ): List<Pair<String, String?>> {
   val working = state.toMutableMap()
   return actions.mapNotNull { element ->
     (element as? JsonObject)
-      ?.let { canvasStateWrite(it, working) }
+      ?.let { canvasStateWrite(it, working, scope, clock) }
       ?.also { (name, value) -> working[name] = value }
   }
 }

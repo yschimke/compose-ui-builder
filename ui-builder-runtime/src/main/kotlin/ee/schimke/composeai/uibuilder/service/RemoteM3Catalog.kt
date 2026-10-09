@@ -43,6 +43,7 @@ internal val REMOTE_M3_MODIFIERS =
     "alignHorizontal",
     "alignVertical",
     "alpha",
+    "animateEnterExit",
     "background",
     "border",
     "clip",
@@ -73,13 +74,14 @@ internal val REMOTE_M3_MODIFIERS =
  *
  * Neither is in the borrowed Compose vocabulary, so filtering a borrowed list by
  * [REMOTE_M3_MODIFIERS] can never produce them: they are appended instead. `sharedElement` matches
- * an element across the branches of a "Show by state" box and animates its bounds between them.
- * `remoteCall` is any other `RemoteModifier` call the released API has, from the generated
- * vocabulary (`RemoteModifierVocabulary`), with its arguments as values. `collapsiblePriority` is a
- * member of the collapsible scopes; the emitter refuses it anywhere else.
+ * an element across the branches of a "Show by state" box and animates its bounds between them;
+ * `animateEnterExit` gives a component its own way in and out as its branch switches. `remoteCall`
+ * is any other `RemoteModifier` call the released API has, from the generated vocabulary
+ * (`RemoteModifierVocabulary`), with its arguments as values. `collapsiblePriority` is a member of
+ * the collapsible scopes; the emitter refuses it anywhere else.
  */
 internal val REMOTE_ONLY_MODIFIERS: List<String> =
-  listOf("collapsiblePriority", "remoteCall", "sharedElement")
+  listOf("animateEnterExit", "collapsiblePriority", "remoteCall", "sharedElement")
 
 /**
  * A borrowed modifier list narrowed to what the Remote emitter writes, plus
@@ -232,7 +234,15 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
         // geometry to hang a modifier on — the generator refuses every one it finds there. So the
         // gradient offers none, rather than eighteen that each end in a refusal. A draw operation
         // is a call inside a canvas, not a layout node, and has nothing to hang one on either.
-        if (componentId == "shape/linear-gradient" || componentId in UiDrawing.BY_ID) emptyList()
+        // A theme wraps a subtree and lays nothing out: the export writes only its child (or a
+        // `RemoteMaterialTheme` around it), so a modifier on it — the remote-only ones included —
+        // would be accepted and dropped.
+        if (
+          componentId == "shape/linear-gradient" ||
+            componentId == UiRemoteTheme.ID ||
+            componentId in UiDrawing.BY_ID
+        )
+          emptyList()
         else modifierCapabilities.remoteAuthorableModifiers()
       // `RemoteAuthorable` is a capability of the Remote Compose emitter, not a property inherited
       // from a mobile component. The reviewed vocabulary does have an emitter branch (or

@@ -21,6 +21,8 @@ import ee.schimke.composeai.uibuilder.capability.acceptsSeedValue
 import ee.schimke.composeai.uibuilder.capability.insertContent
 import ee.schimke.composeai.uibuilder.capability.textComponentFor
 import ee.schimke.composeai.uibuilder.componentRootOf
+import ee.schimke.composeai.uibuilder.export.MOTION_ENTERS
+import ee.schimke.composeai.uibuilder.export.MOTION_EXITS
 import ee.schimke.composeai.uibuilder.export.PropertyValueKinds
 import ee.schimke.composeai.uibuilder.export.REMOTE_CONTENT_MODIFIERS
 import ee.schimke.composeai.uibuilder.export.RemoteModifierVocabulary
@@ -1301,6 +1303,14 @@ internal val MENU_MODIFIERS: List<MenuModifier> by lazy {
           put("key", 1)
         }
       },
+      // A way in and out of its own as a "Show by state" branch brings it in or takes it away.
+      MenuModifier("animateEnterExit", "Animate in and out") {
+        buildJsonObject {
+          put("type", "animateEnterExit")
+          put("enter", "slideInBottom")
+          put("exit", "fadeOut")
+        }
+      },
     )
     // Then every Remote call the typed modifiers above do not already write.
     .let { typed -> typed + remoteCallMenuModifiers(REMOTE_CONTENT_MODIFIERS) }
@@ -1359,6 +1369,15 @@ private val COLUMN_ALIGNMENTS = listOf("start", "centerHorizontally", "end")
 
 private val ROW_ALIGNMENTS = listOf("top", "centerVertically", "bottom")
 
+/** The timing and the ways in and out a motion modifier may name, each optional. */
+private val MOTION_MODIFIER_FIELDS: List<ModifierField> =
+  listOf(
+    ModifierField("durationMs", "Duration (ms)"),
+    ModifierField("easing", "Easing", UiExpressions.EASINGS),
+    ModifierField("enter", "Enter", MOTION_ENTERS),
+    ModifierField("exit", "Exit", MOTION_EXITS),
+  )
+
 /**
  * The values each modifier carries, and what to call them.
  *
@@ -1394,7 +1413,8 @@ internal val MODIFIER_FIELDS: Map<String, List<ModifierField>> =
     "scale" to listOf(ModifierField("scaleX", "Scale X"), ModifierField("scaleY", "Scale Y")),
     "weight" to listOf(ModifierField("weight", "Weight")),
     "collapsiblePriority" to listOf(ModifierField("priority", "Priority")),
-    "sharedElement" to listOf(ModifierField("key", "Shared key")),
+    "sharedElement" to listOf(ModifierField("key", "Shared key")) + MOTION_MODIFIER_FIELDS,
+    "animateEnterExit" to MOTION_MODIFIER_FIELDS,
     "align" to listOf(ModifierField("alignment", "Align", BOX_ALIGNMENTS)),
     "alignHorizontal" to listOf(ModifierField("alignment", "Align", COLUMN_ALIGNMENTS)),
     "alignVertical" to listOf(ModifierField("alignment", "Align", ROW_ALIGNMENTS)),

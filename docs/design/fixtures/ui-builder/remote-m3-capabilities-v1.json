@@ -425,6 +425,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -509,6 +510,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -607,6 +609,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -740,6 +743,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -841,6 +845,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -930,6 +935,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -1076,6 +1082,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -1170,6 +1177,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -1298,6 +1306,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -1401,6 +1410,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -1629,6 +1639,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -1718,6 +1729,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -1867,6 +1879,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -1958,6 +1971,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -3633,6 +3647,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -3697,11 +3712,7 @@
             "code": null,
             "componentId": "remote-m3/remote-material-theme",
             "displayName": "Theme",
-            "modifierCapabilities": [
-                "collapsiblePriority",
-                "remoteCall",
-                "sharedElement"
-            ],
+            "modifierCapabilities": [],
             "properties": [
                 {
                     "allowedValues": [],
@@ -3930,6 +3941,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -4026,6 +4038,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -4122,6 +4135,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -4280,6 +4294,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -4358,6 +4373,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -4463,6 +4479,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -4548,6 +4565,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -4693,6 +4711,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -4799,6 +4818,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -4939,6 +4959,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -5056,6 +5077,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -5155,6 +5177,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -5254,6 +5277,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -5390,6 +5414,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -5526,6 +5551,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -5662,6 +5688,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -5785,6 +5812,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -5908,6 +5936,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -6031,6 +6060,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -6167,6 +6197,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -6312,6 +6343,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -6408,6 +6440,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -17932,6 +17965,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -18031,6 +18065,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -18130,6 +18165,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
@@ -18275,6 +18311,7 @@
                 "alignHorizontal",
                 "alignVertical",
                 "weight",
+                "animateEnterExit",
                 "collapsiblePriority",
                 "remoteCall",
                 "sharedElement"
