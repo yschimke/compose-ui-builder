@@ -71,10 +71,18 @@ internal fun GuidelinesSection(
       controller.loadShared()
     }
     // A prompt left open is rebuilt when the design moves on, so it never shows (or copies) an
-    // earlier revision's tree, source and pictures as the current request.
-    LaunchedEffect(controller, document.revision) {
-      val shown = controller.prompt.value as? DesignGuidelineController.PromptView.Shown
-      if (shown != null && shown.request.revision != document.revision) {
+    // earlier revision's tree, source and pictures as the current request. Keyed on the prompt
+    // too: a prompt still loading when the design is edited lands with the old revision, and is
+    // rebuilt then. Once per revision, so a host that answers with another revision cannot loop.
+    var rebuiltFor by remember(controller) { mutableStateOf<Int?>(null) }
+    LaunchedEffect(controller, document.revision, prompt) {
+      val shown = prompt as? DesignGuidelineController.PromptView.Shown
+      if (
+        shown != null &&
+          shown.request.revision != document.revision &&
+          rebuiltFor != document.revision
+      ) {
+        rebuiltFor = document.revision
         controller.preview(document, DesignGuidelineController.encode(document))
       }
     }

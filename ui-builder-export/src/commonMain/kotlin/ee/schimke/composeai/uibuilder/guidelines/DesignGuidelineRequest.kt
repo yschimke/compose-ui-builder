@@ -69,6 +69,12 @@ data class DesignGuidelinePicture(
   val widthDp: Int,
   val heightDp: Int,
   val dataUrl: String? = null,
+  /**
+   * For an [UNROLLED] picture: whether its canvas is the measured content height, so the whole list
+   * is shown (true), or a fixed multiple of the screen that a longer list runs past (false). Null
+   * for other pictures and for requests made before this was recorded.
+   */
+  val coversWholeContent: Boolean? = null,
 ) {
   companion object {
     /** The first frame on the design's own device. */
@@ -97,6 +103,7 @@ data class DesignGuidelinePicture(
         frame.widthDp,
         frame.heightDp,
         dataUrl,
+        coversWholeContent = frame.coversWholeContent.takeIf { frame.kind == UNROLLED },
       )
 
     fun device(
@@ -349,8 +356,16 @@ fun DesignGuidelinePrompt.provenance(
             DesignGuidelinePicture.DEVICE ->
               "The device picture is a render of the design's first frame on its own device."
             DesignGuidelinePicture.UNROLLED ->
-              "The unrolled picture renders the same design on a canvas tall enough for its whole " +
-                "list, so the end of the list and the revealed edge button are visible."
+              // Says what the picture's own description says, so the Prompt view never claims
+              // the whole list for a fixed-height canvas a longer list runs past.
+              if (picture.coversWholeContent == false)
+                "The unrolled picture renders the same design on a canvas " +
+                  "${picture.heightDp}dp tall, several screens, so a list up to that long shows " +
+                  "its end and the revealed edge button; a longer list is cut by the canvas, " +
+                  "which is not clipping in the design."
+              else
+                "The unrolled picture renders the same design on a canvas tall enough for its " +
+                  "whole list, so the end of the list and the revealed edge button are visible."
             DesignGuidelinePicture.PHONE ->
               "The phone picture renders the design at ${picture.widthDp}×${picture.heightDp}dp, " +
                 "a compact window, whatever size it was authored at."

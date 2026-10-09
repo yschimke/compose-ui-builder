@@ -31,6 +31,34 @@ class GuidelineReviewFixesTest {
   }
 
   @Test
+  fun `the picture and its provenance agree on whether the unrolled canvas shows the whole list`() {
+    val measured =
+      DesignGuidelinePicture.of(
+        DesignGuidelineFrames.unrolled(192, 192, contentHeightDp = 1400, "wear"),
+        2,
+        null,
+      )
+    val fixed =
+      DesignGuidelinePicture.of(
+        DesignGuidelineFrames.unrolled(192, 192, contentHeightDp = null, "wear"),
+        2,
+        null,
+      )
+    assertEquals(true, measured.coversWholeContent)
+    assertEquals(false, fixed.coversWholeContent)
+    fun provenanceOf(picture: DesignGuidelinePicture) =
+      DesignGuidelinePrompt.provenance(1, 1, 1, listOf(picture), false).single {
+        "unrolled picture" in it
+      }
+    assertTrue("whole list" in provenanceOf(measured), provenanceOf(measured))
+    val fixedLine = provenanceOf(fixed)
+    assertTrue("cut by the canvas" in fixedLine, fixedLine)
+    assertFalse("tall enough for its whole list" in fixedLine, fixedLine)
+    // Other pictures carry no whole-content status, so older readers see nothing new.
+    assertEquals(null, DesignGuidelinePicture.device(192, 192, null).coversWholeContent)
+  }
+
+  @Test
   fun `a catalog's own launcher root is a widget, and Remote inline content is neither`() {
     val renamed = encoded(document("remote-widgets", "acme/launcher-root"))
     assertEquals(
