@@ -228,6 +228,56 @@ fun DesignGuidelinePrompt.prepare(
   )
 }
 
+/**
+ * A request asking [guidelines] — the rules the design's own catalog publishes — about [document],
+ * with [pictures] (the frames those guidelines name, drawn by the host). [profile] is the Remote
+ * Compose profile the design targets, which narrows rules written for one; [rulesSource] is where
+ * the catalog published its file, linked from the Prompt view.
+ */
+fun DesignGuidelinePrompt.prepare(
+  guidelines: CatalogGuidelines,
+  designId: String?,
+  revision: Int,
+  document: JsonObject,
+  pictures: List<DesignGuidelinePicture>,
+  source: String?,
+  profile: String? = null,
+  rulesSource: String = CatalogGuidelines.FILE_NAME,
+): DesignGuidelineRequest {
+  val applicable = guidelines.rulesFor(surfaceOf(document), profile)
+  val asked = if (pictures.isNotEmpty()) applicable else applicable.filterNot { it.visual }
+  return DesignGuidelineRequest(
+    designId = designId,
+    revision = revision,
+    platform = guidelines.platform,
+    rules =
+      DesignGuidelineRequestRules(
+        version = guidelines.version,
+        source = rulesSource,
+        forPlatform = applicable.size,
+        asked = asked,
+        visualSkipped = applicable.size - asked.size,
+      ),
+    pictures = pictures,
+    sourceAttached = source != null,
+    systemPrompt = SYSTEM_PROMPT,
+    userText =
+      if (asked.isEmpty()) ""
+      else userText(guidelines.platform, document, asked, pictures.map { it.description }, source),
+    responseSchema = responseSchema,
+    provenance =
+      listOf(
+        "The rules are the `${guidelines.catalog}` catalog's own (${CatalogGuidelines.FILE_NAME}, " +
+          "version ${guidelines.version}): ${applicable.size} for this kind of design" +
+          (profile?.let { " targeting $it" } ?: "") +
+          ", ${asked.size} asked here. Each quotes the design guidance it comes from and links " +
+          "its source."
+      ) +
+        provenance(guidelines.version, applicable.size, asked.size, pictures, source != null)
+          .drop(1),
+  )
+}
+
 /** One sentence per part of a request, saying where it came from. */
 fun DesignGuidelinePrompt.provenance(
   rulesVersion: Int,

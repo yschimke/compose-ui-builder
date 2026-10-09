@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.guidelines
 
 import ee.schimke.composeai.uibuilder.EMBEDDED_ANDROID_DESIGN_GUIDELINES_JSON
+import ee.schimke.composeai.uibuilder.export.LauncherWidgetCodeExporter
 import ee.schimke.composeai.uibuilder.export.WEAR_WIDGET_CONTAINER_IDS
 import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
@@ -28,7 +29,8 @@ import kotlinx.serialization.json.putJsonObject
 @Serializable
 data class DesignGuidelineRule(
   val id: String,
-  val platforms: List<String>,
+  /** Empty in a catalog's own file, whose `platform` covers every rule in it. */
+  val platforms: List<String> = emptyList(),
   val kind: String,
   val severity: String,
   val guidance: String,
@@ -41,11 +43,22 @@ data class DesignGuidelineRule(
    * `not_applicable`.
    */
   val surfaces: List<String> = emptyList(),
+  /**
+   * The Remote Compose profiles this rule is about (`wear-widgets`, `launcher-widgets-v6`,
+   * `launcher-widgets-v7`, `androidx`, each optionally `+experimental`); empty for every profile
+   * and for designs that are not Remote Compose.
+   */
+  val profiles: List<String> = emptyList(),
 ) {
   val visual: Boolean
     get() = kind == KIND_VISUAL
 
   fun appliesTo(surface: String): Boolean = surfaces.isEmpty() || surface in surfaces
+
+  /** Whether a design targeting [profile] (null when it names none) is asked this rule. */
+  fun appliesToProfile(profile: String?): Boolean =
+    profiles.isEmpty() ||
+      (profile != null && profiles.any { it == profile || it == profile.substringBefore('+') })
 
   companion object {
     const val KIND_VISUAL: String = "visual"
@@ -126,7 +139,7 @@ object DesignGuidelinePrompt {
 
   /**
    * Whether [document] (the protocol's JSON) is a [DesignGuidelineRule.SURFACE_WIDGET] — its one
-   * root a Wear widget container — or a [DesignGuidelineRule.SURFACE_SCREEN].
+   * root a Wear widget container or a launcher widget — or a [DesignGuidelineRule.SURFACE_SCREEN].
    */
   fun surfaceOf(document: JsonObject): String {
     val roots = document["roots"] as? JsonArray
@@ -135,7 +148,20 @@ object DesignGuidelinePrompt {
       root
         ?.let { ((document["nodes"] as? JsonObject)?.get(it) as? JsonObject)?.get("componentId") }
         ?.let { (it as? JsonPrimitive)?.contentOrNull }
-    return if (componentId in WEAR_WIDGET_CONTAINER_IDS) DesignGuidelineRule.SURFACE_WIDGET
+    return if (
+      componentId in WEAR_WIDGET_CONTAINER_IDS || componentId == LauncherWidgetCodeExporter.ROOT
+    )
+      DesignGuidelineRule.SURFACE_WIDGET
+    else DesignGuidelineRule.SURFACE_SCREEN
+  }
+
+  /** [surfaceOf] for a typed document. */
+  fun surfaceOf(document: ee.schimke.composeai.uibuilder.export.UiBuilderDocument): String {
+    val componentId = document.roots.singleOrNull()?.let(document.nodes::get)?.componentId
+    return if (
+      componentId in WEAR_WIDGET_CONTAINER_IDS || componentId == LauncherWidgetCodeExporter.ROOT
+    )
+      DesignGuidelineRule.SURFACE_WIDGET
     else DesignGuidelineRule.SURFACE_SCREEN
   }
 
