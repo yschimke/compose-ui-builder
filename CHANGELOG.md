@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.99.0](https://github.com/yschimke/compose-ui-builder/compare/v3.98.0...v3.99.0) (2026-10-09)
+
+
+### Features
+
+* **guidelines:** run the check on the server's key for an account it allows, without asking for a key ([#606](https://github.com/yschimke/compose-ui-builder/issues/606)) ([69b4d97](https://github.com/yschimke/compose-ui-builder/commit/69b4d97d31184a3ceb0906d5ab52a09b57606036))
+* **ui-builder:** timed shared elements and animateEnterExit in Remote designs ([#602](https://github.com/yschimke/compose-ui-builder/issues/602)) ([6a2ef0b](https://github.com/yschimke/compose-ui-builder/commit/6a2ef0b51edc5ad228d9cd6d50f4ade2afa6fb4e))
+
+
+### Bug Fixes
+
+* **deps:** update rc-players to 2.4.0 ([#608](https://github.com/yschimke/compose-ui-builder/issues/608)) ([d0d2f36](https://github.com/yschimke/compose-ui-builder/commit/d0d2f365789e7e7764136e9fc1f58763ca147174))
+* **export:** write Remote Compose Kotlin source in every build ([#607](https://github.com/yschimke/compose-ui-builder/issues/607)) ([7bdf217](https://github.com/yschimke/compose-ui-builder/commit/7bdf2171e969a5622f1d1d50d5f1cc5b58aa1e4c))
+* **ui-builder-runtime:** offer the Remote-only modifiers on published remote-compose components ([#604](https://github.com/yschimke/compose-ui-builder/issues/604)) ([994e1db](https://github.com/yschimke/compose-ui-builder/commit/994e1db6ddf2992ac38555ef56e3cc9cf213641a))
+
 ## [3.98.0](https://github.com/yschimke/compose-ui-builder/compare/v3.97.0...v3.98.0) (2026-10-09)
 
 
