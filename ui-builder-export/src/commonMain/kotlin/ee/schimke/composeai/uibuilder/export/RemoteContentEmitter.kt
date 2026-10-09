@@ -1738,7 +1738,29 @@ internal class RemoteContentEmitter(
       UiExpressions.Op.CONCAT ->
         args.indices.joinToString(" + ", "(", ")") { stringOperand(kinds[it], args[it]) }
       UiExpressions.Op.TO_STRING -> stringOperand(kinds[0], args[0])
+      UiExpressions.Op.TWEEN,
+      UiExpressions.Op.SPRING -> animated(expr, f(0))
     }
+  }
+
+  /** `tween`/`spring`: [target] animated by the player whenever it changes. */
+  private fun animated(expr: UiExpressions.Expr.Call, target: String): String {
+    fun literal(index: Int): String? =
+      (expr.args.getOrNull(index) as? UiExpressions.Expr.Literal)?.value?.content
+    val spec =
+      if (expr.op == UiExpressions.Op.TWEEN) {
+        usedComponentImports += "$REMOTE_STATE_PACKAGE.remoteTween"
+        usedComponentImports += "$REMOTE_STATE_PACKAGE.RemoteEasing"
+        val easing = (literal(2) ?: "standard").replaceFirstChar { it.uppercase() }
+        "remoteTween(${literal(1)!!.toDouble().toInt()}, RemoteEasing.$easing)"
+      } else {
+        usedComponentImports += "$REMOTE_STATE_PACKAGE.remoteSpring"
+        val stiffness = literal(1)?.let { "stiffness = ${it.toFloat()}f" }
+        val damping = literal(2)?.let { "dampingRatio = ${it.toFloat()}f" }
+        "remoteSpring(${listOfNotNull(stiffness, damping).joinToString()})"
+      }
+    usedComponentImports += "$REMOTE_STATE_PACKAGE.animateRemoteFloatAsState"
+    return "animateRemoteFloatAsState($target, $spec)"
   }
 
   /** [lowered] as a `RemoteFloat`: an Int literal is written as the float it is, not converted. */

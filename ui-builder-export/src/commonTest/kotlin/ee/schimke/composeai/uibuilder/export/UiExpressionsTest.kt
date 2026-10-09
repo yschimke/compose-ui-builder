@@ -89,6 +89,34 @@ class UiExpressionsTest {
   }
 
   @Test
+  fun `an animated value previews where it settles`() {
+    assertEquals(160.0, evaluate("tween(select(on, 160, 40), 300)", mapOf("on" to "true")))
+    assertEquals(40.0, evaluate("spring(select(on, 160, 40))", mapOf("on" to "false")))
+    assertEquals(
+      0.5,
+      evaluate("tween(progress, 250, \"bounce\")", mapOf("progress" to "0.5")),
+    )
+    assertEquals(UiValueKind.FLOAT, typed("spring(count, 200, 0.5)").kind)
+  }
+
+  @Test
+  fun `an animation's spec is literal and in range`() {
+    fun issue(text: String) =
+      assertIs<UiExpressions.Checked.Issue>(UiExpressions.check(parse(text), scope), text).message
+    assertTrue("literal" in issue("tween(progress, count)"))
+    assertTrue("more than 0" in issue("tween(progress, 0)"))
+    assertTrue("easing" in issue("tween(progress, 300, \"wobble\")"))
+    assertTrue("more than 0" in issue("spring(progress, 0)"))
+    assertTrue("tween" in issue("tween(name, 300)"))
+  }
+
+  @Test
+  fun `an animated value round-trips through formula text`() {
+    val text = "tween(select(on, 1.0, 0.5), 300, \"overshoot\")"
+    assertEquals(text, UiExpressions.format(parse(text)))
+  }
+
+  @Test
   fun `a live clock is the local time at an instant`() {
     // 2024-05-16T12:34:56.789Z, read two hours ahead of UTC.
     val clock = UiExpressions.Clock.at(1_715_862_896_789L, utcOffsetSeconds = 7200)

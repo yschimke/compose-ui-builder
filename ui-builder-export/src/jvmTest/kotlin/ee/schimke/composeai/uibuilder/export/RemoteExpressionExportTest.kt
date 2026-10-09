@@ -139,6 +139,48 @@ class RemoteExpressionExportTest {
   }
 
   @Test
+  fun `an animated value is the player's animation toward it`() {
+    val (source, refusals) =
+      emit(
+        mapOf(
+          "text" to
+            JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("|")))
+        ),
+        modifiers =
+          listOf(
+            JsonObject(
+              mapOf(
+                "type" to JsonPrimitive("alpha"),
+                "alpha" to formula("tween(select(on, 1.0, 0.25), 300, \"overshoot\")"),
+              )
+            ),
+            JsonObject(
+              mapOf(
+                "type" to JsonPrimitive("rotate"),
+                "degrees" to formula("spring(select(on, 90, 0), 200, 0.5)"),
+              )
+            ),
+          ),
+      )
+
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    assertContains(
+      source,
+      "alpha(animateRemoteFloatAsState(on.select(1.rf, 0.25f.rf), " +
+        "remoteTween(300, RemoteEasing.Overshoot)))",
+    )
+    assertContains(
+      source,
+      "rotate(animateRemoteFloatAsState(on.select(90.ri, 0.ri).toRemoteFloat(), " +
+        "remoteSpring(stiffness = 200.0f, dampingRatio = 0.5f)))",
+    )
+    for (symbol in
+      listOf("animateRemoteFloatAsState", "remoteTween", "RemoteEasing", "remoteSpring")) {
+      assertContains(source, "\nandroidx.compose.remote.creation.compose.state.$symbol\n")
+    }
+  }
+
+  @Test
   fun `math functions import their top-level operator`() {
     val (source, refusals) =
       emit(mapOf("text" to formula("toString(clamp(sin(time.continuousSecond), 0.0, 1.0))")))
