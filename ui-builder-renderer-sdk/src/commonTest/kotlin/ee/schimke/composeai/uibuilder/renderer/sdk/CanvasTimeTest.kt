@@ -56,6 +56,13 @@ class CanvasTimeTest {
   }
 
   @Test
+  fun `only a design that could move has motion`() {
+    assertFalse(document(node("a")).hasMotion)
+    assertTrue(document(node("t", UiTimeText.ID)).hasMotion)
+    assertTrue(document(node("l", "remote-m3/lottie")).hasMotion)
+  }
+
+  @Test
   fun `time runs only where a surface says so`() {
     val settled = document(node("a"))
     assertFalse(settled.timeRuns)

@@ -31,6 +31,16 @@ const val ANIMATIONS_RUNNING = "running"
 val UiBuilderDocument.timeRuns: Boolean
   get() = (environment["animations"] as? JsonPrimitive)?.contentOrNull == ANIMATIONS_RUNNING
 
+/**
+ * Whether letting time run could change what [this] draws: it reads the clock, or holds a component
+ * the player animates on its own. A surface offers no time toggle for a design that would not move.
+ */
+val UiBuilderDocument.hasMotion: Boolean
+  get() = clockReads() != ClockReads.NONE || nodes.values.any { it.componentId in SELF_ANIMATING }
+
+/** Components the player animates with no clock read of their own: an unbound Lottie plays. */
+private val SELF_ANIMATING = setOf("remote-m3/lottie")
+
 /** [this] with time running or settled, for a surface to hand its renderer. */
 fun UiBuilderDocument.withTimeRunning(running: Boolean): UiBuilderDocument {
   val animations = if (running) ANIMATIONS_RUNNING else "settled"
