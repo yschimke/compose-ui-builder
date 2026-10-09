@@ -9,9 +9,8 @@ package ee.schimke.composeai.uibuilder.export
  * choice made for the editing canvas, so the slot drawn for a frame is the slot the widget shows at
  * that size — and the resizable launcher pane switches layout as it is dragged. It must stay
  * exactly the catalog's rule, which is Glance's `SizeMode.Responsive` pick:
- * - `compact` is always a breakpoint (its parameter is required, so an empty one is still a
- *   layout); `medium` and `expanded` are breakpoints only when the design filled them, as an
- *   omitted argument keeps the catalog's no-layout default;
+ * - a slot is a breakpoint only when the design filled it — an omitted argument keeps the catalog's
+ *   no-layout default — and a layout with none filled draws nothing;
  * - two slots at one size are one breakpoint, the earlier slot's;
  * - of the breakpoints that fit the frame, the closest (squared distance between the corners) wins,
  *   ties to the smaller; when none fits, the smallest.
@@ -49,7 +48,7 @@ object LauncherAdaptiveLayout {
     filled: (String) -> Boolean,
   ): String {
     val breakpoints =
-      BREAKPOINTS.filter { it.slot == BREAKPOINTS.first().slot || filled(it.slot) }
+      BREAKPOINTS.filter { filled(it.slot) }
         .map {
           it.slot to (sizeLabel(it.sizeProperty)?.let(LauncherWidgetGrid::parse) ?: it.default)
         }
@@ -61,6 +60,7 @@ object LauncherAdaptiveLayout {
             { it.second.heightDp },
           )
         )
+    if (breakpoints.isEmpty()) return BREAKPOINTS.first().slot
     val fitting = breakpoints.filter {
       it.second.widthDp <= widthDp + FIT_TOLERANCE_DP &&
         it.second.heightDp <= heightDp + FIT_TOLERANCE_DP

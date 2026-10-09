@@ -53,9 +53,10 @@ class LauncherAdaptiveLayoutTest {
   }
 
   @Test
-  fun `an empty optional slot is not a breakpoint, an empty compact still is`() {
-    assertEquals("compact", shown("4x1", filled = setOf("expanded")))
+  fun `an empty slot is not a breakpoint, compact included`() {
+    assertEquals("expanded", shown("2x1", filled = setOf("expanded")))
     assertEquals("expanded", shown("4x2", filled = setOf("expanded")))
+    assertEquals("medium", shown("4x2", filled = setOf("compact", "medium")))
     assertEquals("compact", shown("4x2", filled = emptySet()))
   }
 
@@ -230,7 +231,7 @@ class LauncherAdaptiveLayoutTest {
             "name": "compact",
             "type": "() -> Unit",
             "typeFqn": "kotlin.Function0",
-            "hasDefault": false,
+            "hasDefault": true,
             "composableSlot": true,
             "composableSlotReceiver": null,
             "nullable": false,
@@ -269,7 +270,7 @@ class LauncherAdaptiveLayoutTest {
         "slots": [
           {
             "name": "compact",
-            "required": true,
+            "required": false,
             "receiverScope": null
           },
           {
