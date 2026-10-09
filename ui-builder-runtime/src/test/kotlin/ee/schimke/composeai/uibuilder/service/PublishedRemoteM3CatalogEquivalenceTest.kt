@@ -15,6 +15,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -767,6 +768,38 @@ class PublishedRemoteM3CatalogEquivalenceTest {
       builderOwned.filterNot { it in servedIds },
       "a published catalog lost builder components the synthesised one offers",
     )
+  }
+
+  /**
+   * What a record component is on a Remote Compose catalog by virtue of the platform, which the
+   * synthesised shelf gave every Remote Material 3 component and a published catalog that stated
+   * nothing used to lose: 185 of `CatalogCutoverShadow`'s differences on remote-m3, against the
+   * catalog as published on 2026-10-09.
+   */
+  @Test
+  fun `a remote record component carries the emitter's traits, slots, bindings and modifiers`() {
+    val button = composed.components.single { it.componentId == "remote-m3/remote-button" }
+    assertTrue(
+      button.traits.containsAll(listOf("RemoteContent", "RemoteAuthorable")),
+      "${button.traits}",
+    )
+    val content = button.slots.single { it.name == "content" }
+    assertEquals(listOf("RemoteAuthorable"), content.acceptedTraits)
+    assertEquals(setOf("Scaffold", "Container", "Leaf"), content.acceptedRoles.toSet())
+    // State-bindable: a literal, or a reference to the document's Boolean state.
+    assertEquals(
+      JsonArray(listOf(JsonPrimitive("boolean"), JsonPrimitive("object"))),
+      button.properties.single { it.name == "enabled" }.jsonType,
+    )
+    // Leaf or container, the default is what the emitter writes.
+    val leaf = composed.components.single { it.componentId == "remote-m3/remote-icon" }
+    for (component in listOf(button, leaf)) {
+      assertEquals(
+        REMOTE_CONTENT_MODIFIERS,
+        component.modifierCapabilities.toSet(),
+        component.componentId,
+      )
+    }
   }
 
   private companion object {
