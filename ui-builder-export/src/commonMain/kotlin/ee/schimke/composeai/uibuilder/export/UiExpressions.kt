@@ -149,7 +149,14 @@ object UiExpressions {
     NOT("not", 1..1),
     SELECT("select", 3..3),
     CONCAT("concat", 1..16),
-    TO_STRING("toString", 1..1);
+    TO_STRING("toString", 1..1),
+    /**
+     * Its first argument, animated: whenever it changes the player moves toward it over a duration
+     * in milliseconds, with an optional [EASINGS] name. A preview shows where it settles.
+     */
+    TWEEN("tween", 2..3),
+    /** As [TWEEN], on a spring: optional stiffness (default 50) and damping ratio (default 1). */
+    SPRING("spring", 1..3);
 
     companion object {
       val byWire: Map<String, Op> = entries.associateBy { it.wire }
@@ -373,7 +380,9 @@ object UiExpressions {
           }
         if (args.size !in op.arity)
           throw ExpressionIssue("$where: `${op.wire}` takes ${op.arity.describe()}")
-        Expr.Call(op, args, resultKind(op, args.map { it.kind }, where))
+        Expr.Call(op, args, resultKind(op, args.map { it.kind }, where)).also {
+          animationSpecIssue(it)?.let { issue -> throw ExpressionIssue("$where: $issue") }
+        }
       }
       else -> throw ExpressionIssue("$where: `$type` cannot appear in an expression")
     }
@@ -391,6 +400,45 @@ object UiExpressions {
       }
     if (!ok) throw ExpressionIssue("$where: `${value.content}` is not a $type")
     return Expr.Literal(UiValueKind.fromWire(type)!!, value)
+  }
+
+  /** The easings `tween` names, as the player's `RemoteEasing` constants. */
+  val EASINGS: List<String> =
+    listOf(
+      "standard",
+      "linear",
+      "accelerate",
+      "decelerate",
+      "anticipate",
+      "overshoot",
+      "bounce",
+      "elastic",
+    )
+
+  /**
+   * What is wrong with an animation's spec, or null. Its value may be any formula, but the spec is
+   * the player's animation, fixed when the document is written: literal and in range.
+   */
+  private fun animationSpecIssue(call: Expr.Call): String? {
+    if (call.op != Op.TWEEN && call.op != Op.SPRING) return null
+    val spec = call.args.drop(1)
+    if (spec.any { it !is Expr.Literal }) {
+      return "`${call.op.wire}` takes a literal duration, easing, stiffness and damping"
+    }
+    val numbers = spec.mapNotNull { (it as Expr.Literal).value.doubleOrNull }
+    return when (call.op) {
+      Op.TWEEN ->
+        when {
+          numbers.first().let { it < 1.0 || it % 1.0 != 0.0 } ->
+            "a tween's duration is whole milliseconds, at least 1"
+          spec.size == 2 && (spec[1] as Expr.Literal).value.content !in EASINGS ->
+            "easing must be one of ${EASINGS.joinToString()}"
+          else -> null
+        }
+      else ->
+        if (numbers.any { it <= 0.0 }) "a spring's stiffness and damping must be more than 0"
+        else null
+    }
   }
 
   private fun resultKind(op: Op, kinds: List<UiValueKind>, where: String): UiValueKind {
@@ -444,6 +492,10 @@ object UiExpressions {
           kinds[1].numeric && kinds[2].numeric -> UiValueKind.FLOAT
           else -> fail()
         }
+      Op.TWEEN ->
+        if (numeric(0, 1) && (kinds.size < 3 || kinds[2] == UiValueKind.STRING)) UiValueKind.FLOAT
+        else fail()
+      Op.SPRING -> if (kinds.indices.all { numeric(it) }) UiValueKind.FLOAT else fail()
       Op.CONCAT -> if (kinds.none { it == UiValueKind.COLOR }) UiValueKind.STRING else fail()
       Op.TO_STRING -> if (kinds[0] != UiValueKind.COLOR) UiValueKind.STRING else fail()
     }
@@ -684,6 +736,9 @@ object UiExpressions {
       Op.OR -> b(0) || b(1)
       Op.NOT -> !b(0)
       Op.SELECT -> if (b(0)) values[1].promote(expr.kind) else values[2].promote(expr.kind)
+      // Where the animation settles: the preview is a still frame of a finished animation.
+      Op.TWEEN,
+      Op.SPRING -> num(d(0))
       Op.CONCAT -> values.joinToString("") { it.display() }
       Op.TO_STRING -> values[0].display()
     }

@@ -143,6 +143,15 @@ from its operands and refuses what does not type, with the path of the operand i
 | `and` `or` `not` | Boolean |
 | `select(condition, ifTrue, ifFalse)` | the branches' kind |
 | `concat(…)` `toString(x)` | String; numbers print as the player prints them |
+| `tween(x, ms[, easing])` `spring(x[, stiffness[, dampingRatio]])` | Float: `x`, animated by the player whenever it changes |
+
+`tween` and `spring` export as `animateRemoteFloatAsState(x, remoteTween(…))` /
+`remoteSpring(…)`. Their spec is fixed when the document is written, so it must be literal: a
+whole-millisecond duration of at least 1, an easing among `standard` `linear` `accelerate` `decelerate` `anticipate`
+`overshoot` `bounce` `elastic`, and a stiffness and damping ratio above 0. The canvas draws where
+the animation settles, as a still frame of a finished animation; a played document animates. A
+state change is what moves the target — `tween(select(on, 150, 40), 600)` slides when a click
+toggles `on`.
 
 System values follow the player's `RemoteClock`:
 
@@ -190,7 +199,7 @@ only ever stores the tree, so MCP and hand-written fixtures use the same shape t
 
 - A row field inside an expression is evaluated by the canvas but refused by the Remote writer,
   which needs a typed loop lowering for it.
-- Animated values (`animateRemoteFloatAsState`) and named host inputs (`rememberNamedRemote*`).
+- Named host inputs (`rememberNamedRemote*`).
 - The regular Compose and JSON lanes refuse computed values with a located message.
 - **The published contracts.** `UiValueV1` in `compose-preview-contracts` is closed and has no
   `expr`/`system` subtype, so a design holding one cannot be written as a `.uid` file or committed
