@@ -37,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -196,6 +197,12 @@ internal val EditorColors =
  * sheet.
  */
 private const val MOBILE_EDITING_SHEET_FRACTION = 0.5f
+
+/**
+ * How long a phone's first device tab is left to draw before the other device tabs are built behind
+ * it, so building them never competes with the tab being looked at.
+ */
+private const val MOBILE_PREVIEW_WARM_DELAY_MS = 600L
 
 /** The compact layout's bottom tab bar, above whatever home-indicator inset the window has. */
 internal val MOBILE_DOCK_HEIGHT = 56.dp
@@ -3160,6 +3167,21 @@ fun UiBuilderEditor(
                   SideEffect {
                     shownPreview?.let {
                       if (it.id !in visitedMobilePreviews) visitedMobilePreviews += it.id
+                    }
+                  }
+                  // Somebody who opened one device tab is comparing devices, so once that tab has
+                  // drawn the others are built behind it, one per frame, and the first visit to
+                  // each
+                  // is as immediate as a return. Not before: a phone editing the design never pays
+                  // for frames it is not looking at.
+                  LaunchedEffect(shownPreview != null) {
+                    if (shownPreview == null) return@LaunchedEffect
+                    delay(MOBILE_PREVIEW_WARM_DELAY_MS)
+                    for (pane in mobilePreviewPanes) {
+                      if (pane.id !in visitedMobilePreviews) {
+                        visitedMobilePreviews += pane.id
+                        withFrameNanos {}
+                      }
                     }
                   }
                   keptPreviews.forEach { pane ->

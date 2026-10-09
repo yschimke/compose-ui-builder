@@ -111,12 +111,13 @@ class MobileViewTabsTest {
     }
 
   /**
-   * A device tab opened once stays standing, so going back to it is immediate: switching shows it
-   * rather than building its frame again. Before, every tap built a new frame and composed the
-   * whole design into it, even for the tab visited a moment ago.
+   * Switching device tabs never builds a frame. The tab opened first is built for it, the others
+   * behind it once it has drawn, and from then on a tap shows a frame that is already standing.
+   * Before, every tap built a new frame and composed the whole design into it, even for the tab
+   * visited a moment ago.
    */
   @Test
-  fun `a device tab visited before is shown again without a new frame`() =
+  fun `switching device tabs shows frames already built`() =
     runDesktopComposeUiTest(width = 412, height = 915) {
       var deviceFrames = 0
       setContent {
@@ -133,13 +134,21 @@ class MobileViewTabsTest {
         }
       }
       waitForIdle()
+      assertEquals(0, deviceFrames, "no device frame while the editor is all that shows")
 
-      for (device in listOf("Pixel 7", "Pixel Tablet", "Pixel 7", "Pixel Tablet")) {
+      onNodeWithText("Pixel 7").performClick()
+      waitForIdle()
+      mainClock.advanceTimeBy(2_000)
+      waitForIdle()
+      // The design's own frame, Pixel 7 and Pixel Tablet: every tab, each built once.
+      assertEquals(3, deviceFrames, "every device tab built behind the one opened")
+
+      for (device in listOf("Pixel Tablet", "Preview", "Pixel 7", "Pixel Tablet")) {
         onNodeWithText(device).performClick()
         waitForIdle()
       }
-      assertEquals(2, deviceFrames, "one frame per device, built once")
-      // Only the tab showing is in the semantics tree; the kept one is hidden from it too.
+      assertEquals(3, deviceFrames, "a tap shows a standing frame rather than building one")
+      // Only the tab showing is in the semantics tree; the kept ones are hidden from it too.
       onNodeWithText("Pixel Tablet · 1280×800dp · 2×").assertExists()
       onNodeWithText("Pixel 7 · 411×914dp · 2.625×").assertDoesNotExist()
     }
