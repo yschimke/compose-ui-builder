@@ -359,7 +359,17 @@ data class DesignGuidelineRecord(
   val verdicts: List<DesignGuidelineVerdict>,
   val ranBy: String? = null,
   val recordedAtEpochMillis: Long? = null,
+  /** The model that wrote the verdicts, when [model] was a router or an alias. */
+  val servedModel: String? = null,
+  val provider: String? = null,
+  val costUsd: Double? = null,
+  val generationId: String? = null,
+  val routing: DesignGuidelineRouting? = null,
 ) {
+  /** Who answered, as one value. */
+  val served: DesignGuidelineServed
+    get() = DesignGuidelineServed(servedModel, provider, costUsd, generationId, routing)
+
   companion object {
     const val SCHEMA: String = "compose-ui-builder/guidelines-result/v1"
   }
