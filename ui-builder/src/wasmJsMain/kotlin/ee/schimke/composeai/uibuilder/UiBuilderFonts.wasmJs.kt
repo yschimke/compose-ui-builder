@@ -2,6 +2,7 @@
 
 package ee.schimke.composeai.uibuilder
 
+import ee.schimke.composeai.uibuilder.renderer.sdk.routeFallbackFontsThroughHost
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.coroutines.MainScope
@@ -22,13 +23,15 @@ import kotlinx.coroutines.MainScope
  * ([GOOGLE_FONTS_ROUTE]) instead. The page's own `connect-src` admits only this origin, so the
  * browser cannot fetch `fonts.gstatic.com` itself; the host fetches the file once, keeps it, and
  * answers same-origin. A host without the route answers 404, and the family stays on the default
- * face exactly as it did before.
+ * face exactly as it did before. A glyph no font here has goes the same way
+ * ([routeFallbackFontsThroughHost]).
  *
  * Same-origin and token-carrying like every other request the page makes ([sameOriginRequestUrl]).
  */
 @OptIn(ExperimentalEncodingApi::class)
-fun browserFontRegistry(baseUrl: String = bundleFontsBaseUrl()): UiBuilderFontRegistry =
-  UiBuilderFontRegistry(
+fun browserFontRegistry(baseUrl: String = bundleFontsBaseUrl()): UiBuilderFontRegistry {
+  routeFallbackFontsThroughHost()
+  return UiBuilderFontRegistry(
     scope = MainScope(),
     readManifest = { fetchText("${baseUrl}fonts.json") },
     readFont = { file -> Base64.decode(fetchBase64("$baseUrl$file")) },
@@ -38,6 +41,7 @@ fun browserFontRegistry(baseUrl: String = bundleFontsBaseUrl()): UiBuilderFontRe
     // The fonts.google.com catalogue, shipped beside the vendored manifest for the picker.
     readRemoteFamilies = { fetchText("${baseUrl}google-fonts.txt") },
   )
+}
 
 /** Where a host serves a Google Fonts family's TrueType file at one weight. */
 internal const val GOOGLE_FONTS_ROUTE = "/api/fonts/google"

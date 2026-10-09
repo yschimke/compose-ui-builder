@@ -20,14 +20,16 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  * the host's Google Fonts route, `/api/fonts/google/{family}/{weight}`, which fetches the file once
  * and answers CORS-open: a runtime frame is sandboxed with an opaque origin, so it can make no
  * credentialed request and could not reach `fonts.gstatic.com` through the page's policy anyway. A
- * host without the route answers 404 and the family stays on the platform face.
+ * host without the route answers 404 and the family stays on the platform face. A glyph no font
+ * here has goes the same way ([routeFallbackFontsThroughHost]).
  *
  * Provide it around the document with `ProvideUiBuilderFonts`, and read a theme host's families
  * with `rememberThemeRoleFamilies`.
  */
 @OptIn(ExperimentalEncodingApi::class)
-fun catalogRuntimeFontRegistry(): UiBuilderFontRegistry =
-  UiBuilderFontRegistry(
+fun catalogRuntimeFontRegistry(): UiBuilderFontRegistry {
+  routeFallbackFontsThroughHost()
+  return UiBuilderFontRegistry(
     scope = MainScope(),
     readManifest = { fetchBytes("fonts/fonts.json").decodeToString() },
     readFont = { file -> fetchBytes("fonts/$file") },
@@ -35,6 +37,7 @@ fun catalogRuntimeFontRegistry(): UiBuilderFontRegistry =
       fetchBytes("$GOOGLE_FONTS_ROUTE/${encodeComponent(family)}/$weight")
     },
   )
+}
 
 /** Where a host serves a Google Fonts family's TrueType file at one weight. */
 const val GOOGLE_FONTS_ROUTE: String = "/api/fonts/google"
