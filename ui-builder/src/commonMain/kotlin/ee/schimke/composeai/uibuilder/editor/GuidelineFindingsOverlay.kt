@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -70,10 +71,20 @@ internal fun GuidelineFindingsOverlay(
         val y = ((box.y - frameOrigin.y) / drawScale).toDp()
         val w = (box.width / drawScale).toDp()
         val h = (box.height / drawScale).toDp()
-        Box(Modifier.offset(x, y).size(w, h).border(2.dp, color, RoundedCornerShape(4.dp)))
+        // The overlay sits inside the frame's scaled layer: the outline's stroke and the badge are
+        // backed out of that scale, so they stay screen-sized and clickable at any zoom.
+        Box(
+          Modifier.offset(x, y)
+            .size(w, h)
+            .border((2f / drawScale).dp, color, RoundedCornerShape((4f / drawScale).dp))
+        )
         Box(
           Modifier.offset(x + w - BADGE_SIZE / 2, y - BADGE_SIZE / 2)
             .size(BADGE_SIZE)
+            .graphicsLayer {
+              scaleX = 1f / drawScale
+              scaleY = 1f / drawScale
+            }
             .background(color, CircleShape)
             .clickable { onNodeSelected(nodeId) }
             .semantics { contentDescription = describe(nodeId, findings) },

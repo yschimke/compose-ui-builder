@@ -76,8 +76,11 @@ fun DesignGuidelinePrompt.triageBody(
         "listed guidelines. The reviewer already has the design tree, the listed pictures and " +
         "any source shown.",
     )
-    // Jev's prompt is capped well below a chat model's; the tree and the rules come first.
-    put("design", request.userText.take(MAX_TRIAGE_CHARS))
+    // Jev's prompt is capped well below a chat model's. The rules are what it decides about, so
+    // they are kept whole in their own field and the design (tree, then source) gets the rest.
+    val (design, rules) = triageSections(request)
+    put("rules", rules)
+    put("design", design.take((MAX_TRIAGE_CHARS - rules.length).coerceAtLeast(MIN_DESIGN_CHARS)))
   }
   putJsonObject("questions") {
     offers.forEach { offer ->
@@ -110,6 +113,25 @@ fun List<GuidelineEvidenceOffer>.wanted(
   probabilities: Map<String, Double>,
   threshold: Double = 0.5,
 ): List<GuidelineEvidenceOffer> = filter { (probabilities[it.key] ?: 0.0) >= threshold }
+
+/**
+ * [request]'s user message split at its rule list: the design part (platform, pictures, tree,
+ * source) and the rules, as `ruleId: check` lines — what triage needs from each rule.
+ */
+internal fun triageSections(request: DesignGuidelineRequest): Pair<String, String> {
+  val text = request.userText
+  val marker = text.lastIndexOf("\nRules:\n")
+  val design = if (marker >= 0) text.substring(0, marker) else text
+  val rules =
+    request.rules.asked.joinToString("\n") { "${it.id}: ${it.check}" }.take(MAX_TRIAGE_RULES_CHARS)
+  return design to rules
+}
+
+/** The rule list's own cap, well inside the whole: 40 or so rules' checks fit. */
+private const val MAX_TRIAGE_RULES_CHARS = 32_000
+
+/** Even with a long rule list, the design keeps at least this much. */
+private const val MIN_DESIGN_CHARS = 16_000
 
 /** About 24k tokens: under Jev's 32k prompt cap with room for the questions. */
 private const val MAX_TRIAGE_CHARS = 96_000

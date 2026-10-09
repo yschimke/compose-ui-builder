@@ -202,7 +202,10 @@
       "severity": "info",
       "guidance": "We don't recommend using containers for decorative or structural purposes, to avoid taps that don't do anything.",
       "check": "If this design is a widget, does every container that looks like a button (filled, rounded and button-shaped) have an action or click binding? Treat an empty or placeholder click handler as an action. Answer not_applicable for app screens, where non-interactive cards are fine.",
-      "source": "https://developer.android.com/design/ui/wear/guides/surfaces/tiles/bestpractices"
+      "source": "https://developer.android.com/design/ui/wear/guides/surfaces/tiles/bestpractices",
+      "aliases": [
+        "wear.containers-have-actions"
+      ]
     },
     {
       "id": "glasses.cards.single-action",
@@ -487,7 +490,7 @@
       "kind": "structure",
       "severity": "warning",
       "guidance": "It should be used when the user will be presented with a binary decision. Where user input is not required, such as displaying a transient success or failure message, use ConfirmationDialog. The title should not exceed 3 lines.",
-      "check": "If this design is an alert dialog (alert-dialog-edge-button), does it pose a yes/no decision with a title of 3 lines or fewer, rather than a status message that needs no input? Answer not_applicable for other designs.",
+      "check": "If this design is an alert dialog (wear-m3/alert-dialog), does it pose a yes/no decision with a title of 3 lines or fewer, rather than a status message that needs no input? Answer not_applicable for other designs.",
       "source": "https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary"
     },
     {

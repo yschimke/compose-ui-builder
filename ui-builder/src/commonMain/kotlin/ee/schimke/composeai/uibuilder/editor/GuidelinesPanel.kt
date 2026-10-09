@@ -70,6 +70,14 @@ internal fun GuidelinesSection(
       controller.loadAccess()
       controller.loadShared()
     }
+    // A prompt left open is rebuilt when the design moves on, so it never shows (or copies) an
+    // earlier revision's tree, source and pictures as the current request.
+    LaunchedEffect(controller, document.revision) {
+      val shown = controller.prompt.value as? DesignGuidelineController.PromptView.Shown
+      if (shown != null && shown.request.revision != document.revision) {
+        controller.preview(document, DesignGuidelineController.encode(document))
+      }
+    }
     var local: DesignGuidelineResult? = null
     when (val current = state) {
       is DesignGuidelineState.NeedsKey -> {
@@ -105,11 +113,17 @@ internal fun GuidelinesSection(
           ) {
             Text(if (current.running) "Checking…" else "Check guidelines")
           }
+          // Not while a check runs: its result would land on the source it started with and
+          // silently switch the person back.
           if (current.onServer) {
-            TextButton(onClick = controller::useOwnKey) { Text("Use my own key") }
+            TextButton(onClick = controller::useOwnKey, enabled = !current.running) {
+              Text("Use my own key")
+            }
           } else {
             if (controller.canUseServer) {
-              TextButton(onClick = controller::useServer) { Text("Use this server's key") }
+              TextButton(onClick = controller::useServer, enabled = !current.running) {
+                Text("Use this server's key")
+              }
             }
             TextButton(onClick = { settingsOpen = !settingsOpen }) {
               Text(if (settingsOpen) "Done" else "Model & key")

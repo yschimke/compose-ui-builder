@@ -99,8 +99,18 @@ data class DesignGuidelinePicture(
         dataUrl,
       )
 
-    fun device(widthDp: Int, heightDp: Int, dataUrl: String?, index: Int = 1) =
-      of(DesignGuidelineFrame(DEVICE, widthDp, heightDp, emptyMap()), index, dataUrl)
+    fun device(
+      widthDp: Int,
+      heightDp: Int,
+      dataUrl: String?,
+      index: Int = 1,
+      platform: String? = null,
+    ) =
+      of(
+        DesignGuidelineFrame(DEVICE, widthDp, heightDp, emptyMap(), platform = platform),
+        index,
+        dataUrl,
+      )
   }
 }
 
@@ -172,13 +182,20 @@ fun DesignGuidelinePrompt.prepare(
       ?.content
       ?.toDoubleOrNull()
       ?.toInt() ?: 0
+  val platform =
+    ((document["catalogPin"] as? JsonObject)?.get("systemId")
+        as? kotlinx.serialization.json.JsonPrimitive)
+      ?.content
+      ?.let(::platformOf)
   return prepare(
     rules,
     designId,
     revision,
     document,
     listOfNotNull(
-      devicePicture?.let { DesignGuidelinePicture.device(dim("widthDp"), dim("heightDp"), it) }
+      devicePicture?.let {
+        DesignGuidelinePicture.device(dim("widthDp"), dim("heightDp"), it, platform = platform)
+      }
     ),
     source,
   )
@@ -204,7 +221,14 @@ fun DesignGuidelinePrompt.prepare(
   val platform = systemId?.let(::platformOf)
   val surface = surfaceOf(document)
   val applicable = platform?.let { rules.forPlatform(it, surface) }.orEmpty()
-  val asked = if (pictures.isNotEmpty()) applicable else applicable.filterNot { it.visual }
+  // The adaptive rules compare a phone and a tablet picture: with only one (a local thumbnail),
+  // they are left out rather than judged on missing evidence.
+  val picturesSuffice =
+    if (platform == "mobile")
+      pictures.any { it.kind == DesignGuidelinePicture.PHONE } &&
+        pictures.any { it.kind == DesignGuidelinePicture.TABLET }
+    else pictures.isNotEmpty()
+  val asked = if (picturesSuffice) applicable else applicable.filterNot { it.visual }
   return DesignGuidelineRequest(
     designId = designId,
     revision = revision,
@@ -243,9 +267,17 @@ fun DesignGuidelinePrompt.prepare(
   source: String?,
   profile: String? = null,
   rulesSource: String = CatalogGuidelines.FILE_NAME,
+  /** Roots the catalog marks as launcher hosts (`CatalogExportRouting.launcherRoots`). */
+  launcherRoots: Set<String> = emptySet(),
 ): DesignGuidelineRequest {
-  val applicable = guidelines.rulesFor(surfaceOf(document), profile)
-  val asked = if (pictures.isNotEmpty()) applicable else applicable.filterNot { it.visual }
+  val surface = surfaceOf(document, launcherRoots)
+  val applicable = guidelines.rulesFor(surface, profile)
+  // Visual rules are written against the pictures the catalog plans; with any of them missing
+  // (not drawn, over the budget, refused), they are left out rather than judged on a partial set.
+  val expected = guidelines.expectedPictureKinds(surface)
+  val attached = pictures.map { it.kind }.toSet()
+  val picturesSuffice = pictures.isNotEmpty() && attached.containsAll(expected)
+  val asked = if (picturesSuffice) applicable else applicable.filterNot { it.visual }
   return DesignGuidelineRequest(
     designId = designId,
     revision = revision,
