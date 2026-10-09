@@ -709,6 +709,7 @@ private fun updateCatalogRuntimeSurface(
           runtimeId + '|' + compositionKey, host);
         if (adopted) {
           controller = adopted.__uiBuilderCatalogRuntime;
+          controller.adopted();
           // Sized for the host it left; resize() returns early when only the host changed.
           controller.frame.style.transform = 'scale(' +
             (adopted.clientWidth / controller.frameWidth) + ',' +
@@ -868,6 +869,14 @@ private fun updateCatalogRuntimeSurface(
             marker.style.height = (node.bounds.height * scaleY) + 'px';
             overlay.append(marker);
           }
+        },
+        // Taken over by a new surface. Its wheel sequence starts again at one and it has
+        // revealed nothing yet, so what this frame already sent for the last surface must not
+        // swallow what the new one sends: a retained sequence dropped the first wheels after a
+        // remount, as each was no greater than the last surface's count.
+        adopted() {
+          lastScrollSequence = 0;
+          lastRevealed = '';
         },
         dispose() {
           this.disposed = true;

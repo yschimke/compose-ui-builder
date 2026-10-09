@@ -192,6 +192,15 @@ class MobileViewTabsTest {
         onNodeWithContentDescription("More panels, $label open").assertExists()
       }
 
+      // A sheet's own close button closes it, whichever inspector it is showing.
+      onNodeWithContentDescription("More panels", substring = true).performClick()
+      waitForIdle()
+      onNodeWithContentDescription("Open theme panel").performClick()
+      waitForIdle()
+      onNodeWithContentDescription("Close Theme").performClick()
+      waitForIdle()
+      onNodeWithText("Colours, type and shape for the whole design").assertDoesNotExist()
+
       // Properties shows the properties again, not whichever inspector was open last.
       onNodeWithContentDescription("Open properties panel").performClick()
       waitForIdle()

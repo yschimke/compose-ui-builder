@@ -2441,7 +2441,8 @@ fun UiBuilderEditor(
       // nothing under 840dp — which an editor beside its preview pane easily is.
       onClose = {
         inspectorOpen = false
-        if (mobilePanel == MobileEditorPanel.Properties) mobilePanel = MobileEditorPanel.None
+        // Whichever inspector mode the compact sheet is showing: it is one sheet for all of them.
+        if (mobilePanel.inspectorMode != null) mobilePanel = MobileEditorPanel.None
       },
       fields = propertyFields,
       modifierFields = reducer.modifierFields(state),
