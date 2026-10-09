@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.renderer.sdk
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiExpressions
 import ee.schimke.composeai.uibuilder.protocol.CanvasAdapterMappingV1
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -24,9 +25,18 @@ class CanvasRenderTree(
    * lowers them to live player expressions itself, as the Remote device preview does, passes false.
    */
   evaluateExpressions: Boolean = true,
+  /** This frame's wall clock where time runs; null draws the document at its `fixedTime`. */
+  liveClock: UiExpressions.Clock? = null,
 ) {
+  /** The time this render reads: [liveClock], or the document's `fixedTime`. */
+  val clock: UiExpressions.Clock =
+    liveClock
+      ?: UiExpressions.Clock.of(
+        (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull
+      )
+
   private val expressions: CanvasExpressions? =
-    if (evaluateExpressions) CanvasExpressions.of(document) else null
+    if (evaluateExpressions) CanvasExpressions.of(document, clock) else null
 
   /** Enter an authored root. Missing roots draw nothing rather than taking down the renderer. */
   fun root(nodeId: String): CanvasRenderNode? =
@@ -111,6 +121,10 @@ internal constructor(
   internal val ancestors: Set<String>,
   val bindingArguments: JsonObject,
 ) {
+  /** The time the render this node belongs to reads; see [CanvasRenderTree.clock]. */
+  val clock: UiExpressions.Clock
+    get() = tree.clock
+
   /** Resolve a directly referenced child using this node's argument scope. */
   fun child(nodeId: String): CanvasRenderNode? = tree.child(this, nodeId)
 

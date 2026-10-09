@@ -1,6 +1,6 @@
 {
   "schema": "compose-ui-builder/design-guidelines/v1",
-  "version": 6,
+  "version": 7,
   "about": "Design rules a model checks a UI-builder design against. Each rule quotes the guidance it comes from and links its source: a page on developer.android.com or m3.material.io, the Android Knowledge Base for agent skills, a component set in the Wear OS Material 3 Figma kit, or the androidx source whose KDoc it quotes. `check` is a yes/no question where YES means the design follows the rule. `kind` is `structure` when the design tree is enough evidence, `visual` when it needs a picture of the design. Candidates are extracted with scripts/guidelines/extract-guidance.mjs and reviewed by a person before they are added here. Visual rules say which picture to judge: the device picture (the first frame on the watch) or the unrolled picture (the whole scrolling content, scrolled to the end so a revealed edge button shows). `surfaces` (optional) narrows a rule to `screen` or `widget` designs on its platform; a rule without it applies to every surface.",
   "rules": [
     {
@@ -43,7 +43,7 @@
       "kind": "visual",
       "severity": "warning",
       "guidance": "Margins should be defined in percentages to avoid clipping and provide proportional scaling of elements.",
-      "check": "For a screen, judge round-edge clipping on the device picture (the first frame, as the wearer first sees it), and clipping inside components on the unrolled picture when one is attached; content that continues below the bottom of the device picture in a scrolling list is not clipped. For a widget, judge it on both container pictures: nothing may be cut by the Samsung container's fully rounded ends or the Pixel Watch container's corners. Is every piece of text, icon and control fully visible, with nothing cut off by the edge or by its own container?",
+      "check": "Is every piece of text, every icon and every control drawn whole, with none of its pixels missing? Answer fail only when part of a glyph, an icon or a control's own shape is visibly cut off in a picture: a letter sliced, an icon missing a side, a button's edge flattened where the edge or a container covers it. Being close to the edge, or to a curve, is not clipping, and neither is a container's own rounded outline. For a screen, judge round-edge clipping on the device picture, and clipping inside components on the unrolled picture when one is attached; content that continues below the bottom of the device picture in a scrolling list is not clipped. For a widget, look at the Samsung and the Pixel Watch pictures, and answer fail only for content cut in one of them; name which picture in your reason.",
       "source": "https://developer.android.com/design/ui/wear/guides/foundations/adaptive-design"
     },
     {

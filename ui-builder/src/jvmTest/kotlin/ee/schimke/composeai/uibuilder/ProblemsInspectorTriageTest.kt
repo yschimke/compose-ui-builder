@@ -80,7 +80,7 @@ class ProblemsInspectorTriageTest {
   fun `located group visibly navigates and retains copyable technical details`() =
     runDesktopComposeUiTest(width = 520, height = 700) {
       val events = mutableListOf<UiBuilderEditorEvent>()
-      setContent { MaterialTheme { ProblemsInspector(problems) { events += it } } }
+      setContent { MaterialTheme { ProblemsInspector(problems, dispatch = { events += it }) } }
 
       onAllNodesWithContentDescription("Go to layer card")[0].assertExists().performClick()
       assertEquals("card", assertIs<UiBuilderEditorEvent.SelectNode>(events[0]).nodeId)

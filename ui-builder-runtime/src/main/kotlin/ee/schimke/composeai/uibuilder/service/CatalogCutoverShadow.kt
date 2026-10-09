@@ -230,14 +230,20 @@ public object CatalogCutoverShadow {
     val id = published.benchmark.catalogSystemId
     val kotlin = synthesised.components.associateBy { it.componentId }
     val owned = published.components.associateBy { it.componentId }
+    // A catalog's own ids already carry its prefix (`wear-m3/button`); the builder's do not
+    // (`layout/column`), and those are the ones that need it to say which catalog lost them.
+    fun line(componentId: String, finding: String): String =
+      if (componentId.startsWith("$id/")) "$componentId: $finding" else "$id/$componentId: $finding"
     return buildList {
-      (kotlin.keys - owned.keys).sorted().forEach { add("$id/$it: only the Kotlin catalog has it") }
+      (kotlin.keys - owned.keys).sorted().forEach {
+        add(line(it, "only the Kotlin catalog has it"))
+      }
       (owned.keys - kotlin.keys).sorted().forEach {
-        add("$id/$it: only the published catalog has it")
+        add(line(it, "only the published catalog has it"))
       }
       (kotlin.keys intersect owned.keys).sorted().forEach { componentId ->
         componentDifferences(kotlin.getValue(componentId), owned.getValue(componentId)).forEach {
-          add("$id/$componentId: $it")
+          add(line(componentId, it))
         }
       }
     }

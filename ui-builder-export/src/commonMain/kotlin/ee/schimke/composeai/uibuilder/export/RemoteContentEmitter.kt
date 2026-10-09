@@ -1671,7 +1671,7 @@ internal class RemoteContentEmitter(
             null
           }
       is UiExpressions.Expr.System -> {
-        usedComponentImports += "androidx.compose.remote.creation.compose.layout.RemoteTime"
+        usedComponentImports += expr.value.imports
         expr.value.remote
       }
       is UiExpressions.Expr.Call -> lowerCall(expr, where)

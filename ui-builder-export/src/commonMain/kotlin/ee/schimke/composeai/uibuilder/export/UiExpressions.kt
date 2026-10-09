@@ -49,6 +49,9 @@ object UiExpressions {
     val label: String,
     /** The Remote Kotlin that reads it. */
     val remote: String,
+    /** What [remote] needs imported. */
+    val imports: List<String> =
+      listOf("androidx.compose.remote.creation.compose.layout.RemoteTime"),
   )
 
   /**
@@ -94,6 +97,19 @@ object UiExpressions {
           UiValueKind.FLOAT,
           "Offset from UTC in seconds",
           "RemoteTime().UtcOffset()",
+        ),
+        // Not the wall clock: seconds since the player started this document, so a motion
+        // written over it starts from its beginning wherever and whenever the document is shown.
+        SystemValue(
+          "time.animation",
+          UiValueKind.FLOAT,
+          "Seconds since the document started playing",
+          "RemoteFloat(RemoteContext.FLOAT_ANIMATION_TIME)",
+          imports =
+            listOf(
+              "androidx.compose.remote.creation.compose.state.RemoteFloat",
+              "androidx.compose.remote.core.RemoteContext",
+            ),
         ),
       )
       .associateBy { it.id }
@@ -445,7 +461,10 @@ object UiExpressions {
 
   // ---- Preview evaluation ----------------------------------------------------------------------
 
-  /** What the canvas evaluates against: preview state, row fields and a frozen clock. */
+  /**
+   * What the canvas evaluates against: preview state, row fields and a clock — the document's fixed
+   * time, or the wall clock on a surface that lets time run.
+   */
   class Environment(
     val state: Map<String, String?> = emptyMap(),
     val bindings: (String) -> JsonPrimitive? = { null },
@@ -459,15 +478,35 @@ object UiExpressions {
     val second: Int,
     val dayOfWeek: Int,
     val dayOfMonth: Int,
+    /** The fraction of [second] that has passed, which only `time.continuousSecond` reads. */
+    val millisecond: Int = 0,
+    val utcOffsetSeconds: Int = 0,
+    val year: Int = 2024,
+    val month: Int = 5,
+    /** `time.animation`: 0 at a fixed time, the seconds a live preview has been running. */
+    val animationSeconds: Double = 0.0,
   ) {
+    /** The instant these local fields name, for a host that hands a player a frozen clock. */
+    val epochMillis: Long
+      get() =
+        daysFromCivil(year, month, dayOfMonth) * MILLIS_PER_DAY +
+          ((hour * 60L + minute) * 60L + second) * 1000L +
+          millisecond - utcOffsetSeconds * 1000L
+
+    /** 1 on the 1st of January. */
+    val dayOfYear: Int
+      get() = (daysFromCivil(year, month, dayOfMonth) - daysFromCivil(year, 1, 1)).toInt() + 1
+
     fun read(id: String): Double =
       when (id) {
         "time.hour" -> hour.toDouble()
         "time.minuteOfDay" -> (hour * 60 + minute).toDouble()
         "time.secondOfHour" -> (minute * 60 + second).toDouble()
-        "time.continuousSecond" -> (minute * 60 + second).toDouble()
+        "time.continuousSecond" -> minute * 60 + second + millisecond / 1000.0
         "time.dayOfWeek" -> dayOfWeek.toDouble()
         "time.dayOfMonth" -> dayOfMonth.toDouble()
+        "time.utcOffset" -> utcOffsetSeconds.toDouble()
+        "time.animation" -> animationSeconds
         else -> 0.0
       }
 
@@ -482,6 +521,7 @@ object UiExpressions {
       fun of(fixedTime: String?): Clock {
         val match = fixedTime?.let(ISO_INSTANT::matchEntire) ?: return DEFAULT
         val (year, month, day, hour, minute, second) = match.destructured
+        val fraction = match.groupValues[7]
         // The service checks only that a fixed time is not blank, so a value that matches the
         // shape but names no instant — month 13, hour 25 — draws at the default rather than
         // taking the canvas down.
@@ -499,11 +539,64 @@ object UiExpressions {
           second = second.toInt(),
           dayOfWeek = isoDayOfWeek(year.toInt(), month.toInt(), day.toInt()),
           dayOfMonth = day.toInt(),
+          millisecond = fraction.take(3).padEnd(3, '0').toInt(),
+          year = year.toInt(),
+          month = month.toInt(),
         )
       }
 
+      /**
+       * The local time at [epochMillis] in a zone [utcOffsetSeconds] ahead of UTC: what a live
+       * preview reads each frame, the same fields the player derives from its own clock.
+       */
+      fun at(epochMillis: Long, utcOffsetSeconds: Int = 0): Clock {
+        val local = epochMillis + utcOffsetSeconds * 1000L
+        val days = local.floorDiv(MILLIS_PER_DAY)
+        val millisOfDay = local.mod(MILLIS_PER_DAY)
+        // 1970-01-01 was a Thursday: ISO day 4.
+        val dayOfWeek = (days + 3).mod(7L).toInt() + 1
+        val (year, month, day) = civilFromDays(days)
+        return Clock(
+          hour = (millisOfDay / 3_600_000L).toInt(),
+          minute = (millisOfDay / 60_000L % 60).toInt(),
+          second = (millisOfDay / 1000L % 60).toInt(),
+          dayOfWeek = dayOfWeek,
+          dayOfMonth = day,
+          millisecond = (millisOfDay % 1000L).toInt(),
+          utcOffsetSeconds = utcOffsetSeconds,
+          year = year,
+          month = month,
+        )
+      }
+
+      private const val MILLIS_PER_DAY = 86_400_000L
+
+      /** Year, month and day [epochDays] after 1970-01-01, by Hinnant's civil-from-days. */
+      private fun civilFromDays(epochDays: Long): Triple<Int, Int, Int> {
+        val z = epochDays + 719_468
+        val era = z.floorDiv(146_097L)
+        val dayOfEra = z - era * 146_097
+        val yearOfEra = (dayOfEra - dayOfEra / 1460 + dayOfEra / 36_524 - dayOfEra / 146_096) / 365
+        val dayOfYear = dayOfEra - (365 * yearOfEra + yearOfEra / 4 - yearOfEra / 100)
+        val monthIndex = (5 * dayOfYear + 2) / 153
+        val day = (dayOfYear - (153 * monthIndex + 2) / 5 + 1).toInt()
+        val month = (if (monthIndex < 10) monthIndex + 3 else monthIndex - 9).toInt()
+        val year = (yearOfEra + era * 400 + if (month <= 2) 1 else 0).toInt()
+        return Triple(year, month, day)
+      }
+
+      /** Days from 1970-01-01 to [year]-[month]-[day], by Hinnant's days-from-civil. */
+      private fun daysFromCivil(year: Int, month: Int, day: Int): Long {
+        val y = (if (month <= 2) year - 1 else year).toLong()
+        val era = y.floorDiv(400L)
+        val yearOfEra = y - era * 400
+        val dayOfYear = (153 * (if (month > 2) month - 3 else month + 9) + 2) / 5 + day - 1
+        val dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear
+        return era * 146_097 + dayOfEra - 719_468
+      }
+
       private val ISO_INSTANT =
-        Regex("""(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]00:?00)?""")
+        Regex("""(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:Z|[+-]00:?00)?""")
 
       /** Monday = 1 … Sunday = 7, by Sakamoto's method. */
       private fun isoDayOfWeek(year: Int, month: Int, day: Int): Int {

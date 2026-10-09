@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.export
 
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -109,6 +110,32 @@ class RemoteExpressionExportTest {
     assertContains(source, "rotate(((RemoteTime().Seconds() % 60.rf) * 6.rf))")
     assertContains(source, "alpha(on.select(1.rf, 0.5f.rf))")
     assertContains(source, "androidx.compose.remote.creation.compose.layout.RemoteTime")
+  }
+
+  @Test
+  fun `animation time is the player's own clock, not the wall clock`() {
+    val (source, refusals) =
+      emit(
+        mapOf(
+          "text" to
+            JsonObject(mapOf("type" to JsonPrimitive("string"), "value" to JsonPrimitive("|")))
+        ),
+        modifiers =
+          listOf(
+            JsonObject(
+              mapOf(
+                "type" to JsonPrimitive("rotate"),
+                "degrees" to formula("time.animation * 90"),
+              )
+            )
+          ),
+      )
+
+    assertTrue(refusals.isEmpty(), refusals.toString())
+    assertContains(source, "rotate((RemoteFloat(RemoteContext.FLOAT_ANIMATION_TIME) * 90.rf))")
+    assertContains(source, "\nandroidx.compose.remote.core.RemoteContext\n")
+    assertContains(source, "\nandroidx.compose.remote.creation.compose.state.RemoteFloat\n")
+    assertFalse("RemoteTime" in source, source)
   }
 
   @Test

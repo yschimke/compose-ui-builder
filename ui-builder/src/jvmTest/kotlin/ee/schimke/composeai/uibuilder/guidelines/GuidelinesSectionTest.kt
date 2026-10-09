@@ -3,6 +3,7 @@ package ee.schimke.composeai.uibuilder.guidelines
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import ee.schimke.composeai.uibuilder.editor.GuidelinesSection
+import ee.schimke.composeai.uibuilder.editor.ProblemsInspector
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.promptForCopy
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -53,7 +54,7 @@ class GuidelinesSectionTest {
   @Test
   fun `the prompt is readable without a key, with where it came from`() = runComposeUiTest {
     val controller = DesignGuidelineController(Host(key = null))
-    setContent { MaterialTheme { GuidelinesSection(controller, document(), {}, {}) } }
+    setContent { MaterialTheme { IssuesPanel(controller, {}) } }
     onNodeWithText("Show the prompt").performScrollTo().performClick()
     waitUntil(timeoutMillis = 5_000) {
       onAllNodesWithText("Where this prompt comes from").fetchSemanticsNodes().isNotEmpty()
@@ -85,7 +86,7 @@ class GuidelinesSectionTest {
         ranBy = "agent:review-bot",
       )
     val controller = DesignGuidelineController(host)
-    setContent { MaterialTheme { GuidelinesSection(controller, document(), {}, {}) } }
+    setContent { MaterialTheme { IssuesPanel(controller, {}) } }
     waitUntil(timeoutMillis = 5_000) {
       onAllNodesWithText("Recorded by an agent.").fetchSemanticsNodes().isNotEmpty()
     }
@@ -114,7 +115,7 @@ class GuidelinesSectionTest {
     runComposeUiTest {
       val host = Host(key = null)
       val controller = DesignGuidelineController(host)
-      setContent { MaterialTheme { GuidelinesSection(controller, document(), {}, {}) } }
+      setContent { MaterialTheme { IssuesPanel(controller, {}) } }
       onNodeWithText("Get a key").assertExists()
       onNodeWithText("Connect OpenRouter").performClick()
       assertTrue(host.signedIn)
@@ -128,7 +129,7 @@ class GuidelinesSectionTest {
   @Test
   fun `model settings open below the actions, with room for the field`() = runComposeUiTest {
     val controller = DesignGuidelineController(Host(key = "sk-or-1"))
-    setContent { MaterialTheme { GuidelinesSection(controller, document(), {}, {}) } }
+    setContent { MaterialTheme { IssuesPanel(controller, {}) } }
     onNodeWithText("Model & key").performClick()
     val button = onNodeWithText("Check guidelines").fetchSemanticsNode().boundsInRoot
     val field = onNodeWithText("OpenRouter model").fetchSemanticsNode().boundsInRoot
@@ -141,7 +142,7 @@ class GuidelinesSectionTest {
     val host = Host(key = "sk-or-1")
     val controller = DesignGuidelineController(host)
     val events = mutableListOf<UiBuilderEditorEvent>()
-    setContent { MaterialTheme { GuidelinesSection(controller, document(), {}, { events += it }) } }
+    setContent { MaterialTheme { IssuesPanel(controller, { events += it }) } }
     onNodeWithText("Check guidelines").performClick()
     waitUntil(timeoutMillis = 5_000) {
       onAllNodesWithText("The Stop button has a fixed width.").fetchSemanticsNodes().isNotEmpty()
@@ -149,6 +150,19 @@ class GuidelinesSectionTest {
     assertTrue("wear.layout.responsive-width" in host.sent)
     onNodeWithContentDescription("Go to layer stop").performScrollTo().performClick()
     assertEquals(UiBuilderEditorEvent.SelectNode("stop"), events.first())
+  }
+
+  /** The section as the editor shows it: the first item of the Issues list, which scrolls. */
+  @androidx.compose.runtime.Composable
+  private fun IssuesPanel(
+    controller: DesignGuidelineController,
+    dispatch: (UiBuilderEditorEvent) -> Unit,
+  ) {
+    ProblemsInspector(
+      emptyList(),
+      dispatch,
+      header = { GuidelinesSection(controller, document(), {}, dispatch) },
+    )
   }
 
   private fun document(): UiBuilderDocument =

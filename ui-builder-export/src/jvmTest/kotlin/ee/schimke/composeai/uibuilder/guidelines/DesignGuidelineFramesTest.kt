@@ -36,7 +36,9 @@ class DesignGuidelineFramesTest {
       JsonPrimitive(WearWidgetHostShape.Squircle.id),
       frames[1].environment[WearWidgetHostShape.ENVIRONMENT_KEY],
     )
-    assertTrue("fully rounded ends" in frames[0].describe(1))
+    assertTrue("semicircular ends" in frames[0].describe(1))
+    // A picture's description must not tell the model content is cut before it has looked.
+    frames.forEach { assertTrue(" is cut by" !in it.describe(1), it.describe(1)) }
   }
 
   @Test

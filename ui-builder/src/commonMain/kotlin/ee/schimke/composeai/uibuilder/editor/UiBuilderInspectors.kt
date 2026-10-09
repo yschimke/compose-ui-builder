@@ -348,10 +348,17 @@ private fun InspectorBody(
 ) {
   Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
     if (state.inspectorMode == EditorInspectorMode.Issues) {
-      LocalDesignGuidelineCheck.current?.let { guidelines ->
-        GuidelinesSection(guidelines, state.document, onTextInputFocusChanged, dispatch)
-      }
-      ProblemsInspector(problems, dispatch)
+      // One scrolling list: the guidelines section is its first item rather than a box of its
+      // own above it, so nothing is squeezed into a short inner scroll that nobody notices.
+      val guidelines = LocalDesignGuidelineCheck.current
+      ProblemsInspector(
+        problems,
+        dispatch,
+        header =
+          guidelines?.let {
+            { GuidelinesSection(it, state.document, onTextInputFocusChanged, dispatch) }
+          },
+      )
       return@Column
     }
     if (state.inspectorMode == EditorInspectorMode.History) {
@@ -1317,33 +1324,41 @@ internal fun problemHeading(problems: List<EditorProblem>): String {
 internal fun ProblemsInspector(
   problems: List<EditorProblem>,
   dispatch: (UiBuilderEditorEvent) -> Unit,
+  header: (@Composable () -> Unit)? = null,
 ) {
-  if (problems.isEmpty()) {
-    Text(
-      "Nothing is blocking a Compose export of this design.",
-      Modifier.padding(top = 16.dp),
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    return
-  }
   val groups = triageProblems(problems)
-  val rootCount = groups.count { it.rootCause }
-  val downstreamCount = groups.count { it.blocking && !it.rootCause }
-  val advisoryCount = groups.count { !it.blocking }
-  Text(
-    buildList {
-        if (rootCount > 0) add("$rootCount blocking root cause${if (rootCount == 1) "" else "s"}")
-        if (downstreamCount > 0)
-          add("$downstreamCount downstream group${if (downstreamCount == 1) "" else "s"}")
-        if (advisoryCount > 0)
-          add("$advisoryCount ${if (advisoryCount == 1) "advisory" else "advisories"}")
-        if (problems.size != groups.size) add("${problems.size} total occurrences")
+  LazyColumn(Modifier.fillMaxWidth()) {
+    header?.let { item(key = "header") { it() } }
+    if (problems.isEmpty()) {
+      item(key = "empty") {
+        Text(
+          "Nothing is blocking a Compose export of this design.",
+          Modifier.padding(top = 16.dp),
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
       }
-      .joinToString(" · "),
-    color = MaterialTheme.colorScheme.onSurfaceVariant,
-    style = MaterialTheme.typography.labelSmall,
-  )
-  LazyColumn(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+      return@LazyColumn
+    }
+    val rootCount = groups.count { it.rootCause }
+    val downstreamCount = groups.count { it.blocking && !it.rootCause }
+    val advisoryCount = groups.count { !it.blocking }
+    item(key = "summary") {
+      Text(
+        buildList {
+            if (rootCount > 0)
+              add("$rootCount blocking root cause${if (rootCount == 1) "" else "s"}")
+            if (downstreamCount > 0)
+              add("$downstreamCount downstream group${if (downstreamCount == 1) "" else "s"}")
+            if (advisoryCount > 0)
+              add("$advisoryCount ${if (advisoryCount == 1) "advisory" else "advisories"}")
+            if (problems.size != groups.size) add("${problems.size} total occurrences")
+          }
+          .joinToString(" · "),
+        Modifier.padding(bottom = 10.dp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall,
+      )
+    }
     itemsIndexed(
       groups,
       key = { _, group -> problemGroupKey(group.problems.first()) },

@@ -38,44 +38,26 @@ internal class BrowserGuidelineHost(
     writeGuidelineSetting(MODEL_STORAGE, model.orEmpty())
   }
 
+  override fun storedOverlay(): Boolean? =
+    when (readGuidelineSetting(OVERLAY_STORAGE)) {
+      "1" -> true
+      "0" -> false
+      else -> null
+    }
+
+  override fun storeOverlay(shown: Boolean) {
+    writeGuidelineSetting(OVERLAY_STORAGE, if (shown) "1" else "0")
+  }
+
   override val signIn: (() -> Unit) = { beginOpenRouterSignIn(VERIFIER_STORAGE) }
 
-  override suspend fun completeSignIn(): DesignGuidelineHost.SignInResult {
-    val raw =
-      try {
-        awaitCommentString(finishOpenRouterSignIn(VERIFIER_STORAGE))
-      } catch (e: Exception) {
-        return DesignGuidelineHost.SignInResult.Failed("OpenRouter sign-in failed: ${e.message}")
-      }
-    val outcome =
-      try {
-        guidelineJson.decodeFromString(SignInWire.serializer(), raw)
-      } catch (_: Exception) {
-        return DesignGuidelineHost.SignInResult.Failed("OpenRouter sign-in answered unreadably.")
-      }
-    return when (outcome.state) {
-      "none" -> DesignGuidelineHost.SignInResult.NotReturning
-      "ok" -> {
-        val key =
-          try {
-            guidelineJson.decodeFromString(KeyWire.serializer(), outcome.body.orEmpty()).key
-          } catch (_: Exception) {
-            null
-          }
-        if (key.isNullOrBlank()) {
-          DesignGuidelineHost.SignInResult.Failed("OpenRouter did not hand back a key.")
-        } else {
-          DesignGuidelineHost.SignInResult.Signed(key)
-        }
-      }
-      else ->
-        DesignGuidelineHost.SignInResult.Failed(
-          outcome.reason
-            ?: "OpenRouter refused the sign-in (${outcome.status ?: "no answer"}); try again or " +
-              "paste a key."
-        )
-    }
-  }
+  /**
+   * The sign-in [finishOpenRouterSignInAtBoot] finished when the page loaded, if any, and otherwise
+   * one finished now. Startup is where it is really done: the key is saved before the editor
+   * composes, so it does not depend on this panel ever being asked.
+   */
+  override suspend fun completeSignIn(): DesignGuidelineHost.SignInResult =
+    bootSignIn?.also { bootSignIn = null } ?: exchangeOpenRouterSignIn()
 
   override suspend fun complete(body: String, key: String): DesignGuidelineHost.Response {
     val raw = awaitCommentString(openRouterComplete(OPENROUTER_CHAT_COMPLETIONS, body, key))
@@ -197,25 +179,91 @@ internal class BrowserGuidelineHost(
   }
 
   @Serializable
-  private data class SignInWire(
+  internal data class SignInWire(
     val state: String,
     val status: Int? = null,
     val body: String? = null,
     val reason: String? = null,
   )
 
-  @Serializable private data class KeyWire(val key: String? = null)
+  @Serializable internal data class KeyWire(val key: String? = null)
 
   @Serializable private data class ResponseWire(val status: Int, val body: String)
 
-  private companion object {
+  internal companion object {
     const val KEY_STORAGE = "ui-builder.guidelines.openrouter-key"
     const val MODEL_STORAGE = "ui-builder.guidelines.model"
+    const val OVERLAY_STORAGE = "ui-builder.guidelines.overlay"
     const val VERIFIER_STORAGE = "ui-builder.guidelines.pkce-verifier"
     const val OPENROUTER_CHAT_COMPLETIONS = "https://openrouter.ai/api/v1/chat/completions"
     val guidelineJson = Json { ignoreUnknownKeys = true }
   }
 }
+
+/** A sign-in finished at startup, held until the guidelines panel asks for it. */
+private var bootSignIn: DesignGuidelineHost.SignInResult? = null
+
+/**
+ * Called from `main` before the editor composes: when this page is OpenRouter's sign-in coming
+ * back, trades the code for a key and saves it. Each step is logged, so a sign-in that does not
+ * take says why in the console.
+ */
+internal suspend fun finishOpenRouterSignInAtBoot() {
+  val result = exchangeOpenRouterSignIn()
+  when (result) {
+    DesignGuidelineHost.SignInResult.NotReturning -> return
+    is DesignGuidelineHost.SignInResult.Signed -> {
+      writeGuidelineSetting(BrowserGuidelineHost.KEY_STORAGE, result.key)
+      logGuidelines("OpenRouter sign-in finished; the key is saved in this browser.")
+    }
+    is DesignGuidelineHost.SignInResult.Failed ->
+      logGuidelines("OpenRouter sign-in did not finish: ${result.reason}")
+  }
+  bootSignIn = result
+}
+
+private suspend fun exchangeOpenRouterSignIn(): DesignGuidelineHost.SignInResult {
+  val json = Json { ignoreUnknownKeys = true }
+  val raw =
+    try {
+      awaitCommentString(finishOpenRouterSignIn(BrowserGuidelineHost.VERIFIER_STORAGE))
+    } catch (e: Exception) {
+      return DesignGuidelineHost.SignInResult.Failed("OpenRouter sign-in failed: ${e.message}")
+    }
+  val outcome =
+    try {
+      json.decodeFromString(BrowserGuidelineHost.SignInWire.serializer(), raw)
+    } catch (_: Exception) {
+      return DesignGuidelineHost.SignInResult.Failed("OpenRouter sign-in answered unreadably.")
+    }
+  return when (outcome.state) {
+    "none" -> DesignGuidelineHost.SignInResult.NotReturning
+    "ok" -> {
+      val key =
+        try {
+          json
+            .decodeFromString(BrowserGuidelineHost.KeyWire.serializer(), outcome.body.orEmpty())
+            .key
+        } catch (_: Exception) {
+          null
+        }
+      if (key.isNullOrBlank()) {
+        DesignGuidelineHost.SignInResult.Failed("OpenRouter did not hand back a key.")
+      } else {
+        DesignGuidelineHost.SignInResult.Signed(key)
+      }
+    }
+    else ->
+      DesignGuidelineHost.SignInResult.Failed(
+        outcome.reason
+          ?: "OpenRouter refused the sign-in (${outcome.status ?: "no answer"}); try again or " +
+            "paste a key."
+      )
+  }
+}
+
+@JsFun("(message) => console.info('[ui-builder guidelines] ' + message)")
+private external fun logGuidelines(message: String)
 
 @JsFun("(key) => { try { return localStorage.getItem(key) || ''; } catch (_) { return ''; } }")
 private external fun readGuidelineSetting(key: String): String
