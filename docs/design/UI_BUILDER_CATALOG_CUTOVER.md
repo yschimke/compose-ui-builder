@@ -104,11 +104,13 @@ line is work in a catalog repository, not here.
 
 | Catalog | Gap | Fix, in that repository |
 | --- | --- | --- |
-| `wear-m3` | declares no `composeSourceExport`, so an owned Wear catalog offers no export | add `"composeSourceExport": {"adapter": "wear-compose-screen", "version": 1}` to `ui-builder.policy.json`, **after** the server that serves it ships `CatalogExportRouting` (a server that does not know the id refuses the catalog's exports) |
-| `remote-m3` | the same | `{"adapter": "remote-compose", "version": 1}`, same ordering |
+| `wear-m3` | declares no `composeSourceExport`, so an owned Wear catalog offers no export | add `"composeSourceExport": {"adapter": "wear-compose-screen", "version": 1}` to `ui-builder.policy.json`, **after** the server that serves it ships `CatalogExportRouting` (a server that does not know the id refuses the catalog's exports)  The server has shipped it (3.111.0, on 3.95.0): declared in yschimke/wear-m3-catalog#733 |
+| `wear-m3` | preview.coo.ee's shadow report: the published catalog lacks the colour properties the Wear exporter reads (`card`/`edge-button` `containerColor`, `contentColor`; `progress-indicator` `indicatorColor`, `trackColor`; `icon` `color`), and makes `screen-scaffold`'s `content` slot required | declared, drawn by the runtime adapters and the slot relaxed in yschimke/wear-m3-catalog#733 |
+| `wear-m3`, `m3-catalog` | `variable-font-text` is in the Kotlin catalogs only: it calls a declaration flexpress generates at export, not a library composable, so no catalog record has it | undecided: publish it as a policy builtin in each catalog, or make it builder vocabulary under a builder namespace |
+| `remote-m3` | the same | `{"adapter": "remote-compose", "version": 1}`, same ordering  Declared in yschimke/remote-m3-catalog#40 |
 | `glimmer-catalog` | declares no `composeSourceExport` | glimmer has no emitter in this build at all, so an owned glimmer catalog offers no export until one exists here and the catalog declares it. Its seeds (`glasses-card`, `glasses-list`, `glasses-prompt`) are published |
 | `m3-catalog` | the published `adaptive-navigation` seed holds `m3/icon` nodes without an `imageVector`, which the generic export refuses | give the template's icons a vector (the Kotlin `AdaptiveScreenTemplates` seed exports), or export icons from the asset registry |
-| `remote-widgets` | has no delivery branch, so there is no `ui-builder.json` to serve it from; when it has one, it declares no `composeSourceExport` either | add a `remote-widgets` lane to remote-m3-catalog's `design-artifacts.yml` (its own `REMOTE_WIDGETS_UI_BUILDER.md` lists this), register it on the preview server, then declare `{"adapter": "remote-compose-launcher-widget", "version": 1}` with the same ordering as the rows above |
+| `remote-widgets` | declares no `composeSourceExport` (it now has a delivery branch, and preview.coo.ee serves it from its published `ui-builder.json`) | `{"adapter": "remote-compose-launcher-widget", "version": 1}`, declared in yschimke/remote-m3-catalog#40 |
 
 `declaring the export route is all the export half needs` proves the first two rows are the whole
 fix: with the declarations added, every published seed of those catalogs exports through the
