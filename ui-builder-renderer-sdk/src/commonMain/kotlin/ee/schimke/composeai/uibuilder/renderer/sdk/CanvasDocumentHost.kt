@@ -204,6 +204,7 @@ fun CanvasDocumentHost(
       state = state,
       adapterIds = adapterIds,
       adapterMappings = adapterMappings,
+      liveClock = rememberLiveCanvasClock(document),
     )
   val scope =
     CanvasDocumentScope(

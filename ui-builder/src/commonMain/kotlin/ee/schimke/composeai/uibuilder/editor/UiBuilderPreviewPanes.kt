@@ -72,6 +72,7 @@ import ee.schimke.composeai.uibuilder.codegen.rememberCodePaneSyntaxTheme
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderPreviewSurfaces
 import ee.schimke.composeai.uibuilder.renderer.sdk.bottom
+import ee.schimke.composeai.uibuilder.renderer.sdk.withTimeRunning
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -553,11 +554,26 @@ internal fun DesignPreviewPane(
    * panes; the compact layout's preview tab has already chosen the one pane it shows.
    */
   exactPanes: Boolean = false,
+  /**
+   * Whether each frame's clock and animations run. Frames are handed a copy of their document that
+   * says so ([withTimeRunning]), which is how a catalog runtime drawing in its own frame hears it.
+   */
+  timeRunning: Boolean = false,
+  /** Shows the [PreviewTimeToggle] when set. */
+  onTimeRunningChange: ((Boolean) -> Unit)? = null,
 ) {
   val hostDensity = LocalDensity.current
-  val panes = if (exactPanes) variants else document.widgetPreviewPanes() ?: variants
+  val panes =
+    remember(document, variants, exactPanes, timeRunning) {
+      (if (exactPanes) variants else document.widgetPreviewPanes() ?: variants).map {
+        it.copy(document = it.document.withTimeRunning(timeRunning))
+      }
+    }
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(Modifier.fillMaxSize().padding(12.dp)) {
+      if (onTimeRunningChange != null) {
+        PreviewTimeToggle(timeRunning, onTimeRunningChange, Modifier.align(Alignment.End))
+      }
       BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
         if (panes.isEmpty()) {
           Text(

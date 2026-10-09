@@ -64,6 +64,12 @@ internal fun RemoteDocumentDesignPreviewPane(
   modifier: Modifier = Modifier,
   /** As [DesignPreviewPane]'s: draw [variants] as given rather than a widget's host shapes. */
   exactPanes: Boolean = false,
+  /**
+   * As [DesignPreviewPane]'s, but held by the players rather than the document: a document that
+   * changed would be exported again, and toggling time is not an edit.
+   */
+  timeRunning: Boolean = false,
+  onTimeRunningChange: ((Boolean) -> Unit)? = null,
 ) {
   val panes =
     if (exactPanes) variants
@@ -109,6 +115,9 @@ internal fun RemoteDocumentDesignPreviewPane(
 
   Surface(modifier, color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
     Column(Modifier.fillMaxSize().padding(12.dp)) {
+      if (onTimeRunningChange != null) {
+        PreviewTimeToggle(timeRunning, onTimeRunningChange, Modifier.align(Alignment.End))
+      }
       if (pending) {
         Text("Updating Remote preview…", style = MaterialTheme.typography.labelSmall)
       }
@@ -130,6 +139,7 @@ internal fun RemoteDocumentDesignPreviewPane(
               pane = pane,
               result = results[pane.id],
               scale = scale,
+              timeRunning = timeRunning,
             )
           }
         }
@@ -166,6 +176,7 @@ private fun RemoteDocumentVariantPane(
   pane: UiBuilderVariantPane,
   result: UiBuilderDocumentPreview?,
   scale: Float,
+  timeRunning: Boolean,
 ) {
   Column(horizontalAlignment = Alignment.CenterHorizontally) {
     Text(
@@ -186,7 +197,12 @@ private fun RemoteDocumentVariantPane(
         UiBuilderDocumentPreview.WaitingForSave -> PreviewMessage("Waiting for save…")
         is UiBuilderDocumentPreview.Failed -> PreviewMessage(result.message)
         is UiBuilderDocumentPreview.Ready ->
-          PlayedRemoteDocumentVariant(pane = pane, encoded = result.documentBase64, scale = scale)
+          PlayedRemoteDocumentVariant(
+            pane = pane,
+            encoded = result.documentBase64,
+            scale = scale,
+            timeRunning = timeRunning,
+          )
       }
     }
   }
@@ -197,6 +213,7 @@ private fun PlayedRemoteDocumentVariant(
   pane: UiBuilderVariantPane,
   encoded: String,
   scale: Float,
+  timeRunning: Boolean,
 ) {
   val decoded = remember(encoded) { decodeRemoteComposeDocument(encoded) }
   val target = decoded.getOrNull()
@@ -238,10 +255,14 @@ private fun PlayedRemoteDocumentVariant(
         brushes = { _ -> },
         hasBrushes = false,
       ) {
-        RcComposePlayer(document = target, theme = theme, modifier = Modifier.fillMaxSize())
+        ProvidePreviewPlayerTime(pane.document, timeRunning) {
+          RcComposePlayer(document = target, theme = theme, modifier = Modifier.fillMaxSize())
+        }
       }
     } else {
-      RcComposePlayer(document = target, theme = theme, modifier = Modifier.fillMaxSize())
+      ProvidePreviewPlayerTime(pane.document, timeRunning) {
+        RcComposePlayer(document = target, theme = theme, modifier = Modifier.fillMaxSize())
+      }
     }
   }
 }

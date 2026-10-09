@@ -34,7 +34,8 @@ fun resolveCanvasNode(
 
 /**
  * Computed values (`expr`/`system`) evaluated for one frame of the canvas: at the preview state,
- * the row or placement arguments in scope, and the document's fixed time.
+ * the row or placement arguments in scope, and the document's fixed time or, where time runs, this
+ * frame's wall clock.
  *
  * Each property and each modifier field holding one is replaced by the literal it evaluates to, so
  * adapters never see an expression and draw exactly what they drew for a typed literal. An
@@ -121,14 +122,21 @@ class CanvasExpressions(
       ((value as? JsonObject)?.get("type") as? JsonPrimitive)?.contentOrNull == "state"
 
   companion object {
-    /** The kinds [document] declares and its `environment.fixedTime`. */
-    fun of(document: UiBuilderDocument): CanvasExpressions =
+    /**
+     * The kinds [document] declares, at [liveClock] when time runs and its `environment.fixedTime`
+     * when it does not.
+     */
+    fun of(
+      document: UiBuilderDocument,
+      liveClock: UiExpressions.Clock? = null,
+    ): CanvasExpressions =
       CanvasExpressions(
         stateKinds = UiExpressions.Scope.of(document).stateKinds,
         clock =
-          UiExpressions.Clock.of(
-            (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull
-          ),
+          liveClock
+            ?: UiExpressions.Clock.of(
+              (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull
+            ),
       )
   }
 }
