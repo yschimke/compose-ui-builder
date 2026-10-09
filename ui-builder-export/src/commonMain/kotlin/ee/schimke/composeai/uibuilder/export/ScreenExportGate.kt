@@ -219,11 +219,17 @@ object ScreenExportGate {
  * resolving either is the same answer.
  */
 fun ComponentRecordFile.callableAliases(): ComponentRecordFile =
-  copy(
-    components =
-      components.map { component ->
-        val callable = component.canonicalId.substringAfter('/', "")
-        if (callable.isEmpty() || callable in component.componentIds) component
-        else component.copy(componentIds = component.componentIds + callable)
-      }
-  )
+  newBuilder()
+    .apply {
+      components =
+        this@callableAliases.components.map { component ->
+          val callable = component.canonicalId.substringAfter('/', "")
+          if (callable.isEmpty() || callable in component.componentIds) component
+          else
+            component
+              .newBuilder()
+              .apply { componentIds = component.componentIds + callable }
+              .build()
+        }
+    }
+    .build()

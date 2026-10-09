@@ -1,9 +1,6 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentOrigin
-import ee.schimke.composeai.discovery.ComponentRecord
-import ee.schimke.composeai.discovery.ComponentSymbol
-import ee.schimke.composeai.discovery.TargetParameter
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertFalse
@@ -161,11 +158,11 @@ class RemoteTextComponentExportTest {
   private val published =
     mapOf(
       REMOTE_TEXT_COMPONENT_ID to
-        ComponentRecord(
+        testRecord(
           canonicalId = "remote-catalog/RemoteText",
           componentIds = listOf(REMOTE_TEXT_COMPONENT_ID),
           symbol =
-            ComponentSymbol(
+            testSymbol(
               jvmOwner = "androidx.wear.compose.remote.material3.RemoteTextKt",
               callable = "androidx.wear.compose.remote.material3.RemoteText",
               name = "RemoteText",
@@ -173,13 +170,12 @@ class RemoteTextComponentExportTest {
             ),
           parameters =
             listOf(
-              TargetParameter(
+              testParameter(
                 name = "text",
                 type = "RemoteString",
                 typeFqn = "androidx.compose.remote.creation.compose.state.RemoteString",
               )
             ),
-          slots = emptyList(),
           signatureKnown = true,
         )
     )

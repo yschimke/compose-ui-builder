@@ -212,73 +212,59 @@ object ProductionComposeGenerator {
           arguments = mapOf("modifier" to ScreenValue.ParameterRead("modifier", MODIFIER)),
           slots = mapOf("content" to listOf(projected.document.root)),
         )
+      val resolvable = projected.resolvable(record.callableAliases())
       val combined =
-        projected
-          .resolvable(record.callableAliases())
-          .copy(
+        resolvable
+          .newBuilder()
+          .apply {
             components =
-              projected.resolvable(record.callableAliases()).components +
+              resolvable.components +
                 placements.map { placement ->
-                  ComponentRecord(
+                  projectComponent(
                     canonicalId = placement.symbol,
-                    symbol =
-                      ComponentSymbol(
-                        jvmOwner = placement.symbol + "Kt",
-                        callable = placement.symbol,
-                        name = placement.symbol.substringAfterLast('.'),
-                        origin = ComponentOrigin.PROJECT,
-                      ),
-                    signatureKnown = true,
+                    jvmOwner = placement.symbol + "Kt",
+                    callable = placement.symbol,
+                    name = placement.symbol.substringAfterLast('.'),
                     parameters = emptyList(),
-                    code =
-                      ComponentCode(
-                        call = placement.symbol.substringAfterLast('.') + "()",
-                        imports = listOf(placement.symbol),
-                      ),
+                    call = placement.symbol.substringAfterLast('.') + "()",
+                    imports = listOf(placement.symbol),
                   )
                 } +
                 children
                   .map { child ->
-                    ComponentRecord(
+                    projectComponent(
                       canonicalId = helperFqn(child.entry),
-                      symbol =
-                        ComponentSymbol(
-                          jvmOwner =
-                            child.entry.kotlinFunction.substringBeforeLast('.') +
-                              "." +
-                              child.entry.kotlinFunction.substringAfterLast('.') +
-                              "Kt",
-                          callable = helperFqn(child.entry),
-                          name = helperName(child.entry),
-                          origin = ComponentOrigin.PROJECT,
-                        ),
-                      signatureKnown = true,
+                      jvmOwner =
+                        child.entry.kotlinFunction.substringBeforeLast('.') +
+                          "." +
+                          child.entry.kotlinFunction.substringAfterLast('.') +
+                          "Kt",
+                      callable = helperFqn(child.entry),
+                      name = helperName(child.entry),
                       parameters =
-                        listOf(TargetParameter("modifier", "Modifier", typeFqn = MODIFIER)) +
+                        listOf(parameter("modifier", "Modifier", MODIFIER)) +
                           child.reads.mapIndexed { index, read ->
-                            TargetParameter(
+                            parameter(
                               "p$index",
                               read.type.scalar.kotlinType.substringAfterLast('.'),
-                              typeFqn = read.type.scalar.kotlinType,
+                              read.type.scalar.kotlinType,
                             )
                           } +
                           child.callbacks.indices.map { index ->
-                            TargetParameter(
-                              "c$index",
-                              "() -> Unit",
-                              typeFqn = "kotlin.Function0",
-                              lambdaReturnTypeFqn = "kotlin.Unit",
-                            )
+                            TargetParameter.Builder("c$index", "() -> Unit")
+                              .apply {
+                                typeFqn = "kotlin.Function0"
+                                lambdaReturnTypeFqn = "kotlin.Unit"
+                              }
+                              .build()
                           },
-                      code =
-                        ComponentCode(
-                          call = helperName(child.entry) + "()",
-                          imports = listOf(helperFqn(child.entry)),
-                        ),
+                      call = helperName(child.entry) + "()",
+                      imports = listOf(helperFqn(child.entry)),
                     )
                   }
                   .distinctBy { it.canonicalId }
-          )
+          }
+          .build()
       return Body(entry, reads, callbacks, placements, root, combined).also { bodies[id] = it }
     }
     contract.entryPoints.keys.sorted().forEach(::body)
@@ -586,3 +572,33 @@ object ProductionComposeGenerator {
   private fun helperFqn(entry: ProductionEntryPoint): String =
     entry.kotlinFunction.substringBeforeLast('.') + "." + helperName(entry)
 }
+
+/** A project component record the generated screen calls, as the record's Builders spell it. */
+private fun projectComponent(
+  canonicalId: String,
+  jvmOwner: String,
+  callable: String,
+  name: String,
+  parameters: List<TargetParameter>,
+  call: String,
+  imports: List<String>,
+): ComponentRecord =
+  ComponentRecord.Builder(
+      canonicalId,
+      ComponentSymbol.Builder(jvmOwner, callable, name, ComponentOrigin.PROJECT).build(),
+    )
+    .apply {
+      signatureKnown = true
+      this.parameters = parameters
+      code =
+        ComponentCode.Builder()
+          .apply {
+            this.call = call
+            this.imports = imports
+          }
+          .build()
+    }
+    .build()
+
+private fun parameter(name: String, type: String, typeFqn: String): TargetParameter =
+  TargetParameter.Builder(name, type).apply { this.typeFqn = typeFqn }.build()

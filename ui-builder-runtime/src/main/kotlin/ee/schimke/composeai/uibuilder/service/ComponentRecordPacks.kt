@@ -121,15 +121,18 @@ internal object ComponentRecordPacks {
    */
   fun aliasedRecord(packId: String, record: ComponentRecordFile): ComponentRecordFile {
     val taken = mutableSetOf<String>()
-    return record.copy(
-      components =
-        record.components.mapNotNull { component ->
-          if (exclusionReason(component) != null) return@mapNotNull null
-          val id = UiBuilderComponentPack.componentId(packId, component.symbol.name)
-          if (!taken.add(id)) return@mapNotNull null
-          component.copy(componentIds = listOf(id))
-        }
-    )
+    return record
+      .newBuilder()
+      .apply {
+        components =
+          record.components.mapNotNull { component ->
+            if (exclusionReason(component) != null) return@mapNotNull null
+            val id = UiBuilderComponentPack.componentId(packId, component.symbol.name)
+            if (!taken.add(id)) return@mapNotNull null
+            component.newBuilder().apply { componentIds = listOf(id) }.build()
+          }
+      }
+      .build()
   }
 
   /** `confetti-mobile` → `Confetti Mobile`. */

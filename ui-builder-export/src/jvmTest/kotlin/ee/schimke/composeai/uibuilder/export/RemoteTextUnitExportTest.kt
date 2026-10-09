@@ -1,9 +1,6 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentOrigin
-import ee.schimke.composeai.discovery.ComponentRecord
-import ee.schimke.composeai.discovery.ComponentSymbol
-import ee.schimke.composeai.discovery.TargetParameter
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -105,11 +102,11 @@ class RemoteTextUnitExportTest {
 
   /** `RemoteText`'s shape, as the published record states it. */
   private val record =
-    ComponentRecord(
+    testRecord(
       canonicalId = "catalog/text",
       componentIds = emptyList(),
       symbol =
-        ComponentSymbol(
+        testSymbol(
           jvmOwner = "example.RemoteTextKt",
           callable = "example.RemoteText",
           name = "RemoteText",
@@ -117,19 +114,18 @@ class RemoteTextUnitExportTest {
         ),
       parameters =
         listOf(
-          TargetParameter(
+          testParameter(
             name = "text",
             type = "RemoteString",
             typeFqn = "androidx.compose.remote.creation.compose.state.RemoteString",
           ),
-          TargetParameter(
+          testParameter(
             name = "fontSize",
             type = "RemoteTextUnit",
             typeFqn = "androidx.compose.remote.creation.compose.state.RemoteTextUnit",
             hasDefault = true,
           ),
         ),
-      slots = emptyList(),
       signatureKnown = true,
     )
 }

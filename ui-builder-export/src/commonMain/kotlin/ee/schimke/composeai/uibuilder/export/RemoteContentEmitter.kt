@@ -3013,7 +3013,9 @@ internal class RemoteContentEmitter(
         bound(authored, REMOTE_STRING_FQN, "nodes.${node.id}.text") {
           scopedArgument(
             node,
-            TargetParameter("text", "RemoteString", typeFqn = REMOTE_STRING_FQN),
+            TargetParameter.Builder("text", "RemoteString")
+              .apply { typeFqn = REMOTE_STRING_FQN }
+              .build(),
             it,
           )
         } ?: "\"\".rs"
@@ -3689,11 +3691,12 @@ internal class RemoteContentEmitter(
             .filter { (event, _) -> bound(event) }
             .map { (_, parameter) ->
               "$parameter = " +
-                (actionExpression(this, TargetParameter(parameter, "Action")) ?: return null)
+                (actionExpression(this, TargetParameter.Builder(parameter, "Action").build())
+                  ?: return null)
             }
         modifierCall("combinedClickable(${arguments.joinToString()})")
       } else if (modifierClick && bound("click")) {
-        actionExpression(this, TargetParameter("onClick", "Action"))?.let {
+        actionExpression(this, TargetParameter.Builder("onClick", "Action").build())?.let {
           modifierCall("clickable($it)")
         }
       } else null

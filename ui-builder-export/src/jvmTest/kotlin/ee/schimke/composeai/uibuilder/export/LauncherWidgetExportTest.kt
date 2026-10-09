@@ -1,9 +1,6 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentOrigin
-import ee.schimke.composeai.discovery.ComponentRecord
-import ee.schimke.composeai.discovery.ComponentSymbol
-import ee.schimke.composeai.discovery.TargetParameter
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -133,11 +130,11 @@ class LauncherWidgetExportTest {
   private val records =
     mapOf(
       "remote-widgets/widget-button" to
-        ComponentRecord(
+        testRecord(
           canonicalId = "widget-catalog/ee.schimke.remotewidgets.WidgetComponentsKt.WidgetButton",
           componentIds = listOf("remote-widgets/widget-button"),
           symbol =
-            ComponentSymbol(
+            testSymbol(
               jvmOwner = "ee.schimke.remotewidgets.WidgetComponentsKt",
               callable = "ee.schimke.remotewidgets.WidgetButton",
               name = "WidgetButton",
@@ -145,15 +142,14 @@ class LauncherWidgetExportTest {
             ),
           parameters =
             listOf(
-              TargetParameter(name = "text", type = "String", typeFqn = "kotlin.String"),
-              TargetParameter(
+              testParameter(name = "text", type = "String", typeFqn = "kotlin.String"),
+              testParameter(
                 name = "modifier",
                 type = "RemoteModifier",
                 typeFqn = "androidx.compose.remote.creation.compose.modifier.RemoteModifier",
                 hasDefault = true,
               ),
             ),
-          slots = emptyList(),
           signatureKnown = true,
         )
     )

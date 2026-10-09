@@ -190,7 +190,7 @@ private constructor(
       val claimed = record.components.flatMapTo(mutableSetOf()) { it.componentIds }
       val missing = RECORD.components.filter { it.componentIds.none(claimed::contains) }
       return if (missing.isEmpty()) record
-      else record.copy(components = record.components + missing)
+      else record.newBuilder().apply { components = record.components + missing }.build()
     }
   }
 }

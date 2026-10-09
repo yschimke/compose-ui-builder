@@ -35,10 +35,12 @@ object ProductionGenerationCli {
         val merged =
           decoded
             .first()
-            .copy(
-              components = decoded.flatMap { it.components },
-              builderOrphans = decoded.flatMap { it.builderOrphans },
-            )
+            .newBuilder()
+            .apply {
+              components = decoded.flatMap { it.components }
+              builderOrphans = decoded.flatMap { it.builderOrphans }
+            }
+            .build()
         val generated = ProductionComposeGenerator.generate(contract, merged, recordDigest(records))
         write(root, Path.of(args[2]), generated)
       }

@@ -1,9 +1,6 @@
 package ee.schimke.composeai.uibuilder.export
 
 import ee.schimke.composeai.discovery.ComponentOrigin
-import ee.schimke.composeai.discovery.ComponentRecord
-import ee.schimke.composeai.discovery.ComponentSymbol
-import ee.schimke.composeai.discovery.TargetParameter
 import java.io.File
 import kotlin.test.*
 import kotlinx.serialization.json.*
@@ -180,11 +177,11 @@ class RemoteStateSelectionExportTest {
           },
       )
     val record =
-      ComponentRecord(
+      testRecord(
         canonicalId = "catalog/control",
         componentIds = emptyList(),
         symbol =
-          ComponentSymbol(
+          testSymbol(
             jvmOwner = "example.ControlKt",
             callable = "example.Control",
             name = "Control",
@@ -192,35 +189,39 @@ class RemoteStateSelectionExportTest {
           ),
         parameters =
           listOf(
-            TargetParameter(
+            testParameter(
               name = "modifier",
               type = "RemoteModifier",
               typeFqn = "androidx.compose.remote.creation.compose.modifier.RemoteModifier",
               hasDefault = true,
             ),
-            TargetParameter(
+            testParameter(
               name = "enabled",
               type = "RemoteBoolean",
               typeFqn = "androidx.compose.remote.creation.compose.state.RemoteBoolean",
             ),
-            TargetParameter(
+            testParameter(
               name = "onClick",
               type = "Action",
               typeFqn = "androidx.compose.remote.creation.compose.action.Action",
             ),
           ),
-        slots = emptyList(),
         signatureKnown = true,
       )
     for (defaulted in listOf(false, true)) {
       val refusals = mutableListOf<String>()
       val withDefault =
-        record.copy(
-          parameters =
-            record.parameters.map { parameter ->
-              if (parameter.name == "onClick") parameter.copy(hasDefault = defaulted) else parameter
-            }
-        )
+        record
+          .newBuilder()
+          .apply {
+            parameters =
+              record.parameters.map { parameter ->
+                if (parameter.name == "onClick")
+                  parameter.newBuilder().apply { hasDefault = defaulted }.build()
+                else parameter
+              }
+          }
+          .build()
       val emitter =
         RemoteContentEmitter(
           base.copy(nodes = base.nodes + ("control" to control)),

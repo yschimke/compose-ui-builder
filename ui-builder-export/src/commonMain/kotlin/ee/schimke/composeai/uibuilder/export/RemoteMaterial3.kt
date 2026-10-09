@@ -367,7 +367,8 @@ public object RemoteMaterial3 {
       components
         .mapNotNull { component ->
           byCanonicalId[component.recordId]?.let {
-            component.componentId to it.copy(componentIds = listOf(component.componentId))
+            component.componentId to
+              it.newBuilder().apply { componentIds = listOf(component.componentId) }.build()
           }
         }
         .toMap()
@@ -473,7 +474,13 @@ private fun labelButtonRecord(embedded: List<ComponentRecord>): ComponentRecord?
       own["contentPadding"],
     )
   if (order.any { it == null }) return null
-  return button.copy(canonicalId = LABEL_BUTTON_RECORD_ID, parameters = order.filterNotNull())
+  return button
+    .newBuilder()
+    .apply {
+      canonicalId = LABEL_BUTTON_RECORD_ID
+      parameters = order.filterNotNull()
+    }
+    .build()
 }
 
 /**

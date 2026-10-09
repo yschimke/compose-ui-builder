@@ -1,8 +1,6 @@
 package ee.schimke.composeai.uibuilder
 
 import ee.schimke.composeai.discovery.ComponentOrigin
-import ee.schimke.composeai.discovery.ComponentRecord
-import ee.schimke.composeai.discovery.ComponentSymbol
 import ee.schimke.composeai.discovery.TargetParameter
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
@@ -41,7 +39,7 @@ class RemoteContentRecordFallbackTest {
     hasDefault: Boolean = false,
     composableSlot: Boolean = false,
   ) =
-    TargetParameter(
+    targetParameter(
       name = name,
       type = type,
       typeFqn = typeFqn,
@@ -50,11 +48,11 @@ class RemoteContentRecordFallbackTest {
     )
 
   private fun record(name: String, vararg parameters: TargetParameter) =
-    ComponentRecord(
+    componentRecord(
       canonicalId = "remote-catalog/androidx.wear.compose.remote.material3.${name}Kt.$name",
       componentIds = emptyList(),
       symbol =
-        ComponentSymbol(
+        componentSymbol(
           jvmOwner = "androidx.wear.compose.remote.material3.${name}Kt",
           callable = "androidx.wear.compose.remote.material3.$name",
           name = name,
