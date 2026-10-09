@@ -51,6 +51,14 @@ class CanvasTimeTest {
   }
 
   @Test
+  fun `animation time moves within the second`() {
+    assertEquals(
+      ClockReads.CONTINUOUS,
+      document(node("a", properties = arrayOf("xDp" to system("time.animation")))).clockReads(),
+    )
+  }
+
+  @Test
   fun `a time text reads the clock with no time value of its own`() {
     assertEquals(ClockReads.WHOLE_SECONDS, document(node("t", UiTimeText.ID)).clockReads())
   }

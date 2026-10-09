@@ -155,6 +155,7 @@ System values follow the player's `RemoteClock`:
 | `time.dayOfWeek` | 1 (Monday) – 7 |
 | `time.dayOfMonth` | 1–31 |
 | `time.utcOffset` | seconds |
+| `time.animation` | seconds since the player started the document; 0 in a frozen preview |
 
 ### Formula text
 
@@ -168,7 +169,8 @@ only ever stores the tree, so MCP and hand-written fixtures use the same shape t
 
 - **Canvas.** `CanvasRenderTree` evaluates every computed property and modifier field before an
   adapter sees the node, at the preview state, the row or placement arguments in scope, and the
-  design's `environment.fixedTime` (Wear's 10:10:30 when unset). Adapters draw a literal and never
+  design's `environment.fixedTime` (Wear's 10:10:30 when unset), or the wall clock where a preview
+  lets time run (`environment.animations` = `running`). Adapters draw a literal and never
   learn there was an expression. A runtime that plays expressions itself passes
   `evaluateExpressions = false`.
 - **Remote Kotlin.** `RemoteContentEmitter` lowers the tree to the operators the player evaluates —

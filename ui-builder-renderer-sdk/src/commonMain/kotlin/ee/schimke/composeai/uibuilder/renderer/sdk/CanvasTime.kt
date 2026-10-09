@@ -50,27 +50,37 @@ fun UiBuilderDocument.withTimeRunning(running: Boolean): UiBuilderDocument {
  *
  * Live only when the document lets time run and something in it reads the clock: a design with no
  * `time.*` value never recomposes for one. Whole-second values only change once a second, so a
- * design that reads no `time.continuousSecond` recomposes once a second rather than every frame.
+ * design that reads neither `time.continuousSecond` nor `time.animation` recomposes once a second
+ * rather than every frame. `time.animation` counts from the moment time started running, as the
+ * player's counts from the moment it started the document.
  */
 @Composable
 internal fun rememberLiveCanvasClock(document: UiBuilderDocument): UiExpressions.Clock? {
   val reads = remember(document.nodes) { document.clockReads() }
   if (!document.timeRuns || reads == ClockReads.NONE) return null
   val continuous = reads == ClockReads.CONTINUOUS
-  var clock by remember(continuous) { mutableStateOf(wallClock(continuous)) }
-  LaunchedEffect(continuous) { while (true) withFrameMillis { clock = wallClock(continuous) } }
+  val start = remember { Clock.System.now().toEpochMilliseconds() }
+  var clock by remember(continuous) { mutableStateOf(wallClock(start, continuous)) }
+  LaunchedEffect(continuous) {
+    while (true) withFrameMillis { clock = wallClock(start, continuous) }
+  }
   return clock
 }
 
-private fun wallClock(continuous: Boolean): UiExpressions.Clock {
+private fun wallClock(start: Long, continuous: Boolean): UiExpressions.Clock {
   val now = Clock.System.now().toEpochMilliseconds()
-  val clock = UiExpressions.Clock.at(now, localUtcOffsetSeconds(now))
+  val clock =
+    UiExpressions.Clock.at(now, localUtcOffsetSeconds(now))
+      .copy(animationSeconds = (now - start) / 1000.0)
   // Equal from frame to frame within a second, so the state write is a no-op until it ticks.
-  return if (continuous) clock else clock.copy(millisecond = 0)
+  return if (continuous) clock else clock.copy(millisecond = 0, animationSeconds = 0.0)
 }
 
 /** The local zone's offset from UTC at [epochMillis], in seconds. */
 internal expect fun localUtcOffsetSeconds(epochMillis: Long): Int
+
+/** The clock values that move within a second, and so ask for a frame every frame. */
+private val CONTINUOUS_READS = setOf("time.continuousSecond", "time.animation")
 
 internal enum class ClockReads {
   NONE,
@@ -87,7 +97,7 @@ internal fun UiBuilderDocument.clockReads(): ClockReads {
           val id = (element["value"] as? JsonPrimitive)?.contentOrNull.orEmpty()
           if (id.startsWith("time.")) {
             reads =
-              if (id == "time.continuousSecond") ClockReads.CONTINUOUS
+              if (id in CONTINUOUS_READS) ClockReads.CONTINUOUS
               else maxOf(reads, ClockReads.WHOLE_SECONDS)
           }
         }

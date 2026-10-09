@@ -49,6 +49,9 @@ object UiExpressions {
     val label: String,
     /** The Remote Kotlin that reads it. */
     val remote: String,
+    /** What [remote] needs imported. */
+    val imports: List<String> =
+      listOf("androidx.compose.remote.creation.compose.layout.RemoteTime"),
   )
 
   /**
@@ -94,6 +97,19 @@ object UiExpressions {
           UiValueKind.FLOAT,
           "Offset from UTC in seconds",
           "RemoteTime().UtcOffset()",
+        ),
+        // Not the wall clock: seconds since the player started this document, so a motion
+        // written over it starts from its beginning wherever and whenever the document is shown.
+        SystemValue(
+          "time.animation",
+          UiValueKind.FLOAT,
+          "Seconds since the document started playing",
+          "RemoteFloat(RemoteContext.FLOAT_ANIMATION_TIME)",
+          imports =
+            listOf(
+              "androidx.compose.remote.creation.compose.state.RemoteFloat",
+              "androidx.compose.remote.core.RemoteContext",
+            ),
         ),
       )
       .associateBy { it.id }
@@ -467,6 +483,8 @@ object UiExpressions {
     val utcOffsetSeconds: Int = 0,
     val year: Int = 2024,
     val month: Int = 5,
+    /** `time.animation`: 0 at a fixed time, the seconds a live preview has been running. */
+    val animationSeconds: Double = 0.0,
   ) {
     /** The instant these local fields name, for a host that hands a player a frozen clock. */
     val epochMillis: Long
@@ -488,6 +506,7 @@ object UiExpressions {
         "time.dayOfWeek" -> dayOfWeek.toDouble()
         "time.dayOfMonth" -> dayOfMonth.toDouble()
         "time.utcOffset" -> utcOffsetSeconds.toDouble()
+        "time.animation" -> animationSeconds
         else -> 0.0
       }
 

@@ -82,6 +82,13 @@ class UiExpressionsTest {
   }
 
   @Test
+  fun `animation time is zero at a fixed time and what a live clock says otherwise`() {
+    assertEquals(0.0, evaluate("time.animation"))
+    val running = UiExpressions.Clock.DEFAULT.copy(animationSeconds = 2.5)
+    assertEquals(225.0, evaluate("time.animation * 90", clock = running))
+  }
+
+  @Test
   fun `a live clock is the local time at an instant`() {
     // 2024-05-16T12:34:56.789Z, read two hours ahead of UTC.
     val clock = UiExpressions.Clock.at(1_715_862_896_789L, utcOffsetSeconds = 7200)
