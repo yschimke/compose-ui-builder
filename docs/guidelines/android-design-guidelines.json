@@ -1,7 +1,7 @@
 {
   "schema": "compose-ui-builder/design-guidelines/v1",
-  "version": 6,
-  "about": "Design rules a model checks a UI-builder design against. Each rule quotes the guidance it comes from and links its source on developer.android.com (or the Android Knowledge Base for agent skills). `check` is a yes/no question where YES means the design follows the rule. `kind` is `structure` when the design tree is enough evidence, `visual` when it needs a picture of the design. Candidates are extracted with scripts/guidelines/extract-guidance.mjs and reviewed by a person before they are added here. Visual rules say which picture to judge: the device picture (the first frame on the watch) or the unrolled picture (the whole scrolling content, scrolled to the end so a revealed edge button shows). `surfaces` (optional) narrows a rule to `screen` or `widget` designs on its platform; a rule without it applies to every surface.",
+  "version": 7,
+  "about": "Design rules a model checks a UI-builder design against. Each rule quotes the guidance it comes from and links its source: a page on developer.android.com or m3.material.io, the Android Knowledge Base for agent skills, a component set in the Wear OS Material 3 Figma kit, or the androidx source whose KDoc it quotes. `check` is a yes/no question where YES means the design follows the rule. `kind` is `structure` when the design tree is enough evidence, `visual` when it needs a picture of the design. Candidates are extracted with scripts/guidelines/extract-guidance.mjs and reviewed by a person before they are added here. Visual rules say which picture to judge: the device picture (the first frame on the watch) or the unrolled picture (the whole scrolling content, scrolled to the end so a revealed edge button shows). `surfaces` (optional) narrows a rule to `screen` or `widget` designs on its platform; a rule without it applies to every surface.",
   "rules": [
     {
       "id": "wear.layout.time-text-clear",
@@ -99,9 +99,9 @@
       ],
       "kind": "structure",
       "severity": "warning",
-      "guidance": "Reserves at least 48.dp in size to disambiguate touch interactions if the element would measure smaller. Smaller visual sizes, such as compact and extra-small buttons, are padded out to a 48dp touch target.",
+      "guidance": "Reserves at least 48.dp in size to disambiguate touch interactions if the element would measure smaller. This uses the Material recommended minimum size of 48.dp x 48.dp.",
       "check": "Is the tap area of every tappable control at least 48dp in each direction? Count the padding Wear adds to compact and extra-small buttons and icon buttons (their tap area is 48dp even when they draw smaller); flag only controls given a fixed size or height that leaves the tap area under 48dp.",
-      "source": "https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary"
+      "source": "https://github.com/androidx/androidx/blob/androidx-main/wear/compose/compose-material3/src/main/java/androidx/wear/compose/material3/InteractiveComponentSize.kt"
     },
     {
       "id": "wear.color.role-pairs",
@@ -936,6 +936,355 @@
       "guidance": "Images are displayed at a proper resolution and are not stretched or cropped.",
       "check": "In the tablet picture, are images shown at their natural aspect ratio, not stretched, distorted or cropped to a thin strip by a container that grew wider than on the phone? Answer not_applicable when the design has no images.",
       "source": "https://developer.android.com/docs/quality-guidelines/adaptive-app-quality/tier-2"
+    },
+    {
+      "id": "wear.color.black-background",
+      "platforms": [
+        "wear"
+      ],
+      "surfaces": [
+        "screen"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "Build from black. Watches are designed with a black background, instead of the tinted background that phones use.",
+      "check": "Is the screen's background left black (the theme's default background), rather than filled with a tinted, coloured or bright surface behind the content? Containers such as buttons and cards may use their own colours. Answer not_applicable for widgets, whose background the widget container paints.",
+      "source": "https://m3.material.io/foundations/watches/styles"
+    },
+    {
+      "id": "wear.color.no-dim-on-primary",
+      "platforms": [
+        "wear"
+      ],
+      "surfaces": [
+        "screen",
+        "widget"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "Buttons with (2) on primary on (1) primary and (4) on primary container on (3) primary container stay legible as the contrast level changes. Buttons with (2) primary dim on (1) primary or (4) primary dim on (3) primary container become illegible as contrast levels shift.",
+      "check": "Where a button or card sets its container and content colours, is content on a primary container coloured onPrimary, and content on a primaryContainer coloured onPrimaryContainer, never primaryDim or primaryContainer? Answer not_applicable when the design names no colour roles.",
+      "source": "https://m3.material.io/foundations/watches/styles"
+    },
+    {
+      "id": "wear.layout.important-first",
+      "platforms": [
+        "wear"
+      ],
+      "surfaces": [
+        "screen"
+      ],
+      "kind": "visual",
+      "severity": "info",
+      "guidance": "Prioritize content. Place the most important information at the top of the screen.",
+      "check": "Judge this on the device picture (the first frame, as the wearer first sees it). Is the screen's most important information (its title, the key value or the main control) at the top of that frame, rather than below secondary content or off the first frame?",
+      "source": "https://m3.material.io/foundations/watches/layout"
+    },
+    {
+      "id": "wear.screen.focused-task",
+      "platforms": [
+        "wear"
+      ],
+      "surfaces": [
+        "screen"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "Focus on one or two tasks at a time rather than a full app experience. Don't create complex and detailed apps such as a calendar grid.",
+      "check": "Does the screen serve one or two tasks with a few actions, rather than packing a dense grid, table or many unrelated controls onto the watch? A scrolling list of similar choices (a menu or settings list) is fine.",
+      "source": "https://m3.material.io/foundations/watches/foundations"
+    },
+    {
+      "id": "wear.button.label-lines",
+      "platforms": [
+        "wear"
+      ],
+      "surfaces": [
+        "screen"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "Button: Primary label (1-3 lines); Secondary label (1-2 lines). (Text properties of the Button component set in the Wear OS Material 3 Design Kit.)",
+      "check": "Does each wear-m3/button keep its label to 3 lines or fewer and its secondaryLabel to 2 lines or fewer at the device width? Answer not_applicable when there are no buttons.",
+      "source": "https://www.figma.com/design/B24oss2tTeXAFykyeyusz0/?node-id=35239-93088"
+    },
+    {
+      "id": "wear.card.title-lines",
+      "platforms": [
+        "wear"
+      ],
+      "surfaces": [
+        "screen"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "Card: Title text (1-2 lines). (A text property of the Card component set in the Wear OS Material 3 Design Kit.)",
+      "check": "Does each wear-m3/card keep its title to 2 lines or fewer at the device width? The body's budget is wear.card.text-budget's. Answer not_applicable when there are no cards.",
+      "source": "https://www.figma.com/design/B24oss2tTeXAFykyeyusz0/?node-id=38437-5746"
+    },
+    {
+      "id": "mobile.button.filled-sparingly",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "The filled button style has the most visual impact after the FAB, and should be used for important, final actions that complete a flow, like Save, Join now, or Confirm. Since they have such strong emphasis, the filled style should be used sparingly, ideally for only one action on a page.",
+      "check": "Is at most one action on the screen a filled button (m3/button with style=filled, or Button), with the other buttons tonal, outlined or text? Answer not_applicable when there are fewer than two buttons.",
+      "source": "https://m3.material.io/components/buttons/guidelines"
+    },
+    {
+      "id": "mobile.button.label-brief",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "Label text is the most important element of a button. It should be very brief, ideally 1–3 words. Don’t truncate or wrap label text. It should always be fully visible on a single line.",
+      "check": "Is every button label (m3/button and its tonal, outlined, elevated and text forms) a few words that fit on one line, with no wrapping or ellipsis? Answer not_applicable when there are no labelled buttons.",
+      "source": "https://m3.material.io/components/buttons/guidelines"
+    },
+    {
+      "id": "mobile.fab.one-per-screen",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "Don't display multiple FABs on a single screen. Individual components, such as cards, shouldn't have their own FAB.",
+      "check": "Is there at most one FAB (m3/button with style=fab, or a floating or extended floating action button) on the screen, placed on the screen or in the navigation rail rather than inside a card, list item or other container? Answer not_applicable when there is no FAB.",
+      "source": "https://m3.material.io/components/floating-action-button/guidelines"
+    },
+    {
+      "id": "mobile.fab.primary-positive",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "Use FABs for primary, positive actions. Don’t use FABs for minor, overflow, unclear, or destructive actions. Use clear and simple icons such as add, message, or edit.",
+      "check": "Does the FAB perform the screen's primary, constructive action (create, compose, add, edit), with a clear icon, rather than a minor, overflow or destructive action such as delete or settings? Answer not_applicable when there is no FAB.",
+      "source": "https://m3.material.io/components/floating-action-button/guidelines"
+    },
+    {
+      "id": "mobile.extended-fab.label",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "The extended FAB’s label should clearly describe its action. Use 1–2 words at most. An extended FAB can't have an icon without a text label.",
+      "check": "Does every extended floating action button carry a text label of one or two words? Answer not_applicable when there is no extended FAB.",
+      "source": "https://m3.material.io/components/extended-fab/guidelines"
+    },
+    {
+      "id": "mobile.navigation-bar.destinations",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "Avoid putting more than five navigation items in a navigation bar. Don’t remove the labels from navigation items. Don’t use a navigation bar for fewer than three destinations. Instead, use tabs. All navigation items require a label text. It should be 1-2 words.",
+      "check": "If the screen has a navigation bar, or a navigation-suite-scaffold that shows its items as a bar on the phone, does it hold three to five items, each with an icon and a label of one or two words? Answer not_applicable when there is no top-level navigation.",
+      "source": "https://m3.material.io/components/navigation-bar/guidelines"
+    },
+    {
+      "id": "mobile.navigation-rail.destinations",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "The collapsed nav rail runs along the leading edge of the window, and should contain 3–7 navigation items. Labels should be short enough to not be truncated.",
+      "check": "If the screen has a navigation rail, or a navigation-suite-scaffold that shows its items as a rail on the tablet, does it hold three to seven items with short labels? Answer not_applicable when there is no top-level navigation.",
+      "source": "https://m3.material.io/components/navigation-rail/guidelines"
+    },
+    {
+      "id": "mobile.navigation.one-active",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "One navigation destination is always active. Don’t use the active indicator for more than one destination at a time.",
+      "check": "Among the items of each navigation bar, rail or navigation-suite-scaffold, is exactly one selected? Answer not_applicable when there is no top-level navigation.",
+      "source": "https://m3.material.io/components/navigation-bar/guidelines"
+    },
+    {
+      "id": "mobile.navigation.single-element",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "A navigation rail should be the only visible navigation element. Never use the navigation rail and navigation bar simultaneously.",
+      "check": "Does the screen show one top-level navigation element, never a navigation bar together with a navigation rail? Answer not_applicable when there is no top-level navigation.",
+      "source": "https://m3.material.io/components/navigation-rail/guidelines"
+    },
+    {
+      "id": "mobile.toolbar.not-with-navigation-bar",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "The toolbar and navigation bar are both placed at the bottom of the window, so should not be shown at the same time. Show the navigation bar on primary pages, and toolbars on subsequent pages with actions.",
+      "check": "Is no bottom or docked toolbar shown on the same screen as a navigation bar? Answer not_applicable when the screen has no toolbar or no navigation bar.",
+      "source": "https://m3.material.io/components/toolbars/guidelines"
+    },
+    {
+      "id": "mobile.app-bar.actions",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "App bars should only have one action, two if necessary. Up to two icon buttons can be placed after the headline, aligned to the trailing edge of the app bar. Don’t put multiple filled or tonal buttons in the app bar.",
+      "check": "Does each top app bar carry at most two trailing actions, with at most one of them filled or tonal? Answer not_applicable when there is no top app bar, or for a search app bar, which may also show an avatar.",
+      "source": "https://m3.material.io/components/app-bars/guidelines"
+    },
+    {
+      "id": "mobile.toolbar.one-emphasis",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "Visually emphasizing a single action more than others is an effective way to create hierarchy and guide people to controls they use most often. Avoid emphasizing more than one action at a time. Don’t use square filled icon buttons in floating toolbars.",
+      "check": "In each toolbar (horizontal or vertical floating toolbar), is at most one control emphasised (filled, or a FAB beside it), with the rest standard icon buttons? Answer not_applicable when there is no toolbar.",
+      "source": "https://m3.material.io/components/toolbars/guidelines"
+    },
+    {
+      "id": "mobile.dialog.two-actions",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "Dialogs should contain a maximum of two actions. If a single action is provided, it must be an acknowledgement action. If two actions are provided, one must be a confirming action, and the other a dismissing action. The confirmation button is always closest to the edge.",
+      "check": "If the design shows a dialog (m3/dialog or an alert dialog), does it offer at most two actions, a confirming one at the trailing end and a dismissing one before it (or a single acknowledgement)? Answer not_applicable when there is no dialog, or for a full-screen dialog.",
+      "source": "https://m3.material.io/components/dialogs/guidelines"
+    },
+    {
+      "id": "mobile.dialog.clear-title",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "A dialog’s purpose should be communicated by its headline and buttons or actionable items. Avoid apologies (“Sorry for the interruption”), alarm (“Warning!”), or ambiguity (“Are you sure?”). This dialog title poses a specific question, concisely explains what’s involved in the request, and provides clear actions.",
+      "check": "If the design shows a dialog, does its title say specifically what is being decided, and does its confirming button name the action (Delete, Send, Create) rather than OK, Done or Yes? A single acknowledgement button may say OK. Answer not_applicable when there is no dialog.",
+      "source": "https://m3.material.io/components/dialogs/guidelines"
+    },
+    {
+      "id": "mobile.snackbar.plain",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "Only one snackbar may be displayed at a time. Avoid adding icons to snackbars. Snackbars can display a single text button that lets users take action on a process performed by the app. Don’t use a filled or elevated button in a snackbar, as it draws too much attention. On mobile, the text label can be up to two lines long.",
+      "check": "If the design shows a snackbar, is it the only one, with a message of two lines or fewer, no icon, and at most one text-style action? Answer not_applicable when there is no snackbar.",
+      "source": "https://m3.material.io/components/snackbar/guidelines"
+    },
+    {
+      "id": "mobile.chips.in-sets",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "Don’t display a single chip by itself. Chips should appear in a set. Avoid replacing major actions with chips. Actions that progress people to the next or previous step should always be displayed as buttons. Chip label text should be 20 characters or fewer.",
+      "check": "Do chips (filter, assist, input and suggestion chips) appear in sets of two or more, with labels of 20 characters or fewer, and is no step-completing action (Next, Submit, Save) a chip instead of a button? Answer not_applicable when there are no chips.",
+      "source": "https://m3.material.io/components/chips/guidelines"
+    },
+    {
+      "id": "mobile.tabs.few-and-consistent",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "Avoid using more than four tabs at once. At five or more tabs, the container becomes cramped. Don’t use tabs with both icons and text labels on only some tabs, but not others. Secondary tabs should always be placed below primary tabs.",
+      "check": "Does each fixed tab row (primary or secondary tab row) hold four tabs or fewer, do all its tabs use the same kind of label (all text, all icons, or all both), and is any secondary tab row below a primary one? Scrollable tab rows may hold more. Answer not_applicable when there are no tabs.",
+      "source": "https://m3.material.io/components/tabs/guidelines"
+    },
+    {
+      "id": "mobile.cards.no-inner-scroll",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "Don’t scroll within a card to reveal information. Cards shouldn’t contain content that can be swiped, such as an image carousel or pagination. On a mobile device, cards can't internally scroll, as it could cause two scroll bars to be displayed.",
+      "check": "Is every card free of scrolling or swipeable content inside it (a lazy list, a scrolling column, a carousel or a pager)? Answer not_applicable when there are no cards.",
+      "source": "https://m3.material.io/components/cards/guidelines"
+    },
+    {
+      "id": "mobile.color.container-not-for-content",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "Container – Roles used as a fill color for foreground elements like buttons. They should not be used for text or icons. Don’t use the outline color for dividers since they have different contrast requirements. Instead, use outline variant.",
+      "check": "Is no *Container colour role (primaryContainer, secondaryContainer, tertiaryContainer, errorContainer) used as a text colour, icon tint or contentColor, and do dividers use outlineVariant rather than outline? Answer not_applicable when the design names no colour roles.",
+      "source": "https://m3.material.io/styles/color/roles"
+    },
+    {
+      "id": "mobile.color.role-pairs",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "To ensure accessible visual contrast in your app, apply colors only in the intended pairs or layering orders described in the following sections. Improper color mappings can produce unintended visual results and break accessibility.",
+      "check": "Where the design overrides a container or background colour, is its content given the matching on- role (onPrimary on primary, onSecondaryContainer on secondaryContainer, onSurface on a surface) or a colour of clearly high contrast? Answer not_applicable when the design overrides no colours.",
+      "source": "https://m3.material.io/styles/color/roles"
+    },
+    {
+      "id": "mobile.progress.one-for-a-group",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "When multiple items are loading, use a single progress indicator to show progress for the group. Don’t add progress indicators to every activity. Avoid applying progress indicators to every button in a list.",
+      "check": "Does the screen show one progress or loading indicator for content that is loading together, rather than one on every item, card or button? Answer not_applicable when there are no progress or loading indicators.",
+      "source": "https://m3.material.io/components/progress-indicators/guidelines"
+    },
+    {
+      "id": "mobile.text-field.labelled",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "warning",
+      "guidance": "Every text field should have a label. Label text shouldn’t take up multiple lines. When using both variants of text fields, don't use both next to each other or within the same form.",
+      "check": "Does every text field have a short, one-line label, and does each form use one text field style (all filled or all outlined)? A search bar's placeholder counts as its label. Answer not_applicable when there are no text fields.",
+      "source": "https://m3.material.io/components/text-fields/guidelines"
+    },
+    {
+      "id": "mobile.button-group.uniform",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "structure",
+      "severity": "info",
+      "guidance": "By default, all buttons in a standard group should be the same size (XS to XL) and shape (round or square). Avoid mixing color styles in connected button groups. Button groups should move through layouts together in a single line. They shouldn’t wrap to a second line.",
+      "check": "Do the buttons in each button group or segmented button row share one size and shape, with a connected group using one colour style, and does the group sit on a single line? Answer not_applicable when there are no button groups.",
+      "source": "https://m3.material.io/components/button-groups/guidelines"
+    },
+    {
+      "id": "mobile.carousel.compact-items",
+      "platforms": [
+        "mobile"
+      ],
+      "kind": "visual",
+      "severity": "info",
+      "guidance": "At compact breakpoints, only show up to three carousel items if they have text. Avoid exceeding two lines of text in carousel items at compact breakpoints unless the background is simple, like a single color.",
+      "check": "In the phone picture, does each carousel show at most three items when they carry text, with no more than two lines of text on any item? Answer not_applicable when there is no carousel.",
+      "source": "https://m3.material.io/components/carousel/guidelines"
     }
   ]
 }

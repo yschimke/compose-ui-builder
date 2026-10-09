@@ -68,7 +68,7 @@ earlier revision. The shape is `compose-ui-builder/guidelines-result/v1` (`Desig
 | `severity` | `warning` or `info`. |
 | `guidance` | The guidance as written at `source`. |
 | `check` | A yes/no question; YES means the design follows the rule. |
-| `source` | The page on developer.android.com, or a `kb://` Android Knowledge Base article. |
+| `source` | Where `guidance` is quoted from: a page on developer.android.com or m3.material.io, a `kb://` Android Knowledge Base article, a component set in the Wear OS Material 3 Figma kit, or the androidx source whose KDoc it quotes. |
 
 ### The pictures each design is shown in
 
@@ -99,8 +99,9 @@ node scripts/guidelines/extract-guidance.mjs --out /tmp/candidates.json
 ```
 
 The script lists every normative sentence ("must", "should", "don't", "avoid", "at least", …) in
-the Wear OS, AI glasses and mobile design guides, and the Wear Compose agent skill, with the page
-each came from. Today that is about 440 sentences from about 160 pages.
+the Wear OS, AI glasses and mobile design guides, the Wear Compose agent skill, the Compose
+Material 3 component and design-system pages, and the Wear Compose and Wear widget training, with
+the page each came from. Today that is about 500 sentences from about 210 pages.
 
 Candidates are raw material, not rules. Pick the ones a model can judge from one screen, then for
 each:
@@ -112,5 +113,24 @@ each:
   200% font scale are measured by compose-preview-server's `a11y` check, which is more reliable
   than a model's estimate.
 
-The Material 3 component guidelines on m3.material.io are not in the Knowledge Base, and neither
-are the Figma kits' usage annotations.
+### Sources outside the Knowledge Base
+
+These need a browser and the Figma MCP, so they are harvested by hand rather than by the script.
+
+- **m3.material.io.** The `guidelines` tab of each component page (for example
+  `https://m3.material.io/components/buttons/guidelines`) holds the Material 3 Expressive guidance
+  for phones and tablets, much of it as Do / Don't captions; the `mobile` rules quote it. The site
+  is a single-page app, so read each page in a browser after it renders. For watches it has only
+  the four `foundations/watches/` pages (overview, foundations, styles, layout); the Wear component
+  guidance is on developer.android.com and in the Wear Compose Material 3 KDoc.
+- **androidx KDoc.** Rules that quote a Wear Compose Material 3 component's KDoc cite the
+  reference page or the source file on `androidx-main`. Check a quote against the source before it
+  ships: the CMP port's sources jar has drifted from upstream before.
+- **The Wear OS Material 3 Figma kit** (`B24oss2tTeXAFykyeyusz0`), read-only. Its usage pages have
+  their text outlined, and the read-only MCP tools do not return component descriptions, so the
+  guidance that survives is in the component sets' text property names, such as
+  `Primary label (1-3 lines)`. A rule built on one cites the set:
+  `https://www.figma.com/design/B24oss2tTeXAFykyeyusz0/?node-id=35239-93088`.
+- **The Glimmer Figma kit** (`HKfLClZDLRyMhf4IQQLna8`) has live text, but each component section
+  only summarises the component and links its page under
+  `developer.android.com/design/ui/ai-glasses/guides/`, which the script already reads.

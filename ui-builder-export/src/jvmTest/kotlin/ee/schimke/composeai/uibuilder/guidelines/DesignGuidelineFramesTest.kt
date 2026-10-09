@@ -110,7 +110,11 @@ class DesignGuidelineFramesTest {
     assertTrue("wear.widgets.focused" in widget && "wear.widgets.focused" !in screen)
     assertTrue("wear.edge-button.in-slot" in screen && "wear.edge-button.in-slot" !in widget)
     assertTrue("wear.touch-target-48dp" in widget && "wear.touch-target-48dp" in screen)
-    assertTrue(widget.size < 20 && screen.size < 30, "widget ${widget.size}, screen ${screen.size}")
+    val wear = DesignGuidelineRuleSet.Bundled.forPlatform("wear").size
+    assertTrue(
+      widget.size < wear && screen.size < wear,
+      "widget ${widget.size}, screen ${screen.size} of $wear",
+    )
   }
 
   private fun document(
