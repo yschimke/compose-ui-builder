@@ -338,6 +338,57 @@ class DesignGuidelinesTest {
     )
   }
 
+  @Test
+  fun `an account the server allows checks on the server's key, with no key asked for`(): Unit =
+    runBlocking {
+      val host = FakeHost(key = null)
+      host.access =
+        DesignGuidelineHost.ServerCheckAccess(true, "deepseek/deepseek-v4.1-flash", null)
+      host.serverOutcome =
+        DesignGuidelineHost.ServerCheckOutcome.Recorded(
+          DesignGuidelineRecord(
+            revision = 3,
+            model = "deepseek/deepseek-v4.1-flash",
+            rulesVersion = 6,
+            asked = listOf("wear.layout.responsive-width"),
+            verdicts =
+              DesignGuidelinePrompt.parseVerdicts(
+                """{"verdicts":[{"ruleId":"wear.layout.responsive-width","verdict":"fail",""" +
+                  """"confidence":0.9,"nodeIds":["stop"],"reason":"Fixed width."}]}"""
+              ),
+            ranBy = "github:yschimke",
+            servedModel = "deepseek/deepseek-v4.1-flash",
+          )
+        )
+      val controller = DesignGuidelineController(host)
+      assertIs<DesignGuidelineState.NeedsKey>(controller.state.value)
+
+      controller.loadAccess()
+      val ready = assertIs<DesignGuidelineState.Ready>(controller.state.value)
+      assertTrue(ready.onServer)
+      controller.check(wearDocument(), DesignGuidelineController.encode(wearDocument()))
+
+      val result = assertIs<DesignGuidelineState.Ready>(controller.state.value).result!!
+      assertEquals(listOf("wear.layout.responsive-width"), result.findings.map { it.rule.id })
+      assertEquals("github:yschimke", result.ranBy)
+      assertNull(host.lastKey, "no OpenRouter key was used in this browser")
+
+      controller.useOwnKey()
+      assertIs<DesignGuidelineState.NeedsKey>(controller.state.value)
+      controller.useServer()
+      assertTrue(assertIs<DesignGuidelineState.Ready>(controller.state.value).onServer)
+    }
+
+  @Test
+  fun `an account the server does not allow is asked for its own key`(): Unit = runBlocking {
+    val host = FakeHost(key = null)
+    host.access = DesignGuidelineHost.ServerCheckAccess(false, null, "not enabled for this account")
+    val controller = DesignGuidelineController(host)
+    controller.loadAccess()
+    assertIs<DesignGuidelineState.NeedsKey>(controller.state.value)
+    assertFalse(controller.canUseServer)
+  }
+
   private class FakeHost(key: String?) : DesignGuidelineHost {
     private var key: String? = key
     private var model: String? = null
@@ -379,6 +430,14 @@ class DesignGuidelinesTest {
     override suspend fun hostedRequest(document: UiBuilderDocument) = hosted
 
     override suspend fun sharedResult() = recorded
+
+    var access: DesignGuidelineHost.ServerCheckAccess? = null
+    var serverOutcome: DesignGuidelineHost.ServerCheckOutcome =
+      DesignGuidelineHost.ServerCheckOutcome.Refused("none")
+
+    override suspend fun serverAccess() = access
+
+    override suspend fun runServerCheck(document: UiBuilderDocument) = serverOutcome
 
     override suspend fun recordResult(record: DesignGuidelineRecord): DesignGuidelineRecord {
       recorded = record.copy(ranBy = "github:someone", recordedAtEpochMillis = 1L)

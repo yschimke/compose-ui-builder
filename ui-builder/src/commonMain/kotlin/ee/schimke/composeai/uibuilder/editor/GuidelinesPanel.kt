@@ -66,16 +66,28 @@ internal fun GuidelinesSection(
     Text("Design guidelines", style = MaterialTheme.typography.labelLarge)
     val prompt by controller.prompt.collectAsState()
     val shared by controller.shared.collectAsState()
-    LaunchedEffect(controller, document.id) { controller.loadShared() }
+    LaunchedEffect(controller, document.id) {
+      controller.loadAccess()
+      controller.loadShared()
+    }
     var local: DesignGuidelineResult? = null
     when (val current = state) {
-      is DesignGuidelineState.NeedsKey ->
+      is DesignGuidelineState.NeedsKey -> {
+        if (controller.canUseServer) {
+          TextButton(onClick = controller::useServer) { Text("Use this server's key") }
+        }
         KeySetup(controller, current.notice, onTextInputFocusChanged)
+      }
       is DesignGuidelineState.Ready -> {
         local = current.result
         Text(
-          "Checks this design against the Android design guides with ${current.model}, on your " +
-            "OpenRouter key. Findings are advice; they never block an export.",
+          if (current.onServer)
+            "Checks this design against its catalog's design guidelines with ${current.model}, " +
+              "on this server's OpenRouter key, which your account may use. Findings are " +
+              "advice; they never block an export."
+          else
+            "Checks this design against the Android design guides with ${current.model}, on " +
+              "your OpenRouter key. Findings are advice; they never block an export.",
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           style = MaterialTheme.typography.bodySmall,
         )
@@ -93,11 +105,18 @@ internal fun GuidelinesSection(
           ) {
             Text(if (current.running) "Checking…" else "Check guidelines")
           }
-          TextButton(onClick = { settingsOpen = !settingsOpen }) {
-            Text(if (settingsOpen) "Done" else "Model & key")
+          if (current.onServer) {
+            TextButton(onClick = controller::useOwnKey) { Text("Use my own key") }
+          } else {
+            if (controller.canUseServer) {
+              TextButton(onClick = controller::useServer) { Text("Use this server's key") }
+            }
+            TextButton(onClick = { settingsOpen = !settingsOpen }) {
+              Text(if (settingsOpen) "Done" else "Model & key")
+            }
           }
         }
-        if (settingsOpen) {
+        if (settingsOpen && !current.onServer) {
           ModelSettings(controller, current.model, onTextInputFocusChanged)
         }
         current.notice?.let {
