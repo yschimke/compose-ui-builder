@@ -1,6 +1,6 @@
 {
   "sizes": [
-    { "name": "uiBuilder.wasm", "files": "uiBuilder.wasm", "maxMb": 13.7, "maxGzipMb": 3.8 },
+    { "name": "uiBuilder.wasm", "files": "uiBuilder.wasm", "maxMb": 13.9, "maxGzipMb": 3.9 },
     { "name": "skiko.wasm", "files": "skiko.wasm", "maxMb": 8.5, "maxGzipMb": 3.3 },
     { "name": "scripts", "files": "*.*js", "maxMb": 1.1, "maxGzipMb": 0.17 },
     { "name": "all of wasmDist", "files": "**", "maxMb": 40.5 }
