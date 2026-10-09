@@ -3963,6 +3963,13 @@
                 },
                 {
                     "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "backgroundColor",
+                    "notes": "`RemoteHorizontalPageIndicator`'s `backgroundColor: RemoteColor`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
                     "jsonType": "integer",
                     "name": "pageCount",
                     "notes": "How many pages there are; 4 when absent.",
@@ -4056,6 +4063,13 @@
                     "jsonType": "string",
                     "name": "unselectedColor",
                     "notes": "`RemoteVerticalPageIndicator`'s `unselectedColor: RemoteColor`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "backgroundColor",
+                    "notes": "`RemoteVerticalPageIndicator`'s `backgroundColor: RemoteColor`.",
                     "required": false
                 },
                 {
@@ -5191,13 +5205,6 @@
                     ],
                     "name": "enabled",
                     "notes": "`RemoteOutlinedCard`'s `enabled: RemoteBoolean`.",
-                    "required": false
-                },
-                {
-                    "allowedValues": [],
-                    "jsonType": "string",
-                    "name": "borderColor",
-                    "notes": "`RemoteOutlinedCard`'s `borderColor: RemoteColor`.",
                     "required": false
                 }
             ],
