@@ -211,6 +211,34 @@ class CatalogCutoverReadinessTest {
    * The gap ledger. Each line is work in the named catalog repository, not here; see
    * `UI_BUILDER_CATALOG_CUTOVER.md` § The gap ledger for the fix each one wants.
    */
+  /**
+   * A published `remote-compose` component that states no `modifiers` offers the Remote-only ones
+   * its synthesised twin does. The structural default is a Compose list, so a toggle in an owned
+   * remote-m3 offered no `sharedElement` or `animateEnterExit`, and could not animate a switch
+   * between states. A catalog's own list is still taken at its word: the widget containers state
+   * none.
+   */
+  @Test
+  fun `a published remote-compose component offers the remote-only modifiers`() {
+    val catalog =
+      CatalogCutoverFixtures.executor(listOf("remote-m3"), CatalogOwnership.ALL)
+        .listCatalogs()
+        .single()
+    val byId = catalog.components.associateBy { it.componentId }
+
+    val toggle = byId.getValue("remote-m3/remote-switch-button").modifierCapabilities
+    assertEquals(
+      REMOTE_ONLY_MODIFIERS.toSet(),
+      toggle.filter { it in REMOTE_ONLY_MODIFIERS }.toSet(),
+      "a published switch button offers every Remote-only modifier: $toggle",
+    )
+    assertEquals(
+      emptyList(),
+      byId.getValue("remote-m3/widget-container-small").modifierCapabilities,
+      "a stated empty list stays empty",
+    )
+  }
+
   @Test
   fun `the gap ledger is exactly what each catalog still has to publish`() {
     assertEquals(

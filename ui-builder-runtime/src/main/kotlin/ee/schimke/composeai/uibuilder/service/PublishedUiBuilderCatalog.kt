@@ -554,9 +554,8 @@ public object PublishedUiBuilderCatalog {
         it.slots = slots
         it.properties = properties
         it.modifierCapabilities =
-          (policy?.modifierCapabilities ?: structuralModifiers(slots.isNotEmpty())).writableOn(
-            platform
-          )
+          (policy?.modifierCapabilities ?: structuralModifiers(slots.isNotEmpty(), platform))
+            .writableOn(platform)
         it.code =
           CodeCapabilityV1.Builder(component.symbol.callable)
             .also {
@@ -586,8 +585,25 @@ public object PublishedUiBuilderCatalog {
    * rather than inert. A catalog replacing a synthesised shelf states `modifiers` and does not
    * reach this.
    */
-  private fun structuralModifiers(container: Boolean): List<String> =
-    ComponentRecordPacks.structuralModifiers(container)
+  private fun structuralModifiers(container: Boolean, platform: String): List<String> =
+    ComponentRecordPacks.structuralModifiers(container) + platformOnlyModifiers(platform)
+
+  /**
+   * The modifiers a platform's emitter writes that no Compose default could name, offered by
+   * default on that platform the way [writableModifiers] narrows it.
+   *
+   * The structural default is a Compose list, so a published `remote-compose` component that states
+   * no `modifiers` lost every Remote-only one its synthesised twin offers — `sharedElement`,
+   * `animateEnterExit`, `remoteCall`, `collapsiblePriority` — and a catalog-owned remote-m3 could
+   * not animate a switch between states at all. Which modifiers an emitter writes is the server's
+   * fact about its own emitters, so it is added here rather than asked of every catalog; a catalog
+   * that states its own list is taken at its word.
+   */
+  private fun platformOnlyModifiers(platform: String): List<String> =
+    when (UiBuilderCatalogPlatform.fromWord(platform)) {
+      UiBuilderCatalogPlatform.REMOTE_COMPOSE -> REMOTE_ONLY_MODIFIERS
+      else -> emptyList()
+    }
 
   /**
    * The shelf role of a builtin: `Scaffold`, `Container` or `Leaf`.
@@ -676,7 +692,8 @@ public object PublishedUiBuilderCatalog {
           }
         it.properties = builtin.properties.orEmpty().map { it.toCapability() }
         it.modifierCapabilities =
-          (builtin.modifierCapabilities ?: structuralModifiers(builtin.slots.isNotEmpty()))
+          (builtin.modifierCapabilities
+              ?: structuralModifiers(builtin.slots.isNotEmpty(), platform))
             .writableOn(platform)
         it.code =
           implementation?.let { record ->
