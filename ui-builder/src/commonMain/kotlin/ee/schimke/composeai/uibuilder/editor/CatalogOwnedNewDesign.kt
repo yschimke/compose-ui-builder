@@ -50,8 +50,15 @@ fun catalogOwnedNewDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesi
     templates =
       ids
         .withIndex()
-        // Stable: an entry the catalog gives no order keeps its place after those it does.
-        .sortedBy { (index, id) -> cards[id]?.int("order") ?: (Int.MAX_VALUE - ids.size + index) }
+        // Every ordered entry before every unordered one, then by its order, then where the
+        // catalog listed it: no order value, however large, can sort after an entry with none.
+        .sortedWith(
+          compareBy(
+            { cards[it.value]?.int("order") == null },
+            { cards[it.value]?.int("order") ?: 0 },
+            { it.index },
+          )
+        )
         .map { (_, id) ->
           val card = cards[id]
           UiBuilderNewDesignTemplate(
@@ -104,7 +111,13 @@ fun newDesignCatalogs(
     val order = catalogs.associate { it.benchmark.catalogSystemId to it.newDesignOrder() }
     return cards
       .withIndex()
-      .sortedWith(compareBy({ order[it.value.systemId] ?: Int.MAX_VALUE }, { it.index }))
+      .sortedWith(
+        compareBy(
+          { order[it.value.systemId] == null },
+          { order[it.value.systemId] ?: 0 },
+          { it.index },
+        )
+      )
       .map { it.value }
   }
   if (ownership.isNone) return cards.sortedBy { builtInOrder.indexOf(it.systemId) }
