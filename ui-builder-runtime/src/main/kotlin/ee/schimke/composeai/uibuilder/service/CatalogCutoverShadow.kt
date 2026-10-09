@@ -13,7 +13,10 @@ import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * What would change for one catalog if it were catalog-owned, measured against what it publishes
@@ -59,6 +62,7 @@ public object CatalogCutoverShadow {
       owned.second.synthesisedCatalog(catalogId)?.let {
         servedCatalog(catalogId, emptyMap(), owned = false).first
       }
+    val differences = kotlin?.let { catalogDifferenceDetails(it, owned.first) }
     return Report(
       catalogId = catalogId,
       findings =
@@ -71,19 +75,42 @@ public object CatalogCutoverShadow {
           exportRecord,
           nativeRuntimeId,
         ),
-      differences = kotlin?.let { catalogDifferences(it, owned.first) },
+      differences = differences?.map { it.text },
+      losses = differences?.filter { it.loss }?.map { it.text },
     )
   }
 
-  /** [report]'s answer: clean when [findings] is empty, and [differences] empty or null. */
+  /**
+   * [report]'s answer. [ready] when there are no [findings] AND no [losses]: owning the catalog
+   * must neither refuse something it serves now nor take away something an editor can do today. A
+   * difference that only adds — a component, trait, modifier or property the published catalog has
+   * and the Kotlin one does not, or a constraint it relaxes — does not block it.
+   *
+   * [losses] is the subset of [differences] that takes something away; null exactly when
+   * [differences] is.
+   */
   public class Report
   internal constructor(
     public val catalogId: String,
     public val findings: List<String>,
     public val differences: List<String>?,
+    public val losses: List<String>? = differences?.let { emptyList() },
   ) {
     public val ready: Boolean
-      get() = findings.isEmpty()
+      get() = findings.isEmpty() && losses.isNullOrEmpty()
+  }
+
+  /**
+   * One line of [catalogDifferences], with whether it takes something away from an editor.
+   *
+   * A loss is: a component only the Kotlin catalog has; a changed role; a trait, modifier, property
+   * or slot (or a slot's accepted role or trait) the published catalog drops; a property type that
+   * drops an alternative (`["boolean","object"] -> "boolean"` loses binding to state); a property
+   * that becomes required; allowed values that narrow; a slot cardinality that narrows. A line that
+   * both loses and gains is a loss.
+   */
+  public class Difference internal constructor(public val text: String, public val loss: Boolean) {
+    override fun toString(): String = (if (loss) "loss: " else "") + text
   }
 
   private fun servedCatalog(
@@ -226,20 +253,30 @@ public object CatalogCutoverShadow {
   public fun catalogDifferences(
     synthesised: CatalogCapabilityV1,
     published: CatalogCapabilityV1,
-  ): List<String> {
+  ): List<String> = catalogDifferenceDetails(synthesised, published).map { it.text }
+
+  /** [catalogDifferences], each line classified as a [Difference.loss] or not. */
+  public fun catalogDifferenceDetails(
+    synthesised: CatalogCapabilityV1,
+    published: CatalogCapabilityV1,
+  ): List<Difference> {
     val id = published.benchmark.catalogSystemId
     val kotlin = synthesised.components.associateBy { it.componentId }
     val owned = published.components.associateBy { it.componentId }
     // A catalog's own ids already carry its prefix (`wear-m3/button`); the builder's do not
     // (`layout/column`), and those are the ones that need it to say which catalog lost them.
-    fun line(componentId: String, finding: String): String =
-      if (componentId.startsWith("$id/")) "$componentId: $finding" else "$id/$componentId: $finding"
+    fun line(componentId: String, finding: Finding): Difference =
+      Difference(
+        if (componentId.startsWith("$id/")) "$componentId: ${finding.text}"
+        else "$id/$componentId: ${finding.text}",
+        finding.loss,
+      )
     return buildList {
       (kotlin.keys - owned.keys).sorted().forEach {
-        add(line(it, "only the Kotlin catalog has it"))
+        add(line(it, Finding("only the Kotlin catalog has it", loss = true)))
       }
       (owned.keys - kotlin.keys).sorted().forEach {
-        add(line(it, "only the published catalog has it"))
+        add(line(it, Finding("only the published catalog has it", loss = false)))
       }
       (kotlin.keys intersect owned.keys).sorted().forEach { componentId ->
         componentDifferences(kotlin.getValue(componentId), owned.getValue(componentId)).forEach {
@@ -249,6 +286,9 @@ public object CatalogCutoverShadow {
     }
   }
 
+  /** A component-level difference before it is addressed to its component. */
+  private class Finding(val text: String, val loss: Boolean)
+
   private fun noPlatform(catalogId: String): String =
     "$catalogId: its published file declares no platform (statusSemantics.platform), which an " +
       "owned catalog cannot borrow from the Kotlin one"
@@ -256,8 +296,12 @@ public object CatalogCutoverShadow {
   private fun componentDifferences(
     kotlin: ComponentCapabilityV1,
     published: ComponentCapabilityV1,
-  ): List<String> = buildList {
-    if (kotlin.role != published.role) add("role ${kotlin.role} -> ${published.role}")
+  ): List<Finding> = buildList {
+    // A role decides where the component may be placed and what may be placed in it, so a changed
+    // one can strand designs either way: counted as a loss rather than guessed at.
+    if (kotlin.role != published.role) {
+      add(Finding("role ${kotlin.role} -> ${published.role}", loss = true))
+    }
     differ("traits", kotlin.traits.toSet(), published.traits.toSet())?.let(::add)
     differ(
         "modifiers",
@@ -271,10 +315,29 @@ public object CatalogCutoverShadow {
     (kotlinProperties.keys intersect publishedProperties.keys).sorted().forEach { name ->
       val a = kotlinProperties.getValue(name)
       val b = publishedProperties.getValue(name)
-      if (a.jsonType != b.jsonType) add("property $name type ${a.jsonType} -> ${b.jsonType}")
-      if (a.required != b.required) add("property $name required ${a.required} -> ${b.required}")
+      if (a.jsonType != b.jsonType) {
+        add(
+          Finding(
+            "property $name type ${a.jsonType} -> ${b.jsonType}",
+            loss = !jsonTypes(b.jsonType).containsAll(jsonTypes(a.jsonType)),
+          )
+        )
+      }
+      if (a.required != b.required) {
+        add(Finding("property $name required ${a.required} -> ${b.required}", loss = b.required))
+      }
       if (a.allowedValues.toSet() != b.allowedValues.toSet()) {
-        add("property $name allowed values ${a.allowedValues} -> ${b.allowedValues}")
+        // An empty list allows anything, so narrowing to any list is a loss and widening to none
+        // is not.
+        val narrows =
+          b.allowedValues.isNotEmpty() &&
+            (a.allowedValues.isEmpty() || !b.allowedValues.containsAll(a.allowedValues))
+        add(
+          Finding(
+            "property $name allowed values ${a.allowedValues} -> ${b.allowedValues}",
+            loss = narrows,
+          )
+        )
       }
     }
     val kotlinSlots = kotlin.slots.associateBy { it.name }
@@ -284,9 +347,17 @@ public object CatalogCutoverShadow {
       val a = kotlinSlots.getValue(name)
       val b = publishedSlots.getValue(name)
       if (a.cardinality.min != b.cardinality.min || a.cardinality.max != b.cardinality.max) {
+        // A null max is unbounded.
+        val narrows =
+          b.cardinality.min > a.cardinality.min ||
+            (b.cardinality.max != null &&
+              (a.cardinality.max == null || b.cardinality.max!! < a.cardinality.max!!))
         add(
-          "slot $name cardinality ${a.cardinality.min}..${a.cardinality.max} -> " +
-            "${b.cardinality.min}..${b.cardinality.max}"
+          Finding(
+            "slot $name cardinality ${a.cardinality.min}..${a.cardinality.max} -> " +
+              "${b.cardinality.min}..${b.cardinality.max}",
+            loss = narrows,
+          )
         )
       }
       differ("slot $name accepted roles", a.acceptedRoles.toSet(), b.acceptedRoles.toSet())
@@ -296,14 +367,25 @@ public object CatalogCutoverShadow {
     }
   }
 
-  private fun differ(what: String, kotlin: Set<String>, published: Set<String>): String? {
+  /** A property's JSON type as the set of alternatives it admits: `"x"` or `["x","y"]`. */
+  private fun jsonTypes(type: JsonElement?): Set<String> =
+    when (type) {
+      is JsonPrimitive -> setOf(type.content)
+      is JsonArray -> type.mapNotNull { (it as? JsonPrimitive)?.content }.toSet()
+      else -> emptySet()
+    }
+
+  private fun differ(what: String, kotlin: Set<String>, published: Set<String>): Finding? {
     val lost = (kotlin - published).sorted()
     val gained = (published - kotlin).sorted()
     if (lost.isEmpty() && gained.isEmpty()) return null
-    return buildList {
-        if (lost.isNotEmpty()) add("loses ${lost.joinToString()}")
-        if (gained.isNotEmpty()) add("gains ${gained.joinToString()}")
-      }
-      .joinToString("; ", prefix = "$what: ")
+    return Finding(
+      buildList {
+          if (lost.isNotEmpty()) add("loses ${lost.joinToString()}")
+          if (gained.isNotEmpty()) add("gains ${gained.joinToString()}")
+        }
+        .joinToString("; ", prefix = "$what: "),
+      loss = lost.isNotEmpty(),
+    )
   }
 }

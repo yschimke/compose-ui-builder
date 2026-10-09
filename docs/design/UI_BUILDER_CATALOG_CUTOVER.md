@@ -172,11 +172,25 @@ the same measurement.
 nothing served:
 
 - **`findings`**: would serving the catalog owned work? Seeds it publishes, that they validate,
-  its declared export route, and that every seed exports through it. Empty means ready.
+  its declared export route, and that every seed exports through it.
 - **`differences`**: what would an editor see change if the Kotlin catalog were deleted? The Kotlin
   catalog as this build serves it, against the published one as served owned (both with the
   builder vocabulary added, so that is never reported as lost), component by component: role,
-  traits, properties and slots. Null for a catalog nothing here synthesises.
+  traits, modifiers, properties and slots. Null for a catalog nothing here synthesises.
+- **`losses`**: the differences that take something away. That covers:
+  - a component only the Kotlin catalog has;
+  - a changed role;
+  - a dropped trait, modifier, property, slot, or a slot's accepted role or trait;
+  - a property type that drops an alternative (`["boolean","object"] -> "boolean"` is the loss of
+    binding it to state);
+  - a property that becomes required;
+  - allowed values or a slot cardinality that narrow.
+
+  Additions and relaxations are not losses.
+
+**Ready means no findings and no losses.** Until 2026-10 it meant no findings alone, and
+preview.coo.ee reported `remote-m3` "ready to own" while owning it would have dropped
+`RemoteAuthorable`, `remoteCall` and state-bound `enabled` from about 25 components.
 
 On compose-preview-server it is a per-catalog `"shadow": true` beside `"owned"` in `catalogs.json`'s
 `uiBuilder` block: the box keeps serving what `owned` says, logs the report at startup and serves it
