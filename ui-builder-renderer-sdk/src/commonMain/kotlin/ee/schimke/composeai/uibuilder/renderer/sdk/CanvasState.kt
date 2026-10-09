@@ -1,6 +1,8 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
+import ee.schimke.composeai.uibuilder.export.UiExpressions
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -32,15 +34,23 @@ fun reconcileCanvasState(
   }
 }
 
-/** The state write one protocol action performs, or null when it performs none. */
+/**
+ * The state write one protocol action performs, or null when it performs none.
+ *
+ * A value or amount may be a formula (`expr`/`system`), evaluated against [state] as it stands when
+ * the action runs — after the writes before it — and [clock]. That needs [scope], the document's
+ * state kinds; without one a formula writes nothing, as a value the canvas cannot read always has.
+ */
 fun canvasStateWrite(
   action: JsonObject,
   state: Map<String, String?>,
+  scope: UiExpressions.Scope? = null,
+  clock: UiExpressions.Clock = UiExpressions.Clock.DEFAULT,
 ): Pair<String, String?>? {
   val variable =
     (action["variable"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull ?: return null
   val kind = (action["type"] as? JsonPrimitive)?.contentOrNull
-  val operand = action["value"]
+  val operand = action["value"]?.let { evaluated(it, state, scope, clock) ?: return null }
   if (
     kind in setOf("set", "select", "setText", "selectOrClear") &&
       operand != null &&
@@ -54,8 +64,31 @@ fun canvasStateWrite(
     "set" -> variable to value
     "selectOrClear" -> variable to if (state[variable] == value) null else value
     "toggle" -> variable to (state[variable]?.toBooleanStrictOrNull() != true).toString()
-    "increment" -> canvasIncrement(state[variable], action["amount"])?.let { variable to it }
+    "increment" -> {
+      val amount = action["amount"]?.let { evaluated(it, state, scope, clock) ?: return null }
+      canvasIncrement(state[variable], amount)?.let { variable to it }
+    }
     else -> null
+  }
+}
+
+/**
+ * [value] itself, or the literal a formula evaluates to now; null when a formula cannot be read.
+ */
+private fun evaluated(
+  value: JsonElement,
+  state: Map<String, String?>,
+  scope: UiExpressions.Scope?,
+  clock: UiExpressions.Clock,
+): JsonElement? {
+  if (!UiExpressions.isComputed(value)) return value
+  val checked = UiExpressions.check(value, scope ?: return null) as? UiExpressions.Checked.Ok
+  val expr = checked?.expr ?: return null
+  val result = UiExpressions.evaluate(expr, UiExpressions.Environment(state = state, clock = clock))
+  return when (result) {
+    is Boolean -> JsonPrimitive(result)
+    is Number -> JsonPrimitive(result)
+    else -> JsonPrimitive(result.toString())
   }
 }
 

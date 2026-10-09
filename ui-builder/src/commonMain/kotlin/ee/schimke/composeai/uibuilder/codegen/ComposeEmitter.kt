@@ -16,6 +16,7 @@ import ee.schimke.composeai.uibuilder.export.ThemeTypefaces
 import ee.schimke.composeai.uibuilder.export.TwoWayStateBinding
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiExpressions
 import ee.schimke.composeai.uibuilder.export.canonicalJson
 import ee.schimke.composeai.uibuilder.export.cardContentFill
 import ee.schimke.composeai.uibuilder.export.description
@@ -1582,6 +1583,7 @@ private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String
           // only author: a document from another client could carry `set expanded "yes"` against
           // a `Boolean`, and this emitted `expanded = "yes"` — source nobody can compile, with no
           // diagnostic, because export validation does not read `stateVariables`.
+          action["value"]?.let(UiExpressions::isComputed) == true -> computedActionTodo(name)
           !declaredType.holds(action["value"]) ->
             "TODO(\"${name.orEmpty().escape()} is $declaredType and cannot hold $value\")"
           else -> "$variable = $value"
@@ -1612,6 +1614,7 @@ private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String
         val bare = declaredType?.removeSuffix("?")?.takeIf { it == "Int" || it == "Double" }
         when {
           variable == null || bare == null -> "TODO(\"increment needs a number state variable\")"
+          UiExpressions.isComputed(amount) -> computedActionTodo(name)
           !bare.holds(amount) ->
             "TODO(\"${name.orEmpty().escape()} is $declaredType and cannot add ${amount.kotlinLiteral()}\")"
           declaredType?.endsWith("?") == true ->
@@ -1623,6 +1626,11 @@ private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String
     }
   }
 }
+
+/** A formula an action writes is computed by the Remote Compose player; this lane has none. */
+private fun computedActionTodo(name: String?): String =
+  "TODO(\"${name.orEmpty().escape()} is written by a formula, which only the Remote Compose " +
+    "export computes\")"
 
 private fun UiBuilderNode.buttonSymbol(): String =
   when (string("style")) {

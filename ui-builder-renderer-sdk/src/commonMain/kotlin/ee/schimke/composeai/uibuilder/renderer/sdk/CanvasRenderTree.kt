@@ -35,6 +35,9 @@ class CanvasRenderTree(
         (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull
       )
 
+  /** The document's state kinds, which a formula is typed against. */
+  internal val scope: UiExpressions.Scope by lazy { UiExpressions.Scope.of(document) }
+
   private val expressions: CanvasExpressions? =
     if (evaluateExpressions) CanvasExpressions.of(document, clock) else null
 
@@ -121,6 +124,10 @@ internal constructor(
   internal val ancestors: Set<String>,
   val bindingArguments: JsonObject,
 ) {
+  /** The document's state kinds, for typing a formula an action of this node writes. */
+  val expressionScope: UiExpressions.Scope
+    get() = tree.scope
+
   /** The time the render this node belongs to reads; see [CanvasRenderTree.clock]. */
   val clock: UiExpressions.Clock
     get() = tree.clock

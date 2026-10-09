@@ -193,7 +193,24 @@ only ever stores the tree, so MCP and hand-written fixtures use the same shape t
   number, a Boolean into a flag, anything printable into text, a colour only into a colour.
 - **Inspector.** On a Remote Compose catalog every property one of the probe expressions is accepted
   on offers **Formula**; a computed property shows its formula, editable, with **Clear** to return
-  to a literal. Offered only once `UiExpressions.wireSupported` — see the contracts note below.
+  to a literal. Offered only when `UiExpressions.wireSupported`: the linked contracts (3.20.0 and
+  later) can carry the value.
+
+### Actions that write a formula
+
+An action's value — `set`, `select`, `setText` — or an `increment`'s amount may be a formula, so a
+click can move state on from wherever it is: `x = x + 40`, `label = concat(count, " taps")`,
+`count += count`. In the inspector a value starting with `=` is a formula (`= x + 40`); without it
+the text is a literal, as before.
+
+- **Validation.** The tree must type against the document's state and produce what the variable
+  holds — a number into a number (an Int into a Float, not back), a flag into a flag, anything
+  printable into text. `selectOrClear` keeps a literal: its value is compared as well as written.
+- **Canvas.** Evaluated when the action runs, over the state as earlier actions in the same event
+  left it, at the canvas clock.
+- **Remote Kotlin.** `valueChange(x, (x + 40.rf))`: the player computes it on the watch when the
+  click lands. An increment is `valueChange(x, (x + amount))`.
+- **Compose and JSON.** Refused with a located `TODO`, as computed values are there.
 
 ### Not yet
 
@@ -201,12 +218,6 @@ only ever stores the tree, so MCP and hand-written fixtures use the same shape t
   which needs a typed loop lowering for it.
 - Named host inputs (`rememberNamedRemote*`).
 - The regular Compose and JSON lanes refuse computed values with a located message.
-- **The published contracts.** `UiValueV1` in `compose-preview-contracts` is closed and has no
-  `expr`/`system` subtype, so a design holding one cannot be written as a `.uid` file or committed
-  through a server until the contracts add `ExpressionValueV1` and `SystemValueV1`. The canvas and
-  the exports read them today, and the inspector offers them the moment the linked contracts can
-  decode one (`UiExpressions.wireSupported` asks the serializer). `sharedElement` and
-  `collapsiblePriority` are in the same position for modifiers.
 
 ## Drawing
 

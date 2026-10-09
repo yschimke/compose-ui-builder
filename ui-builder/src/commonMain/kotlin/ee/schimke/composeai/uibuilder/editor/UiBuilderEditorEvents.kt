@@ -14,6 +14,7 @@ import ee.schimke.composeai.uibuilder.reference.ReferenceMarkupKind
 import ee.schimke.composeai.uibuilder.reference.ReferenceOverlaySettings
 import ee.schimke.composeai.uibuilder.reference.ReferenceTool
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -606,8 +607,27 @@ internal fun typedStateValue(raw: String, declaration: JsonObject?): JsonPrimiti
     StateKind.STRING -> JsonPrimitive(raw)
   }
 
-internal fun EditorStateAction.encoded(declaration: JsonObject?): JsonObject {
-  fun typed(raw: String): JsonPrimitive = typedStateValue(raw, declaration)
+/**
+ * The formula an author wrote for this action's value or amount, without its leading `=` — the
+ * spreadsheet convention, so `= x + 40` is a formula and `x + 40` is text — or null for a literal.
+ */
+internal fun EditorStateAction.formulaText(): String? =
+  when (this) {
+      is EditorStateAction.Set -> value
+      is EditorStateAction.Increment -> amount
+      else -> null
+    }
+    ?.trim()
+    ?.takeIf { it.startsWith("=") }
+    ?.drop(1)
+    ?.trim()
+
+/** [this] as its protocol action; [formula], when given, is written as the value or amount. */
+internal fun EditorStateAction.encoded(
+  declaration: JsonObject?,
+  formula: JsonObject? = null,
+): JsonObject {
+  fun typed(raw: String): JsonElement = formula ?: typedStateValue(raw, declaration)
   return when (this) {
     is EditorStateAction.Navigate ->
       JsonObject(

@@ -8,6 +8,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiExpressions
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -44,7 +45,9 @@ fun CanvasRenderNode.prepare(
   onSemanticAction: (String, UiBuilderSemanticActionEntry) -> Unit,
 ): PreparedCanvasNode {
   val enabled = node.canvasBoolean("enabled", true)
-  val dispatch = { event: String -> dispatchCanvasEvent(node, event, state, onState, onNavigate) }
+  val dispatch = { event: String ->
+    dispatchCanvasEvent(node, event, state, onState, onNavigate, expressionScope, clock)
+  }
   val activate = { dispatch("click") }
   if (node.eventBindings["click"] != null) {
     onSemanticAction(
@@ -83,6 +86,9 @@ fun dispatchCanvasEvent(
   state: Map<String, String?>,
   onState: (String, String?) -> Unit,
   onNavigate: (String) -> Unit,
+  /** The document's state kinds, which a formula-valued action is typed against. */
+  scope: UiExpressions.Scope? = null,
+  clock: UiExpressions.Clock = UiExpressions.Clock.DEFAULT,
 ) {
   val actions = node.eventBindings[event] as? JsonArray ?: return
   val working = state.toMutableMap()
@@ -95,7 +101,7 @@ fun dispatchCanvasEvent(
         ?.takeIf(String::isNotBlank)
         ?.let(onNavigate)
     } else {
-      canvasStateWrite(action, working)?.also { (name, value) ->
+      canvasStateWrite(action, working, scope, clock)?.also { (name, value) ->
         working[name] = value
         onState(name, value)
       }

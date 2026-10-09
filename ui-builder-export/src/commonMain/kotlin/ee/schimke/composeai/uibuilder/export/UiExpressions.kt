@@ -234,12 +234,11 @@ object UiExpressions {
   /**
    * Whether the published wire contract linked into this build can carry a computed value.
    *
-   * `UiValueV1` in compose-preview-contracts is a closed hierarchy, and until it has `expr` and
-   * `system` subtypes a design holding one cannot be written as a `.uid` file or committed through
-   * a server. The canvas and every export read computed values regardless; what waits on this is
-   * offering them in the inspector, so an author is never handed a value their save then refuses.
-   * Asked of the serializer itself, so the day the contracts add the types this turns true with no
-   * change here.
+   * `UiValueV1` in compose-preview-contracts has carried `expr` and `system` since 3.20.0
+   * (compose-preview-contracts#141); before that a design holding one could not be written as a
+   * `.uid` file or committed through a server. The inspector offers computed values only when this
+   * is true, so an author is never handed a value their save then refuses. Asked of the serializer
+   * itself rather than of a version number.
    */
   val wireSupported: Boolean by lazy {
     runCatching {
