@@ -23,14 +23,6 @@ import kotlinx.serialization.json.Json
  */
 class LauncherWidgetExportTest {
 
-  @kotlin.test.BeforeTest
-  fun requireExperimentalBuild() {
-    org.junit.Assume.assumeTrue(
-      "Enable with -PuiBuilderRemoteCompose=true",
-      UiBuilderBuildFeatures.remoteCompose,
-    )
-  }
-
   private val json = Json { ignoreUnknownKeys = true }
 
   private fun counter(): UiBuilderDocument =

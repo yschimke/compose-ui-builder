@@ -71,10 +71,6 @@ class LauncherAdaptiveLayoutTest {
 
   @Test
   fun `it exports as a call to the catalog's AdaptiveLayout, one named slot per breakpoint`() {
-    org.junit.Assume.assumeTrue(
-      "Enable with -PuiBuilderRemoteCompose=true",
-      UiBuilderBuildFeatures.remoteCompose,
-    )
     val json = Json { ignoreUnknownKeys = true }
     val document = json.decodeFromString(UiBuilderDocument.serializer(), ADAPTIVE_WIDGET)
     val records =

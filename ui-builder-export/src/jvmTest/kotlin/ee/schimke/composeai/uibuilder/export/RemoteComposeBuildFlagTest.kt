@@ -46,10 +46,15 @@ class RemoteComposeBuildFlagTest {
   }
 
   @Test
-  fun `ordinary Remote source is opt in even with an explicitly supplied platform`() {
+  fun `Remote source is written in every build, and a disabled build names what it withholds`() {
     val result = RecordFreeExport.generate(document, UiBuilderCatalogPlatform.REMOTE_COMPOSE)
     if (UiBuilderBuildFeatures.remoteCompose) assertIs<RecordFreeExport.Generated.Emitted>(result)
-    else assertNull(result)
+    else
+      assertTrue(
+        assertIs<RecordFreeExport.Generated.Refused>(result).reasons.any {
+          "disabled in this build" in it
+        }
+      )
   }
 
   @Test

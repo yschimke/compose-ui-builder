@@ -19,14 +19,6 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class LauncherWidgetTemplatesTest {
 
-  @kotlin.test.BeforeTest
-  fun requireExperimentalBuild() {
-    org.junit.Assume.assumeTrue(
-      "Enable with -PuiBuilderRemoteCompose=true",
-      UiBuilderBuildFeatures.remoteCompose,
-    )
-  }
-
   private val pin =
     JsonObject(
       mapOf(

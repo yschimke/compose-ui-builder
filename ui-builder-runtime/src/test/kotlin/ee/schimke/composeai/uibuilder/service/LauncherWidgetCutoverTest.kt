@@ -4,7 +4,6 @@ import ee.schimke.composeai.uibuilder.export.CatalogExportRouting
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetTemplates
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
-import ee.schimke.composeai.uibuilder.export.UiBuilderBuildFeatures
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
@@ -126,10 +125,6 @@ class LauncherWidgetCutoverTest {
 
   @Test
   fun `its published seed exports as a launcher widget at the catalog's own size`() {
-    org.junit.jupiter.api.Assumptions.assumeTrue(
-      UiBuilderBuildFeatures.remoteCompose,
-      "needs -PuiBuilderRemoteCompose=true",
-    )
     val catalog = declared()
     val generated =
       RecordFreeExport.generate(
@@ -151,10 +146,6 @@ class LauncherWidgetCutoverTest {
    */
   @Test
   fun `a renamed root still exports when the catalog declares the route`() {
-    org.junit.jupiter.api.Assumptions.assumeTrue(
-      UiBuilderBuildFeatures.remoteCompose,
-      "needs -PuiBuilderRemoteCompose=true",
-    )
     val renamed =
       json.decodeFromString(
         UiBuilderDocument.serializer(),
@@ -197,10 +188,6 @@ class LauncherWidgetCutoverTest {
 
   @Test
   fun `a declared route refuses a root the catalog does not mark as a launcher widget`() {
-    org.junit.jupiter.api.Assumptions.assumeTrue(
-      UiBuilderBuildFeatures.remoteCompose,
-      "needs -PuiBuilderRemoteCompose=true",
-    )
     val buttonRooted =
       json.decodeFromString(
         UiBuilderDocument.serializer(),
