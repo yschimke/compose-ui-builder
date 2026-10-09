@@ -495,20 +495,22 @@ class WearScreenCodeExporterTest {
           id = "confetti-wear/section-header",
           parameters =
             listOf(
-              TargetParameter(name = "text", type = "String", typeFqn = "kotlin.String"),
-              TargetParameter(
-                name = "modifier",
-                type = "Modifier",
-                typeFqn = WearScreenCodeExporter.MODIFIER_FQN,
-                hasDefault = true,
-              ),
-              TargetParameter(
-                name = "transformation",
-                type = "SurfaceTransformation?",
-                typeFqn = WearScreenCodeExporter.SURFACE_TRANSFORMATION_FQN,
-                hasDefault = true,
-                nullable = true,
-              ),
+              TargetParameter.Builder(name = "text", type = "String")
+                .also { b -> b.typeFqn = "kotlin.String" }
+                .build(),
+              TargetParameter.Builder(name = "modifier", type = "Modifier")
+                .also { b ->
+                  b.typeFqn = WearScreenCodeExporter.MODIFIER_FQN
+                  b.hasDefault = true
+                }
+                .build(),
+              TargetParameter.Builder(name = "transformation", type = "SurfaceTransformation?")
+                .also { b ->
+                  b.typeFqn = WearScreenCodeExporter.SURFACE_TRANSFORMATION_FQN
+                  b.hasDefault = true
+                  b.nullable = true
+                }
+                .build(),
             ),
           call = "SectionHeader(text = \"\")",
         ),
@@ -517,34 +519,38 @@ class WearScreenCodeExporterTest {
           id = "confetti-wear/session-group",
           parameters =
             listOf(
-              TargetParameter(name = "onClick", type = "() -> Unit"),
-              TargetParameter(
-                name = "label",
-                type = "String",
-                typeFqn = "kotlin.String",
-                hasDefault = true,
-              ),
-              TargetParameter(name = "expanded", type = "Boolean", typeFqn = "kotlin.Boolean"),
-              TargetParameter(
-                name = "count",
-                type = "Int",
-                typeFqn = "kotlin.Int",
-                hasDefault = true,
-              ),
-              TargetParameter(
-                name = "content",
-                type = "@Composable () -> Unit",
-                composableSlot = true,
-              ),
+              TargetParameter.Builder(name = "onClick", type = "() -> Unit").build(),
+              TargetParameter.Builder(name = "label", type = "String")
+                .also { b ->
+                  b.typeFqn = "kotlin.String"
+                  b.hasDefault = true
+                }
+                .build(),
+              TargetParameter.Builder(name = "expanded", type = "Boolean")
+                .also { b -> b.typeFqn = "kotlin.Boolean" }
+                .build(),
+              TargetParameter.Builder(name = "count", type = "Int")
+                .also { b ->
+                  b.typeFqn = "kotlin.Int"
+                  b.hasDefault = true
+                }
+                .build(),
+              TargetParameter.Builder(name = "content", type = "@Composable () -> Unit")
+                .also { b -> b.composableSlot = true }
+                .build(),
             ),
-          slots = listOf(ComponentSlot(name = "content", required = true)),
+          slots = listOf(ComponentSlot.Builder(name = "content", required = true).build()),
           call = "SessionGroup(onClick = {}, expanded = false, content = {})",
         ),
         record(
           "AvatarPlaceholder",
           id = "confetti-wear/avatar",
           parameters =
-            listOf(TargetParameter(name = "name", type = "String", typeFqn = "kotlin.String")),
+            listOf(
+              TargetParameter.Builder(name = "name", type = "String")
+                .also { b -> b.typeFqn = "kotlin.String" }
+                .build()
+            ),
           // A record whose call site was proven by a producer that spelled no placeholder for
           // `name` — the shape a hand-edited or older record can have.
           call = "AvatarPlaceholder()",
@@ -560,21 +566,31 @@ class WearScreenCodeExporterTest {
     call: String,
   ): ComponentRecord {
     val callable = "dev.johnoreilly.confetti.wear.components.$name"
-    return ComponentRecord(
-      canonicalId = "confetti-wear/${callable}Kt.$name",
-      componentIds = listOf(id),
-      symbol =
-        ComponentSymbol(
-          jvmOwner = "dev.johnoreilly.confetti.wear.components.${name}Kt",
-          callable = callable,
-          name = name,
-          origin = ComponentOrigin.PROJECT,
-        ),
-      parameters = parameters,
-      slots = slots,
-      code = ComponentCode(call = call, imports = listOf(callable)),
-      signatureKnown = true,
-    )
+    return ComponentRecord.Builder(
+        canonicalId = "confetti-wear/${callable}Kt.$name",
+        symbol =
+          ComponentSymbol.Builder(
+              jvmOwner = "dev.johnoreilly.confetti.wear.components.${name}Kt",
+              callable = callable,
+              name = name,
+              origin = ComponentOrigin.PROJECT,
+            )
+            .build(),
+      )
+      .also { builder_ ->
+        builder_.componentIds = listOf(id)
+        builder_.parameters = parameters
+        builder_.slots = slots
+        builder_.code =
+          ComponentCode.Builder()
+            .also { b ->
+              b.call = call
+              b.imports = listOf(callable)
+            }
+            .build()
+        builder_.signatureKnown = true
+      }
+      .build()
   }
 
   /**

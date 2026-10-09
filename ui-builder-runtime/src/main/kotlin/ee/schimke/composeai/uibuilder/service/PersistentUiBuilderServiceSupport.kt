@@ -983,6 +983,8 @@ internal fun DesignEnvironmentV1.applyChange(change: EnvironmentChangeV1): Desig
     // alone" is a real answer and not an absent one.
     is SetExportDevicesEnvironmentChangeV1 -> copy(exportDevices = change.value)
     ResetExportDevicesEnvironmentChangeV1 -> copy(exportDevices = emptyList())
+    is SetRemoteProfileEnvironmentChangeV1 -> copy(remoteProfile = change.value)
+    ResetRemoteProfileEnvironmentChangeV1 -> copy(remoteProfile = null)
   }
 
 internal fun DesignEnvironmentV1.value(field: EnvironmentFieldV1): Any? =
@@ -1003,6 +1005,7 @@ internal fun DesignEnvironmentV1.value(field: EnvironmentFieldV1): Any? =
     EnvironmentFieldV1.BACKGROUND -> background
     EnvironmentFieldV1.TYPEFACE -> typeface
     EnvironmentFieldV1.EXPORT_DEVICES -> exportDevices
+    EnvironmentFieldV1.REMOTE_PROFILE -> remoteProfile
   }
 
 internal fun DesignEnvironmentV1.copyFieldsFrom(
@@ -1029,6 +1032,7 @@ internal fun DesignEnvironmentV1.copyFieldsFrom(
       EnvironmentFieldV1.BACKGROUND -> environment.copy(background = source.background)
       EnvironmentFieldV1.TYPEFACE -> environment.copy(typeface = source.typeface)
       EnvironmentFieldV1.EXPORT_DEVICES -> environment.copy(exportDevices = source.exportDevices)
+      EnvironmentFieldV1.REMOTE_PROFILE -> environment.copy(remoteProfile = source.remoteProfile)
     }
   }
 

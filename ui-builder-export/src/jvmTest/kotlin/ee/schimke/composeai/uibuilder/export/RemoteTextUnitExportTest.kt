@@ -105,31 +105,35 @@ class RemoteTextUnitExportTest {
 
   /** `RemoteText`'s shape, as the published record states it. */
   private val record =
-    ComponentRecord(
-      canonicalId = "catalog/text",
-      componentIds = emptyList(),
-      symbol =
-        ComponentSymbol(
-          jvmOwner = "example.RemoteTextKt",
-          callable = "example.RemoteText",
-          name = "RemoteText",
-          origin = ComponentOrigin.LIBRARY,
-        ),
-      parameters =
-        listOf(
-          TargetParameter(
-            name = "text",
-            type = "RemoteString",
-            typeFqn = "androidx.compose.remote.creation.compose.state.RemoteString",
-          ),
-          TargetParameter(
-            name = "fontSize",
-            type = "RemoteTextUnit",
-            typeFqn = "androidx.compose.remote.creation.compose.state.RemoteTextUnit",
-            hasDefault = true,
-          ),
-        ),
-      slots = emptyList(),
-      signatureKnown = true,
-    )
+    ComponentRecord.Builder(
+        canonicalId = "catalog/text",
+        symbol =
+          ComponentSymbol.Builder(
+              jvmOwner = "example.RemoteTextKt",
+              callable = "example.RemoteText",
+              name = "RemoteText",
+              origin = ComponentOrigin.LIBRARY,
+            )
+            .build(),
+      )
+      .also { builder_ ->
+        builder_.componentIds = emptyList()
+        builder_.parameters =
+          listOf(
+            TargetParameter.Builder(name = "text", type = "RemoteString")
+              .also { b ->
+                b.typeFqn = "androidx.compose.remote.creation.compose.state.RemoteString"
+              }
+              .build(),
+            TargetParameter.Builder(name = "fontSize", type = "RemoteTextUnit")
+              .also { b ->
+                b.typeFqn = "androidx.compose.remote.creation.compose.state.RemoteTextUnit"
+                b.hasDefault = true
+              }
+              .build(),
+          )
+        builder_.slots = emptyList()
+        builder_.signatureKnown = true
+      }
+      .build()
 }

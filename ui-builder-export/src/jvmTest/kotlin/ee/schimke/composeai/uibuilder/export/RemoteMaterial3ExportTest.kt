@@ -122,9 +122,19 @@ class RemoteMaterial3ExportTest {
   fun `a host's own record for an id wins over the embedded one`() {
     val embedded = RemoteMaterial3.records.getValue("remote-m3/remote-card")
     val hosts =
-      embedded.copy(
-        symbol = embedded.symbol.copy(callable = "com.example.HostCard", name = "HostCard")
-      )
+      embedded
+        .newBuilder()
+        .also { builder_ ->
+          builder_.symbol =
+            embedded.symbol
+              .newBuilder()
+              .also { b ->
+                b.callable = "com.example.HostCard"
+                b.name = "HostCard"
+              }
+              .build()
+        }
+        .build()
     val result =
       WearWidgetCodeExporter.export(
         widget(UiBuilderNode("body", "remote-m3/remote-card")),

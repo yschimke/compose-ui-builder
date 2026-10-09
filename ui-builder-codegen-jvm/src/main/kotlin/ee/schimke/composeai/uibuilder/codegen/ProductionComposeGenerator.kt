@@ -215,70 +215,89 @@ object ProductionComposeGenerator {
       val combined =
         projected
           .resolvable(record.callableAliases())
-          .copy(
-            components =
+          .newBuilder()
+          .also { rb ->
+            rb.components =
               projected.resolvable(record.callableAliases()).components +
                 placements.map { placement ->
-                  ComponentRecord(
-                    canonicalId = placement.symbol,
-                    symbol =
-                      ComponentSymbol(
-                        jvmOwner = placement.symbol + "Kt",
-                        callable = placement.symbol,
-                        name = placement.symbol.substringAfterLast('.'),
-                        origin = ComponentOrigin.PROJECT,
-                      ),
-                    signatureKnown = true,
-                    parameters = emptyList(),
-                    code =
-                      ComponentCode(
-                        call = placement.symbol.substringAfterLast('.') + "()",
-                        imports = listOf(placement.symbol),
-                      ),
-                  )
+                  ComponentRecord.Builder(
+                      canonicalId = placement.symbol,
+                      symbol =
+                        ComponentSymbol.Builder(
+                            jvmOwner = placement.symbol + "Kt",
+                            callable = placement.symbol,
+                            name = placement.symbol.substringAfterLast('.'),
+                            origin = ComponentOrigin.PROJECT,
+                          )
+                          .build(),
+                    )
+                    .also { builder_ ->
+                      builder_.signatureKnown = true
+                      builder_.parameters = emptyList()
+                      builder_.code =
+                        ComponentCode.Builder()
+                          .also { b ->
+                            b.call = placement.symbol.substringAfterLast('.') + "()"
+                            b.imports = listOf(placement.symbol)
+                          }
+                          .build()
+                    }
+                    .build()
                 } +
                 children
                   .map { child ->
-                    ComponentRecord(
-                      canonicalId = helperFqn(child.entry),
-                      symbol =
-                        ComponentSymbol(
-                          jvmOwner =
-                            child.entry.kotlinFunction.substringBeforeLast('.') +
-                              "." +
-                              child.entry.kotlinFunction.substringAfterLast('.') +
-                              "Kt",
-                          callable = helperFqn(child.entry),
-                          name = helperName(child.entry),
-                          origin = ComponentOrigin.PROJECT,
-                        ),
-                      signatureKnown = true,
-                      parameters =
-                        listOf(TargetParameter("modifier", "Modifier", typeFqn = MODIFIER)) +
-                          child.reads.mapIndexed { index, read ->
-                            TargetParameter(
-                              "p$index",
-                              read.type.scalar.kotlinType.substringAfterLast('.'),
-                              typeFqn = read.type.scalar.kotlinType,
+                    ComponentRecord.Builder(
+                        canonicalId = helperFqn(child.entry),
+                        symbol =
+                          ComponentSymbol.Builder(
+                              jvmOwner =
+                                child.entry.kotlinFunction.substringBeforeLast('.') +
+                                  "." +
+                                  child.entry.kotlinFunction.substringAfterLast('.') +
+                                  "Kt",
+                              callable = helperFqn(child.entry),
+                              name = helperName(child.entry),
+                              origin = ComponentOrigin.PROJECT,
                             )
-                          } +
-                          child.callbacks.indices.map { index ->
-                            TargetParameter(
-                              "c$index",
-                              "() -> Unit",
-                              typeFqn = "kotlin.Function0",
-                              lambdaReturnTypeFqn = "kotlin.Unit",
-                            )
-                          },
-                      code =
-                        ComponentCode(
-                          call = helperName(child.entry) + "()",
-                          imports = listOf(helperFqn(child.entry)),
-                        ),
-                    )
+                            .build(),
+                      )
+                      .also { builder_ ->
+                        builder_.signatureKnown = true
+                        builder_.parameters =
+                          listOf(
+                            TargetParameter.Builder(name = "modifier", type = "Modifier")
+                              .also { b -> b.typeFqn = MODIFIER }
+                              .build()
+                          ) +
+                            child.reads.mapIndexed { index, read ->
+                              TargetParameter.Builder(
+                                  name = "p$index",
+                                  type = read.type.scalar.kotlinType.substringAfterLast('.'),
+                                )
+                                .also { b -> b.typeFqn = read.type.scalar.kotlinType }
+                                .build()
+                            } +
+                            child.callbacks.indices.map { index ->
+                              TargetParameter.Builder(name = "c$index", type = "() -> Unit")
+                                .also { b ->
+                                  b.typeFqn = "kotlin.Function0"
+                                  b.lambdaReturnTypeFqn = "kotlin.Unit"
+                                }
+                                .build()
+                            }
+                        builder_.code =
+                          ComponentCode.Builder()
+                            .also { b ->
+                              b.call = helperName(child.entry) + "()"
+                              b.imports = listOf(helperFqn(child.entry))
+                            }
+                            .build()
+                      }
+                      .build()
                   }
                   .distinctBy { it.canonicalId }
-          )
+          }
+          .build()
       return Body(entry, reads, callbacks, placements, root, combined).also { bodies[id] = it }
     }
     contract.entryPoints.keys.sorted().forEach(::body)

@@ -161,27 +161,31 @@ class RemoteTextComponentExportTest {
   private val published =
     mapOf(
       REMOTE_TEXT_COMPONENT_ID to
-        ComponentRecord(
-          canonicalId = "remote-catalog/RemoteText",
-          componentIds = listOf(REMOTE_TEXT_COMPONENT_ID),
-          symbol =
-            ComponentSymbol(
-              jvmOwner = "androidx.wear.compose.remote.material3.RemoteTextKt",
-              callable = "androidx.wear.compose.remote.material3.RemoteText",
-              name = "RemoteText",
-              origin = ComponentOrigin.LIBRARY,
-            ),
-          parameters =
-            listOf(
-              TargetParameter(
-                name = "text",
-                type = "RemoteString",
-                typeFqn = "androidx.compose.remote.creation.compose.state.RemoteString",
+        ComponentRecord.Builder(
+            canonicalId = "remote-catalog/RemoteText",
+            symbol =
+              ComponentSymbol.Builder(
+                  jvmOwner = "androidx.wear.compose.remote.material3.RemoteTextKt",
+                  callable = "androidx.wear.compose.remote.material3.RemoteText",
+                  name = "RemoteText",
+                  origin = ComponentOrigin.LIBRARY,
+                )
+                .build(),
+          )
+          .also { builder_ ->
+            builder_.componentIds = listOf(REMOTE_TEXT_COMPONENT_ID)
+            builder_.parameters =
+              listOf(
+                TargetParameter.Builder(name = "text", type = "RemoteString")
+                  .also { b ->
+                    b.typeFqn = "androidx.compose.remote.creation.compose.state.RemoteString"
+                  }
+                  .build()
               )
-            ),
-          slots = emptyList(),
-          signatureKnown = true,
-        )
+            builder_.slots = emptyList()
+            builder_.signatureKnown = true
+          }
+          .build()
     )
 
   private fun kotlinx.serialization.json.JsonObjectBuilder.string(name: String, value: String) =

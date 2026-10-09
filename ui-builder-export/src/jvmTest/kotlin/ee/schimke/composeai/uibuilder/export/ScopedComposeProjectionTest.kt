@@ -56,7 +56,7 @@ class ScopedComposeProjectionTest {
         read("compose-foundation-components-v1.json").components.filterNot { candidate ->
           candidate.canonicalId in taken || candidate.componentIds.any { it in claimed }
         }
-      m3.copy(components = m3.components + extra)
+      m3.newBuilder().also { b -> b.components = m3.components + extra }.build()
     }
 
   private fun fixture() =

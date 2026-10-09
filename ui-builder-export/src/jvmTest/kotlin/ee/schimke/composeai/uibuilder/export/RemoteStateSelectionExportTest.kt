@@ -180,47 +180,54 @@ class RemoteStateSelectionExportTest {
           },
       )
     val record =
-      ComponentRecord(
-        canonicalId = "catalog/control",
-        componentIds = emptyList(),
-        symbol =
-          ComponentSymbol(
-            jvmOwner = "example.ControlKt",
-            callable = "example.Control",
-            name = "Control",
-            origin = ComponentOrigin.LIBRARY,
-          ),
-        parameters =
-          listOf(
-            TargetParameter(
-              name = "modifier",
-              type = "RemoteModifier",
-              typeFqn = "androidx.compose.remote.creation.compose.modifier.RemoteModifier",
-              hasDefault = true,
-            ),
-            TargetParameter(
-              name = "enabled",
-              type = "RemoteBoolean",
-              typeFqn = "androidx.compose.remote.creation.compose.state.RemoteBoolean",
-            ),
-            TargetParameter(
-              name = "onClick",
-              type = "Action",
-              typeFqn = "androidx.compose.remote.creation.compose.action.Action",
-            ),
-          ),
-        slots = emptyList(),
-        signatureKnown = true,
-      )
+      ComponentRecord.Builder(
+          canonicalId = "catalog/control",
+          symbol =
+            ComponentSymbol.Builder(
+                jvmOwner = "example.ControlKt",
+                callable = "example.Control",
+                name = "Control",
+                origin = ComponentOrigin.LIBRARY,
+              )
+              .build(),
+        )
+        .also { builder_ ->
+          builder_.componentIds = emptyList()
+          builder_.parameters =
+            listOf(
+              TargetParameter.Builder(name = "modifier", type = "RemoteModifier")
+                .also { b ->
+                  b.typeFqn = "androidx.compose.remote.creation.compose.modifier.RemoteModifier"
+                  b.hasDefault = true
+                }
+                .build(),
+              TargetParameter.Builder(name = "enabled", type = "RemoteBoolean")
+                .also { b ->
+                  b.typeFqn = "androidx.compose.remote.creation.compose.state.RemoteBoolean"
+                }
+                .build(),
+              TargetParameter.Builder(name = "onClick", type = "Action")
+                .also { b -> b.typeFqn = "androidx.compose.remote.creation.compose.action.Action" }
+                .build(),
+            )
+          builder_.slots = emptyList()
+          builder_.signatureKnown = true
+        }
+        .build()
     for (defaulted in listOf(false, true)) {
       val refusals = mutableListOf<String>()
       val withDefault =
-        record.copy(
-          parameters =
-            record.parameters.map { parameter ->
-              if (parameter.name == "onClick") parameter.copy(hasDefault = defaulted) else parameter
-            }
-        )
+        record
+          .newBuilder()
+          .also { builder_ ->
+            builder_.parameters =
+              record.parameters.map { parameter ->
+                if (parameter.name == "onClick")
+                  parameter.newBuilder().also { b -> b.hasDefault = defaulted }.build()
+                else parameter
+              }
+          }
+          .build()
       val emitter =
         RemoteContentEmitter(
           base.copy(nodes = base.nodes + ("control" to control)),

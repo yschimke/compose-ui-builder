@@ -41,29 +41,33 @@ class RemoteContentRecordFallbackTest {
     hasDefault: Boolean = false,
     composableSlot: Boolean = false,
   ) =
-    TargetParameter(
-      name = name,
-      type = type,
-      typeFqn = typeFqn,
-      hasDefault = hasDefault,
-      composableSlot = composableSlot,
-    )
+    TargetParameter.Builder(name = name, type = type)
+      .also { b ->
+        b.typeFqn = typeFqn
+        b.hasDefault = hasDefault
+        b.composableSlot = composableSlot
+      }
+      .build()
 
   private fun record(name: String, vararg parameters: TargetParameter) =
-    ComponentRecord(
-      canonicalId = "remote-catalog/androidx.wear.compose.remote.material3.${name}Kt.$name",
-      componentIds = emptyList(),
-      symbol =
-        ComponentSymbol(
-          jvmOwner = "androidx.wear.compose.remote.material3.${name}Kt",
-          callable = "androidx.wear.compose.remote.material3.$name",
-          name = name,
-          origin = ComponentOrigin.LIBRARY,
-        ),
-      parameters = parameters.toList(),
-      slots = emptyList(),
-      signatureKnown = true,
-    )
+    ComponentRecord.Builder(
+        canonicalId = "remote-catalog/androidx.wear.compose.remote.material3.${name}Kt.$name",
+        symbol =
+          ComponentSymbol.Builder(
+              jvmOwner = "androidx.wear.compose.remote.material3.${name}Kt",
+              callable = "androidx.wear.compose.remote.material3.$name",
+              name = name,
+              origin = ComponentOrigin.LIBRARY,
+            )
+            .build(),
+      )
+      .also { b ->
+        b.componentIds = emptyList()
+        b.parameters = parameters.toList()
+        b.slots = emptyList()
+        b.signatureKnown = true
+      }
+      .build()
 
   private val remoteText =
     record(

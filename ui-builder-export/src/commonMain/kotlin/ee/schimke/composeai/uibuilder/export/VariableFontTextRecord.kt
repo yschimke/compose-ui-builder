@@ -42,7 +42,10 @@ internal object VariableFontTextRecord {
       put("components", JsonArray(requests.map { component(it, packageName) }))
     }
     val generated = json.decodeFromJsonElement(ComponentRecordFile.serializer(), file)
-    return record.copy(components = record.components + generated.components)
+    return record
+      .newBuilder()
+      .also { it.components = record.components + generated.components }
+      .build()
   }
 
   private fun component(request: VariableFontText.Request, packageName: String): JsonObject {

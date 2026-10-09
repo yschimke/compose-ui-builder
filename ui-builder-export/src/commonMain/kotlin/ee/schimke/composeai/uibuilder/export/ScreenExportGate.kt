@@ -218,12 +218,11 @@ object ScreenExportGate {
  * callable would collide on one alias, and they would be the same Kotlin function, so the generator
  * resolving either is the same answer.
  */
-fun ComponentRecordFile.callableAliases(): ComponentRecordFile =
-  copy(
-    components =
-      components.map { component ->
-        val callable = component.canonicalId.substringAfter('/', "")
-        if (callable.isEmpty() || callable in component.componentIds) component
-        else component.copy(componentIds = component.componentIds + callable)
-      }
-  )
+fun ComponentRecordFile.callableAliases(): ComponentRecordFile {
+  val aliased = components.map { component ->
+    val callable = component.canonicalId.substringAfter('/', "")
+    if (callable.isEmpty() || callable in component.componentIds) component
+    else component.newBuilder().also { it.componentIds = component.componentIds + callable }.build()
+  }
+  return newBuilder().also { it.components = aliased }.build()
+}
