@@ -110,25 +110,21 @@ object RecordFreeExport {
     when (route) {
       is CatalogExportRouting.Route.RecordFree ->
         if (route.adapter == CatalogExportRouting.LAUNCHER_WIDGET) {
-          if (!UiBuilderBuildFeatures.remoteCompose) null
-          else
-            remoteKotlinUnsupported(document).takeIf { it.isNotEmpty() }?.let(Generated::Refused)
-              ?: runCatching {
-                launcherWidget(
-                  document.toUiBuilderDocument(),
-                  frameSizes,
-                  launcherRoots,
-                  packageName,
-                  packComponents,
+          remoteKotlinUnsupported(document).takeIf { it.isNotEmpty() }?.let(Generated::Refused)
+            ?: runCatching {
+              launcherWidget(
+                document.toUiBuilderDocument(),
+                frameSizes,
+                launcherRoots,
+                packageName,
+                packComponents,
+              )
+            }
+              .getOrElse {
+                Generated.Refused(
+                  listOf("document: Remote source export could not read the design: ${it.message}")
                 )
               }
-                .getOrElse {
-                  Generated.Refused(
-                    listOf(
-                      "document: Remote source export could not read the design: ${it.message}"
-                    )
-                  )
-                }
         } else
           generate(document, route.platform, packageName, packComponents, assets, variableFonts)
       is CatalogExportRouting.Route.BuiltIn ->
@@ -145,7 +141,6 @@ object RecordFreeExport {
     packageName: String?,
     packComponents: Map<String, ComponentRecord>,
   ): Generated? {
-    if (!UiBuilderBuildFeatures.remoteCompose) return null
     val root =
       document.roots.singleOrNull()?.let(document.nodes::get)
         ?: return Generated.Refused(listOf("a widget design has one root"))
@@ -219,10 +214,10 @@ object RecordFreeExport {
       ?.let {
         return it
       }
-    if (
-      !UiBuilderBuildFeatures.remoteCompose || platform != UiBuilderCatalogPlatform.REMOTE_COMPOSE
-    )
-      return null
+    // Remote Kotlin source is written in every build. What the build flag still withholds — state
+    // selection, repetition, bound actions — `RemoteContentEmitter` refuses by name, so a design
+    // using one gets a refusal that says so rather than no code at all.
+    if (platform != UiBuilderCatalogPlatform.REMOTE_COMPOSE) return null
     // A launcher widget is a Remote Compose root with a scaffold of its own: the
     // `RemoteComposeWidget` class around the body, which the inline exporter below never writes.
     if (document.isLauncherWidget()) {
@@ -328,8 +323,7 @@ object RecordFreeExport {
 
   fun applies(document: DesignDocumentV1, platform: UiBuilderCatalogPlatform): Boolean =
     platform == UiBuilderCatalogPlatform.A2UI ||
-      (UiBuilderBuildFeatures.remoteCompose &&
-        platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE) ||
+      platform == UiBuilderCatalogPlatform.REMOTE_COMPOSE ||
       document.isRecordFree() ||
       misplacesWearContent(platform, document.nodes.values.map { it.componentId })
 

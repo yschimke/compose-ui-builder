@@ -13,6 +13,13 @@ experimental authoring and export paths in the existing WASM app, server and MCP
 [build option and gated surfaces](https://github.com/yschimke/compose-preview-server/blob/e26ab4f6e345e5cc2d3f8fea6156396a8ea5fe60/docs/development/UI_BUILDER_FEATURE_FLAGS.md). The remaining production
 work below is future scope and is not a claim that the full authoring system is complete.
 
+Kotlin source for a Remote Compose catalog is not behind the flag: the code pane, the server and
+MCP write it in every build, including a launcher widget's `RemoteComposeWidget` and record-driven
+calls such as `remote-widgets`' `AdaptiveLayout`. What the flag still withholds is the experimental
+authoring inside a design (state selection, repetition and bound actions), which
+`RemoteContentEmitter` refuses by name in a disabled build, and the Remote JSON and `.rc` document
+exports.
+
 ## Authoring boundary
 
 The visual editor focuses on layouts. Its tree remains a semantic hierarchy of components, layouts,
