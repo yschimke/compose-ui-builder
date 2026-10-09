@@ -179,7 +179,6 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderInstancePath
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import ee.schimke.composeai.uibuilder.export.UiDrawing
-import ee.schimke.composeai.uibuilder.export.UiExpressions
 import ee.schimke.composeai.uibuilder.export.UiRemoteTheme
 import ee.schimke.composeai.uibuilder.export.UiTimeText
 import ee.schimke.composeai.uibuilder.export.WearScreenTheme
@@ -1962,10 +1961,7 @@ private fun RenderNode(
       // `this.entry`: the node being drawn, not the root this renderer was entered from.
       UiDrawing.CANVAS -> UiBuilderDrawCanvas(this.entry, measured) { uiBuilderColor(it) }
       UiTimeText.ID -> {
-        val clock =
-          UiExpressions.Clock.of(
-            (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull
-          )
+        val clock = this.entry.clock
         val time =
           "${clock.hour.toString().padStart(2, '0')}:${clock.minute.toString().padStart(2, '0')}"
         UiBuilderTimeText(node, time, measured) { uiBuilderColor(it) }

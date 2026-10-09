@@ -1604,6 +1604,9 @@ fun UiBuilderEditor(
       drawnDocument.widgetPreviewPanes(resizable = documentBackedPreview == null)
         ?: (listOf(drawnDocument.currentFramePane("Preview")) + variantPanes)
     }
+  // Frozen until asked: see [PreviewTimeToggle]. Editor state rather than the document's, since
+  // letting time run in a preview is not an edit to the design.
+  var previewTimeRunning by remember { mutableStateOf(false) }
   val previewPane: @Composable (Modifier) -> Unit = { modifier ->
     if (documentBackedPreview != null) {
       RemoteDocumentDesignPreviewPane(
@@ -1612,6 +1615,8 @@ fun UiBuilderEditor(
         authoritativeGeneration = authoritativeGeneration,
         request = requireNotNull(onRequestDocumentPreview),
         modifier = modifier,
+        timeRunning = previewTimeRunning,
+        onTimeRunningChange = { previewTimeRunning = it },
       )
     } else {
       DesignPreviewPane(
@@ -1619,6 +1624,8 @@ fun UiBuilderEditor(
         variants = previewPanes,
         modifier = modifier,
         deviceRenderer = canvasRenderer,
+        timeRunning = previewTimeRunning,
+        onTimeRunningChange = { previewTimeRunning = it },
       )
     }
   }
@@ -1637,6 +1644,8 @@ fun UiBuilderEditor(
           request = requireNotNull(onRequestDocumentPreview),
           modifier = modifier,
           exactPanes = true,
+          timeRunning = previewTimeRunning,
+          onTimeRunningChange = { previewTimeRunning = it },
         )
       }
     } else {
@@ -1646,6 +1655,8 @@ fun UiBuilderEditor(
         modifier = modifier,
         deviceRenderer = canvasRenderer,
         exactPanes = true,
+        timeRunning = previewTimeRunning,
+        onTimeRunningChange = { previewTimeRunning = it },
       )
     }
   }

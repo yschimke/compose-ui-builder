@@ -75,6 +75,46 @@ class UiExpressionsTest {
   }
 
   @Test
+  fun `continuous seconds carry the fraction the whole-second values drop`() {
+    val clock = UiExpressions.Clock.of("2024-05-16T12:34:56.250Z")
+    assertEquals(2096.0, evaluate("time.secondOfHour", clock = clock))
+    assertEquals(2096.25, evaluate("time.continuousSecond", clock = clock))
+  }
+
+  @Test
+  fun `animation time is zero at a fixed time and what a live clock says otherwise`() {
+    assertEquals(0.0, evaluate("time.animation"))
+    val running = UiExpressions.Clock.DEFAULT.copy(animationSeconds = 2.5)
+    assertEquals(225.0, evaluate("time.animation * 90", clock = running))
+  }
+
+  @Test
+  fun `a live clock is the local time at an instant`() {
+    // 2024-05-16T12:34:56.789Z, read two hours ahead of UTC.
+    val clock = UiExpressions.Clock.at(1_715_862_896_789L, utcOffsetSeconds = 7200)
+    assertEquals(14.0, evaluate("time.hour", clock = clock))
+    assertEquals(2096.789, evaluate("time.continuousSecond", clock = clock) as Double, 1e-9)
+    assertEquals(4.0, evaluate("time.dayOfWeek", clock = clock))
+    assertEquals(16.0, evaluate("time.dayOfMonth", clock = clock))
+    assertEquals(7200.0, evaluate("time.utcOffset", clock = clock))
+    // Local midnight crosses into the next day before UTC does.
+    val nextDay = UiExpressions.Clock.at(1_715_903_999_000L, utcOffsetSeconds = 3600)
+    assertEquals(17, nextDay.dayOfMonth)
+    assertEquals(5, nextDay.dayOfWeek)
+    assertEquals(
+      UiExpressions.Clock.of("2024-05-16T12:34:56Z"),
+      UiExpressions.Clock.at(1_715_862_896_000L),
+    )
+    assertEquals(1_715_862_896_789L, clock.epochMillis)
+    assertEquals(137, clock.dayOfYear)
+    assertEquals(1_715_862_896_000L, UiExpressions.Clock.of("2024-05-16T12:34:56Z").epochMillis)
+    assertEquals(
+      UiExpressions.Clock.DEFAULT,
+      UiExpressions.Clock.at(UiExpressions.Clock.DEFAULT.epochMillis),
+    )
+  }
+
+  @Test
   fun `a tree that does not type is refused with the operand it is about`() {
     val issue =
       assertIs<UiExpressions.Checked.Issue>(
