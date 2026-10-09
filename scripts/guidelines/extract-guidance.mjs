@@ -20,6 +20,12 @@ const DEFAULT_PREFIXES = [
   "android/design/ui/ai-glasses/guides/",
   "android/design/ui/mobile/guides/",
   "android/agents/skills/wear/",
+  // Material 3 for Compose: the component and design-system pages, and the Wear Compose and
+  // Wear widget training, which carry Material 3 Expressive guidance the design guides do not.
+  "android/develop/ui/compose/components/",
+  "android/develop/ui/compose/designsystems/",
+  "android/training/wearables/compose/",
+  "android/training/wearables/widgets/",
 ];
 const NORMATIVE =
   /\b(must|should|avoid|don't|do not|never|always|at least|minimum|maximum|no more than|recommend)\b/i;

@@ -34,10 +34,7 @@ class DesignGuidelinesTest {
       assertTrue(rule.kind == "structure" || rule.kind == "visual", rule.id)
       assertTrue(rule.severity == "warning" || rule.severity == "info", rule.id)
       assertTrue('?' in rule.check, rule.id)
-      assertTrue(
-        rule.source.startsWith("https://developer.android.com/") || rule.source.startsWith("kb://"),
-        rule.id,
-      )
+      assertTrue(RULE_SOURCES.any { rule.source.startsWith(it) }, rule.id)
     }
     assertTrue(DesignGuidelineRuleSet.Bundled.forPlatform("wear").isNotEmpty())
     assertTrue(DesignGuidelineRuleSet.Bundled.forPlatform("glasses").isNotEmpty())
@@ -437,3 +434,17 @@ class DesignGuidelinesTest {
   @Suppress("unused")
   private fun JsonObject.text(name: String) = (this[name] as JsonPrimitive).content
 }
+
+/**
+ * Where a rule's guidance may be quoted from: the design guides, the Material 3 site, the Android
+ * Knowledge Base, the Wear OS Material 3 Figma kit, and the androidx sources whose KDoc a rule
+ * quotes.
+ */
+private val RULE_SOURCES =
+  listOf(
+    "https://developer.android.com/",
+    "https://m3.material.io/",
+    "kb://",
+    "https://www.figma.com/design/",
+    "https://github.com/androidx/androidx/blob/androidx-main/",
+  )
