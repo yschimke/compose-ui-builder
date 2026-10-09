@@ -349,6 +349,13 @@ internal val LocalUiBuilderUnrolled = staticCompositionLocalOf { false }
  */
 internal val LocalUiBuilderInlineDialogs = staticCompositionLocalOf { false }
 
+/**
+ * The width and height, in dp, of the frame being rendered when a protocol-v2 surface names one,
+ * which may differ from the size saved in the document's environment. Null for in-process renders,
+ * which take the environment's.
+ */
+internal val LocalUiBuilderSurfaceSizeDp = staticCompositionLocalOf<Pair<Float, Float>?> { null }
+
 internal enum class UiBuilderRenderStrategy {
   REAL,
   AUTHORING_ADAPTER,
@@ -558,6 +565,7 @@ fun UiBuilderSurface(
     LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
     LocalCanvasAdapterRegistry provides canvasAdapterRegistry,
     LocalUiBuilderUnrolled provides effectiveUnrolled,
+    LocalUiBuilderSurfaceSizeDp provides renderSurface?.let { it.widthDp to it.heightDp },
     LocalWearWidgetHostShape provides wearWidgetHostShape,
     // What a lazy container scrolls to; see [RevealSelectedItem]. Recomputed only when the
     // selection or the design moves, and equal sets keep the reveal from firing again on an edit.
@@ -768,10 +776,12 @@ private fun RenderNode(
     // being viewed, so a launcher pane resized to the next breakpoint draws that breakpoint's
     // layout. The rule is the catalog's; see [LauncherAdaptiveLayout].
     if (adapterId == LauncherAdaptiveLayout.CANVAS_ADAPTER) {
+      // The frame actually rendered: a protocol-v2 surface's own size, else the document's.
+      val surface = LocalUiBuilderSurfaceSizeDp.current
       val shown =
         LauncherAdaptiveLayout.visibleSlot(
-          widthDp = document.environmentScale("widthDp") ?: 0f,
-          heightDp = document.environmentScale("heightDp") ?: 0f,
+          widthDp = surface?.first ?: document.environmentScale("widthDp") ?: 0f,
+          heightDp = surface?.second ?: document.environmentScale("heightDp") ?: 0f,
           sizeLabel = { node.string(it).takeIf(String::isNotBlank) },
           filled = { slot(it).isNotEmpty() },
         )

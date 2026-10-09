@@ -11,6 +11,8 @@ import ee.schimke.composeai.uibuilder.canvas.UiBuilderSurface
 import ee.schimke.composeai.uibuilder.editor.atLauncherSize
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetGrid
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceV2
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
@@ -99,6 +101,37 @@ class LauncherAdaptiveLayoutCanvasTest {
           assertEquals(if (title == slot) 1 else 0, count, "$title at $size")
         }
       }
+    }
+  }
+
+  @Test
+  fun `a render surface's size picks the slot, not the document's saved size`() {
+    // Saved at 4x1, which shows Medium; the protocol-v2 surface is a 2x1 frame, so Compact.
+    val compact = LauncherWidgetGrid.parse("2x1")!!
+    runDesktopComposeUiTest(width = 600, height = 600) {
+      setContent {
+        MaterialTheme {
+          CompositionLocalProvider(
+            LocalUiBuilderCanvasAdapters provides catalogCanvas,
+            LocalUiBuilderCatalogComponentIds provides catalogCanvas.keys,
+          ) {
+            UiBuilderSurface(
+              adaptive,
+              editorOverlay = false,
+              renderSurface =
+                UiBuilderRendererSurfaceV2(
+                  mode = UiBuilderRendererSurfaceModeV2.DEVICE,
+                  widthDp = compact.widthDp.toFloat(),
+                  heightDp = compact.heightDp.toFloat(),
+                  density = 2.75f,
+                  surfaceId = "2x1",
+                ),
+            )
+          }
+        }
+      }
+      assertEquals(1, onAllNodesWithText("Compact").fetchSemanticsNodes().size)
+      assertEquals(0, onAllNodesWithText("Medium").fetchSemanticsNodes().size)
     }
   }
 }
