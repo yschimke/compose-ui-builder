@@ -188,8 +188,16 @@ internal class BrowserGuidelineHost(
             .getOrNull() ?: wire.body.take(200))
       )
     }
-    val reply = guidelineJson.decodeFromString(GuidelinesWire.serializer(), wire.body)
-    return reply.record?.let { DesignGuidelineHost.ServerCheckOutcome.Recorded(it) }
+    // The route answers with the stored record itself; a reply shaped like `GET …/guidelines`
+    // (the record under `record`) is read too, so either server shape works.
+    val record =
+      runCatching { guidelineJson.decodeFromString(DesignGuidelineRecord.serializer(), wire.body) }
+        .getOrNull()
+        ?: runCatching {
+          guidelineJson.decodeFromString(GuidelinesWire.serializer(), wire.body).record
+        }
+          .getOrNull()
+    return record?.let { DesignGuidelineHost.ServerCheckOutcome.Recorded(it) }
       ?: DesignGuidelineHost.ServerCheckOutcome.Refused(
         "The server ran the check but recorded nothing."
       )
