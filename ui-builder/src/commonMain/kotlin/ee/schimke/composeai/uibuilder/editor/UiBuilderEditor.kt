@@ -1031,9 +1031,14 @@ fun UiBuilderEditor(
   val draggedPlan = draggedCatalogPlan ?: draggedMovePlan
   val canvasDropHovered = draggedPlan != null
   // The empty recommended slots, from the same inspection the drop plan reads — one region per
-  // slot, computed by the reducer, so the hint drawn and the target hit cannot disagree.
+  // slot, computed by the reducer, so the hint drawn and the target hit cannot disagree. Only
+  // while a palette drag or a canvas move is in hand: at rest an empty container is usually meant
+  // to be empty (a swatch, a battery cell, a spacer), and an invitation drawn over it defaced the
+  // design for every viewer, read-only ones included.
+  val dragInHand = draggedComponentId != null || draggedNodeId != null
   val slotPlaceholders =
-    remember(state.document, canvasInspection) {
+    remember(state.document, canvasInspection, dragInHand) {
+      if (!dragInHand) return@remember emptyList()
       canvasInspection?.let { snapshot ->
         reducer.slotPlaceholders(
           state,

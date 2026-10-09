@@ -86,6 +86,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -1273,7 +1274,12 @@ internal fun PinnedDesignCanvas(
  * where the answer belongs, and it is the region a drop hits: the reducer computes one region per
  * empty slot and both the drawing and the hit test read it, so what a reader sees is what a drop
  * lands in. It is drawn under the drag marker and gone the moment the slot is populated, because
- * the reducer only reports empty slots.
+ * the reducer only reports empty slots, and the editor hands it placeholders only while a drag is
+ * in hand.
+ *
+ * The slot's name is drawn only where it fits: a 7dp swatch clipped "content" to a lone "c" in
+ * every cell, which read as stray text in the design rather than as an invitation. The dashed
+ * region alone still says where the drop lands.
  *
  * Strokes and type are screen-sized, not design-sized: a hint that thins with the zoom is a hint
  * lost exactly when the design is too small to read. The label is scaled back up through the same
@@ -1287,6 +1293,8 @@ private fun SlotPlaceholderOverlay(
 ) {
   if (placeholders.isEmpty()) return
   val color = MaterialTheme.colorScheme.primary
+  val labelStyle = MaterialTheme.typography.labelSmall
+  val textMeasurer = rememberTextMeasurer()
   val stroke = screenStroke(2f, drawScale)
   val dashOn = screenStroke(8f, drawScale)
   val dashOff = screenStroke(6f, drawScale)
@@ -1301,13 +1309,13 @@ private fun SlotPlaceholderOverlay(
           height = bounds.height / drawScale,
         )
       drawRoundRect(
-        color = color.copy(alpha = 0.06f),
+        color = color.copy(alpha = 0.12f),
         topLeft = Offset(local.x, local.y),
         size = Size(local.width, local.height),
         cornerRadius = CornerRadius(stroke * 4f),
       )
       drawRoundRect(
-        color = color.copy(alpha = 0.5f),
+        color = color.copy(alpha = 0.8f),
         topLeft = Offset(local.x, local.y),
         size = Size(local.width, local.height),
         cornerRadius = CornerRadius(stroke * 4f),
@@ -1322,6 +1330,11 @@ private fun SlotPlaceholderOverlay(
   val density = LocalDensity.current
   placeholders.forEach { placeholder ->
     val bounds = placeholder.bounds
+    // The chip's screen size against the region's: the chip is scaled back to screen size below,
+    // and the region's bounds are already in screen pixels.
+    val text = textMeasurer.measure(placeholder.target.slot, labelStyle, maxLines = 1).size
+    val chip = with(density) { Size(text.width + 12.dp.toPx(), text.height + 4.dp.toPx()) }
+    if (chip.width > bounds.width || chip.height > bounds.height) return@forEach
     val local =
       UiBuilderPixelBounds(
         x = (bounds.x - frameOrigin.x) / drawScale,

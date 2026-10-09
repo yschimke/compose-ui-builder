@@ -224,8 +224,9 @@ What it says:
   seconds, each copy held.
   `DeviceSceneHost` now hands its scene the editor's resolver: one download, the emoji draws in
   the previews too, and the screen settled at 377 MB (330 MB in the table above, measured without
-  DevTools and after the icons moved). Run with `MEMORY_RESOURCES=1` and count the
-  `fonts.gstatic.com` entries to check that it stays one.
+  DevTools and after the icons moved). Run with `MEMORY_RESOURCES=1` and count the Noto entries
+  (`/api/fonts/noto/…` on a host with that route, `fonts.gstatic.com` on one without) to check
+  that it stays one.
 - A2UI draws outline stand-ins on the canvas (there is no Wasm A2UI renderer), so it is the floor
   for an open design rather than a like-for-like comparison.
 - Mobile shifts memory to the GPU process (+20–30 MB): the canvas backing store is 9.9 MB at
