@@ -26,6 +26,11 @@ interface DesignGuidelineHost {
 
   fun storeModel(model: String?)
 
+  /** Whether this person last chose to see findings over the design; null when never chosen. */
+  fun storedOverlay(): Boolean? = null
+
+  fun storeOverlay(shown: Boolean) {}
+
   /**
    * Starts OpenRouter's sign-in (OAuth PKCE): the page leaves for openrouter.ai and comes back with
    * a code [completeSignIn] trades for a key. Null where the host cannot navigate.
@@ -127,6 +132,16 @@ class DesignGuidelineController(
 
   /** The request shown under Prompt: what the model reads, and where each part came from. */
   val prompt: StateFlow<PromptView> = _prompt.asStateFlow()
+
+  private val _overlay = MutableStateFlow(host.storedOverlay() ?: true)
+
+  /** Whether the findings are drawn over the design on the canvas; on unless turned off. */
+  val overlay: StateFlow<Boolean> = _overlay.asStateFlow()
+
+  fun setOverlay(shown: Boolean) {
+    host.storeOverlay(shown)
+    _overlay.value = shown
+  }
 
   private val _shared = MutableStateFlow<DesignGuidelineResult?>(null)
 

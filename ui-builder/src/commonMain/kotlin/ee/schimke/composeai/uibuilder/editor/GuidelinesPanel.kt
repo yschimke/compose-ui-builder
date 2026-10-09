@@ -10,6 +10,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -20,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalClipboard
@@ -122,6 +124,19 @@ internal fun GuidelinesSection(
       )
     }
     PromptView(prompt)
+    val overlay by controller.overlay.collectAsState()
+    Row(
+      Modifier.fillMaxWidth().padding(top = 4.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+      Text("Show findings on the canvas", style = MaterialTheme.typography.bodySmall)
+      Switch(
+        checked = overlay,
+        onCheckedChange = controller::setOverlay,
+        modifier = Modifier.semantics { contentDescription = "Show findings on the canvas" },
+      )
+    }
     // This person's latest run, or else the design's latest recorded one — an agent's, another
     // person's or the server's.
     (local ?: shared)?.let { result -> ResultSummary(result, document, dispatch) }
