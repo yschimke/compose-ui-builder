@@ -1,6 +1,10 @@
 package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
+import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.SlotCardinalityV1
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -8,7 +12,9 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * [CatalogCutoverShadow]: the check a deployment runs for a catalog it shadows before flipping it.
@@ -178,5 +184,184 @@ class CatalogCutoverShadowTest {
         it.startsWith("${modified.componentId}: modifiers: loses")
       }
     )
+  }
+
+  // ── What counts as a loss ─────────────────────────────────────────────────────────────────────
+
+  private val wear = assertNotNull(executor.synthesisedCatalog("wear-m3"))
+
+  private fun CatalogCapabilityV1.with(
+    componentId: String,
+    change: (ComponentCapabilityV1) -> ComponentCapabilityV1,
+  ): CatalogCapabilityV1 =
+    newBuilder()
+      .also { b ->
+        b.components = components.map { if (it.componentId == componentId) change(it) else it }
+      }
+      .build()
+
+  private fun ComponentCapabilityV1.withProperty(
+    name: String,
+    change: PropertyCapabilityV1.Builder.() -> Unit,
+  ): ComponentCapabilityV1 =
+    newBuilder()
+      .also { b ->
+        b.properties = properties.map {
+          if (it.name == name) it.newBuilder().apply(change).build() else it
+        }
+      }
+      .build()
+
+  /** The single difference [published] has against [kotlin], which must be the only one. */
+  private fun only(kotlin: CatalogCapabilityV1, published: CatalogCapabilityV1) =
+    CatalogCutoverShadow.catalogDifferenceDetails(kotlin, published).single()
+
+  private val component =
+    wear.components.first { it.properties.isNotEmpty() && it.traits.isNotEmpty() }
+  private val property = component.properties.first()
+
+  @Test
+  fun `dropping a component, trait or property is a loss, adding one is not`() {
+    val dropped = wear.newBuilder().also { it.components = wear.components - component }.build()
+    assertTrue(only(wear, dropped).loss)
+    assertFalse(only(dropped, wear).loss)
+
+    val fewerTraits =
+      wear.with(component.componentId) { c ->
+        c.newBuilder().also { it.traits = c.traits.drop(1) }.build()
+      }
+    assertTrue(only(wear, fewerTraits).loss)
+    assertFalse(only(fewerTraits, wear).loss)
+
+    val moreTraits =
+      wear.with(component.componentId) { c ->
+        c.newBuilder().also { it.traits = c.traits + "ShadowTestTrait" }.build()
+      }
+    assertFalse(only(wear, moreTraits).loss)
+  }
+
+  @Test
+  fun `a property type that drops an alternative is a loss, one that adds is not`() {
+    val both =
+      wear.with(component.componentId) {
+        it.withProperty(property.name) {
+          jsonType = JsonArray(listOf(JsonPrimitive("boolean"), JsonPrimitive("object")))
+        }
+      }
+    val one =
+      wear.with(component.componentId) {
+        it.withProperty(property.name) { jsonType = JsonPrimitive("boolean") }
+      }
+    assertTrue(only(both, one).loss, only(both, one).text)
+    assertFalse(only(one, both).loss, only(one, both).text)
+  }
+
+  @Test
+  fun `becoming required, or narrowing allowed values, is a loss`() {
+    val optional =
+      wear.with(component.componentId) {
+        it.withProperty(property.name) {
+          required = false
+          allowedValues = emptyList()
+        }
+      }
+    val required =
+      optional.with(component.componentId) {
+        it.withProperty(property.name) { this.required = true }
+      }
+    assertTrue(only(optional, required).loss)
+    assertFalse(only(required, optional).loss)
+
+    val ab =
+      optional.with(component.componentId) {
+        it.withProperty(property.name) {
+          allowedValues = listOf(JsonPrimitive("a"), JsonPrimitive("b"))
+        }
+      }
+    val a =
+      optional.with(component.componentId) {
+        it.withProperty(property.name) { allowedValues = listOf(JsonPrimitive("a")) }
+      }
+    assertTrue(only(ab, a).loss)
+    assertFalse(only(a, ab).loss)
+    assertTrue(only(optional, a).loss, "any list narrows an unconstrained property")
+    assertFalse(only(a, optional).loss, "dropping the list widens it")
+  }
+
+  @Test
+  fun `narrowing a slot is a loss, widening it is not`() {
+    val slotted = wear.components.first { it.slots.isNotEmpty() }
+    val slot = slotted.slots.first()
+    fun withSlot(min: Int, max: Int?, roles: List<String>) =
+      wear.with(slotted.componentId) { c ->
+        c.newBuilder()
+          .also { b ->
+            b.slots =
+              c.slots.map {
+                if (it.name != slot.name) it
+                else
+                  it
+                    .newBuilder()
+                    .also { s ->
+                      s.cardinality =
+                        SlotCardinalityV1.Builder()
+                          .also { k ->
+                            k.min = min
+                            k.max = max
+                          }
+                          .build()
+                      s.acceptedRoles = roles
+                    }
+                    .build()
+              }
+          }
+          .build()
+      }
+    val wide = withSlot(0, null, listOf("Container", "Leaf"))
+    assertTrue(only(wide, withSlot(0, 1, listOf("Container", "Leaf"))).loss)
+    assertTrue(only(wide, withSlot(1, null, listOf("Container", "Leaf"))).loss)
+    assertFalse(only(withSlot(0, 1, listOf("Container", "Leaf")), wide).loss)
+    assertTrue(only(wide, withSlot(0, null, listOf("Leaf"))).loss)
+    assertFalse(only(withSlot(0, null, listOf("Leaf")), wide).loss)
+  }
+
+  @Test
+  fun `a changed role is a loss`() {
+    val other = if (component.role == "Leaf") "Container" else "Leaf"
+    val moved =
+      wear.with(component.componentId) { c -> c.newBuilder().also { it.role = other }.build() }
+    assertTrue(only(wear, moved).loss)
+  }
+
+  @Test
+  fun `ready needs no findings and no losses, and gains alone stay ready`() {
+    val gains = listOf("wear-m3/x: only the published catalog has it")
+    val losses = listOf("wear-m3/y: traits: loses RemoteAuthorable")
+    assertTrue(CatalogCutoverShadow.Report("wear-m3", emptyList(), gains, emptyList()).ready)
+    assertFalse(CatalogCutoverShadow.Report("wear-m3", emptyList(), gains + losses, losses).ready)
+    assertFalse(CatalogCutoverShadow.Report("wear-m3", listOf("finding"), gains, emptyList()).ready)
+    assertTrue(CatalogCutoverShadow.Report("glimmer-catalog", emptyList(), null, null).ready)
+  }
+
+  @Test
+  fun `the report's losses are exactly the differences classified as losses`() {
+    val report =
+      CatalogCutoverShadow.report(
+        catalogId = "wear-m3",
+        published = CatalogCutoverFixtures.catalog("wear-m3"),
+        templates = CatalogCutoverFixtures.templates("wear-m3"),
+        fixture = CatalogCutoverProbe.fixture,
+        packComponents = CatalogCutoverFixtures.composed("wear-m3").records,
+        exportRecord = CatalogCutoverFixtures.exportRecord("wear-m3"),
+        nativeRuntimeId = CatalogCutoverFixtures.rendererRuntimeId("wear-m3"),
+      )
+    val differences = assertNotNull(report.differences)
+    val losses = assertNotNull(report.losses)
+    assertTrue(differences.containsAll(losses))
+    assertTrue(
+      losses.none { it.endsWith("only the published catalog has it") },
+      losses.joinToString("\n"),
+    )
+    assertEquals(report.findings.isEmpty() && losses.isEmpty(), report.ready)
   }
 }

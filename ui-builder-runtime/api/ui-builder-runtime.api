@@ -15,6 +15,7 @@ public final class ee/schimke/composeai/uibuilder/service/AuthenticatedUiBuilder
 
 public final class ee/schimke/composeai/uibuilder/service/CatalogCutoverShadow {
 	public static final field INSTANCE Lee/schimke/composeai/uibuilder/service/CatalogCutoverShadow;
+	public final fun catalogDifferenceDetails (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Ljava/util/List;
 	public final fun catalogDifferences (Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;)Ljava/util/List;
 	public final fun ownedFindings (Ljava/lang/String;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/export/CatalogSeedTemplates;Lkotlinx/serialization/json/JsonObject;Ljava/util/Map;Lee/schimke/composeai/discovery/ComponentRecordFile;Ljava/lang/String;)Ljava/util/List;
 	public static synthetic fun ownedFindings$default (Lee/schimke/composeai/uibuilder/service/CatalogCutoverShadow;Ljava/lang/String;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/export/CatalogSeedTemplates;Lkotlinx/serialization/json/JsonObject;Ljava/util/Map;Lee/schimke/composeai/discovery/ComponentRecordFile;Ljava/lang/String;ILjava/lang/Object;)Ljava/util/List;
@@ -22,10 +23,17 @@ public final class ee/schimke/composeai/uibuilder/service/CatalogCutoverShadow {
 	public static synthetic fun report$default (Lee/schimke/composeai/uibuilder/service/CatalogCutoverShadow;Ljava/lang/String;Lee/schimke/composeai/uibuilder/protocol/CatalogCapabilityV1;Lee/schimke/composeai/uibuilder/export/CatalogSeedTemplates;Lkotlinx/serialization/json/JsonObject;Ljava/util/Map;Lee/schimke/composeai/discovery/ComponentRecordFile;Ljava/lang/String;ILjava/lang/Object;)Lee/schimke/composeai/uibuilder/service/CatalogCutoverShadow$Report;
 }
 
+public final class ee/schimke/composeai/uibuilder/service/CatalogCutoverShadow$Difference {
+	public final fun getLoss ()Z
+	public final fun getText ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class ee/schimke/composeai/uibuilder/service/CatalogCutoverShadow$Report {
 	public final fun getCatalogId ()Ljava/lang/String;
 	public final fun getDifferences ()Ljava/util/List;
 	public final fun getFindings ()Ljava/util/List;
+	public final fun getLosses ()Ljava/util/List;
 	public final fun getReady ()Z
 }
 
