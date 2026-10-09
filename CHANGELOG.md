@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.100.0](https://github.com/yschimke/compose-ui-builder/compare/v3.99.0...v3.100.0) (2026-10-09)
+
+
+### Bug Fixes
+
+* **guidelines:** drop the routing-metadata header OpenRouter's CORS refuses from browser checks ([#610](https://github.com/yschimke/compose-ui-builder/issues/610)) ([8b31584](https://github.com/yschimke/compose-ui-builder/commit/8b315845fdae466a06b477fe64640109edc8fa19))
+* **published-catalog:** give remote-compose record components the emitter's traits, slots, bindings and modifiers ([#613](https://github.com/yschimke/compose-ui-builder/issues/613)) ([28dfdfd](https://github.com/yschimke/compose-ui-builder/commit/28dfdfd090ef3d9151f85e3f86f78180c8607034))
+* **ui-builder:** fetch Compose's Noto fallback through the host, and invite empty slots only while dragging ([#612](https://github.com/yschimke/compose-ui-builder/issues/612)) ([0f6f532](https://github.com/yschimke/compose-ui-builder/commit/0f6f53295b5d6928651c1545f57923d70b5fd83b))
+* **ui-builder:** the cutover shadow honours a catalog's supersedes ([#614](https://github.com/yschimke/compose-ui-builder/issues/614)) ([83d4e2b](https://github.com/yschimke/compose-ui-builder/commit/83d4e2bf0b572d1a67ed08993d37755ae8645e9a))
+
 ## [3.99.0](https://github.com/yschimke/compose-ui-builder/compare/v3.98.0...v3.99.0) (2026-10-09)
 
 
