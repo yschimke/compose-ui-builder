@@ -243,10 +243,6 @@ class CatalogCutoverReadinessTest {
   fun `the gap ledger is exactly what each catalog still has to publish`() {
     assertEquals(
       listOf(
-        "m3-catalog/adaptive-navigation: export refused: [`m3/icon` has no call site: no " +
-          "placeholder can be written for required parameter `imageVector: ImageVector`, `m3/icon` " +
-          "has no call site: no placeholder can be written for required parameter " +
-          "`imageVector: ImageVector`]",
         "wear-m3: declares no composeSourceExport, so no export is offered",
         "remote-m3: declares no composeSourceExport, so no export is offered",
         "glimmer-catalog: declares no composeSourceExport, so no export is offered",
