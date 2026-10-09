@@ -553,7 +553,11 @@ public object PublishedUiBuilderCatalog {
     return ComponentCapabilityV1.Builder(
         componentId,
         policy?.displayName ?: component.symbol.name,
-        if (slots.isNotEmpty()) "Container" else "Leaf",
+        // What the catalog SAYS, as for a builtin: slot presence cannot tell a scaffold from a
+        // container, so `m3/navigation-suite-scaffold` derived as a Container and could be dropped
+        // into a button. An unknown word falls back to the derivation; see [SHELF_ROLES].
+        policy?.shelfRole?.takeIf { it in SHELF_ROLES }
+          ?: if (slots.isNotEmpty()) "Container" else "Leaf",
         wasm(
           policy?.canvas,
           policy?.nativeOnly == true,
@@ -1165,6 +1169,13 @@ public object PublishedUiBuilderCatalog {
     val nativeOnly: Boolean = false,
     val traits: List<String> = emptyList(),
     val excluded: String? = null,
+    /**
+     * What this component IS on the shelf — `Scaffold`, `Container` or `Leaf` — when the catalog
+     * says rather than leaving it derived from whether it has slots. The same field, and the same
+     * fallback for an unknown word, as [UiBuilderBuiltin.shelfRole]; a capability document serves
+     * it as `role`. The derivation cannot tell a scaffold from a container: both have slots.
+     */
+    val shelfRole: String? = null,
     /**
      * The properties this component offers a design, or null to derive them from the record.
      *
