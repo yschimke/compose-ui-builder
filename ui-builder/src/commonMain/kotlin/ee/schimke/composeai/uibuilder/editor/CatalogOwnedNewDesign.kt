@@ -5,20 +5,23 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The new-design chooser's card for a catalog that answers for itself, built from nothing but what
- * the served catalog says: its `platformLabel` (or its own name), and one template per document its
- * policy's `templates` names, in the catalog's order.
+ * the served catalog says.
  *
- * The built-in cards (`newDesignCatalog` in the Wasm entry point) carry a label and supporting text
- * per template that a catalog cannot publish yet — `templates` is a list of paths, not of objects
- * (`UI_BUILDER_SEED_TEMPLATES.md`). So an owned card names a template after its file, and says it
- * comes from the catalog. That loss is listed in the cutover's gap ledger rather than papered over
- * with a table here keyed by catalog id, which is the coupling this card exists to remove.
+ * The card's label is the catalog's `newDesign.label`, then its `platformLabel`, then its own name.
+ * Its templates are the ones `templates` names, in the catalog's order, each carded from the
+ * matching `newDesign.templates` entry (label, supporting text, heading) and ordered by its `order`
+ * where the catalog gives one. A catalog that publishes no `newDesign` block — every catalog built
+ * before the policy could say what its cards read — has its templates named after their files and
+ * said to come from the catalog, rather than from a table here keyed by catalog id, which is the
+ * coupling this card exists to remove.
  */
 fun catalogOwnedNewDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCatalog {
   val systemId = catalog.benchmark.catalogSystemId
@@ -30,24 +33,50 @@ fun catalogOwnedNewDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesi
       ?.filter(String::isNotBlank)
       .orEmpty()
   val ids = declared.ifEmpty { listOf(UiBuilderNewDesignSeed.BLANK_TEMPLATE) }
-  val source = semantics[PLATFORM_LABEL]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
+  val chooser = semantics[NEW_DESIGN] as? JsonObject
+  val cards =
+    (chooser?.get(TEMPLATES) as? JsonArray)
+      .orEmpty()
+      .mapNotNull { it as? JsonObject }
+      .associateBy { it.string("id") }
+  val label =
+    chooser?.string("label")
+      ?: semantics[PLATFORM_LABEL]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
   return UiBuilderNewDesignCatalog(
     catalogOwned = true,
     systemId = systemId,
-    label = source ?: titleOf(systemId),
+    label = label ?: titleOf(systemId),
     platform = UiBuilderCatalogPlatform.from(semantics),
     templates =
-      ids.map { id ->
-        UiBuilderNewDesignTemplate(
-          id = id,
-          label = titleOf(id),
-          supportingText =
-            if (declared.isEmpty()) "An empty starting point for this catalog."
-            else "A starting point published by $systemId.",
-        )
-      },
+      ids
+        .withIndex()
+        // Stable: an entry the catalog gives no order keeps its place after those it does.
+        .sortedBy { (index, id) -> cards[id]?.int("order") ?: (Int.MAX_VALUE - ids.size + index) }
+        .map { (_, id) ->
+          val card = cards[id]
+          UiBuilderNewDesignTemplate(
+            id = id,
+            label = card?.string("label") ?: titleOf(id),
+            supportingText =
+              card?.string("supportingText")
+                ?: if (declared.isEmpty()) "An empty starting point for this catalog."
+                else "A starting point published by $systemId.",
+            group = card?.string("group"),
+          )
+        },
   )
 }
+
+/**
+ * Where a catalog-owned card asks to sit, from its `newDesign.order`; null when it says nothing.
+ */
+internal fun CatalogCapabilityV1.newDesignOrder(): Int? =
+  (statusSemantics[NEW_DESIGN] as? JsonObject)?.int("order")
+
+private fun JsonObject.string(key: String): String? =
+  (get(key) as? JsonPrimitive)?.contentOrNull?.takeIf(String::isNotBlank)
+
+private fun JsonObject.int(key: String): Int? = (get(key) as? JsonPrimitive)?.intOrNull
 
 /**
  * The chooser's cards in order. A catalog [ownership] names takes its card from
@@ -70,7 +99,14 @@ fun newDesignCatalogs(
     if (ownership.owns(catalog.benchmark.catalogSystemId)) catalogOwnedNewDesignCatalog(catalog)
     else builtIn(catalog)
   }
-  if (allOwned) return cards
+  // Every card owned: the catalogs' own `newDesign.order`, then the order the host served them in.
+  if (allOwned) {
+    val order = catalogs.associate { it.benchmark.catalogSystemId to it.newDesignOrder() }
+    return cards
+      .withIndex()
+      .sortedWith(compareBy({ order[it.value.systemId] ?: Int.MAX_VALUE }, { it.index }))
+      .map { it.value }
+  }
   if (ownership.isNone) return cards.sortedBy { builtInOrder.indexOf(it.systemId) }
   return cards.sortedBy { card ->
     builtInOrder.indexOf(card.systemId).takeIf { it >= 0 }
@@ -93,6 +129,7 @@ private val BUILT_IN_PRIMARY_CATALOGS = listOf("m3-catalog", "wear-m3", "remote-
 
 private const val TEMPLATES = "templates"
 private const val PLATFORM_LABEL = "platformLabel"
+private const val NEW_DESIGN = "newDesign"
 
 private fun titleOf(id: String): String =
   id.split('-', '_', '.').filter(String::isNotEmpty).joinToString(" ") { word ->
