@@ -76,7 +76,7 @@ internal data class CatalogUpgradeOutcome(
 )
 
 /** One `supersedes` entry, as the target catalog declared it. */
-private data class ComponentSuccessor(
+internal data class ComponentSuccessor(
   val componentId: String,
   val properties: Map<String, String>,
   val slots: Map<String, String>,
@@ -85,7 +85,7 @@ private data class ComponentSuccessor(
 )
 
 /** A legacy selector whose value chooses one of several concrete successor components. */
-private data class VariantSuccessor(
+internal data class VariantSuccessor(
   val property: String,
   val components: Map<String, String>,
 )
@@ -109,7 +109,7 @@ private const val SUPERSEDES_KEY = "supersedes"
  * only repair path down with it: an entry that does not name a `componentId` is not a rule, and the
  * node it would have moved is reported as unknown exactly as if nothing had been declared.
  */
-private fun successors(catalog: CatalogCapabilityV1): Map<String, ComponentSuccessor> {
+internal fun successors(catalog: CatalogCapabilityV1): Map<String, ComponentSuccessor> {
   val declared = catalog.statusSemantics[SUPERSEDES_KEY] as? JsonObject ?: return emptyMap()
   return declared.entries
     .mapNotNull { (from, entry) ->

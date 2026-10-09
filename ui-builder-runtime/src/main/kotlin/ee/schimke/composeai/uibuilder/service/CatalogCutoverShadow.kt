@@ -249,6 +249,13 @@ public object CatalogCutoverShadow {
    * properties (name, JSON type, required, allowed values) and slots (name, cardinality, accepted
    * roles and traits). Display names, notes and canvas adapters are presentation and are left out:
    * they differ by design and a report full of them would hide the ones that matter.
+   *
+   * What the published catalog's `statusSemantics.supersedes` carries across is not lost: a saved
+   * design is moved through it ([planCatalogUpgrade]) rather than stranded. A Kotlin-only component
+   * it supersedes, every successor of which the published catalog offers, is reported as superseded
+   * and not as a loss; and a property it migrates — the `variants.property` that chooses the
+   * successor, a property renamed onto one the successor declares, or one restated as a modifier —
+   * is reported as migrated rather than lost.
    */
   public fun catalogDifferences(
     synthesised: CatalogCapabilityV1,
@@ -271,18 +278,64 @@ public object CatalogCutoverShadow {
         else "$id/$componentId: ${finding.text}",
         finding.loss,
       )
+    val successors = successors(published)
     return buildList {
       (kotlin.keys - owned.keys).sorted().forEach {
-        add(line(it, Finding("only the Kotlin catalog has it", loss = true)))
+        add(line(it, kotlinOnly(successors[it], owned.keys)))
       }
       (owned.keys - kotlin.keys).sorted().forEach {
         add(line(it, Finding("only the published catalog has it", loss = false)))
       }
       (kotlin.keys intersect owned.keys).sorted().forEach { componentId ->
-        componentDifferences(kotlin.getValue(componentId), owned.getValue(componentId)).forEach {
-          add(line(componentId, it))
-        }
+        val successor = successors[componentId]
+        componentDifferences(
+            kotlin.getValue(componentId),
+            owned.getValue(componentId),
+            successor?.let { migratedProperties(it, owned) }.orEmpty(),
+          )
+          .forEach { add(line(componentId, it)) }
       }
+    }
+  }
+
+  /**
+   * A component only the Kotlin catalog has: lost, unless the published catalog supersedes it and
+   * offers every component a saved one would be moved to.
+   */
+  private fun kotlinOnly(successor: ComponentSuccessor?, owned: Set<String>): Finding {
+    if (successor == null) return Finding("only the Kotlin catalog has it", loss = true)
+    val targets =
+      (listOf(successor.componentId) + successor.variants?.components?.values.orEmpty()).distinct()
+    val missing = targets.filterNot { it in owned }
+    return if (missing.isEmpty()) {
+      Finding(
+        "only the Kotlin catalog has it; superseded by ${targets.joinToString()}",
+        loss = false,
+      )
+    } else {
+      Finding(
+        "only the Kotlin catalog has it; superseded by ${targets.joinToString()}, but the " +
+          "published catalog lacks ${missing.joinToString()}",
+        loss = true,
+      )
+    }
+  }
+
+  /**
+   * The properties [successor] carries across rather than drops: its variant selector, a property
+   * renamed onto one the successor declares, and one restated as a modifier.
+   */
+  private fun migratedProperties(
+    successor: ComponentSuccessor,
+    owned: Map<String, ComponentCapabilityV1>,
+  ): Set<String> {
+    val declared = owned[successor.componentId]?.properties?.map { it.name }?.toSet().orEmpty()
+    return buildSet {
+      successor.variants?.let { variants ->
+        if (variants.components.values.all { it in owned }) add(variants.property)
+      }
+      successor.properties.forEach { (from, to) -> if (to in declared) add(from) }
+      addAll(successor.modifiers.keys)
     }
   }
 
@@ -296,6 +349,7 @@ public object CatalogCutoverShadow {
   private fun componentDifferences(
     kotlin: ComponentCapabilityV1,
     published: ComponentCapabilityV1,
+    migrated: Set<String> = emptySet(),
   ): List<Finding> = buildList {
     // A role decides where the component may be placed and what may be placed in it, so a changed
     // one can strand designs either way: counted as a loss rather than guessed at.
@@ -311,7 +365,16 @@ public object CatalogCutoverShadow {
       ?.let(::add)
     val kotlinProperties = kotlin.properties.associateBy { it.name }
     val publishedProperties = published.properties.associateBy { it.name }
-    differ("properties", kotlinProperties.keys, publishedProperties.keys)?.let(::add)
+    val carried = (kotlinProperties.keys - publishedProperties.keys) intersect migrated
+    differ("properties", kotlinProperties.keys - carried, publishedProperties.keys)?.let(::add)
+    if (carried.isNotEmpty()) {
+      add(
+        Finding(
+          "properties: migrates ${carried.sorted().joinToString()} through statusSemantics.supersedes",
+          loss = false,
+        )
+      )
+    }
     (kotlinProperties.keys intersect publishedProperties.keys).sorted().forEach { name ->
       val a = kotlinProperties.getValue(name)
       val b = publishedProperties.getValue(name)

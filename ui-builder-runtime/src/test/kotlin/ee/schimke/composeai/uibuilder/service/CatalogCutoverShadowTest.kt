@@ -325,6 +325,68 @@ class CatalogCutoverShadowTest {
     assertFalse(only(withSlot(0, null, listOf("Leaf")), wide).loss)
   }
 
+  private fun CatalogCapabilityV1.superseding(
+    entries: Map<String, JsonObject>
+  ): CatalogCapabilityV1 =
+    newBuilder()
+      .also { b ->
+        b.statusSemantics = JsonObject(statusSemantics + ("supersedes" to JsonObject(entries)))
+      }
+      .build()
+
+  private fun successor(componentId: String, variants: JsonObject? = null): JsonObject =
+    JsonObject(
+      buildMap {
+        put("componentId", JsonPrimitive(componentId))
+        variants?.let { put("variants", it) }
+      }
+    )
+
+  /**
+   * A design naming a component the published catalog supersedes is moved, not stranded
+   * ([planCatalogUpgrade]), so the shadow must not count what the move carries across.
+   */
+  @Test
+  fun `a component the published catalog supersedes is not lost, unless a successor is missing`() {
+    val other = wear.components.first { it.componentId != component.componentId }
+    val dropped = wear.newBuilder().also { it.components = wear.components - component }.build()
+
+    val superseded =
+      dropped.superseding(mapOf(component.componentId to successor(other.componentId)))
+    val difference = only(wear, superseded)
+    assertFalse(difference.loss, difference.text)
+    assertContains(difference.text, "superseded by ${other.componentId}")
+
+    val nowhere = dropped.superseding(mapOf(component.componentId to successor("shadow/missing")))
+    val stranded = only(wear, nowhere)
+    assertTrue(stranded.loss, stranded.text)
+    assertContains(stranded.text, "lacks shadow/missing")
+  }
+
+  @Test
+  fun `the property a supersedes entry chooses its successor by is migrated, not lost`() {
+    val withoutProperty =
+      wear.with(component.componentId) { c ->
+        c.newBuilder().also { it.properties = c.properties - property }.build()
+      }
+    assertTrue(only(wear, withoutProperty).loss)
+
+    val variants =
+      JsonObject(
+        mapOf(
+          "property" to JsonPrimitive(property.name),
+          "components" to JsonObject(mapOf("a" to JsonPrimitive(component.componentId))),
+        )
+      )
+    val migrated =
+      withoutProperty.superseding(
+        mapOf(component.componentId to successor(component.componentId, variants))
+      )
+    val difference = only(wear, migrated)
+    assertFalse(difference.loss, difference.text)
+    assertContains(difference.text, "migrates ${property.name}")
+  }
+
   @Test
   fun `a changed role is a loss`() {
     val other = if (component.role == "Leaf") "Container" else "Leaf"

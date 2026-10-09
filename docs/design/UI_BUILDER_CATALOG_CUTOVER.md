@@ -186,7 +186,14 @@ nothing served:
   - a property that becomes required;
   - allowed values or a slot cardinality that narrow.
 
-  Additions and relaxations are not losses.
+  Additions and relaxations are not losses, and neither is what the published catalog's
+  `statusSemantics.supersedes` carries across: a saved design is moved through it
+  (`CatalogUpgradePlan`) rather than stranded. So a Kotlin-only component the published catalog
+  supersedes is reported as superseded, not lost, provided it offers every successor; and a property
+  the entry migrates (the `variants.property` that picks the successor, a property renamed onto one
+  the successor declares, or one restated as a modifier) is reported as migrated. m3-catalog's
+  `m3/progress-indicator` and the `variant` of `m3/card`, `m3/icon-button` and `m3/text-field` are
+  that case.
 
 **Ready means no findings and no losses.** Until 2026-10 it meant no findings alone, and
 preview.coo.ee reported `remote-m3` "ready to own" while owning it would have dropped
