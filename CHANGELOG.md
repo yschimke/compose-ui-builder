@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.97.0](https://github.com/yschimke/compose-ui-builder/compare/v3.96.0...v3.97.0) (2026-10-09)
+
+
+### Features
+
+* **guidelines:** a catalog's own guidelines file, with its rules, frames and Remote Compose profiles ([#596](https://github.com/yschimke/compose-ui-builder/issues/596)) ([b1c6763](https://github.com/yschimke/compose-ui-builder/commit/b1c6763140a3b43abdd1c76cd6e047e2ef4aee7f))
+* **guidelines:** Material 3 Expressive and Wear kit guidance from m3.material.io, Figma and androidx ([#591](https://github.com/yschimke/compose-ui-builder/issues/591)) ([0d5889f](https://github.com/yschimke/compose-ui-builder/commit/0d5889fc52bc8080bf60105a64511ee74b45c953))
+* **guidelines:** show findings over the design on the canvas, with a switch to hide them ([#592](https://github.com/yschimke/compose-ui-builder/issues/592)) ([3c379f7](https://github.com/yschimke/compose-ui-builder/commit/3c379f7f19215d652c505f2d48233dc853bc95e0))
+* **ui-builder:** live preview time and a time.animation value ([#589](https://github.com/yschimke/compose-ui-builder/issues/589)) ([f3df6a2](https://github.com/yschimke/compose-ui-builder/commit/f3df6a28251a8be0e34942fb2463b26350c024ae))
+* **ui-builder:** tween and spring, animated values in formulas ([#595](https://github.com/yschimke/compose-ui-builder/issues/595)) ([c90e6a5](https://github.com/yschimke/compose-ui-builder/commit/c90e6a5b2ce6a438acc69e287ae67aecc5504795))
+
+
+### Bug Fixes
+
+* **guidelines:** finish OpenRouter sign-in at startup, and scroll the Issues panel as one list ([#590](https://github.com/yschimke/compose-ui-builder/issues/590)) ([511ecb4](https://github.com/yschimke/compose-ui-builder/commit/511ecb4b6965b1b9f650cfb25fbc52ead9fe25b6))
+* **guidelines:** stop the widget picture descriptions asserting that content is clipped ([#594](https://github.com/yschimke/compose-ui-builder/issues/594)) ([071229b](https://github.com/yschimke/compose-ui-builder/commit/071229b90b69609474c942d6672338641bae9b23))
+* **ui-builder:** name a shadow difference once, not under the catalog twice ([#588](https://github.com/yschimke/compose-ui-builder/issues/588)) ([c401068](https://github.com/yschimke/compose-ui-builder/commit/c401068ef400f7bf75db4e271fa205fbf2bf8894))
+
 ## [3.96.0](https://github.com/yschimke/compose-ui-builder/compare/v3.95.0...v3.96.0) (2026-10-09)
 
 
