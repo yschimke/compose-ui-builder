@@ -233,6 +233,15 @@ corner:
 A Preview drawn from server renders (`RemoteDocumentDesignPreviewPane`) gets only the fixed panes.
 There, each size is a render round trip.
 
+A design can also adapt to those counts itself. `remote-widgets/adaptive-layout`
+(remote-m3-catalog's `AdaptiveLayout`) holds up to three layouts, `compact`, `medium` and
+`expanded`, each authored at a cell count, and the widget shows the one that fits it best, Glance's
+`SizeMode.Responsive` rule, chosen during playback by a `RemoteStateLayout`. The catalog draws it
+with the `launcher/adaptive-layout` canvas adapter, which makes the same choice for the frame it is
+drawing (`LauncherAdaptiveLayout`), so every pane shows its own breakpoint and the resizable pane
+switches layout as it is dragged. Export needs nothing of its own: the design writes a record-driven
+call to `AdaptiveLayout`, one named slot per breakpoint.
+
 ### The real adaptive components
 
 The rung this sits on, and what each of the three is allowed to lie about, is

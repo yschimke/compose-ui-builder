@@ -166,6 +166,7 @@ import ee.schimke.composeai.uibuilder.editor.supportingText
 import ee.schimke.composeai.uibuilder.ensureBundledWearDeviceFonts
 import ee.schimke.composeai.uibuilder.export.AdaptiveWearWidget
 import ee.schimke.composeai.uibuilder.export.LAUNCHER_WIDGET_TEXT_COMPONENT_ID
+import ee.schimke.composeai.uibuilder.export.LauncherAdaptiveLayout
 import ee.schimke.composeai.uibuilder.export.LauncherWidgetCodeExporter
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_CUSTOM_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
@@ -347,6 +348,13 @@ internal val LocalUiBuilderUnrolled = staticCompositionLocalOf { false }
  * the same stand-in an unrolled canvas draws — without unrolling anything else.
  */
 internal val LocalUiBuilderInlineDialogs = staticCompositionLocalOf { false }
+
+/**
+ * The width and height, in dp, of the frame being rendered when a protocol-v2 surface names one,
+ * which may differ from the size saved in the document's environment. Null for in-process renders,
+ * which take the environment's.
+ */
+internal val LocalUiBuilderSurfaceSizeDp = staticCompositionLocalOf<Pair<Float, Float>?> { null }
 
 internal enum class UiBuilderRenderStrategy {
   REAL,
@@ -557,6 +565,7 @@ fun UiBuilderSurface(
     LocalUiBuilderCanvasAdapterMappings provides canvasAdapterMappings,
     LocalCanvasAdapterRegistry provides canvasAdapterRegistry,
     LocalUiBuilderUnrolled provides effectiveUnrolled,
+    LocalUiBuilderSurfaceSizeDp provides renderSurface?.let { it.widthDp to it.heightDp },
     LocalWearWidgetHostShape provides wearWidgetHostShape,
     // What a lazy container scrolls to; see [RevealSelectedItem]. Recomputed only when the
     // selection or the design moves, and equal sets keep the reveal from firing again on an edit.
@@ -761,6 +770,24 @@ private fun RenderNode(
         maxLines = node.lineCount("maxLines"),
         onTextLayout = { host.recordTextLayout(path, it) },
       )
+      return@RenderCanvasNode
+    }
+    // A launcher widget's adaptive layout: of its slots, the one the widget would show in the frame
+    // being viewed, so a launcher pane resized to the next breakpoint draws that breakpoint's
+    // layout. The rule is the catalog's; see [LauncherAdaptiveLayout].
+    if (adapterId == LauncherAdaptiveLayout.CANVAS_ADAPTER) {
+      // The frame actually rendered: a protocol-v2 surface's own size, else the document's.
+      val surface = LocalUiBuilderSurfaceSizeDp.current
+      val shown =
+        LauncherAdaptiveLayout.visibleSlot(
+          widthDp = surface?.first ?: document.environmentScale("widthDp") ?: 0f,
+          heightDp = surface?.second ?: document.environmentScale("heightDp") ?: 0f,
+          sizeLabel = { node.string(it).takeIf(String::isNotBlank) },
+          filled = { slot(it).isNotEmpty() },
+        )
+      Box(measured, contentAlignment = Alignment.Center) {
+        slot(shown).forEach { child(it, Modifier.fillMaxSize()) }
+      }
       return@RenderCanvasNode
     }
     when (adapterId) {
