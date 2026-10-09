@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.98.0](https://github.com/yschimke/compose-ui-builder/compare/v3.97.0...v3.98.0) (2026-10-09)
+
+
+### Features
+
+* **canvas:** draw a launcher widget's adaptive layout at the slot its frame picks ([#601](https://github.com/yschimke/compose-ui-builder/issues/601)) ([6cd69ee](https://github.com/yschimke/compose-ui-builder/commit/6cd69ee408ad34966c7efe37b4b1186577fc13cd))
+* **guidelines:** default to DeepSeek V4.1 Flash, record which model answered, and a Jev evidence triage ([#598](https://github.com/yschimke/compose-ui-builder/issues/598)) ([03deacd](https://github.com/yschimke/compose-ui-builder/commit/03deacdc77672f2f7f2f36ad7575dbf98121e025))
+* **ui-builder:** actions that write a formula ([#599](https://github.com/yschimke/compose-ui-builder/issues/599)) ([9099788](https://github.com/yschimke/compose-ui-builder/commit/90997889e3c96da54a10af845aa66a851060d2bc))
+* **ui-builder:** card a catalog-owned chooser from the catalog's own newDesign copy ([#597](https://github.com/yschimke/compose-ui-builder/issues/597)) ([81afe7c](https://github.com/yschimke/compose-ui-builder/commit/81afe7cfd4560daf8ae7fc32ca61d58d05b6d0fa))
+
 ## [3.97.0](https://github.com/yschimke/compose-ui-builder/compare/v3.96.0...v3.97.0) (2026-10-09)
 
 
