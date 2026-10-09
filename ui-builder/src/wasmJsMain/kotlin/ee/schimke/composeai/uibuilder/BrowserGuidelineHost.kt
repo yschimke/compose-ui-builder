@@ -154,6 +154,55 @@ internal class BrowserGuidelineHost(
     }
   }
 
+  override suspend fun serverAccess(): DesignGuidelineHost.ServerCheckAccess? =
+    serverGet("/guidelines/access")?.let {
+      val wire = guidelineJson.decodeFromString(AccessWire.serializer(), it)
+      DesignGuidelineHost.ServerCheckAccess(wire.serverCheck, wire.model, wire.reason)
+    }
+
+  /**
+   * Runs the check on compose-preview-server's own key (`POST …/guidelines/check`), which answers
+   * with the design's guidelines — the record it just wrote — or a sentence saying why not.
+   */
+  override suspend fun runServerCheck(
+    document: UiBuilderDocument
+  ): DesignGuidelineHost.ServerCheckOutcome {
+    val url =
+      designUrl("/guidelines/check?revision=${document.revision}")
+        ?: return DesignGuidelineHost.ServerCheckOutcome.Refused(
+          "this page is not served by a design host that runs the check"
+        )
+    val wire =
+      guidelineJson.decodeFromString(
+        ResponseWire.serializer(),
+        awaitCommentString(commentFetch("POST", url, "{}", true)),
+      )
+    if (wire.status !in 200..299) {
+      return DesignGuidelineHost.ServerCheckOutcome.Refused(
+        "The server could not run the check (${wire.status}): " +
+          (runCatching {
+            guidelineJson.decodeFromString(ErrorWire.serializer(), wire.body).let {
+              it.message ?: it.error
+            }
+          }
+            .getOrNull() ?: wire.body.take(200))
+      )
+    }
+    // The route answers with the stored record itself; a reply shaped like `GET …/guidelines`
+    // (the record under `record`) is read too, so either server shape works.
+    val record =
+      runCatching { guidelineJson.decodeFromString(DesignGuidelineRecord.serializer(), wire.body) }
+        .getOrNull()
+        ?: runCatching {
+          guidelineJson.decodeFromString(GuidelinesWire.serializer(), wire.body).record
+        }
+          .getOrNull()
+    return record?.let { DesignGuidelineHost.ServerCheckOutcome.Recorded(it) }
+      ?: DesignGuidelineHost.ServerCheckOutcome.Refused(
+        "The server ran the check but recorded nothing."
+      )
+  }
+
   private fun designUrl(suffix: String): String? {
     if (!hostedByServer) return null
     return try {
@@ -189,6 +238,17 @@ internal class BrowserGuidelineHost(
   @Serializable internal data class KeyWire(val key: String? = null)
 
   @Serializable private data class ResponseWire(val status: Int, val body: String)
+
+  @Serializable
+  private data class AccessWire(
+    val serverCheck: Boolean = false,
+    val model: String? = null,
+    val reason: String? = null,
+  )
+
+  @Serializable private data class GuidelinesWire(val record: DesignGuidelineRecord? = null)
+
+  @Serializable private data class ErrorWire(val message: String? = null, val error: String? = null)
 
   internal companion object {
     const val KEY_STORAGE = "ui-builder.guidelines.openrouter-key"

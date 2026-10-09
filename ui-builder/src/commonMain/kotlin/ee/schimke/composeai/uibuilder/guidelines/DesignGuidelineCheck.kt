@@ -66,6 +66,27 @@ interface DesignGuidelineHost {
   /** Records [record] as the design's latest result, so agents and other people see it. */
   suspend fun recordResult(record: DesignGuidelineRecord): DesignGuidelineRecord? = null
 
+  /**
+   * Whether this person may run the check on the design host's own OpenRouter key, and on which
+   * model; null where the host has no such check (the person then needs a key of their own).
+   */
+  suspend fun serverAccess(): ServerCheckAccess? = null
+
+  /** Runs the check on the host's key and returns the result it recorded. */
+  suspend fun runServerCheck(document: UiBuilderDocument): ServerCheckOutcome =
+    ServerCheckOutcome.Refused("this host does not run the check on its own key")
+
+  /**
+   * What [serverAccess] answers: `serverCheck` is false with a [reason] for an account not allowed.
+   */
+  data class ServerCheckAccess(val serverCheck: Boolean, val model: String?, val reason: String?)
+
+  sealed interface ServerCheckOutcome {
+    data class Recorded(val record: DesignGuidelineRecord) : ServerCheckOutcome
+
+    data class Refused(val reason: String) : ServerCheckOutcome
+  }
+
   data class Response(val status: Int, val body: String)
 
   sealed interface SignInResult {
@@ -95,6 +116,8 @@ sealed interface DesignGuidelineState {
     val result: DesignGuidelineResult? = null,
     val running: Boolean = false,
     val notice: String? = null,
+    /** The check runs on the design host's key, which this account may use; no key is asked for. */
+    val onServer: Boolean = false,
   ) : DesignGuidelineState
 }
 
@@ -161,6 +184,44 @@ class DesignGuidelineController(
     data class Shown(val request: DesignGuidelineRequest) : PromptView
 
     data class Failed(val reason: String) : PromptView
+  }
+
+  private var serverAccess: DesignGuidelineHost.ServerCheckAccess? = null
+
+  /**
+   * Asks the host whether this account may run the check on the host's own key. When it may, the
+   * panel offers the check without asking for an OpenRouter key; a key of the person's own stays
+   * available through [useOwnKey].
+   */
+  suspend fun loadAccess() {
+    val access = runCatching { host.serverAccess() }.getOrNull() ?: return
+    serverAccess = access
+    if (!access.serverCheck) return
+    val current = _state.value
+    if (current is DesignGuidelineState.Ready && current.running) return
+    _state.value =
+      DesignGuidelineState.Ready(
+        model = access.model ?: currentModel(),
+        result = (current as? DesignGuidelineState.Ready)?.result,
+        onServer = true,
+      )
+  }
+
+  /** Whether the host offered its own key to this account. */
+  val canUseServer: Boolean
+    get() = serverAccess?.serverCheck == true
+
+  /** Leaves the host's key for the person's own: their stored key, or the key setup. */
+  fun useOwnKey() {
+    _state.value =
+      host.storedKey()?.let { DesignGuidelineState.Ready(currentModel()) }
+        ?: DesignGuidelineState.NeedsKey()
+  }
+
+  /** Back to the host's key, when it offered it. */
+  fun useServer() {
+    val access = serverAccess?.takeIf { it.serverCheck } ?: return
+    _state.value = DesignGuidelineState.Ready(access.model ?: currentModel(), onServer = true)
   }
 
   /** Reads the design's latest recorded result from the host, when it keeps one. */
@@ -252,6 +313,7 @@ class DesignGuidelineController(
 
   suspend fun check(document: UiBuilderDocument, encoded: JsonObject) {
     val ready = _state.value as? DesignGuidelineState.Ready ?: return
+    if (ready.onServer) return checkOnServer(document, ready)
     val key = host.storedKey() ?: return run { _state.value = DesignGuidelineState.NeedsKey() }
     _state.value = ready.copy(running = true, notice = null)
     _state.value =
@@ -267,6 +329,30 @@ class DesignGuidelineController(
         } else {
           ready.copy(running = false, notice = failure.message)
         }
+      } catch (thrown: Exception) {
+        ready.copy(running = false, notice = "The check could not run: ${thrown.message}")
+      }
+  }
+
+  private suspend fun checkOnServer(
+    document: UiBuilderDocument,
+    ready: DesignGuidelineState.Ready,
+  ) {
+    _state.value = ready.copy(running = true, notice = null)
+    _state.value =
+      try {
+        when (val outcome = host.runServerCheck(document)) {
+          is DesignGuidelineHost.ServerCheckOutcome.Recorded -> {
+            val result = outcome.record.toResult(rules)
+            _shared.value = result
+            ready.copy(result = result, running = false)
+          }
+          is DesignGuidelineHost.ServerCheckOutcome.Refused ->
+            ready.copy(running = false, notice = outcome.reason)
+        }
+      } catch (cancelled: CancellationException) {
+        _state.value = ready.copy(running = false)
+        throw cancelled
       } catch (thrown: Exception) {
         ready.copy(running = false, notice = "The check could not run: ${thrown.message}")
       }
