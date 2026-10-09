@@ -347,6 +347,8 @@ private external fun finishOpenRouterSignIn(storageKey: String): Promise<JsStrin
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + key,
       'X-Title': 'Compose UI Builder guidelines check',
+      // Routing metadata in the body, so a routed check records which model answered and why.
+      'X-OpenRouter-Metadata': 'enabled',
     },
     body,
   }).then((response) => response.text().then((text) => JSON.stringify({

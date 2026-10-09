@@ -115,4 +115,78 @@ class CatalogOwnedNewDesignTest {
       )
     assertEquals(listOf(false, true), cards.map { it.catalogOwned })
   }
+
+  private fun withNewDesign(catalog: CatalogCapabilityV1, newDesign: String) =
+    catalog
+      .newBuilder()
+      .also {
+        it.statusSemantics =
+          JsonObject(
+            catalog.statusSemantics +
+              ("newDesign" to kotlinx.serialization.json.Json.parseToJsonElement(newDesign))
+          )
+      }
+      .build()
+
+  @Test
+  fun `a catalog that publishes its chooser copy is carded by it, in the order it gives`() {
+    val described =
+      withNewDesign(
+        wear,
+        """
+        {"label": "Wear app", "order": 1, "templates": [
+          {"id": "wear-screen", "path": "ui-builder/designs/wear-screen.json"},
+          {"id": "wear-list", "path": "ui-builder/designs/wear-list.json", "label": "Activity list",
+           "supportingText": "Six title cards under a list header.", "group": "Lists", "order": 1}
+        ]}
+        """,
+      )
+    val card = catalogOwnedNewDesignCatalog(described)
+    assertEquals("Wear app", card.label)
+    // `wear-list` gives an order and `wear-screen` none, so the ordered one comes first.
+    assertEquals(listOf("wear-list", "wear-screen"), card.templates.map { it.id })
+    assertEquals("Activity list", card.templates[0].label)
+    assertEquals("Six title cards under a list header.", card.templates[0].supportingText)
+    assertEquals("Lists", card.templates[0].group)
+    // An entry that says nothing keeps the file-name card.
+    assertEquals("Wear Screen", card.templates[1].label)
+  }
+
+  @Test
+  fun `with every catalog owned, the catalogs' own order decides before the served order`() {
+    val cards =
+      newDesignCatalogs(
+        listOf(
+          withNewDesign(wear, """{"order": 2}"""),
+          withNewDesign(m3, """{"order": 1}"""),
+          a2ui,
+        ),
+        CatalogOwnership.ALL,
+        builtInOrder,
+        ::builtIn,
+      )
+    assertEquals(listOf("m3-catalog", "wear-m3", "a2ui-catalog"), cards.map { it.systemId })
+  }
+
+  @Test
+  fun `an ordered entry precedes an unordered one whatever its order value`() {
+    val described =
+      withNewDesign(
+        wear,
+        """{"templates": [{"id": "wear-list", "path": "p", "order": ${Int.MAX_VALUE - 1}}]}""",
+      )
+    // `wear-screen` is listed first and gives no order; `wear-list` gives a very large one.
+    assertEquals(
+      listOf("wear-list", "wear-screen"),
+      catalogOwnedNewDesignCatalog(described).templates.map { it.id },
+    )
+    val cards =
+      newDesignCatalogs(
+        listOf(a2ui, withNewDesign(m3, """{"order": ${Int.MAX_VALUE}}""")),
+        CatalogOwnership.ALL,
+        builtInOrder,
+        ::builtIn,
+      )
+    assertEquals(listOf("m3-catalog", "a2ui-catalog"), cards.map { it.systemId })
+  }
 }

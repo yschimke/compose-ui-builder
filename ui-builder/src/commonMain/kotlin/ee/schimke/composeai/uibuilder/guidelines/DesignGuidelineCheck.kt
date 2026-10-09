@@ -81,7 +81,10 @@ interface DesignGuidelineHost {
 const val OPENROUTER_KEYS_URL: String = "https://openrouter.ai/settings/keys"
 
 /** The model a person starts with; any OpenRouter model id works. */
-const val DEFAULT_GUIDELINE_MODEL: String = "typesafe/jev-router"
+// Called directly rather than through `typesafe/jev-router`, which routes this check to the same
+// model most of the time but picks at random, through dearer providers, and reads only the text —
+// so it never chooses for the pictures the visual rules are judged on.
+const val DEFAULT_GUIDELINE_MODEL: String = "deepseek/deepseek-v4.1-flash"
 
 sealed interface DesignGuidelineState {
   /** No key yet: the panel explains how to get one. */
@@ -111,6 +114,8 @@ data class DesignGuidelineResult(
   val request: DesignGuidelineRequest? = null,
   /** Who ran it, as the host records it (`github:…`, `agent:…`, `server`); null when unknown. */
   val ranBy: String? = null,
+  /** The model that actually answered, and how it was chosen; null when not reported. */
+  val served: DesignGuidelineServed? = null,
 )
 
 /**
@@ -296,6 +301,7 @@ class DesignGuidelineController(
           DesignGuidelinePrompt.errorMessage(response.body),
       )
     }
+    val served = DesignGuidelinePrompt.parseServed(response.body)
     val verdicts =
       DesignGuidelinePrompt.parseCompletion(response.body).getOrElse {
         throw GuidelineCheckFailure(
@@ -321,6 +327,7 @@ class DesignGuidelineController(
         model = model,
         sourceAttached = request.sourceAttached,
         request = request,
+        served = served,
       )
     // Shared with agents and other people: the design's latest result is whoever ran it last.
     val recorded = runCatching {
@@ -332,6 +339,11 @@ class DesignGuidelineController(
           rulesVersion = request.rules.version,
           asked = asked.map { it.id },
           verdicts = answered,
+          servedModel = served.model,
+          provider = served.provider,
+          costUsd = served.costUsd,
+          generationId = served.generationId,
+          routing = served.routing,
         )
       )
     }
@@ -381,5 +393,6 @@ fun DesignGuidelineRecord.toResult(rules: DesignGuidelineRuleSet): DesignGuideli
     model = model,
     unanswered = asked - answered.map { it.ruleId }.toSet(),
     ranBy = ranBy,
+    served = served.takeIf { it.model != null || it.routing != null },
   )
 }
