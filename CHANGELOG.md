@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.96.0](https://github.com/yschimke/compose-ui-builder/compare/v3.95.0...v3.96.0) (2026-10-09)
+
+
+### Bug Fixes
+
+* **ui-builder:** stop the paste loop spinning once its effect is cancelled ([#587](https://github.com/yschimke/compose-ui-builder/issues/587)) ([6c2af2c](https://github.com/yschimke/compose-ui-builder/commit/6c2af2c6ae4e42c74ffbfdde6454cf1154bd63ac))
+
 ## [3.95.0](https://github.com/yschimke/compose-ui-builder/compare/v3.94.0...v3.95.0) (2026-10-08)
 
 
