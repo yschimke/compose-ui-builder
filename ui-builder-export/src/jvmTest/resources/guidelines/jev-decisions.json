@@ -1,0 +1,24 @@
+{
+ "model": "typesafe/jev-1.13-20260917",
+ "answers": {
+  "dark_theme": {
+   "type": "noul",
+   "noul": 0.71
+  },
+  "large_font": {
+   "type": "noul",
+   "noul": 0.22
+  },
+  "a11y_hierarchy": {
+   "type": "noul",
+   "noul": 0.55
+  }
+ },
+ "usage": {
+  "input_tokens": 7732,
+  "output_tokens": 781,
+  "cost": 0.000324744
+ },
+ "id": "gen-dec-1791536416-TgcVngEZHwQjda9YuLTg",
+ "provider": "TypeSafe"
+}

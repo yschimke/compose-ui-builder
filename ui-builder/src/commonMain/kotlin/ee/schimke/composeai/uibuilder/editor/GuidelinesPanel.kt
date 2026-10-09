@@ -39,6 +39,7 @@ import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineRequest
 import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineResult
 import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineState
 import ee.schimke.composeai.uibuilder.guidelines.OPENROUTER_KEYS_URL
+import ee.schimke.composeai.uibuilder.guidelines.describe
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
@@ -276,7 +277,8 @@ private fun ResultSummary(
   val stale = result.revision != document.revision
   Text(
     buildString {
-      append("Revision ").append(result.revision).append(" · ").append(result.model)
+      append("Revision ").append(result.revision).append(" · ")
+      append(result.served?.describe(result.model) ?: result.model)
       result.ranBy?.let { append(" · run by ").append(it) }
     },
     color = MaterialTheme.colorScheme.onSurfaceVariant,
