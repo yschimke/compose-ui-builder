@@ -93,6 +93,29 @@ accessibility, not interaction, which stays an event binding. `drawWithContent` 
 modifier holds values, not draw operations, and a `layout/box` with a `draw/canvas` behind its
 content draws the same thing as nodes.
 
+## Motion between states
+
+Two typed modifiers animate a "Show by state" box's switch, which is a `RemoteStateLayout` in the
+export and the device preview:
+
+- **`sharedElement`** (`key`) matches one element across the branches: the same key on both sides
+  is one element, and its bounds move between them instead of one copy fading out while another
+  fades in. With only a key it exports as `animationSpec(key, true)`, the overload every line has.
+  It may also name `durationMs`, `easing` (the `tween` easings), `enter` and `exit`, and then
+  exports as `sharedElement(key, remoteTween(…), RemoteEnterTransition.…, RemoteExitTransition.…)`,
+  from alpha20.
+- **`animateEnterExit`** gives a component its own way in and out as its branch comes and goes —
+  `fadeIn`, `slideInLeft`/`Right`/`Top`/`Bottom`, `rotate` in; the matching `…Out` and `rotate`
+  out. A slide is named by the way it travels: `slideInBottom` moves down into place. It exports
+  as `animationSpec(-1, spec, spec, enter, exit)`, not the creation library's own
+  `animateEnterExit`: that writes animation id 0, which every player reads as "animation disabled",
+  so its transitions never play. `-1` is the unset id — enabled, and matched to nothing.
+
+Padding is part of a Remote Compose component, so a shared element's padding morphs with it. An
+element that should travel is placed by its parent (an alignment, or a box around it), not by its
+own padding. The canvas draws neither modifier; the device preview, which runs the CMP player,
+plays both (rc-players ≥ the release carrying yschimke/rc-players#604).
+
 ## Where it stood
 
 A property was a literal, a state read or a loop binding, and only text and record parameters could
