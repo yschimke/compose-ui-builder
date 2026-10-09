@@ -38,6 +38,17 @@ internal class BrowserGuidelineHost(
     writeGuidelineSetting(MODEL_STORAGE, model.orEmpty())
   }
 
+  override fun storedOverlay(): Boolean? =
+    when (readGuidelineSetting(OVERLAY_STORAGE)) {
+      "1" -> true
+      "0" -> false
+      else -> null
+    }
+
+  override fun storeOverlay(shown: Boolean) {
+    writeGuidelineSetting(OVERLAY_STORAGE, if (shown) "1" else "0")
+  }
+
   override val signIn: (() -> Unit) = { beginOpenRouterSignIn(VERIFIER_STORAGE) }
 
   override suspend fun completeSignIn(): DesignGuidelineHost.SignInResult {
@@ -211,6 +222,7 @@ internal class BrowserGuidelineHost(
   private companion object {
     const val KEY_STORAGE = "ui-builder.guidelines.openrouter-key"
     const val MODEL_STORAGE = "ui-builder.guidelines.model"
+    const val OVERLAY_STORAGE = "ui-builder.guidelines.overlay"
     const val VERIFIER_STORAGE = "ui-builder.guidelines.pkce-verifier"
     const val OPENROUTER_CHAT_COMPLETIONS = "https://openrouter.ai/api/v1/chat/completions"
     val guidelineJson = Json { ignoreUnknownKeys = true }

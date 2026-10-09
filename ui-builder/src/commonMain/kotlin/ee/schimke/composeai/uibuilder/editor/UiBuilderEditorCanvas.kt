@@ -950,6 +950,10 @@ internal fun PinnedDesignCanvas(
                   findings = referenceFindings,
                 )
                 RemotePresenceOverlay(collaborators, inspection, frameOrigin, drawScale)
+                // Over the design and its collaborators, under the comment pins: a finding is
+                // advice about what is drawn, and a pin is still the one thing a person came to
+                // click.
+                GuidelineFindingsOverlay(inspection, frameOrigin, drawScale, onNodeSelected)
                 // Above everything, because a pin is the one thing on this canvas a person clicks
                 // that is
                 // not part of the design: it must not end up under a mock somebody just turned up
