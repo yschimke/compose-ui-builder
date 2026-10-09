@@ -113,8 +113,11 @@ export and the device preview:
 
 Padding is part of a Remote Compose component, so a shared element's padding morphs with it. An
 element that should travel is placed by its parent (an alignment, or a box around it), not by its
-own padding. The canvas draws neither modifier; the device preview, which runs the CMP player,
-plays both (rc-players ≥ the release carrying yschimke/rc-players#604).
+own padding. A published `remote-compose` catalog offers both (and `remoteCall`,
+`collapsiblePriority`) on every component whose policy states no `modifiers`, the way the
+synthesised remote-m3 does, so they survive the catalog-owned cutover. The canvas draws neither
+modifier; the device preview, which runs the CMP player, plays both (rc-players ≥ the release
+carrying yschimke/rc-players#604 and #606).
 
 ## Where it stood
 
