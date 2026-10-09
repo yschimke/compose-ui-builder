@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.101.0](https://github.com/yschimke/compose-ui-builder/compare/v3.100.0...v3.101.0) (2026-10-09)
+
+
+### Bug Fixes
+
+* compose-ai-tools 2.38.0, building component records through the contracts' builders ([#617](https://github.com/yschimke/compose-ui-builder/issues/617)) ([3368e29](https://github.com/yschimke/compose-ui-builder/commit/3368e2928a085f79e940e16e004c35713cbdf077))
+
 ## [3.100.0](https://github.com/yschimke/compose-ui-builder/compare/v3.99.0...v3.100.0) (2026-10-09)
 
 
