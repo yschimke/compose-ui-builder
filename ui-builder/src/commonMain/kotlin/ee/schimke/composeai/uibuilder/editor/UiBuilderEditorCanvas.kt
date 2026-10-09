@@ -1333,8 +1333,7 @@ private fun SlotPlaceholderOverlay(
     // The chip's screen size against the region's: the chip is scaled back to screen size below,
     // and the region's bounds are already in screen pixels.
     val text = textMeasurer.measure(placeholder.target.slot, labelStyle, maxLines = 1).size
-    val chip =
-      with(density) { Size(text.width + 12.dp.toPx(), text.height + 4.dp.toPx()) }
+    val chip = with(density) { Size(text.width + 12.dp.toPx(), text.height + 4.dp.toPx()) }
     if (chip.width > bounds.width || chip.height > bounds.height) return@forEach
     val local =
       UiBuilderPixelBounds(
