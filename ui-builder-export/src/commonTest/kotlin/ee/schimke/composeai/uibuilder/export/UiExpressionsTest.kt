@@ -104,7 +104,11 @@ class UiExpressionsTest {
     fun issue(text: String) =
       assertIs<UiExpressions.Checked.Issue>(UiExpressions.check(parse(text), scope), text).message
     assertTrue("literal" in issue("tween(progress, count)"))
-    assertTrue("more than 0" in issue("tween(progress, 0)"))
+    assertTrue("whole milliseconds" in issue("tween(progress, 0)"))
+    // The player's tween takes whole milliseconds; 0.5 would be written as 0.
+    assertTrue("whole milliseconds" in issue("tween(progress, 0.5)"))
+    assertTrue("whole milliseconds" in issue("tween(progress, 300.5)"))
+    assertEquals(UiValueKind.FLOAT, typed("tween(progress, 300.0)").kind)
     assertTrue("easing" in issue("tween(progress, 300, \"wobble\")"))
     assertTrue("more than 0" in issue("spring(progress, 0)"))
     assertTrue("tween" in issue("tween(name, 300)"))

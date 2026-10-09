@@ -147,7 +147,7 @@ from its operands and refuses what does not type, with the path of the operand i
 
 `tween` and `spring` export as `animateRemoteFloatAsState(x, remoteTween(…))` /
 `remoteSpring(…)`. Their spec is fixed when the document is written, so it must be literal: a
-duration above 0 ms, an easing among `standard` `linear` `accelerate` `decelerate` `anticipate`
+whole-millisecond duration of at least 1, an easing among `standard` `linear` `accelerate` `decelerate` `anticipate`
 `overshoot` `bounce` `elastic`, and a stiffness and damping ratio above 0. The canvas draws where
 the animation settles, as a still frame of a finished animation; a played document animates. A
 state change is what moves the target — `tween(select(on, 150, 40), 600)` slides when a click

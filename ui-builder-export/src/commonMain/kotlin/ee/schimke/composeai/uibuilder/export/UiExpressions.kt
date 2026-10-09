@@ -429,7 +429,8 @@ object UiExpressions {
     return when (call.op) {
       Op.TWEEN ->
         when {
-          numbers.first() <= 0.0 -> "a tween's duration must be more than 0 ms"
+          numbers.first().let { it < 1.0 || it % 1.0 != 0.0 } ->
+            "a tween's duration is whole milliseconds, at least 1"
           spec.size == 2 && (spec[1] as Expr.Literal).value.content !in EASINGS ->
             "easing must be one of ${EASINGS.joinToString()}"
           else -> null
