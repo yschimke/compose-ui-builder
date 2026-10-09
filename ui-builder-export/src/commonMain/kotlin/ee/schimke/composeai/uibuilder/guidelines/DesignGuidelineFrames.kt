@@ -21,10 +21,15 @@ data class DesignGuidelineFrame(
   val heightDp: Int,
   /** Written over the document's `environment` before it is drawn. */
   val environment: Map<String, JsonPrimitive>,
+  /** The catalog's own words for this picture; null for the built-in description of [kind]. */
+  val description: String? = null,
 ) {
   /** How the user message introduces this picture, as picture [index] (1-based). */
   fun describe(index: Int): String {
     val size = "${widthDp}×${heightDp}dp"
+    description?.let {
+      return "Picture $index ($kind picture, $size): $it"
+    }
     return when (kind) {
       DesignGuidelinePicture.DEVICE ->
         "Picture $index (device picture): the design on its own device at $size, its first " +
@@ -130,7 +135,7 @@ object DesignGuidelineFrames {
       mapOf("widthDp" to JsonPrimitive(widthDp), "heightDp" to JsonPrimitive(heightDp)),
     )
 
-  private fun widgetSize(document: UiBuilderDocument): WearWidgetScaffoldSize? {
+  internal fun widgetSize(document: UiBuilderDocument): WearWidgetScaffoldSize? {
     if (!document.isWearWidget()) return null
     val root = document.roots.singleOrNull()?.let(document.nodes::get) ?: return null
     if (root.componentId == AdaptiveWearWidget.COMPONENT_ID) return WearWidgetScaffoldSize.Large
