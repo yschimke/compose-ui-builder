@@ -3712,12 +3712,7 @@
             "code": null,
             "componentId": "remote-m3/remote-material-theme",
             "displayName": "Theme",
-            "modifierCapabilities": [
-                "animateEnterExit",
-                "collapsiblePriority",
-                "remoteCall",
-                "sharedElement"
-            ],
+            "modifierCapabilities": [],
             "properties": [
                 {
                     "allowedValues": [],

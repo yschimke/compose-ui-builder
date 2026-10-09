@@ -234,7 +234,15 @@ internal fun ComponentCapabilityV1.narrowedForRemoteAuthoring(): ComponentCapabi
         // geometry to hang a modifier on — the generator refuses every one it finds there. So the
         // gradient offers none, rather than eighteen that each end in a refusal. A draw operation
         // is a call inside a canvas, not a layout node, and has nothing to hang one on either.
-        if (componentId == "shape/linear-gradient" || componentId in UiDrawing.BY_ID) emptyList()
+        // A theme wraps a subtree and lays nothing out: the export writes only its child (or a
+        // `RemoteMaterialTheme` around it), so a modifier on it — the remote-only ones included —
+        // would be accepted and dropped.
+        if (
+          componentId == "shape/linear-gradient" ||
+            componentId == UiRemoteTheme.ID ||
+            componentId in UiDrawing.BY_ID
+        )
+          emptyList()
         else modifierCapabilities.remoteAuthorableModifiers()
       // `RemoteAuthorable` is a capability of the Remote Compose emitter, not a property inherited
       // from a mobile component. The reviewed vocabulary does have an emitter branch (or
