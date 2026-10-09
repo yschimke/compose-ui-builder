@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiExpressions
+import ee.schimke.composeai.uibuilder.export.UiTimeText
 import kotlin.time.Clock
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -64,13 +65,13 @@ private fun wallClock(continuous: Boolean): UiExpressions.Clock {
 /** The local zone's offset from UTC at [epochMillis], in seconds. */
 internal expect fun localUtcOffsetSeconds(epochMillis: Long): Int
 
-private enum class ClockReads {
+internal enum class ClockReads {
   NONE,
   WHOLE_SECONDS,
   CONTINUOUS,
 }
 
-private fun UiBuilderDocument.clockReads(): ClockReads {
+internal fun UiBuilderDocument.clockReads(): ClockReads {
   var reads = ClockReads.NONE
   fun visit(element: JsonElement) {
     when (element) {
@@ -90,6 +91,8 @@ private fun UiBuilderDocument.clockReads(): ClockReads {
     }
   }
   for (node in nodes.values) {
+    // A time text reads the render's clock itself, through no `time.*` value of its own.
+    if (node.componentId == UiTimeText.ID) reads = maxOf(reads, ClockReads.WHOLE_SECONDS)
     visit(node.properties)
     node.modifiers.forEach(::visit)
     if (reads == ClockReads.CONTINUOUS) break
