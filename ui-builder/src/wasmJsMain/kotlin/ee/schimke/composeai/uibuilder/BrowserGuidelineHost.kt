@@ -407,8 +407,10 @@ private external fun finishOpenRouterSignIn(storageKey: String): Promise<JsStrin
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + key,
       'X-Title': 'Compose UI Builder guidelines check',
-      // Routing metadata in the body, so a routed check records which model answered and why.
-      'X-OpenRouter-Metadata': 'enabled',
+      // No X-OpenRouter-Metadata here: OpenRouter's CORS preflight does not allow that header, so
+      // a browser request carrying it is blocked outright. The served model, provider and cost
+      // still come back in the body; only a router's routing reason needs the header, and the
+      // server-side check (no CORS) sends it.
     },
     body,
   }).then((response) => response.text().then((text) => JSON.stringify({
