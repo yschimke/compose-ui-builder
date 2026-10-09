@@ -202,6 +202,8 @@ fun main() {
     // Only the live session keeps designs; an IDE host or an MCP App owns its document.
     storage?.await()
     if (!liveSession) recordStartupMark("storage-ready")
+    // A page OpenRouter's sign-in returned to: save the key before anything composes.
+    if (liveSession) finishOpenRouterSignInAtBoot()
     bootPhase("Starting the editor")
     recordStartupMark("compose-start")
     ComposeViewport(viewportContainerId = "composeApp") {
