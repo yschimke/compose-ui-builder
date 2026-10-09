@@ -764,11 +764,10 @@ private fun RenderNode(
       )
       return@RenderCanvasNode
     }
-    // A launcher widget's adaptive layout, by component id like the root: of its slots, the one
-    // the widget would show in the frame being viewed, so a launcher pane resized to the next
-    // breakpoint draws that breakpoint's layout. The rule is the catalog's; see
-    // [LauncherAdaptiveLayout].
-    if (node.componentId == LauncherAdaptiveLayout.COMPONENT_ID) {
+    // A launcher widget's adaptive layout: of its slots, the one the widget would show in the frame
+    // being viewed, so a launcher pane resized to the next breakpoint draws that breakpoint's
+    // layout. The rule is the catalog's; see [LauncherAdaptiveLayout].
+    if (adapterId == LauncherAdaptiveLayout.CANVAS_ADAPTER) {
       val shown =
         LauncherAdaptiveLayout.visibleSlot(
           widthDp = document.environmentScale("widthDp") ?: 0f,

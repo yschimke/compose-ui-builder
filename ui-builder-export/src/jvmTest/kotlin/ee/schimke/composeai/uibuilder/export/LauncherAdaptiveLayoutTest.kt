@@ -79,7 +79,7 @@ class LauncherAdaptiveLayoutTest {
     val document = json.decodeFromString(UiBuilderDocument.serializer(), ADAPTIVE_WIDGET)
     val records =
       mapOf(
-        LauncherAdaptiveLayout.COMPONENT_ID to
+        "remote-widgets/adaptive-layout" to
           json.decodeFromString(ComponentRecord.serializer(), ADAPTIVE_LAYOUT_RECORD),
         "remote-widgets/widget-title" to
           json.decodeFromString(ComponentRecord.serializer(), WIDGET_TITLE_RECORD),

@@ -65,7 +65,7 @@ class LauncherAdaptiveLayoutCanvasTest {
   private val catalogCanvas =
     mapOf(
       "remote-widgets/launcher-widget" to "layout/box",
-      "remote-widgets/adaptive-layout" to "layout/box",
+      "remote-widgets/adaptive-layout" to "launcher/adaptive-layout",
       "remote-widgets/widget-title" to "m3/text",
     )
 

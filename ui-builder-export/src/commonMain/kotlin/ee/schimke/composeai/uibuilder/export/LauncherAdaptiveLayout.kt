@@ -1,8 +1,9 @@
 package ee.schimke.composeai.uibuilder.export
 
 /**
- * `remote-widgets`' adaptive layout: up to three layouts, each authored at a launcher grid size, of
- * which the widget shows the one that fits it best (remote-m3-catalog's `AdaptiveLayout`).
+ * A launcher widget's adaptive layout — `remote-widgets`' `AdaptiveLayout` — up to three layouts,
+ * each authored at a launcher grid size, of which the widget shows the one that fits it best
+ * (remote-m3-catalog's `AdaptiveLayout`).
  *
  * The widget makes that choice itself, during playback, through a `RemoteStateLayout`; the export
  * writes a plain call to the catalog's composable and nothing here takes part. This is the same
@@ -16,7 +17,13 @@ package ee.schimke.composeai.uibuilder.export
  *   ties to the smaller; when none fits, the smallest.
  */
 object LauncherAdaptiveLayout {
-  const val COMPONENT_ID: String = "remote-widgets/adaptive-layout"
+  /**
+   * The canvas adapter a catalog names for its adaptive layout. An adapter rather than the
+   * component's id, so the builder learns no catalog's id: a catalog with a layout of this shape
+   * claims the adapter in its policy (`"canvas": "launcher/adaptive-layout"`), as `remote-widgets`
+   * does for `AdaptiveLayout`, and a builder without it draws a placeholder.
+   */
+  const val CANVAS_ADAPTER: String = "launcher/adaptive-layout"
 
   /** A slot, the property naming its grid size, and the size it has when that property is unset. */
   data class Breakpoint(
