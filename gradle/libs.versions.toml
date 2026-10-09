@@ -214,7 +214,9 @@ composeai-preview-daemon = "3.14.1"
 composeai-contracts = "3.20.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
-rc-players = "2.2.1"
+# 2.3.0 redraws clock-driven layout canvases every frame (rc-players#601), which a played preview
+# of a `time.*` RemoteCanvas needs once time runs.
+rc-players = "2.3.0"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.11.0"
 ktor = "3.6.0"

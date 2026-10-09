@@ -8,9 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import ee.schimke.composeai.rcplayer.compose.LocalRcAnimationClock
 import ee.schimke.composeai.rcplayer.compose.LocalRcTimeSource
-import ee.schimke.composeai.rcplayer.compose.RcAnimationClock
 import ee.schimke.composeai.rcplayer.runtime.RcTimeSnapshot
 import ee.schimke.composeai.rcplayer.runtime.RcTimeSource
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -41,8 +39,13 @@ internal fun PreviewTimeToggle(
 }
 
 /**
- * [content]'s players at [document]'s `fixedTime` with animation held at its first frame, unless
- * time runs — the same still frame the canvas renderer draws for a design that is not running.
+ * [content]'s players at [document]'s `fixedTime` unless time runs — the wall clock the canvas
+ * renderer draws a design that is not running at.
+ *
+ * Animation time is left to the player. Holding it with `LocalRcAnimationClock` would freeze it,
+ * but a host-driven clock makes the player redraw every frame for any document that declares a
+ * float animation — every Remote M3 button carries a press spring — so a frozen preview never
+ * idled.
  */
 @Composable
 internal fun ProvidePreviewPlayerTime(
@@ -56,14 +59,8 @@ internal fun ProvidePreviewPlayerTime(
   }
   val fixedTime = (document.environment["fixedTime"] as? JsonPrimitive)?.contentOrNull
   val source = remember(fixedTime) { FixedRcTimeSource(UiExpressions.Clock.of(fixedTime)) }
-  CompositionLocalProvider(
-    LocalRcTimeSource provides source,
-    LocalRcAnimationClock provides FirstFrame,
-    content = content,
-  )
+  CompositionLocalProvider(LocalRcTimeSource provides source, content = content)
 }
-
-private val FirstFrame = RcAnimationClock { 0f }
 
 /** Always [clock]'s instant, read as the canvas reads it: its own fields, not the host's zone. */
 private class FixedRcTimeSource(private val clock: UiExpressions.Clock) : RcTimeSource {
