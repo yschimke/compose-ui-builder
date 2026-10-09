@@ -111,6 +111,75 @@ class BehaviorAuthoringTest {
   }
 
   @Test
+  fun `an action may write a formula over state, typed against what the variable holds`() {
+    val number =
+      obj(
+        """{"type":"value","valueType":"float","nullable":false,"initialValue":40,"persistence":"preview"}"""
+      )
+    val counter =
+      obj(
+        """{"type":"value","valueType":"int","nullable":false,"initialValue":0,"persistence":"preview"}"""
+      )
+    val step =
+      Json.parseToJsonElement(
+          """[{"type":"set","variable":"x","value":{"type":"expr","op":"add","args":[
+               {"type":"state","variable":"x"},{"type":"int","value":40}]}},
+             {"type":"increment","variable":"count","amount":{"type":"expr","op":"add","args":[
+               {"type":"state","variable":"count"},{"type":"int","value":1}]}}]"""
+        )
+        .jsonArray
+    val state =
+      apply(
+        CollaborationState(document()),
+        "formula",
+        DesignOperation.SetStateVariable("x", number),
+        DesignOperation.SetStateVariable("count", counter),
+        DesignOperation.SetEventBinding("button", "click", step),
+      )
+
+    // The canvas computes each formula when the click runs, over the writes before it.
+    val scope = ee.schimke.composeai.uibuilder.export.UiExpressions.Scope.of(state.document)
+    val working = mutableMapOf<String, String?>("x" to "40", "count" to "2")
+    step.forEach { action ->
+      ee.schimke.composeai.uibuilder.renderer.sdk
+        .canvasStateWrite(action.jsonObject, working, scope)
+        ?.let { (name, value) -> working[name] = value }
+    }
+    assertEquals("80.0", working["x"])
+    assertEquals("5", working["count"])
+
+    fun refused(actions: String) =
+      assertIs<CommandOutcome.Rejected>(
+        CollaborationReducer.apply(
+            state,
+            command(
+              "bad",
+              state.document.revision,
+              DesignOperation.SetEventBinding(
+                "button",
+                "click",
+                Json.parseToJsonElement(actions).jsonArray,
+              ),
+            ),
+          )
+          .outcome
+      )
+    // A float into an Int, an undeclared read, and a formula that does not type.
+    refused(
+      """[{"type":"set","variable":"count","value":{"type":"expr","op":"add","args":[
+           {"type":"state","variable":"x"},{"type":"int","value":1}]}}]"""
+    )
+    refused(
+      """[{"type":"set","variable":"x","value":{"type":"expr","op":"add","args":[
+           {"type":"state","variable":"nope"},{"type":"int","value":1}]}}]"""
+    )
+    refused(
+      """[{"type":"set","variable":"x","value":{"type":"expr","op":"lerp","args":[
+           {"type":"int","value":1}]}}]"""
+    )
+  }
+
+  @Test
   fun `removing or narrowing live state is refused atomically`() {
     val state =
       apply(

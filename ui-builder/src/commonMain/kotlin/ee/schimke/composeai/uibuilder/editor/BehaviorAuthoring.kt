@@ -2,6 +2,8 @@ package ee.schimke.composeai.uibuilder.editor
 
 import ee.schimke.composeai.uibuilder.export.KOTLIN_HARD_KEYWORDS
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
+import ee.schimke.composeai.uibuilder.export.UiExpressions
+import ee.schimke.composeai.uibuilder.export.UiValueKind
 import ee.schimke.composeai.uibuilder.export.exportedStateIdentifier
 import ee.schimke.composeai.uibuilder.protocol.DesignActionV1
 import ee.schimke.composeai.uibuilder.protocol.StateVariableV1
@@ -81,6 +83,11 @@ internal fun UiBuilderDocument.behaviorIssue(): BehaviorIssue? {
       actions.forEach { encodedAction ->
         val action =
           encodedAction as? JsonObject ?: return BehaviorIssue("Invalid action", node.id, field)
+        listOfNotNull(action["value"], action["amount"]).forEach { operand ->
+          readIssue(operand, node.id, field)?.let {
+            return it
+          }
+        }
         if (
           runCatching { behaviorJson.decodeFromJsonElement(DesignActionV1.serializer(), action) }
             .isFailure
@@ -103,7 +110,11 @@ internal fun UiBuilderDocument.behaviorIssue(): BehaviorIssue? {
               field,
             )
           action["amount"]?.let { amount ->
-            if (amount is JsonNull || !declaration.acceptsStateValue(amount))
+            if (UiExpressions.isComputed(amount)) {
+              formulaIssue(amount, declaration, "Increment amount", variable)?.let {
+                return BehaviorIssue(it, node.id, field)
+              }
+            } else if (amount is JsonNull || !declaration.acceptsStateValue(amount))
               return BehaviorIssue(
                 "Increment amount does not match state $variable",
                 node.id,
@@ -116,7 +127,11 @@ internal fun UiBuilderDocument.behaviorIssue(): BehaviorIssue? {
         }
         if (type in setOf("set", "select", "selectOrClear", "setText")) {
           action["value"]?.let { value ->
-            if (!declaration.acceptsStateValue(value))
+            if (UiExpressions.isComputed(value) && type != "selectOrClear") {
+              formulaIssue(value, declaration, "Action value", variable)?.let {
+                return BehaviorIssue(it, node.id, field)
+              }
+            } else if (!declaration.acceptsStateValue(value))
               return BehaviorIssue("Action value does not match state $variable", node.id, field)
           }
         }
@@ -124,6 +139,31 @@ internal fun UiBuilderDocument.behaviorIssue(): BehaviorIssue? {
     }
   }
   return null
+}
+
+/**
+ * What is wrong with a formula an action writes into the state [declaration] holds, or null. It
+ * must type against the document's state, and produce what the variable holds: a number into a
+ * number (an Int into a Float, not back), a flag into a flag, anything printable into text.
+ */
+private fun UiBuilderDocument.formulaIssue(
+  value: JsonElement,
+  declaration: JsonObject,
+  what: String,
+  variable: String,
+): String? {
+  val checked = UiExpressions.check(value, UiExpressions.Scope.of(this), what)
+  if (checked is UiExpressions.Checked.Issue) return checked.message
+  val kind = (checked as UiExpressions.Checked.Ok).expr.kind
+  val fits =
+    when (declaration.stateType()) {
+      "int" -> kind == UiValueKind.INT
+      "float" -> kind.numeric
+      "bool" -> kind == UiValueKind.BOOL
+      "string" -> kind != UiValueKind.COLOR
+      else -> false
+    }
+  return if (fits) null else "$what computes ${kind.wire}, which state $variable cannot hold"
 }
 
 private fun JsonObject.nullableState(): Boolean =

@@ -1257,6 +1257,28 @@ internal class RemoteContentEmitter(
       return null
     }
     val target = remoteState(variable, valueType, "`${node.id}`.$event") ?: return null
+    // A formula is computed by the player when the action runs, over the state as it is then.
+    fun formula(value: JsonElement?, field: String): String? =
+      value?.takeIf(UiExpressions::isComputed)?.let {
+        computed(it, UiValueKind.fromWire(valueType) ?: return null, "`${node.id}`.$event.$field")
+      }
+    val formulaField = if (kind == "increment") "amount" else "value"
+    val formulaValue = action[formulaField]
+    if (formulaValue != null && UiExpressions.isComputed(formulaValue) && operand == null) {
+      val computedValue = formula(formulaValue, formulaField) ?: return null
+      val written =
+        when (kind) {
+          "set",
+          "select",
+          "setText" -> computedValue
+          "increment" -> "($target + $computedValue)"
+          else -> null
+        }
+      if (written != null) {
+        usesValueChange = true
+        return "valueChange($target, $written)"
+      }
+    }
     val written =
       when (kind) {
         "set",

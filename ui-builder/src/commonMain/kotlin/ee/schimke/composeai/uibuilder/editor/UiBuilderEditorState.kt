@@ -2490,14 +2490,29 @@ class UiBuilderEditorReducer(
             RejectionCode.INVALID_PROPERTY,
             "Unknown state ${event.action.variable}",
           )
-    event.action.valueRefusal(declaration)?.let {
-      return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, it)
+    // `= x + 40` is a formula, typed by the collaboration reducer against what `x` holds.
+    val formula =
+      event.action.formulaText()?.let { text ->
+        try {
+          UiExpressions.parseFormula(text, state.document.stateVariables.keys)
+        } catch (failure: UiExpressions.FormulaError) {
+          return state.rejected(
+            sequence,
+            RejectionCode.INVALID_PROPERTY,
+            failure.message ?: "Not a formula",
+          )
+        }
+      }
+    if (formula == null) {
+      event.action.valueRefusal(declaration)?.let {
+        return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, it)
+      }
     }
     val node = state.document.nodes[event.nodeId] ?: return state
     val actions = (node.eventBindings[event.event] as? JsonArray).orEmpty().toMutableList()
-    if (event.index == null) actions += event.action.encoded(declaration)
-    else if (event.index in actions.indices)
-      actions[event.index] = event.action.encoded(declaration)
+    val encoded = event.action.encoded(declaration, formula)
+    if (event.index == null) actions += encoded
+    else if (event.index in actions.indices) actions[event.index] = encoded
     else
       return state.rejected(sequence, RejectionCode.INVALID_COMMAND, "That action no longer exists")
     return state.apply(

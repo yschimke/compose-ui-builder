@@ -19,6 +19,7 @@ import ee.schimke.composeai.uibuilder.export.StateSelection
 import ee.schimke.composeai.uibuilder.export.TwoWayStateBinding
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNode
+import ee.schimke.composeai.uibuilder.export.UiExpressions
 import ee.schimke.composeai.uibuilder.export.stateSelection
 import ee.schimke.composeai.uibuilder.export.stateSelectionIssue
 import kotlinx.serialization.json.*
@@ -288,7 +289,7 @@ internal fun EventActionsInspector(
       val actionVariable = (action?.get("variable") as? JsonPrimitive)?.content.orEmpty()
       val actionPage = (action?.get("pageKey") as? JsonPrimitive)?.content.orEmpty()
       Text(
-        "${index + 1}. $actionKind ${actionPage.ifBlank { actionVariable }} ${((action?.get("value") ?: action?.get("amount")) as? JsonPrimitive)?.contentOrNull.orEmpty()}",
+        "${index + 1}. $actionKind ${actionPage.ifBlank { actionVariable }} ${actionOperandText(action?.get("value") ?: action?.get("amount"))}",
         style = MaterialTheme.typography.bodySmall,
       )
       Row {
@@ -312,9 +313,10 @@ internal fun EventActionsInspector(
               else {
                 variable = actionVariable
                 value =
-                  (action?.get(if (actionKind == "increment") "amount" else "value")
-                      as? JsonPrimitive)
-                    ?.contentOrNull ?: if (actionKind == "increment") "1" else ""
+                  actionOperandText(
+                      action?.get(if (actionKind == "increment") "amount" else "value")
+                    )
+                    .ifEmpty { if (actionKind == "increment") "1" else "" }
               }
             }
           ) {
@@ -399,6 +401,9 @@ internal fun EventActionsInspector(
           { value = it },
           Modifier.fillMaxWidth().onFocusChanged { onTextInputFocusChanged(it.hasFocus) },
           label = { Text(if (kind == "increment") "Amount" else "Value") },
+          supportingText =
+            if (kind == "set" || kind == "increment") ({ Text("Start with = for a formula") })
+            else null,
           singleLine = true,
         )
       TextButton(
@@ -557,3 +562,11 @@ internal fun StateSelectionInspector(
     }
   }
 }
+
+/** An action's value or amount as the author edits it: a literal as itself, a formula as `=…`. */
+private fun actionOperandText(operand: JsonElement?): String =
+  when {
+    operand == null -> ""
+    UiExpressions.isComputed(operand) -> "=" + UiExpressions.format(operand)
+    else -> (operand as? JsonPrimitive)?.contentOrNull.orEmpty()
+  }
