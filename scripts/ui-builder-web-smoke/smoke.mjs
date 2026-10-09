@@ -135,7 +135,10 @@ async function recordStartup(page, label, visit) {
       }));
     return {
       ...globalThis.__uiBuilderStartup,
-      fetchPreserved: globalThis.fetch === globalThis.__smokeOriginalFetch,
+      // The one wrapper allowed is the runtime's Noto fallback route (FallbackFontRoute.kt), which
+      // hands every other request to this exact function with its Response untouched.
+      fetchPreserved: globalThis.fetch === globalThis.__smokeOriginalFetch
+        || globalThis.fetch.uiBuilderNativeFetch === globalThis.__smokeOriginalFetch,
       bootHidden: document.getElementById('ui-builder-boot') === null,
       wasm,
     };

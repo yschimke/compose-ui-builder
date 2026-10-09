@@ -14,7 +14,10 @@ package ee.schimke.composeai.uibuilder.renderer.sdk
  * the fetch then goes to gstatic as it did before, which a page that allows it still completes.
  *
  * Idempotent, and called by both font registries' factories so every editor and runtime page has it
- * before its first frame lays out text.
+ * before its first frame lays out text. Every other request goes to the native `fetch` with its
+ * arguments and its `Response` untouched, which keeps Chromium's compiled-Wasm cache (a wrapper that
+ * rebuilt Responses lost it); the wrapper carries that function as `uiBuilderNativeFetch`, which is
+ * what the web smoke test checks it against.
  */
 fun routeFallbackFontsThroughHost() {
   installFallbackFontRoute(GSTATIC_FALLBACK_BASE, "$NOTO_FALLBACK_ROUTE/")
@@ -28,16 +31,18 @@ internal const val GSTATIC_FALLBACK_BASE: String = "https://fonts.gstatic.com/s/
 
 @JsFun(
   """(from, to) => {
-    if (globalThis.__uiBuilderFallbackFontRoute) return;
-    globalThis.__uiBuilderFallbackFontRoute = true;
-    const fetch = globalThis.fetch.bind(globalThis);
-    globalThis.fetch = (input, init) => {
+    if (globalThis.fetch.uiBuilderNativeFetch) return;
+    const native = globalThis.fetch;
+    const fetch = native.bind(globalThis);
+    const routed = (input, init) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : null;
       if (url === null || !url.startsWith(from)) return fetch(input, init);
       const original = () => fetch(input, init);
       return fetch(to + url.slice(from.length), init)
         .then((response) => (response.ok ? response : original()), original);
     };
+    routed.uiBuilderNativeFetch = native;
+    globalThis.fetch = routed;
   }"""
 )
 private external fun installFallbackFontRoute(from: String, to: String)
