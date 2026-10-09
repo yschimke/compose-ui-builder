@@ -479,6 +479,8 @@ public object PublishedUiBuilderCatalog {
     policy: UiBuilderComponentPolicy?,
     platform: String,
   ): ComponentCapabilityV1 {
+    val remote =
+      UiBuilderCatalogPlatform.fromWord(platform) == UiBuilderCatalogPlatform.REMOTE_COMPOSE
     // The catalog's slots, or failing that the composable's. See
     // `UiBuilderComponentPolicy.slotCapabilities`.
     val slots =
@@ -510,6 +512,15 @@ public object PublishedUiBuilderCatalog {
                 .build(),
               true,
             )
+            .also {
+              // A derived slot on a Remote Compose document takes what a widget body takes — any
+              // shelf role, so long as the emitter can write it — rather than `AnyContent`, which
+              // would admit a mobile component the emitter refuses at export.
+              if (remote) {
+                it.acceptedRoles = REMOTE_SLOT_ROLES
+                it.acceptedTraits = REMOTE_SLOT_TRAITS
+              }
+            }
             .build()
         }
     val slotNames = slots.map { it.name }.toSet()
@@ -523,7 +534,9 @@ public object PublishedUiBuilderCatalog {
           val jsonType = ComponentRecordPacks.jsonTypeOf(parameter) ?: return@mapNotNull null
           PropertyCapabilityV1.Builder(
               ComponentRecordPacks.propertyNameOf(parameter),
-              JsonPrimitive(jsonType),
+              if (remote && parameter.typeFqn in REMOTE_STATE_TYPES)
+                JsonArray(listOf(JsonPrimitive(jsonType), JsonPrimitive("object")))
+              else JsonPrimitive(jsonType),
             )
             .also {
               it.required = !parameter.hasDefault && !parameter.nullable
@@ -550,7 +563,9 @@ public object PublishedUiBuilderCatalog {
         ),
       )
       .also {
-        it.traits = policy?.traits.orEmpty()
+        it.traits =
+          if (remote) (policy?.traits.orEmpty() + REMOTE_COMPONENT_TRAITS).distinct()
+          else policy?.traits.orEmpty()
         it.slots = slots
         it.properties = properties
         it.modifierCapabilities =
@@ -586,7 +601,13 @@ public object PublishedUiBuilderCatalog {
    * reach this.
    */
   private fun structuralModifiers(container: Boolean, platform: String): List<String> =
-    ComponentRecordPacks.structuralModifiers(container) + platformOnlyModifiers(platform)
+    when (UiBuilderCatalogPlatform.fromWord(platform)) {
+      // What `RemoteContentEmitter` writes is the whole question on a Remote Compose document, leaf
+      // or container: a Compose list filtered by it dropped `clip` and `horizontalScroll`
+      // everywhere, and every container modifier on a leaf, though the emitter writes them all.
+      UiBuilderCatalogPlatform.REMOTE_COMPOSE -> REMOTE_CONTENT_MODIFIERS.toList()
+      else -> ComponentRecordPacks.structuralModifiers(container) + platformOnlyModifiers(platform)
+    }
 
   /**
    * The modifiers a platform's emitter writes that no Compose default could name, offered by
@@ -648,6 +669,33 @@ public object PublishedUiBuilderCatalog {
    * everywhere else.
    */
   private val SHELF_ROLES = setOf("Scaffold", "Container", "Leaf")
+
+  // What a record component of a Remote Compose catalog is by virtue of the platform rather than
+  // of anything its catalog chose. `RemoteContentEmitter` writes every record component through
+  // its record fallback, so each is content of a document (`RemoteContent`) that a widget body may
+  // hold (`RemoteAuthorable`). The synthesised remote-m3 shelf gave every Remote Material 3
+  // component exactly this, and a published catalog that stated nothing lost it:
+  // `CatalogCutoverShadow` counted 185 losses on remote-m3, nearly all of them these rules. A
+  // catalog's own `traits` are added to, not replaced, because these are facts about the emitter.
+  private val REMOTE_COMPONENT_TRAITS = listOf("RemoteContent", "RemoteAuthorable")
+
+  private val REMOTE_SLOT_ROLES = listOf("Scaffold", "Container", "Leaf")
+
+  private val REMOTE_SLOT_TRAITS = listOf("RemoteAuthorable")
+
+  /**
+   * The Remote value types a design may bind to the document's state as well as set: a property of
+   * one of these types is `[<scalar>, "object"]`, the object being a state reference the emitter
+   * writes as the named Remote state. `RemoteColor` and `RemoteTextUnit` stay scalar, as on the
+   * synthesised shelf, because no design state carries them.
+   */
+  private val REMOTE_STATE_TYPES =
+    setOf(
+      "androidx.compose.remote.creation.compose.state.RemoteString",
+      "androidx.compose.remote.creation.compose.state.RemoteBoolean",
+      "androidx.compose.remote.creation.compose.state.RemoteFloat",
+      "androidx.compose.remote.creation.compose.state.RemoteInt",
+    )
 
   /**
    * A builtin, as a component.
