@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +49,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -198,12 +200,30 @@ private const val MOBILE_EDITING_SHEET_FRACTION = 0.5f
 /** The compact layout's bottom tab bar, above whatever home-indicator inset the window has. */
 internal val MOBILE_DOCK_HEIGHT = 56.dp
 
-internal enum class MobileEditorPanel {
+/**
+ * The compact layout's panels: the wide layout's two rails, folded into one bottom dock.
+ *
+ * Every inspector mode is a panel of its own, as each is a dock of the wide rail. A phone used to
+ * offer only Properties of them, and Theme, Screen, Issues, Talk and History could not be reached
+ * at all: the sheet would draw any of them, but nothing on a phone opened one.
+ */
+internal enum class MobileEditorPanel(val inspectorMode: EditorInspectorMode? = null) {
   None,
   Components,
   Layers,
-  Properties,
-  Code,
+  Properties(EditorInspectorMode.Properties),
+  Theme(EditorInspectorMode.Theme),
+  Screen(EditorInspectorMode.Screen),
+  Issues(EditorInspectorMode.Issues),
+  Comments(EditorInspectorMode.Comments),
+  History(EditorInspectorMode.History),
+  Code;
+
+  companion object {
+    fun of(mode: EditorInspectorMode): MobileEditorPanel = entries.first {
+      it.inspectorMode == mode
+    }
+  }
 }
 
 @Composable
@@ -892,6 +912,8 @@ fun UiBuilderEditor(
   // Which compact tab is showing: a preview pane's id, or null for the editor. Per design, like the
   // panel, and a pane that goes away — its device unticked — falls back to the editor.
   var mobileView by remember(document.id) { mutableStateOf<String?>(null) }
+  // The device tabs opened so far, which stay composed so switching back to one is immediate.
+  val visitedMobilePreviews = remember(document.id) { mutableStateListOf<String>() }
   // Opened where the URL asked for a panel, on a narrow viewport as much as a wide one. The
   // compact layout draws its docks from this rather than from [inspectorOpen], so initialising only
   // that flag left `?node=` and `#thread=` selecting silently on a phone: the state was right and
@@ -3096,7 +3118,7 @@ fun UiBuilderEditor(
                   // canvas, step aside while it is carried, and a canvas that had shrunk under them
                   // would be a smaller drop target than the one the drag started over.
                   val editingSheet =
-                    mobilePanel == MobileEditorPanel.Properties ||
+                    mobilePanel.inspectorMode != null ||
                       (mobilePanel == MobileEditorPanel.Code && generatedCode != null)
                   // This box's height rather than the window's: the sheets are a fraction of this
                   // box, and an open keyboard has already been taken out of it.
@@ -3120,10 +3142,39 @@ fun UiBuilderEditor(
                         ),
                       Alignment.Center,
                     )
-                  } else {
-                    // Instead of the canvas, not over it: a catalog runtime draws the canvas in a
-                    // page layer above this one, which no Compose sibling can cover.
-                    mobilePreview(shownPreview, Modifier.fillMaxSize().padding(bottom = dockHeight))
+                  }
+                  // Every device tab once opened stays composed, and switching tabs shows one and
+                  // hides the rest rather than building the next. A tab is a scene (or a runtime
+                  // frame) of its own, and building one composes the whole design again; that was
+                  // the wait between tapping a device and seeing it, every time, even for a tab
+                  // visited a moment before. A hidden tab is laid out at no size, which draws
+                  // nothing and takes no pointer — a runtime's page layer shrinks to nothing with
+                  // it — while its scene, sized by the device rather than by the layout, stands.
+                  // A settled scene draws nothing more, so a kept tab costs memory and no frames.
+                  //
+                  // Instead of the canvas, not over it: a catalog runtime draws the canvas in a
+                  // page layer above this one, which no Compose sibling can cover.
+                  val keptPreviews = mobilePreviewPanes.filter {
+                    it.id in visitedMobilePreviews || it.id == shownPreview?.id
+                  }
+                  SideEffect {
+                    shownPreview?.let {
+                      if (it.id !in visitedMobilePreviews) visitedMobilePreviews += it.id
+                    }
+                  }
+                  keptPreviews.forEach { pane ->
+                    key(pane.id) {
+                      mobilePreview(
+                        pane,
+                        if (pane.id == shownPreview?.id) {
+                          Modifier.fillMaxSize().padding(bottom = dockHeight)
+                        } else {
+                          // Out of the semantics tree as well as off the screen: a screen reader
+                          // would otherwise read every kept tab's frame as if it were showing.
+                          Modifier.size(0.dp).clearAndSetSemantics {}
+                        },
+                      )
+                    }
                   }
                   val mobileNavigatorTab =
                     when (mobilePanel) {
@@ -3149,7 +3200,7 @@ fun UiBuilderEditor(
                       mobilePanel = MobileEditorPanel.None
                     }
                   }
-                  if (mobilePanel == MobileEditorPanel.Properties) {
+                  if (mobilePanel.inspectorMode != null) {
                     inspector(
                       Modifier.align(Alignment.BottomCenter)
                         .fillMaxWidth()
@@ -3172,16 +3223,29 @@ fun UiBuilderEditor(
                     )
                   }
                   if (!viewportInsets.keyboardOpen) {
+                    // The one inspector sheet draws whichever mode the editor is in, and something
+                    // other than the dock can change it (a `#thread=` link opens Talk), so the dock
+                    // names the panel the sheet is showing rather than the one last tapped.
+                    val dockPanel =
+                      if (mobilePanel.inspectorMode != null) {
+                        MobileEditorPanel.of(state.inspectorMode)
+                      } else {
+                        mobilePanel
+                      }
                     MobilePanelDock(
-                      panel = mobilePanel,
+                      panel = dockPanel,
+                      issueCount = problemBadgeCount(problems),
+                      talkCount = comments.openThreads.size,
                       onPanelChanged = {
                         // Every panel edits or feeds the canvas, so opening one goes back to it.
-                        if (shownPreview != null) {
-                          mobileView = null
-                          mobilePanel = it
-                        } else {
-                          mobilePanel = if (mobilePanel == it) MobileEditorPanel.None else it
+                        val opened =
+                          if (shownPreview != null || dockPanel != it) it
+                          else MobileEditorPanel.None
+                        mobileView = null
+                        opened.inspectorMode?.let { mode ->
+                          dispatch(UiBuilderEditorEvent.ShowInspector(mode))
                         }
+                        mobilePanel = opened
                       },
                       modifier = Modifier.align(Alignment.BottomCenter),
                       bottomInset = viewportInsets.bottom,

@@ -1,6 +1,10 @@
 package ee.schimke.composeai.uibuilder
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -17,6 +21,7 @@ import ee.schimke.composeai.uibuilder.editor.currentFramePane
 import ee.schimke.composeai.uibuilder.editor.mobileTabLabel
 import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
+import ee.schimke.composeai.uibuilder.protocol.UiBuilderRendererSurfaceModeV2
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
@@ -103,6 +108,86 @@ class MobileViewTabsTest {
       onNodeWithText("Editor").assertIsSelected()
       onNodeWithText("Pixel Tablet · 1280×800dp · 2×").assertDoesNotExist()
       onNodeWithContentDescription("Close layers panel").assertExists()
+    }
+
+  /**
+   * A device tab opened once stays standing, so going back to it is immediate: switching shows it
+   * rather than building its frame again. Before, every tap built a new frame and composed the
+   * whole design into it, even for the tab visited a moment ago.
+   */
+  @Test
+  fun `a device tab visited before is shown again without a new frame`() =
+    runDesktopComposeUiTest(width = 412, height = 915) {
+      var deviceFrames = 0
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            devicePresets = listOf(phone, tablet),
+            canvasRenderer = { _, surface, _, _, _, _ ->
+              if (surface.mode == UiBuilderRendererSurfaceModeV2.DEVICE) remember { deviceFrames++ }
+              Box(Modifier.fillMaxSize())
+            },
+          )
+        }
+      }
+      waitForIdle()
+
+      for (device in listOf("Pixel 7", "Pixel Tablet", "Pixel 7", "Pixel Tablet")) {
+        onNodeWithText(device).performClick()
+        waitForIdle()
+      }
+      assertEquals(2, deviceFrames, "one frame per device, built once")
+      // Only the tab showing is in the semantics tree; the kept one is hidden from it too.
+      onNodeWithText("Pixel Tablet · 1280×800dp · 2×").assertExists()
+      onNodeWithText("Pixel 7 · 411×914dp · 2.625×").assertDoesNotExist()
+    }
+
+  /**
+   * Every dock the wide rail has is reachable on a phone: Issues is a button of its own, and the
+   * rest are behind More, by the rail's names. Before, Theme, Screen, Issues, Talk and History had
+   * no way in at all on a phone.
+   */
+  @Test
+  fun `a phone reaches every inspector panel from the dock`() =
+    runDesktopComposeUiTest(width = 412, height = 915) {
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document = document,
+            catalog = catalog,
+            devicePresets = listOf(phone, tablet),
+          )
+        }
+      }
+      waitForIdle()
+
+      onNodeWithContentDescription("Open issues panel").performClick()
+      waitForIdle()
+      onNodeWithText("What the export would refuse").assertExists()
+      onNodeWithContentDescription("Close issues panel").assertExists()
+
+      for ((label, supporting) in
+        listOf(
+          "Theme" to "Colours, type and shape for the whole design",
+          "Screen" to "Frame, density and reference",
+          "Talk" to "What people and agents have said",
+          "History" to "What has been done, newest first",
+        )) {
+        onNodeWithContentDescription("More panels", substring = true).performClick()
+        waitForIdle()
+        onNodeWithContentDescription("Open ${label.lowercase()} panel").performClick()
+        waitForIdle()
+        onNodeWithText(supporting).assertExists()
+        onNodeWithContentDescription("More panels, $label open").assertExists()
+      }
+
+      // Properties shows the properties again, not whichever inspector was open last.
+      onNodeWithContentDescription("Open properties panel").performClick()
+      waitForIdle()
+      onNodeWithContentDescription("Close properties panel").assertExists()
+      onNodeWithText("What has been done, newest first").assertDoesNotExist()
     }
 
   /**

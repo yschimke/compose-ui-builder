@@ -396,6 +396,7 @@ internal fun CatalogRuntimeCanvas(
     )
   }
   DisposableEffect(surfaceId) {
+    installCatalogRuntimePool()
     mountCatalogRuntimeSurface(surfaceId)
     onDispose { disposeCatalogRuntimeSurface(surfaceId) }
   }
@@ -539,6 +540,66 @@ private fun UiBuilderInspectionSnapshot.inEditorCoordinates(
 )
 private external fun nextCatalogRuntimeSurfaceId(): String
 
+/**
+ * Live catalog runtimes whose surface left composition, kept for the next surface that wants one.
+ *
+ * Every device pane, the phone's device tabs and the editing canvas own a surface each, so changing
+ * device disposed one surface and mounted another, and the new one cold-booted the catalog's whole
+ * Wasm runtime: a manifest fetch, an iframe load, an `initialize` handshake, and a blank pane for
+ * the seconds all that took, every time. A frame cannot move to the new surface's host (an iframe
+ * moved in the DOM reloads), so the host moves instead: parked hidden where it is, then adopted by
+ * the next surface for the same runtime and composition key under that surface's id, and resized
+ * and re-rendered in place by the message a live frame already takes.
+ *
+ * Bounded, because each is a whole runtime: two per key, and none older than two minutes.
+ */
+@JsFun(
+  """() => {
+    if (globalThis.__uiBuilderRuntimePool) return;
+    const parked = [];
+    const evict = (entry) => {
+      const index = parked.indexOf(entry);
+      if (index >= 0) parked.splice(index, 1);
+      clearTimeout(entry.timer);
+      entry.host.__uiBuilderCatalogRuntime?.dispose();
+      entry.host.remove();
+    };
+    globalThis.__uiBuilderRuntimePool = {
+      maxPerKey: 2,
+      ttlMs: 120000,
+      size: () => parked.length,
+      park(host) {
+        const controller = host.__uiBuilderCatalogRuntime;
+        if (!controller || controller.disposed) return false;
+        const key = controller.runtimeId + '|' + controller.compositionKey;
+        host.removeAttribute('id');
+        host.style.visibility = 'hidden';
+        host.style.pointerEvents = 'none';
+        const entry = { host, key, timer: 0 };
+        entry.timer = setTimeout(() => evict(entry), this.ttlMs);
+        parked.push(entry);
+        const sameKey = parked.filter((other) => other.key === key);
+        while (sameKey.length > this.maxPerKey) evict(sameKey.shift());
+        return true;
+      },
+      // The parked host for [key], taking [fresh]'s id and place on screen; null when none is.
+      adopt(key, fresh) {
+        const index = parked.findIndex((entry) => entry.key === key &&
+          !entry.host.__uiBuilderCatalogRuntime?.disposed);
+        if (index < 0) return null;
+        const [entry] = parked.splice(index, 1);
+        clearTimeout(entry.timer);
+        const host = entry.host;
+        host.style.cssText = fresh.style.cssText;
+        host.id = fresh.id;
+        fresh.remove();
+        return host;
+      },
+    };
+  }"""
+)
+private external fun installCatalogRuntimePool()
+
 private fun mountCatalogRuntimeSurface(surfaceId: String): Unit =
   js(
     """(function () {
@@ -642,6 +703,18 @@ private fun updateCatalogRuntimeSurface(
       const pixelRatio = globalThis.devicePixelRatio || 1;
       const compositionKey = density + '|' + mode + '|' + pixelRatio;
       let controller = host.__uiBuilderCatalogRuntime;
+      // A new surface takes a live runtime a departed one parked, rather than booting its own.
+      if (!controller) {
+        const adopted = globalThis.__uiBuilderRuntimePool?.adopt(
+          runtimeId + '|' + compositionKey, host);
+        if (adopted) {
+          controller = adopted.__uiBuilderCatalogRuntime;
+          // Sized for the host it left; resize() returns early when only the host changed.
+          controller.frame.style.transform = 'scale(' +
+            (adopted.clientWidth / controller.frameWidth) + ',' +
+            (adopted.clientHeight / controller.frameHeight) + ')';
+        }
+      }
       if (controller && !controller.disposed && controller.runtimeId === runtimeId &&
           controller.compositionKey === compositionKey) {
         controller.resize(widthDp, heightDp);
@@ -944,6 +1017,9 @@ private fun disposeCatalogRuntimeSurface(surfaceId: String): Unit =
     """(function () {
       const host = document.getElementById(surfaceId);
       if (!host) return;
+      // Kept with its last drawing and inspection: a surface that adopts it for the same document
+      // at the same size has nothing to re-render, and reads that inspection straight away.
+      if (globalThis.__uiBuilderRuntimePool?.park(host)) return;
       host.__uiBuilderCatalogRuntime?.dispose();
       delete host.__uiBuilderCatalogRuntime;
       delete host.__uiBuilderInspectionJson;

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -314,12 +315,22 @@ internal fun MobileEditorToolbar(
   }
 }
 
+/**
+ * The compact layout's bottom dock: the wide layout's two rails as one row a thumb can reach.
+ *
+ * Five buttons, which is what a phone's width holds without breaking a label. The four panels an
+ * author reaches for while editing are buttons of their own — Issues among them, with the same
+ * count the wide rail shows, because a problem nobody can find is one nobody fixes. The rest of the
+ * wide rail's docks are behind More, by the names that rail gives them.
+ */
 @Composable
 internal fun MobilePanelDock(
   panel: MobileEditorPanel,
   onPanelChanged: (MobileEditorPanel) -> Unit,
   modifier: Modifier = Modifier,
   bottomInset: Dp = 0.dp,
+  issueCount: Int = 0,
+  talkCount: Int = 0,
 ) {
   // The surface runs down to the screen's edge, under a phone's home indicator; the tabs sit above
   // it, where a thumb can reach them without the system taking the swipe.
@@ -334,8 +345,63 @@ internal fun MobilePanelDock(
       MobilePanelButton("Components", MobileEditorPanel.Components, panel, onPanelChanged)
       MobilePanelButton("Layers", MobileEditorPanel.Layers, panel, onPanelChanged)
       MobilePanelButton("Properties", MobileEditorPanel.Properties, panel, onPanelChanged)
-      MobilePanelButton("Code", MobileEditorPanel.Code, panel, onPanelChanged)
+      MobilePanelButton("Issues", MobileEditorPanel.Issues, panel, onPanelChanged, issueCount)
+      MobileMorePanelsButton(panel, onPanelChanged, talkCount)
     }
+  }
+}
+
+/** The docks a phone has no button for, labelled as the wide layout's rail labels them. */
+private val MOBILE_MORE_PANELS =
+  listOf(
+    "Code" to MobileEditorPanel.Code,
+    "Theme" to MobileEditorPanel.Theme,
+    "Screen" to MobileEditorPanel.Screen,
+    "Talk" to MobileEditorPanel.Comments,
+    "History" to MobileEditorPanel.History,
+  )
+
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.MobileMorePanelsButton(
+  selected: MobileEditorPanel,
+  onPanelChanged: (MobileEditorPanel) -> Unit,
+  talkCount: Int,
+) {
+  var expanded by remember { mutableStateOf(false) }
+  val open = MOBILE_MORE_PANELS.firstOrNull { it.second == selected }
+  Box(Modifier.weight(1f).fillMaxHeight()) {
+    TextButton(
+      onClick = { expanded = true },
+      modifier =
+        Modifier.fillMaxSize().semantics {
+          contentDescription =
+            if (open != null) "More panels, ${open.first} open" else "More panels"
+        },
+      contentPadding = PaddingValues(horizontal = 4.dp),
+    ) {
+      MobilePanelLabel(open?.first ?: "More", open != null, badge = talkCount)
+    }
+    LocalUiBuilderChrome.current.PopupMenu(
+      expanded = expanded,
+      onDismissRequest = { expanded = false },
+      entries =
+        MOBILE_MORE_PANELS.map { (label, target) ->
+          UiBuilderMenuEntry.Action(
+            label = label,
+            detail =
+              if (target == MobileEditorPanel.Comments && talkCount > 0) "$talkCount open"
+              else null,
+            selected = target == selected,
+            contentDescription =
+              if (target == selected) "Close ${label.lowercase()} panel"
+              else "Open ${label.lowercase()} panel",
+            onClick = {
+              expanded = false
+              onPanelChanged(target)
+            },
+          )
+        },
+    )
   }
 }
 
@@ -379,6 +445,7 @@ private fun androidx.compose.foundation.layout.RowScope.MobilePanelButton(
   target: MobileEditorPanel,
   selected: MobileEditorPanel,
   onPanelChanged: (MobileEditorPanel) -> Unit,
+  badge: Int = 0,
 ) {
   TextButton(
     onClick = { onPanelChanged(target) },
@@ -388,21 +455,48 @@ private fun androidx.compose.foundation.layout.RowScope.MobilePanelButton(
           if (selected == target) "Close ${label.lowercase()} panel"
           else "Open ${label.lowercase()} panel"
       },
-    // A quarter of a phone's width is under 100dp, and the default 12dp either side left
-    // "Components" and "Properties" too little room, so they broke mid-word onto a second line.
+    // A fifth of a phone's width is under 90dp, and the default 12dp either side left "Components"
+    // and "Properties" too little room, so they broke mid-word onto a second line.
     contentPadding = PaddingValues(horizontal = 4.dp),
   ) {
-    // One line, always: a label is a word, and a word broken across two lines is not one. On a
-    // screen narrower than the label needs it shrinks to fit rather than wrapping or clipping.
-    val style = MaterialTheme.typography.labelLarge
+    MobilePanelLabel(label, selected == target, badge)
+  }
+}
+
+/**
+ * A dock button's word, and the count the wide rail puts on the same dock.
+ *
+ * One line, always: a label is a word, and a word broken across two lines is not one. On a screen
+ * narrower than the label needs it shrinks to fit rather than wrapping or clipping.
+ */
+@Composable
+private fun MobilePanelLabel(label: String, selected: Boolean, badge: Int) {
+  val style = MaterialTheme.typography.labelLarge
+  Row(verticalAlignment = Alignment.CenterVertically) {
     Text(
       label,
+      Modifier.weight(1f, fill = false),
       style = style,
-      fontWeight = if (selected == target) FontWeight.Bold else FontWeight.Normal,
+      fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
       maxLines = 1,
       softWrap = false,
       autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = style.fontSize),
     )
+    if (badge > 0) {
+      Surface(
+        Modifier.padding(start = 2.dp),
+        shape = RoundedCornerShape(7.dp),
+        color = MaterialTheme.colorScheme.error,
+      ) {
+        Text(
+          badge.toString(),
+          Modifier.padding(horizontal = 4.dp),
+          color = MaterialTheme.colorScheme.onError,
+          style = MaterialTheme.typography.labelSmall,
+          fontWeight = FontWeight.Bold,
+        )
+      }
+    }
   }
 }
 
