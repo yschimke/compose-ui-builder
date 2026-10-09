@@ -39,6 +39,11 @@ class CatalogCutoverShadowTest {
   fun `a component or property only one side has is reported, and by which side`() {
     val kotlin = assertNotNull(executor.synthesisedCatalog("wear-m3"))
     val dropped = kotlin.components.first { it.properties.isNotEmpty() }
+    // A builder id (`asset/image`) is reported under the catalog's prefix, its own ids as they are.
+    val removed = kotlin.components.last()
+    val removedLine =
+      if (removed.componentId.startsWith("wear-m3/")) removed.componentId
+      else "wear-m3/${removed.componentId}"
     val property = dropped.properties.first().name
     val published =
       kotlin
@@ -54,16 +59,16 @@ class CatalogCutoverShadowTest {
                     it.properties = component.properties.filterNot { p -> p.name == property }
                   }
                   .build()
-            } - kotlin.components.last()
+            } - removed
         }
         .build()
 
     val differences = CatalogCutoverShadow.catalogDifferences(kotlin, published)
     assertContains(
       differences,
-      "wear-m3/${kotlin.components.last().componentId}: only the Kotlin catalog has it",
+      "$removedLine: only the Kotlin catalog has it",
     )
-    assertContains(differences, "wear-m3/${dropped.componentId}: properties: loses $property")
+    assertContains(differences, "${dropped.componentId}: properties: loses $property")
   }
 
   /**
@@ -79,6 +84,10 @@ class CatalogCutoverShadowTest {
         CatalogCutoverFixtures.catalog("wear-m3"),
       )
     assertTrue(differences.all { it.startsWith("wear-m3/") }, differences.joinToString("\n"))
+    assertTrue(
+      differences.none { it.startsWith("wear-m3/wear-m3/") },
+      differences.joinToString("\n"),
+    )
   }
 
   /**
@@ -166,7 +175,7 @@ class CatalogCutoverShadowTest {
         .build()
     assertTrue(
       CatalogCutoverShadow.catalogDifferences(kotlin, published).any {
-        it.startsWith("wear-m3/${modified.componentId}: modifiers: loses")
+        it.startsWith("${modified.componentId}: modifiers: loses")
       }
     )
   }
