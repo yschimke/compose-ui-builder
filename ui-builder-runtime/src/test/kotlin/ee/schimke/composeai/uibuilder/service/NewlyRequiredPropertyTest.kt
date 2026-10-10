@@ -78,6 +78,20 @@ class NewlyRequiredPropertyTest {
   }
 
   @Test
+  fun `a required colour constrained by allowed values takes the first allowed token`() {
+    assertEquals(
+      ColorTokenValueV1("primary"),
+      requiredPlaceholder(
+        property(
+          "string",
+          name = "containerColor",
+          allowed = listOf(JsonPrimitive("primary"), JsonPrimitive("secondary")),
+        )
+      ),
+    )
+  }
+
+  @Test
   fun `a required object or list has no placeholder`() {
     assertNull(requiredPlaceholder(property("object")), "no zero means anything for an object")
     assertNull(requiredPlaceholder(property("array")))

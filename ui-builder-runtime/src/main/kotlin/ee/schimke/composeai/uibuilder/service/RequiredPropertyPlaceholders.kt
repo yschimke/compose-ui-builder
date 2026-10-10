@@ -77,12 +77,15 @@ internal fun DesignDocumentV1.withRequiredPlaceholders(
  *
  * A property whose NAME gives its value a kind is answered by that kind, not by its JSON type: a
  * `string` zero passed `validate` but is refused by `validateWrite` and the export. A colour is the
- * theme's `onSurface` role, a value the canvas draws and the export writes. An asset key has no
- * value anybody could guess that resolves, so it gets none and stays a blocking refusal.
+ * first of its `allowedValues` as a colour token, else the theme's `onSurface` role, a value the
+ * canvas draws and the export writes. An asset key has no value anybody could guess that resolves,
+ * so it gets none and stays a blocking refusal.
  */
 internal fun requiredPlaceholder(property: PropertyCapabilityV1): UiValueV1? {
   if (CurrentM3UiBuilderCatalogExecutor.isColourProperty(property.name)) {
-    return ColorTokenValueV1(PLACEHOLDER_COLOUR_TOKEN)
+    val allowed =
+      property.allowedValues.firstNotNullOfOrNull { (it as? JsonPrimitive)?.takeIf { it.isString } }
+    return ColorTokenValueV1(allowed?.content ?: PLACEHOLDER_COLOUR_TOKEN)
   }
   if (ee.schimke.composeai.uibuilder.export.PropertyValueKinds.isAssetKey(property.name)) {
     return null
