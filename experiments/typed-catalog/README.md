@@ -35,3 +35,21 @@ and remove this opt-in wiring.
 
 Authoring, publication, guarantees and an application-owned validation test are documented in
 [compose-ai-tools' typed catalog design](https://github.com/yschimke/compose-ai-tools/blob/main/docs/design/TYPED_UI_BUILDER_CATALOG.md).
+
+## Validate an application's exported pair
+
+The opt-in `ExternalTypedCatalogSmokeTest` reads the pair through the standard host reader in a
+process with no app implementation on its classpath. After generating the app's catalog, run:
+
+```sh
+build-brief ./gradlew -PlocalBuilds=tools -PtypedAdapterCatalog=true \
+  -PtypedCatalogSmokeDirectory=../meshcore-mobile/ui-builder-catalog/build/catalog \
+  :ui-builder-runtime:test --tests '*ExternalTypedCatalogSmokeTest'
+```
+
+Home Assistant's native export writes `ui-builder-catalog/build/catalog/testDebugUnitTest` instead.
+Relative smoke-directory paths are resolved from the builder checkout root; absolute paths also work.
+The property is required for this test; ordinary experiment validation excludes it. This verifies
+metadata consumption and native-only placeholder capabilities, while each app's own native render
+test verifies its installed adapter against the actual component. It does not install app code in
+an external host.
