@@ -1333,6 +1333,7 @@ object ScreenDocumentProjection {
         val target =
           variant?.propertyTargets?.get(property)
             ?: PROPERTY_PARAMETERS[node.componentId]?.get(property)
+            ?: ICON_KEY_TARGET.takeIf { property == ICON_KEY }
         if (target == null) {
           arguments[property] = value(value, node, property) ?: continue
           continue
@@ -3277,7 +3278,7 @@ object ScreenDocumentProjection {
       property: String,
       where: String,
     ): ScreenValue? {
-      if (componentId to property in ICON_PROPERTIES) {
+      if (property == ICON_KEY) {
         return icon(entry)
           ?: refuse(
             "$where is the icon key `$entry`, which is not one of " +
@@ -3316,7 +3317,7 @@ object ScreenDocumentProjection {
     /** Whether this catalog property's values are an enumeration one of the tables names. */
     private fun enumerated(componentId: String, property: String): Boolean =
       ENUM_MEMBERS[componentId]?.containsKey(property) == true ||
-        componentId to property in ICON_PROPERTIES ||
+        property == ICON_KEY ||
         componentId to property in FACTORY_MEMBERS
 
     /**
@@ -4420,8 +4421,22 @@ object ScreenDocumentProjection {
   private const val ICONS = "$ICONS_PACKAGE.Icons"
   private const val IMAGE_VECTOR = "androidx.compose.ui.graphics.vector.ImageVector"
 
-  /** The catalog properties whose enum values are icon keys rather than members of a type. */
-  private val ICON_PROPERTIES: Set<Pair<String, String>> = setOf("m3/icon" to "iconKey")
+  /**
+   * The catalog property whose values are icon keys rather than members of a type, on ANY
+   * component: the builder's icon picker writes `iconKey` wherever a component draws an icon, and
+   * the keys are one vocabulary ([ICON_MEMBERS]). Keyed by property, not by component, because a
+   * table naming `m3/icon` left every other catalog's icon — `glimmer/icon`, whose keys are the
+   * same `filled/info` — refused as "`ImageVector` has no literal", with no way for the catalog to
+   * say otherwise.
+   */
+  private const val ICON_KEY = "iconKey"
+
+  /**
+   * Where [ICON_KEY] goes when [PROPERTY_PARAMETERS] says nothing for the component: an icon
+   * composable's `imageVector`, as Material 3's and Glimmer's `Icon` both name it. A component
+   * whose icon parameter is called something else keeps an explicit entry there.
+   */
+  private val ICON_KEY_TARGET = ParameterTarget("imageVector", TargetKind.RENAME)
 
   /**
    * Which icon each catalog `iconKey` names, as the member path under `Icons`, generated from the
