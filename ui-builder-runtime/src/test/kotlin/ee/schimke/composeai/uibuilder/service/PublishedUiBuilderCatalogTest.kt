@@ -180,6 +180,34 @@ class PublishedUiBuilderCatalogTest {
   }
 
   @Test
+  fun `a record component states its shelf role, and an unknown word keeps the derivation`() {
+    fun widgetRole(shelfRole: String?): String {
+      val json =
+        published().let {
+          if (shelfRole == null) it
+          else
+            it.replace(
+              "\"traits\": [\"scrollable\"]",
+              "\"traits\": [\"scrollable\"], \"shelfRole\": \"$shelfRole\"",
+            )
+        }
+      val result = PublishedUiBuilderCatalog.compose(json, record, exports)
+      val catalog =
+        assertTrue(result is PublishedUiBuilderCatalog.Result.Composed).let {
+          (result as PublishedUiBuilderCatalog.Result.Composed).catalog
+        }
+      return catalog.components.first { it.componentId == "test-catalog/widget" }.role
+    }
+
+    // No slots, so the derivation says Leaf; slot presence cannot say Scaffold at all.
+    assertEquals("Leaf", widgetRole(null))
+    assertEquals("Scaffold", widgetRole("Scaffold"))
+    assertEquals("Container", widgetRole("Container"))
+    // A word that names no shelf is ignored rather than served, exactly as for a builtin.
+    assertEquals("Leaf", widgetRole("Pane"))
+  }
+
+  @Test
   fun `a published catalog carries its Compose source adapter onto its capability`() {
     val result =
       PublishedUiBuilderCatalog.compose(
