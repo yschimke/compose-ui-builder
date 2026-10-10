@@ -1598,7 +1598,7 @@ private fun LiveSessionApp(
           override fun prompt(includeSetup: Boolean, instructions: String) =
             agentUiBuilderPrompt(
               "${pageOrigin().trimEnd('/')}/mcp",
-              shareableUrl(designUrlPath(config.designId)),
+              shareableUrl(designUrlPath(config.designId, basePath = uiBuilderBasePath)),
               config.designId,
               includeSetup,
               instructions,
@@ -1762,7 +1762,7 @@ private fun LiveSessionApp(
           (if (changedInAnotherTab) EditorNoticeAction("Reload") { reloadBrowserPage() } else null)
             ?: config.copiedFromDesignId?.let { source ->
               EditorNoticeAction("Open original") {
-                navigateTo("/ui-builder/${encodeUriComponent(source)}")
+                navigateTo(uiBuilderPagePath(uiBuilderBasePath, source))
               }
             }
             ?: config.signInUrl
@@ -1776,7 +1776,8 @@ private fun LiveSessionApp(
           if (!isDesignUrlPathSafe(config.designId)) null
           else
             { selectors ->
-              val result = copyDesignLink(designUrlPath(config.designId, selectors))
+              val result =
+                copyDesignLink(designUrlPath(config.designId, selectors, uiBuilderBasePath))
               // Only on a copy that landed: a failure message must not read as a sharing hint.
               if (designVisibility?.visibility == "private" && result.startsWith("Link copied"))
                 "$result · Private: recipients need access from the owner."
@@ -1817,7 +1818,8 @@ private fun LiveSessionApp(
               copyAiPrompt(
                 agentUiBuilderPrompt(
                   mcpEndpoint = "${pageOrigin().trimEnd('/')}/mcp",
-                  designUrl = shareableUrl(designUrlPath(config.designId)),
+                  designUrl =
+                    shareableUrl(designUrlPath(config.designId, basePath = uiBuilderBasePath)),
                   designId = config.designId,
                 )
               )

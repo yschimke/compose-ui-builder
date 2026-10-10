@@ -2123,17 +2123,33 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
 @JsFun("""() => new URL(globalThis.location.href).searchParams.get('catalog') || 'm3-catalog'""")
 private external fun uiBuilderCatalogFromPath(): String
 
-@JsFun(
-  """() => {
-    const parts = globalThis.location.pathname.split('/').filter(Boolean);
-    if (parts[0] !== 'ui-builder' || parts.length !== 2 || parts[1] === 'designs') return '';
-    return decodeURIComponent(parts[1]);
-  }"""
-)
-private external fun uiBuilderDesignFromPath(): String
+@JsFun("() => globalThis.location.pathname") private external fun locationPathname(): String
+
+private fun uiBuilderDesignFromPath(): String =
+  designIdFromUiBuilderPath(locationPathname(), uiBuilderBasePath)
 
 /**
- * The canonical URL for one design: `/ui-builder/<designId>`.
+ * The editor page's `<meta name="ui-builder-base-path">`, or null on a page without one — every
+ * host but a builder host serving the editor at its root.
+ */
+@JsFun(
+  """() => globalThis.document?.querySelector('meta[name="ui-builder-base-path"]')
+    ?.getAttribute('content') ?? null"""
+)
+private external fun uiBuilderBasePathMeta(): String?
+
+/**
+ * Where this host serves the editor's pages: `/ui-builder/`, or `/` on a builder host serving the
+ * editor at its root. The one value every page navigation and shared link below is built from; see
+ * [normalizeUiBuilderBasePath] for what stays under `/ui-builder/` regardless.
+ */
+internal val uiBuilderBasePath: String by lazy {
+  normalizeUiBuilderBasePath(uiBuilderBasePathMeta())
+}
+
+/**
+ * The canonical URL for one design: `<base>/<designId>` — `/ui-builder/<designId>`, or
+ * `/<designId>` on a builder host serving the editor at its root ([uiBuilderBasePath]).
  *
  * Only the identity and transport values survive as a query — they configure *who* is editing, not
  * *what*. `session`, `create`, `designId`, `template` and `state` do not: the first three are
@@ -2148,9 +2164,8 @@ private external fun uiBuilderDesignFromPath(): String
  * left the browser to begin with.
  */
 @JsFun(
-  """(designId, carried, revision, node) => {
+  """(path, carried, revision, node) => {
     const current = new URL(globalThis.location.href);
-    const path = '/ui-builder/' + encodeURIComponent(designId);
     const next = new URL(path, current.origin);
     carried.split(',').forEach((name) => {
       const value = current.searchParams.get(name);
@@ -2165,7 +2180,7 @@ private external fun uiBuilderDesignFromPath(): String
   }"""
 )
 private external fun canonicalizeUiBuilderUrlWith(
-  designId: String,
+  path: String,
   carried: String,
   revision: String,
   node: String,
@@ -2181,7 +2196,7 @@ internal fun canonicalizeUiBuilderUrl(
   selectors: DesignUrlSelectors,
 ) =
   canonicalizeUiBuilderUrlWith(
-    designId,
+    uiBuilderPagePath(uiBuilderBasePath, designId),
     DESIGN_URL_IDENTITY_KEYS.joinToString(","),
     selectors.revision?.toString().orEmpty(),
     selectors.nodeId.orEmpty(),
@@ -2292,9 +2307,8 @@ internal external fun goToLatestRevision()
  * may be about to leave behind. What the URL is for is the *next* visit.
  */
 @JsFun(
-  """(designId) => {
+  """(path) => {
     const current = new URL(globalThis.location.href);
-    const path = '/ui-builder/' + encodeURIComponent(designId);
     const next = new URL(path, current.origin);
     ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
       .forEach((name) => {
@@ -2305,14 +2319,15 @@ internal external fun goToLatestRevision()
     globalThis.history.replaceState(null, '', next.toString());
   }"""
 )
-internal external fun enterLocalDesignUrl(designId: String)
+private external fun enterLocalDesignUrlAt(path: String)
+
+internal fun enterLocalDesignUrl(designId: String) =
+  enterLocalDesignUrlAt(uiBuilderPagePath(uiBuilderBasePath, designId))
 
 /** Follow a `navigatePage` action while retaining only the identity and transport query values. */
 @JsFun(
-  """(catalogSystemId, designId) => {
+  """(path) => {
     const current = new URL(globalThis.location.href);
-    const path = '/ui-builder/' + encodeURIComponent(catalogSystemId) + '/' +
-      encodeURIComponent(designId);
     const next = new URL(path, current.origin);
     ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
       .forEach((name) => {
@@ -2322,7 +2337,10 @@ internal external fun enterLocalDesignUrl(designId: String)
     globalThis.location.assign(next.toString());
   }"""
 )
-internal external fun navigateToUiBuilderPage(catalogSystemId: String, designId: String)
+private external fun navigateToUiBuilderPageAt(path: String)
+
+internal fun navigateToUiBuilderPage(catalogSystemId: String, designId: String) =
+  navigateToUiBuilderPageAt(uiBuilderPagePath(uiBuilderBasePath, catalogSystemId, designId))
 
 /** The origin this page was served from, which is the server a design taken offline came from. */
 @JsFun("""() => globalThis.location.origin""") internal external fun pageOrigin(): String
@@ -2453,9 +2471,9 @@ internal const val UI_BUILDER_MCP_SERVER_NAME: String = "compose-preview-catalog
  * token-gated host the page that lands without it is a page that cannot list anything.
  */
 @JsFun(
-  """(carried) => {
+  """(path, carried) => {
     const current = new URL(globalThis.location.href);
-    const next = new URL('/ui-builder/designs', current.origin);
+    const next = new URL(path, current.origin);
     carried.split(',').forEach((name) => {
       const value = current.searchParams.get(name);
       if (value !== null) next.searchParams.set(name, value);
@@ -2463,10 +2481,13 @@ internal const val UI_BUILDER_MCP_SERVER_NAME: String = "compose-preview-catalog
     globalThis.location.assign(next.toString());
   }"""
 )
-private external fun navigateToDesignsIndexWith(carried: String)
+private external fun navigateToDesignsIndexWith(path: String, carried: String)
 
 internal fun navigateToDesignsIndex() =
-  navigateToDesignsIndexWith(DESIGN_URL_IDENTITY_KEYS.joinToString(","))
+  navigateToDesignsIndexWith(
+    uiBuilderPagePath(uiBuilderBasePath, UI_BUILDER_DESIGNS_SEGMENT),
+    DESIGN_URL_IDENTITY_KEYS.joinToString(","),
+  )
 
 /**
  * An epoch millisecond as the reader's own locale writes it.
@@ -2480,9 +2501,9 @@ internal external fun formatLocalDateTime(millis: Double): String
 
 /** Open one design by id, which is the home screen's row press. */
 @JsFun(
-  """(designId, carried) => {
+  """(path, carried) => {
     const current = new URL(globalThis.location.href);
-    const next = new URL('/ui-builder/' + encodeURIComponent(designId), current.origin);
+    const next = new URL(path, current.origin);
     carried.split(',').forEach((name) => {
       const value = current.searchParams.get(name);
       if (value !== null) next.searchParams.set(name, value);
@@ -2490,10 +2511,13 @@ internal external fun formatLocalDateTime(millis: Double): String
     globalThis.location.assign(next.toString());
   }"""
 )
-private external fun navigateToDesignWith(designId: String, carried: String)
+private external fun navigateToDesignWith(path: String, carried: String)
 
 internal fun navigateToDesign(designId: String) =
-  navigateToDesignWith(designId, DESIGN_URL_IDENTITY_KEYS.joinToString(","))
+  navigateToDesignWith(
+    uiBuilderPagePath(uiBuilderBasePath, designId),
+    DESIGN_URL_IDENTITY_KEYS.joinToString(","),
+  )
 
 /**
  * Start a new design as a copy of an existing one: the same POST/Redirect/GET the New design form
@@ -3196,14 +3220,17 @@ private fun Color.toCssColor(): String {
 }
 
 @JsFun(
-  """(design) => {
+  """(path) => {
   const url = new URL(globalThis.location.href);
-  url.pathname = '/ui-builder/' + encodeURIComponent(design) + '/access';
+  url.pathname = path;
   url.hash = '';
   globalThis.location.assign(url.toString());
 }"""
 )
-internal external fun openDesignSharing(design: String)
+private external fun openDesignSharingAt(path: String)
+
+internal fun openDesignSharing(design: String) =
+  openDesignSharingAt(uiBuilderPagePath(uiBuilderBasePath, design, "access"))
 
 /** Yield through a browser paint before starting optional work after a design's first layout. */
 internal suspend fun awaitBrowserPaintOpportunity(): Unit =

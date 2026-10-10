@@ -115,13 +115,15 @@ private val DESIGN_PATH_ASSET_EXTENSIONS =
   )
 
 /**
- * The canonical, root-relative URL for one design with only the selectors a reader needs. Order is
- * fixed so the same selection always yields the same string. The design must be
- * [isDesignUrlPathSafe].
+ * The canonical, root-relative URL for one design with only the selectors a reader needs, under
+ * [basePath] (`/ui-builder/` unless the host serves the editor at its root). Order is fixed so the
+ * same selection always yields the same string. The design must be [isDesignUrlPathSafe].
  */
 fun designUrlPath(
   designId: String,
   selectors: DesignUrlSelectors = DesignUrlSelectors(),
+  /** Where this host serves the editor's pages; see [normalizeUiBuilderBasePath]. */
+  basePath: String = DEFAULT_UI_BUILDER_BASE_PATH,
 ): String {
   require(designId.isNotBlank()) { "a design link needs a design id" }
   require(isDesignUrlPathSafe(designId)) {
@@ -130,7 +132,7 @@ fun designUrlPath(
   require(selectors.revision == null || selectors.revision >= 0) {
     "a design link revision must not be negative"
   }
-  val path = "/ui-builder/${encodeUrlComponent(designId)}"
+  val path = uiBuilderPagePath(basePath, designId)
   val query = buildList {
     selectors.revision?.let { add("$DESIGN_URL_REVISION_KEY=$it") }
     selectors.nodeId?.let { add("$DESIGN_URL_NODE_KEY=${encodeUrlComponent(it)}") }

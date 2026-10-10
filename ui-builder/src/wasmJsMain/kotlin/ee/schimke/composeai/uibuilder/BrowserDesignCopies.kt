@@ -111,9 +111,9 @@ private external fun downloadText(filename: String, text: String)
 
 /** Opens a design this browser keeps, by a navigation: the home screen has no editor to reuse. */
 @JsFun(
-  """(designId) => {
+  """(path) => {
     const current = new URL(globalThis.location.href);
-    const next = new URL('/ui-builder/' + encodeURIComponent(designId), current.origin);
+    const next = new URL(path, current.origin);
     ['token', 'actor', 'clientId', 'displayName', 'color', 'endpoint', 'updatesEndpoint']
       .forEach((name) => {
         const value = current.searchParams.get(name);
@@ -123,4 +123,7 @@ private external fun downloadText(filename: String, text: String)
     globalThis.location.assign(next.toString());
   }"""
 )
-internal external fun navigateToBrowserDesign(designId: String)
+private external fun navigateToBrowserDesignAt(path: String)
+
+internal fun navigateToBrowserDesign(designId: String) =
+  navigateToBrowserDesignAt(uiBuilderPagePath(uiBuilderBasePath, designId))
