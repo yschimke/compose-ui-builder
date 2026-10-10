@@ -86,7 +86,7 @@ class DesktopLaunchOptionsTest {
         DesktopLaunchOptions.parse(arrayOf("--template", "weather-widget"))
       }
 
-    assertEquals(true, refused.message?.contains("jetcaster"), refused.message)
+    assertEquals(true, refused.message?.contains("blank"), refused.message)
   }
 
   @Test

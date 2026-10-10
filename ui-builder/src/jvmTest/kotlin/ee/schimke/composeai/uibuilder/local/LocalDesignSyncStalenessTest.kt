@@ -59,7 +59,7 @@ class LocalDesignSyncStalenessTest {
     UiBuilderNewDesignSeed.document(
         designId = DESIGN_ID,
         catalogSystemId = "m3-catalog",
-        templateId = UiBuilderNewDesignSeed.DEFAULT_TEMPLATE,
+        templateId = UiBuilderNewDesignSeed.FIXTURE_TEMPLATE,
         catalogRevision = catalog.benchmark.catalogRevision,
         nativeRuntimeId = catalog.benchmark.nativeRuntimeId,
         fixture =

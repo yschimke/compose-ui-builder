@@ -63,7 +63,7 @@ class MobileScreenNewDesignTest {
    */
   @Test
   fun `the worked template keeps its own canvas`() {
-    val environment = seed(UiBuilderNewDesignSeed.DEFAULT_TEMPLATE).environment
+    val environment = seed(UiBuilderNewDesignSeed.FIXTURE_TEMPLATE).environment
 
     assertEquals("1280", environment.getValue("widthDp").jsonPrimitive.content)
     assertEquals("800", environment.getValue("heightDp").jsonPrimitive.content)
