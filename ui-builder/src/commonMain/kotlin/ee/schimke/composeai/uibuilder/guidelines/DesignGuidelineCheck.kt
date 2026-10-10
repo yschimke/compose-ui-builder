@@ -14,13 +14,27 @@ import kotlinx.serialization.json.jsonObject
  * OpenRouter key, a way to get one, and a way to send a request with it.
  *
  * The key belongs to the person at the keyboard and is spent on their account. It is kept in this
- * browser only and sent to OpenRouter only — never to the design host.
+ * tab — on this device only when they choose to remember it — and sent to OpenRouter only, never to
+ * the design host.
  */
 interface DesignGuidelineHost {
   /** The stored key, or null when this person has not added one. */
   fun storedKey(): String?
 
   fun storeKey(key: String?)
+
+  /** Whether this host can keep the key beyond the current session when the person asks it to. */
+  val canRememberKey: Boolean
+    get() = false
+
+  /** Whether the person chose to keep the key on this device rather than for this session only. */
+  fun keyRemembered(): Boolean = false
+
+  /**
+   * Keeps the key on this device ([remember] true) or for this session only (false), moving the
+   * stored key with the choice — turning it off removes the remembered copy.
+   */
+  fun rememberKey(remember: Boolean) {}
 
   fun storedModel(): String?
 
@@ -155,6 +169,19 @@ class DesignGuidelineController(
         ?: DesignGuidelineState.NeedsKey()
     )
   val state: StateFlow<DesignGuidelineState> = _state.asStateFlow()
+
+  private val _keyRemembered = MutableStateFlow(host.keyRemembered())
+
+  /** Whether the key is kept on this device; off means it is gone when the session ends. */
+  val keyRemembered: StateFlow<Boolean> = _keyRemembered.asStateFlow()
+
+  val canRememberKey: Boolean
+    get() = host.canRememberKey
+
+  fun setKeyRemembered(remember: Boolean) {
+    host.rememberKey(remember)
+    _keyRemembered.value = host.keyRemembered()
+  }
 
   private val _prompt = MutableStateFlow<PromptView>(PromptView.Hidden)
 

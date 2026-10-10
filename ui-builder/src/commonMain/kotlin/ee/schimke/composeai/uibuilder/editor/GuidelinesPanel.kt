@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -26,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -197,8 +200,8 @@ private fun KeySetup(
   Text(
     "Check this design against the Android design guides (developer.android.com) with a model " +
       "of your choice. It runs on your own OpenRouter account: connect it below, or create a key " +
-      "on openrouter.ai (Settings, then Keys) and paste it here. The key stays in this browser and is " +
-      "sent only to openrouter.ai.",
+      "on openrouter.ai (Settings, then Keys) and paste it here. The key is kept for this tab only " +
+      "unless you choose to remember it on this device, and is sent only to openrouter.ai.",
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     style = MaterialTheme.typography.bodySmall,
   )
@@ -226,8 +229,31 @@ private fun KeySetup(
         .onFocusChanged { onTextInputFocusChanged(it.isFocused) }
         .semantics { contentDescription = "OpenRouter API key" },
   )
+  RememberKeyToggle(controller)
   TextButton(onClick = { controller.saveKey(draft) }, enabled = draft.isNotBlank()) {
     Text("Save key")
+  }
+}
+
+/**
+ * "Remember on this device": off by default, so the key lasts only as long as this tab. On keeps it
+ * in storage every page on this origin can read; turning it off again removes that copy.
+ */
+@Composable
+private fun RememberKeyToggle(controller: DesignGuidelineController) {
+  if (!controller.canRememberKey) return
+  val remembered by controller.keyRemembered.collectAsState()
+  Row(
+    Modifier.fillMaxWidth()
+      .toggleable(
+        value = remembered,
+        role = Role.Checkbox,
+        onValueChange = controller::setKeyRemembered,
+      ),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Checkbox(checked = remembered, onCheckedChange = null)
+    Text("Remember on this device", style = MaterialTheme.typography.bodySmall)
   }
 }
 
@@ -255,6 +281,7 @@ private fun ModelSettings(
       TextButton(onClick = { controller.setModel(draft) }) { Text("Use model") }
       TextButton(onClick = controller::forgetKey) { Text("Forget key") }
     }
+    RememberKeyToggle(controller)
   }
 }
 
