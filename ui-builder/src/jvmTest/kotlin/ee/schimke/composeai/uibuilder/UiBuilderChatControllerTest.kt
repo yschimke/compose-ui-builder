@@ -226,6 +226,68 @@ class UiBuilderChatControllerTest {
   }
 
   @Test
+  fun `posting my own reply does not consume an automatic review`() = runBlocking {
+    val host = Host()
+    val chat = UiBuilderChatController(host, this, actorId = "viewer")
+    val comments =
+      listOf(
+        DesignComment("other", "reviewer", body = "A concern"),
+        DesignComment("mine", "viewer", body = "My reply"),
+      )
+    chat.comments(
+      DesignCommentBoard(1, listOf(DesignCommentThread("thread", comments = comments))),
+      true,
+    )
+    chat.monitor(true)
+    yield()
+    assertEquals(1, host.requests.size)
+    assertTrue(host.requests.single().last().content.contains("A concern"))
+    assertFalse(host.requests.single().last().content.contains("My reply"))
+    host.answers.single().complete("Review")
+    yield()
+    yield()
+    chat.comments(
+      DesignCommentBoard(
+        2,
+        listOf(
+          DesignCommentThread(
+            "thread",
+            comments = comments + DesignComment("mine2", "viewer", body = "Another reply"),
+          )
+        ),
+      ),
+      true,
+    )
+    yield()
+    assertEquals(1, host.requests.size)
+    assertTrue(chat.monitoring)
+    chat.stop()
+  }
+
+  @Test
+  fun `resolving and reopening a retained thread does not review its comments again`() =
+    runBlocking {
+      val host = Host()
+      val chat = UiBuilderChatController(host, this)
+      val current = board("one")
+      chat.comments(current, true)
+      chat.monitor(true)
+      yield()
+      host.answers.single().complete("Review")
+      yield()
+      yield()
+      chat.comments(
+        current.copy(sequence = 2, threads = current.threads.map { it.copy(resolved = true) }),
+        true,
+      )
+      chat.comments(current.copy(sequence = 3), true)
+      yield()
+      assertEquals(1, host.requests.size)
+      assertEquals("one", host.stored.reviewedComments["thread"])
+      chat.stop()
+    }
+
+  @Test
   fun `context includes design text and instructions but excludes asset bytes and source URLs`() {
     val document =
       UiBuilderDocument(

@@ -1574,11 +1574,12 @@ private fun LiveSessionApp(
           BrowserChatHost(
             config.designId,
             config.actorId,
-            monitoringAvailable = revisionPin == null,
+            monitoringAvailable = revisionPin?.pinned != true,
           ) {
             browserChatContext(chatDocument, chatSelection, chatInstructions, chatComments)
           },
           scope,
+          actorId = config.actorId,
         )
       }
     DisposableEffect(browserChat) { onDispose { browserChat.stop() } }

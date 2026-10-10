@@ -8,7 +8,9 @@ Connecting authorizes sending the message, a bounded text view of the current de
 comments, and the person's saved general or per-design instructions to OpenRouter on each turn.
 Context includes node ids, component ids, selected node, revision and common text properties.
 It excludes document homes, asset bytes, source URLs and application credentials. The assistant
-can explain changes and draft replies; it has no tools and cannot edit, post, resolve or execute.
+also receives collaborators' open comments under the viewer's provider account; collaborators
+do not receive a separate provider-consent prompt. The assistant can explain changes and draft
+replies; it has no tools and cannot edit, post, resolve or execute.
 Outputs are displayed as selectable plain text, never executed or rendered as HTML.
 
 The model can be changed under **Model and instructions**. The default prompt is shown there;
@@ -22,6 +24,9 @@ agent handoff remains the route to Claude, Codex and other agents with design to
   thread. **Clear chat** removes that conversation and stops pending work.
 - OpenRouter PKCE sign-in has its own verifier and callback marker, separate from guideline
   sign-in. Callback URLs carry only revision/node selectors, never application tokens.
+  The rest of the editor URL configuration, including actor identity, local-design mode and the
+  private thread fragment, stays in this tab's sessionStorage and is restored before editor boot.
+  A return without its account marker is discarded before exchanging a provider key, with a notice.
   The key stays in page memory by default and is lost on reload or closure.
 - **Remember connection in this browser** explicitly saves the key for this actor on this origin.
   Turning it off removes the saved key but retains the in-memory connection. **Disconnect** stops
@@ -40,7 +45,8 @@ designs; static, embedded and offline editors keep their existing handoff behavi
 ## Monitoring while the page is open
 
 **Monitor comments while open** is an explicit spending decision. It consumes the existing comment
-feed and reviews unreviewed human comments in open threads, in batches of at most 20. Reviews stay
+feed and catches up on unreviewed human comments in open threads, excluding the viewer's own
+comments, in batches of at most 20. First enabling also reviews the existing backlog. Reviews stay
 in private chat. It does not post a reply or acknowledge/resolve a shared thread.
 
 Only one provider request runs at a time. Comments arriving during a request wait for the next
@@ -57,6 +63,10 @@ monitoring. Background work after the browser closes belongs to the user's exter
 their machine or personal cloud runtime, using the design host's expiring, scoped access grant.
 **External agent → Copy monitoring prompt** copies that task with instructions to ask before
 shared writes. Copying does not launch the external agent or create a grant.
+
+Comment cursors currently use ids. Deleting the last reviewed comment can cause that thread's
+remaining comments to be reviewed again, within the same five-batch spending limit. Resolved
+threads keep their cursors while they remain on the comment board.
 
 ## Verification
 

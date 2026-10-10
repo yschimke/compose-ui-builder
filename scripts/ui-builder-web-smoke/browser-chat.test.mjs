@@ -120,3 +120,98 @@ test('OAuth callback URLs never carry application tokens to OpenRouter', async (
   assert.equal(callback.searchParams.get('openrouter-chat-callback'), '1');
   assert.equal(callback.hash, '');
 });
+
+for (const [marker, storageKey] of [
+  ['openrouter-callback', 'ui-builder.guidelines.pkce-verifier'],
+  ['openrouter-chat-callback', 'ui-builder.chat.pkce-verifier'],
+]) {
+  test(`${marker} restores editor configuration locally before boot`, async () => {
+    const original = new URL('https://editor.example/ui-builder/?token=private-token&code=stale&actor=viewer&storage=local&designId=local-design&catalog=wear&rendererRuntimeId=runtime&mode=editor&session=s&clientId=c&displayName=Viewer&color=blue&endpoint=https%3A%2F%2Fhost.example%2Fd&updatesEndpoint=wss%3A%2F%2Fhost.example%2Fu&revision=7&node=n#thread=t');
+    const storage = new Map();
+    let redirected;
+    let href = original.toString();
+    let complete;
+    const navigation = new Promise(resolve => { complete = resolve; });
+    const globals = {
+      URL, Uint8Array, TextEncoder, btoa,
+      crypto: {
+        getRandomValues: bytes => bytes.fill(42),
+        subtle: { digest: async () => new Uint8Array(32).buffer },
+      },
+      sessionStorage: {
+        setItem: (key, value) => storage.set(key, value),
+        getItem: key => storage.get(key),
+        removeItem: key => storage.delete(key),
+      },
+      globalThis: {
+        location: {
+          get href() { return href; },
+          set href(value) { redirected = value; complete(); },
+        },
+        history: { state: {}, replaceState: (_state, _title, value) => { href = value; } },
+      },
+    };
+    jsFunction('beginOpenRouterSignIn', globals, guidelineSource)(storageKey, marker);
+    await navigation;
+    const callback = new URL(new URL(redirected).searchParams.get('callback_url'));
+    assert.equal(callback.searchParams.has('actor'), false);
+    assert.equal(callback.searchParams.has('storage'), false);
+    assert.equal(callback.searchParams.has('token'), false);
+    assert.equal(callback.hash, '');
+    assert.equal(new URL(storage.get(storageKey + '.page')).searchParams.has('token'), false);
+    callback.searchParams.set('code', 'fresh-code');
+    href = callback.toString();
+    jsFunction('restoreOpenRouterPageAtBoot', globals, guidelineSource)();
+    const restored = new URL(href);
+    for (const [key, value] of original.searchParams) {
+      if (key === 'token' || key === 'code') continue;
+      assert.equal(restored.searchParams.get(key), value, key);
+    }
+    assert.equal(restored.searchParams.has('token'), false);
+    assert.equal(restored.searchParams.get('code'), 'fresh-code');
+    assert.equal(restored.searchParams.get(marker), '1');
+    assert.equal(restored.hash, '#thread=t');
+    assert.equal(storage.has(storageKey + '.page'), false);
+  });
+}
+
+test('OAuth page restoration ignores state for another origin or design path', () => {
+  for (const saved of ['https://other.example/ui-builder/design?actor=other',
+    'https://editor.example/ui-builder/other?actor=other']) {
+    let href = 'https://editor.example/ui-builder/design?openrouter-chat-callback=1&code=code';
+    const restore = jsFunction('restoreOpenRouterPageAtBoot', {
+      URL,
+      sessionStorage: { getItem: () => saved, removeItem: () => {} },
+      globalThis: {
+        location: { get href() { return href; } },
+        history: { state: null, replaceState: (_state, _title, value) => { href = value; } },
+      },
+    }, guidelineSource);
+    restore();
+    assert.equal(new URL(href).searchParams.has('actor'), false);
+  }
+});
+
+test('abandoning a chat OAuth return removes its code and verifier without a provider request', () => {
+  const storage = new Map([
+    ['ui-builder.chat.pkce-verifier', 'verifier'],
+    ['ui-builder.chat.pkce-verifier.page', 'page'],
+  ]);
+  let cleaned;
+  const discard = jsFunction('discardChatSignInReturn', {
+    URL,
+    sessionStorage: { removeItem: key => storage.delete(key) },
+    fetch: () => { assert.fail('an abandoned return must not mint a key'); },
+    globalThis: {
+      location: { href: 'https://editor.example/ui-builder/design?actor=viewer&openrouter-chat-callback=1&code=code#thread=t' },
+      history: { state: null, replaceState: (_state, _title, url) => { cleaned = url; } },
+    },
+  });
+  discard();
+  assert.equal(storage.size, 0);
+  const url = new URL(cleaned);
+  assert.equal(url.searchParams.has('code'), false);
+  assert.equal(url.searchParams.has('openrouter-chat-callback'), false);
+  assert.equal(url.searchParams.get('actor'), 'viewer');
+  assert.equal(url.hash, '#thread=t');
+});

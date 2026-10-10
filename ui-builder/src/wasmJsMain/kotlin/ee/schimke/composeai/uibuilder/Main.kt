@@ -130,6 +130,7 @@ private external fun suppressBrowserContextMenu()
 
 fun main() {
   recordStartupMark("kotlin-start")
+  restoreOpenRouterPageAtBoot()
   stripPageToken()
   val rendererRuntimeId = sandboxRendererRuntimeId()
   if (rendererRuntimeId.isNotEmpty()) {

@@ -30,6 +30,7 @@ private const val CHAT_CALLBACK = "openrouter-chat-callback"
 private const val CHAT_VERIFIER = "ui-builder.chat.pkce-verifier"
 private val chatJson = Json { ignoreUnknownKeys = true }
 private val connections = mutableMapOf<String, BrowserChatConnection>()
+private var chatSignInNotice by mutableStateOf<String?>(null)
 
 /** Account-scoped memory by default. Remembering a provider key is an explicit browser choice. */
 private class BrowserChatConnection(actorId: String) {
@@ -82,9 +83,10 @@ internal class BrowserChatHost(
     get() = connection.remembered
 
   override val connectionNotice
-    get() = connection.notice
+    get() = connection.notice ?: chatSignInNotice
 
   override fun connect() {
+    chatSignInNotice = null
     if (!rememberChatSignInAccount(actorId)) {
       connection.notice = "This browser cannot keep the sign-in verifier. Paste a key instead."
       return
@@ -92,7 +94,10 @@ internal class BrowserChatHost(
     beginOpenRouterSignIn(CHAT_VERIFIER, CHAT_CALLBACK)
   }
 
-  override fun useKey(key: String) = connection.useKey(key)
+  override fun useKey(key: String) {
+    chatSignInNotice = null
+    connection.useKey(key)
+  }
 
   override fun rememberConnection(remember: Boolean) = connection.remember(remember)
 
@@ -204,12 +209,16 @@ internal class BrowserChatHost(
 internal fun startBrowserChatSignInAtBoot(scope: CoroutineScope) {
   if (!isChatSignInReturn()) return
   val actorId = takeChatSignInAccount()
+  if (actorId.isBlank()) {
+    discardChatSignInReturn()
+    chatSignInNotice = "OpenRouter sign-in lost its browser account. Connect again or paste a key."
+    return
+  }
   scope.launch {
     val result = runCatching {
       withTimeout(20_000) { exchangeOpenRouterSignIn(CHAT_VERIFIER, CHAT_CALLBACK) }
     }
       .getOrNull()
-    if (actorId.isBlank()) return@launch
     val connection = connections.getOrPut(actorId) { BrowserChatConnection(actorId) }
     when (result) {
       is DesignGuidelineHost.SignInResult.Signed -> connection.useKey(result.key)
@@ -249,6 +258,20 @@ private external fun rememberChatSignInAccount(actorId: String): Boolean
 }"""
 )
 private external fun takeChatSignInAccount(): String
+
+@JsFun(
+  """() => {
+  try {
+    sessionStorage.removeItem('ui-builder.chat.pkce-verifier');
+    sessionStorage.removeItem('ui-builder.chat.pkce-verifier.page');
+  } catch (_) {}
+  const url = new URL(globalThis.location.href);
+  url.searchParams.delete('code');
+  url.searchParams.delete('openrouter-chat-callback');
+  globalThis.history.replaceState(globalThis.history.state, '', url.toString());
+}"""
+)
+private external fun discardChatSignInReturn()
 
 @JsFun(
   "() => new URL(globalThis.location.href).searchParams.get('openrouter-chat-callback') === '1'"

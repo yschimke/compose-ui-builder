@@ -41,7 +41,7 @@ internal fun BrowserChatContents(chat: UiBuilderChatController) {
   ) {
     Text("Your browser · your OpenRouter account", style = MaterialTheme.typography.labelLarge)
     Text(
-      "Messages and design context go directly to OpenRouter. Chat history stays in this browser. " +
+      "Messages, design context and open comments go directly to OpenRouter. Chat history stays in this browser. " +
         "Replies are private drafts; this chat cannot change your design or post comments.",
       style = MaterialTheme.typography.bodySmall,
     )
@@ -108,7 +108,7 @@ internal fun BrowserChatContents(chat: UiBuilderChatController) {
         Text("Monitor comments while open", style = MaterialTheme.typography.bodySmall)
       }
       Text(
-        "Reviews unreviewed human comments, up to five batches each time you enable it. " +
+        "Catches up on other people's unreviewed comments, up to five batches each time you enable it. " +
           "Reopening restores history with monitoring off. Use an external agent for background work.",
         style = MaterialTheme.typography.bodySmall,
       )

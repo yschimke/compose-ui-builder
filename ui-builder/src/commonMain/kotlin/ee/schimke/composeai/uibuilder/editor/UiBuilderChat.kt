@@ -46,7 +46,11 @@ interface UiBuilderChatHost {
 }
 
 /** One in-flight turn per page; monitoring is always off when a saved conversation is reopened. */
-class UiBuilderChatController(val host: UiBuilderChatHost, private val scope: CoroutineScope) {
+class UiBuilderChatController(
+  val host: UiBuilderChatHost,
+  private val scope: CoroutineScope,
+  private val actorId: String? = null,
+) {
   var session by mutableStateOf(host.load())
     private set
 
@@ -135,7 +139,7 @@ class UiBuilderChatController(val host: UiBuilderChatHost, private val scope: Co
           val after = thread.comments.indexOfFirst { it.id == lastReviewed } + 1
           thread.comments
             .drop(after)
-            .filter { it.kind == DesignCommentAuthorKind.Human }
+            .filter { it.kind == DesignCommentAuthorKind.Human && it.authorId != actorId }
             .map { thread to it }
         }
         .take(20)

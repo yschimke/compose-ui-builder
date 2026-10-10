@@ -378,6 +378,10 @@ private external fun writeGuidelineSetting(key: String, value: String)
   crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)).then((digest) => {
     sessionStorage.setItem(storageKey, verifier);
     const back = new URL(globalThis.location.href);
+    // Keep boot configuration and private selectors in this tab, never in the provider URL.
+    for (const name of ['token', 'code', 'openrouter-callback', 'openrouter-chat-callback'])
+      back.searchParams.delete(name);
+    sessionStorage.setItem(storageKey + '.page', back.toString());
     back.hash = '';
     // Carry only editor selectors back. Never put an application token in a provider callback.
     const selectors = ['revision', 'node'].map(name => [name, back.searchParams.get(name)]);
@@ -394,6 +398,37 @@ internal external fun beginOpenRouterSignIn(
   storageKey: String,
   callbackMarker: String,
 )
+
+/**
+ * Restore this tab's editor configuration before boot reads identity, storage mode or selectors.
+ */
+@JsFun(
+  """() => {
+  const returned = new URL(globalThis.location.href);
+  const flows = [
+    ['openrouter-callback', 'ui-builder.guidelines.pkce-verifier'],
+    ['openrouter-chat-callback', 'ui-builder.chat.pkce-verifier'],
+  ];
+  for (const [marker, storageKey] of flows) {
+    if (returned.searchParams.get(marker) !== '1') continue;
+    try {
+      const saved = sessionStorage.getItem(storageKey + '.page');
+      sessionStorage.removeItem(storageKey + '.page');
+      if (!saved) continue;
+      const page = new URL(saved);
+      if (page.origin !== returned.origin || page.pathname !== returned.pathname) continue;
+      for (const name of ['token', 'code', 'openrouter-callback', 'openrouter-chat-callback'])
+        page.searchParams.delete(name);
+      page.searchParams.set(marker, '1');
+      const code = returned.searchParams.get('code');
+      if (code !== null) page.searchParams.set('code', code);
+      globalThis.history.replaceState(globalThis.history.state, '', page.toString());
+      return;
+    } catch (_) {}
+  }
+}"""
+)
+internal external fun restoreOpenRouterPageAtBoot()
 
 /**
  * Step two, on the page OpenRouter returned to: take the code off the address (so a reload or a
