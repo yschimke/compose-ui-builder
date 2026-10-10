@@ -44,13 +44,4 @@ internal object CatalogCutoverProbe {
         nativeRuntimeId = CatalogCutoverFixtures.rendererRuntimeId(id),
       )
     }
-
-  /**
-   * One line per catalog whose repository has written a policy but publishes no delivery branch: it
-   * cannot be served at all, flag or no flag, until it does.
-   */
-  fun unpublishedFindings(): List<String> =
-    CatalogCutoverFixtures.unpublishedIds.map { id ->
-      "$id: has no delivery branch, so there is no ui-builder.json to serve it from"
-    }
 }

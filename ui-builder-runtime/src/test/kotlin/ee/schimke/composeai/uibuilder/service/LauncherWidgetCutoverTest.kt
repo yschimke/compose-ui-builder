@@ -7,7 +7,6 @@ import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
-import ee.schimke.composeai.uibuilder.protocol.CatalogBenchmarkV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComposeSourceExportCapabilityV1
 import kotlin.test.Test
@@ -29,41 +28,45 @@ import kotlinx.serialization.json.jsonObject
  * builder's Kotlin copy of a launcher seed (`LauncherWidgetTemplates`), and its export reaches
  * `LauncherWidgetCodeExporter` only because its root is spelled `remote-widgets/launcher-widget`.
  *
- * Its delivery branch does not exist yet, so these read its policy and templates as its repository
- * wrote them ([CatalogCutoverFixtures.unpublishedIds]); the readiness ledger carries the missing
- * branch.
+ * Read from its delivery branch (`design-artifacts/remote-widgets`) like every other captured
+ * catalog: the published `statusSemantics` carries the same `builtins`, `frame` and
+ * `composeSourceExport` its policy file states, so these hold the catalog as a host serves it.
  */
 class LauncherWidgetCutoverTest {
 
   private val id = "remote-widgets"
   private val json = Json { classDiscriminator = "type" }
 
-  private val policy: JsonObject
-    get() = CatalogCutoverFixtures.sourcePolicy(id)
+  private val published: CatalogCapabilityV1
+    get() = CatalogCutoverFixtures.catalog(id)
 
-  /** The catalog as served once published, with the one-line declaration it would add. */
-  private fun declared(
-    adapter: String = CatalogExportRouting.LAUNCHER_WIDGET
-  ): CatalogCapabilityV1 =
-    CatalogCapabilityV1.Builder(
-        schema = "compose-ui-builder-capability/v1",
-        benchmark =
-          CatalogBenchmarkV1.Builder(
-              id = id,
-              sourceRevision = "source",
-              catalogSystemId = id,
-              catalogRevision = "revision",
-              nativeRuntimeId = "candidate",
-            )
-            .build(),
-        components = emptyList(),
-      )
-      .also {
-        it.statusSemantics = policy
-        it.composeSourceExport =
-          ComposeSourceExportCapabilityV1.Builder(adapter, CatalogExportRouting.V1).build()
-      }
-      .build()
+  /** The published `statusSemantics`: the catalog's policy, as its delivery branch serves it. */
+  private val policy: JsonObject
+    get() = published.statusSemantics
+
+  /**
+   * The catalog as served. An [adapter] other than the one it publishes asks "what if it declared
+   * this route instead", which is exactly the one-line change its repository would make.
+   */
+  private fun declared(adapter: String? = null): CatalogCapabilityV1 =
+    if (adapter == null) published
+    else
+      published
+        .newBuilder()
+        .also {
+          it.composeSourceExport =
+            ComposeSourceExportCapabilityV1.Builder(adapter, CatalogExportRouting.V1).build()
+        }
+        .build()
+
+  @Test
+  fun `it publishes the launcher widget route`() {
+    assertEquals(
+      CatalogExportRouting.LAUNCHER_WIDGET,
+      published.composeSourceExport?.adapter,
+      "remote-widgets declares its own export route, so owning it needs no builder table",
+    )
+  }
 
   private fun seed(templateId: String): UiBuilderDocument =
     UiBuilderNewDesignSeed.document(
@@ -90,7 +93,7 @@ class LauncherWidgetCutoverTest {
       "the flag off ignores what the catalog publishes",
     )
     assertEquals(
-      listOf("launcher-widget-2x1", "counter-widget"),
+      listOf("hello-widget", "launcher-widget-2x1", "counter-widget"),
       UiBuilderNewDesignSeed.templateIds(
           id,
           CatalogOwnership.ALL,
@@ -212,6 +215,12 @@ class LauncherWidgetCutoverTest {
     assertEquals(
       setOf("remote-widgets/launcher-widget"),
       CatalogExportRouting.launcherRoots(policy),
+    )
+    // Composed, the trait reaches the served component, so a host reading the capability and one
+    // reading the policy agree on the root.
+    assertEquals(
+      CatalogExportRouting.launcherRoots(policy),
+      CatalogExportRouting.launcherRoots(published),
     )
   }
 

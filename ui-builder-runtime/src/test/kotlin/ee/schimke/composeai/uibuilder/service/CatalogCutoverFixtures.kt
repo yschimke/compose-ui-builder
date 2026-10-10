@@ -31,19 +31,14 @@ internal object CatalogCutoverFixtures {
 
   /** The builder catalogs a deployment serves, in the order compose-preview-server lists them. */
   val catalogIds: List<String> =
-    listOf("m3-catalog", "wear-m3", "remote-m3", "a2ui-catalog", "glimmer-catalog")
-
-  /**
-   * Catalogs whose repository has written a policy and seed templates but publishes no delivery
-   * branch yet, captured from the source repository instead (`source.json` says `published:
-   * false`). They cannot be served, so [catalogIds] does not hold them; the readiness test reports
-   * each as a ledger line and holds its templates to their emitter directly.
-   */
-  val unpublishedIds: List<String> = listOf("remote-widgets")
-
-  /** An unpublished catalog's policy file, as its repository wrote it. */
-  fun sourcePolicy(id: String): JsonObject =
-    json.parseToJsonElement(checkNotNull(text("$id/ui-builder.policy.json"))).jsonObject
+    listOf(
+      "m3-catalog",
+      "wear-m3",
+      "remote-m3",
+      "a2ui-catalog",
+      "glimmer-catalog",
+      "remote-widgets",
+    )
 
   /** The builder's own vocabulary, published from m3-catalog but not a catalog anyone opens. */
   const val FOUNDATION: String = "compose-foundation"
@@ -152,8 +147,7 @@ internal object CatalogCutoverFixtures {
 
   /** The paths [id]'s policy names under `statusSemantics.templates`. */
   fun templatePaths(id: String): List<String> =
-    (if (id in unpublishedIds) sourcePolicy(id)["templates"] as? JsonArray
-      else (policy(id)["statusSemantics"] as? JsonObject)?.get("templates") as? JsonArray)
+    ((policy(id)["statusSemantics"] as? JsonObject)?.get("templates") as? JsonArray)
       ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
       .orEmpty()
 

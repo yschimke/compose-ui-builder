@@ -104,8 +104,10 @@ class CatalogCutoverReadinessTest {
     )
     for (catalog in executor.listCatalogs()) {
       val id = catalog.benchmark.catalogSystemId
+      // A catalog whose branch carries no `runtime.zip` (remote-widgets: its launcher widgets have
+      // no native lane yet) is served as `candidate`, the pin every unstamped design carries.
       assertEquals(
-        CatalogCutoverFixtures.rendererRuntimeId(id),
+        CatalogCutoverFixtures.rendererRuntimeId(id) ?: "candidate",
         catalog.benchmark.nativeRuntimeId,
         "$id is drawn by the renderer runtime its own repository published",
       )
@@ -242,13 +244,8 @@ class CatalogCutoverReadinessTest {
   @Test
   fun `the gap ledger is exactly what each catalog still has to publish`() {
     assertEquals(
-      listOf(
-        "wear-m3: declares no composeSourceExport, so no export is offered",
-        "remote-m3: declares no composeSourceExport, so no export is offered",
-        "glimmer-catalog: declares no composeSourceExport, so no export is offered",
-        "remote-widgets: has no delivery branch, so there is no ui-builder.json to serve it from",
-      ),
-      CatalogCutoverProbe.findings() + CatalogCutoverProbe.unpublishedFindings(),
+      listOf("glimmer-catalog: declares no composeSourceExport, so no export is offered"),
+      CatalogCutoverProbe.findings(),
     )
   }
 

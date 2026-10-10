@@ -30,17 +30,10 @@ catalogs=(
   "remote-m3 yschimke/remote-m3-catalog-out remote-m3"
   "a2ui-catalog yschimke/a2ui-catalog-out a2ui-catalog"
   "glimmer-catalog yschimke/glimmer-catalog-out glimmer-catalog"
+  "remote-widgets yschimke/remote-m3-catalog-out remote-widgets"
   "compose-foundation yschimke/m3-catalog-out compose-foundation"
 )
 
-# Catalogs whose repository has written a policy and seed templates but publishes no delivery branch
-# yet: <builder catalog id> <source repository> <module directory>. Captured from the source
-# repository's main instead, policy and templates only, and marked unpublished in `source.json`, so
-# the readiness test can hold their templates to the launcher emitter today and report the missing
-# branch as a ledger line. A catalog moves to the list above the day its branch exists.
-unpublished=(
-  "remote-widgets yschimke/remote-m3-catalog widget-catalog"
-)
 
 only="${1:-}"
 for entry in "${catalogs[@]}"; do
@@ -91,39 +84,4 @@ json.dump(
 open(path, "a").write("\n")
 PY
   echo "captured ${id} from ${repo}@${sha:0:12}"
-done
-
-for entry in "${unpublished[@]}"; do
-  read -r id repo module <<<"${entry}"
-  [[ -z "${only}" || "${only}" == "${id}" ]] || continue
-
-  sha="$(git ls-remote "https://github.com/${repo}" refs/heads/main | cut -f1)"
-  base="https://raw.githubusercontent.com/${repo}/${sha}/${module}"
-  dir="${out}/${id}"
-  rm -rf "${dir}"
-  mkdir -p "${dir}/designs"
-
-  curl -fsS "${base}/ui-builder.policy.json" >"${dir}/ui-builder.policy.json"
-  templates="$(python3 -c 'import json,sys; [print(t) for t in json.load(open(sys.argv[1])).get("templates", [])]' "${dir}/ui-builder.policy.json")"
-  while IFS= read -r template; do
-    [[ -n "${template}" ]] || continue
-    curl -fsS "${base}/${template}" >"${dir}/designs/$(basename "${template}")"
-  done <<<"${templates}"
-
-  python3 - "${dir}/source.json" "${repo}" "${module}" "${sha}" <<'PY'
-import json, sys
-path, repo, module, sha = sys.argv[1:]
-json.dump(
-    {
-        "published": False,
-        "repository": repo,
-        "module": module,
-        "commit": sha,
-    },
-    open(path, "w"),
-    indent=2,
-)
-open(path, "a").write("\n")
-PY
-  echo "captured unpublished ${id} from ${repo}@${sha:0:12}"
 done

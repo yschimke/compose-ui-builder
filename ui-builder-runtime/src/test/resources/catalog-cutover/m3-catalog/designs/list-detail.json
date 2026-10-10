@@ -10,20 +10,25 @@
     "nativeRuntimeId": "candidate"
   },
   "environment": {
-    "widthDp": 412,
-    "heightDp": 915,
-    "density": 1,
-    "theme": "light",
+    "widthDp": 411,
+    "heightDp": 914,
+    "density": 2.625,
+    "theme": "dark",
+    "dynamicColor": false,
     "locale": "en-US",
-    "fontScale": 1,
+    "fontScale": 1.0,
     "layoutDirection": "ltr",
     "windowPosture": "flat",
+    "browserZoomPercent": 100,
+    "fixedTime": "2024-05-16T12:00:00Z",
     "animations": "settled",
     "networkAccess": false,
     "exportDevices": [
-      "id:pixel_6",
-      "spec:width=700dp,height=900dp,dpi=160",
-      "spec:width=1200dp,height=800dp,dpi=160"
+      "id:pixel_4a",
+      "id:pixel_9",
+      "id:pixel_9_pro_xl",
+      "id:pixel_9_pro_fold",
+      "id:pixel_tablet"
     ]
   },
   "stateVariables": {},
