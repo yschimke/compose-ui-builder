@@ -1,0 +1,137 @@
+{
+  "schema": "compose-ui-builder-design-renders/v1",
+  "designs": [
+    {
+      "id": "google-calendar-tablet-1280",
+      "file": "google-app-adaptive/google-calendar-tablet-1280.png",
+      "sha256": "92956231f653d8fd39c41484b04c095fd15405006020b53827bf5dba76aa03c4",
+      "bytes": 59517
+    },
+    {
+      "id": "google-calendar-tablet-411",
+      "file": "google-app-adaptive/google-calendar-tablet-411.png",
+      "sha256": "570c74d3e32e31502e92795c1ef88eb4bf9b42ef95dc406e3862e43bba33ae7f",
+      "bytes": 35720
+    },
+    {
+      "id": "google-docs-tablet-1280",
+      "file": "google-app-adaptive/google-docs-tablet-1280.png",
+      "sha256": "8ee9bc40cc59b09e7e0fd6f1d4acf02e3f1f978f6f7357a931e287266e84bf6d",
+      "bytes": 93944
+    },
+    {
+      "id": "google-docs-tablet-411",
+      "file": "google-app-adaptive/google-docs-tablet-411.png",
+      "sha256": "f89cb05fb072ead8999d54f99e221260d0b82522dcfa559024361d661742220a",
+      "bytes": 69041
+    },
+    {
+      "id": "google-gmail-tablet-1280",
+      "file": "google-app-adaptive/google-gmail-tablet-1280.png",
+      "sha256": "91b9028688b83b35555d433835b19e7965eff531d786387de94d964a0959a8bb",
+      "bytes": 128208
+    },
+    {
+      "id": "google-gmail-tablet-411",
+      "file": "google-app-adaptive/google-gmail-tablet-411.png",
+      "sha256": "3e3f3c2b507970d4bd558c4437844a2e57ea6cdc27fdc07480efc668a216f02f",
+      "bytes": 73792
+    },
+    {
+      "id": "google-keep-tablet-1280",
+      "file": "google-app-adaptive/google-keep-tablet-1280.png",
+      "sha256": "6bf189024105882b8512bb21f1b9f83dc20ebd764a2c6ac5541eb372c0549917",
+      "bytes": 79022
+    },
+    {
+      "id": "google-keep-tablet-411",
+      "file": "google-app-adaptive/google-keep-tablet-411.png",
+      "sha256": "17af1eb9e8628401d2807b8da61dd1b09f9a6302633e81c41d2c27d8339d6a95",
+      "bytes": 34575
+    },
+    {
+      "id": "google-photos-tablet-1280",
+      "file": "google-app-adaptive/google-photos-tablet-1280.png",
+      "sha256": "ba65f11bf6ebb69d09c7e7fc80a1333dc347b939a7fffe22ef3854d02b6d1d98",
+      "bytes": 65224
+    },
+    {
+      "id": "google-photos-tablet-411",
+      "file": "google-app-adaptive/google-photos-tablet-411.png",
+      "sha256": "d71944b09da386422404c52c42ba04ec587245a1be0ca2c827053ccdf83e24ea",
+      "bytes": 40912
+    },
+    {
+      "id": "google-play-tablet-1280",
+      "file": "google-app-adaptive/google-play-tablet-1280.png",
+      "sha256": "a564cc62a7f6b11adc5100fbb0cd855dcee7de0d09f78769171ffa4a72e3eacf",
+      "bytes": 68846
+    },
+    {
+      "id": "google-play-tablet-411",
+      "file": "google-app-adaptive/google-play-tablet-411.png",
+      "sha256": "a7bbc209ab5af444e799af5c4124e9ea6367b927a88424342e9947a838dfc61a",
+      "bytes": 51831
+    },
+    {
+      "id": "google-home-wear",
+      "file": "google-home-wear.png",
+      "sha256": "64ff8a701ca77a1ded62d11296c51869eb948001ba13666c26fc16bfd93f5343",
+      "bytes": 15172
+    },
+    {
+      "id": "jetcaster-wear-episode",
+      "file": "jetcaster-wear-episode.png",
+      "sha256": "a25bfb8b92bd34619cca5c9651288a1cea021acc856bff81fac478c6c6f98dbc",
+      "bytes": 23618
+    },
+    {
+      "id": "jetcaster-wear-library",
+      "file": "jetcaster-wear-library.png",
+      "sha256": "e5e352f1fc44a5f2027624d45590a3c0c2bfb66d97fdf176919a397b8b85bf71",
+      "bytes": 21455
+    },
+    {
+      "id": "jetcaster-wear-queue",
+      "file": "jetcaster-wear-queue.png",
+      "sha256": "13bc1b06d1a5605314f3118228e67d234746afdfd77a3f844d99714f6d5ad6f7",
+      "bytes": 23799
+    },
+    {
+      "id": "analog",
+      "file": "remote-clocks/analog.png",
+      "sha256": "f954ac98c1ba2ec5933423e46cbb07fdecae745224cd6325403e31b65ae6f552",
+      "bytes": 8250
+    },
+    {
+      "id": "digital",
+      "file": "remote-clocks/digital.png",
+      "sha256": "f87b05e07656b8c1cf30046170592bd2de6ef07c24b634c09301263a3d110213",
+      "bytes": 13804
+    },
+    {
+      "id": "lcd",
+      "file": "remote-clocks/lcd.png",
+      "sha256": "d6998475c71ca5721e570ee97438e2f7ce5b49bb59e28a08f4a4a154296377e2",
+      "bytes": 55165
+    },
+    {
+      "id": "racing",
+      "file": "remote-clocks/racing.png",
+      "sha256": "f7909e3e0677bc474f72abae5f9d6383d4bd65eda57e6ae02e40a40c214db889",
+      "bytes": 168407
+    },
+    {
+      "id": "wear-starter-greeting",
+      "file": "wear-starter-greeting.png",
+      "sha256": "b67bf3f8fcbe13b5114f61c8f0914bb30c9a19dbfd2d7879b198696e073c9536",
+      "bytes": 11786
+    },
+    {
+      "id": "wear-starter-list",
+      "file": "wear-starter-list.png",
+      "sha256": "8981cd5299c6436708789034e1771d7de1f54af6b90cac19896831a9efbcb23f",
+      "bytes": 19794
+    }
+  ]
+}
