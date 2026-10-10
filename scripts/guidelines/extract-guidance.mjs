@@ -81,10 +81,16 @@ export function candidates(markdown, page) {
     .map((text) => ({ page, text }));
 }
 
-/** `android/design/ui/wear/guides/x.md.txt` → its developer.android.com address. */
+/**
+ * `android/design/ui/wear/guides/x.md.txt` → its developer.android.com address.
+ *
+ * The agent skills (`android/agents/…`) are pages there too — `agents/skills/xr/…/skill` — so they
+ * map the same way. They used to become `kb://android/agents/…`, which a catalog's published
+ * guidelines cannot carry: compose-ai-tools' validator requires every `source` to be https, and two
+ * catalogs stopped republishing on it (wear-m3-catalog#747, glimmer-catalog#40).
+ */
 export function sourceUrl(entry) {
   const path = entry.replace(/\.md\.txt$/, "").replace(/\/index$/, "");
-  if (path.startsWith("android/agents/")) return `kb://${path}`;
   return `https://developer.android.com/${path.replace(/^android\//, "")}`;
 }
 

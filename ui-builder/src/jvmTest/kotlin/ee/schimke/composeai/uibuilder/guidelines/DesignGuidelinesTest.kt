@@ -514,15 +514,15 @@ class DesignGuidelinesTest {
 }
 
 /**
- * Where a rule's guidance may be quoted from: the design guides, the Material 3 site, the Android
- * Knowledge Base, the Wear OS Material 3 Figma kit, and the androidx sources whose KDoc a rule
- * quotes.
+ * Where a rule's guidance may be quoted from: the design guides and agent skills on
+ * developer.android.com, the Material 3 site, the Wear OS Material 3 Figma kit, and the androidx
+ * sources whose KDoc a rule quotes. Every one is https, as compose-ai-tools' validator requires of
+ * a catalog's published guidelines — a `kb://` source here would break the catalog it moves to.
  */
 private val RULE_SOURCES =
   listOf(
     "https://developer.android.com/",
     "https://m3.material.io/",
-    "kb://",
     "https://www.figma.com/design/",
     "https://github.com/androidx/androidx/blob/androidx-main/",
   )
