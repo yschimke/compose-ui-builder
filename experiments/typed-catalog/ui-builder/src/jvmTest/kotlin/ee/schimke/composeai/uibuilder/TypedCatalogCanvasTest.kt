@@ -93,7 +93,7 @@ class TypedCatalogCanvasTest {
           Text("Count ${value(adapter.count)}", modifier)
         }
       }
-      fun document(value: JsonElement, type: String = "integer"): UiBuilderDocument {
+      fun document(value: JsonElement, type: String = "int"): UiBuilderDocument {
         val empty = JsonObject(emptyMap())
         return UiBuilderDocument(
           schema = "compose-ui-builder-document/v1-candidate",

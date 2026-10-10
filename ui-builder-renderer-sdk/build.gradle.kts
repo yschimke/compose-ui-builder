@@ -30,6 +30,14 @@ if (providers.gradleProperty("typedAdapterCatalog").orNull == "true") {
       rootProject.file("experiments/typed-catalog/ui-builder-renderer-sdk/src/commonTest/kotlin")
     )
   }
+  kotlin.sourceSets
+    .matching { it.name == "jvmMain" }
+    .configureEach {
+      kotlin.srcDir(
+        rootProject.file("experiments/typed-catalog/ui-builder-renderer-sdk/src/jvmMain/kotlin")
+      )
+      dependencies { implementation(libs.compose.components.resources) }
+    }
 }
 
 ktfmt { googleStyle() }

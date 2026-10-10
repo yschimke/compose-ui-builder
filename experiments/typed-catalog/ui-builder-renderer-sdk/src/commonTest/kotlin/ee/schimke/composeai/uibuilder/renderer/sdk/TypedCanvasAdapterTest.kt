@@ -82,7 +82,7 @@ class TypedCanvasAdapterTest {
             put(
               "checked",
               buildJsonObject {
-                put("type", "boolean")
+                put("type", "bool")
                 put("value", "true")
               },
             )
@@ -119,7 +119,7 @@ class TypedCanvasAdapterTest {
             put(
               "checked",
               buildJsonObject {
-                put("type", "boolean")
+                put("type", "bool")
                 put("value", "true")
               },
             )

@@ -129,8 +129,8 @@ data class UiBuilderFrameGeometry(
      * editor.
      */
     fun from(statusSemantics: JsonObject): UiBuilderFrameGeometry {
-      val frame = statusSemantics["frame"]?.jsonObject ?: return None
-      val geometry = frame["geometry"]?.jsonObject
+      val frame = statusSemantics["frame"] as? JsonObject ?: return None
+      val geometry = frame["geometry"] as? JsonObject
       val rows =
         geometry
           ?.get("contentPadding")

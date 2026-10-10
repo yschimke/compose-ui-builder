@@ -369,6 +369,7 @@ flexpress-codegen = { module = "ee.schimke.flexpress:flexpress-codegen", version
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3-compose" }
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
 compose-material3-adaptive-layout = { module = "org.jetbrains.compose.material3.adaptive:adaptive-layout", version.ref = "compose-material3-adaptive" }
 compose-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "compose-material3-adaptive" }
 compose-material3-navigation-suite = { module = "org.jetbrains.compose.material3:material3-adaptive-navigation-suite", version.ref = "material3-compose" }
