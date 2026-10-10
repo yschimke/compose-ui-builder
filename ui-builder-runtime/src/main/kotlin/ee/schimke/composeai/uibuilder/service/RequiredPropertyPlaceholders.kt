@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder.service
 
 import ee.schimke.composeai.uibuilder.protocol.BooleanValueV1
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
+import ee.schimke.composeai.uibuilder.protocol.ColorTokenValueV1
 import ee.schimke.composeai.uibuilder.protocol.DecimalValueV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.EnumValueV1
@@ -73,8 +74,19 @@ internal fun DesignDocumentV1.withRequiredPlaceholders(
  * The value an unset required [property] is given: the first of its `allowedValues` that is a
  * scalar, else the zero of its first scalar JSON type (`integer` before `number` before `boolean`
  * before `string`), else null when it has no scalar type at all.
+ *
+ * A property whose NAME gives its value a kind is answered by that kind, not by its JSON type: a
+ * `string` zero passed `validate` but is refused by `validateWrite` and the export. A colour is the
+ * theme's `onSurface` role, a value the canvas draws and the export writes. An asset key has no
+ * value anybody could guess that resolves, so it gets none and stays a blocking refusal.
  */
 internal fun requiredPlaceholder(property: PropertyCapabilityV1): UiValueV1? {
+  if (CurrentM3UiBuilderCatalogExecutor.isColourProperty(property.name)) {
+    return ColorTokenValueV1(PLACEHOLDER_COLOUR_TOKEN)
+  }
+  if (ee.schimke.composeai.uibuilder.export.PropertyValueKinds.isAssetKey(property.name)) {
+    return null
+  }
   property.allowedValues
     .firstNotNullOfOrNull { allowedScalar(it) }
     ?.let {
@@ -106,3 +118,8 @@ private fun allowedScalar(value: JsonElement): UiValueV1? {
     else -> null
   }
 }
+
+/**
+ * One of [CurrentM3UiBuilderCatalogExecutor.CANVAS_COLOR_TOKENS], so the placeholder always draws.
+ */
+private const val PLACEHOLDER_COLOUR_TOKEN = "onSurface"

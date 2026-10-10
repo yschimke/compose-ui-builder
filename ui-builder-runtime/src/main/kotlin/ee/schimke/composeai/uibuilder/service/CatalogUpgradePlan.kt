@@ -100,6 +100,9 @@ internal data class VariantSuccessor(
 private val MODIFIER_WRITERS: Map<String, (UiValueV1) -> DesignModifierV1> =
   mapOf("background" to { color -> BackgroundModifierV1(color) })
 
+/** Whether an upgrade can write the [modifier] a catalog states a property becomes. */
+internal fun canWriteUpgradeModifier(modifier: String): Boolean = modifier in MODIFIER_WRITERS
+
 private const val SUPERSEDES_KEY = "supersedes"
 
 /**

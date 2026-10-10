@@ -585,7 +585,18 @@ public class PersistentUiBuilderService(
     val (filled, changed) = document.withRequiredPlaceholders(catalog)
     if (changed.isEmpty()) return this
     if (catalogs.validate(probe(filled), catalog) != null) return this
-    return copy(document = filled)
+    // The retained snapshot of the current revision too: `GetSnapshot` and a default export read
+    // it, and left alone it still lacked the property — two documents and two hashes for one
+    // revision.
+    return copy(
+      document = filled,
+      revisionSnapshots =
+        revisionSnapshots.map { retained ->
+          if (retained.document.revision == filled.revision)
+            retained.copy(document = retained.document.withRequiredPlaceholders(catalog).first)
+          else retained
+        },
+    )
   }
 
   /** What the startup re-pin did, for the health surface. */

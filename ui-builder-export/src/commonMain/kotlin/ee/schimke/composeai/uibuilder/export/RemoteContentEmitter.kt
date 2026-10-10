@@ -1840,9 +1840,10 @@ internal class RemoteContentEmitter(
         ")"
     val arguments = mutableListOf("state = $state")
     node.modifierExpression(pad)?.let { arguments += "modifier = $it" }
-    // The colours released remote-material3 (1.0.0-alpha12) takes; the builder authors against the
-    // latest alpha, whose page indicators have no backgroundColor.
-    listOf("selectedColor", "unselectedColor").forEach { name ->
+    // The colours remote-material3 1.0.0-alpha13 — the alpha the builder authors against — takes.
+    // `backgroundColor` arrived in alpha13, the catalog offers it and the canvas draws it, so an
+    // export that left it out silently lost a setting the author could see.
+    listOf("selectedColor", "unselectedColor", "backgroundColor").forEach { name ->
       pageIndicatorColor(node, name)?.let { arguments += "$name = $it" }
     }
     return (pad + call(symbol, arguments, pad)).split("\n")

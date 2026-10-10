@@ -568,8 +568,15 @@ public object PublishedUiBuilderCatalog {
       )
       .also {
         it.traits =
-          if (remote) (policy?.traits.orEmpty() + REMOTE_COMPONENT_TRAITS).distinct()
-          else policy?.traits.orEmpty()
+          if (remote) {
+            // `RemoteAuthorable` is what a Remote slot admits, so it says "the widget exporter can
+            // write this". One no other file may call (`remote-m3/theme-specimen`) every export
+            // refuses (`RemoteContentEmitter.recordCall`), so it is not offered for placing there.
+            val traits =
+              if (component.callableFromAnotherFile) REMOTE_COMPONENT_TRAITS
+              else REMOTE_COMPONENT_TRAITS - REMOTE_AUTHORABLE
+            (policy?.traits.orEmpty() + traits).distinct()
+          } else policy?.traits.orEmpty()
         it.slots = slots
         it.properties = properties
         it.modifierCapabilities =
@@ -681,7 +688,9 @@ public object PublishedUiBuilderCatalog {
   // component exactly this, and a published catalog that stated nothing lost it:
   // `CatalogCutoverShadow` counted 185 losses on remote-m3, nearly all of them these rules. A
   // catalog's own `traits` are added to, not replaced, because these are facts about the emitter.
-  private val REMOTE_COMPONENT_TRAITS = listOf("RemoteContent", "RemoteAuthorable")
+  private const val REMOTE_AUTHORABLE = "RemoteAuthorable"
+
+  private val REMOTE_COMPONENT_TRAITS = listOf("RemoteContent", REMOTE_AUTHORABLE)
 
   private val REMOTE_SLOT_ROLES = listOf("Scaffold", "Container", "Leaf")
 

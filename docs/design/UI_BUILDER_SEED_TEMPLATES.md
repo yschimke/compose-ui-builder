@@ -61,8 +61,10 @@ component record fixes: an adaptive `SupportingPaneScaffold` layout mode that ha
 written to, a carousel whose `items` is a `CarouselScope` DSL, grid spans belonging to the wrapper
 around a node, and `selected` properties comparing a state variable. Those are values this
 vocabulary has no Kotlin for, not components the export has not been shown — the document validates
-against `m3-catalog` cleanly. It is also not offered in the New design chooser: it is
-`UiBuilderNewDesignSeed.DEFAULT_TEMPLATE`, the document a URL naming no template gets, and it is
+against `m3-catalog` cleanly. It is also not offered in the New design chooser, and it is no
+longer the default: a URL naming no template gets `UiBuilderNewDesignSeed.DEFAULT_TEMPLATE`, which
+is `blank`. `jetcaster` is `UiBuilderNewDesignSeed.FIXTURE_TEMPLATE`, the fallback for a template
+id the seed does not recognise and the name tests and the benchmark seed it by, and it is
 this repository's own Jetcaster reference fixture (`ui-builder-reference-jetcaster`, the benchmark of
 [`UI_BUILDER_JETCASTER_BENCHMARK.md`](UI_BUILDER_JETCASTER_BENCHMARK.md)). So the move carries
 **seven** documents to two repositories, and `jetcaster` stays here as what it already is.
@@ -118,7 +120,7 @@ gives "Wear list" for a card that should read "Activity list". So each entry is 
 `order` because the chooser's order is authored today and is a decision — the blank starting point
 comes before the worked sample in both Wear catalogs, and the comments in `Main.kt` say why. `default`
 because exactly one template per catalog answers "a URL named no template", and a catalog that
-declares templates should answer it rather than inheriting `jetcaster`.
+declares templates should answer it rather than inheriting the builder's `blank`.
 
 ## Steps
 

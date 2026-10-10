@@ -13,6 +13,7 @@ import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -270,12 +271,14 @@ public object CatalogCutoverShadow {
     val id = published.benchmark.catalogSystemId
     val kotlin = synthesised.components.associateBy { it.componentId }
     val owned = published.components.associateBy { it.componentId }
-    // A catalog's own ids already carry its prefix (`wear-m3/button`); the builder's do not
-    // (`layout/column`), and those are the ones that need it to say which catalog lost them.
+    // A catalog's own ids already name it (`wear-m3/button`, and `m3/button` or `a2ui/Column`,
+    // whose namespace is not the system id); the builder's do not (`layout/column`), and those are
+    // the ones that need it to say which catalog lost them.
     fun line(componentId: String, finding: Finding): Difference =
       Difference(
-        if (componentId.startsWith("$id/")) "$componentId: ${finding.text}"
-        else "$id/$componentId: ${finding.text}",
+        if (BUILDER_NAMESPACES.any { componentId.startsWith(it) })
+          "$id/$componentId: ${finding.text}"
+        else "$componentId: ${finding.text}",
         finding.loss,
       )
     val successors = successors(published)
@@ -328,14 +331,18 @@ public object CatalogCutoverShadow {
   private fun migratedProperties(
     successor: ComponentSuccessor,
     owned: Map<String, ComponentCapabilityV1>,
-  ): Set<String> {
+  ): Map<String, String?> {
     val declared = owned[successor.componentId]?.properties?.map { it.name }?.toSet().orEmpty()
-    return buildSet {
+    return buildMap {
       successor.variants?.let { variants ->
-        if (variants.components.values.all { it in owned }) add(variants.property)
+        if (variants.components.values.all { it in owned }) put(variants.property, null)
       }
-      successor.properties.forEach { (from, to) -> if (to in declared) add(from) }
-      addAll(successor.modifiers.keys)
+      // A rename keeps where it goes, so its value's constraints are compared with the
+      // destination's: [planCatalogUpgrade] copies the value across unchanged.
+      successor.properties.forEach { (from, to) -> if (to in declared) put(from, to) }
+      // Only a modifier [planCatalogUpgrade] can write: any other blocks the upgrade
+      // (`UNSUPPORTED_MODIFIER`), so the property is lost, not migrated.
+      successor.modifiers.forEach { (from, to) -> if (canWriteUpgradeModifier(to)) put(from, null) }
     }
   }
 
@@ -349,7 +356,7 @@ public object CatalogCutoverShadow {
   private fun componentDifferences(
     kotlin: ComponentCapabilityV1,
     published: ComponentCapabilityV1,
-    migrated: Set<String> = emptySet(),
+    migrated: Map<String, String?> = emptyMap(),
   ): List<Finding> = buildList {
     // A role decides where the component may be placed and what may be placed in it, so a changed
     // one can strand designs either way: counted as a loss rather than guessed at.
@@ -365,7 +372,7 @@ public object CatalogCutoverShadow {
       ?.let(::add)
     val kotlinProperties = kotlin.properties.associateBy { it.name }
     val publishedProperties = published.properties.associateBy { it.name }
-    val carried = (kotlinProperties.keys - publishedProperties.keys) intersect migrated
+    val carried = (kotlinProperties.keys - publishedProperties.keys) intersect migrated.keys
     differ("properties", kotlinProperties.keys - carried, publishedProperties.keys)?.let(::add)
     if (carried.isNotEmpty()) {
       add(
@@ -376,32 +383,20 @@ public object CatalogCutoverShadow {
       )
     }
     (kotlinProperties.keys intersect publishedProperties.keys).sorted().forEach { name ->
-      val a = kotlinProperties.getValue(name)
-      val b = publishedProperties.getValue(name)
-      if (a.jsonType != b.jsonType) {
-        add(
-          Finding(
-            "property $name type ${a.jsonType} -> ${b.jsonType}",
-            loss = !jsonTypes(b.jsonType).containsAll(jsonTypes(a.jsonType)),
-          )
+      addAll(
+        propertyDifferences(
+          name,
+          kotlinProperties.getValue(name),
+          publishedProperties.getValue(name),
         )
-      }
-      if (a.required != b.required) {
-        add(Finding("property $name required ${a.required} -> ${b.required}", loss = b.required))
-      }
-      if (a.allowedValues.toSet() != b.allowedValues.toSet()) {
-        // An empty list allows anything, so narrowing to any list is a loss and widening to none
-        // is not.
-        val narrows =
-          b.allowedValues.isNotEmpty() &&
-            (a.allowedValues.isEmpty() || !b.allowedValues.containsAll(a.allowedValues))
-        add(
-          Finding(
-            "property $name allowed values ${a.allowedValues} -> ${b.allowedValues}",
-            loss = narrows,
-          )
-        )
-      }
+      )
+    }
+    // A renamed property's value is copied onto its destination unchanged, so the destination has
+    // to accept everything the old property did.
+    carried.sorted().forEach { from ->
+      val to = migrated[from] ?: return@forEach
+      val destination = publishedProperties[to] ?: return@forEach
+      addAll(propertyDifferences("$from -> $to", kotlinProperties.getValue(from), destination))
     }
     val kotlinSlots = kotlin.slots.associateBy { it.name }
     val publishedSlots = published.slots.associateBy { it.name }
@@ -423,10 +418,65 @@ public object CatalogCutoverShadow {
           )
         )
       }
-      differ("slot $name accepted roles", a.acceptedRoles.toSet(), b.acceptedRoles.toSet())
+      slotFilter("slot $name accepted roles", a.acceptedRoles.toSet(), b.acceptedRoles.toSet())
         ?.let(::add)
-      differ("slot $name accepted traits", a.acceptedTraits.toSet(), b.acceptedTraits.toSet())
+      slotFilter("slot $name accepted traits", a.acceptedTraits.toSet(), b.acceptedTraits.toSet())
         ?.let(::add)
+    }
+  }
+
+  /** How one property's constraints moved, [label] naming it (or the rename that carries it). */
+  private fun propertyDifferences(
+    label: String,
+    a: PropertyCapabilityV1,
+    b: PropertyCapabilityV1,
+  ): List<Finding> = buildList {
+    if (a.jsonType != b.jsonType) {
+      add(
+        Finding(
+          "property $label type ${a.jsonType} -> ${b.jsonType}",
+          loss = !admitsAll(jsonTypes(b.jsonType), jsonTypes(a.jsonType)),
+        )
+      )
+    }
+    if (a.required != b.required) {
+      add(Finding("property $label required ${a.required} -> ${b.required}", loss = b.required))
+    }
+    if (a.allowedValues.toSet() != b.allowedValues.toSet()) {
+      // An empty list allows anything, so narrowing to any list is a loss and widening to none
+      // is not.
+      val narrows =
+        b.allowedValues.isNotEmpty() &&
+          (a.allowedValues.isEmpty() || !b.allowedValues.containsAll(a.allowedValues))
+      add(
+        Finding(
+          "property $label allowed values ${a.allowedValues} -> ${b.allowedValues}",
+          loss = narrows,
+        )
+      )
+    }
+  }
+
+  /**
+   * Whether the JSON types [published] admits every value [kotlin] did. `integer` is a subtype of
+   * `number` — the runtime's `number` accepts an integral value — so widening one to the other
+   * loses nothing.
+   */
+  private fun admitsAll(published: Set<String>, kotlin: Set<String>): Boolean = kotlin.all {
+    it in published || (it == "integer" && "number" in published)
+  }
+
+  /**
+   * [differ] for a slot's accepted roles or traits, where an EMPTY list accepts everything
+   * (`slotAccepts`): adding a filter to an empty one narrows the slot, and dropping every filter
+   * widens it, whatever the strings say.
+   */
+  private fun slotFilter(what: String, kotlin: Set<String>, published: Set<String>): Finding? {
+    val finding = differ(what, kotlin, published) ?: return null
+    return when {
+      kotlin.isEmpty() -> Finding(finding.text, loss = true)
+      published.isEmpty() -> Finding(finding.text, loss = false)
+      else -> finding
     }
   }
 
