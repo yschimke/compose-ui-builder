@@ -12,6 +12,9 @@ data class UiBuilderAgentPreferences(
 
 /** Origin and clipboard belong to the host; the editor owns the invitation and prompt panel. */
 interface UiBuilderAgentHost {
+  val chat: UiBuilderChatController?
+    get() = null
+
   val preferences: UiBuilderAgentPreferences
   /** Null means this host has not supplied presence, rather than an empty room. */
   val agents: List<UiBuilderCollaborator>?

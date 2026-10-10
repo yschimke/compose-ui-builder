@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +61,7 @@ import ee.schimke.composeai.uibuilder.editor.UI_BUILDER_PRESENCE_HEARTBEAT_MILLI
 import ee.schimke.composeai.uibuilder.editor.UiBuilderAgentHost
 import ee.schimke.composeai.uibuilder.editor.UiBuilderAgentPreferences
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCatalogRecoveryUi
+import ee.schimke.composeai.uibuilder.editor.UiBuilderChatController
 import ee.schimke.composeai.uibuilder.editor.UiBuilderCollaborator
 import ee.schimke.composeai.uibuilder.editor.UiBuilderDocumentPreview
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
@@ -70,6 +72,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderPresenceState
 import ee.schimke.composeai.uibuilder.editor.UiBuilderUnavailableScreen
+import ee.schimke.composeai.uibuilder.editor.browserChatContext
 import ee.schimke.composeai.uibuilder.editor.catalogRecoveryCommand
 import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
 import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs as orderedNewDesignCatalogs
@@ -1561,10 +1564,33 @@ private fun LiveSessionApp(
     LaunchedEffect(loadedCatalog) {
       catalogRecord = fetchCatalogRecord(loadedCatalog.benchmark.catalogSystemId)
     }
+    val chatDocument by rememberUpdatedState(loadedDocument)
+    val chatInstructions by rememberUpdatedState(agentPreferences.instructions())
+    val chatComments by rememberUpdatedState(commentBoard)
+    val chatSelection by rememberUpdatedState(selectedNodeId)
+    val browserChat =
+      remember(config.designId, config.actorId) {
+        UiBuilderChatController(
+          BrowserChatHost(
+            config.designId,
+            config.actorId,
+            monitoringAvailable = revisionPin?.pinned != true,
+          ) {
+            browserChatContext(chatDocument, chatSelection, chatInstructions, chatComments)
+          },
+          scope,
+          actorId = config.actorId,
+        )
+      }
+    DisposableEffect(browserChat) { onDispose { browserChat.stop() } }
+    LaunchedEffect(browserChat, commentBoard, commentBoardLoaded, commentStatus) {
+      browserChat.comments(commentBoard, available = commentBoardLoaded && commentStatus == null)
+    }
     val agentHost =
       if (localSession != null || !isDesignUrlPathSafe(config.designId)) null
       else
         object : UiBuilderAgentHost {
+          override val chat = browserChat
           override val preferences = agentPreferences
           override val agents = activeAgents
           override val viewers = collaborators

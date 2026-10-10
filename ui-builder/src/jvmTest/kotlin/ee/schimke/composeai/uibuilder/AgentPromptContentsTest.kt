@@ -43,6 +43,19 @@ class AgentPromptContentsTest {
   }
 
   @Test
+  fun `background handoff asks for a personal runtime and review before shared writes`() =
+    runComposeUiTest {
+      val host = Host()
+      setContent { MaterialTheme { AgentPromptContents(host) {} } }
+      onNodeWithText("Copy monitoring prompt").performScrollTo().performClick()
+      waitForIdle()
+      assertTrue(host.copied.contains("ui_builder_await_comments"))
+      assertTrue(host.copied.contains("your own runtime"))
+      assertTrue(host.copied.contains("ask before posting replies"))
+      assertTrue(host.copied.contains("Do not send provider credentials"))
+    }
+
+  @Test
   fun `editing and clicking copies the visible prompt`() = runComposeUiTest {
     val host = Host()
     setContent { MaterialTheme { AgentPromptContents(host) {} } }

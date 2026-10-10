@@ -130,6 +130,7 @@ private external fun suppressBrowserContextMenu()
 
 fun main() {
   recordStartupMark("kotlin-start")
+  restoreOpenRouterPageAtBoot()
   stripPageToken()
   val rendererRuntimeId = sandboxRendererRuntimeId()
   if (rendererRuntimeId.isNotEmpty()) {
@@ -204,7 +205,10 @@ fun main() {
     if (!liveSession) recordStartupMark("storage-ready")
     // A page OpenRouter's sign-in returned to: start trading the code for a key beside startup;
     // the guidelines panel awaits it, so a slow exchange never holds the editor up.
-    if (liveSession) startOpenRouterSignInAtBoot(this)
+    if (liveSession) {
+      startOpenRouterSignInAtBoot(this)
+      startBrowserChatSignInAtBoot(this)
+    }
     bootPhase("Starting the editor")
     recordStartupMark("compose-start")
     ComposeViewport(viewportContainerId = "composeApp") {

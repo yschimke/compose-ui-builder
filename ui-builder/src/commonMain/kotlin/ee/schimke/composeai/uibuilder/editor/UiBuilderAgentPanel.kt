@@ -37,7 +37,15 @@ internal fun AgentToolbarAction(host: UiBuilderAgentHost, onOpen: () -> Unit) {
   val active = host.agents?.size ?: 0
   Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small) {
     TextButton(onClick = onOpen) {
-      Text(if (active > 0) "Agent · $active active" else "Connect agent")
+      Text(
+        when {
+          host.chat?.monitoring == true -> "Chat · monitoring"
+          host.chat?.busy == true -> "Chat · working"
+          host.chat?.host?.connected == true -> "Chat"
+          active > 0 -> "Agent · $active active"
+          else -> "Connect agent"
+        }
+      )
     }
   }
 }
@@ -48,7 +56,12 @@ internal fun AgentInvitation(
   onOpen: () -> Unit,
   onNotice: (String) -> Unit,
 ) {
-  if (host.preferences.hintDismissed || host.agents?.isNotEmpty() == true) return
+  if (
+    host.preferences.hintDismissed ||
+      host.agents?.isNotEmpty() == true ||
+      host.chat?.host?.connected == true
+  )
+    return
   Surface(color = MaterialTheme.colorScheme.secondaryContainer) {
     Row(
       Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -75,10 +88,26 @@ internal fun AgentPromptDialog(
   onDismiss: () -> Unit,
   onNotice: (String) -> Unit,
 ) {
+  var browserChat by remember { mutableStateOf(host.chat != null) }
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text("Work with your agent") },
-    text = { AgentPromptContents(host, onNotice) },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (host.chat != null) {
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { browserChat = true }, enabled = !browserChat) {
+              Text("Browser chat")
+            }
+            TextButton(onClick = { browserChat = false }, enabled = browserChat) {
+              Text("External agent")
+            }
+          }
+        }
+        if (browserChat && host.chat != null) BrowserChatContents(host.chat!!)
+        else AgentPromptContents(host, onNotice)
+      }
+    },
     confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
   )
 }
@@ -116,11 +145,10 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
       )
     }
     when (val agents = host.agents) {
-      null ->
-        Text("Agent presence unavailable on this host", style = MaterialTheme.typography.bodySmall)
+      null -> Text("Activity unavailable", style = MaterialTheme.typography.bodySmall)
       else -> {
         Text(
-          if (agents.isEmpty()) "No recent agent activity" else "Active on this design",
+          if (agents.isEmpty()) "No recent activity" else "Active on this design",
           style = MaterialTheme.typography.labelMedium,
         )
         agents.forEach { agent ->
@@ -129,10 +157,6 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
               .joinToString(" · ")
           )
         }
-        Text(
-          "Agents appear while using this design and for 30 seconds afterward.",
-          style = MaterialTheme.typography.bodySmall,
-        )
       }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -182,7 +206,7 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
         minLines = 2,
       )
       Text(
-        "Saved in this browser. Design instructions override your general instructions.",
+        "Saved on this browser.",
         style = MaterialTheme.typography.bodySmall,
       )
     }
@@ -190,7 +214,7 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
       value = prompt,
       onValueChange = { prompt = it },
       label = { Text("Prompt") },
-      supportingText = { Text("Click to copy, or edit and use Copy prompt.") },
+      supportingText = { Text("Click to copy") },
       modifier = Modifier.fillMaxWidth(),
       minLines = 5,
       maxLines = 6,
@@ -205,13 +229,34 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
         }
       }
     }
+    TextButton(
+      onClick = {
+        host.save(draft)?.let(onNotice)
+        scope.launch {
+          onNotice(
+            host.copy(
+              host.prompt(
+                includeSetup,
+                draft.instructions() +
+                  "\n" +
+                  "Run on my machine or in my personal cloud environment, not on the shared design server. " +
+                  "Monitor this design's comments using ui_builder_await_comments. Keep your conversation " +
+                  "and last processed comment sequence in your own runtime. Read new human comments, " +
+                  "draft replies and propose design suggestions; ask before posting replies, resolving " +
+                  "threads or applying changes to the main design. Use a scoped, expiring grant for this " +
+                  "design and stop when I ask or access expires. Do not send provider credentials or " +
+                  "private conversation history to the design server.",
+              )
+            )
+          )
+        }
+      }
+    ) {
+      Text("Copy monitoring prompt")
+    }
     if (includeSetup) {
-      TextButton(onClick = host::openSetup) { Text("Set up Claude, Codex, Antigravity or Other") }
-      TextButton(onClick = host::connectVsCode) { Text("Add MCP connection to VS Code") }
-      Text(
-        "VS Code will ask you to review the connection. Then paste the prompt into your agent.",
-        style = MaterialTheme.typography.bodySmall,
-      )
+      TextButton(onClick = host::openSetup) { Text("Agent setup") }
+      TextButton(onClick = host::connectVsCode) { Text("Add to VS Code") }
     }
   }
 }
