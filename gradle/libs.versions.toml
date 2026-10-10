@@ -120,7 +120,9 @@ maven-publish = "0.37.0"
 # constructors and `copy` are internal, and records are rebuilt through `newBuilder()`, which is
 # what every edit of a record here now does. It moves with daemon 3.15.0 and contracts 3.24.0
 # below, the set 2.38.0 is built against.
-composeai-tools = "2.38.0"
+# 2.39.1 is built on compose-preview-daemon 3.15.1 (compose-ai-tools#5755), moved with the daemon
+# line below.
+composeai-tools = "2.39.1"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and
@@ -188,7 +190,8 @@ composeai-tools = "2.38.0"
 # Dispatchers.Main (compose-preview-daemon#214), and contracts and rc-players resolved through their
 # BOMs (compose-preview-daemon#211).
 # 3.15.0 is what compose-ai-tools 2.38.0 was built against; the two lines move together.
-composeai-preview-daemon = "3.15.0"
+# 3.15.1 is built on rc-players 2.4.0 and contracts 3.24.0 (compose-preview-daemon#232, #234).
+composeai-preview-daemon = "3.15.1"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
