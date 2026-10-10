@@ -55,10 +55,15 @@ class CatalogGuidelinesTest {
       widget[0].describe(1),
     )
 
-    val screen = DesignGuidelineFrames.plan(document("wear-m3/screen-scaffold"), guidelines)
+    val screen =
+      DesignGuidelineFrames.plan(document("wear-m3/screen-scaffold", "wear-m3"), guidelines)
     assertEquals(listOf(DesignGuidelinePicture.DEVICE, "tablet"), screen.map { it.kind })
     val scrolling =
-      DesignGuidelineFrames.plan(document("wear-m3/screen-scaffold"), guidelines, scrolls = true)
+      DesignGuidelineFrames.plan(
+        document("wear-m3/screen-scaffold", "wear-m3"),
+        guidelines,
+        scrolls = true,
+      )
     assertEquals(768, scrolling.single { it.kind == DesignGuidelinePicture.UNROLLED }.heightDp)
   }
 
@@ -115,14 +120,14 @@ class CatalogGuidelinesTest {
     )
   }
 
-  private fun document(root: String): UiBuilderDocument =
+  private fun document(root: String, systemId: String = "remote-m3"): UiBuilderDocument =
     Json.decodeFromString(
       UiBuilderDocument.serializer(),
       """
       {
         "schema": "compose-ui-builder-document/v1-candidate",
         "id": "d", "title": "D", "revision": 1,
-        "catalogPin": {"systemId": "remote-m3"},
+        "catalogPin": {"systemId": "$systemId"},
         "environment": {"widthDp": 192, "heightDp": 192},
         "stateVariables": {},
         "roots": ["root"],

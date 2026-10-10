@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.102.0](https://github.com/yschimke/compose-ui-builder/compare/v3.101.0...v3.102.0) (2026-10-10)
+
+
+### Bug Fixes
+
+* **build:** let the runtime boundary admit the contracts' component record module ([#622](https://github.com/yschimke/compose-ui-builder/issues/622)) ([e0f87e8](https://github.com/yschimke/compose-ui-builder/commit/e0f87e8bfcc5666f0642a78e4ff87987e513cbdf))
+* **deps:** compose-ai-tools 2.39.1 and compose-preview-daemon 3.15.1 ([#627](https://github.com/yschimke/compose-ui-builder/issues/627)) ([a280f69](https://github.com/yschimke/compose-ui-builder/commit/a280f69f9053fe8f570b53276f487eee16246ca9))
+* **guidelines:** review findings from the editor and library PRs ([#620](https://github.com/yschimke/compose-ui-builder/issues/620)) ([91c8f42](https://github.com/yschimke/compose-ui-builder/commit/91c8f42f52d643551cdd37d2be53a172e927c2a2))
+
 ## [3.101.0](https://github.com/yschimke/compose-ui-builder/compare/v3.100.0...v3.101.0) (2026-10-09)
 
 

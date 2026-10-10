@@ -149,6 +149,12 @@ abstract class CheckUiBuilderRuntimeBoundary : DefaultTask() {
         "module ee.schimke.composeai:screen-document-jvm",
         "module ee.schimke.composeai:screen-model",
         "module ee.schimke.composeai:screen-model-jvm",
+        // The component record types (`ComponentRecord`, `ComponentRecordFile`, …) moved out of
+        // `screen-model` into the contracts' wire module (compose-ai-tools 2.38.0), and
+        // `screen-model` now carries them as an `api` dependency. Data shapes only — no transport,
+        // renderer, daemon, MCP or Compose UI — so it sits on the same side of this line.
+        "module ee.schimke.composeai:component-catalog-protocol",
+        "module ee.schimke.composeai:component-catalog-protocol-jvm",
       )
     /**
      * The packaged render data and shared document semantics on this classpath.
