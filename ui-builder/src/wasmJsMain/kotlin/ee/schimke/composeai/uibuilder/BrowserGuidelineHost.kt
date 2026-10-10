@@ -53,7 +53,9 @@ internal class BrowserGuidelineHost(
     writeGuidelineSetting(OVERLAY_STORAGE, if (shown) "1" else "0")
   }
 
-  override val signIn: (() -> Unit) = { beginOpenRouterSignIn(VERIFIER_STORAGE) }
+  override val signIn: (() -> Unit) = {
+    beginOpenRouterSignIn(VERIFIER_STORAGE, "openrouter-callback")
+  }
 
   /**
    * The sign-in [finishOpenRouterSignInAtBoot] finished when the page loaded, if any, and otherwise
@@ -303,11 +305,14 @@ internal fun startOpenRouterSignInAtBoot(scope: CoroutineScope) {
 /** How long the sign-in exchange may take before the panel offers the manual key instead. */
 private const val SIGN_IN_TIMEOUT_MS = 20_000L
 
-private suspend fun exchangeOpenRouterSignIn(): DesignGuidelineHost.SignInResult {
+internal suspend fun exchangeOpenRouterSignIn(
+  storageKey: String = BrowserGuidelineHost.VERIFIER_STORAGE,
+  callbackMarker: String = "openrouter-callback",
+): DesignGuidelineHost.SignInResult {
   val json = Json { ignoreUnknownKeys = true }
   val raw =
     try {
-      awaitCommentString(finishOpenRouterSignIn(BrowserGuidelineHost.VERIFIER_STORAGE))
+      awaitCommentString(finishOpenRouterSignIn(storageKey, callbackMarker))
     } catch (e: Exception) {
       return DesignGuidelineHost.SignInResult.Failed("OpenRouter sign-in failed: ${e.message}")
     }
@@ -364,7 +369,7 @@ private external fun writeGuidelineSetting(key: String, value: String)
  * with `?code=` and the `openrouter-callback` marker [finishOpenRouterSignIn] looks for.
  */
 @JsFun(
-  """(storageKey) => {
+  """(storageKey, callbackMarker) => {
   const b64url = (buffer) => btoa(String.fromCharCode(...new Uint8Array(buffer)))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const bytes = new Uint8Array(32);
@@ -374,29 +379,35 @@ private external fun writeGuidelineSetting(key: String, value: String)
     sessionStorage.setItem(storageKey, verifier);
     const back = new URL(globalThis.location.href);
     back.hash = '';
-    back.searchParams.delete('code');
-    back.searchParams.set('openrouter-callback', '1');
+    // Carry only editor selectors back. Never put an application token in a provider callback.
+    const selectors = ['revision', 'node'].map(name => [name, back.searchParams.get(name)]);
+    back.search = '';
+    for (const [name, value] of selectors) if (value !== null) back.searchParams.set(name, value);
+    back.searchParams.set(callbackMarker, '1');
     globalThis.location.href = 'https://openrouter.ai/auth?callback_url=' +
       encodeURIComponent(back.toString()) + '&code_challenge=' + b64url(digest) +
       '&code_challenge_method=S256';
   });
 }"""
 )
-private external fun beginOpenRouterSignIn(storageKey: String)
+internal external fun beginOpenRouterSignIn(
+  storageKey: String,
+  callbackMarker: String,
+)
 
 /**
  * Step two, on the page OpenRouter returned to: take the code off the address (so a reload or a
  * shared link never carries it), and trade it with the stored verifier for a key.
  */
 @JsFun(
-  """(storageKey) => {
+  """(storageKey, callbackMarker) => {
   const url = new URL(globalThis.location.href);
-  if (url.searchParams.get('openrouter-callback') !== '1') {
+  if (url.searchParams.get(callbackMarker) !== '1') {
     return Promise.resolve(JSON.stringify({ state: 'none' }));
   }
   const code = url.searchParams.get('code');
   url.searchParams.delete('code');
-  url.searchParams.delete('openrouter-callback');
+  url.searchParams.delete(callbackMarker);
   globalThis.history.replaceState(globalThis.history.state, '', url.toString());
   let verifier = null;
   try { verifier = sessionStorage.getItem(storageKey); sessionStorage.removeItem(storageKey); } catch (_) {}
@@ -417,7 +428,10 @@ private external fun beginOpenRouterSignIn(storageKey: String)
   }))).catch((error) => JSON.stringify({ state: 'failed', reason: String(error) }));
 }"""
 )
-private external fun finishOpenRouterSignIn(storageKey: String): Promise<JsString>
+private external fun finishOpenRouterSignIn(
+  storageKey: String,
+  callbackMarker: String,
+): Promise<JsString>
 
 /** One chat completion, credential-free apart from the bearer: no cookies leave for OpenRouter. */
 @JsFun(

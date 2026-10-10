@@ -1,6 +1,9 @@
 # Agent handoff and presence
 
-The web editor's **Connect agent** action opens the prompt panel. A dismissible invitation appears
+The web editor's **Connect agent** action opens browser-owned chat when the host offers it, with an
+**External agent** tab for the prompt panel. [Browser chat](UI_BUILDER_BROWSER_CHAT.md) keeps provider
+credentials and conversation history in the browser and offers opt-in comment monitoring while
+the page is open. A dismissible invitation appears
 until dismissed in this browser or an agent is active; the highlighted toolbar action stays visible.
 The panel lists browser viewers and recent agent activity, and offers full setup or minimal prompts.
 
