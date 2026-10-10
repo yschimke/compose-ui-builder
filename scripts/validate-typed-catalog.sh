@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+python3 -m unittest discover -s "$(dirname "${BASH_SOURCE[0]}")/tests" -p test_install_typed_catalog_bundle.py
 
 # Read-only checks: no publication, installation, formatter, or saved-design mutation.
 builder_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)

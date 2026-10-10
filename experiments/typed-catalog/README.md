@@ -85,3 +85,29 @@ while property capability JSON Schema types remain `boolean`/`integer`.
 
 The committed `evidence/` screenshots show the initial installed component and its edited, sent
 state. Current runs regenerate these views under `ui-builder/build/typed-catalog/e2e`.
+
+## Consume a published experimental generation
+
+Both app workflows can publish a validated catalog generation as an experimental GitHub prerelease
+using the manual `publish` input. The standard `components.json` and `ui-builder.json` files ship
+beside the executable ZIP, `catalog.json`, and `bundle.json` (source/dependency commits and SHA-256).
+Production preview catalog branches are unaffected.
+
+Download an exact source commit and explicitly select its execution runtime:
+
+```sh
+scripts/download-typed-catalog.sh yschimke/meshcore-mobile FULL_SOURCE_SHA jvm-linux-x64 /tmp/mesh-catalog
+scripts/download-typed-catalog.sh yschimke/homeassistant-remotecompose FULL_SOURCE_SHA android /tmp/ha-catalog
+```
+
+The destination must be new. Installation verifies the expected source commit, runtime, ZIP and
+catalog checksums, and that the published JSON pair equals the pair inside the ZIP. It refuses
+path traversal, duplicate entries and links before extracting. Checksums establish artifact
+consistency; callers still explicitly trust the publisher's executable code and compatible runtime.
+
+Use the Meshcore directory as `-PtypedCatalogJvmBundle=/tmp/mesh-catalog` for
+`ExternalJvmCatalogEndToEndTest`. Home Assistant is an Android runtime: its independent
+`:ui-builder-catalog-host:testDebugUnitTest` takes `-PtypedCatalogAndroidBundle=/tmp/ha-catalog`.
+The Android host supplies Android Compose and Remote Compose engines, while all three app library
+implementations are loaded from the downloaded JARs; AARs are also included for Android packaging.
+This does not turn Android components into desktop or browser implementations.
