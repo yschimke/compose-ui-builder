@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
@@ -23,6 +24,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 import ee.schimke.composeai.uibuilder.editor.UiBuilderExportHost
 import ee.schimke.composeai.uibuilder.editor.UiBuilderFileDesigns
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
+import ee.schimke.composeai.uibuilder.editor.agentChatContext
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
@@ -396,6 +398,8 @@ fun OfflineUiBuilderSessionView(
   referenceStore: Path? = null,
   /** The open file's top-level designs, for the strip above the canvas; null for none. */
   fileDesigns: UiBuilderFileDesigns? = null,
+  /** Opt-in local Claude/Codex integration; each host chooses its own private storage namespace. */
+  localAgentStore: Path? = null,
 ) {
   val snapshot by session.snapshot.collectAsState()
   val failure by session.failure.collectAsState()
@@ -407,6 +411,35 @@ fun OfflineUiBuilderSessionView(
         mutableStateOf(current.snapshot.state.document.toUiBuilderDocument())
       }
     val latestDocument by rememberUpdatedState(previewDocument)
+    val latestComments by rememberUpdatedState(comments)
+    val agentScope = rememberCoroutineScope()
+    val localAgent =
+      remember(session, localAgentStore) {
+        localAgentStore?.let { root ->
+          val namespace =
+            java.security.MessageDigest.getInstance("SHA-256")
+              .digest(
+                Json.encodeToString(listOf(session.actorId, current.snapshot.state.document.id))
+                  .toByteArray()
+              )
+              .joinToString("") { "%02x".format(it) }
+          JvmLocalAgentHost(
+            root.resolve(namespace),
+            session.actorId,
+            agentScope,
+            session.commentsAvailable,
+          ) {
+            agentChatContext(latestDocument, null, "", latestComments)
+          }
+        }
+      }
+    LaunchedEffect(localAgent, previewDocument) { localAgent?.conversation?.stop() }
+    DisposableEffect(localAgent) { onDispose { localAgent?.close() } }
+    LaunchedEffect(localAgent, localAgent?.conversation, comments, commentStatus) {
+      localAgent
+        ?.conversation
+        ?.comments(comments, available = session.commentsAvailable && commentStatus == null)
+    }
     val export = remember(session, exportHost) { exportHost?.invoke { latestDocument } }
     val references = remember(session, referenceStore) { JvmReferenceHost(referenceStore) }
     val restoredReference = remember(references) { references.load() }
@@ -423,6 +456,7 @@ fun OfflineUiBuilderSessionView(
     UiBuilderEditor(
       document = current.snapshot.state.document.toUiBuilderDocument(),
       exportHost = export,
+      agentHost = localAgent,
       catalog = session.catalog,
       chrome = chrome,
       actorId = session.actorId,

@@ -72,7 +72,7 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignCatalog
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNewDesignScreen
 import ee.schimke.composeai.uibuilder.editor.UiBuilderPresenceState
 import ee.schimke.composeai.uibuilder.editor.UiBuilderUnavailableScreen
-import ee.schimke.composeai.uibuilder.editor.browserChatContext
+import ee.schimke.composeai.uibuilder.editor.agentChatContext
 import ee.schimke.composeai.uibuilder.editor.catalogRecoveryCommand
 import ee.schimke.composeai.uibuilder.editor.exportFormatsFor
 import ee.schimke.composeai.uibuilder.editor.newDesignCatalogs as orderedNewDesignCatalogs
@@ -1576,7 +1576,7 @@ private fun LiveSessionApp(
             config.actorId,
             monitoringAvailable = revisionPin?.pinned != true,
           ) {
-            browserChatContext(chatDocument, chatSelection, chatInstructions, chatComments)
+            agentChatContext(chatDocument, chatSelection, chatInstructions, chatComments)
           },
           scope,
           actorId = config.actorId,

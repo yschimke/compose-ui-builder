@@ -189,6 +189,12 @@ internal fun ApplicationScope.DesktopApp(options: DesktopLaunchOptions, storageR
               // operator's scaffolding, and writing it next to a file somebody shares would put
               // a multi-megabyte mock into their repository.
               referenceStore = referenceStoreFor(design, storageRoot),
+              localAgentStore =
+                storageRoot
+                  .resolve("agents")
+                  .resolve(
+                    referenceStoreFor(design, storageRoot).fileName.toString().removeSuffix(".json")
+                  ),
               // The same three verbs as the Designs menu, where the design is.
               fileDesigns =
                 collection?.fileDesigns(
