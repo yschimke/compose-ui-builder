@@ -9,15 +9,27 @@ import ee.schimke.composeai.uibuilder.editor.promptForCopy
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalTestApi::class)
 class GuidelinesSectionTest {
-  private class Host(var key: String?) : DesignGuidelineHost {
+  private class Host(var key: String?, private val rememberable: Boolean = false) :
+    DesignGuidelineHost {
     var signedIn = false
     var sent = ""
+    var remembered = false
+
+    override val canRememberKey
+      get() = rememberable
+
+    override fun keyRemembered() = remembered
+
+    override fun rememberKey(remember: Boolean) {
+      remembered = remember
+    }
 
     override fun storedKey() = key
 
@@ -148,6 +160,26 @@ class GuidelinesSectionTest {
       waitForIdle()
       assertEquals("sk-or-pasted", host.key)
       onNodeWithText("Check guidelines").assertExists()
+      // A host that cannot keep a key beyond the session offers no choice about it.
+      onNodeWithText("Remember on this device").assertDoesNotExist()
+    }
+
+  @Test
+  fun `remembering the key on this device is an opt-in, and can be taken back`() =
+    runComposeUiTest {
+      val host = Host(key = null, rememberable = true)
+      val controller = DesignGuidelineController(host)
+      setContent { MaterialTheme { IssuesPanel(controller, {}) } }
+      onNodeWithText("Remember on this device").assertIsOff()
+      onNodeWithText("Remember on this device").performClick()
+      assertTrue(host.remembered)
+      onNodeWithContentDescription("OpenRouter API key").performTextInput("sk-or-pasted")
+      onNodeWithText("Save key").performClick()
+      waitForIdle()
+      onNodeWithText("Model & key").performClick()
+      onNodeWithText("Remember on this device").assertIsOn().performClick()
+      assertFalse(host.remembered)
+      onNodeWithText("Remember on this device").assertIsOff()
     }
 
   @Test

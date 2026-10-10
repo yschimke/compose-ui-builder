@@ -23,7 +23,11 @@ design host:
      **Save key**.
 3. Press **Check guidelines**.
 
-The key is kept in this browser's `localStorage` and is sent only to `openrouter.ai`. **Model &
+The key is kept in this tab's `sessionStorage`, so it is gone when the tab closes, and is sent
+only to `openrouter.ai`. Tick **Remember on this device** to keep it in `localStorage` instead;
+that storage is shared by every page on the editor's origin, which can serve other apps, so it is
+an opt-in, and unticking it removes the remembered copy. A key an earlier version stored in
+`localStorage` is moved into the tab's `sessionStorage` the first time it is read. **Model &
 key** changes the model (default `typesafe/jev-router`, TypeSafe's Jev decision model; any
 OpenRouter model id works) or forgets the key. A key OpenRouter rejects is forgotten automatically.
 

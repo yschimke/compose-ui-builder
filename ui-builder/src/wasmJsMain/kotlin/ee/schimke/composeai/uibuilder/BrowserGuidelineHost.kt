@@ -6,6 +6,8 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineHost
 import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineRecord
 import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineRequest
+import ee.schimke.composeai.uibuilder.guidelines.GuidelineKeyStore
+import ee.schimke.composeai.uibuilder.guidelines.GuidelineKeyValueStore
 import kotlin.js.JsString
 import kotlin.js.Promise
 import kotlinx.coroutines.CoroutineScope
@@ -16,10 +18,12 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * The browser half of the guidelines check: the person's own OpenRouter key in this browser's
- * `localStorage`, OpenRouter's PKCE sign-in to get one without copying it by hand, and the request
- * itself — sent from this page straight to openrouter.ai (the editor page's `connect-src` admits
- * it), so the key never reaches the design host.
+ * The browser half of the guidelines check: the person's own OpenRouter key in this tab's
+ * `sessionStorage` (in `localStorage` only when they tick "Remember on this device" — the origin
+ * also serves other apps, which can read `localStorage`), OpenRouter's PKCE sign-in to get one
+ * without copying it by hand, and the request itself — sent from this page straight to
+ * openrouter.ai (the editor page's `connect-src` admits it), so the key never reaches the design
+ * host.
  *
  * [designId] and [hostedByServer] are for the picture the visual rules need: on
  * compose-preview-server the design's thumbnail is a same-origin read; anywhere else there is none
@@ -29,10 +33,19 @@ internal class BrowserGuidelineHost(
   private val designId: String,
   private val hostedByServer: Boolean,
 ) : DesignGuidelineHost {
-  override fun storedKey(): String? = readGuidelineSetting(KEY_STORAGE).takeIf { it.isNotBlank() }
+  override fun storedKey(): String? = browserKeyStore.key()
 
   override fun storeKey(key: String?) {
-    writeGuidelineSetting(KEY_STORAGE, key.orEmpty())
+    browserKeyStore.storeKey(key)
+  }
+
+  override val canRememberKey: Boolean
+    get() = true
+
+  override fun keyRemembered(): Boolean = browserKeyStore.remembered
+
+  override fun rememberKey(remember: Boolean) {
+    browserKeyStore.setRemembered(remember)
   }
 
   override fun storedModel(): String? =
@@ -258,7 +271,6 @@ internal class BrowserGuidelineHost(
   @Serializable private data class ErrorWire(val message: String? = null, val error: String? = null)
 
   internal companion object {
-    const val KEY_STORAGE = "ui-builder.guidelines.openrouter-key"
     const val MODEL_STORAGE = "ui-builder.guidelines.model"
     const val OVERLAY_STORAGE = "ui-builder.guidelines.overlay"
     const val VERIFIER_STORAGE = "ui-builder.guidelines.pkce-verifier"
@@ -272,6 +284,23 @@ internal class BrowserGuidelineHost(
  * than a result: the exchange runs beside the editor's startup instead of in front of it.
  */
 private var bootSignIn: Deferred<DesignGuidelineHost.SignInResult>? = null
+
+/** The key in `sessionStorage`, or in `localStorage` when the person opted in to remembering it. */
+private val browserKeyStore =
+  GuidelineKeyStore(
+    device =
+      object : GuidelineKeyValueStore {
+        override fun get(key: String) = readGuidelineSetting(key).takeIf { it.isNotEmpty() }
+
+        override fun set(key: String, value: String?) = writeGuidelineSetting(key, value.orEmpty())
+      },
+    session =
+      object : GuidelineKeyValueStore {
+        override fun get(key: String) = readSessionSetting(key).takeIf { it.isNotEmpty() }
+
+        override fun set(key: String, value: String?) = writeSessionSetting(key, value.orEmpty())
+      },
+  )
 
 /**
  * Called from `main` at startup: when this page is OpenRouter's sign-in coming back, starts trading
@@ -290,8 +319,12 @@ internal fun startOpenRouterSignInAtBoot(scope: CoroutineScope) {
     when (result) {
       DesignGuidelineHost.SignInResult.NotReturning -> Unit
       is DesignGuidelineHost.SignInResult.Signed -> {
-        writeGuidelineSetting(BrowserGuidelineHost.KEY_STORAGE, result.key)
-        logGuidelines("OpenRouter sign-in finished; the key is saved in this browser.")
+        browserKeyStore.storeKey(result.key)
+        logGuidelines(
+          if (browserKeyStore.remembered)
+            "OpenRouter sign-in finished; the key is remembered on this device."
+          else "OpenRouter sign-in finished; the key is kept for this tab."
+        )
       }
       is DesignGuidelineHost.SignInResult.Failed ->
         logGuidelines("OpenRouter sign-in did not finish: ${result.reason}")
@@ -357,6 +390,18 @@ private external fun readGuidelineSetting(key: String): String
 }"""
 )
 private external fun writeGuidelineSetting(key: String, value: String)
+
+@JsFun("(key) => { try { return sessionStorage.getItem(key) || ''; } catch (_) { return ''; } }")
+private external fun readSessionSetting(key: String): String
+
+@JsFun(
+  """(key, value) => {
+  try {
+    if (value) sessionStorage.setItem(key, value); else sessionStorage.removeItem(key);
+  } catch (_) {}
+}"""
+)
+private external fun writeSessionSetting(key: String, value: String)
 
 /**
  * OpenRouter's PKCE sign-in, step one: a random verifier kept in `sessionStorage`, its SHA-256
