@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.103.0](https://github.com/yschimke/compose-ui-builder/compare/v3.102.0...v3.103.0) (2026-10-10)
+
+
+### Features
+
+* add browser-owned OpenRouter design chat ([#637](https://github.com/yschimke/compose-ui-builder/issues/637)) ([5331acf](https://github.com/yschimke/compose-ui-builder/commit/5331acf45d5ecd5b4a9a6c57bfa18545eaae10cd))
+* **published-catalog:** a record component can state its shelf role ([#621](https://github.com/yschimke/compose-ui-builder/issues/621)) ([ada592d](https://github.com/yschimke/compose-ui-builder/commit/ada592d049df3e6ed4f02165cbaea14c029c2d37))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.25.0 ([#531](https://github.com/yschimke/compose-ui-builder/issues/531)) ([12b6d47](https://github.com/yschimke/compose-ui-builder/commit/12b6d474a278834d90103101173b75ca4654497f))
+* **export:** an iconKey names an icon on any component, not only m3/icon ([#636](https://github.com/yschimke/compose-ui-builder/issues/636)) ([ae39e09](https://github.com/yschimke/compose-ui-builder/commit/ae39e09312990027975b8e24bb7907eadc034545))
+* **guidelines:** keep the OpenRouter key for the tab unless remembered on this device ([#633](https://github.com/yschimke/compose-ui-builder/issues/633)) ([980b6fb](https://github.com/yschimke/compose-ui-builder/commit/980b6fbd4d64544201777c8f0c1998c6220821e3))
+* **remote-m3:** author against remote-material3 1.0.0-alpha13, so the outlined card stops offering borderColor ([#624](https://github.com/yschimke/compose-ui-builder/issues/624)) ([67bb228](https://github.com/yschimke/compose-ui-builder/commit/67bb2287327353684e57fc742c88bbfb36034864))
+* **ui-builder:** reach every panel on a phone, and switch preview devices without rebuilding ([#623](https://github.com/yschimke/compose-ui-builder/issues/623)) ([6a30dec](https://github.com/yschimke/compose-ui-builder/commit/6a30decc030a7766077971d8a14e3a5bf8b10845))
+* **ui-builder:** stop offering the jetcaster template for new designs ([#619](https://github.com/yschimke/compose-ui-builder/issues/619)) ([44478e2](https://github.com/yschimke/compose-ui-builder/commit/44478e2939a6f418be67a644a14cd879e57f189a))
+
 ## [3.102.0](https://github.com/yschimke/compose-ui-builder/compare/v3.101.0...v3.102.0) (2026-10-10)
 
 
