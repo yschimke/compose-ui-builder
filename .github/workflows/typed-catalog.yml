@@ -1,0 +1,77 @@
+name: Typed catalog prototype
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'experiments/typed-catalog/**'
+      - 'scripts/validate-typed-catalog.sh'
+      - '.github/workflows/typed-catalog.yml'
+      - 'ui-builder-renderer-sdk/**'
+      - 'ui-builder-runtime/**'
+      - 'ui-builder-export/**'
+      - 'ui-builder/src/**'
+      - '**/*.gradle.kts'
+      - 'gradle/**'
+  push:
+    branches: [main]
+    paths:
+      - 'experiments/typed-catalog/**'
+      - 'scripts/validate-typed-catalog.sh'
+      - '.github/workflows/typed-catalog.yml'
+      - 'ui-builder-renderer-sdk/**'
+      - 'ui-builder-runtime/**'
+      - 'ui-builder-export/**'
+      - 'ui-builder/src/**'
+      - '**/*.gradle.kts'
+      - 'gradle/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  typed-catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: compose-ui-builder
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: compose-ui-builder
+          persist-credentials: false
+      # Immutable companion API until it ships. Update this pin with coordinated tools changes;
+      # do not resolve a moving branch or execute another PR's head in this repository's CI.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: yschimke/compose-ai-tools
+          ref: 7ccffc7720ec2e48882e011fb55b014b22783bef
+          path: compose-ai-tools
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            17
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+      - name: Compile, test and format-check the opt-in sources
+        run: scripts/validate-typed-catalog.sh "$GITHUB_WORKSPACE/compose-ai-tools"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: typed-catalog-test-results
+          path: |
+            compose-ai-tools/gradle-plugin/preview-discovery/build/test-results/test
+            compose-ui-builder/ui-builder-renderer-sdk/build/test-results/jvmTest
+            compose-ui-builder/ui-builder-runtime/build/test-results/test
+            compose-ui-builder/ui-builder/build/test-results/jvmTest
+          if-no-files-found: ignore

@@ -77,6 +77,12 @@ dependencies {
 // The catalog belongs to the runtime that controls its revision and persistence lifecycle. The
 // render bundle used to be copied in beside it, from `:ui-builder`'s build directory; it is now
 // `:ui-builder-render-bundle`'s packaged artifact, for the reasons that dependency records.
+if (providers.gradleProperty("typedAdapterCatalog").orNull == "true") {
+  sourceSets.named("test") {
+    kotlin.srcDir(rootProject.file("experiments/typed-catalog/ui-builder-runtime/src/test/kotlin"))
+  }
+}
+
 tasks.processResources {
   from(rootProject.file("docs/design/fixtures/ui-builder/m3-catalog-capabilities-v1.json")) {
     into("ee/schimke/composeai/uibuilder/catalogs")
