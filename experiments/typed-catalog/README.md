@@ -48,6 +48,7 @@ build-brief ./gradlew -PlocalBuilds=tools -PtypedAdapterCatalog=true \
 ```
 
 Home Assistant's native export writes `ui-builder-catalog/build/catalog/testDebugUnitTest` instead.
+Relative smoke-directory paths are resolved from the builder checkout root; absolute paths also work.
 The property is required for this test; ordinary experiment validation excludes it. This verifies
 metadata consumption and native-only placeholder capabilities, while each app's own native render
 test verifies its installed adapter against the actual component. It does not install app code in

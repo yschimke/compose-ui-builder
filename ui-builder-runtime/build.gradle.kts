@@ -81,11 +81,12 @@ if (providers.gradleProperty("typedAdapterCatalog").orNull == "true") {
   sourceSets.named("test") {
     kotlin.srcDir(rootProject.file("experiments/typed-catalog/ui-builder-runtime/src/test/kotlin"))
   }
-  val externalCatalog = providers.gradleProperty("typedCatalogSmokeDirectory")
+  val externalCatalog =
+    providers.gradleProperty("typedCatalogSmokeDirectory").orNull?.let { rootProject.file(it) }
   tasks.named<Test>("test") {
-    if (externalCatalog.isPresent) {
+    if (externalCatalog != null) {
       inputs.dir(externalCatalog)
-      systemProperty("typedCatalogSmokeDirectory", externalCatalog.get())
+      systemProperty("typedCatalogSmokeDirectory", externalCatalog.absolutePath)
     } else {
       exclude("**/ExternalTypedCatalogSmokeTest*")
     }
