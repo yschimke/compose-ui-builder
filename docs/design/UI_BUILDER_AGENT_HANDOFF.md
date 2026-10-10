@@ -1,21 +1,30 @@
 # Agent handoff and presence
 
-The desktop editor offers [local Claude Code and Codex sessions](UI_BUILDER_LOCAL_AGENTS.md).
+The desktop editor offers [local Claude Code, Codex and OpenCode sessions](UI_BUILDER_LOCAL_AGENTS.md).
 Those use installed harnesses and local authentication; no provider token goes to the design host.
 The shared JVM view can opt into the same adapter for remote designs with a live comment feed.
 
 The web editor's **Connect agent** action opens browser-owned chat when the host offers it, with an
 **External agent** tab for the prompt panel. [Browser chat](UI_BUILDER_BROWSER_CHAT.md) keeps provider
 credentials and conversation history in the browser and offers opt-in comment monitoring while
-the page is open. A dismissible invitation appears
-until dismissed in this browser or an agent is active; the highlighted toolbar action stays visible.
+the page is open. One toolbar control owns connection and activity; there is no separate invitation
+bar above the workspace. Sharing also lives in the main toolbar: a **Private**/**Public** control
+with the full access rule in its tooltip. At compact widths a visibility icon stays beside the title,
+and **More → Sharing** opens the same host-owned sharing page. These controls replace the former
+sharing strip; access, revision and error notices retain their existing status strip.
+
+The agent control shows a recent agent's reported name, or **OpenRouter** for browser chat,
+with an extra-participant count when both are available. Browser work and monitoring identify
+OpenRouter explicitly; tooltips and accessibility descriptions include reported model names and
+browser chat's selected model. Unavailable activity is distinct from a known empty roster.
+Clicking a named external agent opens its activity/handoff tab; ongoing browser work opens chat.
 The panel lists browser viewers and recent agent activity, and offers full setup or minimal prompts.
 
 Prompt preferences are stored on this browser's origin, separate from the design document:
-`ui-builder.agent.preferences` stores the setup history, invitation dismissal and general
+`ui-builder.agent.preferences` stores the setup history, legacy invitation dismissal and general
 instructions; `ui-builder.agent.document.<designId>` stores a design override. A blank override uses
 the general instructions. Copying a prompt does not claim setup succeeded. Observed agent activity
-or the person's explicit **My agent is already set up** choice selects the minimal prompt.
+selects the minimal prompt; **Include setup** controls whether setup steps are copied.
 
 The minimal handoff carries the design URL, MCP server name and endpoint, skill name and public
 setup guide. The HTML shell also exposes the endpoint and recovery instructions before Wasm loads;

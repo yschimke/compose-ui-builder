@@ -21,8 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -267,9 +265,9 @@ fun UiBuilderEditor(
    */
   fileDesigns: UiBuilderFileDesigns? = null,
   /**
-   * Who can open this design, in a line above the toolbar; null draws no line. Null by default
-   * because only the host knows: an IDE bridge or MCP app editing a server design must not claim it
-   * is private to this device.
+   * Who can open this design, shown in toolbar controls; null hides the visibility control. Null by
+   * default because only the host knows: an IDE bridge or MCP app editing a server design must not
+   * claim it is private to this device.
    */
   visibilityLabel: String? = null,
   onManageVisibility: (() -> Unit)? = null,
@@ -2721,21 +2719,6 @@ fun UiBuilderEditor(
               )
             }
         ) {
-          if (visibilityLabel != null && !focusedCanvas && !dedicatedOutput && hostChrome == null) {
-            Row(
-              Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-              verticalAlignment = Alignment.CenterVertically,
-            ) {
-              Text(
-                visibilityLabel,
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.weight(1f),
-              )
-              if (onManageVisibility != null)
-                TextButton(onClick = onManageVisibility) { Text("Sharing") }
-            }
-          }
           if (focusedCanvas) {
             // No toolbar: the host's own bar above the editor is the focused layout's chrome.
           } else if (!dedicatedOutput && hostChrome != null) {
@@ -2780,6 +2763,8 @@ fun UiBuilderEditor(
                 onReconnect = onReconnect,
                 onHelp = onHelp,
                 onCopyAiPrompt = onCopyAiPrompt,
+                visibilityLabel = visibilityLabel,
+                onManageVisibility = onManageVisibility,
                 agentHost = agentHost,
                 onOpenAgentPrompt = { showAgentPrompt = true },
                 onNotice = ::say,
@@ -2805,6 +2790,8 @@ fun UiBuilderEditor(
                 onReconnect = onReconnect,
                 onHelp = onHelp,
                 onCopyAiPrompt = onCopyAiPrompt,
+                visibilityLabel = visibilityLabel,
+                onManageVisibility = onManageVisibility,
                 agentHost = agentHost,
                 onOpenAgentPrompt = { showAgentPrompt = true },
                 onNotice = ::say,
@@ -2835,9 +2822,6 @@ fun UiBuilderEditor(
           // the focused canvas included, because which design is open is a question about the page.
           if (!dedicatedOutput && fileDesigns?.shown == true) {
             EditorDesignStrip(fileDesigns, activeTitle = state.document.title)
-          }
-          if (agentHost != null && !focusedCanvas && !dedicatedOutput && hostChrome == null) {
-            AgentInvitation(agentHost, { showAgentPrompt = true }, ::say)
           }
           // Under the toolbar and over everything else, on both layouts: what a link asked for is
           // the first thing to know about this page, and a strip inside one of the docks would be

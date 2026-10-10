@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
@@ -119,6 +121,8 @@ internal fun MobileEditorToolbar(
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
   onCopyAiPrompt: (suspend () -> String)?,
+  visibilityLabel: String? = null,
+  onManageVisibility: (() -> Unit)? = null,
   agentHost: UiBuilderAgentHost? = null,
   onOpenAgentPrompt: () -> Unit = {},
   onNotice: (String) -> Unit,
@@ -141,23 +145,47 @@ internal fun MobileEditorToolbar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
       ) {
-        Text("UI Builder", fontWeight = FontWeight.Bold, maxLines = 1)
+        if (visibilityLabel != null) {
+          MaterialChromeTooltip(visibilityLabel, "") {
+            Icon(
+              visibilityIcon(visibilityLabel),
+              contentDescription = visibilityLabel,
+              modifier = Modifier.size(16.dp),
+            )
+          }
+        }
+        Text(
+          "UI Builder",
+          fontWeight = FontWeight.Bold,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
         catalogFormFactorLabel(state.document)?.let { FormFactorChip(it) }
       }
-      EditorAction("Undo", "$COMMAND_MODIFIER+Z", canUndo) { dispatch(UiBuilderEditorEvent.Undo) }
-      EditorAction("Redo", "$COMMAND_MODIFIER+Shift+Z", canRedo) {
+      ToolbarIconAction("Undo", "$COMMAND_MODIFIER+Z", UiBuilderChromeIcon.Undo, canUndo) {
+        dispatch(UiBuilderEditorEvent.Undo)
+      }
+      ToolbarIconAction("Redo", "$COMMAND_MODIFIER+Shift+Z", UiBuilderChromeIcon.Redo, canRedo) {
         dispatch(UiBuilderEditorEvent.Redo)
       }
-      if (agentHost != null) AgentToolbarAction(agentHost, onOpenAgentPrompt)
+      if (agentHost != null) AgentToolbarAction(agentHost, onOpenAgentPrompt, compact = true)
       if (exportHost != null) ExportMenu(exportHost, showStatus = false)
       Box {
-        TextButton(
-          onClick = { expanded = true },
-          modifier = Modifier.semantics { contentDescription = "More editor actions" },
-        ) {
-          Text("More")
+        ToolbarIconAction("More editor actions", "", UiBuilderChromeIcon.More, true) {
+          expanded = true
         }
         val menuEntries = buildList {
+          if (visibilityLabel != null) {
+            add(UiBuilderMenuEntry.Heading(visibilityLabel))
+            if (onManageVisibility != null)
+              add(
+                UiBuilderMenuEntry.Action("Sharing") {
+                  expanded = false
+                  onManageVisibility()
+                }
+              )
+            add(UiBuilderMenuEntry.Divider)
+          }
           // The host container shapes, on a widget design. Rows rather than the wide toolbar's
           // menu-inside-a-menu, because this is already the overflow: a second dropdown off one
           // row is a worse thing to hit on a narrow screen than two rows that read as a pair. The
@@ -527,6 +555,8 @@ internal fun EditorToolbar(
   onReconnect: (() -> Unit)?,
   onHelp: (() -> Unit)?,
   onCopyAiPrompt: (suspend () -> String)?,
+  visibilityLabel: String? = null,
+  onManageVisibility: (() -> Unit)? = null,
   agentHost: UiBuilderAgentHost? = null,
   onOpenAgentPrompt: () -> Unit = {},
   onNotice: (String) -> Unit,
@@ -617,6 +647,7 @@ internal fun EditorToolbar(
       if (onForkDesign != null) {
         ToolbarIconAction("Fork this design", "", UiBuilderChromeIcon.Copy, true, onForkDesign)
       }
+      if (visibilityLabel != null) VisibilityToolbarAction(visibilityLabel, onManageVisibility)
       if (agentHost != null) {
         AgentToolbarAction(agentHost, onOpenAgentPrompt)
       } else if (onCopyAiPrompt != null) {
@@ -1355,6 +1386,44 @@ internal suspend fun copyLinkSentence(
   } catch (failure: Exception) {
     "Copy link failed: ${failure.message ?: "unknown error"}"
   }
+
+private fun visibilityIcon(label: String) =
+  when {
+    label.startsWith("Private") -> Icons.Filled.Lock
+    label.startsWith("Public") -> Icons.Filled.Public
+    else -> Icons.Filled.Share
+  }
+
+@Composable
+private fun VisibilityToolbarAction(label: String, onManage: (() -> Unit)?) {
+  val title =
+    when {
+      label.startsWith("Private") -> "Private"
+      label.startsWith("Public") -> "Public"
+      else -> "Sharing"
+    }
+  MaterialChromeTooltip("Sharing · $label", "") {
+    if (onManage != null) {
+      TextButton(
+        onClick = onManage,
+        modifier = Modifier.semantics { contentDescription = "Sharing · $label" },
+      ) {
+        Icon(visibilityIcon(label), contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(title)
+      }
+    } else {
+      Row(
+        Modifier.padding(horizontal = 8.dp).semantics { contentDescription = label },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+      ) {
+        Icon(visibilityIcon(label), contentDescription = null, modifier = Modifier.size(16.dp))
+        Text(title, style = MaterialTheme.typography.labelMedium)
+      }
+    }
+  }
+}
 
 /**
  * What a pinned revision, a stale selector or a just-copied link has to say, over the canvas.

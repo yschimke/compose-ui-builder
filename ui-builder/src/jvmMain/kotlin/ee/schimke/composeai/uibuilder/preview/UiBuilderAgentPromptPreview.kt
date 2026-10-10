@@ -47,7 +47,7 @@ fun UiBuilderAgentPromptPreview() {
     }
   Surface(color = MaterialTheme.colorScheme.surface) {
     Column(Modifier.padding(20.dp)) {
-      AgentToolbarAction(host) {}
+      AgentToolbarAction(host, onOpen = {})
       AgentPromptContents(host) {}
     }
   }
