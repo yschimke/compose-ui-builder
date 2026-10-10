@@ -49,11 +49,23 @@ data class DesignGuidelineRule(
    * and for designs that are not Remote Compose.
    */
   val profiles: List<String> = emptyList(),
+  /**
+   * Ids this rule was known by before a rename. A rule id is a finding code, so a record or a
+   * suppression keyed by an old id still resolves to the rule it meant.
+   */
+  val aliases: List<String> = emptyList(),
 ) {
+  /** Whether [id] names this rule, by its id or a former one. */
+  fun answersTo(id: String): Boolean = id == this.id || id in aliases
+
   val visual: Boolean
     get() = kind == KIND_VISUAL
 
-  fun appliesTo(surface: String): Boolean = surfaces.isEmpty() || surface in surfaces
+  fun appliesTo(surface: String): Boolean =
+    surfaces.isEmpty() ||
+      surface in surfaces ||
+      // Inline content is neither a screen nor a widget: it gets the rules written for both.
+      (surface == SURFACE_CONTENT && SURFACE_SCREEN in surfaces && SURFACE_WIDGET in surfaces)
 
   /** Whether a design targeting [profile] (null when it names none) is asked this rule. */
   fun appliesToProfile(profile: String?): Boolean =
@@ -64,6 +76,8 @@ data class DesignGuidelineRule(
     const val KIND_VISUAL: String = "visual"
     const val SURFACE_SCREEN: String = "screen"
     const val SURFACE_WIDGET: String = "widget"
+    /** Inline content (a Remote Compose clock or card on a fixed canvas): no screen, no widget. */
+    const val SURFACE_CONTENT: String = "content"
   }
 }
 
@@ -138,32 +152,47 @@ object DesignGuidelinePrompt {
   }
 
   /**
-   * Whether [document] (the protocol's JSON) is a [DesignGuidelineRule.SURFACE_WIDGET] — its one
-   * root a Wear widget container or a launcher widget — or a [DesignGuidelineRule.SURFACE_SCREEN].
+   * Which surface [document] (the protocol's JSON) is:
+   * - [DesignGuidelineRule.SURFACE_WIDGET] when its one root is a Wear widget container, the
+   *   launcher widget root, or any root the catalog marks as a launcher host ([launcherRoots], from
+   *   `CatalogExportRouting.launcherRoots`, so a catalog naming its own root is still a widget);
+   * - [DesignGuidelineRule.SURFACE_CONTENT] for inline content in a Remote Compose catalog — a
+   *   clock or a card drawn on a fixed canvas, neither a screen nor a widget — which is asked only
+   *   the rules written for every surface;
+   * - [DesignGuidelineRule.SURFACE_SCREEN] otherwise.
    */
-  fun surfaceOf(document: JsonObject): String {
+  fun surfaceOf(document: JsonObject, launcherRoots: Set<String> = emptySet()): String {
     val roots = document["roots"] as? JsonArray
     val root = (roots?.singleOrNull() as? JsonPrimitive)?.contentOrNull
     val componentId =
       root
         ?.let { ((document["nodes"] as? JsonObject)?.get(it) as? JsonObject)?.get("componentId") }
         ?.let { (it as? JsonPrimitive)?.contentOrNull }
-    return if (
-      componentId in WEAR_WIDGET_CONTAINER_IDS || componentId == LauncherWidgetCodeExporter.ROOT
-    )
-      DesignGuidelineRule.SURFACE_WIDGET
-    else DesignGuidelineRule.SURFACE_SCREEN
+    val systemId =
+      ((document["catalogPin"] as? JsonObject)?.get("systemId") as? JsonPrimitive)?.contentOrNull
+    return surfaceOf(componentId, systemId, launcherRoots)
   }
 
   /** [surfaceOf] for a typed document. */
-  fun surfaceOf(document: ee.schimke.composeai.uibuilder.export.UiBuilderDocument): String {
-    val componentId = document.roots.singleOrNull()?.let(document.nodes::get)?.componentId
-    return if (
-      componentId in WEAR_WIDGET_CONTAINER_IDS || componentId == LauncherWidgetCodeExporter.ROOT
+  fun surfaceOf(
+    document: ee.schimke.composeai.uibuilder.export.UiBuilderDocument,
+    launcherRoots: Set<String> = emptySet(),
+  ): String =
+    surfaceOf(
+      document.roots.singleOrNull()?.let(document.nodes::get)?.componentId,
+      (document.catalogPin["systemId"] as? JsonPrimitive)?.contentOrNull,
+      launcherRoots,
     )
-      DesignGuidelineRule.SURFACE_WIDGET
-    else DesignGuidelineRule.SURFACE_SCREEN
-  }
+
+  private fun surfaceOf(rootComponentId: String?, systemId: String?, launcherRoots: Set<String>) =
+    when {
+      rootComponentId in WEAR_WIDGET_CONTAINER_IDS ||
+        rootComponentId == LauncherWidgetCodeExporter.ROOT ||
+        rootComponentId in launcherRoots -> DesignGuidelineRule.SURFACE_WIDGET
+      // A Remote Compose catalog's designs are widgets or inline content; it has no app screens.
+      systemId?.lowercase()?.startsWith("remote") == true -> DesignGuidelineRule.SURFACE_CONTENT
+      else -> DesignGuidelineRule.SURFACE_SCREEN
+    }
 
   /** How much generated source a request carries; a screen's export is well under this. */
   const val MAX_SOURCE_CHARS: Int = 16_000

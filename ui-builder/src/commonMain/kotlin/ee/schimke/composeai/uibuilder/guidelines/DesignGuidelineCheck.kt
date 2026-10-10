@@ -466,6 +466,9 @@ fun DesignGuidelineRecord.toResult(rules: DesignGuidelineRuleSet): DesignGuideli
   val known = rules.rules.associateBy { it.id }
   val askedRules = asked.map { id ->
     known[id]
+      // A record from before a rule was renamed: its guidance under the id the record used, so
+      // the verdicts still match.
+      ?: rules.rules.firstOrNull { it.answersTo(id) }?.copy(id = id)
       ?: DesignGuidelineRule(id, emptyList(), "structure", "info", "", id, GUIDELINE_RULES_URL)
   }
   val answered = DesignGuidelinePrompt.answered(verdicts, askedRules)

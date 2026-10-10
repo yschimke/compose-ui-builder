@@ -46,7 +46,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@2076ca1d7544d7f2cdca55fe0037f8cb79b5ad29 # main
+    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@dc162441ec3d77d065674e2d0b7cca8490c2b388 # main
     with:
       # The Material 3 designs, against m3-catalog's own bundle off its delivery branch in the
       # m3-catalog-out output repository. No `lane`: this call keeps the comment and branches it
@@ -58,7 +58,7 @@ jobs:
       builder-repository: ${{ github.repository }}
       builder-ref: ${{ github.event.pull_request.head.sha || github.sha }}
       # Must name the same commit as the `uses:` above; Renovate bumps both as one update.
-      server-ref: 2076ca1d7544d7f2cdca55fe0037f8cb79b5ad29 # main
+      server-ref: dc162441ec3d77d065674e2d0b7cca8490c2b388 # main
       fail-on-refusal: true
       catalog-id: m3-catalog
       catalog-bundle: https://raw.githubusercontent.com/yschimke/m3-catalog-out/design-artifacts/m3-catalog/bundle/bundle.png
@@ -72,7 +72,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@2076ca1d7544d7f2cdca55fe0037f8cb79b5ad29 # main
+    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@dc162441ec3d77d065674e2d0b7cca8490c2b388 # main
     with:
       # The Wear designs, against wear-m3-catalog's bundle. Compiled against the m3 bundle they fail
       # at `Unresolved reference 'wear'`. `wear-m3` is record-free, so there is no `components`.

@@ -35,6 +35,34 @@ data class CatalogGuidelines(
     it.appliesTo(surface) && it.appliesToProfile(profile)
   }
 
+  /**
+   * The picture kinds every design of [surface] must have attached before visual rules are asked:
+   * each planned frame for that surface except the unrolled one, which is drawn only when the
+   * design scrolls. A widget host frame counts only for widgets.
+   */
+  fun expectedPictureKinds(surface: String): Set<String> =
+    frames
+      .filter { it.surface == null || it.surface == surface }
+      .filter { !it.whenScrolls }
+      .mapNotNull { frame ->
+        when (frame.kind) {
+          CatalogGuidelineFrame.DEVICE -> DesignGuidelinePicture.DEVICE
+          CatalogGuidelineFrame.SIZED ->
+            frame.label ?: "${frame.widthDp ?: return@mapNotNull null}x${frame.heightDp}"
+          CatalogGuidelineFrame.WIDGET_HOST ->
+            if (surface != DesignGuidelineRule.SURFACE_WIDGET) null
+            else
+              when (frame.hostShape) {
+                "round" -> DesignGuidelinePicture.WIDGET_SAMSUNG
+                "squircle" -> DesignGuidelinePicture.WIDGET_PIXEL_WATCH
+                null -> null
+                else -> "widget-${frame.hostShape}"
+              }
+          else -> null
+        }
+      }
+      .toSet()
+
   /** As a rule set, for the prompt's provenance and the shapes that predate catalog rules. */
   fun asRuleSet(): DesignGuidelineRuleSet =
     DesignGuidelineRuleSet(schema = schema, version = version, about = about, rules = rules)
@@ -90,8 +118,13 @@ fun DesignGuidelineFrames.plan(
   document: UiBuilderDocument,
   guidelines: CatalogGuidelines,
   scrolls: Boolean = false,
+  /** The scrolling content's measured height, when the host knows it; sizes the unrolled frame. */
+  contentHeightDp: Int? = null,
+  /** Roots the catalog marks as launcher hosts (`CatalogExportRouting.launcherRoots`). */
+  launcherRoots: Set<String> = emptySet(),
 ): List<DesignGuidelineFrame> {
-  val surface = DesignGuidelinePrompt.surfaceOf(document)
+  val surface = DesignGuidelinePrompt.surfaceOf(document, launcherRoots)
+  val platform = guidelines.platform
   val width = document.environmentInt("widthDp")
   val height = document.environmentInt("heightDp")
   return guidelines.frames
@@ -106,17 +139,17 @@ fun DesignGuidelineFrames.plan(
             height,
             emptyMap(),
             frame.description,
+            platform = platform,
           )
-        CatalogGuidelineFrame.UNROLLED -> {
-          val tall = height * (frame.heightFactor ?: UNROLLED_HEIGHT_FACTOR)
-          DesignGuidelineFrame(
-            DesignGuidelinePicture.UNROLLED,
-            width,
-            tall,
-            sizeOverrides(width, tall),
-            frame.description,
-          )
-        }
+        CatalogGuidelineFrame.UNROLLED ->
+          DesignGuidelineFrames.unrolled(
+              width,
+              height,
+              contentHeightDp,
+              platform,
+              frame.heightFactor ?: UNROLLED_HEIGHT_FACTOR,
+            )
+            .copy(description = frame.description)
         // The picture's kind is the catalog's label ("phone", "tablet", "2x1"), which is also what
         // the host caches it under.
         CatalogGuidelineFrame.SIZED -> {
@@ -128,6 +161,7 @@ fun DesignGuidelineFrames.plan(
             h,
             sizeOverrides(w, h),
             frame.description,
+            platform = platform,
           )
         }
         CatalogGuidelineFrame.WIDGET_HOST -> {
@@ -143,6 +177,7 @@ fun DesignGuidelineFrames.plan(
             sizeOverrides(spec.frameWidthDp, spec.frameHeightDp) +
               (WearWidgetHostShape.ENVIRONMENT_KEY to JsonPrimitive(shape.id)),
             frame.description,
+            platform = platform,
           )
         }
         else -> null

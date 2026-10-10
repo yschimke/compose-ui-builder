@@ -23,6 +23,13 @@ data class DesignGuidelineFrame(
   val environment: Map<String, JsonPrimitive>,
   /** The catalog's own words for this picture; null for the built-in description of [kind]. */
   val description: String? = null,
+  /**
+   * The platform the design is for (`wear`, `mobile`, `glasses`, …), so the built-in description
+   * only speaks of a watch, an edge button or a round screen where the design is on one.
+   */
+  val platform: String? = null,
+  /** For an unrolled picture: whether [heightDp] is the measured content, not a multiple. */
+  val coversWholeContent: Boolean = false,
 ) {
   /** How the user message introduces this picture, as picture [index] (1-based). */
   fun describe(index: Int): String {
@@ -34,12 +41,22 @@ data class DesignGuidelineFrame(
       DesignGuidelinePicture.DEVICE ->
         "Picture $index (device picture): the design on its own device at $size, its first " +
           "frame, scrolled to the top. On a scrolling screen, content running off the bottom " +
-          "continues when the user scrolls and is not clipped, and Wear keeps the edge button " +
-          "hidden until the list reaches its end."
+          "continues when the user scrolls and is not clipped." +
+          (if (platform == WEAR_PLATFORM)
+            " Wear keeps the edge button hidden until the list reaches its end."
+          else "")
       DesignGuidelinePicture.UNROLLED ->
-        "Picture $index (unrolled picture): the same design on a canvas $size, tall enough for " +
-          "its whole list, so it sits at the end of the list with the edge button revealed. " +
-          "Judge clipping and the end of the list here; no watch is this tall."
+        if (coversWholeContent)
+          "Picture $index (unrolled picture): the same design on a canvas $size, tall enough " +
+            "for its whole list, so it sits at the end of the list with the edge button " +
+            "revealed. Judge clipping and the end of the list here; no watch is this tall."
+        else
+        // A fixed multiple of the screen cannot promise the whole list: a longer one is cut by
+        // the canvas edge, which is not clipping in the design.
+        "Picture $index (unrolled picture): the same design on a canvas $size, several " +
+            "screens tall, so a list up to that long sits at its end with the edge button " +
+            "revealed. A list longer than this canvas is cut at the picture's bottom edge; that " +
+            "is the canvas, not clipping in the design. Judge clipping inside components here."
       DesignGuidelinePicture.PHONE ->
         "Picture $index (phone picture): the design in a compact window, a phone in portrait at " +
           "$size."
@@ -60,6 +77,8 @@ data class DesignGuidelineFrame(
     }
   }
 }
+
+private const val WEAR_PLATFORM = "wear"
 
 /** The pictures a guidelines request should attach for a design, by platform and surface. */
 object DesignGuidelineFrames {
@@ -89,6 +108,10 @@ object DesignGuidelineFrames {
     document: UiBuilderDocument,
     platform: String?,
     scrolls: Boolean = false,
+    /**
+     * The scrolling content's measured height, when the host knows it; sizes the unrolled frame.
+     */
+    contentHeightDp: Int? = null,
   ): List<DesignGuidelineFrame> {
     val width = document.environmentInt("widthDp")
     val height = document.environmentInt("heightDp")
@@ -110,30 +133,61 @@ object DesignGuidelineFrames {
                 "heightDp" to JsonPrimitive(spec.frameHeightDp),
                 WearWidgetHostShape.ENVIRONMENT_KEY to JsonPrimitive(shape.id),
               ),
+              platform = platform,
             )
           }
       platform == MOBILE ->
         listOf(
-          sized(DesignGuidelinePicture.PHONE, PHONE_WIDTH_DP, PHONE_HEIGHT_DP),
-          sized(DesignGuidelinePicture.TABLET, TABLET_WIDTH_DP, TABLET_HEIGHT_DP),
+          sized(DesignGuidelinePicture.PHONE, PHONE_WIDTH_DP, PHONE_HEIGHT_DP, platform),
+          sized(DesignGuidelinePicture.TABLET, TABLET_WIDTH_DP, TABLET_HEIGHT_DP, platform),
         )
       else ->
         listOfNotNull(
-          DesignGuidelineFrame(DesignGuidelinePicture.DEVICE, width, height, emptyMap()),
-          if (platform == WEAR && scrolls)
-            sized(DesignGuidelinePicture.UNROLLED, width, height * UNROLLED_HEIGHT_FACTOR)
+          DesignGuidelineFrame(
+            DesignGuidelinePicture.DEVICE,
+            width,
+            height,
+            emptyMap(),
+            platform = platform,
+          ),
+          if (platform == WEAR && scrolls) unrolled(width, height, contentHeightDp, platform)
           else null,
         )
     }
   }
 
-  private fun sized(kind: String, widthDp: Int, heightDp: Int) =
+  private fun sized(kind: String, widthDp: Int, heightDp: Int, platform: String?) =
     DesignGuidelineFrame(
       kind,
       widthDp,
       heightDp,
       mapOf("widthDp" to JsonPrimitive(widthDp), "heightDp" to JsonPrimitive(heightDp)),
+      platform = platform,
     )
+
+  /**
+   * The unrolled frame: the measured content height when the host knows it (so the picture does
+   * show the whole list), otherwise [factor] screens, whose description then says a longer list is
+   * cut by the canvas.
+   */
+  internal fun unrolled(
+    width: Int,
+    height: Int,
+    contentHeightDp: Int?,
+    platform: String?,
+    factor: Int = UNROLLED_HEIGHT_FACTOR,
+  ): DesignGuidelineFrame {
+    val measured = contentHeightDp?.takeIf { it > 0 }?.coerceAtLeast(height)
+    val tall = measured ?: (height * factor)
+    return DesignGuidelineFrame(
+      DesignGuidelinePicture.UNROLLED,
+      width,
+      tall,
+      mapOf("widthDp" to JsonPrimitive(width), "heightDp" to JsonPrimitive(tall)),
+      platform = platform,
+      coversWholeContent = measured != null,
+    )
+  }
 
   internal fun widgetSize(document: UiBuilderDocument): WearWidgetScaffoldSize? {
     if (!document.isWearWidget()) return null

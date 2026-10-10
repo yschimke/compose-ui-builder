@@ -8,6 +8,10 @@ import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineRecord
 import ee.schimke.composeai.uibuilder.guidelines.DesignGuidelineRequest
 import kotlin.js.JsString
 import kotlin.js.Promise
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -56,8 +60,11 @@ internal class BrowserGuidelineHost(
    * one finished now. Startup is where it is really done: the key is saved before the editor
    * composes, so it does not depend on this panel ever being asked.
    */
-  override suspend fun completeSignIn(): DesignGuidelineHost.SignInResult =
-    bootSignIn?.also { bootSignIn = null } ?: exchangeOpenRouterSignIn()
+  override suspend fun completeSignIn(): DesignGuidelineHost.SignInResult {
+    val started = bootSignIn ?: return exchangeOpenRouterSignIn()
+    bootSignIn = null
+    return started.await()
+  }
 
   override suspend fun complete(body: String, key: String): DesignGuidelineHost.Response {
     val raw = awaitCommentString(openRouterComplete(OPENROUTER_CHAT_COMPLETIONS, body, key))
@@ -260,27 +267,41 @@ internal class BrowserGuidelineHost(
   }
 }
 
-/** A sign-in finished at startup, held until the guidelines panel asks for it. */
-private var bootSignIn: DesignGuidelineHost.SignInResult? = null
+/**
+ * The sign-in started at startup, held until the guidelines panel asks for it. A [Deferred] rather
+ * than a result: the exchange runs beside the editor's startup instead of in front of it.
+ */
+private var bootSignIn: Deferred<DesignGuidelineHost.SignInResult>? = null
 
 /**
- * Called from `main` before the editor composes: when this page is OpenRouter's sign-in coming
- * back, trades the code for a key and saves it. Each step is logged, so a sign-in that does not
- * take says why in the console.
+ * Called from `main` at startup: when this page is OpenRouter's sign-in coming back, starts trading
+ * the code for a key in [scope] and saves the key when it arrives. It does not hold the editor up —
+ * a stalled exchange would otherwise leave the person on the boot screen, without the editor or the
+ * paste-a-key fallback. Each step is logged, so a sign-in that does not take says why in the
+ * console.
  */
-internal suspend fun finishOpenRouterSignInAtBoot() {
-  val result = exchangeOpenRouterSignIn()
-  when (result) {
-    DesignGuidelineHost.SignInResult.NotReturning -> return
-    is DesignGuidelineHost.SignInResult.Signed -> {
-      writeGuidelineSetting(BrowserGuidelineHost.KEY_STORAGE, result.key)
-      logGuidelines("OpenRouter sign-in finished; the key is saved in this browser.")
+internal fun startOpenRouterSignInAtBoot(scope: CoroutineScope) {
+  bootSignIn = scope.async {
+    val result =
+      withTimeoutOrNull(SIGN_IN_TIMEOUT_MS) { exchangeOpenRouterSignIn() }
+        ?: DesignGuidelineHost.SignInResult.Failed(
+          "OpenRouter did not answer the sign-in in time; try Connect again or paste a key."
+        )
+    when (result) {
+      DesignGuidelineHost.SignInResult.NotReturning -> Unit
+      is DesignGuidelineHost.SignInResult.Signed -> {
+        writeGuidelineSetting(BrowserGuidelineHost.KEY_STORAGE, result.key)
+        logGuidelines("OpenRouter sign-in finished; the key is saved in this browser.")
+      }
+      is DesignGuidelineHost.SignInResult.Failed ->
+        logGuidelines("OpenRouter sign-in did not finish: ${result.reason}")
     }
-    is DesignGuidelineHost.SignInResult.Failed ->
-      logGuidelines("OpenRouter sign-in did not finish: ${result.reason}")
+    result
   }
-  bootSignIn = result
 }
+
+/** How long the sign-in exchange may take before the panel offers the manual key instead. */
+private const val SIGN_IN_TIMEOUT_MS = 20_000L
 
 private suspend fun exchangeOpenRouterSignIn(): DesignGuidelineHost.SignInResult {
   val json = Json { ignoreUnknownKeys = true }
