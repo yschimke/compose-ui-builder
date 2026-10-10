@@ -7,14 +7,9 @@ import kotlin.test.assertTrue
 
 class OfflineCatalogTest {
   @Test
-  fun `every packaged offline catalog produces a matching starter design`() {
+  fun `every offline catalog, read from what it publishes, produces a matching starter design`() {
     OfflineCatalog.entries.forEach { offlineCatalog ->
-      val text =
-        checkNotNull(javaClass.getResource("/${offlineCatalog.capabilitiesResource}")) {
-            "missing ${offlineCatalog.capabilitiesResource}"
-          }
-          .readText()
-      val catalog = CapabilityCatalogParser.parse(text)
+      val catalog = CapabilityCatalogParser.parse(offlineCatalog.capabilityJson())
 
       val document =
         offlineCatalog.seed(
@@ -32,10 +27,7 @@ class OfflineCatalogTest {
   @Test
   fun `every template a catalog offers seeds a design in that catalog`() {
     OfflineCatalog.entries.forEach { offlineCatalog ->
-      val catalog =
-        CapabilityCatalogParser.parse(
-          checkNotNull(javaClass.getResource("/${offlineCatalog.capabilitiesResource}")).readText()
-        )
+      val catalog = CapabilityCatalogParser.parse(offlineCatalog.capabilityJson())
       offlineCatalog.templateIds.forEach { template ->
         val document =
           offlineCatalog.seed(

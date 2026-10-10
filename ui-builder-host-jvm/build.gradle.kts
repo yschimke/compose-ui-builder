@@ -26,6 +26,8 @@ kotlin {
 
   sourceSets {
     getByName("jvmMain") {
+      // The builder's own fixtures (the Jetcaster benchmark design, the foundation vocabulary) —
+      // never a catalog: catalogs are read from where they publish (PublishedCatalogStore).
       resources.srcDir(rootProject.layout.projectDirectory.dir("docs/design/fixtures/ui-builder"))
     }
     jvmMain.dependencies {
@@ -34,6 +36,12 @@ kotlin {
       api(project(":ui-builder"))
       implementation(libs.compose.material3)
       implementation(libs.kotlinx.coroutines.core)
+      // PublishedUiBuilderCatalog: the offline host composes each catalog from what it publishes,
+      // exactly as a preview server does. Not the render bundle — that is the frontend's own
+      // packaged previews, which a host of the editor neither needs nor may carry.
+      implementation(project(":ui-builder-runtime")) {
+        exclude(group = "ee.schimke.composeai", module = "ui-builder-render-bundle")
+      }
     }
     jvmTest.dependencies {
       implementation(kotlin("test"))
@@ -41,4 +49,13 @@ kotlin {
       @Suppress("DEPRECATION") implementation(compose.desktop.currentOs)
     }
   }
+}
+
+// The hosts read catalogs from where they publish; their tests must not reach the network, so
+// they read the cutover captures (one delivery commit per catalog) through the same store.
+tasks.withType<Test>().configureEach {
+  systemProperty(
+    "compose.uiBuilder.catalogDir",
+    rootProject.file("ui-builder-runtime/src/test/resources/catalog-cutover").absolutePath,
+  )
 }
