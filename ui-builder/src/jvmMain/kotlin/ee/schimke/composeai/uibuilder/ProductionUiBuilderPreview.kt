@@ -2,6 +2,7 @@ package ee.schimke.composeai.uibuilder
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import ee.schimke.composeai.overrides.previewOverrideString
 import ee.schimke.composeai.uibuilder.canvas.LocalUiBuilderCanvasAdapterMappings
@@ -32,7 +33,11 @@ import kotlinx.serialization.json.jsonPrimitive
 @Composable
 fun ProductionUiBuilderPreview() {
   val source = previewOverrideString(PRODUCTION_DOCUMENT_OVERRIDE, DEFAULT_DOCUMENT_JSON)
-  ProductionUiBuilderSurface(decodeProductionRendererDocument(source))
+  val servedCatalog = previewOverrideString(PRODUCTION_CATALOG_OVERRIDE, "")
+  ProductionUiBuilderSurface(
+    decodeProductionRendererDocument(source),
+    servedCatalog = servedCatalog,
+  )
 }
 
 /**
@@ -43,8 +48,10 @@ fun ProductionUiBuilderPreview() {
 internal fun ProductionUiBuilderSurface(
   document: UiBuilderDocument,
   fonts: Map<String, androidx.compose.ui.text.font.FontFamily> = ProductionFontFamilies.production,
+  /** See [ProvideProductionCatalog]. */
+  servedCatalog: String = "",
 ) {
-  ProvideProductionCatalog(document) {
+  ProvideProductionCatalog(document, servedCatalog) {
     CompositionLocalProvider(
       LocalUiBuilderFontFamilies provides fonts,
       LocalUiBuilderFontVariants provides (fonts as? UiBuilderFontVariants),
@@ -65,9 +72,15 @@ internal fun ProductionUiBuilderSurface(
 @Composable
 internal fun ProvideProductionCatalog(
   document: UiBuilderDocument,
+  /**
+   * The catalog the host serves for the pin ([PRODUCTION_CATALOG_OVERRIDE]), used when this
+   * renderer packages none for it. Blank when the host sent none.
+   */
+  servedCatalog: String = "",
   content: @Composable () -> Unit,
 ) {
-  val catalog = productionPreviewCatalog(document)
+  val catalog =
+    remember(document.catalogPin, servedCatalog) { productionCatalogFor(document, servedCatalog) }
   if (catalog == null) {
     content()
   } else {
@@ -88,6 +101,27 @@ internal fun ProvideProductionCatalog(
 
 internal fun decodeProductionRendererDocument(source: String): UiBuilderDocument =
   productionPreviewJson.decodeFromString(UiBuilderDocument.serializer(), source)
+
+/**
+ * The catalog [document] is drawn with: the one this renderer packages for its pin, else the one
+ * the host serves ([servedCatalog]), else none.
+ *
+ * Packaged first, so the catalogs this renderer was built against draw exactly as they always have.
+ * The served catalog is for one it predates: a catalog-owned catalog such as `glimmer-catalog`,
+ * whose PNG export and design-card thumbnail drew every component as "Unsupported component"
+ * because, with no catalog at all, the renderer did not even know they were the catalog's. With it,
+ * a component this renderer has no adapter for draws as its named placeholder, children and all,
+ * the way the editor's own canvas falls back. An unreadable served catalog is ignored rather than
+ * failing the render.
+ */
+internal fun productionCatalogFor(
+  document: UiBuilderDocument,
+  servedCatalog: String,
+): CapabilityCatalog? =
+  productionPreviewCatalog(document)
+    ?: servedCatalog
+      .takeIf { it.isNotBlank() }
+      ?.let { runCatching { CapabilityCatalogParser.parse(it) }.getOrNull() }
 
 /** The packaged catalog artifact for the document's pin, if this renderer carries one. */
 internal fun productionPreviewCatalog(document: UiBuilderDocument): CapabilityCatalog? {
@@ -131,6 +165,12 @@ internal fun CapabilityCatalog.productionCanvasAdapterMappings():
   PUBLISHED_COMPONENT_CANVAS_MAPPINGS.filterKeys { it !in canvasAdapterIds } + canvasAdapterMappings
 
 const val PRODUCTION_DOCUMENT_OVERRIDE: String = "uiBuilder.document.v1"
+
+/**
+ * The served catalog a host passes beside the document: `ui-builder-runtime`'s
+ * `PackagedUiBuilderRenderBundle.CATALOG_OVERRIDE_KEY`. See [productionCatalogFor].
+ */
+const val PRODUCTION_CATALOG_OVERRIDE: String = "uiBuilder.catalog.v1"
 
 private val productionPreviewJson = Json {
   ignoreUnknownKeys = false

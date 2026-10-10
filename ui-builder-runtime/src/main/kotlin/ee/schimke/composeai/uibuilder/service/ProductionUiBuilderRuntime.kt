@@ -1338,6 +1338,12 @@ public data class UiBuilderRenderRequest(
   val localeTag: String,
   val fontScale: Float,
   val encodedDocument: String,
+  /**
+   * The catalog the design is pinned to, as this host serves it ([CatalogCapabilityV1] JSON), for
+   * the renderer to draw with when it packages no catalog of its own for the pin. A host passes it
+   * under [PackagedUiBuilderRenderBundle.CATALOG_OVERRIDE_KEY]. Null for a caller that has none.
+   */
+  val encodedCatalog: String? = null,
 )
 
 /** Narrow pixel/vector port implemented by the server beside its render-host dependency. */
@@ -1424,6 +1430,7 @@ public class ProductionUiBuilderExportExecutor(
         projectRendererDocument(document) { binding ->
           (binding.source as? UploadedAssetSourceV1)?.let { assets?.read(it.storageKey) }
         },
+      encodedCatalog = json.encodeToString(CatalogCapabilityV1.serializer(), catalog),
     )
 
   private fun RevisionPinnedUiBuilderExport.binaryArtifact(bytes: ByteArray): ExportArtifactV1 =
@@ -1464,6 +1471,15 @@ public object PackagedUiBuilderRenderBundle {
   public const val PREVIEW_ID: String =
     "ee.schimke.composeai.uibuilder.ProductionUiBuilderPreviewKt.ProductionUiBuilderPreview"
   public const val DOCUMENT_OVERRIDE_KEY: String = "uiBuilder.document.v1"
+
+  /**
+   * The named string override carrying [UiBuilderRenderRequest.encodedCatalog]: the served catalog
+   * the bundle draws a design with when it packages none for the design's pin. Without it a
+   * catalog-owned catalog the bundle predates — `glimmer-catalog` — rendered every component as
+   * "Unsupported component" in its PNG export and design-card thumbnail, because the renderer had
+   * neither its canvas adapters nor even its component ids.
+   */
+  public const val CATALOG_OVERRIDE_KEY: String = "uiBuilder.catalog.v1"
 
   /**
    * The system property naming the directory of Google Fonts files (`<slug>-<weight>.ttf`) the
