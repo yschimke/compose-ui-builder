@@ -9,12 +9,28 @@ computes.
 
 ## Authoring target
 
-The builder authors against the **latest released alpha**: `remote-creation-compose` 1.0.0-alpha20
-and `remote-material3` 1.0.0-alpha12 (checked against Google Maven, 2026-10-07). The embedded
-`remote-m3-record-v1.json` matches those signatures. The published catalog's snapshot record is
-ahead of them (`backgroundColor` on the page indicators, `border` on the cards); export never writes
-a snapshot-only parameter, so every exported widget compiles against the alpha. The target moves
-with each new alpha, by refreshing the record and its goldens together.
+The builder authors against the **latest released alpha**: `remote-material3` 1.0.0-alpha13
+(checked against Google Maven, 2026-10-10) for the component record, and `remote-creation-compose`
+1.0.0-alpha20 for the modifier vocabulary (alpha21 is out; `remote-modifiers-v1.json` has not been
+regenerated against it yet). The embedded `remote-m3-record-v1.json` matches alpha13's signatures; export never writes a snapshot-only parameter, so every exported widget compiles against
+the alpha. The target moves with each new alpha, by refreshing the record and its goldens together.
+
+How the record was refreshed to alpha13, so the next refresh can repeat it: the 17 components
+remote-m3-catalog's **released** lane stickers came from its `composePreviewDiscover
+-PremoteSnapshot=` record (alpha13), with `bindings` stripped (the fixture never carried them) and
+each `componentIds` unioned with the previous entry's. The other 10 — the selection buttons, sliders,
+stepper, edge button and linear progress, which that catalog stickers only on its snapshot lane — kept
+their entries after their signatures were checked unchanged between alpha12 and alpha13 sources. Then
+`:ui-builder-runtime:test --tests '*SynthesisedCatalogGoldenTest*' -PuiBuilderGoldens=write
+-PuiBuilderRemoteCompose=true`. Never take the published `design-artifacts/remote-m3` record: that
+sheet is drawn on the snapshot lane and is ahead of any release.
+
+alpha13 is what the published catalog's snapshot record had run ahead with before: `backgroundColor`
+on both page indicators, a `border: RemoteBorderStroke?` on `RemoteCard`, `RemoteAppCard` and
+`RemoteTitleCard`, and `RemoteOutlinedCard`'s `border` becoming a `RemoteBorderStroke` with its
+`borderColor` gone. A stored design that still sets `borderColor` on `remote-m3/remote-outlined-card`
+keeps opening and editing: an undeclared property a design already carried is tolerated and left out
+of export (`UndeclaredPropertyToleranceTest`).
 
 ## Time text
 
