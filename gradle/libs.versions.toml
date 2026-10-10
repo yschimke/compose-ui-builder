@@ -191,7 +191,7 @@ composeai-tools = "2.39.1"
 # BOMs (compose-preview-daemon#211).
 # 3.15.0 is what compose-ai-tools 2.38.0 was built against; the two lines move together.
 # 3.15.1 is built on rc-players 2.4.0 and contracts 3.24.0 (compose-preview-daemon#232, #234).
-composeai-preview-daemon = "3.15.1"
+composeai-preview-daemon = "3.15.2"
 # 2.9.0 is the first release carrying `DesignEnvironmentV1.exportDevices` and its Set/Reset
 # changes, which is the field a design names its export devices in. 2.14.0 adds the components a
 # design defines — `DesignDocumentV1.components`, `DesignNodeV1.component` and the `binding` value
