@@ -438,6 +438,11 @@
                 "kind": "string",
                 "optional": true
             },
+            "shelfRole": {
+                "kind": "string",
+                "optional": true,
+                "nullable": true
+            },
             "slotCapabilities": {
                 "kind": "objectList",
                 "members": {
