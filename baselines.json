@@ -892,7 +892,7 @@
     "functionName": "UiBuilderUnexportablePalettePreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderUnexportablePalettePreview-2c6c35dc.png",
-    "sha256": "3bee729f5df1c6e7fe3e1a2ccfcaaf3974ae0cfbfe8c3dd161f0571a0c1b9403",
+    "sha256": "00278a1cbedd757066f600f2d2a0be730ff1b8692e7853b61e5d49e21dc2c39e",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderEditorChromePreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderEditorChromePreviewKt.UiBuilderVariantStripPreview": {
