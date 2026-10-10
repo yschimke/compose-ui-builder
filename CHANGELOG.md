@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.104.0](https://github.com/yschimke/compose-ui-builder/compare/v3.103.0...v3.104.0) (2026-10-10)
+
+
+### Features
+
+* add local Claude Code, Codex and OpenCode desktop chat ([#641](https://github.com/yschimke/compose-ui-builder/issues/641)) ([7ce9440](https://github.com/yschimke/compose-ui-builder/commit/7ce9440bc1de0292bc28a310792bea2b0c241dcf))
+* prototype typed catalog renderer adapters ([#642](https://github.com/yschimke/compose-ui-builder/issues/642)) ([d46b498](https://github.com/yschimke/compose-ui-builder/commit/d46b498e90e50cdd65b0b5e46de78f5bf1052636))
+
+
+### Bug Fixes
+
+* consolidate sharing and agent controls in the toolbar ([#646](https://github.com/yschimke/compose-ui-builder/issues/646)) ([1a24c81](https://github.com/yschimke/compose-ui-builder/commit/1a24c810defbe033ad21f622123f6c3cc1e23249))
+* **guidelines:** cite agent skills at their developer.android.com address, never kb:// ([#649](https://github.com/yschimke/compose-ui-builder/issues/649)) ([538bcb2](https://github.com/yschimke/compose-ui-builder/commit/538bcb21e52e479fbe9b71fac71c2fdd497adb91))
+
 ## [3.103.0](https://github.com/yschimke/compose-ui-builder/compare/v3.102.0...v3.103.0) (2026-10-10)
 
 
