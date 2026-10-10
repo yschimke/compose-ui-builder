@@ -39,10 +39,9 @@ internal fun BrowserChatContents(chat: UiBuilderChatController) {
     Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
     verticalArrangement = Arrangement.spacedBy(10.dp),
   ) {
-    Text("Your browser · your OpenRouter account", style = MaterialTheme.typography.labelLarge)
+    Text("OpenRouter", style = MaterialTheme.typography.labelLarge)
     Text(
-      "Messages, design context and open comments go directly to OpenRouter. Chat history stays in this browser. " +
-        "Replies are private drafts; this chat cannot change your design or post comments.",
+      "Sends this design and open comments to OpenRouter. Replies stay private.",
       style = MaterialTheme.typography.bodySmall,
     )
     if (!host.connected) {
@@ -67,16 +66,16 @@ internal fun BrowserChatContents(chat: UiBuilderChatController) {
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
       Checkbox(checked = host.rememberConnection, onCheckedChange = host::rememberConnection)
-      Text("Remember connection in this browser", style = MaterialTheme.typography.bodySmall)
+      Text("Remember on this browser", style = MaterialTheme.typography.bodySmall)
     }
     Text(
-      if (host.rememberConnection) "The key is saved on this browser's origin."
-      else "The key stays in memory until you reload or close the page.",
+      if (host.rememberConnection) "Key saved on this browser."
+      else "Disconnects on reload or close.",
       style = MaterialTheme.typography.bodySmall,
     )
     host.connectionNotice?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-      TextButton(onClick = { settings = !settings }) { Text("Model and instructions") }
+      TextButton(onClick = { settings = !settings }) { Text("Settings") }
       if (host.connected) TextButton(onClick = chat::disconnect) { Text("Disconnect") }
     }
     if (settings) {
@@ -88,9 +87,8 @@ internal fun BrowserChatContents(chat: UiBuilderChatController) {
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
       )
-      Text(UiBuilderChatController.DEFAULT_INSTRUCTIONS, style = MaterialTheme.typography.bodySmall)
       Text(
-        "Your saved design instructions are included with each turn. Edit them under External agent → Customize.",
+        "Edit instructions in External agent → Customize.",
         style = MaterialTheme.typography.bodySmall,
       )
     }
@@ -108,13 +106,12 @@ internal fun BrowserChatContents(chat: UiBuilderChatController) {
         Text("Monitor comments while open", style = MaterialTheme.typography.bodySmall)
       }
       Text(
-        "Catches up on other people's unreviewed comments, up to five batches each time you enable it. " +
-          "Reopening restores history with monitoring off. Use an external agent for background work.",
+        "Uses your credits. Pauses after five reviews.",
         style = MaterialTheme.typography.bodySmall,
       )
     }
     if (chat.session.messages.isEmpty()) {
-      Text("Ask about this design or draft a reply to a comment.")
+      Text("Ask about this design.")
     }
     chat.session.messages.forEach { message ->
       Surface(
@@ -136,7 +133,7 @@ internal fun BrowserChatContents(chat: UiBuilderChatController) {
       }
     }
     chat.notice?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-    if (chat.busy) Text("Waiting for OpenRouter…", style = MaterialTheme.typography.bodySmall)
+    if (chat.busy) Text("Thinking…", style = MaterialTheme.typography.bodySmall)
     OutlinedTextField(
       value = messageDraft,
       onValueChange = { messageDraft = it.take(UiBuilderChatController.MAX_MESSAGE_CHARS) },

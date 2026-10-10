@@ -91,12 +91,12 @@ class UiBuilderChatController(
       return
     }
     if (!host.connected || !host.monitoringAvailable || !feedAvailable) {
-      notice = "Connect OpenRouter and wait for the comment feed before monitoring."
+      notice = "Connect OpenRouter and wait for comments to load."
       return
     }
     monitoring = true
     automaticTurns = 0
-    notice = "Monitoring while this page is open. Reviews stay in this chat."
+    notice = "Monitoring comments."
     pump()
   }
 
@@ -106,7 +106,7 @@ class UiBuilderChatController(
     feedAvailable = available
     if (!available && monitoring) {
       stop()
-      notice = "Monitoring paused because the comment feed is unavailable."
+      notice = "Monitoring paused: comments unavailable."
     } else pump()
   }
 
@@ -146,7 +146,7 @@ class UiBuilderChatController(
     if (pending.isEmpty()) return
     if (automaticTurns >= MAX_AUTOMATIC_TURNS) {
       monitoring = false
-      notice = "Monitoring paused after $MAX_AUTOMATIC_TURNS reviews. Turn it on to continue."
+      notice = "Paused after $MAX_AUTOMATIC_TURNS reviews. Enable monitoring to continue."
       return
     }
     automaticTurns++
@@ -203,8 +203,7 @@ class UiBuilderChatController(
       } catch (_: Exception) {
         if (requestGeneration == generation) {
           monitoring = false
-          notice =
-            "OpenRouter could not complete this turn. Check your connection, model and credits, then try again."
+          notice = "Request failed. Check your connection, model and credits."
         }
       } finally {
         if (requestGeneration == generation) {

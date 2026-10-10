@@ -145,11 +145,10 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
       )
     }
     when (val agents = host.agents) {
-      null ->
-        Text("Agent presence unavailable on this host", style = MaterialTheme.typography.bodySmall)
+      null -> Text("Activity unavailable", style = MaterialTheme.typography.bodySmall)
       else -> {
         Text(
-          if (agents.isEmpty()) "No recent agent activity" else "Active on this design",
+          if (agents.isEmpty()) "No recent activity" else "Active on this design",
           style = MaterialTheme.typography.labelMedium,
         )
         agents.forEach { agent ->
@@ -158,10 +157,6 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
               .joinToString(" · ")
           )
         }
-        Text(
-          "Agents appear while using this design and for 30 seconds afterward.",
-          style = MaterialTheme.typography.bodySmall,
-        )
       }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -211,7 +206,7 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
         minLines = 2,
       )
       Text(
-        "Saved in this browser. Design instructions override your general instructions.",
+        "Saved on this browser.",
         style = MaterialTheme.typography.bodySmall,
       )
     }
@@ -219,7 +214,7 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
       value = prompt,
       onValueChange = { prompt = it },
       label = { Text("Prompt") },
-      supportingText = { Text("Click to copy, or edit and use Copy prompt.") },
+      supportingText = { Text("Click to copy") },
       modifier = Modifier.fillMaxWidth(),
       minLines = 5,
       maxLines = 6,
@@ -234,10 +229,6 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
         }
       }
     }
-    Text(
-      "For background monitoring, keep your own agent running on your machine or personal cloud runtime.",
-      style = MaterialTheme.typography.bodySmall,
-    )
     TextButton(
       onClick = {
         host.save(draft)?.let(onNotice)
@@ -248,6 +239,7 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
                 includeSetup,
                 draft.instructions() +
                   "\n" +
+                  "Run on my machine or in my personal cloud environment, not on the shared design server. " +
                   "Monitor this design's comments using ui_builder_await_comments. Keep your conversation " +
                   "and last processed comment sequence in your own runtime. Read new human comments, " +
                   "draft replies and propose design suggestions; ask before posting replies, resolving " +
@@ -263,12 +255,8 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
       Text("Copy monitoring prompt")
     }
     if (includeSetup) {
-      TextButton(onClick = host::openSetup) { Text("Set up Claude, Codex, Antigravity or Other") }
-      TextButton(onClick = host::connectVsCode) { Text("Add MCP connection to VS Code") }
-      Text(
-        "VS Code will ask you to review the connection. Then paste the prompt into your agent.",
-        style = MaterialTheme.typography.bodySmall,
-      )
+      TextButton(onClick = host::openSetup) { Text("Agent setup") }
+      TextButton(onClick = host::connectVsCode) { Text("Add to VS Code") }
     }
   }
 }
