@@ -336,8 +336,14 @@ internal fun CatalogRuntimeCanvas(
   // And without its `home`. That is provenance for exports, not something a runtime draws, and a
   // runtime built before homes existed decodes the document strictly: every design the server
   // stamped a home on was refused with `INVALID_DOCUMENT`, and all three panes stayed blank.
+  //
+  // And with a builder template the runtime does not ship resolved into the components it does
+  // (see [forCatalogRuntime]): remote-m3's runtime drew an adaptive widget as an empty frame.
   val runtimeDocument =
-    document.withInlinedUploadedAssets(LocalUiBuilderAssetBytes.current).copy(home = null)
+    document
+      .forCatalogRuntime()
+      .withInlinedUploadedAssets(LocalUiBuilderAssetBytes.current)
+      .copy(home = null)
   val documentJson =
     remember(runtimeDocument) {
       inspectionJson.encodeToString(UiBuilderDocument.serializer(), runtimeDocument)
