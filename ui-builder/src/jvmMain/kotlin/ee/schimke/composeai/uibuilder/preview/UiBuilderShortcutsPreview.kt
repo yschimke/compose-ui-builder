@@ -19,7 +19,7 @@ import ee.schimke.composeai.uibuilder.editor.EditorShortcutsPanel
  * against — so adding a chord without a description, or removing one the panel still claims, shows
  * up here as a changed image rather than as a help sheet nobody re-read.
  */
-@Preview(widthDp = 560, heightDp = 700)
+@Preview(widthDp = 560, heightDp = 1080)
 @Composable
 fun UiBuilderShortcutsPreview() {
   MaterialTheme(colorScheme = darkColorScheme()) {

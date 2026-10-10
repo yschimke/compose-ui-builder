@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -897,6 +898,12 @@ fun UiBuilderEditor(
   // zoomed in is a fact about their window, not about the design, and an authoritative snapshot
   // that reset it would be worse than one that remembers nothing.
   var canvasZoom by remember(document.id) { mutableStateOf(initialCanvasZoom) }
+  // What the canvas last drew at, fitted or pinned, which only it can work out. Read by the zoom
+  // chords and nothing in composition, so the canvas reporting it every frame recomposes nothing.
+  var canvasDrawnScale by remember(document.id) { mutableFloatStateOf(initialCanvasZoom ?: 1f) }
+  // The shortcuts dialog the `?` key opens. The toolbars keep their own for their menu entry; this
+  // one exists because a key has no toolbar to belong to, and the focused layout has none at all.
+  var showShortcutsDialog by remember { mutableStateOf(false) }
   // Which control the hover editor should put the caret in, set by an action that just created the
   // value being edited and cleared the moment it lands.
   var hoverFocusTarget by remember(document.id) { mutableStateOf<String?>(null) }
@@ -2008,6 +2015,7 @@ fun UiBuilderEditor(
           focusEditor()
           canvasZoom = it
         },
+        onScaleDrawn = { canvasDrawnScale = it },
         canvasView = state.canvasView,
         onCanvasViewChanged = { view ->
           focusEditor()
@@ -2679,6 +2687,14 @@ fun UiBuilderEditor(
     )
 
     EditorTheme(theme) {
+      if (showShortcutsDialog) {
+        EditorShortcutsDialog(
+          onDismiss = {
+            showShortcutsDialog = false
+            focusEditor()
+          }
+        )
+      }
       BoxWithConstraints(Modifier.fillMaxSize()) {
         // A host drawing the toolbar and rails has taken the width they cost, and its panes are
         // resized by the person rather than by a phone, so it keeps the desktop layout.
@@ -2716,6 +2732,13 @@ fun UiBuilderEditor(
                 enabled = !textInputFocused,
                 editing = state.editing,
                 dispatch = ::dispatch,
+                onViewCommand = { command ->
+                  when (command) {
+                    is EditorViewCommand.Zoom ->
+                      canvasZoom = canvasZoomAfter(command.zoom, canvasZoom ?: canvasDrawnScale)
+                    EditorViewCommand.ShowShortcuts -> showShortcutsDialog = true
+                  }
+                },
               )
             }
         ) {
