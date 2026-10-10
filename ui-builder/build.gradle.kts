@@ -262,6 +262,19 @@ if (providers.gradleProperty("typedAdapterCatalog").orNull == "true") {
       "skiko.data.path",
       layout.buildDirectory.dir("typed-catalog/skiko").get().asFile.absolutePath,
     )
+    val bundle =
+      providers.gradleProperty("typedCatalogJvmBundle").orNull?.let { rootProject.file(it) }
+    if (bundle != null) {
+      inputs.dir(bundle)
+      systemProperty("typedCatalogJvmBundle", bundle.absolutePath)
+      outputs.dir(layout.buildDirectory.dir("typed-catalog/e2e"))
+      systemProperty(
+        "typedCatalogJvmEvidence",
+        layout.buildDirectory.dir("typed-catalog/e2e").get().asFile.absolutePath,
+      )
+    } else {
+      exclude("**/ExternalJvmCatalogEndToEndTest*")
+    }
   }
 }
 

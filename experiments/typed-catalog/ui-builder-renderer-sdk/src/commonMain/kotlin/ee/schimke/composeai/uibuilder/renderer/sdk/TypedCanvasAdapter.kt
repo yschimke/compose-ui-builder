@@ -69,7 +69,7 @@ class TypedCanvasNodeScope<P>(
       requireNotNull(encoded["value"]) { "${definition.id}.${property.name}: unresolved property" }
     val wrapperType = (encoded["type"] as? JsonPrimitive)?.contentOrNull
     require(
-      wrapperType == property.codec.jsonType || (wrapperType == "state" && property.bindable)
+      wrapperType == property.codec.literalType || (wrapperType == "state" && property.bindable)
     ) {
       "${definition.id}.${property.name}: unsupported property type $wrapperType"
     }

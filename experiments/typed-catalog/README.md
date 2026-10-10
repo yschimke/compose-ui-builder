@@ -53,3 +53,35 @@ The property is required for this test; ordinary experiment validation excludes 
 metadata consumption and native-only placeholder capabilities, while each app's own native render
 test verifies its installed adapter against the actual component. It does not install app code in
 an external host.
+## JVM executable bundle proof
+
+Meshcore's opt-in catalog module packages its generated JSON pair, a saved ChatInput design and
+executable adapter/runtime JARs. `JvmCanvasAdapterProvider` is the experimental JVM service entry
+point; `loadJvmCanvasAdapterRegistry` requires exactly one provider for the chosen catalog. The
+host passes the bundle's inventory to the provider, rather than running discovery against host
+classes. The loader checks every required adapter ID and wraps each adapter with a Compose
+`JvmResourceReader` for the same class loader: strings and other resources must come from the
+installed JARs too. Only trusted code belongs in this in-process loader.
+
+`ExternalJvmCatalogEndToEndTest` has no Meshcore compile dependency. It reads the bundle through
+the standard catalog reader, loads the actual component classes from JAR URLs, renders a saved
+design with the builder canvas, commits inspector edits through the editor reducer, exercises
+the host's existing Column/Text vocabulary alongside the imported components, checks
+two-way text state and Send actions, and reopens the saved edits with fresh preview state. It
+saves screenshots and the edited design. The test is
+excluded unless `typedCatalogJvmBundle` is supplied; paths resolve from the builder checkout root.
+
+```sh
+./gradlew -PtypedAdapterCatalog=true -PlocalBuilds=tools \
+  -PlocalBuild.tools=../compose-ai-tools -PtypedCatalogJvmBundle=/absolute/path/to/unzipped-bundle \
+  :ui-builder:jvmTest --tests '*ExternalJvmCatalogEndToEndTest'
+```
+
+The bundle is produced and this cross-repository test is run by Meshcore's pinned catalog CI.
+This does not install components into the shipped desktop/IDE UI or make native code run in Wasm.
+The proof also exercises a generated catalog with no screen frame; the editor treats its explicit
+JSON null frame as absent. Literal starters use the document's `bool`/`int` wrapper vocabulary,
+while property capability JSON Schema types remain `boolean`/`integer`.
+
+The committed `evidence/` screenshots show the initial installed component and its edited, sent
+state. Current runs regenerate these views under `ui-builder/build/typed-catalog/e2e`.
