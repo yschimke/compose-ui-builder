@@ -35,10 +35,14 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun AgentToolbarAction(host: UiBuilderAgentHost, onOpen: () -> Unit) {
   val active = host.agents?.size ?: 0
+  val localChat = host.local?.conversation
   Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small) {
     TextButton(onClick = onOpen) {
       Text(
         when {
+          localChat?.monitoring == true -> "Agent · monitoring"
+          localChat?.busy == true -> "Agent · working"
+          host.local != null -> "Local agent"
           host.chat?.monitoring == true -> "Chat · monitoring"
           host.chat?.busy == true -> "Chat · working"
           host.chat?.host?.connected == true -> "Chat"
@@ -58,6 +62,7 @@ internal fun AgentInvitation(
 ) {
   if (
     host.preferences.hintDismissed ||
+      host.local != null ||
       host.agents?.isNotEmpty() == true ||
       host.chat?.host?.connected == true
   )
@@ -88,23 +93,35 @@ internal fun AgentPromptDialog(
   onDismiss: () -> Unit,
   onNotice: (String) -> Unit,
 ) {
-  var browserChat by remember { mutableStateOf(host.chat != null) }
+  var tab by remember {
+    mutableStateOf(
+      if (host.local != null) "local" else if (host.chat != null) "browser" else "external"
+    )
+  }
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text("Work with your agent") },
     text = {
       Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (host.chat != null) {
+        if (host.chat != null || host.local != null) {
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { browserChat = true }, enabled = !browserChat) {
-              Text("Browser chat")
+            if (host.local != null) {
+              TextButton(onClick = { tab = "local" }, enabled = tab != "local") {
+                Text("Local agent")
+              }
             }
-            TextButton(onClick = { browserChat = false }, enabled = browserChat) {
+            if (host.chat != null) {
+              TextButton(onClick = { tab = "browser" }, enabled = tab != "browser") {
+                Text("Browser chat")
+              }
+            }
+            TextButton(onClick = { tab = "external" }, enabled = tab != "external") {
               Text("External agent")
             }
           }
         }
-        if (browserChat && host.chat != null) BrowserChatContents(host.chat!!)
+        if (tab == "local" && host.local != null) LocalAgentContents(host.local!!)
+        else if (tab == "browser" && host.chat != null) BrowserChatContents(host.chat!!)
         else AgentPromptContents(host, onNotice)
       }
     },
@@ -206,7 +223,7 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
         minLines = 2,
       )
       Text(
-        "Saved on this browser.",
+        if (host.local != null) "Saved for this session." else "Saved on this browser.",
         style = MaterialTheme.typography.bodySmall,
       )
     }
@@ -229,34 +246,35 @@ internal fun AgentPromptContents(host: UiBuilderAgentHost, onNotice: (String) ->
         }
       }
     }
-    TextButton(
-      onClick = {
-        host.save(draft)?.let(onNotice)
-        scope.launch {
-          onNotice(
-            host.copy(
-              host.prompt(
-                includeSetup,
-                draft.instructions() +
-                  "\n" +
-                  "Run on my machine or in my personal cloud environment, not on the shared design server. " +
-                  "Monitor this design's comments using ui_builder_await_comments. Keep your conversation " +
-                  "and last processed comment sequence in your own runtime. Read new human comments, " +
-                  "draft replies and propose design suggestions; ask before posting replies, resolving " +
-                  "threads or applying changes to the main design. Use a scoped, expiring grant for this " +
-                  "design and stop when I ask or access expires. Do not send provider credentials or " +
-                  "private conversation history to the design server.",
+    if (host.monitoringHandoffAvailable)
+      TextButton(
+        onClick = {
+          host.save(draft)?.let(onNotice)
+          scope.launch {
+            onNotice(
+              host.copy(
+                host.prompt(
+                  includeSetup,
+                  draft.instructions() +
+                    "\n" +
+                    "Run on my machine or in my personal cloud environment, not on the shared design server. " +
+                    "Monitor this design's comments using ui_builder_await_comments. Keep your conversation " +
+                    "and last processed comment sequence in your own runtime. Read new human comments, " +
+                    "draft replies and propose design suggestions; ask before posting replies, resolving " +
+                    "threads or applying changes to the main design. Use a scoped, expiring grant for this " +
+                    "design and stop when I ask or access expires. Do not send provider credentials or " +
+                    "private conversation history to the design server.",
+                )
               )
             )
-          )
+          }
         }
+      ) {
+        Text("Copy monitoring prompt")
       }
-    ) {
-      Text("Copy monitoring prompt")
-    }
     if (includeSetup) {
       TextButton(onClick = host::openSetup) { Text("Agent setup") }
-      TextButton(onClick = host::connectVsCode) { Text("Add to VS Code") }
+      if (host.local == null) TextButton(onClick = host::connectVsCode) { Text("Add to VS Code") }
     }
   }
 }

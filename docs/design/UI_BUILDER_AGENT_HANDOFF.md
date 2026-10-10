@@ -1,5 +1,9 @@
 # Agent handoff and presence
 
+The desktop editor offers [local Claude Code and Codex sessions](UI_BUILDER_LOCAL_AGENTS.md).
+Those use installed harnesses and local authentication; no provider token goes to the design host.
+The shared JVM view can opt into the same adapter for remote designs with a live comment feed.
+
 The web editor's **Connect agent** action opens browser-owned chat when the host offers it, with an
 **External agent** tab for the prompt panel. [Browser chat](UI_BUILDER_BROWSER_CHAT.md) keeps provider
 credentials and conversation history in the browser and offers opt-in comment monitoring while

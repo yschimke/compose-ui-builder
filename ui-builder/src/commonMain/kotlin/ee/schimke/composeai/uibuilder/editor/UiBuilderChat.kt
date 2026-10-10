@@ -27,6 +27,9 @@ interface UiBuilderChatHost {
   val connectionNotice: String?
     get() = null
 
+  val failureNotice: String
+    get() = "Request failed. Check your connection, model and credits."
+
   fun connect()
 
   fun useKey(key: String)
@@ -203,7 +206,7 @@ class UiBuilderChatController(
       } catch (_: Exception) {
         if (requestGeneration == generation) {
           monitoring = false
-          notice = "Request failed. Check your connection, model and credits."
+          notice = host.failureNotice
         }
       } finally {
         if (requestGeneration == generation) {

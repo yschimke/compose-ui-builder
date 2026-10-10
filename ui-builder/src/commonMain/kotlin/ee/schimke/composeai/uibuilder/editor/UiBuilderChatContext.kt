@@ -7,7 +7,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /** A bounded text-only view. Asset bytes, document homes and source URLs are never transmitted. */
-internal fun browserChatContext(
+fun agentChatContext(
   document: UiBuilderDocument,
   selectedNodeId: String?,
   instructions: String,
