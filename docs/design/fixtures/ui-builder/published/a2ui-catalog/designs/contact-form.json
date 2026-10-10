@@ -1,0 +1,247 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "contact-form",
+  "title": "Contact form",
+  "revision": 0,
+  "template": "contact-form",
+  "catalogPin": {
+    "systemId": "a2ui-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 411,
+    "heightDp": 914,
+    "density": 2.625,
+    "theme": "light",
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_4a",
+      "id:pixel_9",
+      "id:pixel_9_pro_xl",
+      "id:pixel_9_pro_fold",
+      "id:pixel_tablet"
+    ]
+  },
+  "stateVariables": {
+    "name": {
+      "type": "text",
+      "valueType": "string",
+      "nullable": false,
+      "initialValue": "",
+      "persistence": "preview"
+    },
+    "email": {
+      "type": "text",
+      "valueType": "string",
+      "nullable": false,
+      "initialValue": "",
+      "persistence": "preview"
+    },
+    "message": {
+      "type": "text",
+      "valueType": "string",
+      "nullable": false,
+      "initialValue": "",
+      "persistence": "preview"
+    },
+    "sendCopy": {
+      "type": "value",
+      "valueType": "bool",
+      "nullable": false,
+      "initialValue": false,
+      "persistence": "preview"
+    }
+  },
+  "roots": [
+    "contact"
+  ],
+  "nodes": {
+    "contact": {
+      "id": "contact",
+      "componentId": "a2ui/Column",
+      "properties": {
+        "align": {
+          "type": "enum",
+          "value": "stretch"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "contact-title",
+          "contact-intro",
+          "contact-name",
+          "contact-email",
+          "contact-message",
+          "contact-copy",
+          "contact-actions"
+        ]
+      }
+    },
+    "contact-title": {
+      "id": "contact-title",
+      "componentId": "a2ui/Text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Get in touch"
+        },
+        "variant": {
+          "type": "enum",
+          "value": "h2"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "contact-intro": {
+      "id": "contact-intro",
+      "componentId": "a2ui/Text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "We usually reply within a day."
+        },
+        "variant": {
+          "type": "enum",
+          "value": "body"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "contact-name": {
+      "id": "contact-name",
+      "componentId": "a2ui/TextField",
+      "properties": {
+        "label": {
+          "type": "string",
+          "value": "Name"
+        },
+        "value": {
+          "type": "state",
+          "variable": "name"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "contact-email": {
+      "id": "contact-email",
+      "componentId": "a2ui/TextField",
+      "properties": {
+        "label": {
+          "type": "string",
+          "value": "Email"
+        },
+        "value": {
+          "type": "state",
+          "variable": "email"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "contact-message": {
+      "id": "contact-message",
+      "componentId": "a2ui/TextField",
+      "properties": {
+        "label": {
+          "type": "string",
+          "value": "Message"
+        },
+        "variant": {
+          "type": "enum",
+          "value": "longText"
+        },
+        "value": {
+          "type": "state",
+          "variable": "message"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "contact-copy": {
+      "id": "contact-copy",
+      "componentId": "a2ui/CheckBox",
+      "properties": {
+        "label": {
+          "type": "string",
+          "value": "Send me a copy"
+        },
+        "value": {
+          "type": "state",
+          "variable": "sendCopy"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "contact-actions": {
+      "id": "contact-actions",
+      "componentId": "a2ui/Row",
+      "properties": {
+        "justify": {
+          "type": "enum",
+          "value": "end"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "contact-send"
+        ]
+      }
+    },
+    "contact-send": {
+      "id": "contact-send",
+      "componentId": "a2ui/Button",
+      "properties": {
+        "variant": {
+          "type": "enum",
+          "value": "primary"
+        },
+        "action": {
+          "type": "object",
+          "fields": {
+            "event": {
+              "type": "object",
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "value": "send"
+                }
+              }
+            }
+          }
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "child": [
+          "contact-send-label"
+        ]
+      }
+    },
+    "contact-send-label": {
+      "id": "contact-send-label",
+      "componentId": "a2ui/Text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Send"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    }
+  }
+}

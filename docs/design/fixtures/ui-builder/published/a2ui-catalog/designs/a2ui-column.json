@@ -1,0 +1,65 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "a2ui-column",
+  "title": "Untitled A2UI surface",
+  "revision": 0,
+  "template": "a2ui-column",
+  "catalogPin": {
+    "systemId": "a2ui-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 411,
+    "heightDp": 914,
+    "density": 2.625,
+    "theme": "light",
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_4a",
+      "id:pixel_9",
+      "id:pixel_9_pro_xl",
+      "id:pixel_9_pro_fold",
+      "id:pixel_tablet"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "a2ui-column"
+  ],
+  "nodes": {
+    "a2ui-column": {
+      "id": "a2ui-column",
+      "componentId": "a2ui/Column",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "a2ui-headline"
+        ]
+      }
+    },
+    "a2ui-headline": {
+      "id": "a2ui-headline",
+      "componentId": "a2ui/Text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Hello, A2UI"
+        },
+        "variant": {
+          "type": "enum",
+          "value": "h2"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    }
+  }
+}

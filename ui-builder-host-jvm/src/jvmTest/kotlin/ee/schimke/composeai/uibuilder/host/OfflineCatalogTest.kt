@@ -54,4 +54,34 @@ class OfflineCatalogTest {
       }
     }
   }
+
+  @Test
+  fun `every catalog but the floor is packaged as what it publishes, templates included`() {
+    OfflineCatalog.entries
+      .filter { it.published }
+      .forEach { offlineCatalog ->
+        assertTrue(
+          offlineCatalog.capabilitiesResource.startsWith("published/"),
+          "${offlineCatalog.systemId} must be read from its published capture, not a Kotlin golden",
+        )
+        val semantics =
+          kotlinx.serialization.json.Json.parseToJsonElement(
+              checkNotNull(javaClass.getResource("/${offlineCatalog.capabilitiesResource}"))
+                .readText()
+            )
+            .let { it as kotlinx.serialization.json.JsonObject }["statusSemantics"]
+            as kotlinx.serialization.json.JsonObject
+        val published =
+          (semantics["templates"] as? kotlinx.serialization.json.JsonArray)
+            .orEmpty()
+            .map { (it as kotlinx.serialization.json.JsonPrimitive).content }
+            .map { it.substringAfterLast('/').removeSuffix(".json") }
+            .toSet()
+        assertEquals(
+          published.ifEmpty { setOf("blank") },
+          offlineCatalog.templateIds,
+          offlineCatalog.systemId,
+        )
+      }
+  }
 }

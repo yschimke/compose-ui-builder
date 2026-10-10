@@ -183,7 +183,9 @@ fun WearWidgetCodePanePreview() {
  */
 private val wearWidgetPreviewCatalog by lazy {
   CapabilityCatalogParser.parse(
-    checkNotNull(WearWidgetScaffoldSize::class.java.getResource("/remote-m3-capabilities-v1.json"))
+    checkNotNull(
+        WearWidgetScaffoldSize::class.java.getResource("/published/remote-m3-capabilities-v1.json")
+      )
       .readText()
   )
 }

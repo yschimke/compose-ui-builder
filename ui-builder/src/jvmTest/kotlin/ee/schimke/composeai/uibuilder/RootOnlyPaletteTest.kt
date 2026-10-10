@@ -22,7 +22,8 @@ import kotlinx.serialization.json.jsonObject
 class RootOnlyPaletteTest {
   private fun resource(path: String) = checkNotNull(javaClass.getResource(path)).readText()
 
-  private val catalog = CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
+  private val catalog =
+    CapabilityCatalogParser.parse(resource("/published/remote-m3-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(catalog)
   private val widget =
     UiBuilderNewDesignSeed.document(

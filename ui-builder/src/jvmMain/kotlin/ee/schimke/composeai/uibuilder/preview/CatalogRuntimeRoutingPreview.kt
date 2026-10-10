@@ -80,7 +80,9 @@ private val RUNTIME_MARK = Color(0xffd6008f)
 /** The published `remote-m3` capability catalog, the one a widget design is pinned to. */
 private val remoteM3PreviewCatalog by lazy {
   CapabilityCatalogParser.parse(
-    checkNotNull(WearWidgetScaffoldSize::class.java.getResource("/remote-m3-capabilities-v1.json"))
+    checkNotNull(
+        WearWidgetScaffoldSize::class.java.getResource("/published/remote-m3-capabilities-v1.json")
+      )
       .readText()
   )
 }

@@ -25,7 +25,8 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 @OptIn(ExperimentalTestApi::class)
 class CatalogRowRefusalTest {
-  private val wearCatalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))
+  private val wearCatalog =
+    CapabilityCatalogParser.parse(resource("/published/wear-m3-capabilities-v1.json"))
 
   /** The sentence the *document* refuses a wrap with — panel-wide, and about the design. */
   private val documentRefusal =

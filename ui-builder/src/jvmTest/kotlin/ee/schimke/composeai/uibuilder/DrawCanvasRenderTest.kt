@@ -24,7 +24,7 @@ class DrawCanvasRenderTest {
   fun `the remote-m3 palette offers the drawing vocabulary`() {
     val catalog =
       CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/remote-m3-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/published/remote-m3-capabilities-v1.json")).readText()
       )
 
     UiDrawing.COMPONENT_IDS.forEach { id ->

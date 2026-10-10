@@ -25,6 +25,8 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderExportHost
 import ee.schimke.composeai.uibuilder.editor.UiBuilderFileDesigns
 import ee.schimke.composeai.uibuilder.editor.UiBuilderNativeRender
 import ee.schimke.composeai.uibuilder.editor.agentChatContext
+import ee.schimke.composeai.uibuilder.export.CatalogOwnership
+import ee.schimke.composeai.uibuilder.export.CatalogSeedTemplates
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.export.UiBuilderNewDesignSeed
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
@@ -63,6 +65,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -503,23 +506,71 @@ private fun fixtureDocument(): UiBuilderDocument =
     )
     .document
 
-/** A packaged catalog that the offline hosts can author against without a server. */
+/**
+ * A packaged catalog that the offline hosts can author against without a server.
+ *
+ * Every catalog but the builder's own floor ([M3]) is packaged as what it **publishes**: the
+ * capability under `published/` is the catalog a deployment that owns it serves (composed from the
+ * captured `ui-builder.json` and record by `PublishedCatalogGoldenTest`), and its new designs seed
+ * from the template documents it publishes, through the same catalog-owned seeding the server uses.
+ * Nothing here reads the Kotlin catalogs this build still synthesises, so they can be deleted
+ * (UI_BUILDER_CATALOG_CUTOVER.md, step 3).
+ */
 public enum class OfflineCatalog(
   val systemId: String,
   val capabilitiesResource: String,
   /** What a new workspace in this catalog starts as when no template is asked for. */
-  val defaultTemplateId: String,
+  val defaultTemplateId: String?,
 ) {
   // The desktop's own workspace is the Jetcaster benchmark, which is no longer a template the web
   // host's New design form offers (it does not export, and the published m3-catalog lacks its
   // `m3/snackbar-host`); [seed] answers it from the fixture before the offered set is consulted.
   M3("m3-catalog", "m3-catalog-capabilities-v1.json", UiBuilderNewDesignSeed.FIXTURE_TEMPLATE),
-  WEAR_M3("wear-m3", "wear-m3-capabilities-v1.json", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE),
-  REMOTE_M3("remote-m3", "remote-m3-capabilities-v1.json", "wear-widget-small");
+  WEAR_M3("wear-m3", "published/wear-m3-capabilities-v1.json", "wear-list"),
+  REMOTE_M3("remote-m3", "published/remote-m3-capabilities-v1.json", "wear-widget-small"),
+  REMOTE_WIDGETS("remote-widgets", "published/remote-widgets-capabilities-v1.json", null),
+  GLIMMER("glimmer-catalog", "published/glimmer-catalog-capabilities-v1.json", null),
+  A2UI("a2ui-catalog", "published/a2ui-catalog-capabilities-v1.json", null);
 
-  /** Every template [seed] accepts, from the same seed the web host's New design form offers. */
+  /** Whether this catalog is packaged as what it publishes (everything but the floor). */
+  val published: Boolean
+    get() = this != M3
+
+  /** The templates this catalog publishes, read from the packaged documents. */
+  private val publishedTemplates: CatalogSeedTemplates? by lazy {
+    if (!published) return@lazy null
+    val paths =
+      Json.parseToJsonElement(resourceText(capabilitiesResource))
+        .jsonObject["statusSemantics"]
+        ?.jsonObject
+        ?.get("templates")
+        ?.jsonArray
+        ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+        .orEmpty()
+    when (
+      val read =
+        CatalogSeedTemplates.read(systemId, paths) { path ->
+          resourceTextOrNull("published/$systemId/designs/${path.substringAfterLast('/')}")
+        }
+    ) {
+      is CatalogSeedTemplates.Result.Read -> read.templates
+      is CatalogSeedTemplates.Result.Unusable ->
+        error("packaged templates of '$systemId' do not read: ${read.reason}")
+    }
+  }
+
+  /** Every template [seed] accepts: what the catalog publishes, or the floor's own seed set. */
   val templateIds: Set<String>
-    get() = UiBuilderNewDesignSeed.templateIds(systemId)
+    get() =
+      publishedTemplates?.ids?.toSet()?.ifEmpty { setOf(UiBuilderNewDesignSeed.BLANK_TEMPLATE) }
+        ?: UiBuilderNewDesignSeed.templateIds(systemId)
+
+  /** [defaultTemplateId], or the first template the catalog publishes. */
+  private val startTemplateId: String
+    get() =
+      defaultTemplateId?.takeIf { it in templateIds }
+        ?: publishedTemplates?.ids?.firstOrNull()
+        ?: UiBuilderNewDesignSeed.BLANK_TEMPLATE
 
   fun seed(
     designId: String,
@@ -530,18 +581,32 @@ public enum class OfflineCatalog(
     if (this == M3 && (templateId == null || templateId == defaultTemplateId)) {
       fixtureDocument().copy(id = designId, title = "Desktop workspace")
     } else {
-      UiBuilderNewDesignSeed.document(
-        designId = designId,
-        catalogSystemId = systemId,
-        templateId =
-          (templateId ?: defaultTemplateId).also {
-            require(it in templateIds) { "catalog '$systemId' has no template '$it'" }
-          },
-        catalogRevision = catalogRevision,
-        nativeRuntimeId = nativeRuntimeId,
-        fixture =
-          Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject,
-      )
+      val chosen =
+        (templateId ?: startTemplateId).also {
+          require(it in templateIds) { "catalog '$systemId' has no template '$it'" }
+        }
+      val fixture =
+        Json.parseToJsonElement(resourceText("jetcaster-discover-operations-v1.json")).jsonObject
+      if (published)
+        UiBuilderNewDesignSeed.document(
+          designId = designId,
+          catalogSystemId = systemId,
+          templateId = chosen,
+          catalogRevision = catalogRevision,
+          nativeRuntimeId = nativeRuntimeId,
+          fixture = fixture,
+          ownership = CatalogOwnership.of(setOf(systemId)),
+          published = publishedTemplates,
+        )
+      else
+        UiBuilderNewDesignSeed.document(
+          designId = designId,
+          catalogSystemId = systemId,
+          templateId = chosen,
+          catalogRevision = catalogRevision,
+          nativeRuntimeId = nativeRuntimeId,
+          fixture = fixture,
+        )
     }
 
   /** The packaged capability used while a remote session loads its authoritative snapshot. */
@@ -554,6 +619,9 @@ public enum class OfflineCatalog(
         ?: error("offline UI Builder has no packaged catalog '$systemId'")
   }
 }
+
+private fun resourceTextOrNull(name: String): String? =
+  object {}.javaClass.getResource("/$name")?.readText()
 
 private fun resourceText(name: String): String =
   checkNotNull(object {}.javaClass.getResource("/$name")) { "missing desktop resource $name" }

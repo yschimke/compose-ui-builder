@@ -1266,7 +1266,7 @@ private const val refusalPreviewCatalogQuery: String = "scaffold"
 
 /** The wear catalog, for the one preview that needs a component a board cannot hold. */
 internal val editorChromePreviewWearCatalog: CapabilityCatalog by lazy {
-  CapabilityCatalogParser.parse(previewResource("/wear-m3-capabilities-v1.json"))
+  CapabilityCatalogParser.parse(previewResource("/published/wear-m3-capabilities-v1.json"))
 }
 
 /**

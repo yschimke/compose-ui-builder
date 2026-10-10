@@ -266,6 +266,41 @@ readiness test is green with that catalog owned, and `ledger empty for it` is th
 `blankUiBuilderDocument`, `ComposeFoundationCatalog` and the packaged `m3-catalog` capability stay:
 they are the builder's floor, not knowledge of somebody else's catalog.
 
+### Consumers moved off the Kotlin catalogs (step 2 of retiring them)
+
+preview.coo.ee owns all six catalogs since 2026-10-10. Before anything in the table above is
+deleted, what does not *need* the Kotlin catalogs reads what the catalogs publish instead:
+
+- **`docs/design/fixtures/ui-builder/published/`** — `<id>-capabilities-v1.json` is the catalog a
+  deployment that owns `<id>` serves (the `catalog-cutover/<id>/` capture composed by
+  `PublishedUiBuilderCatalog` and served by an executor that owns it), and `<id>/designs/` its
+  published templates. Written by `PublishedCatalogGoldenTest` with the other goldens
+  (`-PuiBuilderGoldens=write`), and after every capture.
+- **The offline and desktop hosts** (`OfflineCatalog`) package every catalog but the `m3-catalog`
+  floor from `published/`, seed new designs from the published templates through the catalog-owned
+  seeding the server uses, and offer `remote-widgets`, `glimmer-catalog` and `a2ui-catalog` too.
+- **The host-bridge web archive** ships `published/` under its `<systemId>-capabilities-v1.json`
+  names.
+- **Previews and the tests that hold** read `published/` (18 test files, 4 previews).
+
+Still on the Kotlin goldens, because what they assert is a real difference between the published
+catalog and the Kotlin one — each is a gap to close in the catalog (or the test) before step 3:
+
+| Test | What the published catalog lacks or does differently |
+| --- | --- |
+| `DesignTokensTest`, `DesignTokenInterchangeTest`, `ThemeSchemesTest` | wear-m3 (and remote-m3) publish no design tokens or theme schemes — owning them drops the Theme panel's tokens |
+| `CatalogThumbnailTest`, `DragGhostDocumentTest` | a2ui's served root is `layout/box`, not `a2ui/Column` / `a2ui/button-of` |
+| `FormulaBindingTest` | remote-m3 properties bind as `expr` where the Kotlin catalog typed `string` |
+| `StarterContentTest` | `StarterContent` seeds `m3/text` into `remote-m3/widget-container-adaptive`, which the published catalog does not offer |
+| `CrossCatalogPasteTest`, `WearPropertyReadershipTest`, `WearEditorProblemsTest` | pin revisions and property sets keyed to the Kotlin catalog (`wear-screen-scaffold-v1`) |
+| `host/CatalogOverrideTest` | overrides the Kotlin golden by design |
+
+Also still reading the Kotlin definitions, by design until step 3: `SynthesisedCatalogGoldenTest`
+and the goldens it writes, `PublishedRemoteM3CatalogEquivalenceTest` and the shadow machinery
+(`CatalogCutoverShadow`), and the delete-list rows above (`UiBuilderNewDesignSeed`'s Kotlin
+templates, `LauncherWidgetTemplates`, `WearWidgetSample`, `AdaptiveScreenTemplates`, used by the
+wasm `Main.kt` and the server's non-owned path).
+
 ### What stays here, by design
 
 - **The emitters**: `WearScreenCodeExporter`, `WearWidgetCodeExporter`, `WearContentEmitter`,

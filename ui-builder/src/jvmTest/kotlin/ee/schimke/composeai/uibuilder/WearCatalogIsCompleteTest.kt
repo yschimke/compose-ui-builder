@@ -34,7 +34,7 @@ import kotlin.test.assertTrue
  */
 class WearCatalogIsCompleteTest {
   private val catalogJson =
-    checkNotNull(javaClass.getResource("/wear-m3-capabilities-v1.json")) {
+    checkNotNull(javaClass.getResource("/published/wear-m3-capabilities-v1.json")) {
         "missing the wear capability golden on the test resources path"
       }
       .readText()

@@ -1,0 +1,125 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "glasses-card",
+  "title": "Glasses card",
+  "revision": 0,
+  "template": "glasses-card",
+  "catalogPin": {
+    "systemId": "glimmer-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 960,
+    "heightDp": 720,
+    "density": 1,
+    "theme": "dark",
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false
+  },
+  "stateVariables": {},
+  "roots": [
+    "screen"
+  ],
+  "nodes": {
+    "screen": {
+      "id": "screen",
+      "componentId": "layout/column",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "padding",
+          "startDp": 48,
+          "topDp": 48,
+          "endDp": 48,
+          "bottomDp": 48
+        }
+      ],
+      "slots": {
+        "children": [
+          "card"
+        ]
+      }
+    },
+    "card": {
+      "id": "card",
+      "componentId": "glimmer/card",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "title": [
+          "card-title"
+        ],
+        "subtitle": [
+          "card-subtitle"
+        ],
+        "leadingIcon": [
+          "card-icon"
+        ],
+        "content": [
+          "card-body"
+        ]
+      }
+    },
+    "card-title": {
+      "id": "card-title",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Hello, Glimmer"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "card-subtitle": {
+      "id": "card-subtitle",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Your first glasses screen"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "card-icon": {
+      "id": "card-icon",
+      "componentId": "glimmer/icon",
+      "properties": {
+        "iconKey": {
+          "type": "string",
+          "value": "filled/info"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Info"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "card-body": {
+      "id": "card-body",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Select this card and change it, or drag in a component."
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    }
+  }
+}

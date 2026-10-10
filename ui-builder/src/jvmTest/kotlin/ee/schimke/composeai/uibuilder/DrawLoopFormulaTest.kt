@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 class DrawLoopFormulaTest {
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/remote-m3-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/published/remote-m3-capabilities-v1.json")).readText()
     )
   private val reducer = UiBuilderEditorReducer(catalog)
   private val document = decodeProductionRendererDocument(DOCUMENT)

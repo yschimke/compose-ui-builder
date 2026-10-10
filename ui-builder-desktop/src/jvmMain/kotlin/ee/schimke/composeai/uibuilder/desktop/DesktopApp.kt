@@ -230,7 +230,8 @@ private fun FrameWindowScope.DesktopMenuBar(
       // widget samples among them — each opening a workspace of its own.
       Menu("New from template") {
         OfflineCatalog.entries.forEach { catalog ->
-          (catalog.templateIds - catalog.defaultTemplateId).sorted().forEach { template ->
+          (catalog.templateIds - setOfNotNull(catalog.defaultTemplateId)).sorted().forEach {
+            template ->
             Item(
               "${catalog.displayName} · ${templateMenuLabel(template)}",
               onClick = { onNew(catalog, template) },
@@ -315,6 +316,9 @@ internal val OfflineCatalog.displayName: String
       OfflineCatalog.M3 -> "Material 3"
       OfflineCatalog.WEAR_M3 -> "Wear M3"
       OfflineCatalog.REMOTE_M3 -> "Wear widgets"
+      OfflineCatalog.REMOTE_WIDGETS -> "Launcher widgets"
+      OfflineCatalog.GLIMMER -> "Glimmer (glasses)"
+      OfflineCatalog.A2UI -> "A2UI"
     }
 
 private fun chooseDesignFile(owner: Frame, mode: Int, suggested: String? = null): Path? {

@@ -21,7 +21,7 @@ class TimeTextCanvasRenderTest {
   fun `the palette offers time text`() {
     val catalog =
       CapabilityCatalogParser.parse(
-        checkNotNull(javaClass.getResource("/remote-m3-capabilities-v1.json")).readText()
+        checkNotNull(javaClass.getResource("/published/remote-m3-capabilities-v1.json")).readText()
       )
 
     assertNotNull(catalog.componentsById[UiTimeText.ID])

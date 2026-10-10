@@ -1,0 +1,89 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "hello-widget",
+  "title": "Hello widget · 3x1 (203×102dp)",
+  "revision": 0,
+  "template": "hello-widget",
+  "catalogPin": {
+    "systemId": "remote-widgets",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 203,
+    "heightDp": 102,
+    "density": 2.75,
+    "theme": "light",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": []
+  },
+  "stateVariables": {},
+  "roots": [
+    "launcher-widget"
+  ],
+  "nodes": {
+    "launcher-widget": {
+      "id": "launcher-widget",
+      "componentId": "remote-widgets/launcher-widget",
+      "properties": {
+        "background": {
+          "type": "string",
+          "value": "#FF6750A4"
+        }
+      },
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "hello-content"
+        ]
+      }
+    },
+    "hello-content": {
+      "id": "hello-content",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "slots": {
+        "children": [
+          "hello-text"
+        ]
+      }
+    },
+    "hello-text": {
+      "id": "hello-text",
+      "componentId": "remote-widgets/remote-text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Hello, World!"
+        },
+        "color": {
+          "type": "string",
+          "value": "#FFFFFFFF"
+        },
+        "fontSize": {
+          "type": "float",
+          "value": 24
+        }
+      },
+      "modifiers": [
+        {
+          "type": "align",
+          "alignment": "center"
+        }
+      ],
+      "slots": {}
+    }
+  }
+}

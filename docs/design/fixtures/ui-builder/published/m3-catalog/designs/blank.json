@@ -1,0 +1,67 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "blank",
+  "title": "Blank screen",
+  "revision": 0,
+  "catalogPin": {
+    "systemId": "m3-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 411,
+    "heightDp": 914,
+    "density": 2.625,
+    "theme": "dark",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1.0,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "browserZoomPercent": 100,
+    "fixedTime": "2024-05-16T12:00:00Z",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_4a",
+      "id:pixel_9",
+      "id:pixel_9_pro_xl",
+      "id:pixel_9_pro_fold",
+      "id:pixel_tablet"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "screen"
+  ],
+  "nodes": {
+    "screen": {
+      "id": "screen",
+      "componentId": "layout/scaffold",
+      "properties": {},
+      "slots": {
+        "content": [
+          "body"
+        ]
+      },
+      "modifiers": [],
+      "eventBindings": {}
+    },
+    "body": {
+      "id": "body",
+      "componentId": "layout/box",
+      "properties": {},
+      "slots": {
+        "children": []
+      },
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        }
+      ],
+      "eventBindings": {}
+    }
+  },
+  "assets": {}
+}

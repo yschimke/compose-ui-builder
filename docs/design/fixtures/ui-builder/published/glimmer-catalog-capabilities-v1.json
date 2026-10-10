@@ -1,0 +1,4042 @@
+{
+    "benchmark": {
+        "catalogRevision": "sha256:33e77f74e3a315919db5fed194e8c6f6",
+        "catalogSystemId": "glimmer-catalog",
+        "id": "glimmer-catalog",
+        "nativeRuntimeId": "glimmer-p2-7b404bfa905f",
+        "sourceRevision": "components.json"
+    },
+    "components": [
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.ButtonGroup"
+                ],
+                "symbol": "androidx.xr.glimmer.ButtonGroup"
+            },
+            "componentId": "glimmer/button-group",
+            "displayName": "ButtonGroup",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "fillMaxSize",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll"
+            ],
+            "properties": [],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/button-group",
+                "notes": "Drawn on the canvas by the `glimmer/button-group` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.Button"
+                ],
+                "symbol": "androidx.xr.glimmer.Button"
+            },
+            "componentId": "glimmer/button",
+            "displayName": "Button",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "fillMaxSize",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "enabled",
+                    "notes": "`enabled: Boolean` on `androidx.xr.glimmer.Button`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "shape",
+                    "notes": "`shape: Shape` on `androidx.xr.glimmer.Button`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`color: Color` on `androidx.xr.glimmer.Button`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentColor",
+                    "notes": "`contentColor: Color` on `androidx.xr.glimmer.Button`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "leadingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "trailingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/button",
+                "notes": "Drawn on the canvas by the `glimmer/button` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.ActionCard"
+                ],
+                "symbol": "androidx.xr.glimmer.ActionCard"
+            },
+            "componentId": "glimmer/action-card",
+            "displayName": "ActionCard",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "fillMaxSize",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "shape",
+                    "notes": "`shape: Shape` on `androidx.xr.glimmer.ActionCard`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`color: Color` on `androidx.xr.glimmer.ActionCard`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentColor",
+                    "notes": "`contentColor: Color` on `androidx.xr.glimmer.ActionCard`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "action",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "title",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "subtitle",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "leadingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "trailingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/action-card",
+                "notes": "Drawn on the canvas by the `glimmer/action-card` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.Card"
+                ],
+                "symbol": "androidx.xr.glimmer.Card"
+            },
+            "componentId": "glimmer/card",
+            "displayName": "Card",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "fillMaxSize",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "shape",
+                    "notes": "`shape: Shape` on `androidx.xr.glimmer.Card`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`color: Color` on `androidx.xr.glimmer.Card`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentColor",
+                    "notes": "`contentColor: Color` on `androidx.xr.glimmer.Card`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "title",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "subtitle",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "leadingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "trailingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/card",
+                "notes": "Drawn on the canvas by the `glimmer/card` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.ImageCard"
+                ],
+                "symbol": "androidx.xr.glimmer.ImageCard"
+            },
+            "componentId": "glimmer/image-card",
+            "displayName": "ImageCard",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "fillMaxSize",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "shape",
+                    "notes": "`shape: Shape` on `androidx.xr.glimmer.ImageCard`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`color: Color` on `androidx.xr.glimmer.ImageCard`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentColor",
+                    "notes": "`contentColor: Color` on `androidx.xr.glimmer.ImageCard`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "image",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "title",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "subtitle",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "leadingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "trailingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/image-card",
+                "notes": "Drawn on the canvas by the `glimmer/image-card` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.IconButton"
+                ],
+                "symbol": "androidx.xr.glimmer.IconButton"
+            },
+            "componentId": "glimmer/icon-button",
+            "displayName": "IconButton",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "fillMaxSize",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "enabled",
+                    "notes": "`enabled: Boolean` on `androidx.xr.glimmer.IconButton`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "shape",
+                    "notes": "`shape: Shape` on `androidx.xr.glimmer.IconButton`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`color: Color` on `androidx.xr.glimmer.IconButton`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentColor",
+                    "notes": "`contentColor: Color` on `androidx.xr.glimmer.IconButton`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/icon-button",
+                "notes": "Drawn on the canvas by the `glimmer/icon-button` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.Icon"
+                ],
+                "symbol": "androidx.xr.glimmer.Icon"
+            },
+            "componentId": "glimmer/icon",
+            "displayName": "Icon",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "iconKey",
+                    "notes": "A Material icon key from the builder's icon catalog (`filled/info`, `rounded/callEnd`), drawn by the renderer runtime through googleMaterialIconImageVector. Glimmer's Icon takes an ImageVector, which no design can hold as data, so the key stands in for it exactly as m3-catalog's Icon does.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "string",
+                        "null"
+                    ],
+                    "name": "contentDescription",
+                    "notes": "",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "sizeDp",
+                    "notes": "",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/icon",
+                "notes": "Drawn on the canvas by the `glimmer/icon` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.IconToggleButton"
+                ],
+                "symbol": "androidx.xr.glimmer.IconToggleButton"
+            },
+            "componentId": "glimmer/icon-toggle-button",
+            "displayName": "IconToggleButton",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "fillMaxSize",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "checked",
+                    "notes": "`checked: Boolean` on `androidx.xr.glimmer.IconToggleButton`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "shape",
+                    "notes": "`shape: Shape` on `androidx.xr.glimmer.IconToggleButton`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "enabled",
+                    "notes": "`enabled: Boolean` on `androidx.xr.glimmer.IconToggleButton`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/icon-toggle-button",
+                "notes": "Drawn on the canvas by the `glimmer/icon-toggle-button` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.ListItem"
+                ],
+                "symbol": "androidx.xr.glimmer.ListItem"
+            },
+            "componentId": "glimmer/list-item",
+            "displayName": "ListItem",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "fillMaxSize",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "shape",
+                    "notes": "`shape: Shape` on `androidx.xr.glimmer.ListItem`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`color: Color` on `androidx.xr.glimmer.ListItem`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentColor",
+                    "notes": "`contentColor: Color` on `androidx.xr.glimmer.ListItem`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "supportingLabel",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "leadingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "trailingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/list-item",
+                "notes": "Drawn on the canvas by the `glimmer/list-item` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.Text"
+                ],
+                "symbol": "androidx.xr.glimmer.Text"
+            },
+            "componentId": "glimmer/text",
+            "displayName": "Text",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "`text: String` on `androidx.xr.glimmer.Text`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`color: Color` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "fontSizeSp",
+                    "notes": "`fontSize: TextUnit` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "fontStyle",
+                    "notes": "`fontStyle: FontStyle?` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "fontWeight",
+                    "notes": "`fontWeight: FontWeight?` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "letterSpacingSp",
+                    "notes": "`letterSpacing: TextUnit` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "textDecoration",
+                    "notes": "`textDecoration: TextDecoration?` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "textAlign",
+                    "notes": "`textAlign: TextAlign` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "lineHeightSp",
+                    "notes": "`lineHeight: TextUnit` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "overflow",
+                    "notes": "`overflow: TextOverflow` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "softWrap",
+                    "notes": "`softWrap: Boolean` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "maxLines",
+                    "notes": "`maxLines: Int` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "minLines",
+                    "notes": "`minLines: Int` on `androidx.xr.glimmer.Text`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/text",
+                "notes": "Drawn on the canvas by the `glimmer/text` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.TitleChip"
+                ],
+                "symbol": "androidx.xr.glimmer.TitleChip"
+            },
+            "componentId": "glimmer/title-chip",
+            "displayName": "TitleChip",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "fillMaxSize",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "shape",
+                    "notes": "`shape: Shape` on `androidx.xr.glimmer.TitleChip`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`color: Color` on `androidx.xr.glimmer.TitleChip`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentColor",
+                    "notes": "`contentColor: Color` on `androidx.xr.glimmer.TitleChip`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "leadingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/title-chip",
+                "notes": "Drawn on the canvas by the `glimmer/title-chip` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.ToggleButton"
+                ],
+                "symbol": "androidx.xr.glimmer.ToggleButton"
+            },
+            "componentId": "glimmer/toggle-button",
+            "displayName": "ToggleButton",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "fillMaxSize",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "checked",
+                    "notes": "`checked: Boolean` on `androidx.xr.glimmer.ToggleButton`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "enabled",
+                    "notes": "`enabled: Boolean` on `androidx.xr.glimmer.ToggleButton`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "shape",
+                    "notes": "`shape: Shape` on `androidx.xr.glimmer.ToggleButton`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "leadingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "trailingIcon",
+                    "ordered": true
+                },
+                {
+                    "acceptedRoles": [],
+                    "acceptedTraits": [],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/toggle-button",
+                "notes": "Drawn on the canvas by the `glimmer/toggle-button` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.ContainedVoiceInputIndicator"
+                ],
+                "symbol": "androidx.xr.glimmer.ContainedVoiceInputIndicator"
+            },
+            "componentId": "glimmer/contained-voice-input-indicator",
+            "displayName": "ContainedVoiceInputIndicator",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "backgroundColor",
+                    "notes": "`backgroundColor: Color` on `androidx.xr.glimmer.ContainedVoiceInputIndicator`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/contained-voice-input-indicator",
+                "notes": "Drawn on the canvas by the `glimmer/contained-voice-input-indicator` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.VoiceInputIndicator"
+                ],
+                "symbol": "androidx.xr.glimmer.VoiceInputIndicator"
+            },
+            "componentId": "glimmer/voice-input-indicator",
+            "displayName": "VoiceInputIndicator",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "indicatorColor",
+                    "notes": "`indicatorColor: Color` on `androidx.xr.glimmer.VoiceInputIndicator`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/voice-input-indicator",
+                "notes": "Drawn on the canvas by the `glimmer/voice-input-indicator` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.list.GlimmerLazyColumn"
+                ],
+                "symbol": "androidx.xr.glimmer.list.GlimmerLazyColumn"
+            },
+            "componentId": "glimmer/glimmer-lazy-column",
+            "displayName": "GlimmerLazyColumn",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "userScrollEnabled",
+                    "notes": "`userScrollEnabled: Boolean` on `androidx.xr.glimmer.list.GlimmerLazyColumn`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "reverseLayout",
+                    "notes": "`reverseLayout: Boolean` on `androidx.xr.glimmer.list.GlimmerLazyColumn`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/glimmer-lazy-column",
+                "notes": "Drawn on the canvas by the `glimmer/glimmer-lazy-column` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.xr.glimmer.stack.VerticalStack"
+                ],
+                "symbol": "androidx.xr.glimmer.stack.VerticalStack"
+            },
+            "componentId": "glimmer/vertical-stack",
+            "displayName": "VerticalStack",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [],
+            "role": "Leaf",
+            "slots": [],
+            "svg": null,
+            "traits": [],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "glimmer/vertical-stack",
+                "notes": "Drawn on the canvas by the `glimmer/vertical-stack` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.Image",
+                    "androidx.compose.ui.layout.ContentScale"
+                ],
+                "symbol": "Image"
+            },
+            "componentId": "asset/image",
+            "displayName": "Image asset",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "assetKey",
+                    "notes": "The key of an asset the canvas can draw, written as {\"type\":\"assetKey\",\"value\":\"…\"}: one of statusSemantics.assetRegistry.keys, or a key pinned in the design's own assets map by PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey} (raw PNG, JPEG, GIF or WebP body) or the ui_builder_put_asset MCP tool. Any other key is refused at commit, so put the picture before inserting the node. A pinned key whose bytes this lane cannot show renders as a placeholder naming it, and exports as Image(painter = ColorPainter(...)) with an ASSET_PLACEHOLDER warning.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "string",
+                        "null"
+                    ],
+                    "name": "contentDescription",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "crop",
+                        "fit",
+                        "fillBounds",
+                        "inside"
+                    ],
+                    "jsonType": "string",
+                    "name": "contentScale",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "embedded-raster",
+                "notes": "The recorder embeds the pinned asset bytes, or the project-owned artwork, with source and payload provenance; a key with no bytes behind it is drawn as a vector placeholder rather than declared as a raster fallback.",
+                "status": "raster-fallback-required"
+            },
+            "traits": [
+                "ImageContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "Draws the bytes the design's assets map pins under assetKey (content-addressed, hash-checked, stored by the host), the project-owned Jetcaster covers, or a visible placeholder carrying the key. External URLs are not accepted.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Box"
+                ],
+                "symbol": "Box"
+            },
+            "componentId": "layout/box",
+            "displayName": "Box",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentAlignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "propagateMinConstraints",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "showByState",
+                    "notes": "Select one child by state. Object fields: selector is a typed scalar or state read; cases is an object mapping child IDs to typed scalar values; optional fallback is a string child ID. Every child must be a case or the fallback. Compose export uses when. Remote export uses StateLayout for non-null number or flag selectors; String equality is unavailable on that target.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "OverlayContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Column"
+                ],
+                "symbol": "Column"
+            },
+            "componentId": "layout/column",
+            "displayName": "Column",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "verticalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Distribution down the axis. The three aligned values compose with verticalSpacingDp through Arrangement.spacedBy(space, alignment); the three space* values distribute the free space themselves, and Compose has no form that also inserts a fixed gap.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalAlignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "topStart",
+                        "topCenter",
+                        "topEnd",
+                        "centerStart",
+                        "center",
+                        "centerEnd",
+                        "bottomStart",
+                        "bottomCenter",
+                        "bottomEnd"
+                    ],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": "How a parent Box aligns this column. The renderer has always read `alignment` off any Box child and the exporter has always emitted `.align(...)` for it; only the declaration was missing, so a centred column was inexpressible.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "weight",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "VerticalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.ExperimentalLayoutApi",
+                    "androidx.compose.foundation.layout.FlowRow"
+                ],
+                "symbol": "FlowRow"
+            },
+            "componentId": "layout/flow-row",
+            "displayName": "Flow row",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalArrangement",
+                    "notes": "Distribution along a line, exactly as on layout/row, and composing with horizontalSpacingDp the same way.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Distribution of the LINES, not of the children: a flow row's cross axis is the stack of rows it wrapped into, so this is a Column's vocabulary and verticalSpacingDp is the gap between lines.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "maxItemsInEachRow",
+                    "notes": "A ceiling on the children one line may hold, for a design that wants a fixed number per row however much space there is. Absent means as many as fit, which is the reason to reach for this component at all.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "topStart",
+                        "topCenter",
+                        "topEnd",
+                        "centerStart",
+                        "center",
+                        "centerEnd",
+                        "bottomStart",
+                        "bottomCenter",
+                        "bottomEnd"
+                    ],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": "How a parent Box aligns this flow row, read off any Box child exactly as on layout/column.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "weight",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "HorizontalContent",
+                "LayoutPrimitive"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [],
+                "symbol": ""
+            },
+            "componentId": "layout/for-each",
+            "displayName": "For each",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "data",
+                    "notes": "The rows: a `list` value whose entries are `object` values — one dictionary per row, read by the template through `{\"type\":\"binding\",\"value\":\"<key>\"}`, the same reader a component body uses for its arguments.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 1
+                    },
+                    "name": "template",
+                    "ordered": false
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "Repeated rows draw the template more than once, and the structured recorder correlates a text element by authored node id — so only the last row's measurements survive and the typography annotation cannot be matched. Unverified until the recorder reads instance paths, which makes an SVG export of a design holding a loop refuse by name rather than emit an unannotated one.",
+                "status": "unverified"
+            },
+            "traits": [
+                "OrderedContent",
+                "RepeatedContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.material3.carousel.HorizontalUncontainedCarousel",
+                    "androidx.compose.material3.carousel.rememberCarouselState"
+                ],
+                "symbol": "HorizontalUncontainedCarousel"
+            },
+            "componentId": "layout/horizontal-carousel",
+            "displayName": "Horizontal uncontained carousel",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "itemWidthDp",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "itemSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "contentPaddingStartDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "scrollStateKey",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "kind",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "span",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container"
+                    ],
+                    "acceptedTraits": [
+                        "CarouselItem"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 1
+                    },
+                    "name": "items",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "Verified only for the pinned settled viewport; off-screen items are not flattened into view.",
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "CarouselContent",
+                "ScrollableContent",
+                "RepeatedContent"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Experimental Material 3 carousel API; masking and stable item keys require conformance tests.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.lazy.LazyColumn"
+                ],
+                "symbol": "LazyColumn"
+            },
+            "componentId": "layout/lazy-column",
+            "displayName": "Lazy column",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "contentPadding",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "scrollStateKey",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "reverseLayout",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "items",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "VerticalContent",
+                "ScrollableContent",
+                "RepeatedContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "Independent pane scroll requires distinct stable scrollStateKey values.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.lazy.grid.GridCells",
+                    "androidx.compose.foundation.lazy.grid.GridItemSpan",
+                    "androidx.compose.foundation.lazy.grid.LazyVerticalGrid"
+                ],
+                "symbol": "LazyVerticalGrid"
+            },
+            "componentId": "layout/lazy-grid",
+            "displayName": "Adaptive lazy vertical grid",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "columns",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "contentPadding",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "scrollStateKey",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "itemSpans",
+                    "notes": "Map stable child id to 'single' or 'full'.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "items",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "GridContent",
+                "ScrollableContent",
+                "RepeatedContent"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Must prove adaptive 362dp cells and full-span rows at the pinned viewport.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.lazy.LazyRow"
+                ],
+                "symbol": "LazyRow"
+            },
+            "componentId": "layout/lazy-row",
+            "displayName": "Lazy row",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "contentPadding",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "scrollStateKey",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "span",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "stableKey",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "items",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "HorizontalContent",
+                "ScrollableContent",
+                "RepeatedContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold"
+                ],
+                "symbol": "ListDetailPaneScaffold"
+            },
+            "componentId": "layout/list-detail-pane-scaffold",
+            "displayName": "List-detail pane scaffold",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "activePaneIndex",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "adaptive",
+                        "expandedTwoPane",
+                        "singlePane",
+                        "twoPane"
+                    ],
+                    "jsonType": "string",
+                    "name": "layoutMode",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "listPanePreferredWidthDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "detailPanePreferredWidthDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "paneSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "listPaneVisible",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "detailPaneVisible",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [
+                        "preferred",
+                        "fixedStart",
+                        "fixedEnd",
+                        "split"
+                    ],
+                    "jsonType": "string",
+                    "name": "paneSizing",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "fixedPaneWidthDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "splitFraction",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "extraPanePreferredWidthDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "list",
+                        "detail",
+                        "extra"
+                    ],
+                    "jsonType": "string",
+                    "name": "activePane",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Scaffold",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 1
+                    },
+                    "name": "listPane",
+                    "ordered": false
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "detailPane",
+                    "ordered": false
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "extraPane",
+                    "ordered": false
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Use PNG or native rendering to inspect adaptive layout.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "ScreenContent",
+                "AdaptivePaneLayout"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "Uses the real adaptive scaffold in constrained frames; the authoring canvas unrolls all declared panes.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Row"
+                ],
+                "symbol": "Row"
+            },
+            "componentId": "layout/row",
+            "displayName": "Row",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalArrangement",
+                    "notes": "The Row counterpart of a Column’s verticalArrangement, with the same relationship to horizontalSpacingDp.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalAlignment",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "HorizontalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.material3.Scaffold"
+                ],
+                "symbol": "Scaffold"
+            },
+            "componentId": "layout/scaffold",
+            "displayName": "Scaffold",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "array",
+                    "name": "contentWindowInsets",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "loading",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "scrollStateKey",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Scaffold",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container"
+                    ],
+                    "acceptedTraits": [
+                        "TopBar",
+                        "LayoutPrimitive"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "topBar",
+                    "ordered": false
+                },
+                {
+                    "acceptedRoles": [
+                        "Container"
+                    ],
+                    "acceptedTraits": [
+                        "SnackbarHost"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "snackbarHost",
+                    "ordered": false
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 1
+                    },
+                    "name": "content",
+                    "ordered": false
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "ScreenContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.material3.adaptive.layout.SupportingPaneScaffold"
+                ],
+                "symbol": "SupportingPaneScaffold"
+            },
+            "componentId": "layout/supporting-pane-scaffold",
+            "displayName": "Supporting pane scaffold",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "shadow",
+                "wrapContentSize",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "adaptive",
+                        "expandedTwoPane",
+                        "singlePane",
+                        "twoPane"
+                    ],
+                    "jsonType": "string",
+                    "name": "layoutMode",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "mainPanePreferredWidthDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "supportingPanePreferredWidthDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "paneSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "mainPaneVisible",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "supportingPaneVisible",
+                    "notes": null,
+                    "required": true
+                },
+                {
+                    "allowedValues": [
+                        "preferred",
+                        "fixedStart",
+                        "fixedEnd",
+                        "split"
+                    ],
+                    "jsonType": "string",
+                    "name": "paneSizing",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "fixedPaneWidthDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "splitFraction",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Scaffold",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 1
+                    },
+                    "name": "mainPane",
+                    "ordered": false
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "supportingPane",
+                    "ordered": false
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "Verified for the deterministic expanded two-pane adapter used by this frozen benchmark, not the unavailable general adaptive Material API.",
+                "status": "verified"
+            },
+            "traits": [
+                "ScreenContent",
+                "AdaptivePaneLayout"
+            ],
+            "wasm": {
+                "adapterStatus": "unsupported",
+                "canvas": null,
+                "notes": "The repository has no Material 3 adaptive dependency or verified Wasm adapter yet; this blocks the expanded benchmark.",
+                "platformSupported": "unverified",
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry"
+                ],
+                "symbol": "RcCustomComponentRegistry"
+            },
+            "componentId": "remote-compose/custom",
+            "displayName": "Custom component",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "name",
+                    "notes": "The custom-component config name the document writes and the host registers a renderer under. Namespaced by convention (slot:, rc:, or an application domain) so two documents composed together cannot collide.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "widthDp",
+                    "notes": "The bounds the document reserves for host content it cannot measure. A player lays out a custom component from the document, not from the Compose content filling it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "heightDp",
+                    "notes": "See widthDp.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Host content inside a Remote Compose document has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable",
+                "OrderedContent"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "Draws the ordinary Compose content in its own slot, which is what a registered renderer draws on a real player too. A preview only draws it if a custom component of this name is registered; an unregistered one is a player support issue rather than silently borrowed content. The code mapping names the registry rather than a composable, because the composable is whatever the host registers under this name.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.composeai.rcplayer.compose.RcComposePlayer"
+                ],
+                "symbol": "RcComposePlayer"
+            },
+            "componentId": "remote-compose/document",
+            "displayName": "Remote Compose document",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "documentBase64",
+                    "notes": "Base64-encoded Remote Compose wire document; limited to 8 MiB encoded. Not required on its own: a node carries either the bytes or a documentUrl, and the editor's own rule reports a node that carries neither.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "documentUrl",
+                    "notes": "Absolute http(s) URL the host resolves to the same wire document. Read only when documentBase64 is empty, so a design that carries its own bytes never depends on the network.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "inherit",
+                        "light",
+                        "dark",
+                        "system"
+                    ],
+                    "jsonType": "string",
+                    "name": "theme",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "namedValues",
+                    "notes": "Typed host values keyed by the Remote Compose named-variable name.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Nested Remote Compose SVG export requires an explicit renderer implementation.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "OrderedContent",
+                "DynamicSlots"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "Uses the common CMP player. Each named UI Builder slot registers the matching Remote Compose custom-component config.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.remote.creation.compose.capture.captureSingleRemoteDocument",
+                    "androidx.compose.remote.player.compose.RemoteDocumentPlayer"
+                ],
+                "symbol": "RemoteDocumentPlayer"
+            },
+            "componentId": "remote-compose/inline",
+            "displayName": "Remote Compose content",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "inherit",
+                        "light",
+                        "dark",
+                        "system"
+                    ],
+                    "jsonType": "string",
+                    "name": "theme",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "The subtree becomes a Remote Compose document at export; SVG export of one needs an explicit renderer, exactly as remote-compose/document does.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "OrderedContent"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "The subtree is drawn with the ordinary Compose stand-ins remote-m3 already uses, inside a marked frame. The canvas has no Remote Compose writer, so until the subtree is captured these are the shapes the generated @RemoteComposable body describes rather than the pixels a player produces. A host that captures it - compiling the generated body and running captureSingleRemoteDocument on the Android daemon - answers with a document, and the same frame then plays it through the player that draws an embedded remote-compose/document, with the design's own custom components registered by name.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.background",
+                    "androidx.compose.foundation.layout.Box"
+                ],
+                "symbol": "Box"
+            },
+            "componentId": "shape/colour-dot",
+            "displayName": "Colour dot",
+            "modifierCapabilities": [
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "diameterDp",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "Decoration",
+                "DrawLayer"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.background",
+                    "androidx.compose.ui.Modifier",
+                    "androidx.compose.ui.graphics.Brush"
+                ],
+                "symbol": "Modifier.background(Brush.linearGradient)"
+            },
+            "componentId": "shape/linear-gradient",
+            "displayName": "Linear gradient layer",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "startColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "endColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "direction",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "The frozen benchmark usage records as vector gradient output.",
+                "status": "verified"
+            },
+            "traits": [
+                "DrawLayer",
+                "OverlayContent"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Must remain a semantic brush layer, not persisted pixel geometry.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.background",
+                    "androidx.compose.ui.Modifier",
+                    "androidx.compose.ui.graphics.Brush"
+                ],
+                "symbol": "Modifier.background(Brush.radialGradient)"
+            },
+            "componentId": "shape/radial-gradient",
+            "displayName": "Radial gradient layer",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "clip",
+                "matchParentSize",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "testTag",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "aspectRatio",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "innerColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "outerColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "innerAlpha",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "center",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "The frozen benchmark usage records as vector gradient output.",
+                "status": "verified"
+            },
+            "traits": [
+                "DrawLayer",
+                "BackgroundContent"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Must remain a semantic brush layer, not persisted pixel geometry.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        }
+    ],
+    "exportCapabilities": {
+        "bundle": false,
+        "composeCode": true,
+        "png": false,
+        "svg": false
+    },
+    "schema": "compose-catalog-capabilities/v1",
+    "statusSemantics": {
+        "assetRegistry": {
+            "keys": [
+                "jetcaster.cover.android-developers-backstage",
+                "jetcaster.cover.google-developers-podcast",
+                "ui-builder.gate0.cover",
+                "editor.placeholder"
+            ]
+        },
+        "browserPreview": null,
+        "builtins": {},
+        "code": null,
+        "colorTokens": {
+            "roles": [
+                "background",
+                "surface",
+                "primary",
+                "secondary",
+                "positive",
+                "negative"
+            ]
+        },
+        "componentIdPrefix": "glimmer/",
+        "componentMenu": {
+            "components": {
+                "asset/image": {
+                    "group": "Content"
+                },
+                "glimmer/action-card": {
+                    "group": "Card"
+                },
+                "glimmer/button": {
+                    "group": "Button"
+                },
+                "glimmer/button-group": {
+                    "group": "Button group"
+                },
+                "glimmer/card": {
+                    "group": "Stack"
+                },
+                "glimmer/contained-voice-input-indicator": {
+                    "group": "Voice input"
+                },
+                "glimmer/glimmer-lazy-column": {
+                    "group": "Lazy list"
+                },
+                "glimmer/icon": {
+                    "group": "Button"
+                },
+                "glimmer/icon-button": {
+                    "group": "Icon button"
+                },
+                "glimmer/icon-toggle-button": {
+                    "group": "Icon button"
+                },
+                "glimmer/image-card": {
+                    "group": "Card"
+                },
+                "glimmer/list-item": {
+                    "group": "List item"
+                },
+                "glimmer/text": {
+                    "group": "Button"
+                },
+                "glimmer/title-chip": {
+                    "group": "Card"
+                },
+                "glimmer/toggle-button": {
+                    "group": "Button"
+                },
+                "glimmer/vertical-stack": {
+                    "group": "Stack"
+                },
+                "glimmer/voice-input-indicator": {
+                    "group": "Voice input"
+                },
+                "layout/box": {
+                    "group": "Layout"
+                },
+                "layout/column": {
+                    "group": "Layout"
+                },
+                "layout/flow-row": {
+                    "group": "Layout"
+                },
+                "layout/for-each": {
+                    "group": "Layout"
+                },
+                "layout/horizontal-carousel": {
+                    "group": "Containment"
+                },
+                "layout/lazy-column": {
+                    "group": "Layout"
+                },
+                "layout/lazy-grid": {
+                    "group": "Layout"
+                },
+                "layout/lazy-row": {
+                    "group": "Layout"
+                },
+                "layout/list-detail-pane-scaffold": {
+                    "group": "Scaffolds"
+                },
+                "layout/row": {
+                    "group": "Layout"
+                },
+                "layout/scaffold": {
+                    "group": "Scaffolds"
+                },
+                "layout/supporting-pane-scaffold": {
+                    "group": "Scaffolds"
+                },
+                "remote-compose/custom": {
+                    "group": "Embedded"
+                },
+                "remote-compose/document": {
+                    "group": "Embedded"
+                },
+                "remote-compose/inline": {
+                    "group": "Embedded"
+                },
+                "shape/colour-dot": {
+                    "group": "Styles"
+                },
+                "shape/linear-gradient": {
+                    "group": "Styles"
+                },
+                "shape/radial-gradient": {
+                    "group": "Styles"
+                }
+            },
+            "groupOrder": [
+                "Scaffolds",
+                "Layout",
+                "Containment",
+                "Content",
+                "Styles",
+                "Embedded",
+                "Button",
+                "Button group",
+                "Icon button",
+                "Card",
+                "List item",
+                "Lazy list",
+                "Stack",
+                "Voice input"
+            ]
+        },
+        "components": {
+            "glimmer/action-card": {
+                "canvas": "glimmer/action-card",
+                "canvasMapping": null,
+                "catalogId": "ImageCard",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.CardKt.ActionCard",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/button": {
+                "canvas": "glimmer/button",
+                "canvasMapping": null,
+                "catalogId": "Button",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.ButtonKt.Button",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/button-group": {
+                "canvas": "glimmer/button-group",
+                "canvasMapping": null,
+                "catalogId": "ButtonGroup",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.ButtonGroupKt.ButtonGroup",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/card": {
+                "canvas": "glimmer/card",
+                "canvasMapping": null,
+                "catalogId": "ImageCard",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.CardKt.Card",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/contained-voice-input-indicator": {
+                "canvas": "glimmer/contained-voice-input-indicator",
+                "canvasMapping": null,
+                "catalogId": "VoiceInputIndicator",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.VoiceInputIndicatorKt.ContainedVoiceInputIndicator",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/glimmer-lazy-column": {
+                "canvas": "glimmer/glimmer-lazy-column",
+                "canvasMapping": null,
+                "catalogId": "GlimmerLazyColumn",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.list.GlimmerLazyListKt.GlimmerLazyColumn",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/icon": {
+                "canvas": "glimmer/icon",
+                "canvasMapping": null,
+                "catalogId": null,
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": [
+                    {
+                        "jsonType": "string",
+                        "name": "iconKey",
+                        "notes": "A Material icon key from the builder's icon catalog (`filled/info`, `rounded/callEnd`), drawn by the renderer runtime through googleMaterialIconImageVector. Glimmer's Icon takes an ImageVector, which no design can hold as data, so the key stands in for it exactly as m3-catalog's Icon does.",
+                        "required": true
+                    },
+                    {
+                        "jsonType": [
+                            "string",
+                            "null"
+                        ],
+                        "name": "contentDescription",
+                        "required": false
+                    },
+                    {
+                        "jsonType": "number",
+                        "name": "sizeDp",
+                        "required": false
+                    }
+                ],
+                "record": "catalog/androidx.xr.glimmer.IconKt.Icon",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/icon-button": {
+                "canvas": "glimmer/icon-button",
+                "canvasMapping": null,
+                "catalogId": "IconButton",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.IconButtonKt.IconButton",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/icon-toggle-button": {
+                "canvas": "glimmer/icon-toggle-button",
+                "canvasMapping": null,
+                "catalogId": "IconToggleButton",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.IconToggleButtonKt.IconToggleButton",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {
+                    "onCheckedChange": "checked:boolean"
+                },
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/image-card": {
+                "canvas": "glimmer/image-card",
+                "canvasMapping": null,
+                "catalogId": "ImageCard",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.CardKt.ImageCard",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/list-item": {
+                "canvas": "glimmer/list-item",
+                "canvasMapping": null,
+                "catalogId": "ListItem",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.ListItemKt.ListItem",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/sticker": {
+                "canvas": null,
+                "canvasMapping": null,
+                "catalogId": null,
+                "displayName": null,
+                "excluded": "The catalog's own preview frame is not a Glimmer library component.",
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/ee.schimke.m3catalog.glimmer.GlimmerCatalogKt.Sticker",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/text": {
+                "canvas": "glimmer/text",
+                "canvasMapping": null,
+                "catalogId": null,
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.TextKt.Text",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/title-chip": {
+                "canvas": "glimmer/title-chip",
+                "canvasMapping": null,
+                "catalogId": "TitleChip",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.TitleChipKt.TitleChip",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/toggle-button": {
+                "canvas": "glimmer/toggle-button",
+                "canvasMapping": null,
+                "catalogId": "ToggleButton",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.ToggleButtonKt.ToggleButton",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {
+                    "onCheckedChange": "checked:boolean"
+                },
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/vertical-stack": {
+                "canvas": "glimmer/vertical-stack",
+                "canvasMapping": null,
+                "catalogId": "VerticalStack",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.stack.StackKt.VerticalStack",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "glimmer/voice-input-indicator": {
+                "canvas": "glimmer/voice-input-indicator",
+                "canvasMapping": null,
+                "catalogId": "VoiceInputIndicator",
+                "displayName": null,
+                "excluded": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "catalog/androidx.xr.glimmer.VoiceInputIndicatorKt.VoiceInputIndicator",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            }
+        },
+        "composeSourceExport": null,
+        "frame": {
+            "adapter": "frame/rect",
+            "seedDevice": "spec:width=960dp,height=720dp,dpi=160"
+        },
+        "platform": "glasses",
+        "platformLabel": "Glasses",
+        "previewSurfaces": {
+            "native": {
+                "backend": "android",
+                "fidelity": "authoritative",
+                "reason": "Generated Compose rendered against the released AndroidX Glimmer AAR through Robolectric, the same lane used by the catalog."
+            },
+            "wasm": {
+                "fidelity": "authoritative",
+                "reason": "The catalog-owned Wasm renderer links this repository's pinned CMP Glimmer port and invokes the real Glimmer composables."
+            }
+        },
+        "supersedes": null,
+        "templates": [
+            "ui-builder/designs/glasses-card.json",
+            "ui-builder/designs/glasses-list.json",
+            "ui-builder/designs/glasses-prompt.json"
+        ]
+    }
+}

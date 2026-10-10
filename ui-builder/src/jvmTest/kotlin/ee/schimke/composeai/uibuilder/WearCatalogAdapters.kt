@@ -23,7 +23,9 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
  */
 private val wearCatalog by lazy {
   CapabilityCatalogParser.parse(
-    checkNotNull(UiBuilderDocument::class.java.getResource("/wear-m3-capabilities-v1.json")) {
+    checkNotNull(
+        UiBuilderDocument::class.java.getResource("/published/wear-m3-capabilities-v1.json")
+      ) {
         "missing the wear capability golden on the test resources path"
       }
       .readText()

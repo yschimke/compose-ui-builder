@@ -1,0 +1,188 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "glasses-prompt",
+  "title": "Glasses prompt",
+  "revision": 0,
+  "template": "glasses-prompt",
+  "catalogPin": {
+    "systemId": "glimmer-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 960,
+    "heightDp": 720,
+    "density": 1,
+    "theme": "dark",
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "animations": "settled",
+    "networkAccess": false
+  },
+  "stateVariables": {},
+  "roots": [
+    "screen"
+  ],
+  "nodes": {
+    "screen": {
+      "id": "screen",
+      "componentId": "layout/column",
+      "properties": {},
+      "modifiers": [
+        {
+          "type": "fillMaxSize"
+        },
+        {
+          "type": "padding",
+          "startDp": 48,
+          "topDp": 48,
+          "endDp": 48,
+          "bottomDp": 48
+        }
+      ],
+      "slots": {
+        "children": [
+          "prompt",
+          "answers"
+        ]
+      }
+    },
+    "prompt": {
+      "id": "prompt",
+      "componentId": "glimmer/card",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "title": [
+          "prompt-title"
+        ],
+        "content": [
+          "prompt-body"
+        ]
+      }
+    },
+    "prompt-title": {
+      "id": "prompt-title",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Incoming call"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "prompt-body": {
+      "id": "prompt-body",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Alex Kim"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "answers": {
+      "id": "answers",
+      "componentId": "glimmer/button-group",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "content": [
+          "decline",
+          "accept"
+        ]
+      }
+    },
+    "decline": {
+      "id": "decline",
+      "componentId": "glimmer/button",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "leadingIcon": [
+          "decline-icon"
+        ],
+        "content": [
+          "decline-text"
+        ]
+      }
+    },
+    "decline-icon": {
+      "id": "decline-icon",
+      "componentId": "glimmer/icon",
+      "properties": {
+        "iconKey": {
+          "type": "string",
+          "value": "filled/callEnd"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Decline"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "decline-text": {
+      "id": "decline-text",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Decline"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "accept": {
+      "id": "accept",
+      "componentId": "glimmer/button",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "leadingIcon": [
+          "accept-icon"
+        ],
+        "content": [
+          "accept-text"
+        ]
+      }
+    },
+    "accept-icon": {
+      "id": "accept-icon",
+      "componentId": "glimmer/icon",
+      "properties": {
+        "iconKey": {
+          "type": "string",
+          "value": "filled/call"
+        },
+        "contentDescription": {
+          "type": "string",
+          "value": "Answer"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "accept-text": {
+      "id": "accept-text",
+      "componentId": "glimmer/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Answer"
+        }
+      },
+      "modifiers": [],
+      "slots": {}
+    }
+  }
+}

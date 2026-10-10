@@ -122,7 +122,7 @@ fun WearScreenCodePanePreview() {
  */
 private val wearScreenPreviewCatalog by lazy {
   ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser.parse(
-    previewResource("/wear-m3-capabilities-v1.json")
+    previewResource("/published/wear-m3-capabilities-v1.json")
   )
 }
 

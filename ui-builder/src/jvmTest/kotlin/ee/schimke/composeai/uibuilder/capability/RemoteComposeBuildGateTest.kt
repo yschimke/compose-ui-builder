@@ -20,7 +20,7 @@ import kotlinx.serialization.json.JsonObject
  * unrelated edit to it with it.
  */
 class RemoteComposeBuildGateTest {
-  private val remote = catalog("/remote-m3-capabilities-v1.json")
+  private val remote = catalog("/published/remote-m3-capabilities-v1.json")
 
   @Test
   fun `a widget palette offers For each exactly when the build can export it`() {

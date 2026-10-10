@@ -18,7 +18,8 @@ import kotlinx.serialization.json.JsonPrimitive
  * and the size of its Text.
  */
 class WearNumberEditorsTest {
-  private val catalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))
+  private val catalog =
+    CapabilityCatalogParser.parse(resource("/published/wear-m3-capabilities-v1.json"))
 
   @Test
   fun `every Wear slider, stepper, progress and text number has an editor`() {

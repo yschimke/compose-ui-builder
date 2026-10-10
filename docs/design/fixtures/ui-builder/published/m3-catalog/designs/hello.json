@@ -1,0 +1,106 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "hello",
+  "title": "Hello, Compose",
+  "revision": 0,
+  "catalogPin": {
+    "systemId": "m3-catalog",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 411,
+    "heightDp": 914,
+    "density": 2.625,
+    "theme": "dark",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1.0,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "browserZoomPercent": 100,
+    "fixedTime": "2024-05-16T12:00:00Z",
+    "animations": "settled",
+    "networkAccess": false,
+    "exportDevices": [
+      "id:pixel_4a",
+      "id:pixel_9",
+      "id:pixel_9_pro_xl",
+      "id:pixel_9_pro_fold",
+      "id:pixel_tablet"
+    ]
+  },
+  "stateVariables": {},
+  "roots": [
+    "screen-scaffold"
+  ],
+  "nodes": {
+    "screen-scaffold": {
+      "id": "screen-scaffold",
+      "componentId": "layout/scaffold",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "topBar": [],
+        "snackbarHost": [],
+        "content": [
+          "screen-content"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "screen-content": {
+      "id": "screen-content",
+      "componentId": "layout/box",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "hello-column"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "hello-column": {
+      "id": "hello-column",
+      "componentId": "layout/column",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "children": [
+          "hello-headline",
+          "hello-body"
+        ]
+      },
+      "eventBindings": {}
+    },
+    "hello-headline": {
+      "id": "hello-headline",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Hello, Compose"
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    },
+    "hello-body": {
+      "id": "hello-body",
+      "componentId": "m3/text",
+      "properties": {
+        "text": {
+          "type": "string",
+          "value": "Select this text and change it, or drag in a component."
+        }
+      },
+      "modifiers": [],
+      "slots": {},
+      "eventBindings": {}
+    }
+  },
+  "assets": {}
+}

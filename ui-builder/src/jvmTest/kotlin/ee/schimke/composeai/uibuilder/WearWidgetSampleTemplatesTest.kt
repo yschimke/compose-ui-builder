@@ -23,7 +23,8 @@ import kotlinx.serialization.json.jsonPrimitive
  * it would open as an editor full of issues.
  */
 class WearWidgetSampleTemplatesTest {
-  private val catalog = CapabilityCatalogParser.parse(resource("/remote-m3-capabilities-v1.json"))
+  private val catalog =
+    CapabilityCatalogParser.parse(resource("/published/remote-m3-capabilities-v1.json"))
   private val reference =
     UiBuilderReducer.replay(
         Json.parseToJsonElement(resource("/jetcaster-discover-operations-v1.json")).jsonObject

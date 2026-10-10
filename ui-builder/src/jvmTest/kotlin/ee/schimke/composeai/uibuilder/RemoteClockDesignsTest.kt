@@ -26,7 +26,7 @@ import kotlinx.serialization.json.JsonObject
 class RemoteClockDesignsTest {
   private val catalog =
     CapabilityCatalogParser.parse(
-      checkNotNull(javaClass.getResource("/remote-m3-capabilities-v1.json")).readText()
+      checkNotNull(javaClass.getResource("/published/remote-m3-capabilities-v1.json")).readText()
     )
 
   private val empty = JsonObject(emptyMap())

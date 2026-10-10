@@ -1,0 +1,4221 @@
+{
+    "benchmark": {
+        "catalogRevision": "sha256:62ff2f95f3b0791e66a0b1b5f82ed0ed",
+        "catalogSystemId": "remote-widgets",
+        "id": "remote-widgets",
+        "nativeRuntimeId": "candidate",
+        "sourceRevision": "components.json"
+    },
+    "components": [
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.remote.creation.compose.layout.RemoteText"
+                ],
+                "symbol": "androidx.compose.remote.creation.compose.layout.RemoteText"
+            },
+            "componentId": "remote-widgets/remote-text",
+            "displayName": "RemoteText",
+            "modifierCapabilities": [
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "alpha",
+                "animateEnterExit",
+                "background",
+                "border",
+                "clip",
+                "collapsiblePriority",
+                "fillMaxHeight",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "height",
+                "heightIn",
+                "horizontalScroll",
+                "offset",
+                "padding",
+                "remoteCall",
+                "rotate",
+                "scale",
+                "sharedElement",
+                "size",
+                "verticalScroll",
+                "weight",
+                "width",
+                "widthIn",
+                "wrapContentSize",
+                "zIndex"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "The string the text draws, written as `\"…\".rs`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "fontSize",
+                    "notes": "Size in sp, written as `<n>.rsp`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "A `#AARRGGBB` literal, written as `Color(0x…).rc`. No theme roles: see $comment_colorTokens.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "integer",
+                    "name": "maxLines",
+                    "notes": "The most lines the text wraps to.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "minFontSize",
+                    "notes": "`minFontSize: Float?` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "maxFontSize",
+                    "notes": "`maxFontSize: Float?` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "fontStyle",
+                    "notes": "`fontStyle: FontStyle` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "fontWeight",
+                    "notes": "`fontWeight: RemoteFloat` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "textAlign",
+                    "notes": "`textAlign: TextAlign` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "fontFamily",
+                    "notes": "`fontFamily: String?` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "overflow",
+                    "notes": "`overflow: TextOverflow` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "letterSpacing",
+                    "notes": "`letterSpacing: RemoteFloat` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "lineHeightAdd",
+                    "notes": "`lineHeightAdd: Float?` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "lineHeightMultiply",
+                    "notes": "`lineHeightMultiply: RemoteFloat` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "textDecoration",
+                    "notes": "`textDecoration: TextDecoration?` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "fontFeatureSettings",
+                    "notes": "`fontFeatureSettings: String?` on `androidx.compose.remote.creation.compose.layout.RemoteText`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": null,
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "m3/text",
+                "canvasMapping": {
+                    "defaults": {},
+                    "properties": {
+                        "fontSizeSp": "fontSize"
+                    },
+                    "slots": {}
+                },
+                "notes": "Drawn on the canvas by the `m3/text` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.remotewidgets.AdaptiveLayout"
+                ],
+                "symbol": "ee.schimke.remotewidgets.AdaptiveLayout"
+            },
+            "componentId": "remote-widgets/adaptive-layout",
+            "displayName": "Adaptive layout",
+            "modifierCapabilities": [
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "alpha",
+                "animateEnterExit",
+                "background",
+                "border",
+                "clip",
+                "collapsiblePriority",
+                "fillMaxHeight",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "height",
+                "heightIn",
+                "horizontalScroll",
+                "offset",
+                "padding",
+                "remoteCall",
+                "rotate",
+                "scale",
+                "sharedElement",
+                "size",
+                "verticalScroll",
+                "weight",
+                "width",
+                "widthIn",
+                "wrapContentSize",
+                "zIndex"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "1x1",
+                        "2x1",
+                        "2x2",
+                        "3x1",
+                        "3x2",
+                        "4x1",
+                        "4x2",
+                        "4x3",
+                        "5x2"
+                    ],
+                    "jsonType": "string",
+                    "name": "compactSize",
+                    "notes": "The launcher grid size the `compact` slot is laid out for, as its cell count; default `2x1`. The widget shows whichever authored slot fits it best, Glance's SizeMode.Responsive rule: the closest size that fits, else the smallest.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "1x1",
+                        "2x1",
+                        "2x2",
+                        "3x1",
+                        "3x2",
+                        "4x1",
+                        "4x2",
+                        "4x3",
+                        "5x2"
+                    ],
+                    "jsonType": "string",
+                    "name": "mediumSize",
+                    "notes": "The launcher grid size the `medium` slot is laid out for, as its cell count; default `4x1`. The widget shows whichever authored slot fits it best, Glance's SizeMode.Responsive rule: the closest size that fits, else the smallest.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "1x1",
+                        "2x1",
+                        "2x2",
+                        "3x1",
+                        "3x2",
+                        "4x1",
+                        "4x2",
+                        "4x3",
+                        "5x2"
+                    ],
+                    "jsonType": "string",
+                    "name": "expandedSize",
+                    "notes": "The launcher grid size the `expanded` slot is laid out for, as its cell count; default `4x2`. The widget shows whichever authored slot fits it best, Glance's SizeMode.Responsive rule: the closest size that fits, else the smallest.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "compact",
+                    "ordered": false
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "medium",
+                    "ordered": false
+                },
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "expanded",
+                    "ordered": false
+                }
+            ],
+            "svg": null,
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "launcher/adaptive-layout",
+                "notes": "Drawn on the canvas by the `launcher/adaptive-layout` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.remotewidgets.WidgetButton"
+                ],
+                "symbol": "ee.schimke.remotewidgets.WidgetButton"
+            },
+            "componentId": "remote-widgets/widget-button",
+            "displayName": "WidgetButton",
+            "modifierCapabilities": [
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "alpha",
+                "animateEnterExit",
+                "background",
+                "border",
+                "clip",
+                "collapsiblePriority",
+                "fillMaxHeight",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "height",
+                "heightIn",
+                "horizontalScroll",
+                "offset",
+                "padding",
+                "remoteCall",
+                "rotate",
+                "scale",
+                "sharedElement",
+                "size",
+                "verticalScroll",
+                "weight",
+                "width",
+                "widthIn",
+                "wrapContentSize",
+                "zIndex"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "`text: String` on `ee.schimke.remotewidgets.WidgetButton`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "containerColor",
+                    "notes": "`containerColor: Color` on `ee.schimke.remotewidgets.WidgetButton`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentColor",
+                    "notes": "`contentColor: Color` on `ee.schimke.remotewidgets.WidgetButton`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": null,
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "m3/button",
+                "notes": "Drawn on the canvas by the `m3/button` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.remotewidgets.WidgetLabel"
+                ],
+                "symbol": "ee.schimke.remotewidgets.WidgetLabel"
+            },
+            "componentId": "remote-widgets/widget-label",
+            "displayName": "WidgetLabel",
+            "modifierCapabilities": [
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "alpha",
+                "animateEnterExit",
+                "background",
+                "border",
+                "clip",
+                "collapsiblePriority",
+                "fillMaxHeight",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "height",
+                "heightIn",
+                "horizontalScroll",
+                "offset",
+                "padding",
+                "remoteCall",
+                "rotate",
+                "scale",
+                "sharedElement",
+                "size",
+                "verticalScroll",
+                "weight",
+                "width",
+                "widthIn",
+                "wrapContentSize",
+                "zIndex"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "`text: String` on `ee.schimke.remotewidgets.WidgetLabel`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`color: Color` on `ee.schimke.remotewidgets.WidgetLabel`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": null,
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "m3/text",
+                "notes": "Drawn on the canvas by the `m3/text` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.remotewidgets.WidgetSurface"
+                ],
+                "symbol": "ee.schimke.remotewidgets.WidgetSurface"
+            },
+            "componentId": "remote-widgets/widget-surface",
+            "displayName": "WidgetSurface",
+            "modifierCapabilities": [
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "alpha",
+                "animateEnterExit",
+                "background",
+                "border",
+                "clip",
+                "collapsiblePriority",
+                "fillMaxHeight",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "height",
+                "heightIn",
+                "horizontalScroll",
+                "offset",
+                "padding",
+                "remoteCall",
+                "rotate",
+                "scale",
+                "sharedElement",
+                "size",
+                "verticalScroll",
+                "weight",
+                "width",
+                "widthIn",
+                "wrapContentSize",
+                "zIndex"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`color: Color` on `ee.schimke.remotewidgets.WidgetSurface`.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "layout/box",
+                "canvasMapping": {
+                    "defaults": {},
+                    "properties": {},
+                    "slots": {
+                        "children": "content"
+                    }
+                },
+                "notes": "Drawn on the canvas by the `layout/box` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.remotewidgets.WidgetTitle"
+                ],
+                "symbol": "ee.schimke.remotewidgets.WidgetTitle"
+            },
+            "componentId": "remote-widgets/widget-title",
+            "displayName": "WidgetTitle",
+            "modifierCapabilities": [
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "alpha",
+                "animateEnterExit",
+                "background",
+                "border",
+                "clip",
+                "collapsiblePriority",
+                "fillMaxHeight",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "height",
+                "heightIn",
+                "horizontalScroll",
+                "offset",
+                "padding",
+                "remoteCall",
+                "rotate",
+                "scale",
+                "sharedElement",
+                "size",
+                "verticalScroll",
+                "weight",
+                "width",
+                "widthIn",
+                "wrapContentSize",
+                "zIndex"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "`text: String` on `ee.schimke.remotewidgets.WidgetTitle`.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "`color: Color` on `ee.schimke.remotewidgets.WidgetTitle`.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": null,
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "m3/text",
+                "notes": "Drawn on the canvas by the `m3/text` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.remotewidgets.WidgetSticker"
+                ],
+                "symbol": "ee.schimke.remotewidgets.WidgetSticker"
+            },
+            "componentId": "remote-widgets/widget-sticker",
+            "displayName": "WidgetSticker",
+            "modifierCapabilities": [
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "alpha",
+                "animateEnterExit",
+                "background",
+                "border",
+                "clip",
+                "collapsiblePriority",
+                "fillMaxHeight",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "height",
+                "heightIn",
+                "horizontalScroll",
+                "offset",
+                "padding",
+                "remoteCall",
+                "rotate",
+                "scale",
+                "sharedElement",
+                "size",
+                "verticalScroll",
+                "weight",
+                "width",
+                "widthIn",
+                "wrapContentSize",
+                "zIndex"
+            ],
+            "properties": [],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [
+                "RemoteContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "unsupported",
+                "canvas": null,
+                "notes": "Drawn on the canvas as a named placeholder: this catalog claims no adapter.",
+                "platformSupported": false,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "remote-widgets/launcher-widget",
+            "displayName": "Launcher widget",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "background",
+                    "notes": "The widget's background, filling the cell the launcher gives it: a `#AARRGGBB` literal, written as `RemoteModifier.background(Color(0x…).rc)` on the box `Content` draws. Unset leaves the widget transparent over the wallpaper. The corner radius is the launcher's: it clips every widget to its own `system_app_widget_background_radius`, so the root never authors one.",
+                    "required": false
+                }
+            ],
+            "role": "Scaffold",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": null,
+            "traits": [
+                "ScreenContent",
+                "LauncherWidgetHost",
+                "RemoteContentHost"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": "layout/box",
+                "notes": "Drawn on the canvas by the `layout/box` adapter.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Box"
+                ],
+                "symbol": "Box"
+            },
+            "componentId": "layout/box",
+            "displayName": "Box",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "contentAlignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "propagateMinConstraints",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "showByState",
+                    "notes": "Select one child by state. Object fields: selector is a typed scalar or state read; cases is an object mapping child IDs to typed scalar values; optional fallback is a string child ID. Every child must be a case or the fallback. Compose export uses when. Remote export uses StateLayout for non-null number or flag selectors; String equality is unavailable on that target.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "OverlayContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Column"
+                ],
+                "symbol": "Column"
+            },
+            "componentId": "layout/column",
+            "displayName": "Column",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Distribution down the axis. The three aligned values compose with verticalSpacingDp through Arrangement.spacedBy(space, alignment); the three space* values distribute the free space themselves, and Compose has no form that also inserts a fixed gap.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalAlignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "topStart",
+                        "topCenter",
+                        "topEnd",
+                        "centerStart",
+                        "center",
+                        "centerEnd",
+                        "bottomStart",
+                        "bottomCenter",
+                        "bottomEnd"
+                    ],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": "How a parent Box aligns this column. The renderer has always read `alignment` off any Box child and the exporter has always emitted `.align(...)` for it; only the declaration was missing, so a centred column was inexpressible.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "weight",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "VerticalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.Row"
+                ],
+                "symbol": "Row"
+            },
+            "componentId": "layout/row",
+            "displayName": "Row",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalArrangement",
+                    "notes": "The Row counterpart of a Column’s verticalArrangement, with the same relationship to horizontalSpacingDp.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalAlignment",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "HorizontalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [],
+                "symbol": ""
+            },
+            "componentId": "layout/for-each",
+            "displayName": "For each",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "data",
+                    "notes": "The rows: a `list` value whose entries are `object` values — one dictionary per row, read by the template through `{\"type\":\"binding\",\"value\":\"<key>\"}`, the same reader a component body uses for its arguments.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": 1,
+                        "min": 1
+                    },
+                    "name": "template",
+                    "ordered": false
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "Repeated rows draw the template more than once, and the structured recorder correlates a text element by authored node id — so only the last row's measurements survive and the typography annotation cannot be matched. Unverified until the recorder reads instance paths, which makes an SVG export of a design holding a loop refuse by name rather than emit an unannotated one.",
+                "status": "unverified"
+            },
+            "traits": [
+                "OrderedContent",
+                "RepeatedContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": null,
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.layout.ExperimentalLayoutApi",
+                    "androidx.compose.foundation.layout.FlowRow"
+                ],
+                "symbol": "FlowRow"
+            },
+            "componentId": "layout/flow-row",
+            "displayName": "Flow row",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalArrangement",
+                    "notes": "Distribution along a line, exactly as on layout/row, and composing with horizontalSpacingDp the same way.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Distribution of the LINES, not of the children: a flow row's cross axis is the stack of rows it wrapped into, so this is a Column's vocabulary and verticalSpacingDp is the gap between lines.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "maxItemsInEachRow",
+                    "notes": "A ceiling on the children one line may hold, for a design that wants a fixed number per row however much space there is. Absent means as many as fit, which is the reason to reach for this component at all.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "topStart",
+                        "topCenter",
+                        "topEnd",
+                        "centerStart",
+                        "center",
+                        "centerEnd",
+                        "bottomStart",
+                        "bottomCenter",
+                        "bottomEnd"
+                    ],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": "How a parent Box aligns this flow row, read off any Box child exactly as on layout/column.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "weight",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "HorizontalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "RemoteFlowRow. Not in the Glance Wear widget profile (LAYOUT_FLOW): the Native / Live render of a widget using it fails while the document is captured.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "layout/fit-box",
+            "displayName": "Fit box",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalAlignment",
+                    "notes": "Where the chosen child sits across the box. Centred when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Where the chosen child sits down the box. Centred when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "OverlayContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "RemoteFitBox: its children are alternatives, largest first, and it shows the first one that fits.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "layout/collapsible-column",
+            "displayName": "Collapsible column",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalArrangement",
+                    "notes": "Distribution down the axis. The three aligned values compose with verticalSpacingDp through Arrangement.spacedBy(space, alignment); the three space* values distribute the free space themselves, and Compose has no form that also inserts a fixed gap.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "verticalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalAlignment",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "topStart",
+                        "topCenter",
+                        "topEnd",
+                        "centerStart",
+                        "center",
+                        "centerEnd",
+                        "bottomStart",
+                        "bottomCenter",
+                        "bottomEnd"
+                    ],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": "How a parent Box aligns this column. The renderer has always read `alignment` off any Box child and the exporter has always emitted `.align(...)` for it; only the declaration was missing, so a centred column was inexpressible.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "weight",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "VerticalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "RemoteCollapsibleColumn: hides whole children, lowest collapsiblePriority first, when it runs out of height. Not in the Glance Wear widget profile (LAYOUT_COLLAPSIBLE_COLUMN): the Native / Live render of a widget using it fails while the document is captured.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "layout/collapsible-row",
+            "displayName": "Collapsible row",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end",
+                        "spaceBetween",
+                        "spaceAround",
+                        "spaceEvenly"
+                    ],
+                    "jsonType": "string",
+                    "name": "horizontalArrangement",
+                    "notes": "The Row counterpart of a Column’s verticalArrangement, with the same relationship to horizontalSpacingDp.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "horizontalSpacingDp",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "top",
+                        "center",
+                        "bottom"
+                    ],
+                    "jsonType": "string",
+                    "name": "verticalAlignment",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "RemoteAuthorable"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "children",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": null,
+                "status": "verified"
+            },
+            "traits": [
+                "OrderedContent",
+                "HorizontalContent",
+                "LayoutPrimitive",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "RemoteCollapsibleRow: hides whole children, lowest collapsiblePriority first, when it runs out of width. Not in the Glance Wear widget profile (LAYOUT_COLLAPSIBLE_ROW): the Native / Live render of a widget using it fails while the document is captured.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.composeai.rcplayer.compose.RcComposePlayer"
+                ],
+                "symbol": "RcComposePlayer"
+            },
+            "componentId": "remote-compose/document",
+            "displayName": "Remote Compose document",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "documentBase64",
+                    "notes": "Base64-encoded Remote Compose wire document; limited to 8 MiB encoded. Not required on its own: a node carries either the bytes or a documentUrl, and the editor's own rule reports a node that carries neither.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "documentUrl",
+                    "notes": "Absolute http(s) URL the host resolves to the same wire document. Read only when documentBase64 is empty, so a design that carries its own bytes never depends on the network.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "inherit",
+                        "light",
+                        "dark",
+                        "system"
+                    ],
+                    "jsonType": "string",
+                    "name": "theme",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "object",
+                    "name": "namedValues",
+                    "notes": "Typed host values keyed by the Remote Compose named-variable name.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Nested Remote Compose SVG export requires an explicit renderer implementation.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "OrderedContent",
+                "DynamicSlots"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "Uses the common CMP player. Each named UI Builder slot registers the matching Remote Compose custom-component config.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "ee.schimke.composeai.rcplayer.compose.RcCustomComponentRegistry"
+                ],
+                "symbol": "RcCustomComponentRegistry"
+            },
+            "componentId": "remote-compose/custom",
+            "displayName": "Custom component",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "name",
+                    "notes": "The custom-component config name the document writes and the host registers a renderer under. Namespaced by convention (slot:, rc:, or an application domain) so two documents composed together cannot collide.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "widthDp",
+                    "notes": "The bounds the document reserves for host content it cannot measure. A player lays out a custom component from the document, not from the Compose content filling it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "number",
+                    "name": "heightDp",
+                    "notes": "See widthDp.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "AnyContent"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "content",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "Host content inside a Remote Compose document has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteContent",
+                "OrderedContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "Draws the ordinary Compose content in its own slot, which is what a registered renderer draws on a real player too. A preview only draws it if a custom component of this name is registered; an unregistered one is a player support issue rather than silently borrowed content. The code mapping names the registry rather than a composable, because the composable is whatever the host registers under this name.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.background",
+                    "androidx.compose.ui.Modifier",
+                    "androidx.compose.ui.graphics.Brush"
+                ],
+                "symbol": "Modifier.background(Brush.linearGradient)"
+            },
+            "componentId": "shape/linear-gradient",
+            "displayName": "Linear gradient layer",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "startColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "endColor",
+                    "notes": "A colour, written as {\"type\":\"color\",\"value\":\"#RRGGBB\"} or as {\"type\":\"colorToken\",\"value\":\"primary\"} naming one of statusSemantics.colorTokens. A string wrapper, or a role the canvas does not draw, is refused at commit.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "direction",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "none",
+                "notes": "The frozen benchmark usage records as vector gradient output.",
+                "status": "verified"
+            },
+            "traits": [
+                "DrawLayer",
+                "OverlayContent"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Must remain a semantic brush layer, not persisted pixel geometry.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": {
+                "imports": [
+                    "androidx.compose.foundation.Image",
+                    "androidx.compose.ui.layout.ContentScale"
+                ],
+                "symbol": "Image"
+            },
+            "componentId": "asset/image",
+            "displayName": "Image asset",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "assetKey",
+                    "notes": "The key of an asset the canvas can draw, written as {\"type\":\"assetKey\",\"value\":\"…\"}: one of statusSemantics.assetRegistry.keys, or a key pinned in the design's own assets map by PUT /api/ui-builder/v1/designs/{designId}/assets/{assetKey} (raw PNG, JPEG, GIF or WebP body) or the ui_builder_put_asset MCP tool. Any other key is refused at commit, so put the picture before inserting the node. A pinned key whose bytes this lane cannot show renders as a placeholder naming it, and exports as Image(painter = ColorPainter(...)) with an ASSET_PLACEHOLDER warning.",
+                    "required": true
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "string",
+                        "null"
+                    ],
+                    "name": "contentDescription",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "crop",
+                        "fit",
+                        "fillBounds",
+                        "inside"
+                    ],
+                    "jsonType": "string",
+                    "name": "contentScale",
+                    "notes": null,
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "alignment",
+                    "notes": null,
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": false,
+                "fallback": "embedded-raster",
+                "notes": "The recorder embeds the pinned asset bytes, or the project-owned artwork, with source and payload provenance; a key with no bytes behind it is drawn as a vector placeholder rather than declared as a raster fallback.",
+                "status": "raster-fallback-required"
+            },
+            "traits": [
+                "ImageContent",
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "supported",
+                "canvas": null,
+                "notes": "Draws the bytes the design's assets map pins under assetKey (content-addressed, hash-checked, stored by the host), the project-owned Jetcaster covers, or a visible placeholder carrying the key. External URLs are not accepted.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/canvas",
+            "displayName": "Canvas",
+            "modifierCapabilities": [
+                "size",
+                "fillMaxSize",
+                "fillMaxWidth",
+                "padding",
+                "clip",
+                "alpha",
+                "offset",
+                "rotate",
+                "scale",
+                "zIndex",
+                "width",
+                "height",
+                "widthIn",
+                "heightIn",
+                "fillMaxHeight",
+                "background",
+                "border",
+                "wrapContentSize",
+                "verticalScroll",
+                "horizontalScroll",
+                "align",
+                "alignHorizontal",
+                "alignVertical",
+                "weight",
+                "animateEnterExit",
+                "collapsiblePriority",
+                "remoteCall",
+                "sharedElement"
+            ],
+            "properties": [],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawOperation"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "ops",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "RemoteAuthorable"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "RemoteCanvas: draws its operations in order, in dp from its top-left. Give it a size; an unsized canvas draws in whatever space its parent gives it.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/rect",
+            "displayName": "Rectangle",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "xDp",
+                    "notes": "Left edge of the rectangle. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "yDp",
+                    "notes": "Top edge of the rectangle. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "widthDp",
+                    "notes": "Width of the rectangle. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "heightDp",
+                    "notes": "Height of the rectangle. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "cornerRadiusDp",
+                    "notes": "Rounds the corners; written as drawRoundRect.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawRect` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/circle",
+            "displayName": "Circle",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "centerXDp",
+                    "notes": "Centre across. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "centerYDp",
+                    "notes": "Centre down. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "radiusDp",
+                    "notes": "Radius. Half the canvas's shorter side when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawCircle` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/oval",
+            "displayName": "Oval",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "xDp",
+                    "notes": "Left edge of the oval's bounds. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "yDp",
+                    "notes": "Top edge of the oval's bounds. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "widthDp",
+                    "notes": "Width of the oval's bounds. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "heightDp",
+                    "notes": "Height of the oval's bounds. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawOval` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/arc",
+            "displayName": "Arc",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "xDp",
+                    "notes": "Left edge of the arc's oval. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "yDp",
+                    "notes": "Top edge of the arc's oval. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "widthDp",
+                    "notes": "Width of the arc's oval. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "heightDp",
+                    "notes": "Height of the arc's oval. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "startAngle",
+                    "notes": "Where the arc starts; 0 is three o'clock.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "sweepAngle",
+                    "notes": "How far it sweeps, clockwise.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "useCenter",
+                    "notes": "Close the arc through the centre, as a pie slice.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawArc` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/line",
+            "displayName": "Line",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "startXDp",
+                    "notes": "Start across.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "startYDp",
+                    "notes": "Start down.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "endXDp",
+                    "notes": "End across.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "endYDp",
+                    "notes": "End down.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawLine` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/path",
+            "displayName": "Path",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "pathData",
+                    "notes": "SVG path data, e.g. `M2 12 L12 2 L22 12 Z`.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportWidth",
+                    "notes": "The width the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportHeight",
+                    "notes": "The height the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawPath` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/morph",
+            "displayName": "Path morph",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "pathData",
+                    "notes": "The path at progress 0, as SVG path data.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "toPathData",
+                    "notes": "The path at progress 1: the same commands as `pathData`, with other numbers.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "progress",
+                    "notes": "How far from the first path to the second, 0 to 1; bind it to state or a formula.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportWidth",
+                    "notes": "The width the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportHeight",
+                    "notes": "The height the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "fill",
+                        "stroke"
+                    ],
+                    "jsonType": "string",
+                    "name": "style",
+                    "notes": "Fill the shape or stroke its outline.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "strokeWidthDp",
+                    "notes": "Stroke width, when stroked.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "butt",
+                        "round",
+                        "square"
+                    ],
+                    "jsonType": "string",
+                    "name": "strokeCap",
+                    "notes": "How a stroke's ends are drawn.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawTweenPath` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/text",
+            "displayName": "Text",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "The text to draw.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "xDp",
+                    "notes": "Anchor across. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "yDp",
+                    "notes": "Anchor down, at the text's middle. Centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "textSizeSp",
+                    "notes": "Text size. 14 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "start",
+                        "center",
+                        "end"
+                    ],
+                    "jsonType": "string",
+                    "name": "align",
+                    "notes": "Which end of the text sits at the anchor.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawAnchoredText` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/text-circle",
+            "displayName": "Text on a circle",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "The text to curve.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "centerXDp",
+                    "notes": "Centre across. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "centerYDp",
+                    "notes": "Centre down. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "radiusDp",
+                    "notes": "Where the text's baseline runs. Half the canvas's shorter side, less the text size, when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "angle",
+                    "notes": "Where the text is centred, clockwise from three o'clock. 270 (the top) when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "textSizeSp",
+                    "notes": "Text size. 14 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [
+                        "horizontal",
+                        "vertical",
+                        "radial",
+                        "sweep"
+                    ],
+                    "jsonType": "string",
+                    "name": "gradient",
+                    "notes": "Paint with a gradient from `color` to `gradientColor` across the canvas: left to right, top to bottom, out from the centre, or clockwise round it.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "gradientColor",
+                    "notes": "Where the gradient ends. Transparent when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawTextOnCircle` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/text-path",
+            "displayName": "Text on a path",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "text",
+                    "notes": "The text to lay along the path.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "pathData",
+                    "notes": "SVG path data in dp from the canvas's top-left; the text runs along it from its start.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "startDp",
+                    "notes": "How far along the path the text starts. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "offsetDp",
+                    "notes": "How far the baseline sits off the path, positive to the path's right. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "textSizeSp",
+                    "notes": "Text size. 14 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "color",
+                    "notes": "Fill or stroke colour. Black when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "alpha",
+                    "notes": "Opacity of the paint, 0 to 1.",
+                    "required": false
+                }
+            ],
+            "role": "Leaf",
+            "slots": [],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawTextOnPath` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/group",
+            "displayName": "Transform group",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "translateXDp",
+                    "notes": "Moves its operations across.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "translateYDp",
+                    "notes": "Moves its operations down.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "rotate",
+                    "notes": "Turns its operations about the pivot.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "scale",
+                    "notes": "Scales its operations about the pivot.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "pivotXDp",
+                    "notes": "Pivot across. The canvas centre when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "pivotYDp",
+                    "notes": "Pivot down. The canvas centre when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawOperation"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "ops",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `withTransform` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/clip",
+            "displayName": "Clip",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "xDp",
+                    "notes": "Left edge of the clip rectangle. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "yDp",
+                    "notes": "Top edge of the clip rectangle. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "widthDp",
+                    "notes": "Width of the clip rectangle. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "heightDp",
+                    "notes": "Height of the clip rectangle. The rest of the canvas when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "pathData",
+                    "notes": "Clip to this SVG path, drawn in the viewport and scaled to the canvas, instead of the rectangle.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportWidth",
+                    "notes": "The width the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "viewportHeight",
+                    "notes": "The height the path data is drawn in; scaled to the canvas. 24 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "exclude",
+                    "notes": "Draw everywhere except the clip, rather than only inside it.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawOperation"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "ops",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `clipRect` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/if",
+            "displayName": "Draw when",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": "boolean",
+                    "name": "condition",
+                    "notes": "Its operations draw only while this is true; bind it to state or a formula.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawOperation"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "ops",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `drawConditionally` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        },
+        {
+            "code": null,
+            "componentId": "draw/repeat",
+            "displayName": "Repeat",
+            "modifierCapabilities": [],
+            "properties": [
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "from",
+                    "notes": "The first index. 0 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "until",
+                    "notes": "Repeats while the index is below this. Required.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": [
+                        "number",
+                        "object"
+                    ],
+                    "name": "step",
+                    "notes": "How much the index grows each time. 1 when absent.",
+                    "required": false
+                },
+                {
+                    "allowedValues": [],
+                    "jsonType": "string",
+                    "name": "index",
+                    "notes": "The name its operations read the index by, as `@i` in a formula. `i` when absent.",
+                    "required": false
+                }
+            ],
+            "role": "Container",
+            "slots": [
+                {
+                    "acceptedRoles": [
+                        "Scaffold",
+                        "Container",
+                        "Leaf"
+                    ],
+                    "acceptedTraits": [
+                        "DrawOperation"
+                    ],
+                    "cardinality": {
+                        "max": null,
+                        "min": 0
+                    },
+                    "name": "ops",
+                    "ordered": true
+                }
+            ],
+            "svg": {
+                "blocksExport": true,
+                "fallback": "none",
+                "notes": "A Remote Compose drawing has no structured SVG answer.",
+                "status": "unsupported"
+            },
+            "traits": [
+                "DrawOperation"
+            ],
+            "wasm": {
+                "adapterStatus": "planned",
+                "canvas": null,
+                "notes": "Written as `loop` inside the canvas's RemoteDrawScope.",
+                "platformSupported": true,
+                "unrolled": null
+            }
+        }
+    ],
+    "composeSourceExport": {
+        "adapter": "remote-compose-launcher-widget",
+        "version": 1
+    },
+    "exportCapabilities": {
+        "bundle": false,
+        "composeCode": true,
+        "png": false,
+        "svg": false
+    },
+    "schema": "compose-catalog-capabilities/v1",
+    "statusSemantics": {
+        "assetRegistry": {
+            "keys": [
+                "jetcaster.cover.android-developers-backstage",
+                "jetcaster.cover.google-developers-podcast",
+                "ui-builder.gate0.cover",
+                "editor.placeholder"
+            ]
+        },
+        "browserPreview": null,
+        "builtins": {
+            "remote-widgets/launcher-widget": {
+                "canvas": "layout/box",
+                "code": null,
+                "displayName": "Launcher widget",
+                "group": "Widget",
+                "implementation": null,
+                "insertContent": null,
+                "modifierCapabilities": [],
+                "properties": [
+                    {
+                        "jsonType": "string",
+                        "name": "background",
+                        "notes": "The widget's background, filling the cell the launcher gives it: a `#AARRGGBB` literal, written as `RemoteModifier.background(Color(0x…).rc)` on the box `Content` draws. Unset leaves the widget transparent over the wallpaper. The corner radius is the launcher's: it clips every widget to its own `system_app_widget_background_radius`, so the root never authors one.",
+                        "required": false
+                    }
+                ],
+                "role": "screen-root",
+                "shelfRole": null,
+                "slots": {
+                    "content": {
+                        "acceptedRoles": [
+                            "Scaffold",
+                            "Container",
+                            "Leaf"
+                        ],
+                        "acceptedTraits": [
+                            "AnyContent"
+                        ],
+                        "max": 1
+                    }
+                },
+                "svg": null,
+                "traits": [
+                    "ScreenContent",
+                    "LauncherWidgetHost",
+                    "RemoteContentHost"
+                ],
+                "unrolled": null,
+                "wasm": null
+            }
+        },
+        "code": null,
+        "colorTokens": null,
+        "componentIdPrefix": "remote-widgets/",
+        "componentMenu": {
+            "components": {
+                "asset/image": {
+                    "group": "Content"
+                },
+                "draw/arc": {
+                    "group": "Drawing"
+                },
+                "draw/canvas": {
+                    "group": "Drawing"
+                },
+                "draw/circle": {
+                    "group": "Drawing"
+                },
+                "draw/clip": {
+                    "group": "Drawing"
+                },
+                "draw/group": {
+                    "group": "Drawing"
+                },
+                "draw/if": {
+                    "group": "Drawing"
+                },
+                "draw/line": {
+                    "group": "Drawing"
+                },
+                "draw/morph": {
+                    "group": "Drawing"
+                },
+                "draw/oval": {
+                    "group": "Drawing"
+                },
+                "draw/path": {
+                    "group": "Drawing"
+                },
+                "draw/rect": {
+                    "group": "Drawing"
+                },
+                "draw/repeat": {
+                    "group": "Drawing"
+                },
+                "draw/text": {
+                    "group": "Drawing"
+                },
+                "draw/text-circle": {
+                    "group": "Drawing"
+                },
+                "draw/text-path": {
+                    "group": "Drawing"
+                },
+                "layout/box": {
+                    "group": "Layout"
+                },
+                "layout/collapsible-column": {
+                    "group": "Layout"
+                },
+                "layout/collapsible-row": {
+                    "group": "Layout"
+                },
+                "layout/column": {
+                    "group": "Layout"
+                },
+                "layout/fit-box": {
+                    "group": "Layout"
+                },
+                "layout/flow-row": {
+                    "group": "Layout"
+                },
+                "layout/for-each": {
+                    "group": "Layout"
+                },
+                "layout/row": {
+                    "group": "Layout"
+                },
+                "remote-compose/custom": {
+                    "group": "Embedded"
+                },
+                "remote-compose/document": {
+                    "group": "Embedded"
+                },
+                "remote-widgets/adaptive-layout": {
+                    "group": "Layout"
+                },
+                "remote-widgets/remote-text": {
+                    "group": "Text"
+                },
+                "remote-widgets/widget-button": {
+                    "group": "Buttons"
+                },
+                "remote-widgets/widget-label": {
+                    "group": "Text"
+                },
+                "remote-widgets/widget-sticker": {
+                    "group": "Widget"
+                },
+                "remote-widgets/widget-surface": {
+                    "group": "Containment"
+                },
+                "remote-widgets/widget-title": {
+                    "group": "Text"
+                },
+                "shape/linear-gradient": {
+                    "group": "Styles"
+                }
+            },
+            "groupOrder": [
+                "Widget",
+                "Containment",
+                "Buttons",
+                "Text",
+                "Content",
+                "Styles",
+                "Embedded",
+                "Drawing",
+                "Layout"
+            ]
+        },
+        "components": {
+            "remote-widgets/adaptive-layout": {
+                "canvas": "launcher/adaptive-layout",
+                "canvasMapping": null,
+                "catalogId": null,
+                "displayName": "Adaptive layout",
+                "excluded": null,
+                "insertContent": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": [
+                    {
+                        "allowedValues": [
+                            "1x1",
+                            "2x1",
+                            "2x2",
+                            "3x1",
+                            "3x2",
+                            "4x1",
+                            "4x2",
+                            "4x3",
+                            "5x2"
+                        ],
+                        "jsonType": "string",
+                        "name": "compactSize",
+                        "notes": "The launcher grid size the `compact` slot is laid out for, as its cell count; default `2x1`. The widget shows whichever authored slot fits it best, Glance's SizeMode.Responsive rule: the closest size that fits, else the smallest.",
+                        "required": false
+                    },
+                    {
+                        "allowedValues": [
+                            "1x1",
+                            "2x1",
+                            "2x2",
+                            "3x1",
+                            "3x2",
+                            "4x1",
+                            "4x2",
+                            "4x3",
+                            "5x2"
+                        ],
+                        "jsonType": "string",
+                        "name": "mediumSize",
+                        "notes": "The launcher grid size the `medium` slot is laid out for, as its cell count; default `4x1`. The widget shows whichever authored slot fits it best, Glance's SizeMode.Responsive rule: the closest size that fits, else the smallest.",
+                        "required": false
+                    },
+                    {
+                        "allowedValues": [
+                            "1x1",
+                            "2x1",
+                            "2x2",
+                            "3x1",
+                            "3x2",
+                            "4x1",
+                            "4x2",
+                            "4x3",
+                            "5x2"
+                        ],
+                        "jsonType": "string",
+                        "name": "expandedSize",
+                        "notes": "The launcher grid size the `expanded` slot is laid out for, as its cell count; default `4x2`. The widget shows whichever authored slot fits it best, Glance's SizeMode.Responsive rule: the closest size that fits, else the smallest.",
+                        "required": false
+                    }
+                ],
+                "record": "widget-catalog/ee.schimke.remotewidgets.AdaptiveLayoutKt.AdaptiveLayout",
+                "slotCapabilities": [
+                    {
+                        "acceptedRoles": [
+                            "Scaffold",
+                            "Container",
+                            "Leaf"
+                        ],
+                        "acceptedTraits": [
+                            "AnyContent"
+                        ],
+                        "cardinality": {
+                            "max": 1,
+                            "min": 0
+                        },
+                        "name": "compact"
+                    },
+                    {
+                        "acceptedRoles": [
+                            "Scaffold",
+                            "Container",
+                            "Leaf"
+                        ],
+                        "acceptedTraits": [
+                            "AnyContent"
+                        ],
+                        "cardinality": {
+                            "max": 1,
+                            "min": 0
+                        },
+                        "name": "medium"
+                    },
+                    {
+                        "acceptedRoles": [
+                            "Scaffold",
+                            "Container",
+                            "Leaf"
+                        ],
+                        "acceptedTraits": [
+                            "AnyContent"
+                        ],
+                        "cardinality": {
+                            "max": 1,
+                            "min": 0
+                        },
+                        "name": "expanded"
+                    }
+                ],
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "remote-widgets/remote-text": {
+                "canvas": "m3/text",
+                "canvasMapping": {
+                    "properties": {
+                        "fontSizeSp": "fontSize"
+                    }
+                },
+                "catalogId": null,
+                "displayName": null,
+                "excluded": null,
+                "insertContent": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": [
+                    {
+                        "jsonType": "string",
+                        "name": "text",
+                        "notes": "The string the text draws, written as `\"…\".rs`.",
+                        "required": true
+                    },
+                    {
+                        "jsonType": "number",
+                        "name": "fontSize",
+                        "notes": "Size in sp, written as `<n>.rsp`.",
+                        "required": false
+                    },
+                    {
+                        "jsonType": "string",
+                        "name": "color",
+                        "notes": "A `#AARRGGBB` literal, written as `Color(0x…).rc`. No theme roles: see $comment_colorTokens.",
+                        "required": false
+                    },
+                    {
+                        "jsonType": "integer",
+                        "name": "maxLines",
+                        "notes": "The most lines the text wraps to.",
+                        "required": false
+                    }
+                ],
+                "record": "widget-catalog/androidx.compose.remote.creation.compose.layout.RemoteTextKt.RemoteText",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "remote-widgets/widget-button": {
+                "canvas": "m3/button",
+                "canvasMapping": null,
+                "catalogId": null,
+                "displayName": null,
+                "excluded": null,
+                "insertContent": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "widget-catalog/ee.schimke.remotewidgets.WidgetComponentsKt.WidgetButton",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "remote-widgets/widget-label": {
+                "canvas": "m3/text",
+                "canvasMapping": null,
+                "catalogId": null,
+                "displayName": null,
+                "excluded": null,
+                "insertContent": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "widget-catalog/ee.schimke.remotewidgets.WidgetComponentsKt.WidgetLabel",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "remote-widgets/widget-sticker": {
+                "canvas": null,
+                "canvasMapping": null,
+                "catalogId": null,
+                "displayName": null,
+                "excluded": null,
+                "insertContent": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "widget-catalog/ee.schimke.remotewidgets.WidgetStickerKt.WidgetSticker",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "remote-widgets/widget-surface": {
+                "canvas": "layout/box",
+                "canvasMapping": {
+                    "slots": {
+                        "children": "content"
+                    }
+                },
+                "catalogId": null,
+                "displayName": null,
+                "excluded": null,
+                "insertContent": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "widget-catalog/ee.schimke.remotewidgets.WidgetComponentsKt.WidgetSurface",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            },
+            "remote-widgets/widget-title": {
+                "canvas": "m3/text",
+                "canvasMapping": null,
+                "catalogId": null,
+                "displayName": null,
+                "excluded": null,
+                "insertContent": null,
+                "modifierCapabilities": null,
+                "nativeOnly": false,
+                "propertyCapabilities": null,
+                "record": "widget-catalog/ee.schimke.remotewidgets.WidgetComponentsKt.WidgetTitle",
+                "slotCapabilities": null,
+                "slots": {},
+                "starter": {},
+                "stateCallbacks": {},
+                "traits": [],
+                "unrolled": null,
+                "variantProperty": null,
+                "variants": {}
+            }
+        },
+        "composeSourceExport": {
+            "adapter": "remote-compose-launcher-widget",
+            "version": 1
+        },
+        "frame": {
+            "$comment_adapter": "A launcher widget is drawn into the rectangle the launcher gives it, measured in grid cells. `frame/launcher-widget`, not remote-m3's `frame/widget-host` (a Wear host container) nor a device frame.",
+            "adapter": "frame/launcher-widget",
+            "geometry": {
+                "$comment": "The sizes are DISCRETE LAUNCHER GRID UNITS: each `label` is the cell count a design is authored at (`3x2`), and its dp the portrait size Android documents for that count, (73n - 16) x (118m - 16) dp (developer.android.com/develop/ui/views/appwidgets/layouts, measured on a Pixel 4's 5x4 grid). Real launchers vary the cell size, which is why the cell count is what a design states and this dp is its reference rendering. The same table is WidgetSize in widget-catalog/src/main/kotlin/ee/schimke/remotewidgets/WidgetSizes.kt and the breakpoints in catalog.spec.json; WidgetSizeTest holds all three together.",
+                "sizesDp": [
+                    {
+                        "heightDp": 102,
+                        "label": "1x1",
+                        "widthDp": 57
+                    },
+                    {
+                        "heightDp": 102,
+                        "label": "2x1",
+                        "widthDp": 130
+                    },
+                    {
+                        "heightDp": 220,
+                        "label": "2x2",
+                        "widthDp": 130
+                    },
+                    {
+                        "heightDp": 102,
+                        "label": "3x1",
+                        "widthDp": 203
+                    },
+                    {
+                        "heightDp": 220,
+                        "label": "3x2",
+                        "widthDp": 203
+                    },
+                    {
+                        "heightDp": 102,
+                        "label": "4x1",
+                        "widthDp": 276
+                    },
+                    {
+                        "heightDp": 220,
+                        "label": "4x2",
+                        "widthDp": 276
+                    },
+                    {
+                        "heightDp": 338,
+                        "label": "4x3",
+                        "widthDp": 276
+                    },
+                    {
+                        "heightDp": 220,
+                        "label": "5x2",
+                        "widthDp": 349
+                    }
+                ]
+            }
+        },
+        "newDesign": null,
+        "platform": "remote-compose",
+        "platformLabel": "RemoteCompose · Launcher widgets",
+        "previewSurfaces": {
+            "native": {
+                "backend": "android",
+                "fidelity": "authoritative",
+                "reason": "The generated RemoteComposeWidget Kotlin, compiled against this module's own classpath (remote-creation-compose + remote-foundation, the vendored port) and rasterised by the real player under the WIDGETS_V6 profile a launcher widget records with."
+            }
+        },
+        "supersedes": null,
+        "templates": [
+            "ui-builder/designs/hello-widget.json",
+            "ui-builder/designs/launcher-widget-2x1.json",
+            "ui-builder/designs/counter-widget.json"
+        ]
+    }
+}

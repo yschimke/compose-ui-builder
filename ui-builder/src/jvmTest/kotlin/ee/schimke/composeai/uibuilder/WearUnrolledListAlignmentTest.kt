@@ -31,7 +31,8 @@ class WearUnrolledListAlignmentTest {
           .first { File(it, "site/designs/wear-list.uid").isFile }
       val catalog =
         CapabilityCatalogParser.parse(
-          File(root, "docs/design/fixtures/ui-builder/wear-m3-capabilities-v1.json").readText()
+          File(root, "docs/design/fixtures/ui-builder/published/wear-m3-capabilities-v1.json")
+            .readText()
         )
       // The Wear list template: a `ListHeader` reading "Activity" over cards that fill the list.
       val document = UidDesignFiles.decode(File(root, "site/designs/wear-list.uid").readText())
