@@ -138,6 +138,19 @@
     return;
   }
 
+  // A builder host serving the editor at its ROOT (`<meta name="ui-builder-base-path" content="/">`,
+  // compose-preview-server's --ui-builder-host-root) keeps its pages at `/<design>`, but the worker
+  // is only served at `/ui-builder/ui-builder-sw.js`, and a worker cannot control pages outside the
+  // path it is served from. So root-mode pages run without it — online, as every page did before the
+  // worker existed — rather than registering a script that is not there. The `/ui-builder/` pages of
+  // that host still offer it, and `?sw=off` above still clears it.
+  const basePath = (
+    document.querySelector('meta[name="ui-builder-base-path"]')?.getAttribute('content') || ''
+  ).trim();
+  // Only a path made of nothing but slashes is the root; an empty or absent meta is `/ui-builder/`,
+  // as normalizeUiBuilderBasePath reads it.
+  if (basePath !== '' && basePath.replace(/\/+/g, '') === '') return;
+
   const installed = ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay'].some(
     (mode) => globalThis.matchMedia?.('(display-mode: ' + mode + ')').matches,
   ) || navigator.standalone === true;
