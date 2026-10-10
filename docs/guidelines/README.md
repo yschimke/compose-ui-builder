@@ -72,7 +72,7 @@ earlier revision. The shape is `compose-ui-builder/guidelines-result/v1` (`Desig
 | `severity` | `warning` or `info`. |
 | `guidance` | The guidance as written at `source`. |
 | `check` | A yes/no question; YES means the design follows the rule. |
-| `source` | Where `guidance` is quoted from: a page on developer.android.com or m3.material.io, a `kb://` Android Knowledge Base article, a component set in the Wear OS Material 3 Figma kit, or the androidx source whose KDoc it quotes. |
+| `source` | Where `guidance` is quoted from: an https page on developer.android.com (the design guides, and the agent skills at `agents/skills/…`) or m3.material.io, a component set in the Wear OS Material 3 Figma kit, or the androidx source whose KDoc it quotes. |
 
 ### The pictures each design is shown in
 

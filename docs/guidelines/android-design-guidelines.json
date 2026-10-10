@@ -1,6 +1,6 @@
 {
   "schema": "compose-ui-builder/design-guidelines/v1",
-  "version": 8,
+  "version": 9,
   "about": "Design rules a model checks a UI-builder design against. Each rule quotes the guidance it comes from and links its source: a page on developer.android.com or m3.material.io, the Android Knowledge Base for agent skills, a component set in the Wear OS Material 3 Figma kit, or the androidx source whose KDoc it quotes. `check` is a yes/no question where YES means the design follows the rule. `kind` is `structure` when the design tree is enough evidence, `visual` when it needs a picture of the design. Candidates are extracted with scripts/guidelines/extract-guidance.mjs and reviewed by a person before they are added here. Visual rules say which picture to judge: the device picture (the first frame on the watch) or the unrolled picture (the whole scrolling content, scrolled to the end so a revealed edge button shows). `surfaces` (optional) narrows a rule to `screen` or `widget` designs on its platform; a rule without it applies to every surface.",
   "rules": [
     {
@@ -72,7 +72,7 @@
       "severity": "warning",
       "guidance": "Use a Column as a direct child of ScreenScaffold only if the screen will never scroll, even with the largest system font.",
       "check": "If the screen-scaffold's content is a plain layout/column rather than a transforming-lazy-column, is it short enough (a few short items) that it would still fit at the largest font size? Answer not_applicable when the content is a scrolling list.",
-      "source": "kb://android/agents/skills/wear/wear-compose-m3/skill"
+      "source": "https://developer.android.com/agents/skills/wear/wear-compose-m3/skill"
     },
     {
       "id": "wear.dialog.dedicated-task",
@@ -405,7 +405,7 @@
       "severity": "warning",
       "guidance": "Do NOT hard-code text sizes, use typography from MaterialTheme. Do NOT hard-code colors, use colorScheme.",
       "check": "Do text nodes set a style rather than fontSizeSp, lineHeightSp or letterSpacingSp, and do colours come from the theme's colour roles rather than hex values on individual components? Theme-level overrides on the screen-scaffold (theme*Color, theme*Typeface) are fine.",
-      "source": "kb://android/agents/skills/wear/wear-compose-m3/skill"
+      "source": "https://developer.android.com/agents/skills/wear/wear-compose-m3/skill"
     },
     {
       "id": "wear.scroll-indicator-matches",
@@ -586,7 +586,7 @@
       "severity": "warning",
       "guidance": "Show only one primary piece of information at a time (for example, using a Stack). Avoid multiple simultaneous cards.",
       "check": "Is at most one card shown outside a Stack or List?",
-      "source": "kb://android/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
+      "source": "https://developer.android.com/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
     },
     {
       "id": "glasses.stack-vs-list",
@@ -597,7 +597,7 @@
       "severity": "info",
       "guidance": "If the items are of different types use a stack. If the items are of the same type, use a list. Don't use a title chip with a stack.",
       "check": "Do Lists hold items of one type and Stacks mixed types, with no TitleChip on a Stack? Answer not_applicable when there is neither.",
-      "source": "kb://android/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
+      "source": "https://developer.android.com/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
     },
     {
       "id": "glasses.list.sole-scroller",
@@ -619,7 +619,7 @@
       "severity": "warning",
       "guidance": "Never embed a card within a List Item.",
       "check": "Does no ListItem contain a Card? Answer not_applicable when there are no list items.",
-      "source": "kb://android/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
+      "source": "https://developer.android.com/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
     },
     {
       "id": "glasses.card.click-xor-nested",
@@ -630,7 +630,7 @@
       "severity": "warning",
       "guidance": "Leave onClick as null if the Card contains multiple internal interactive elements, to avoid focus contention.",
       "check": "Does every clickable Card contain no buttons of its own? Answer not_applicable when no card is clickable.",
-      "source": "kb://android/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
+      "source": "https://developer.android.com/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
     },
     {
       "id": "glasses.title-chip.short",
@@ -641,7 +641,7 @@
       "severity": "warning",
       "guidance": "Always center text in a title chip. Never let the title chip go to two lines. Keep the label to three words or less.",
       "check": "Is every TitleChip label three words or fewer, on one line? Answer not_applicable when there are no title chips.",
-      "source": "kb://android/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
+      "source": "https://developer.android.com/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
     },
     {
       "id": "glasses.icon.trigger-is-icon-button",
@@ -652,7 +652,7 @@
       "severity": "warning",
       "guidance": "If an icon serves as a trigger, then you must use an IconButton.",
       "check": "Does every tappable icon use an IconButton rather than a clickable Icon? Answer not_applicable when no icon is tappable.",
-      "source": "kb://android/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
+      "source": "https://developer.android.com/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
     },
     {
       "id": "glasses.icon.no-black-tint",
@@ -663,7 +663,7 @@
       "severity": "warning",
       "guidance": "NEVER use pure black (#000000) for icon tints.",
       "check": "Is no icon tinted #000000?",
-      "source": "kb://android/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
+      "source": "https://developer.android.com/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
     },
     {
       "id": "glasses.progress.honest",
@@ -696,7 +696,7 @@
       "severity": "info",
       "guidance": "Always use a consistent background color and corner radius for every item. Don't vary these unless you are visually grouping different types of content.",
       "check": "Do the items of each List share one background and shape? Answer not_applicable when there is no list.",
-      "source": "kb://android/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
+      "source": "https://developer.android.com/agents/skills/xr/display-glasses-with-jetpack-compose-glimmer/skill"
     },
     {
       "id": "mobile.adaptive.replace-not-stretch",
