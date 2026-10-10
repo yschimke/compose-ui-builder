@@ -66,26 +66,23 @@ class SeedTemplateCatalogReadinessTest {
   }
 
   @Test
-  fun `every template but jetcaster generates source`() {
+  fun `every template generates source`() {
     val failures = catalogs.flatMap { (systemId, catalog) ->
-      UiBuilderNewDesignSeed.templateIds(systemId)
-        .sorted()
-        .filter { "$systemId/$it" !in NOT_EXPORTABLE }
-        .mapNotNull { templateId ->
-          when (val outcome = generate(catalog, seed(systemId, templateId))) {
-            is Generated.Source -> {
-              // Kept on disk: what a catalog repository's round-trip test would compile, and the
-              // only readable evidence that "it generates" means a composable and not a comment.
-              val file = sourceDirectory.resolve("$systemId-$templateId.kt")
-              file.parentFile.mkdirs()
-              file.writeText(outcome.kotlin)
-              if (!outcome.kotlin.contains("@Composable") || !outcome.kotlin.contains("fun "))
-                "$systemId/$templateId: generated no composable function (see $file)"
-              else null
-            }
-            is Generated.Refused -> "$systemId/$templateId: ${outcome.reasons.joinToString("; ")}"
+      UiBuilderNewDesignSeed.templateIds(systemId).sorted().mapNotNull { templateId ->
+        when (val outcome = generate(catalog, seed(systemId, templateId))) {
+          is Generated.Source -> {
+            // Kept on disk: what a catalog repository's round-trip test would compile, and the
+            // only readable evidence that "it generates" means a composable and not a comment.
+            val file = sourceDirectory.resolve("$systemId-$templateId.kt")
+            file.parentFile.mkdirs()
+            file.writeText(outcome.kotlin)
+            if (!outcome.kotlin.contains("@Composable") || !outcome.kotlin.contains("fun "))
+              "$systemId/$templateId: generated no composable function (see $file)"
+            else null
           }
+          is Generated.Refused -> "$systemId/$templateId: ${outcome.reasons.joinToString("; ")}"
         }
+      }
     }
 
     assertEquals(emptyList(), failures, failures.joinToString("\n"))
@@ -120,29 +117,31 @@ class SeedTemplateCatalogReadinessTest {
   }
 
   /**
-   * `jetcaster` refuses, and the reasons it refuses for are the **projection's** — which is why it
-   * is named above rather than waived.
+   * The Jetcaster fixture ([UiBuilderNewDesignSeed.FIXTURE_TEMPLATE]) refuses, and the reasons it
+   * refuses for are the **projection's**. It is no longer an offered template — partly for this,
+   * partly because it uses `m3/snackbar-host`, which the published `m3-catalog` does not carry —
+   * but it is still the benchmark, so what keeps it from exporting stays asserted.
    *
-   * The template is the Jetcaster reference design, drawn to exercise the canvas rather than
-   * written to be exported: it holds an adaptive `SupportingPaneScaffold` with a pane spacing, a
-   * carousel whose `items` is a `CarouselScope` DSL, grid spans belonging to the wrapper around a
-   * node, and `selected` properties comparing a state variable. None of those is a component the
-   * export has not been shown — they are values this vocabulary has no Kotlin for, so no component
-   * record, however complete, makes this document export.
+   * The fixture is the Jetcaster reference design, drawn to exercise the canvas rather than written
+   * to be exported: it holds an adaptive `SupportingPaneScaffold` with a pane spacing, a carousel
+   * whose `items` is a `CarouselScope` DSL, grid spans belonging to the wrapper around a node, and
+   * `selected` properties comparing a state variable. None of those is a component the export has
+   * not been shown — they are values this vocabulary has no Kotlin for, so no component record,
+   * however complete, makes this document export.
    *
    * Asserted rather than skipped because the interesting change is the one that makes it pass: a
-   * template that starts exporting is a template a catalog repository can carry, and this test
-   * failing is how anyone learns that.
+   * fixture that starts exporting is one a catalog repository could carry as a template, and this
+   * test failing is how anyone learns that.
    */
   @Test
   fun `jetcaster refuses for reasons no component record fixes`() {
     val catalog = catalogs.getValue("m3-catalog")
-    val document = seed("m3-catalog", "jetcaster")
+    val document = seed("m3-catalog", UiBuilderNewDesignSeed.FIXTURE_TEMPLATE)
 
     val reasons =
       assertIs<Generated.Refused>(
           generate(catalog, document),
-          "jetcaster exported: drop it from NOT_EXPORTABLE and delete this test",
+          "the Jetcaster fixture exported: it could be offered as a template again",
         )
         .reasons
 
@@ -164,16 +163,6 @@ class SeedTemplateCatalogReadinessTest {
     // The catalog is not the reason: the document validates against it, which is the whole point of
     // separating the two questions a template has to answer.
     assertTrue(CapabilityValidator(catalog).validate(document).structurallyValid)
-  }
-
-  private companion object {
-    /**
-     * `<catalog>/<template>` pairs the Compose export refuses, each with a test below saying why.
-     *
-     * A list of one. It is not a waiver: the named test asserts the refusal and its reasons, so
-     * this entry cannot outlive the problem silently.
-     */
-    val NOT_EXPORTABLE: Set<String> = setOf("m3-catalog/jetcaster")
   }
 
   private sealed interface Generated {

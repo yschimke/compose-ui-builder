@@ -98,7 +98,7 @@ the two empty host sizes:
 | --- | --- |
 | `remote-m3` | `wear-widget-small` (default), `wear-widget-large`, `hello-widget`, `weather-widget` |
 | `wear-m3` | `wear-list` (default), `wear-screen` |
-| `m3-catalog` | `jetcaster` (default), `blank` |
+| `m3-catalog` | the Jetcaster benchmark workspace (default), `blank`, `hello`, `list-detail`, `supporting-pane`, `adaptive-feed`, `adaptive-navigation` |
 
 `wear-m3` opens a Wear screen and `m3-catalog` (the default) a phone screen. Each catalog keeps its
 own workspace, in a subdirectory named after it, and a named template keeps one of its own beneath

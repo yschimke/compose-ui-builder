@@ -476,7 +476,10 @@ public enum class OfflineCatalog(
   /** What a new workspace in this catalog starts as when no template is asked for. */
   val defaultTemplateId: String,
 ) {
-  M3("m3-catalog", "m3-catalog-capabilities-v1.json", UiBuilderNewDesignSeed.DEFAULT_TEMPLATE),
+  // The desktop's own workspace is the Jetcaster benchmark, which is no longer a template the web
+  // host's New design form offers (it does not export, and the published m3-catalog lacks its
+  // `m3/snackbar-host`); [seed] answers it from the fixture before the offered set is consulted.
+  M3("m3-catalog", "m3-catalog-capabilities-v1.json", UiBuilderNewDesignSeed.FIXTURE_TEMPLATE),
   WEAR_M3("wear-m3", "wear-m3-capabilities-v1.json", UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE),
   REMOTE_M3("remote-m3", "remote-m3-capabilities-v1.json", "wear-widget-small");
 

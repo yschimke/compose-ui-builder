@@ -92,6 +92,22 @@
         "at any time"
       ],
       "minimumReleaseAge": null
+    },
+    {
+      "description": "The design-render workflow's compose-preview-server pin, at any time and automerged. It fell a week behind the weekly schedule: compose-ai-tools 2.38.0 (#617) made a call the pinned server source still used internal, and every Design Renders run was red until #628 moved the pin by hand. Safe to automerge because the pin PR's own Design Renders job builds and renders with the new server commit, so a pin that does not work fails its PR rather than main. Placed after the no-automerge rule, since the last match wins.",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDepNames": [
+        "yschimke/compose-preview-server"
+      ],
+      "schedule": [
+        "at any time"
+      ],
+      "automerge": true,
+      "automergeSchedule": [
+        "at any time"
+      ]
     }
   ],
   "customManagers": [

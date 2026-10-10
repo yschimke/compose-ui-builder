@@ -22,8 +22,24 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 object UiBuilderNewDesignSeed {
 
-  /** The template a URL that names none is asking for. */
-  const val DEFAULT_TEMPLATE: String = "jetcaster"
+  /**
+   * The template a request that names none is asking for: [BLANK_TEMPLATE], which is also what an
+   * owned `m3-catalog` defaults to (the first template its policy lists), so the default does not
+   * change at the cutover. It was the Jetcaster fixture, re-pinned; see [FIXTURE_TEMPLATE].
+   */
+  const val DEFAULT_TEMPLATE: String = "blank"
+
+  /**
+   * The Jetcaster benchmark fixture re-pinned to the served catalog — the fallback [document]
+   * answers for a template it does not recognise.
+   *
+   * No longer offered by [templateIds]. It is the builder's fidelity benchmark rather than a place
+   * to start a design: it does not export (its carousel and state-comparison `selected` have no
+   * Kotlin in the projection), and it uses `m3/snackbar-host`, which the published `m3-catalog`
+   * deliberately does not carry, so on a catalog-served host it failed to create at all. Tests and
+   * the benchmark seed it by this name.
+   */
+  const val FIXTURE_TEMPLATE: String = "jetcaster"
 
   /** An empty `ScreenScaffold` over an empty `TransformingLazyColumn`. */
   const val WEAR_SCREEN_TEMPLATE: String = "wear-screen"
@@ -56,8 +72,8 @@ object UiBuilderNewDesignSeed {
       "wear-m3" -> setOf(WEAR_SCREEN_TEMPLATE, WEAR_LIST_TEMPLATE)
       A2uiDocumentExporter.CATALOG_SYSTEM_ID -> setOf(A2UI_TEMPLATE)
       LauncherWidgetTemplates.CATALOG_SYSTEM_ID -> LauncherWidgetTemplates.ids
-      "m3-catalog" -> setOf("blank", HELLO_TEMPLATE, DEFAULT_TEMPLATE) + AdaptiveScreenTemplates.ids
-      else -> setOf("blank", DEFAULT_TEMPLATE)
+      "m3-catalog" -> setOf(BLANK_TEMPLATE, HELLO_TEMPLATE) + AdaptiveScreenTemplates.ids
+      else -> setOf(BLANK_TEMPLATE)
     }
 
   /**
@@ -174,7 +190,7 @@ object UiBuilderNewDesignSeed {
    *
    * [fixture] is the Jetcaster operations fixture the builder ships beside its Wasm bundle. Every
    * template reads its environment from that fixture's own `createDesign` rather than restating a
-   * default, and the `jetcaster` template *is* it, re-pinned. The catalog pin is rewritten from the
+   * default, and [FIXTURE_TEMPLATE] *is* it, re-pinned. The catalog pin is rewritten from the
    * catalog actually being served, because a document pinned to a revision this server does not
    * serve is one the service will refuse.
    */
@@ -271,7 +287,7 @@ object UiBuilderNewDesignSeed {
           designId = designId,
           catalogPin = catalogPin,
           // A phone, not the fixture's 1280x800 supporting-pane canvas — see
-          // [mobileScreenEnvironment]. The Jetcaster template below keeps the fixture's own frame,
+          // [mobileScreenEnvironment]. [FIXTURE_TEMPLATE] below keeps the fixture's own frame,
           // which is the design it was built to show.
           environment = mobileScreenEnvironment(environment),
           state = state,
