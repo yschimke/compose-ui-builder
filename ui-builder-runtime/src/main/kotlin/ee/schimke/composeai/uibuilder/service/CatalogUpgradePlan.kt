@@ -276,10 +276,27 @@ internal fun planCatalogUpgrade(
         slots = slots,
       )
     }
+  // A property the target REQUIRES and the design never set: given the generator's own placeholder
+  // rather than left to block the move. Without it a tab row drawn before `selectedTabIndex` became
+  // required could never be upgraded, and the automatic recovery left the design stranded for good.
+  // A warning, so the person accepting the move sees which value was chosen for them.
+  val (filledCandidate, filled) =
+    document.copy(catalogPin = targetPin, nodes = nodes).withRequiredPlaceholders(target)
+  filled.forEach { (nodeId, property, value) ->
+    changes += AddCatalogUpgradeChangeV1(propertyPath(nodeId, property), value.encoded())
+    issues +=
+      CatalogUpgradeIssueV1(
+        CatalogUpgradeIssueSeverityV1.WARNING,
+        "REQUIRED_PROPERTY_FILLED",
+        propertyPath(nodeId, property),
+        "the target catalog requires $property, which this design never set; it is given " +
+          "${value.encoded()} -- change it if that is not what was meant",
+      )
+  }
   changes +=
     ReplaceCatalogUpgradeChangeV1("/catalogPin", document.catalogPin.encoded(), targetPin.encoded())
   return CatalogUpgradeOutcome(
-    candidate = document.copy(catalogPin = targetPin, nodes = nodes),
+    candidate = filledCandidate,
     changes = changes,
     issues = issues,
   )

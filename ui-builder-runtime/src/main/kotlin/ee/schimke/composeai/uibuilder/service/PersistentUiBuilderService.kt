@@ -406,7 +406,13 @@ public class PersistentUiBuilderService(
   private val store: UiBuilderDesignStore = designStore.store
   private val loadedPersistence = store.load()
   private var persisted: PersistedServiceV1 =
-    PersistedServiceV1(loadedPersistence.designs.mapValues { (_, design) -> design.rePinned() })
+    PersistedServiceV1(
+      loadedPersistence.designs.mapValues { (_, design) ->
+        // Filled first: `rePinned` validates before it moves a pin, and a newly required property
+        // the design lacks is exactly what would make it refuse.
+        design.withNewlyRequiredFilled().rePinned()
+      }
+    )
   private val rePin: RePinOutcome = persistRePins()
   private val runtime = linkedMapOf<String, RuntimeDesign>()
   private var nextSubscriberId = 1L
@@ -555,6 +561,31 @@ public class PersistentUiBuilderService(
     )
       return this
     return copy(document = document.copy(catalogPin = served))
+  }
+
+  /**
+   * The same design with the required properties its catalog started requiring filled in
+   * ([withRequiredPlaceholders]), when that is the ONLY thing wrong with it.
+   *
+   * A design whose pin resolves but whose tab row predates `selectedTabIndex` becoming required was
+   * refused on every request (`invalid stored design …: required property selectedTabIndex is
+   * missing`), and nothing an owner could do in the editor reached it, because the editor never
+   * opened. Filling the generator's own placeholder makes it openable and editable again; the value
+   * is real and stays the owner's to change.
+   *
+   * Narrow on purpose: only when the probe fails, the fill changes something, and the filled
+   * document then validates. A design with any other defect is returned untouched and keeps its
+   * honest refusal. Written through to the store by [persistRePins], like a moved pin.
+   */
+  private fun PersistedDesignV1.withNewlyRequiredFilled(): PersistedDesignV1 {
+    val catalog = catalogs.resolve(document.catalogPin) ?: return this
+    fun probe(candidate: DesignDocumentV1) =
+      candidate.withoutProperties(undeclaredProperties(candidate, catalog))
+    if (catalogs.validate(probe(document), catalog) == null) return this
+    val (filled, changed) = document.withRequiredPlaceholders(catalog)
+    if (changed.isEmpty()) return this
+    if (catalogs.validate(probe(filled), catalog) != null) return this
+    return copy(document = filled)
   }
 
   /** What the startup re-pin did, for the health surface. */
