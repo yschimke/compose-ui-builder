@@ -46,7 +46,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@183bb9f70e1a344ae99e31e859f81469d0bce9bf # main
+    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@f445e8065f7541f1d70daf9fb29c3b1b6542e216 # main
     with:
       # The Material 3 designs, against m3-catalog's own bundle off its delivery branch in the
       # m3-catalog-out output repository. No `lane`: this call keeps the comment and branches it
@@ -72,7 +72,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@183bb9f70e1a344ae99e31e859f81469d0bce9bf # main
+    uses: yschimke/compose-preview-server/.github/workflows/ui-builder-designs-reusable.yml@f445e8065f7541f1d70daf9fb29c3b1b6542e216 # main
     with:
       # The Wear designs, against wear-m3-catalog's bundle. Compiled against the m3 bundle they fail
       # at `Unresolved reference 'wear'`. `wear-m3` is record-free, so there is no `components`.
