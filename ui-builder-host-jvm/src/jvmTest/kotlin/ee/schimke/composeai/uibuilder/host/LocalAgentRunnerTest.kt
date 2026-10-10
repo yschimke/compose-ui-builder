@@ -20,9 +20,10 @@ class LocalAgentRunnerTest {
   @Test
   fun `commands never put prompt text in argv and retain restrictions when resuming`() {
     for (harness in LocalHarness.entries) {
-      val command = harness.command(Path.of("/trusted/agent"), sessionId)
+      val id = if (harness == LocalHarness.OpenCode) "ses_abc123" else sessionId
+      val command = harness.command(Path.of("/trusted/agent"), id)
       assertEquals("/trusted/agent", command.first())
-      assertTrue(sessionId in command)
+      assertTrue(id in command)
       assertFalse(command.any { "bypass" in it || "dangerously" in it })
       if (harness == LocalHarness.Codex) {
         assertTrue("read-only" in command)
@@ -35,6 +36,11 @@ class LocalAgentRunnerTest {
         assertTrue("features.daemon_auto_start=false" in command)
         assertTrue("--ignore-user-config" in command)
         assertTrue("approval_policy=\"never\"" in command)
+      } else if (harness == LocalHarness.OpenCode) {
+        assertTrue("compose-chat" in command)
+        assertTrue("--session" in command)
+        assertFalse("--continue" in command)
+        assertFalse("--share" in command)
       } else {
         assertEquals("", command[command.indexOf("--tools") + 1])
         assertTrue("--strict-mcp-config" in command)
@@ -56,6 +62,61 @@ class LocalAgentRunnerTest {
     assertFails { LocalHarness.Codex.parse(codex.substringBefore("{\"type\":\"turn.completed\"}")) }
     assertFails { LocalHarness.Codex.parse("""{"type":"error","message":"sensitive"}""") }
     assertFails { LocalHarness.Claude.parse(result.replace("false", "true")) }
+  }
+
+  @Test
+  fun `opencode accepts only completed private text and its own session ids`() {
+    val events =
+      """{"type":"step_start","sessionID":"ses_abc123"}
+{"type":"reasoning","sessionID":"ses_abc123","part":{"text":"Private reasoning"}}
+{"type":"text","sessionID":"ses_abc123","part":{"text":"Review"}}
+{"type":"step_finish","sessionID":"ses_abc123","part":{"reason":"stop"}}"""
+    assertEquals(LocalAgentAnswer("Review", "ses_abc123"), LocalHarness.OpenCode.parse(events))
+    assertFails { LocalHarness.OpenCode.parse(events.replace("stop", "tool-calls")) }
+    assertFails { LocalHarness.OpenCode.parse(events + "\n{\"type\":\"error\"}") }
+    assertFails { LocalHarness.OpenCode.parse(events.replace("ses_abc123", "--continue")) }
+    assertFails { LocalHarness.Claude.command(Path.of("/trusted/agent"), "ses_abc123") }
+  }
+
+  @Test
+  fun `opencode isolates configuration while retaining native login storage`() = runBlocking {
+    if (System.getProperty("os.name").startsWith("Windows")) return@runBlocking
+    val directory = Files.createTempDirectory("opencode-input")
+    try {
+      val executable =
+        fixture(
+          directory,
+          """
+cat > prompt.txt
+printf '%s' "${'$'}OPENCODE_CONFIG_CONTENT" > config.json
+printf '%s' "${'$'}XDG_CONFIG_HOME" > config-home.txt
+printf '%s' "${'$'}OPENCODE_PERMISSION" > permission.json
+printf '%s\n' '{"type":"text","sessionID":"ses_abc123","part":{"text":"Review"}}' '{"type":"step_finish","sessionID":"ses_abc123","part":{"reason":"stop"}}'
+""",
+        )
+      assertEquals(
+        "Review",
+        LocalAgentRunner().run(LocalHarness.OpenCode, executable, directory, "Snapshot", null).text,
+      )
+      assertEquals("Snapshot", Files.readString(directory.resolve("prompt.txt")))
+      assertEquals(
+        directory.resolve("config").toString(),
+        Files.readString(directory.resolve("config-home.txt")),
+      )
+      assertEquals("{\"*\":\"deny\"}", Files.readString(directory.resolve("permission.json")))
+      assertTrue(
+        Files.readString(directory.resolve("config.json")).contains("\"share\":\"disabled\"")
+      )
+      assertTrue(
+        localAgentEnvironment(
+            mapOf("OPENCODE_CONFIG_CONTENT" to "untrusted", "ANTHROPIC_API_KEY" to "secret"),
+            LocalHarness.OpenCode,
+          )
+          .isEmpty()
+      )
+    } finally {
+      directory.toFile().deleteRecursively()
+    }
   }
 
   @Test
@@ -151,6 +212,16 @@ class LocalAgentRunnerTest {
           LocalAgentRunner().run(LocalHarness.Claude, failed, directory, "hello", null)
         }
         assertFalse(failure.message.orEmpty().contains("sensitive-provider-error"))
+        val unsupported =
+          fixture(
+            directory,
+            "cat >/dev/null\necho 'unknown field features.new_flag sensitive-token' >&2\nexit 1",
+          )
+        val versionFailure =
+          assertFailsWith<UnsupportedLocalAgentException> {
+            LocalAgentRunner().run(LocalHarness.Codex, unsupported, directory, "hello", null)
+          }
+        assertFalse(versionFailure.message.orEmpty().contains("sensitive-token"))
       } finally {
         directory.toFile().deleteRecursively()
       }

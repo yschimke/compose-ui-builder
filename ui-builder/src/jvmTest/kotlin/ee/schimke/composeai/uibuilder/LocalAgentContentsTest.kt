@@ -58,6 +58,7 @@ class LocalAgentContentsTest {
             listOf(
               UiBuilderLocalHarness("codex", "Codex", true),
               UiBuilderLocalHarness("claude", "Claude Code", true),
+              UiBuilderLocalHarness("opencode", "OpenCode", true),
             )
           override var selected by mutableStateOf("codex")
           override val conversation = UiBuilderChatController(provider, scope)
@@ -77,6 +78,9 @@ class LocalAgentContentsTest {
     onNodeWithText("Monitor comments while open").assertDoesNotExist()
     onNodeWithText("Claude Code").performClick()
     assertEquals("claude", local.selected)
+    onNodeWithText("OpenCode").performClick()
+    assertEquals("opencode", local.selected)
+    assertEquals(0, provider.requests)
     onNodeWithText("Message").performScrollTo().performTextReplacement("Review this")
     onNodeWithText("Send").performScrollTo().performClick()
     waitForIdle()
@@ -99,6 +103,7 @@ class LocalAgentContentsTest {
             listOf(
               UiBuilderLocalHarness("codex", "Codex", true),
               UiBuilderLocalHarness("claude", "Claude Code", true),
+              UiBuilderLocalHarness("opencode", "OpenCode", true),
             )
           override val selected = "codex"
           override val conversation = UiBuilderChatController(ChatHost(), scope)

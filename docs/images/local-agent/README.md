@@ -5,7 +5,7 @@ chat; the [web external handoff panel](../browser-chat/desktop-handoff.png) is a
 existing web agent surface.
 
 These captures show the actual common local-agent panel at 440 px and 320 px, with a fake host
-reporting both harnesses installed. They omit dialog chrome and do not exercise real CLI login or
+reporting all three harnesses installed. They omit dialog chrome and do not exercise real CLI login or
 paid inference. `LocalAgentContentsTest` regenerates them under `ui-builder/build/local-agent`.
 
 | Desktop | Compact |

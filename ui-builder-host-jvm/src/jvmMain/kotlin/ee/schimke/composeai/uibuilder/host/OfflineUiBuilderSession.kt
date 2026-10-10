@@ -433,6 +433,7 @@ fun OfflineUiBuilderSessionView(
           }
         }
       }
+    LaunchedEffect(localAgent, previewDocument) { localAgent?.conversation?.stop() }
     DisposableEffect(localAgent) { onDispose { localAgent?.close() } }
     LaunchedEffect(localAgent, localAgent?.conversation, comments, commentStatus) {
       localAgent

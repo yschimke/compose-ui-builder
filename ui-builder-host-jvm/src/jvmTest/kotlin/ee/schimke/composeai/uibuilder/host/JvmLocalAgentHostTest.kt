@@ -70,12 +70,59 @@ printf '%s' '{"type":"result","is_error":false,"result":"Private review","sessio
       withTimeout(5_000) { while (reopened.conversation.busy) delay(10) }
       assertTrue(Files.readString(workspace.resolve("arguments.txt")).contains("--resume\n$id"))
       assertFalse(Files.readString(workspace.resolve("prompt.txt")).contains("Review this"))
+      assertTrue(Files.readString(workspace.resolve("prompt.txt")).contains("snapshot unchanged"))
       reopened.conversation.clear()
       reopened.conversation.send("New conversation")
       withTimeout(5_000) { while (reopened.conversation.busy) delay(10) }
       assertFalse(Files.readString(workspace.resolve("arguments.txt")).contains("--resume"))
       assertFalse(Files.readString(storage.resolve("claude/chat.json")).contains("Review this"))
       reopened.close()
+    } finally {
+      directory.toFile().deleteRecursively()
+    }
+  }
+
+  @Test
+  fun `opencode resumes its own native id after reopening`() = runBlocking {
+    if (System.getProperty("os.name").startsWith("Windows")) return@runBlocking
+    val directory = Files.createTempDirectory("opencode-host")
+    try {
+      val cli = directory.resolve("opencode")
+      Files.writeString(
+        cli,
+        """#!/bin/sh
+printf '%s\n' "${'$'}@" > arguments.txt
+cat > prompt.txt
+printf '%s\n' '{"type":"text","sessionID":"ses_abc123","part":{"text":"Review"}}' '{"type":"step_finish","sessionID":"ses_abc123","part":{"reason":"stop"}}'
+""",
+      )
+      cli.toFile().setExecutable(true)
+      val storage = directory.resolve("history")
+      fun host() =
+        JvmLocalAgentHost(
+          storage,
+          "viewer",
+          this,
+          false,
+          { "Snapshot" },
+          { mapOf(LocalHarness.OpenCode to cli) },
+        )
+      val first = host()
+      assertEquals("opencode", first.selected)
+      first.conversation.send("Review")
+      withTimeout(5_000) { while (first.conversation.busy) delay(10) }
+      assertEquals("Review", first.conversation.session.messages.last().content)
+      first.close()
+      val restored = host()
+      restored.conversation.send("Follow up")
+      withTimeout(5_000) { while (restored.conversation.busy) delay(10) }
+      val arguments = storage.resolve("opencode/workspace/arguments.txt")
+      assertTrue(Files.readString(arguments).contains("--session\nses_abc123"))
+      restored.conversation.clear()
+      restored.conversation.send("New")
+      withTimeout(5_000) { while (restored.conversation.busy) delay(10) }
+      assertFalse(Files.readString(arguments).contains("--session"))
+      restored.close()
     } finally {
       directory.toFile().deleteRecursively()
     }

@@ -21,11 +21,12 @@ import kotlinx.serialization.json.jsonPrimitive
 
 internal enum class LocalHarness(val id: String, val label: String) {
   Codex("codex", "Codex"),
-  Claude("claude", "Claude Code");
+  Claude("claude", "Claude Code"),
+  OpenCode("opencode", "OpenCode");
 
   fun command(executable: Path, sessionId: String?): List<String> {
     require(executable.isAbsolute)
-    sessionId?.let { UUID.fromString(it) }
+    sessionId?.let { validateSessionId(it) }
     return when (this) {
       Codex ->
         buildList {
@@ -82,6 +83,12 @@ internal enum class LocalHarness(val id: String, val label: String) {
           if (sessionId != null) addAll(listOf("resume", sessionId))
           add("-")
         }
+      OpenCode ->
+        buildList {
+          add(executable.toString())
+          addAll(listOf("run", "--format", "json", "--agent", "compose-chat"))
+          if (sessionId != null) addAll(listOf("--session", sessionId))
+        }
       Claude ->
         buildList {
           add(executable.toString())
@@ -113,6 +120,11 @@ internal enum class LocalHarness(val id: String, val label: String) {
     }
   }
 
+  fun validateSessionId(id: String) {
+    if (this == OpenCode) require(id.matches(Regex("ses_[A-Za-z0-9]{1,100}")))
+    else UUID.fromString(id)
+  }
+
   fun parse(output: String): LocalAgentAnswer {
     var sessionId: String? = null
     var answer: String? = null
@@ -124,6 +136,24 @@ internal enum class LocalHarness(val id: String, val label: String) {
       sessionId = result.string("session_id")
       answer = result.string("result")
       completed = true
+    } else if (this == OpenCode) {
+      val parts = mutableListOf<String>()
+      for (line in output.lineSequence().filter { it.isNotBlank() }) {
+        val event = Json.parseToJsonElement(line).jsonObject
+        event.string("sessionID")?.let {
+          validateSessionId(it)
+          require(sessionId == null || sessionId == it)
+          sessionId = it
+        }
+        when (event.string("type")) {
+          "text" -> event["part"]?.jsonObject?.string("text")?.let(parts::add)
+          "step_finish" -> completed = event["part"]?.jsonObject?.string("reason") == "stop"
+          "tool_use",
+          "error" -> error("Local agent failed")
+        }
+      }
+      require(sessionId != null)
+      answer = parts.joinToString("\n")
     } else {
       for (line in output.lineSequence().filter { it.isNotBlank() }) {
         val event = Json.parseToJsonElement(line).jsonObject
@@ -140,7 +170,7 @@ internal enum class LocalHarness(val id: String, val label: String) {
       }
     }
     require(completed && !answer.isNullOrBlank()) { "Local agent returned no answer" }
-    sessionId?.let { UUID.fromString(it) }
+    sessionId?.let { validateSessionId(it) }
     return LocalAgentAnswer(answer, sessionId)
   }
 }
@@ -160,7 +190,14 @@ internal fun discoverLocalHarnesses(
       .split(java.io.File.pathSeparator)
       .filter { it.isNotBlank() }
       .mapNotNull { runCatching { Path.of(it) }.getOrNull() }
-      .filter { it.isAbsolute } + listOf(home.resolve(".local/bin"), home.resolve(".cargo/bin"))
+      .filter { it.isAbsolute } +
+      listOf(
+        home.resolve(".local/bin"),
+        home.resolve(".cargo/bin"),
+        home.resolve(".opencode/bin"),
+        Path.of("/opt/homebrew/bin"),
+        Path.of("/usr/local/bin"),
+      )
   return LocalHarness.entries
     .mapNotNull { harness ->
       directories
@@ -181,6 +218,8 @@ internal fun localAgentEnvironment(
     setOf(
       "PATH",
       "HOME",
+      "USER",
+      "LOGNAME",
       "USERPROFILE",
       "APPDATA",
       "LOCALAPPDATA",
@@ -204,16 +243,22 @@ internal fun localAgentEnvironment(
       "NODE_EXTRA_CA_CERTS",
     )
   val login =
-    if (harness == LocalHarness.Codex) setOf("CODEX_HOME", "OPENAI_API_KEY")
-    else
-      setOf(
-        "CLAUDE_CONFIG_DIR",
-        "ANTHROPIC_API_KEY",
-        "ANTHROPIC_AUTH_TOKEN",
-        "CLAUDE_CODE_OAUTH_TOKEN",
-      )
+    when (harness) {
+      LocalHarness.Codex -> setOf("CODEX_HOME", "OPENAI_API_KEY")
+      LocalHarness.OpenCode -> emptySet()
+      LocalHarness.Claude ->
+        setOf(
+          "CLAUDE_CONFIG_DIR",
+          "ANTHROPIC_API_KEY",
+          "ANTHROPIC_AUTH_TOKEN",
+          "CLAUDE_CODE_OAUTH_TOKEN",
+        )
+    }
   return environment.filterKeys { it.uppercase() in names + login || it.startsWith("LC_") }
 }
+
+internal class UnsupportedLocalAgentException :
+  IllegalStateException("Unsupported local CLI version")
 
 internal class LocalAgentRunner(private val timeoutMillis: Long = 120_000) {
   suspend fun run(
@@ -231,6 +276,32 @@ internal class LocalAgentRunner(private val timeoutMillis: Long = 120_000) {
         val environment = localAgentEnvironment(builder.environment(), harness)
         builder.environment().clear()
         builder.environment().putAll(environment)
+        if (!System.getProperty("os.name").startsWith("Windows")) {
+          builder.environment()["PATH"] =
+            (environment["PATH"].orEmpty().split(java.io.File.pathSeparator) +
+                listOf("/opt/homebrew/bin", "/usr/local/bin"))
+              .filter { it.isNotBlank() }
+              .distinct()
+              .joinToString(java.io.File.pathSeparator)
+        }
+        if (harness == LocalHarness.OpenCode) {
+          // Keep the CLI's own data/auth store, but isolate executable user/project config.
+          val config = directory.resolve("config").toAbsolutePath()
+          Files.createDirectories(config)
+          builder
+            .environment()
+            .putAll(
+              mapOf(
+                "XDG_CONFIG_HOME" to config.toString(),
+                "OPENCODE_CONFIG_DIR" to config.resolve("opencode").toString(),
+                "OPENCODE_DISABLE_PROJECT_CONFIG" to "true",
+                "OPENCODE_DISABLE_AUTOUPDATE" to "true",
+                "OPENCODE_PERMISSION" to "{\"*\":\"deny\"}",
+                "OPENCODE_CONFIG_CONTENT" to
+                  """{"autoupdate":false,"share":"disabled","permission":{"*":"deny"},"agent":{"compose-chat":{"mode":"primary","description":"Private design advice","permission":{"*":"deny"},"steps":1}}}""",
+              )
+            )
+        }
         val process = builder.start()
         try {
           coroutineScope {
@@ -245,15 +316,23 @@ internal class LocalAgentRunner(private val timeoutMillis: Long = 120_000) {
                 }
               }
             val output = async(Dispatchers.IO) { boundedOutput(process.inputStream) }
-            val errors =
-              async(Dispatchers.IO) {
-                boundedOutput(process.errorStream)
-                Unit
-              }
+            val errors = async(Dispatchers.IO) { boundedOutput(process.errorStream) }
             process.outputStream.bufferedWriter(Charsets.UTF_8).use { it.write(prompt) }
-            require(exit.await() == 0) { "Local agent failed" }
+            val status = exit.await()
             val text = output.await()
-            errors.await()
+            val diagnostics = errors.await()
+            if (status != 0) {
+              val unsupported =
+                listOf(
+                    "unexpected argument",
+                    "unknown field",
+                    "unknown config",
+                    "unrecognized option",
+                  )
+                  .any { diagnostics.contains(it, ignoreCase = true) }
+              if (unsupported) throw UnsupportedLocalAgentException()
+              error("Local agent failed")
+            }
             ensureActive()
             harness.parse(text)
           }

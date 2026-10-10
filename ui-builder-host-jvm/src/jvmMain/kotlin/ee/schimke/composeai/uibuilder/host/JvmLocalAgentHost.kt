@@ -100,8 +100,11 @@ internal constructor(
       Desktop.getDesktop()
         .browse(
           URI(
-            if (harness == LocalHarness.Codex) "https://developers.openai.com/codex/cli/"
-            else "https://code.claude.com/docs/en/setup"
+            when (harness) {
+              LocalHarness.Codex -> "https://developers.openai.com/codex/cli/"
+              LocalHarness.Claude -> "https://code.claude.com/docs/en/setup"
+              LocalHarness.OpenCode -> "https://opencode.ai/docs/"
+            }
           )
         )
     }
@@ -118,7 +121,9 @@ internal constructor(
 
     override val rememberConnection = false
     override val monitoringAvailable = this@JvmLocalAgentHost.monitoringAvailable
-    override val failureNotice = "Agent failed. Check its local login and update the CLI."
+    private var lastFailure = "Agent failed. Check its local login and update the CLI."
+    override val failureNotice
+      get() = lastFailure
 
     override fun connect() = refresh()
 
@@ -144,6 +149,12 @@ internal constructor(
     override suspend fun complete(model: String, messages: List<UiBuilderChatMessage>): String {
       val executable = requireNotNull(executables[provider])
       val resume = record.sessionId
+      val snapshot = context().take(64_000)
+      val snapshotHash =
+        java.security.MessageDigest.getInstance("SHA-256")
+          .digest(snapshot.toByteArray(Charsets.UTF_8))
+          .joinToString("") { "%02x".format(it) }
+      val unchanged = resume != null && record.snapshotHash == snapshotHash
       // A failed/canceled native turn may have changed its transcript: next time start from
       // the app's last known history, rather than silently resuming that partial turn.
       record = record.copy(sessionId = null)
@@ -154,7 +165,8 @@ internal constructor(
           "Use only this supplied snapshot. No tool calls, local file access or shared writes.\n"
         )
         append(preferences.instructions().take(4_000)).append('\n')
-        append(context().take(64_000)).append('\n')
+        append(if (unchanged) "Design snapshot unchanged since the last turn." else snapshot)
+          .append('\n')
         val turns = if (resume == null) messages else messages.takeLast(1)
         var remaining = 48_000
         turns
@@ -166,17 +178,24 @@ internal constructor(
           .asReversed()
           .forEach { append(it.role).append(": ").append(it.content).append('\n') }
       }
+      lastFailure = "Agent failed. Check its local login and update the CLI."
       val result =
-        LocalAgentRunner().run(provider, executable, directory.resolve("workspace"), input, resume)
+        try {
+          LocalAgentRunner()
+            .run(provider, executable, directory.resolve("workspace"), input, resume)
+        } catch (failure: UnsupportedLocalAgentException) {
+          lastFailure = "CLI version unsupported. Update the local agent."
+          throw failure
+        }
       currentCoroutineContext().ensureActive()
-      record = record.copy(sessionId = result.sessionId ?: resume)
+      record = record.copy(sessionId = result.sessionId ?: resume, snapshotHash = snapshotHash)
       return result.text
     }
 
     private fun loadRecord(): LocalAgentRecord = runCatching {
       require(Files.size(store) <= 600_000)
       val saved = Json.decodeFromString<LocalAgentRecord>(Files.readString(store))
-      saved.sessionId?.let { java.util.UUID.fromString(it) }
+      saved.sessionId?.let { provider.validateSessionId(it) }
       saved.copy(
         chat =
           saved.chat.copy(
@@ -216,4 +235,5 @@ internal constructor(
 private data class LocalAgentRecord(
   val chat: UiBuilderChatSession = UiBuilderChatSession(),
   val sessionId: String? = null,
+  val snapshotHash: String? = null,
 )
