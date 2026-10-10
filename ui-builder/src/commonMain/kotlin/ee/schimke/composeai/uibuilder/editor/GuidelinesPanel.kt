@@ -70,6 +70,22 @@ internal fun GuidelinesSection(
       controller.loadAccess()
       controller.loadShared()
     }
+    // A prompt left open is rebuilt when the design moves on, so it never shows (or copies) an
+    // earlier revision's tree, source and pictures as the current request. Keyed on the prompt
+    // too: a prompt still loading when the design is edited lands with the old revision, and is
+    // rebuilt then. Once per revision, so a host that answers with another revision cannot loop.
+    var rebuiltFor by remember(controller) { mutableStateOf<Int?>(null) }
+    LaunchedEffect(controller, document.revision, prompt) {
+      val shown = prompt as? DesignGuidelineController.PromptView.Shown
+      if (
+        shown != null &&
+          shown.request.revision != document.revision &&
+          rebuiltFor != document.revision
+      ) {
+        rebuiltFor = document.revision
+        controller.preview(document, DesignGuidelineController.encode(document))
+      }
+    }
     var local: DesignGuidelineResult? = null
     when (val current = state) {
       is DesignGuidelineState.NeedsKey -> {
@@ -105,11 +121,17 @@ internal fun GuidelinesSection(
           ) {
             Text(if (current.running) "Checking…" else "Check guidelines")
           }
+          // Not while a check runs: its result would land on the source it started with and
+          // silently switch the person back.
           if (current.onServer) {
-            TextButton(onClick = controller::useOwnKey) { Text("Use my own key") }
+            TextButton(onClick = controller::useOwnKey, enabled = !current.running) {
+              Text("Use my own key")
+            }
           } else {
             if (controller.canUseServer) {
-              TextButton(onClick = controller::useServer) { Text("Use this server's key") }
+              TextButton(onClick = controller::useServer, enabled = !current.running) {
+                Text("Use this server's key")
+              }
             }
             TextButton(onClick = { settingsOpen = !settingsOpen }) {
               Text(if (settingsOpen) "Done" else "Model & key")

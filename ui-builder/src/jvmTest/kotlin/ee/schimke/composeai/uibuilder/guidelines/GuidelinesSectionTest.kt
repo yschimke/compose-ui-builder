@@ -52,6 +52,30 @@ class GuidelinesSectionTest {
   }
 
   @Test
+  fun `a prompt that lands for an earlier revision is rebuilt for the design on screen`() =
+    runComposeUiTest {
+      val controller = DesignGuidelineController(Host(key = null))
+      // A prompt built while the design was at an earlier revision, as one still loading during
+      // an edit lands once the revision has moved on.
+      val earlier = document().copy(revision = 0)
+      kotlinx.coroutines.runBlocking {
+        controller.preview(earlier, DesignGuidelineController.encode(earlier))
+      }
+      assertEquals(
+        0,
+        assertIs<DesignGuidelineController.PromptView.Shown>(controller.prompt.value)
+          .request
+          .revision,
+      )
+      setContent { MaterialTheme { IssuesPanel(controller, {}) } }
+      waitUntil(timeoutMillis = 5_000) {
+        (controller.prompt.value as? DesignGuidelineController.PromptView.Shown)
+          ?.request
+          ?.revision == 1
+      }
+    }
+
+  @Test
   fun `the prompt is readable without a key, with where it came from`() = runComposeUiTest {
     val controller = DesignGuidelineController(Host(key = null))
     setContent { MaterialTheme { IssuesPanel(controller, {}) } }

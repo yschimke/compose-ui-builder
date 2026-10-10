@@ -389,6 +389,25 @@ class DesignGuidelinesTest {
     assertFalse(controller.canUseServer)
   }
 
+  @Test
+  fun `a record from before a rule was renamed still reads as that rule`() {
+    val record =
+      DesignGuidelineRecord(
+        revision = 1,
+        model = "m",
+        rulesVersion = 5,
+        asked = listOf("wear.containers-have-actions"),
+        verdicts =
+          DesignGuidelinePrompt.parseVerdicts(
+            """{"verdicts":[{"ruleId":"wear.containers-have-actions","verdict":"fail",""" +
+              """"confidence":0.9,"nodeIds":["stop"],"reason":"No action."}]}"""
+          ),
+      )
+    val finding = record.toResult(DesignGuidelineRuleSet.Bundled).findings.single()
+    assertEquals("wear.containers-have-actions", finding.rule.id)
+    assertTrue(finding.rule.guidance.isNotBlank(), "the renamed rule's guidance is found")
+  }
+
   private class FakeHost(key: String?) : DesignGuidelineHost {
     private var key: String? = key
     private var model: String? = null

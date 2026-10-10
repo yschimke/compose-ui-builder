@@ -1611,6 +1611,13 @@ private fun LiveSessionApp(
         )
       }
     LaunchedEffect(guidelines) { guidelines.completeSignIn() }
+    // The design's recorded result and this account's access, read when the design opens rather
+    // than when the Issues panel first does, so the canvas overlay shows a recorded finding at
+    // once.
+    LaunchedEffect(guidelines) {
+      guidelines.loadAccess()
+      guidelines.loadShared()
+    }
     CompositionLocalProvider(LocalDesignGuidelineCheck provides guidelines) {
       UiBuilderEditor(
         document = loadedDocument,
