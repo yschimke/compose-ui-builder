@@ -221,7 +221,7 @@ composeai-preview-daemon = "3.15.2"
 # 3.20.0 adds the `expr` and `system` values and the `remoteCall` modifier
 # (compose-preview-contracts#141), so a design holding a formula or a Remote call saves and commits.
 # 3.24.0 is the set compose-ai-tools 2.38.0 is built against.
-composeai-contracts = "3.25.0"
+composeai-contracts = "3.26.0"
 # 1.65.0 is the first release publishing `rc-players-bom`. (1.64.0 is a tag and a GitHub Release
 # whose Maven coordinates never reached Central -- rc-players#211 -- so it cannot be pinned.)
 # 2.3.0 redraws clock-driven layout canvases every frame (rc-players#601), which a played preview
