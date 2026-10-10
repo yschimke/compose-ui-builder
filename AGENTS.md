@@ -46,7 +46,12 @@ still answer for it.
   `./gradlew :ui-builder-runtime:updateKotlinAbi` and commit the dump with the change. That module
   is a seam: an ABI change here is a change to what compose-preview-server compiles against.
 - Immediately before every push, fetch `origin main` and confirm the branch or PR has not merged.
-- Open or update a PR automatically after a completed coding change. Never auto-merge.
+- Open or update a PR automatically after a completed coding change.
+- **Merge only when explicitly requested.** Only merge a PR or enable auto-merge
+  when the user specifically asks. If the request or intended PRs are unclear,
+  ask for clarification before merging. A request to implement, fix, review,
+  or open a PR does not by itself authorize merging. Honor required checks,
+  reviews, and branch protections.
 
 ## Review guidelines
 
