@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
@@ -29,59 +29,91 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-@Composable
-internal fun AgentToolbarAction(host: UiBuilderAgentHost, onOpen: () -> Unit) {
-  val active = host.agents?.size ?: 0
-  val localChat = host.local?.conversation
-  Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small) {
-    TextButton(onClick = onOpen) {
-      Text(
-        when {
-          localChat?.monitoring == true -> "Agent · monitoring"
-          localChat?.busy == true -> "Agent · working"
-          host.local != null -> "Local agent"
-          host.chat?.monitoring == true -> "Chat · monitoring"
-          host.chat?.busy == true -> "Chat · working"
-          host.chat?.host?.connected == true -> "Chat"
-          active > 0 -> "Agent · $active active"
-          else -> "Connect agent"
-        }
-      )
+/** Presence names are reported by the agent; a browser key is readiness, not remote presence. */
+internal fun agentToolbarLabel(host: UiBuilderAgentHost): String {
+  host.local?.let { local ->
+    val name = local.harnesses.firstOrNull { it.id == local.selected }?.name ?: "Local agent"
+    return when {
+      local.conversation.busy -> "$name · working"
+      local.conversation.monitoring -> "$name · monitoring"
+      !local.conversation.host.connected -> "Set up $name"
+      else -> name
     }
   }
+  val agents = host.agents.orEmpty()
+  val chat = host.chat
+  val browserReady = chat?.host?.connected == true
+  val browserActive = chat?.busy == true || chat?.monitoring == true
+  val primary = if (browserActive || agents.isEmpty()) null else agents.first()
+  val name =
+    primary?.displayName?.trim()?.ifBlank { "Agent" } ?: if (browserReady) "OpenRouter" else null
+  if (name == null) return if (host.agents == null) "Agents" else "Connect agent"
+  val others =
+    agents.size - (if (primary != null) 1 else 0) + (if (primary != null && browserReady) 1 else 0)
+  val count = if (others > 0) " +$others" else ""
+  val state =
+    if (primary != null) ""
+    else
+      when {
+        chat?.busy == true -> " · working"
+        chat?.monitoring == true -> " · monitoring"
+        else -> ""
+      }
+  return name + count + state
 }
 
+internal fun agentToolbarDescription(host: UiBuilderAgentHost): String = buildList {
+  host.local?.let { local ->
+    val name = local.harnesses.firstOrNull { it.id == local.selected }?.name ?: "Local agent"
+    add(name + if (local.conversation.host.connected) " · installed locally" else " · not found")
+  }
+  host.agents?.forEach { agent ->
+    add(listOfNotNull(agent.displayName, agent.modelName).joinToString(" · ") + " (reported)")
+  }
+  if (host.chat?.host?.connected == true) {
+    add(
+      "OpenRouter · " +
+        host.chat!!.session.model +
+        when {
+          host.chat!!.busy -> " · working"
+          host.chat!!.monitoring -> " · monitoring"
+          else -> " · browser chat ready"
+        }
+    )
+  }
+  if (host.agents == null) add("Agent activity unavailable")
+}
+  .joinToString("; ")
+  .ifBlank { "Connect an agent or browser chat" }
+
 @Composable
-internal fun AgentInvitation(
+internal fun AgentToolbarAction(
   host: UiBuilderAgentHost,
   onOpen: () -> Unit,
-  onNotice: (String) -> Unit,
+  compact: Boolean = false,
 ) {
-  if (
-    host.preferences.hintDismissed ||
-      host.local != null ||
-      host.agents?.isNotEmpty() == true ||
-      host.chat?.host?.connected == true
-  )
-    return
-  Surface(color = MaterialTheme.colorScheme.secondaryContainer) {
-    Row(
-      Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
+  val description = agentToolbarDescription(host)
+  MaterialChromeTooltip(description, "") {
+    Surface(
+      color = MaterialTheme.colorScheme.primaryContainer,
+      shape = MaterialTheme.shapes.small,
     ) {
-      Text(
-        "Bring your agent into this design",
-        Modifier.weight(1f).padding(vertical = 12.dp),
-        style = MaterialTheme.typography.bodySmall,
-      )
-      TextButton(onClick = onOpen) { Text("Connect") }
       TextButton(
-        onClick = { host.save(host.preferences.copy(hintDismissed = true))?.let(onNotice) }
+        onClick = onOpen,
+        modifier = Modifier.semantics { contentDescription = description },
       ) {
-        Text("Dismiss")
+        Text(
+          agentToolbarLabel(host),
+          modifier = Modifier.widthIn(max = if (compact) 108.dp else 180.dp),
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
       }
     }
   }
@@ -95,7 +127,13 @@ internal fun AgentPromptDialog(
 ) {
   var tab by remember {
     mutableStateOf(
-      if (host.local != null) "local" else if (host.chat != null) "browser" else "external"
+      when {
+        host.local != null -> "local"
+        host.chat?.busy == true || host.chat?.monitoring == true -> "browser"
+        host.agents?.isNotEmpty() == true -> "external"
+        host.chat != null -> "browser"
+        else -> "external"
+      }
     )
   }
   AlertDialog(
