@@ -71,4 +71,17 @@ class GuidelineKeyStoreTest {
     assertNull(device.values[GuidelineKeyStore.KEY_STORAGE])
     assertEquals("sk-or-old", session.values[GuidelineKeyStore.KEY_STORAGE])
   }
+
+  @Test
+  fun `a legacy key stays on the device when the session refuses it`() {
+    val refusing =
+      object : GuidelineKeyValueStore {
+        override fun get(key: String): String? = null
+
+        override fun set(key: String, value: String?) {}
+      }
+    device.values[GuidelineKeyStore.KEY_STORAGE] = "sk-or-old"
+    assertEquals("sk-or-old", GuidelineKeyStore(device, refusing).key())
+    assertEquals("sk-or-old", device.values[GuidelineKeyStore.KEY_STORAGE])
+  }
 }

@@ -35,8 +35,11 @@ class GuidelineKeyStore(
       .get(KEY_STORAGE)
       ?.takeIf { it.isNotBlank() }
       ?.let { legacy ->
-        device.set(KEY_STORAGE, null)
         if (session.get(KEY_STORAGE).isNullOrBlank()) session.set(KEY_STORAGE, legacy)
+        // Only drop the device copy once the session holds a key: a session store that refuses
+        // the write (unavailable, over quota) must not cost the person their only copy.
+        if (session.get(KEY_STORAGE).isNullOrBlank()) return legacy
+        device.set(KEY_STORAGE, null)
       }
     return session.get(KEY_STORAGE)?.takeIf { it.isNotBlank() }
   }
