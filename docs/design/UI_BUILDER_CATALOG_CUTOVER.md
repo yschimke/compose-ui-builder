@@ -99,8 +99,30 @@ And it asserts the **gap ledger** exactly, so the list can only shrink deliberat
 
 ## The gap ledger
 
-As captured on 2026-10-07, with `a2ui-catalog` and `glimmer-catalog` re-captured on 2026-10-08. Each
-line is work in a catalog repository, not here.
+### Where it stands
+
+Every catalog re-captured on 2026-10-10 from its delivery branch, `remote-widgets` included now that
+it publishes one. `CatalogCutoverShadowTableTest` holds this table exactly — it is the report
+compose-preview-server logs at startup for each shadowed catalog, computed from the same files:
+
+| Catalog | Ready to own | Findings | Losses |
+| --- | --- | --- | --- |
+| `wear-m3` | yes | 0 | 0 |
+| `remote-m3` | yes | 0 | 0 |
+| `remote-widgets` | yes | 0 | — (nothing synthesised to compare) |
+| `m3-catalog` | no | 0 | 1: `m3/navigation-suite-scaffold: role Scaffold -> Container` |
+| `a2ui-catalog` | no | 0 | 30 (unchanged since 2026-10-08) |
+| `glimmer-catalog` | no | 1: no `composeSourceExport` | — |
+
+`m3-catalog`'s one loss clears when a compose-ai-tools release carries a record component's
+`shelfRole` to the published file (compose-ai-tools#5754) and the catalog states `"shelfRole":
+"Scaffold"` for the scaffold. `a2ui-catalog`'s losses are binding (`object`) alternatives its
+published properties drop, `Column`/`List`/`Row` children required where the Kotlin catalog allows
+none, and `Tabs`' `titles`/`tabs` shape; it and `glimmer-catalog` are already owned on
+preview.coo.ee, so these are what an editor there has today rather than what a flip would cost.
+
+The rows below are the history of how each line closed, from the first capture on 2026-10-07.
+Each line is work in a catalog repository, not here.
 
 | Catalog | Gap | Fix, in that repository |
 | --- | --- | --- |
@@ -145,10 +167,10 @@ the flag and is the catalog the cutover fits best:
   `5x2`), read by `UiBuilderFrameGeometry.sizes` for the frame picker. Under the flag the exporter
   names its preview from the same block (`CatalogExportRouting.frameSizes`) instead of
   `LauncherWidgetGrid`, the Kotlin copy of the table.
-- **It publishes its own seeds** (`launcher-widget-2x1`, `counter-widget`). Off the flag it is
-  offered `hello-widget`, the builder's Kotlin launcher seed (`LauncherWidgetTemplates`,
-  compose-ui-builder#562); under the flag it is offered the catalog's own, and the Kotlin seed is
-  one more copy to delete.
+- **It publishes its own seeds** (`hello-widget`, `launcher-widget-2x1`, `counter-widget`). Off the
+  flag it is offered `hello-widget`, the builder's Kotlin launcher seed (`LauncherWidgetTemplates`,
+  compose-ui-builder#562); under the flag it is offered the catalog's own, which now include the
+  same `hello-widget`, and the Kotlin seed is one more copy to delete.
 - **Its export is the last id-routed emitter.** Off the flag `RecordFreeExport` reaches the launcher
   emitter only because the root is spelled `remote-widgets/launcher-widget`
   (`isLauncherWidget()`). Under the flag the catalog declares
@@ -157,9 +179,9 @@ the flag and is the catalog the cutover fits best:
   root the catalog publishes. `LauncherWidgetCutoverTest` renames the root to one this build has
   never seen and shows it still exports declared, and does not when routed by id.
 
-`LauncherWidgetCutoverTest` holds all of this against the policy and templates the repository wrote,
-captured by `scripts/capture-catalog-cutover-fixtures.sh` from the source repository with
-`"published": false` until the delivery branch exists. The ledger row above is the branch.
+`LauncherWidgetCutoverTest` holds all of this against the catalog as its delivery branch
+(`design-artifacts/remote-widgets`) serves it, captured by `scripts/capture-catalog-cutover-fixtures.sh`
+like every other catalog. Its shadow report is ready: no findings, and nothing synthesised to lose.
 
 **Recommendation: flip `remote-widgets` first.** It has nothing to fall back to and nothing to
 delete, so owning it is only gain, and it is the smallest proof of the whole path on a real box.

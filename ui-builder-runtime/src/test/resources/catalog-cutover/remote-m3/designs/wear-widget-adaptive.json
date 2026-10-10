@@ -1,0 +1,85 @@
+{
+  "schema": "compose-ui-builder-document/v1-candidate",
+  "id": "wear-widget-adaptive",
+  "title": "Wear widget · Adaptive (experimental)",
+  "revision": 0,
+  "template": "wear-widget-adaptive",
+  "catalogPin": {
+    "systemId": "remote-m3",
+    "catalogRevision": "candidate",
+    "capabilityDigest": "candidate",
+    "nativeRuntimeId": "candidate"
+  },
+  "environment": {
+    "widthDp": 216,
+    "heightDp": 124,
+    "density": 2.0,
+    "theme": "dark",
+    "dynamicColor": false,
+    "locale": "en-US",
+    "fontScale": 1,
+    "layoutDirection": "ltr",
+    "windowPosture": "flat",
+    "fixedTime": "2024-05-16T12:00:00Z",
+    "animations": "settled",
+    "networkAccess": false
+  },
+  "stateVariables": {},
+  "roots": ["wear-widget-adaptive"],
+  "nodes": {
+    "wear-widget-adaptive": {
+      "id": "wear-widget-adaptive",
+      "componentId": "remote-m3/widget-container-adaptive",
+      "properties": {
+        "background": { "type": "colorToken", "value": "surfaceContainer" }
+      },
+      "modifiers": [],
+      "slots": {
+        "background": [],
+        "headline": ["adaptive-headline"],
+        "supporting": ["adaptive-supporting"],
+        "action": ["adaptive-action"]
+      }
+    },
+    "adaptive-headline": {
+      "id": "adaptive-headline",
+      "componentId": "remote-m3/remote-text",
+      "properties": {
+        "text": { "type": "string", "value": "Next meeting" },
+        "style": { "type": "enum", "value": "titleMedium" },
+        "color": { "type": "colorToken", "value": "onSurface" }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "adaptive-supporting": {
+      "id": "adaptive-supporting",
+      "componentId": "remote-m3/remote-text",
+      "properties": {
+        "text": { "type": "string", "value": "10:30 · Room 4" },
+        "style": { "type": "enum", "value": "bodyMedium" },
+        "color": { "type": "colorToken", "value": "onSurfaceVariant" }
+      },
+      "modifiers": [],
+      "slots": {}
+    },
+    "adaptive-action": {
+      "id": "adaptive-action",
+      "componentId": "remote-m3/remote-button",
+      "properties": {},
+      "modifiers": [],
+      "slots": {
+        "content": ["adaptive-action-label"]
+      }
+    },
+    "adaptive-action-label": {
+      "id": "adaptive-action-label",
+      "componentId": "remote-m3/remote-text",
+      "properties": {
+        "text": { "type": "string", "value": "Join" }
+      },
+      "modifiers": [],
+      "slots": {}
+    }
+  }
+}

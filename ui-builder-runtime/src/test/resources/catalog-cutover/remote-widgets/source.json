@@ -1,6 +1,6 @@
 {
-  "published": false,
-  "repository": "yschimke/remote-m3-catalog",
-  "module": "widget-catalog",
-  "commit": "8157a45678ecd3fd203364158783f9bec456c5f3"
+  "repository": "yschimke/remote-m3-catalog-out",
+  "branch": "design-artifacts/remote-widgets",
+  "commit": "b0c5131df9e8c65a14ccae0291f1a698f7f9d54b",
+  "rendererRuntimeId": null
 }
