@@ -252,6 +252,19 @@ tasks
     )
   }
 
+if (providers.gradleProperty("typedAdapterCatalog").orNull == "true") {
+  kotlin.sourceSets.named("jvmTest") {
+    kotlin.srcDir(rootProject.file("experiments/typed-catalog/ui-builder/src/jvmTest/kotlin"))
+  }
+  tasks.named<Test>("jvmTest") {
+    // Keep the prototype's native validation reproducible on hosts with a read-only home.
+    systemProperty(
+      "skiko.data.path",
+      layout.buildDirectory.dir("typed-catalog/skiko").get().asFile.absolutePath,
+    )
+  }
+}
+
 tasks.named<Test>("jvmTest") {
   // `DesignFixturesTest` reads the committed designs from disk, not from a hand-kept list, so a
   // file cannot join the directory without being replayed, validated and exported.
