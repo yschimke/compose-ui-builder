@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.104.0](https://github.com/yschimke/compose-ui-builder/compare/v3.103.0...v3.104.0) (2026-10-10)
+
+
+### Features
+
+* add local Claude Code, Codex and OpenCode desktop chat ([#641](https://github.com/yschimke/compose-ui-builder/issues/641)) ([7ce9440](https://github.com/yschimke/compose-ui-builder/commit/7ce9440bc1de0292bc28a310792bea2b0c241dcf))
+* prototype typed catalog renderer adapters ([#642](https://github.com/yschimke/compose-ui-builder/issues/642)) ([d46b498](https://github.com/yschimke/compose-ui-builder/commit/d46b498e90e50cdd65b0b5e46de78f5bf1052636))
+* validate executable JVM catalog bundles end to end ([#653](https://github.com/yschimke/compose-ui-builder/issues/653)) ([5dbe7a4](https://github.com/yschimke/compose-ui-builder/commit/5dbe7a4f7236c65eda3d76e8b0b1162af91a5be7))
+* **web:** read the editor's base path from the page, so a builder host can serve it at its root ([#659](https://github.com/yschimke/compose-ui-builder/issues/659)) ([644909c](https://github.com/yschimke/compose-ui-builder/commit/644909ce191817ceb1cf5408feac582d8e8fb109))
+
+
+### Bug Fixes
+
+* consolidate sharing and agent controls in the toolbar ([#646](https://github.com/yschimke/compose-ui-builder/issues/646)) ([1a24c81](https://github.com/yschimke/compose-ui-builder/commit/1a24c810defbe033ad21f622123f6c3cc1e23249))
+* **deps:** update dependency ee.schimke.composeai:rc-players-bom to v2.5.0 ([#655](https://github.com/yschimke/compose-ui-builder/issues/655)) ([f02b464](https://github.com/yschimke/compose-ui-builder/commit/f02b464fc0c674067fd6c70105eadebd527805ca))
+* **guidelines:** cite agent skills at their developer.android.com address, never kb:// ([#649](https://github.com/yschimke/compose-ui-builder/issues/649)) ([538bcb2](https://github.com/yschimke/compose-ui-builder/commit/538bcb21e52e479fbe9b71fac71c2fdd497adb91))
+
 ## [3.103.0](https://github.com/yschimke/compose-ui-builder/compare/v3.102.0...v3.103.0) (2026-10-10)
 
 
