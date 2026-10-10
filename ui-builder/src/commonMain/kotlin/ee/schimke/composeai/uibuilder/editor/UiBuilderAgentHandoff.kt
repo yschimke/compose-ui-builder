@@ -12,6 +12,12 @@ data class UiBuilderAgentPreferences(
 
 /** Origin and clipboard belong to the host; the editor owns the invitation and prompt panel. */
 interface UiBuilderAgentHost {
+  val local: UiBuilderLocalAgentHost?
+    get() = null
+
+  val monitoringHandoffAvailable: Boolean
+    get() = true
+
   val chat: UiBuilderChatController?
     get() = null
 

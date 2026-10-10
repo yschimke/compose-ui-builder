@@ -317,7 +317,7 @@ class UiBuilderChatControllerTest {
           ),
         assets = JsonObject(mapOf("secret" to JsonPrimitive("private-asset"))),
       )
-    val context = browserChatContext(document, "node", "Keep it concise", board("one"))
+    val context = agentChatContext(document, "node", "Keep it concise", board("one"))
     assertTrue(context.contains("Hello"))
     assertTrue(context.contains("Keep it concise"))
     assertTrue(context.contains("Review one"))
