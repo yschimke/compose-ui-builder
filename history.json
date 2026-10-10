@@ -1,6 +1,6 @@
 {
     "formatVersion": "compose-preview-history/v1",
-    "generatedFrom": "f07301d12805d7a2b5ea9d13dd795bd4b5471302",
+    "generatedFrom": "aaf3757c305a509408aa4dfd0c6e5c1554ca7c6c",
     "previews": {
         "ui-builder-production-consumer/example.ConsumerKt.DurableLibraryPreview": {
             "path": "renders/ui-builder-production-consumer/DurableLibraryPreview-40a004c8.png",
@@ -1653,6 +1653,13 @@
             "path": "renders/ui-builder/UiBuilderAgentPromptPreview-916952ea.png",
             "versions": [
                 {
+                    "blob": "53a752477f4ba91e4eaa6f71b0572afcd79a3387",
+                    "commit": "aaf3757c305a509408aa4dfd0c6e5c1554ca7c6c",
+                    "date": "2026-10-10T11:01:03Z",
+                    "sourceSha": "5331acf4",
+                    "commits": 1
+                },
+                {
                     "blob": "c1760d046d6d591a5bcf77f980063dc8db5714e2",
                     "commit": "b908344f8d5f521cba3de728457a3f1a4be90ec6",
                     "date": "2026-10-05T09:07:22Z",
@@ -1667,13 +1674,20 @@
                     "commits": 1
                 }
             ],
-            "observations": 2,
+            "observations": 3,
             "unstable": false,
             "flapCount": 0
         },
         "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderAgentPromptPreviewKt.UiBuilderAgentPromptPreview_Mobile": {
             "path": "renders/ui-builder/UiBuilderAgentPromptPreview_Mobile-9902b914.png",
             "versions": [
+                {
+                    "blob": "f31d2f498825ef75dfb2a08ce8e1b7c8bda2135f",
+                    "commit": "aaf3757c305a509408aa4dfd0c6e5c1554ca7c6c",
+                    "date": "2026-10-10T11:01:03Z",
+                    "sourceSha": "5331acf4",
+                    "commits": 1
+                },
                 {
                     "blob": "644cacd76295a1d527f525e9fa3e8fe2bdd38e96",
                     "commit": "b908344f8d5f521cba3de728457a3f1a4be90ec6",
@@ -1682,7 +1696,7 @@
                     "commits": 1
                 }
             ],
-            "observations": 1,
+            "observations": 2,
             "unstable": false,
             "flapCount": 0
         },
