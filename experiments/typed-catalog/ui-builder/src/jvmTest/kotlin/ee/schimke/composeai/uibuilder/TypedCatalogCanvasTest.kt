@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithText
@@ -27,7 +30,9 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.canvasAdapterRegistry
 import ee.schimke.composeai.uibuilder.renderer.sdk.register
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -58,6 +63,104 @@ class TypedCatalogCanvasTest {
     }
   }
 
+  private data class CountProps(val count: Int)
+
+  @Test
+  fun `bad typed values show a local diagnostic and recover without stopping siblings`() =
+    runDesktopComposeUiTest(width = 400, height = 400) {
+      val record =
+        ComponentRecord.Builder(
+            ":app/acme.CountKt.Count",
+            ComponentSymbol.Builder("acme.CountKt", "acme.Count", "Count", ComponentOrigin.PROJECT)
+              .build(),
+          )
+          .also {
+            it.signatureKnown = true
+            it.parameters =
+              listOf(
+                TargetParameter.Builder("count", "Int").also { it.typeFqn = "kotlin.Int" }.build()
+              )
+          }
+          .build()
+      val adapter =
+        object : TypedComponentAdapter<CountProps>("acme/count", record) {
+          val count = property(CountProps::count, AdapterValueCodecs.Int, 3)
+        }
+      var renders = 0
+      val registry = canvasAdapterRegistry {
+        register(adapter) {
+          renders++
+          Text("Count ${value(adapter.count)}", modifier)
+        }
+      }
+      fun document(value: JsonElement, type: String = "integer"): UiBuilderDocument {
+        val empty = JsonObject(emptyMap())
+        return UiBuilderDocument(
+          schema = "compose-ui-builder-document/v1-candidate",
+          id = "bad-value",
+          title = "Bad value",
+          revision = 0,
+          catalogPin = empty,
+          environment = empty,
+          stateVariables = empty,
+          roots = listOf("bad", "healthy"),
+          nodes =
+            mapOf(
+              "bad" to
+                UiBuilderNode(
+                  id = "bad",
+                  componentId = adapter.id,
+                  properties =
+                    buildJsonObject {
+                      put(
+                        "count",
+                        buildJsonObject {
+                          put("type", type)
+                          put("value", value)
+                        },
+                      )
+                    },
+                ),
+              "healthy" to
+                UiBuilderNode(
+                  id = "healthy",
+                  componentId = "m3/text",
+                  properties =
+                    buildJsonObject {
+                      put(
+                        "text",
+                        buildJsonObject {
+                          put("type", "string")
+                          put("value", "Healthy sibling")
+                        },
+                      )
+                    },
+                ),
+            ),
+        )
+      }
+      var current by mutableStateOf(document(JsonPrimitive(2.5)))
+      setContent {
+        UiBuilderSurface(
+          current,
+          catalogComponentIds = setOf(adapter.id, "m3/text"),
+          canvasAdapterIds = mapOf(adapter.id to adapter.id),
+          canvasAdapterRegistry = registry,
+        )
+      }
+      onNodeWithText("acme/count: invalid properties", substring = true).assertExists()
+      onNodeWithText("Healthy sibling").assertExists()
+      runOnIdle { assertEquals(0, renders) }
+      runOnIdle { current = document(JsonPrimitive("3.0")) }
+      onNodeWithText("acme/count: invalid properties", substring = true).assertExists()
+      onNodeWithText("Healthy sibling").assertExists()
+      runOnIdle { assertEquals(0, renders) }
+      runOnIdle { current = document(JsonPrimitive(3)) }
+      onNodeWithText("Count 3").assertExists()
+      onNodeWithText("acme/count: invalid properties", substring = true).assertDoesNotExist()
+      onNodeWithText("Healthy sibling").assertExists()
+    }
+
   @Test
   fun `generated catalog routes a real component with typed properties slots and callbacks`() =
     runDesktopComposeUiTest(width = 400, height = 400) {
@@ -79,7 +182,12 @@ class TypedCatalogCanvasTest {
                 TargetParameter.Builder("label", "String")
                   .also { it.typeFqn = "kotlin.String" }
                   .build(),
-                TargetParameter.Builder("onClick", "() -> Unit").build(),
+                TargetParameter.Builder("onClick", "() -> Unit")
+                  .also {
+                    it.typeFqn = "kotlin.Function0"
+                    it.lambdaReturnTypeFqn = "kotlin.Unit"
+                  }
+                  .build(),
                 TargetParameter.Builder("modifier", "Modifier")
                   .also { it.hasDefault = true }
                   .build(),

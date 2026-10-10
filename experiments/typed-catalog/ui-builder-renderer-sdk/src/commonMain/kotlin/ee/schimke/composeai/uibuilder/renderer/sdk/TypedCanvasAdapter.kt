@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import ee.schimke.composeai.discovery.AdapterEvent
@@ -18,7 +19,12 @@ fun <P> CanvasAdapterRegistry.Builder.register(
   render: @Composable TypedCanvasNodeScope<P>.() -> Unit,
 ) {
   definition.freeze()
-  register(definition.id) { TypedCanvasNodeScope(definition, this).render() }
+  register(definition.id) {
+    val typed = TypedCanvasNodeScope(definition, this)
+    val problems = typed.prepare()
+    if (problems.isEmpty()) typed.render()
+    else BasicText("${definition.id}: invalid properties\n${problems.joinToString("\n")}", modifier)
+  }
 }
 
 /** Typed handles over the SDK's resolved node; traversal, state and inspection stay in the SDK. */
@@ -26,6 +32,19 @@ class TypedCanvasNodeScope<P>(
   val definition: TypedComponentAdapter<P>,
   val canvas: CanvasNodeScope,
 ) {
+  private val decoded = mutableMapOf<AdapterProperty<P, *>, Any?>()
+
+  /** Decode every declared value before entering the component's composable renderer. */
+  internal fun prepare(): List<String> = buildList {
+    for (property in definition.properties) {
+      try {
+        decoded[property] = decode(property)
+      } catch (failure: IllegalArgumentException) {
+        add("${property.name}: ${failure.message ?: "invalid value"}")
+      }
+    }
+  }
+
   val modifier: Modifier
     get() = canvas.modifier
 
@@ -34,12 +53,26 @@ class TypedCanvasNodeScope<P>(
 
   fun <T> value(property: AdapterProperty<P, T>): T {
     require(definition.owns(property)) { "property belongs to another adapter" }
+    if (decoded.containsKey(property)) {
+      @Suppress("UNCHECKED_CAST")
+      return decoded[property] as T
+    }
+    return decode(property)
+  }
+
+  private fun <T> decode(property: AdapterProperty<P, T>): T {
     val encoded = canvas.node.properties[property.name] ?: return property.default
     require(encoded is JsonObject) {
       "${definition.id}.${property.name}: expected a property wrapper"
     }
     val raw =
       requireNotNull(encoded["value"]) { "${definition.id}.${property.name}: unresolved property" }
+    val wrapperType = (encoded["type"] as? JsonPrimitive)?.contentOrNull
+    require(
+      wrapperType == property.codec.jsonType || (wrapperType == "state" && property.bindable)
+    ) {
+      "${definition.id}.${property.name}: unsupported property type $wrapperType"
+    }
     // Preview state is stored as text by the interpreter. Normalize only state scalars, keeping
     // ordinary string literals strict and avoiding a second binding interpreter in adapters.
     val resolved =

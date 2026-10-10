@@ -15,11 +15,17 @@ build-brief ./gradlew -PlocalBuilds=tools -PtypedAdapterCatalog=true \
 ```
 
 `scripts/validate-typed-catalog.sh` runs these checks, the tools consumer compilation tests, and
-Wasm compilation of the renderer bridge. It takes an optional path to the tools checkout.
+Wasm compilation of the renderer bridge, plus formatting checks with the experiment sources enabled.
+It takes an optional path to the tools checkout. The dedicated typed-catalog CI workflow runs the
+same script against an immutable tools commit until the API is released.
 
 Tests cover the actual published-catalog reader without an app dependency, property defaults and
 resolved state, strict malformed-value rejection, two-way callbacks, cross-definition handle
 rejection, and a compiled Compose button rendering a real slot child and receiving a click.
+All declared values are decoded before a registered renderer is entered. Invalid values display a
+node-local diagnostic; tests verify that a healthy sibling keeps drawing and correcting the value
+recovers the original component. Arbitrary exceptions inside component composables are not caught.
+Int properties are literal-only until the state schema supports integer constraints.
 
 This does not install app classes into the IDE or package a Wasm runtime for publication. Use the
 existing catalog-owned runtime delivery path; JVM addon/project-process loading remains separate.

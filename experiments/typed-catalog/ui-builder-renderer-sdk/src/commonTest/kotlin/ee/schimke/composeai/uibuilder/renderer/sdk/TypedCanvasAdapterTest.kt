@@ -109,6 +109,72 @@ class TypedCanvasAdapterTest {
   }
 
   @Test
+  fun `preparation checks unused properties and caches successfully decoded values`() {
+    val adapter = Adapter()
+    val bad =
+      TypedCanvasNodeScope(
+        adapter,
+        scope(
+          buildJsonObject {
+            put(
+              "checked",
+              buildJsonObject {
+                put("type", "boolean")
+                put("value", "true")
+              },
+            )
+          }
+        ),
+      )
+    assertEquals(1, bad.prepare().size)
+    val good = TypedCanvasNodeScope(adapter, scope())
+    assertEquals(emptyList(), good.prepare())
+    assertEquals("Toggle", good.value(adapter.label))
+    assertEquals(false, good.value(adapter.checked))
+  }
+
+  @Test
+  fun `integer handles refuse hand authored number and state wrappers`() {
+    data class CountProps(val count: Int)
+    val definition =
+      object :
+        TypedComponentAdapter<CountProps>(
+          "acme/count",
+          record()
+            .newBuilder()
+            .also {
+              it.parameters =
+                listOf(
+                  TargetParameter.Builder("count", "Int").also { it.typeFqn = "kotlin.Int" }.build()
+                )
+            }
+            .build(),
+        ) {
+        val count = property(CountProps::count, AdapterValueCodecs.Int, 3)
+      }
+    definition.freeze()
+    for (type in listOf("number", "state")) {
+      val typed =
+        TypedCanvasNodeScope(
+          definition,
+          scope(
+            buildJsonObject {
+              put(
+                "count",
+                buildJsonObject {
+                  put("type", type)
+                  put("value", "3.0")
+                },
+              )
+            }
+          ),
+        )
+      assertEquals(1, typed.prepare().size)
+      assertFailsWith<IllegalArgumentException> { typed.value(definition.count) }
+    }
+  }
+
+  @Test
   fun `typed callbacks use the existing event and two way state interpreter`() {
     val adapter = Adapter()
     val events = mutableListOf<String>()
@@ -164,8 +230,18 @@ class TypedCanvasAdapterTest {
               TargetParameter.Builder("checked", "Boolean")
                 .also { it.typeFqn = "kotlin.Boolean" }
                 .build(),
-              TargetParameter.Builder("onClick", "() -> Unit").build(),
-              TargetParameter.Builder("onCheckedChange", "(Boolean) -> Unit").build(),
+              TargetParameter.Builder("onClick", "() -> Unit")
+                .also {
+                  it.typeFqn = "kotlin.Function0"
+                  it.lambdaReturnTypeFqn = "kotlin.Unit"
+                }
+                .build(),
+              TargetParameter.Builder("onCheckedChange", "(Boolean) -> Unit")
+                .also {
+                  it.typeFqn = "kotlin.Function1"
+                  it.lambdaReturnTypeFqn = "kotlin.Unit"
+                }
+                .build(),
             )
         }
         .build()

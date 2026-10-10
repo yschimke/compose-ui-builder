@@ -53,7 +53,12 @@ class TypedCatalogPublicationTest {
               TargetParameter.Builder("checked", "Boolean")
                 .also { it.typeFqn = "kotlin.Boolean" }
                 .build(),
-              TargetParameter.Builder("onCheckedChange", "(Boolean) -> Unit").build(),
+              TargetParameter.Builder("onCheckedChange", "(Boolean) -> Unit")
+                .also {
+                  it.typeFqn = "kotlin.Function1"
+                  it.lambdaReturnTypeFqn = "kotlin.Unit"
+                }
+                .build(),
               TargetParameter.Builder("content", "() -> Unit")
                 .also { it.composableSlot = true }
                 .build(),
