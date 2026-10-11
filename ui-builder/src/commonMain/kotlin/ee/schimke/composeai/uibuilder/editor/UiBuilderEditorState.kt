@@ -197,6 +197,9 @@ class UiBuilderEditorReducer(
       // A reader's pins are a fact about their palette, not about the design arriving, so they
       // survive a rebuild for the same reason the pack switches do.
       pinnedComponents = state.pinnedComponents,
+      // Carried for the same reason: an insert is answered by an authoritative document, and a
+      // shelf rebuilt empty by that answer would never show the component it was recording.
+      recentComponents = state.recentComponents,
       // Carried, minus the rows this document has already answered. Every edit rebuilds the state,
       // so dropping them all would lose the panel's drift rows on the next keystroke; keeping them
       // all would keep saying a design has drifted from a symbol the arriving edit just
@@ -244,11 +247,15 @@ class UiBuilderEditorReducer(
     // layer row, an arrow key, the node an insert lands — closes it rather than moving it onto a
     // node nobody asked to edit.
     val next =
-      if (reduced.quickEditorOpen && reduced.selectedNodeId != state.selectedNodeId) {
-        reduced.copy(quickEditorOpen = false)
-      } else {
-        reduced
-      }
+      recordRecentComponent(
+        state,
+        event,
+        if (reduced.quickEditorOpen && reduced.selectedNodeId != state.selectedNodeId) {
+          reduced.copy(quickEditorOpen = false)
+        } else {
+          reduced
+        },
+      )
     val moved = next.document.revision != state.document.revision
     val peeked =
       if (moved && next.revisionPeek != null) next.copy(revisionPeek = null, revisionCompare = null)
@@ -257,6 +264,35 @@ class UiBuilderEditorReducer(
     // just inserted; see [withTokenTargets].
     return if (peeked.document === state.document) peeked
     else peeked.copy(tunables = peeked.tunables.withTokenTargets(peeked.document, catalog))
+  }
+
+  /**
+   * [next] with the component [event] inserted moved to the front of the "Recently used" shelf,
+   * when it was a catalog insert the document accepted. A refused insert placed nothing, so it is
+   * not something the reader was using; the sequence check keeps a stale Accepted from an earlier
+   * command from counting. Every catalog route — Add, Add beside, a drop on the canvas — arrives as
+   * one of these three events, so recording here rather than at each call site cannot miss one.
+   */
+  private fun recordRecentComponent(
+    state: UiBuilderEditorState,
+    event: UiBuilderEditorEvent,
+    next: UiBuilderEditorState,
+  ): UiBuilderEditorState {
+    val componentId =
+      when (event) {
+        is UiBuilderEditorEvent.InsertComponent -> event.componentId
+        is UiBuilderEditorEvent.InsertComponentBeside -> event.componentId
+        is UiBuilderEditorEvent.InsertComponentWithAction -> event.componentId
+        else -> return next
+      }
+    val accepted =
+      next.operationSequence != state.operationSequence &&
+        next.lastOutcome is CommandOutcome.Accepted
+    return if (accepted) {
+      next.copy(recentComponents = next.recentComponents.withRecentComponent(componentId))
+    } else {
+      next
+    }
   }
 
   private fun reduceEvent(
@@ -1120,7 +1156,32 @@ class UiBuilderEditorReducer(
         .withIndex()
         .associate { (index, name) -> name to index }
     val rows = mutableListOf<EditorCatalogRow>()
-    // The pins first, and only while browsing: a search is a question about the whole catalog, and
+    // What was just placed, first of all: building a screen is the same few components over and
+    // over, and the second Text should not mean scrolling back to the Text shelf. Only while
+    // browsing, for the same reason as the pins below, and only from [items], so a component this
+    // catalog no longer offers, whose pack was switched off, or that has nowhere to go in this
+    // design drops off the shelf rather than being a tile that cannot be added.
+    if (!filtering && state.recentComponents.isNotEmpty()) {
+      val byId = items.associateBy(EditorCatalogItem::componentId)
+      val recentItems = state.recentComponents.mapNotNull(byId::get)
+      if (recentItems.isNotEmpty()) {
+        val expanded = RECENT_SHELF !in state.collapsedCatalogGroups
+        rows += EditorCatalogRow.Group(RECENT_SHELF, recentItems.size, expanded)
+        if (expanded) {
+          recentItems.forEach { item ->
+            val open =
+              item.variants.isNotEmpty() && item.componentId in state.expandedCatalogComponents
+            rows += EditorCatalogRow.Component(item, open, recent = true)
+            if (open) {
+              item.variants.forEach {
+                rows += EditorCatalogRow.Variant(it, item.displayName, recent = true)
+              }
+            }
+          }
+        }
+      }
+    }
+    // The pins next, and only while browsing: a search is a question about the whole catalog, and
     // a component it matches already answers from its own shelf — a second copy under "Pinned"
     // would be the same row twice in the results. A pin whose pack is off is not on the palette,
     // so it is not at the top of it either.

@@ -148,12 +148,14 @@ sealed interface EditorCatalogRow {
 
   /**
    * A component's row. [pinned] is part of the row's identity: the "Pinned" shelf copy and the
-   * shelf copy are the same component twice, and a list keyed by id alone would drop one.
+   * shelf copy are the same component twice, and a list keyed by id alone would drop one. [recent]
+   * is the same for the "Recently used" copy.
    */
   data class Component(
     val item: EditorCatalogItem,
     val expanded: Boolean,
     val pinned: Boolean = false,
+    val recent: Boolean = false,
   ) : EditorCatalogRow
 
   /**
@@ -165,6 +167,8 @@ sealed interface EditorCatalogRow {
     val componentName: String,
     /** Which copy of the component this variant hangs under — see [Component.pinned]. */
     val pinned: Boolean = false,
+    /** Whether it hangs under the "Recently used" copy — see [Component.recent]. */
+    val recent: Boolean = false,
   ) : EditorCatalogRow
 }
 
@@ -460,6 +464,12 @@ data class UiBuilderEditorState(
    * by the host.
    */
   val pinnedComponents: Set<String>? = null,
+  /**
+   * The catalog components most recently inserted or dropped, most recent first and each at most
+   * once — see [withRecentComponent]. Session-scoped editor state: unlike the pins it is not a
+   * choice the reader made, so nothing asks the host to remember it.
+   */
+  val recentComponents: List<String> = emptyList(),
   /**
    * The last component-library drift read for this design's imports; empty means not asked. Kept on
    * the state because [problems] must stay a pure function of the document.
