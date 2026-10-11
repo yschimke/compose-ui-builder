@@ -340,6 +340,40 @@ class ProjectedComposeExportTest {
   }
 
   @Test
+  fun `a builtin exports through the projection of the record component implementing it`() {
+    val listRecord =
+      "wear/androidx.wear.compose.foundation.lazy.TransformingLazyColumnKt.TransformingLazyColumn"
+    val semantics = buildJsonObject {
+      putJsonObject("components") {
+        putJsonObject("wear-m3/transforming-lazy-column-call") {
+          put("record", listRecord)
+          put("exportProjection", textProjection)
+        }
+      }
+      putJsonObject("builtins") {
+        putJsonObject("wear-m3/transforming-lazy-column") {
+          put("role", "list")
+          put("implementation", listRecord)
+        }
+        putJsonObject("wear-m3/screen-scaffold") { put("role", "screen-root") }
+        putJsonObject("wear-m3/unimplemented") {
+          put("role", "list")
+          put("implementation", "wear/nothing.Nothing")
+        }
+      }
+    }
+    val projections = CatalogExportProjections.from(semantics)
+    val projection = ExportProjectionJson.decode(textProjection).getOrThrow()
+    assertEquals(
+      mapOf(
+        "wear-m3/transforming-lazy-column-call" to projection,
+        "wear-m3/transforming-lazy-column" to projection,
+      ),
+      projections,
+    )
+  }
+
+  @Test
   fun `a catalog without projections exports exactly as before`() {
     val document = document(button())
     assertEquals(
