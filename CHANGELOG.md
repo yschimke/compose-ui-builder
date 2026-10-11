@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.108.0](https://github.com/yschimke/compose-ui-builder/compare/v3.107.0...v3.108.0) (2026-10-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* **runtime:** retire the catalog-cutover shadow comparison ([#716](https://github.com/yschimke/compose-ui-builder/issues/716))
+
+### Features
+
+* **editor:** structured list and object properties for typed adapters ([#717](https://github.com/yschimke/compose-ui-builder/issues/717)) ([84809b6](https://github.com/yschimke/compose-ui-builder/commit/84809b636d795a763d2264f95d2f0353bb0b5fa9))
+* **export:** lower resource values to the catalog's string resources ([#729](https://github.com/yschimke/compose-ui-builder/issues/729)) ([4cb4e1f](https://github.com/yschimke/compose-ui-builder/commit/4cb4e1f2cce9051fb34d7d08d9c7e8dc3a6a7780))
+* **export:** unwrap the screen-root builtin into the catalog's frame ([#728](https://github.com/yschimke/compose-ui-builder/issues/728)) ([ce423cf](https://github.com/yschimke/compose-ui-builder/commit/ce423cf775cb7135fe22adb55951867d8eabcb53))
+
+
+### Bug Fixes
+
+* **deps:** update dependency ee.schimke.composeai:compose-preview-daemon-bom to v3.15.3 ([#724](https://github.com/yschimke/compose-ui-builder/issues/724)) ([9f59015](https://github.com/yschimke/compose-ui-builder/commit/9f590151aa71e49efb0eb0dacdca3e960fbf635b))
+
+
+### Code Refactoring
+
+* **runtime:** retire the catalog-cutover shadow comparison ([#716](https://github.com/yschimke/compose-ui-builder/issues/716)) ([fbd99c3](https://github.com/yschimke/compose-ui-builder/commit/fbd99c35180590ae9dfd4acf2b81fa51982bff9d))
+
 ## [3.107.0](https://github.com/yschimke/compose-ui-builder/compare/v3.106.0...v3.107.0) (2026-10-11)
 
 
