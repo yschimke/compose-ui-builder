@@ -1063,14 +1063,7 @@ class UiBuilderEditorReducer(
   fun catalogRows(state: UiBuilderEditorState): List<EditorCatalogRow> {
     val needle = state.catalogQuery.trim().lowercase()
     val filtering = needle.isNotEmpty()
-    val items =
-      catalog.paletteComponents
-        .map { it.editorCatalogItem() }
-        // A disabled pack is hidden from search too; otherwise the switch would not hide anything.
-        .filter { it.pack == null || it.pack in state.enabledPacks }
-        .filter { !placeableNowhere(state, it.componentId) }
-        .filter { it.matches(needle) }
-        .sortedWith(compareBy({ it.searchRank(needle) }, EditorCatalogItem::displayName))
+    val items = searchedCatalogItems(state, needle)
     // Declared shelves, then kind-label fallbacks in kind order. `distinct` because the lists
     // overlap ("Scaffolds") and the later entry would push the shelf to the end.
     val order =
@@ -1151,6 +1144,38 @@ class UiBuilderEditorReducer(
         }
       }
     return rows
+  }
+
+  /**
+   * The components the insert panel offers, narrowed to [needle] (already trimmed and lowercased)
+   * and in search order. Shared by the panel and quick insert, so the two cannot rank differently.
+   */
+  private fun searchedCatalogItems(
+    state: UiBuilderEditorState,
+    needle: String,
+  ): List<EditorCatalogItem> =
+    catalog.paletteComponents
+      .map { it.editorCatalogItem() }
+      // A disabled pack is hidden from search too; otherwise the switch would not hide anything.
+      .filter { it.pack == null || it.pack in state.enabledPacks }
+      .filter { !placeableNowhere(state, it.componentId) }
+      .filter { it.matches(needle) }
+      .sortedWith(compareBy({ it.searchRank(needle) }, EditorCatalogItem::displayName))
+
+  /**
+   * What the `/` quick insert lists for [query]: the insert panel's matches in the panel's order,
+   * less anything the selection has no slot for, so Enter on any row inserts. With no query the
+   * "Recently used" shelf leads, most recent first, because the component wanted next is most often
+   * one just placed; everything else follows in the panel's browsing order.
+   */
+  fun quickInsertItems(state: UiBuilderEditorState, query: String): List<EditorCatalogItem> {
+    val needle = query.trim().lowercase()
+    val items =
+      searchedCatalogItems(state, needle).filter { dropTarget(state, it.componentId) != null }
+    if (needle.isNotEmpty()) return items
+    val byId = items.associateBy(EditorCatalogItem::componentId)
+    val recent = state.recentComponents.mapNotNull(byId::get)
+    return recent + (items - recent.toSet())
   }
 
   private fun ComponentCapability.editorCatalogItem(): EditorCatalogItem {
