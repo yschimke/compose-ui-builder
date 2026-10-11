@@ -1,6 +1,7 @@
 package ee.schimke.composeai.uibuilder.renderer.sdk
 
 import androidx.compose.ui.Modifier
+import ee.schimke.composeai.discovery.AdapterObjectCodec
 import ee.schimke.composeai.discovery.AdapterValueCodecs
 import ee.schimke.composeai.discovery.ComponentOrigin
 import ee.schimke.composeai.discovery.ComponentRecord
@@ -11,8 +12,11 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 
 class TypedCanvasAdapterTest {
@@ -213,7 +217,102 @@ class TypedCanvasAdapterTest {
     assertFailsWith<IllegalArgumentException> { canvas.callback(other.change) }
   }
 
+  private data class Contact(val name: String, val unread: Int, val tags: List<String>)
+
+  private data class InboxProps(val contacts: List<Contact>, val pinned: Contact)
+
+  private class InboxAdapter : TypedComponentAdapter<InboxProps>("acme/inbox", record()) {
+    val contacts = property(InboxProps::contacts, AdapterValueCodecs.list(CONTACT), emptyList())
+    val pinned = property(InboxProps::pinned, CONTACT, Contact("Nobody", 0, emptyList()))
+  }
+
+  private fun inbox(properties: String) =
+    InboxAdapter().let { adapter ->
+      adapter to
+        TypedCanvasNodeScope(adapter, scope(Json.parseToJsonElement(properties).jsonObject))
+    }
+
+  @Test
+  fun `a list of objects decodes through the codec's nested wrappers`() {
+    val (adapter, canvas) =
+      inbox(
+        """
+        {"contacts": {"type": "list", "values": [
+          {"type": "object", "fields": {
+            "name": {"type": "string", "value": "Ada"},
+            "tags": {"type": "list", "values": [{"type": "string", "value": "vip"}]}}},
+          {"type": "object", "fields": {
+            "name": {"type": "string", "value": "Grace"},
+            "unread": {"type": "int", "value": 2}}}]}}
+        """
+      )
+    assertEquals(emptyList(), canvas.prepare())
+    assertEquals(
+      listOf(Contact("Ada", 0, listOf("vip")), Contact("Grace", 2, emptyList())),
+      canvas.value(adapter.contacts),
+    )
+    // Absent, the object property is its declared default, as a scalar is.
+    assertEquals(Contact("Nobody", 0, emptyList()), canvas.value(adapter.pinned))
+  }
+
+  @Test
+  fun `an object property decodes its fields, nested lists included`() {
+    val (adapter, canvas) =
+      inbox(
+        """
+        {"pinned": {"type": "object", "fields": {
+          "name": {"type": "string", "value": "Linus"},
+          "unread": {"type": "int", "value": 7},
+          "tags": {"type": "list", "values": [
+            {"type": "string", "value": "a"}, {"type": "string", "value": "b"}]}}}}
+        """
+      )
+    assertEquals(Contact("Linus", 7, listOf("a", "b")), canvas.value(adapter.pinned))
+    assertEquals(emptyList(), canvas.value(adapter.contacts))
+  }
+
+  @Test
+  fun `a malformed nested value fails with its path instead of drawing a default`() {
+    for (contacts in
+      listOf(
+        // An unknown field.
+        """{"type": "list", "values": [{"type": "object", "fields": {
+            "name": {"type": "string", "value": "Ada"}, "age": {"type": "int", "value": 3}}}]}""",
+        // A required field missing.
+        """{"type": "list", "values": [{"type": "object", "fields": {}}]}""",
+        // A nested scalar of the wrong type.
+        """{"type": "list", "values": [{"type": "object", "fields": {
+            "name": {"type": "string", "value": "Ada"},
+            "tags": {"type": "list", "values": [{"type": "int", "value": 1}]}}}]}""",
+        // A list stored as a bare array, or as a scalar literal.
+        """[]""",
+        """{"type": "list", "value": []}""",
+      )) {
+      val (adapter, canvas) = inbox("""{"contacts": $contacts}""")
+      val problems = canvas.prepare()
+      assertEquals(1, problems.size, contacts)
+      val failure = assertFailsWith<IllegalArgumentException> { canvas.value(adapter.contacts) }
+      assertTrue(failure.message.orEmpty().startsWith("acme/inbox.contacts"), failure.message)
+    }
+  }
+
+  @Test
+  fun `a list or object property is literal only`() {
+    val (adapter, canvas) =
+      inbox("""{"contacts": {"type": "state", "variable": "rows", "value": "[]"}}""")
+    assertFailsWith<IllegalArgumentException> { canvas.value(adapter.contacts) }
+  }
+
   companion object {
+    private val CONTACT: AdapterObjectCodec<Contact> =
+      AdapterValueCodecs.obj("acme.Contact") {
+        val name = field(Contact::name, AdapterValueCodecs.String)
+        val unread = field(Contact::unread, AdapterValueCodecs.Int, default = 0)
+        val tags =
+          field(Contact::tags, AdapterValueCodecs.list(AdapterValueCodecs.String), emptyList())
+        construct { Contact(name = it[name], unread = it[unread], tags = it[tags]) }
+      }
+
     private fun record() =
       ComponentRecord.Builder(
           ":app/acme.ToggleKt.Toggle",

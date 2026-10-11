@@ -160,6 +160,10 @@ object ScreenExportGate {
   /**
    * The owners [exportProjections] print that sit in a package some component of [record] is
    * declared in. Anything else stays outside the allowlist, so the generator refuses it by name.
+   *
+   * A list or object property's object class (`Contact(name = …)`) is admitted as itself, the one
+   * callable its codec writes, on the same condition; its `listOf` is `kotlin.collections`, which
+   * [EXPRESSION_PACKAGES] already admits.
    */
   internal fun projectedOwners(
     exportProjections: Map<String, ExportProjection>,
@@ -168,10 +172,35 @@ object ScreenExportGate {
     if (exportProjections.isEmpty()) return emptySet()
     val packages =
       record.components.map { it.symbol.callable.substringBeforeLast('.', "") }.toSet() - ""
-    return exportProjections.values
-      .flatMap { it.qualifiedOwners }
+    return (exportProjections.values.flatMap { it.qualifiedOwners } +
+        exportProjections.values.flatMap(::objectCallables))
       .filter { owner -> owner.substringBeforeLast('.', "") in packages }
       .toSet()
+  }
+
+  /** Every object callable [projection]'s list and object codecs write, at any depth. */
+  private fun objectCallables(projection: ExportProjection): Set<String> = buildSet {
+    fun codec(written: ExportProjection.Codec) {
+      when (written) {
+        is ExportProjection.Codec.ListOf -> codec(written.element)
+        is ExportProjection.Codec.Object -> {
+          add(written.callableFqn)
+          written.fields.values.forEach { codec(it.codec) }
+        }
+        else -> Unit
+      }
+    }
+    fun value(read: ExportProjection.Value) {
+      when (read) {
+        is ExportProjection.Value.Property -> codec(read.codec)
+        is ExportProjection.Value.Call -> read.arguments.values.forEach(::value)
+        else -> Unit
+      }
+    }
+    for (target in projection.targets) {
+      target.parameters.values.forEach(::value)
+      target.contexts.values.forEach { context -> context.parameters.values.forEach(::value) }
+    }
   }
 
   /** The composable-slot receivers of every record a projection targets, from [record]. */

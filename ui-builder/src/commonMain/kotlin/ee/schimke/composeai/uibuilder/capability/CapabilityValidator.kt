@@ -329,6 +329,24 @@ class CapabilityValidator(private val catalog: CapabilityCatalog) {
             name,
           )
       } else {
+        // A typed adapter's list or object: the whole nested value against its published shape,
+        // which is the codec the renderer decodes it with.
+        val shape = property.compositeShapeFor(encodedValue)
+        if (shape != null) {
+          PropertyValueShapes.issue(shape, encodedValue, name)?.let { message ->
+            val stated =
+              ((encodedValue as? JsonObject)?.get("type") as? JsonPrimitive)?.contentOrNull
+            issues +=
+              issue(
+                if (stated == shape.literalType) CapabilityIssueCode.INVALID_PROPERTY_VALUE
+                else CapabilityIssueCode.INVALID_PROPERTY_TYPE,
+                node,
+                "property $message",
+                name,
+              )
+          }
+          return@forEach
+        }
         val value = encodedValue.unwrapPropertyValue()
         val argumentMatches =
           bindings.propertyMatches(node.id, name, encodedValue) { supplied ->
@@ -600,12 +618,25 @@ internal fun PropertyCapability.acceptsSeedValue(encoded: JsonObject): Boolean {
   return acceptsType(value) && (allowedValues.isEmpty() || value in allowedValues)
 }
 
+/**
+ * The published list or object shape [encoded] is checked against, or null for a scalar property,
+ * and for a component body's `binding` read, whose value is its placement's to supply.
+ */
+private fun PropertyCapability.compositeShapeFor(encoded: JsonElement): PropertyValueShape? {
+  val shape = editor?.valueShape ?: return null
+  val stated = ((encoded as? JsonObject)?.get("type") as? JsonPrimitive)?.contentOrNull
+  return shape.takeUnless { stated == "binding" }
+}
+
 private fun PropertyCapability.acceptsType(value: JsonElement): Boolean =
   typeNames().any { type ->
     when (type) {
       "null" -> value is JsonNull
       "object" -> value is JsonObject
-      "array" -> value is JsonArray
+      // A list arrives in its document wrapper, `{"type": "list", "values": […]}`.
+      "array" ->
+        value is JsonArray ||
+          (value is JsonObject && (value["type"] as? JsonPrimitive)?.contentOrNull == "list")
       "string" -> value is JsonPrimitive && value.isString
       "boolean" -> value is JsonPrimitive && value.booleanOrNull != null
       "integer" -> value is JsonPrimitive && !value.isString && value.longOrNull != null

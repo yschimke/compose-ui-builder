@@ -9,6 +9,7 @@ import ee.schimke.composeai.uibuilder.RejectionCode
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderFrameGeometry
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
+import ee.schimke.composeai.uibuilder.capability.PropertyPathSegment
 import ee.schimke.composeai.uibuilder.codegen.validateDocumentForExport
 import ee.schimke.composeai.uibuilder.export.UiBuilderCatalogPlatform
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
@@ -28,6 +29,13 @@ enum class EditorPropertyControl {
   Number,
   Enum,
   Color,
+  /**
+   * A typed adapter's list: shows how many rows it holds and adds one; its rows follow as their own
+   * fields (see [EditorPropertyStructure]).
+   */
+  List,
+  /** A typed adapter's object: a heading whose fields follow as their own rows. */
+  Object,
   Unsupported,
 }
 
@@ -67,7 +75,44 @@ data class EditorPropertyField(
   val notes: String? = null,
   /** A short line the inspector always shows under the control, such as what a parameter is. */
   val supporting: String? = null,
+  /**
+   * Set on every row of a list or object property, the property's own heading included: where in
+   * the value this row sits. Null for every other field.
+   */
+  val structure: EditorPropertyStructure? = null,
 )
+
+/**
+ * Where one row of a typed adapter's list or object property sits. [path] is empty for the
+ * property's own heading; [row] is set when this value is one row of a list, so the inspector can
+ * move and remove it. A scalar row is committed with [UiBuilderEditorEvent.CommitPropertyPath] (or
+ * [UiBuilderEditorEvent.CommitProperty] under its spelled name, `contacts[0].name`); rows are
+ * added, removed and moved with [UiBuilderEditorEvent.EditPropertyList].
+ */
+data class EditorPropertyStructure(
+  val property: String,
+  val path: List<PropertyPathSegment>,
+  val row: EditorListRow? = null,
+) {
+  /** How far the row is indented under its property. */
+  val depth: Int
+    get() = path.size
+}
+
+/** Row [index] of a list holding [count]. */
+data class EditorListRow(val index: Int, val count: Int)
+
+/**
+ * One change to the rows of a list inside a property; see [UiBuilderEditorEvent.EditPropertyList].
+ */
+sealed interface EditorListEdit {
+  /** A row seeded from the element shape, at [index] or, when null, at the end. */
+  data class Insert(val index: Int? = null) : EditorListEdit
+
+  data class Remove(val index: Int) : EditorListEdit
+
+  data class Move(val from: Int, val to: Int) : EditorListEdit
+}
 
 data class EditorPropertyLocation(val nodeId: String, val property: String)
 

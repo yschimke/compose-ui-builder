@@ -1818,10 +1818,13 @@ fun UiBuilderEditor(
                 // Only what the node carries, i.e. what the export would write.
                 fields =
                   inspectorPropertyFields(reducer.propertyFields(state)).filter { field ->
-                    field.written ||
-                      field.required ||
-                      field.boundVariable != null ||
-                      field.error != null
+                    // A list or object is edited row by row in the panel, which can add and
+                    // remove rows; the card types over single values only.
+                    field.structure == null &&
+                      (field.written ||
+                        field.required ||
+                        field.boundVariable != null ||
+                        field.error != null)
                   },
                 modifierFields = reducer.modifierFields(state),
                 sizing = reducer.sizing(state),
@@ -2226,7 +2229,8 @@ fun UiBuilderEditor(
   val bindableProperties =
     state.selectedNodeId?.let { nodeId ->
       propertyFields
-        .filter { reducer.canBindToState(state, nodeId, it.name) }
+        // A list or object row is never bindable, and each probe validates the whole document.
+        .filter { it.structure == null && reducer.canBindToState(state, nodeId, it.name) }
         .map { it.name }
         .toSet()
     } ?: emptySet()
