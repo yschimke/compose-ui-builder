@@ -14,27 +14,13 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * `asset/image` on a Wear screen, which is the one borrowed foundation component that is not a box.
+ * `asset/image` on a Wear screen, the one borrowed foundation component (beside `layout/box`,
+ * `layout/column`, `layout/row`) that isn't a container.
  *
- * ## What it was, and why it refused
- *
- * `wear-m3` borrows four components from the foundation, and only four: `layout/box`,
- * `layout/column`, `layout/row` and `asset/image`. The first three are containers and the screen
- * generator has always written them. The fourth fell through to the generator's `else`, whose
- * refusal text *names `asset/image` among the borrows* — so the lane offered the component on the
- * palette, drew it on the canvas as the real `Image`, and then refused to write the screen holding
- * it, citing a list that contains it.
- *
- * ## Why the painter is a colour
- *
- * The picture is bytes in the design's asset store. Generated source cannot carry them, and the
- * symbol that would name them once they are in a project — `R.drawable.…` on one host,
- * `Res.drawable.…` on another — is declared by whoever receives this file. So the frame is filled
- * with the theme's own raised ground and the line to replace is named in a comment above it. This
- * is what the Wear catalog already told authors this lane does (`assetKey`'s notes: *"exports as
- * Image(painter = ColorPainter(...))"*) and what `ScreenDocumentProjection` does for the same
- * component on the mobile side, where `Result` has a warning list to record it in and this lane's
- * has only a source.
+ * Generated source can't carry the asset bytes, and the project symbol (`R.drawable.…`,
+ * `Res.drawable.…`) is the receiver's, so the frame is filled with the theme's raised ground and a
+ * comment names the line to replace. This matches the catalog's `assetKey` notes (*"exports as
+ * Image(painter = ColorPainter(...))"*) and `ScreenDocumentProjection` on mobile.
  */
 class WearImageExportTest {
   private val pin = JsonObject(emptyMap())
@@ -87,11 +73,7 @@ class WearImageExportTest {
     assertTrue("The asset `hero` is bytes in the design" in source, source)
   }
 
-  /**
-   * Only what the design set. `Image` defaults `contentScale` and `alignment`, and writing
-   * `ContentScale.Fit` where nobody asked for it is this generator claiming a decision the author
-   * did not make — the same reason every other branch omits an untouched argument.
-   */
+  /** Only what the design set: untouched `contentScale` and `alignment` are omitted. */
   @Test
   fun `scale and alignment are written when authored and omitted when not`() {
     val bare = source(screenWith(image("assetKey" to "hero")))
@@ -127,10 +109,8 @@ class WearImageExportTest {
   }
 
   /**
-   * A value outside the catalog's `allowedValues` is refused by name rather than written through.
-   *
-   * `ContentScale.Squish` is not a compile error this generator gets to discover: it is one the
-   * author discovers, in their own project, long after the export.
+   * A value outside the catalog's `allowedValues` (e.g. `ContentScale.Squish`) is refused by name
+   * rather than written through.
    */
   @Test
   fun `a scale or alignment the catalog does not allow is refused`() {

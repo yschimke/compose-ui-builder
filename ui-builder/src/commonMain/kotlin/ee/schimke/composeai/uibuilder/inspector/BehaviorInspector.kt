@@ -223,9 +223,8 @@ internal fun EventActionsInspector(
   val stateActionKinds =
     listOf("set" to "Set") +
       (if (isFlag) listOf("toggle" to "Toggle") else emptyList()) +
-      // Only where an export writes it: the Remote Compose lanes count in the player; the screen
-      // generator the Compose export runs has no increment lowering yet, and offering one there
-      // would author a design the export then refuses.
+      // Only where an export writes it: Remote Compose lanes support increment; the Compose screen
+      // generator has no lowering yet and would refuse it.
       (if (isNumber && remoteCompose) listOf("increment" to "Add") else emptyList()) +
       (if (isNullable) listOf("selectOrClear" to "Select / clear") else emptyList())
   val actionKinds =

@@ -20,12 +20,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * `m3/slider` and `m3/progress-indicator`: a value you drag and a value you watch.
- *
- * The pair is the decimal half of what the selection controls did for flags. A slider writes a
- * declared decimal variable and a progress indicator reads one, so between them they cover both
- * directions of the same seam — and the indicator adds the one thing neither of the others has, an
- * *indeterminate* state that is a second Material overload rather than a value.
+ * `m3/slider` and `m3/progress-indicator`: a value you drag and a value you watch, writing and
+ * reading a declared decimal variable. The indicator's *indeterminate* state is a different
+ * Material overload, not a value.
  */
 class SliderAndProgressTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -48,11 +45,7 @@ class SliderAndProgressTest {
     assertEquals(emptyList(), CapabilityValidator(catalog).validate(progress.document).issues)
   }
 
-  /**
-   * The inspector has to be able to author these, which is not automatic: the catalog gives a
-   * number an editor from a `…Dp` name, and none of a slider's numbers is a dimension. Without the
-   * overrides they were all `Unsupported` — a slider whose ends nobody can set.
-   */
+  /** The inspector needs editor overrides for these numbers, since none is a `…Dp` dimension. */
   @Test
   fun `the inspector offers bounded fields for the range, the steps and the fraction`() {
     val (slider, _) = insert("m3/slider")
@@ -93,11 +86,7 @@ class SliderAndProgressTest {
     )
   }
 
-  /**
-   * Material's indeterminate indicator is the overload you call *without* a progress lambda, so the
-   * flag has to pick the call rather than a value. Passing `progress = { … }` and animating anyway
-   * is not a thing the API offers.
-   */
+  /** Indeterminate is the overload without a progress lambda, so the flag picks the call. */
   @Test
   fun `an indeterminate indicator exports as the overload that takes no progress`() {
     val source = exportOf("m3/progress-indicator", "indeterminate" to "true")

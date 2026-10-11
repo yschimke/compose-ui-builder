@@ -7,7 +7,22 @@ class UiBuilderBasePathTest {
 
   @Test
   fun `a page with no meta, or a malformed one, keeps the ui-builder base`() {
-    for (raw in listOf(null, "", "  ", "ui-builder", "//evil.example/", "https://evil.example/")) {
+    for (raw in
+      listOf(
+        null,
+        "",
+        "  ",
+        "ui-builder",
+        "//evil.example/",
+        "https://evil.example/",
+        // A browser reads `\` as `/` and drops tabs and newlines in an http(s) URL, so each of
+        // these is `//evil.example/` once a navigation is built from it.
+        "/\\evil.example/",
+        "/\tevil/\t/evil.example/",
+        "/\n/evil.example/",
+        "/ui-builder?x=1",
+        "/ui-builder#x",
+      )) {
       assertEquals(DEFAULT_UI_BUILDER_BASE_PATH, normalizeUiBuilderBasePath(raw), "for $raw")
     }
   }

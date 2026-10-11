@@ -47,12 +47,9 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 /**
- * The guidelines section of the Issues panel: a model reads the design on screen against the
- * Android design guides for its platform, on the person's own OpenRouter key, and each rule it
- * judges broken is listed with the guide it comes from.
- *
- * Advisory only. Nothing here feeds the export gate, so a finding never blocks an export and the
- * panel's blocking counts are unchanged by it.
+ * The Issues panel's guidelines section: a model checks the design against its platform's Android
+ * design guides using the person's OpenRouter key, listing each broken rule with its guide.
+ * Advisory only; never feeds the export gate.
  */
 @Composable
 internal fun GuidelinesSection(

@@ -162,11 +162,9 @@ sealed interface UiBuilderClientUpdate {
 }
 
 /**
- * Strict pushed-update decoder with an exclusive durable cursor.
- *
- * The injected transport can be backed by browser `WebSocket`, Ktor, or a deterministic fake. Only
- * snapshots and deltas advance the cursor. Presence and outcomes remain non-durable. Replayed and
- * overlapping deltas are suppressed or trimmed before delivery.
+ * Strict pushed-update decoder with an exclusive durable cursor. The transport can be a browser
+ * `WebSocket`, Ktor, or a fake. Only snapshots and deltas advance the cursor; presence and outcomes
+ * are non-durable. Replayed and overlapping deltas are suppressed or trimmed.
  */
 class UiBuilderProtocolUpdateClient(
   private val designId: String,

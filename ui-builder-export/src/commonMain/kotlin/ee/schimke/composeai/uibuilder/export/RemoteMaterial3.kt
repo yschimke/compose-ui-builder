@@ -9,42 +9,17 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The Remote Material 3 components a widget body can hold:
- * `androidx.wear.compose.remote.material3`, under the ids `yschimke/wear-m3-catalog` publishes them
- * as.
+ * The Remote Material 3 components a widget body can hold
+ * (`androidx.wear.compose.remote.material3`), under the ids `yschimke/wear-m3-catalog` publishes.
+ * One table read by the built-in `remote-m3` catalog (palette), the canvas (via
+ * [Component.canvasMapping]) and the export ([records], read by `RemoteContentEmitter`'s record
+ * fallback).
  *
- * ## One table, three readers
- *
- * - **The built-in `remote-m3` catalog** offers each on the widget palette, its properties and
- *   slots read off the component's own signature in the embedded record.
- * - **The canvas** draws each with the Wear Material 3 adapter the published catalog names —
- *   `RemoteButton` is `wear-m3/button` — through [Component.canvasMapping], so a widget shows a
- *   Wear button rather than a placeholder.
- * - **The export** writes each from its record: [records] is what `RemoteContentEmitter`'s record
- *   fallback reads, so `remote-m3/remote-button` becomes `RemoteButton(onClick = …) { … }`.
- *
- * The ids, record ids, shelves, canvas adapters and mappings are wear-m3-catalog's
- * `remote-catalog/ui-builder.policy.json`, row for row, so a design authored against this catalog
- * opens unchanged against the published one and the other way round.
- *
- * ## What is left out, and why
- *
- * Nothing is left out any more. The two page indicators were: each takes a
- * `RemotePageIndicatorState`, which no property can carry. They are offered now, with the state's
- * two inputs — `pageCount` and `selectedPage` — as properties, and `RemoteContentEmitter` writes
- * `rememberRemotePageIndicatorState(pageCount, selectedPage)` by hand ahead of the record fallback,
- * so `selectedPage` can read a design's Int state and follow it as an action writes it.
- *
- * `remote-m3/remote-icon` takes an `ImageVector` too, and is offered anyway: the vector is chosen
- * by a Material icon key — the same table `m3/icon` and `wear-m3/icon` read — which
- * `RemoteContentEmitter` writes as `Icons.<Style>.<Name>.toRemoteImageVector()` by hand rather than
- * through the record fallback. A launcher or shortcut widget is a row of icon buttons, and without
- * it there was no way to put a glyph inside one (yschimke/remote-m3-catalog#12).
- *
- * `remote-m3/remote-text` is offered beside `m3/text`: both are written as the same `RemoteText`,
- * but the published catalog declares only the former, so a design or template that must open
- * against both catalogs names `remote-m3/remote-text`. `m3/text` stays for the designs already
- * stored against it.
+ * Rows match wear-m3-catalog's `remote-catalog/ui-builder.policy.json`, so designs open against
+ * either catalog. Hand-written cases: the page indicators (`RemotePageIndicatorState` built from
+ * `pageCount`/`selectedPage`) and `remote-m3/remote-icon` (a Material icon key written as
+ * `Icons.<Style>.<Name>.toRemoteImageVector()`). `m3/text` stays beside `remote-m3/remote-text` for
+ * designs stored against it.
  */
 public object RemoteMaterial3 {
 
@@ -354,10 +329,8 @@ public object RemoteMaterial3 {
     )
 
   /**
-   * Each component's record, keyed by its component id and carrying that id — the shape
-   * `RemoteContentEmitter` takes, which is the published catalog's aliased record.
-   *
-   * Empty only if the embedded record failed to parse, which a test in this module rules out.
+   * Each component's record, keyed by its component id and carrying that id (the published
+   * catalog's aliased shape). Non-empty, as a test in this module ensures.
    */
   public val records: Map<String, ComponentRecord> by
     lazy(LazyThreadSafetyMode.PUBLICATION) {
@@ -421,23 +394,16 @@ public object RemoteMaterial3 {
 }
 
 /**
- * `RemoteButton`'s label overload — `label`, `secondaryLabel` and `icon` slots in place of one
- * `content` row — the Wear button shape most designs want.
- *
- * The record holds one overload per symbol, and for `RemoteButton` it is the `content` one, so this
- * one is assembled from it: the button's own parameters, with the three slots as
- * `RemoteCheckboxButton` declares them (the same types: `label` and `secondaryLabel` row-scoped,
- * `icon` plain and optional). `label` is placed before the defaulted parameters rather than last,
- * so the emitter names it instead of writing a trailing lambda: `RemoteButton(onClick = …) { … }`
- * would match both overloads, and a named `label` matches only this one.
+ * `RemoteButton`'s label overload (`label`, `secondaryLabel`, `icon` slots), assembled from the
+ * record's `content` overload with slots typed as `RemoteCheckboxButton` declares them. `label` is
+ * placed before the defaulted parameters so the emitter names it, selecting this overload rather
+ * than a trailing lambda that matches both.
  */
 public const val REMOTE_LABEL_BUTTON_ID: String = "remote-m3/remote-label-button"
 
 /**
- * Rows this table offers that the published catalog's policy does not have yet. The published
- * record holds one overload per symbol, so an overload assembled here has no row there until the
- * catalog adds one; a design using it opens only against this built-in catalog, as one using
- * [UiTimeText] or [UiRemoteTheme] does.
+ * Rows the published catalog's policy does not have yet (assembled overloads); designs using them
+ * open only against this built-in catalog, as with [UiTimeText] or [UiRemoteTheme].
  */
 internal val UNPUBLISHED_REMOTE_M3_IDS: Set<String> = setOf(REMOTE_LABEL_BUTTON_ID)
 
@@ -485,9 +451,9 @@ private fun labelButtonRecord(embedded: List<ComponentRecord>): ComponentRecord?
 }
 
 /**
- * The asset whose picture fills a button's or card's container: `RemoteButton`'s and `RemoteCard`'s
- * `containerPainter` overloads, written `painterRemoteImageBitmap(…)`. The record holds the
- * overload without one, so this is a stated property rather than a derived parameter.
+ * The asset whose picture fills a button's or card's container (`containerPainter` overloads,
+ * written `painterRemoteImageBitmap(…)`). A stated property, since the record holds the overload
+ * without one.
  */
 public const val REMOTE_CONTAINER_IMAGE_PROPERTY: String = "containerImageKey"
 

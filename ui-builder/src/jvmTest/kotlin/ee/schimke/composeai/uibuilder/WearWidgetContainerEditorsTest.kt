@@ -8,20 +8,12 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * The container's `background` has to be reachable from the inspector, not merely declared.
+ * The container's `background` (typed `"string"`) is reachable from the inspector as a colour
+ * editor. Padding and corner radius aren't the container's (`WearWidgetParams` supplies them per
+ * host shape), so they have no editors.
  *
- * It is typed `"string"`, so it fell through to a plain text field with no hint that a colour or a
- * token was what it wanted. A property the catalog declares and the renderer reads but the
- * inspector will not show is the same as not having it.
- *
- * Padding and corner radius used to be pinned here as number controls. The container no longer
- * declares them — `WearWidgetParams` hands them to the widget per host shape — so the override
- * table no longer carries editors for them either.
- *
- * Parsed from a synthetic catalog rather than the real `remote-m3` one: that catalog is synthesised
- * in `:ui-builder-runtime`, which this module may not depend on. What is under test is the override
- * table in the parser, and it is keyed by component id, so the id is all the fixture needs to
- * carry.
+ * Parsed from a synthetic catalog: the real `remote-m3` is synthesised in `:ui-builder-runtime`,
+ * which this module can't depend on, and the override table is keyed by component id only.
  */
 class WearWidgetContainerEditorsTest {
   private val catalog = CapabilityCatalogParser.parse(CONTAINER_CATALOG)

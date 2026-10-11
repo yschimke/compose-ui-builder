@@ -1,23 +1,9 @@
-// `:ui-builder-export` — the projection from a saved design onto the screen the generator consumes.
+// `:ui-builder-export` — the projection from a saved design onto the screen the generator
+// consumes, shared by `:server` and the browser editor so both agree on which designs export.
 //
-// It exists because two very different callers need the same answer to one question — *what does
-// this document mean?* — and until now only one of them could ask it. `:server` projects a saved
-// `DesignDocumentV1` onto `ScreenDocument` and runs the real `ScreenGenerator`; the browser editor,
-// which is wasm, could not reach that code at all and kept a hand-written emitter of its own. The
-// two then disagreed about which designs export, which is the drift this module ends.
-//
-// **Kotlin Multiplatform** (jvm + wasmJs) for exactly that reason, and it is only possible because
-// `ee.schimke.composeai:screen-model` publishes the generator for both targets. `preview-discovery`
-// carries the same code for the JVM alone, which is why this could not be done before 1.77.0.
-//
-// **No Compose dependency.** This is projection and generation, not rendering: `:ui-builder` may
-// depend on it without inverting anything, and `:server` may without pulling Compose UI onto a
-// server classpath.
-//
-// **A named seam**, because both `:server` and `:ui-builder` depend on it. It used to publish for
-// that reason; an incomplete project-dependency POM is what broke `compose-preview-serve` 3.1.0.
-// Since #794 this repository ships distributions rather than Maven coordinates, while the module
-// boundary remains useful for keeping the browser and server on one implementation.
+// Kotlin Multiplatform (jvm + wasmJs), possible because `ee.schimke.composeai:screen-model`
+// publishes the generator for both. No Compose dependency: this is projection and generation, not
+// rendering.
 plugins {
   alias(libs.plugins.ktfmt)
   alias(libs.plugins.kotlin.multiplatform)
@@ -27,10 +13,8 @@ plugins {
 
 base { archivesName.set("compose-preview-" + project.name) }
 
-// The Remote Material 3 component record, embedded as a constant for the reason
-// `:ui-builder:embedComponentRecord` gives: resource loading differs between the JVM and wasmJs. It
-// is what writes a `remote-m3/remote-button` in a widget body as a `RemoteButton` call, and what
-// the built-in `remote-m3` catalog reads each component's parameters off. See `RemoteMaterial3`.
+// The Remote Material 3 component record, embedded as a constant (resource loading differs between
+// JVM and wasmJs). See `RemoteMaterial3`.
 val embedRemoteMaterial3Record =
   tasks.register<EmbedComponentRecord>("embedRemoteMaterial3Record") {
     record.set(rootProject.file("docs/design/fixtures/ui-builder/remote-m3-record-v1.json"))
@@ -47,9 +31,8 @@ val embedRemoteMaterial3Record =
   }
 
 // The Remote modifier vocabulary, generated from the released `remote-creation-compose` sources by
-// `scripts/remote-vocabulary/generate_remote_modifiers.py`. The released API is authoritative for
-// which `RemoteModifier` calls exist; a `remoteCall` modifier is validated and written against
-// this.
+// `scripts/remote-vocabulary/generate_remote_modifiers.py`; `remoteCall` modifiers are validated
+// against it.
 val embedRemoteModifierVocabulary =
   tasks.register<EmbedComponentRecord>("embedRemoteModifierVocabulary") {
     record.set(rootProject.file("docs/design/fixtures/ui-builder/remote-modifiers-v1.json"))
@@ -65,9 +48,8 @@ val embedRemoteModifierVocabulary =
     )
   }
 
-// The design-guideline rules, from the one file people review and edit. `DesignGuidelineRuleSet.
-// Bundled` reads it on both sides: the editor's own-key check and compose-preview-server's
-// guidelines lane and MCP tools ask the same rules, with no copy kept in step by hand.
+// The design-guideline rules, from the one reviewed file; `DesignGuidelineRuleSet.Bundled` reads it
+// in the editor and in compose-preview-server.
 val embedDesignGuidelines =
   tasks.register<EmbedComponentRecord>("embedDesignGuidelines") {
     record.set(rootProject.file("docs/guidelines/android-design-guidelines.json"))
@@ -83,18 +65,10 @@ val embedDesignGuidelines =
     )
   }
 
-// The document and mutation JSON Schemas come from the pinned protocol jar, generated there from
-// the serializers; see `ExtractProtocolSchemas`. The JVM jar alone: the attributes pick the JVM
-// variant of the multiplatform root module, and the dependency (not the configuration) is
-// non-transitive so its own dependencies stay out. Not the configuration: a non-transitive
-// configuration does not follow the platform's edges either, so the BOM's constraints would never
-// apply and the versionless coordinate would fail to resolve.
-//
-// The coordinate carries no version. The contracts BOM supplies it, as it does for every other
-// contracts module this build names: the contracts repository publishes only the modules a release
-// changes, so `ui-builder-protocol-jvm` at the BOM's own version is a 404 whenever a release skips
-// it (3.15.0 is one). The BOM constrains the root module, not `-jvm`, which is why this names the
-// root and selects the JVM variant by attribute rather than naming the `-jvm` artifact directly.
+// The document and mutation JSON Schemas from the pinned protocol jar; see
+// `ExtractProtocolSchemas`. The dependency (not the configuration) is non-transitive so the BOM's
+// constraints still apply. Versionless: the contracts BOM supplies the root module's version, and
+// the JVM variant is selected by attribute (a `-jvm` coordinate at the BOM version may not exist).
 val protocolSchemaJar =
   configurations.create("protocolSchemaJar") {
     isCanBeConsumed = false
@@ -137,9 +111,8 @@ val extractProtocolSchemas =
     output.set(layout.buildDirectory.dir("generated/protocolSchemas"))
   }
 
-// The flexpress release the generated code is written for, from the version catalog, so the note an
-// export carries (`implementation("ee.schimke.flexpress:flexpress-compose:…")`) names the version
-// the JVM side generated with and moves when Renovate moves it.
+// The flexpress version from the version catalog, so an export's dependency note matches the
+// generator.
 val generateFlexpressVersion =
   tasks.register("generateFlexpressVersion") {
     val version = libs.versions.flexpress
@@ -160,10 +133,8 @@ val generateFlexpressVersion =
     }
   }
 
-// The variable fonts `FlexpressVariableFontSources` generates from, in this module's own JVM
-// resources: compose-preview-server puts this jar on its classpath but not `:ui-builder`'s, and
-// the render bundle is an opaque PNG there, so neither of the copies the canvas draws from is
-// readable where an export runs. The files `VariableFontText.Font` names, with their licences;
+// The variable fonts `FlexpressVariableFontSources` generates from, staged into this module's JVM
+// resources because the canvas's copies are not readable where an export runs.
 // `FlexpressVariableFontSourcesTest` fails if one is missing.
 val stageFlexpressFonts =
   tasks.register<Sync>("stageFlexpressFonts") {
@@ -182,10 +153,8 @@ val stageFlexpressFonts =
 ktfmt { googleStyle() }
 
 kotlin {
-  // Pinned to `java-server`, and pinned *explicitly*. This module had no toolchain at all, so its
-  // JVM jar once took whatever JVM happened to run Gradle — 17 on CI today, and silently whatever a
-  // contributor's `JAVA_HOME` says. It is stated here so the server distribution cannot drift, and
-  // so a reader comparing this file with `:ui-builder`'s sees the line between the two floors.
+  // Pinned explicitly to `java-server` so the server distribution's floor cannot drift with
+  // `JAVA_HOME`.
   jvmToolchain(libs.versions.java.server.get().toInt())
 
   jvm()
@@ -213,10 +182,8 @@ kotlin {
       kotlin.srcDir(generateFlexpressVersion)
     }
     commonMain.dependencies {
-      // Both coordinates carry no version of their own; these platforms supply them (see the
-      // catalog). `project.dependencies.platform(...)`, not a bare `platform(...)`: inside a
-      // Kotlin Multiplatform source set the receiver is `KotlinDependencyHandler`, which has no
-      // `platform` function at all.
+      // These platforms supply the versions. `project.dependencies.platform(...)` because a KMP
+      // source set's `KotlinDependencyHandler` has no `platform` function.
       api(project.dependencies.platform(libs.composeai.tools.bom))
       api(project.dependencies.platform(libs.composeai.contracts.bom))
       api(libs.composeai.screen.model)
@@ -240,13 +207,9 @@ kotlin {
   }
 }
 
-// Compose Multiplatform Desktop, as a compile classpath for generated source and nothing else:
-// `DesktopTypefacesCompileTest` compiles the desktop typeface form (`TypefaceTarget.DESKTOP`)
-// against the real `ui-text` and Material 3 a desktop catalog like m3-catalog builds with, so
-// `SystemFont`'s signature and its opt-in are the library's rather than a stand-in's. A
-// configuration of its own rather than a test dependency, so no other test's stand-ins for
-// `androidx.compose` classes are shadowed by the real ones, and the module keeps no Compose
-// dependency at all (see the header).
+// Compose Multiplatform Desktop as a compile classpath for `DesktopTypefacesCompileTest` only (real
+// `SystemFont` signature and opt-in). Its own configuration so other tests' stand-ins are not
+// shadowed and the module keeps no Compose dependency.
 val desktopComposeClasspath =
   configurations.create("desktopComposeClasspath") {
     isCanBeConsumed = false
@@ -260,9 +223,8 @@ val desktopComposeClasspath =
     }
   }
 
-// The Compose compiler plugin, for `FlexpressVariableFontSourcesTest`: a standalone variable font
-// text calls `remember`, an inline composable the compiler cannot inline without the plugin's
-// lowering. Non-transitive; the embeddable compiler it plugs into is already on the test classpath.
+// The Compose compiler plugin, for `FlexpressVariableFontSourcesTest` (generated code calls
+// `remember`). Non-transitive.
 val composeCompilerPlugin =
   configurations.create("composeCompilerPlugin") {
     isCanBeConsumed = false

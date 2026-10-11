@@ -7,36 +7,15 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * `compose-foundation`: the builder's own vocabulary, curated per platform.
+ * `compose-foundation`: the builder's own vocabulary (`layout/`, `shape/`, `asset/` from
+ * `androidx.compose.foundation`/`ui`), curated per platform. m3-catalog declines to own these.
  *
- * A box, a gradient and an image are not Material 3's and not Wear Material 3's — they are
- * `androidx.compose.foundation` and `androidx.compose.ui`, which publish one of each rather than
- * one per design system. m3-catalog says the same from the other side: it declares no builtins at
- * all, on the stated grounds that doing so "would be this catalog claiming to own the builder's own
- * vocabulary". Somebody still has to own them, and for `layout/`, `shape/` and `asset/` this is
- * who.
+ * The `remote-compose/` seams are Remote Compose's and arrive through `seams`; curations only say
+ * which seam a platform takes and where it is shelved. A seam the source lacks is left off.
  *
- * **The `remote-compose/` seams are not among them.** Remote Compose is a different library with a
- * catalog of its own to describe it — so `document`, `inline` and `custom` arrive here through the
- * `seams` parameter rather than being declared here. The curations below still say WHICH seam a
- * platform takes and WHERE it sits on the shelf, because that is a statement about the palette
- * rather than about the component; the component is Remote Compose's. A seam the source does not
- * have is left off the palette rather than invented.
- *
- * **Local for now, external eventually.** The per-platform sets below are derived here from the
- * packaged Material 3 catalog because that is where the components are currently declared. The
- * intent of [#819](https://github.com/yschimke/compose-preview-server/issues/819) is that this
- * becomes a catalog published like any other, at which point this file loads a file instead of
- * building a list — and the two synthesised per-platform generators, whose only remaining job is to
- * be this donor, can go.
- *
- * ## Why the set is per platform rather than one list
- *
- * Because a palette entry that cannot be exported is worse than a missing one — it is only
- * discovered at the end. `WearScreenCodeExporter` refuses `layout/lazy-grid`, `layout/scaffold` and
- * the shapes with "no Wear Compose Material 3 counterpart this generator can write", so handing a
- * watch palette the mobile seventeen would guarantee a failed export for any design that used one.
- * The curation each platform already had is the curation kept here, component for component.
+ * Derived from the packaged Material 3 catalog for now; intended to become a published catalog,
+ * after which the synthesised per-platform generators can go. Per platform because an entry that
+ * cannot be exported (e.g. `layout/lazy-grid` on Wear) is worse than a missing one.
  */
 internal fun composeFoundationCatalog(
   base: CatalogCapabilityV1,
@@ -76,19 +55,13 @@ private const val MOBILE_PLATFORM = CurrentM3UiBuilderCatalogExecutor.DEFAULT_PL
 
 /**
  * One platform's share of the foundation: which components, in what shape, on which shelves.
- *
- * `ComposeFoundationFaithfulnessTest` asserts each of these against what the synthesised catalog of
- * that platform donates today, which is what makes the generators deletable rather than merely
- * redundant.
+ * `ComposeFoundationFaithfulnessTest` checks each against the synthesised catalog's donation.
  */
 private class FoundationCuration(
   /**
-   * Null means "every builder-namespace component the packaged catalog declares, in its order".
-   *
-   * So a mobile palette's SEAM ids also come from the packaged catalog, even though the seam
-   * components come from the seam source. That is right while the packaged catalog still declares
-   * all three; when it stops (#819), mobile needs an explicit list here the way wear and
-   * remote-compose already have one, or it silently loses them.
+   * Null means "every builder-namespace component the packaged catalog declares, in its order",
+   * including seam ids. If the packaged catalog stops declaring seams, mobile needs an explicit
+   * list like wear and remote-compose, or it silently loses them.
    */
   private val ids: List<String>?,
   val curate: (ComponentCapabilityV1) -> ComponentCapabilityV1 = { it },
@@ -103,26 +76,12 @@ private class FoundationCuration(
 
 private val FOUNDATION_CURATIONS =
   mapOf(
-    // Mobile takes the packaged declarations unchanged, on the packaged shelves. This is the set
-    // m3-catalog is served today, and the reason a published catalog that correctly declines to
-    // claim `layout/box` still ships a shelf with a box on it.
+    // Mobile takes the packaged declarations unchanged, on the packaged shelves.
     MOBILE_PLATFORM to
       FoundationCuration(ids = null, menu = { base -> base.statusSemantics.componentMenuObject() }),
-    // Wear borrows four foundation components, and nothing else.
-    //
-    // The three Remote Compose seams were here too, and they were offered rather than usable: the
-    // whole-screen Wear generator has no case for any of them, so a design that placed one was
-    // refused at export. That is the failure a curated borrow set exists to prevent — a palette
-    // entry that cannot be exported is worse than a missing one, because it is only discovered at
-    // the end, after the design is drawn.
-    //
-    // Withdrawn rather than fixed, for now, because making them work is a question about what a
-    // Remote Compose seam even means inside a Wear SCREEN — these are widget vocabulary, and the
-    // screen generator writes plain Compose. Tracked to come back once that has an answer.
-    //
-    // The four that remain are the ones that are genuinely shared: `layout/box`, `layout/column`,
-    // `layout/row` and `asset/image` are `androidx.compose.foundation` and `androidx.compose.ui`,
-    // which both platforms have, and all four export.
+    // Wear borrows only the four shared foundation components (`layout/box`, `layout/column`,
+    // `layout/row`, `asset/image`), all exportable. The Remote Compose seams are withdrawn: the
+    // screen generator cannot write them.
     "wear" to
       FoundationCuration(
         ids = listOf("layout/box", "layout/column", "layout/row", "asset/image"),
@@ -138,10 +97,11 @@ private val FOUNDATION_CURATIONS =
         },
         menu = { wearComponentMenu() },
       ),
-    // A Remote Compose document body. `shape/radial-gradient` is deliberately absent —
-    // `RemoteContentEmitter` writes linear gradient chains and has an authored refusal for
-    // `asset/image`, while a radial one would fall through to a generic "is not a widget background
-    // brush", which is a worse answer than not offering it.
+    // A2UI is a closed vocabulary and neither A2UI exporter handles `layout/`, `shape/` or
+    // `asset/`, so offer nothing rather than components that cannot be exported.
+    "a2ui" to FoundationCuration(ids = emptyList(), menu = { JsonObject(emptyMap()) }),
+    // A Remote Compose document body. No `shape/radial-gradient`: the emitter only writes linear
+    // gradient chains.
     "remote-compose" to
       FoundationCuration(
         ids =

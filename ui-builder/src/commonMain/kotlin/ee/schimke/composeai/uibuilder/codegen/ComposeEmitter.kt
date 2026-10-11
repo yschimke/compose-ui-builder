@@ -62,11 +62,9 @@ internal class ComposeEmitter(
     document.componentSignatures().first
 
   /**
-   * The component whose body is being emitted, or null inside the screen function.
-   *
-   * A bound property prints the parameter it reads only inside the body that declares it. Outside
-   * one there is nothing to read, so a binding that reached the screen would have no expression to
-   * become — and the gate refuses such a document before this ever runs.
+   * The component whose body is being emitted, or null inside the screen function. Bound properties
+   * print their parameter only inside the declaring body; the gate refuses bindings that would
+   * reach the screen.
    */
   private var emittingComponent: ComponentSignature? = null
 
@@ -81,19 +79,15 @@ internal class ComposeEmitter(
   }
 
   /**
-   * The row being drawn, inside a loop's template: the lambda's parameter, and what it holds.
-   *
-   * A bound property prints `row.shade` here, exactly as it prints a parameter name inside a
-   * component body. A nested loop replaces it rather than stacking, because a template's bindings
-   * read its own row — an inner loop's rows are the design's, not the outer row's fields.
+   * The row being drawn inside a loop's template: the lambda's parameter and its signature. A
+   * nested loop replaces it rather than stacking, since a template's bindings read only its own
+   * row.
    */
   private var emittingRow: Pair<String, LoopSignature>? = null
 
   /**
-   * The body first, then the header, so imports reflect what was actually emitted: a
-   * defined-but-unplaced component holding a supporting pane scaffold must not add an Adaptive
-   * import the project may not have ([emittedSupportingPaneScaffold] is set by
-   * [emitSupportingPane]).
+   * Emits the body first, then the header, so imports reflect what was actually emitted (e.g. no
+   * Adaptive import for an unplaced supporting-pane component).
    */
   fun emit(): String {
     val functionName = document.exportFunctionName()
@@ -124,10 +118,8 @@ internal class ComposeEmitter(
     val body = out.toString()
 
     out.clear()
-    // `FlowRow` is `@ExperimentalLayoutApi`, and the opt-in rides only on a file that wrote one:
-    // an unused opt-in is a warning in a project on source they did not author. No import goes
-    // with it — `androidx.compose.foundation.layout.*` is unconditional in [GENERATED_IMPORTS] and
-    // already carries both the composable and the annotation.
+    // `FlowRow` is `@ExperimentalLayoutApi`; opt in only when one was written, since an unused
+    // opt-in is a warning. The import is already covered by [GENERATED_IMPORTS].
     val optIns =
       listOf("ExperimentalMaterial3Api") +
         if (emittedFlowLayout) listOf("ExperimentalLayoutApi") else emptyList()
@@ -170,12 +162,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * Every declared variable and the Kotlin type `emitState` writes for it.
-   *
-   * One map rather than a set per question — boolean, nullable, declared — because the questions
-   * are all the same question and three sets that must agree is how several of this branch's
-   * defects happened. A handler reads the type it is writing into, which is what lets it refuse a
-   * value that type cannot hold instead of emitting `expanded = "yes"`.
+   * Every declared variable and the Kotlin type `emitState` writes for it. Handlers read this to
+   * refuse values the type cannot hold.
    */
   private val stateKotlinTypes: Map<String, String> by lazy {
     document.stateVariables.keys.associateWith { name -> stateDeclaration(name).kotlinType }
@@ -185,20 +173,12 @@ internal class ComposeEmitter(
     StateDeclaration.of(document.stateVariables[name] as? JsonObject)
 
   /**
-   * Every variable, typed from its own declaration.
-   *
-   * The Kotlin type is written out rather than left to inference. `initialValue` is not enough on
-   * its own: a nullable variable initialised to `null` infers `Nothing?` and rejects every later
-   * assignment, and a text variable initialised to `"true"` reads as a boolean to any classifier
-   * that asks `booleanOrNull` without checking `isString`. `valueType` and `nullable` are what the
-   * document actually declares, so they decide.
+   * Every variable, with its Kotlin type written explicitly from `valueType`/`nullable`. Inference
+   * from `initialValue` breaks for `null` (infers `Nothing?`) and for string `"true"`.
    */
   /**
-   * One `private @Composable fun` per component the design places, after the screen function.
-   *
-   * Only the ones actually placed: a component nobody uses is a definition the design carries, not
-   * a function the generated file has to explain. Parameter order is the sorted key order the
-   * signature fixed, so a re-export of an unchanged design is byte-identical.
+   * One `private @Composable fun` per component the design actually places, after the screen
+   * function. Parameters are in sorted key order so re-exports are byte-identical.
    */
   private fun emitComponentFunctions() {
     val placed =
@@ -217,11 +197,8 @@ internal class ComposeEmitter(
         appendLine("// component:${key.escapeComment()} root:${signature.root.escapeComment()}")
         appendLine("@Composable")
         appendLine("private fun ${signature.functionName}($parameters) {")
-        // `Box(modifier)`, because the canvas draws a placement the same way: the modifiers a
-        // placement carries belong to the placement, not to the body, and a body root that took
-        // them would apply one design's padding to every other placement of the same component.
-        // The wrapper is what makes the preview and the generated screen agree about which box the
-        // modifier sized.
+        // `Box(modifier)`: placement modifiers belong to the placement, not the body, matching how
+        // the canvas draws it.
         line(1, "Box(modifier) {")
         emittingComponent = signature
         emitNode(signature.root, 2)
@@ -233,12 +210,9 @@ internal class ComposeEmitter(
   }
 
   /**
-   * The rows a loop draws, as the list the generated `forEach` walks.
-   *
-   * A `Column` with the spacing the canvas lays the rows out with, so the preview and the generated
-   * screen agree about the gaps. `kotlin.collections.listOf` is qualified for the reason the
-   * sibling fold qualifies `kotlin.repeat`: a design may declare a state variable that shadows the
-   * bare name, and a generator cannot know what the file it is pasted into already means by it.
+   * The rows a loop draws, as the list the generated `forEach` walks, in a `Column` with the
+   * canvas's spacing. `kotlin.collections.listOf` is qualified in case a state variable shadows
+   * `listOf`.
    */
   private fun emitLoop(node: UiBuilderNode, level: Int) {
     val loop = loopSignatures[node.id] ?: return
@@ -256,9 +230,7 @@ internal class ComposeEmitter(
           }
         "${loop.className}($arguments)"
       }
-    // The element type is written when there is no element to infer it from: an empty list whose
-    // lambda reads `row.shade` has nothing to tell Kotlin what `row` is, and a design with no rows
-    // yet is the state every loop starts in.
+    // An empty list gives Kotlin nothing to infer `row`'s type from, so it is written explicitly.
     val elementType = if (loop.rows.isEmpty()) "<${loop.className}>" else ""
     line(level + 1, "kotlin.collections.listOf$elementType($rows).forEach { $parameter ->")
     val outer = emittingRow
@@ -270,11 +242,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * A name for the row the lambda binds, which nothing else in scope already means.
-   *
-   * `row` reads best and is almost always free; a design declaring a state variable called `row`
-   * would otherwise have every read of it inside the template silently answer the lambda's
-   * parameter instead — the capture the sibling fold refuses `it` for.
+   * A name for the row the lambda binds that nothing else in scope already means: `row`, unless a
+   * state variable claims it.
    */
   private fun rowParameterName(loop: LoopSignature): String {
     val taken = document.stateVariables.keys.mapTo(mutableSetOf()) { it.identifier() }
@@ -313,9 +282,7 @@ internal class ComposeEmitter(
     val passed =
       signature.parameters.joinToString("") { (parameter, kind) ->
         val value = arguments[parameter] as? JsonObject ?: return@joinToString ""
-        // A placement inside a loop template may pass the row rather than a value of its own,
-        // which is the composition the design record calls the point of having both: one body,
-        // placed once, drawn per row.
+        // Inside a loop template a placement may pass the row rather than its own value.
         val expression = node.boundArgument(parameter) ?: kind.argument(value)
         "${parameter.identifier()} = $expression, "
       }
@@ -323,12 +290,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * A colour property, as a parameter reference where the body reads one.
-   *
-   * The reason a component function can have parameters at all: inside a body this prints `shade`
-   * where it would otherwise print `Color(0xFF39D353)`. Outside a body — and for any property
-   * [BINDABLE_PROPERTIES] does not carry — nothing changes, and the gate has already refused a
-   * binding that would land here.
+   * A colour property, as a parameter reference where the body reads one (`shade` instead of
+   * `Color(0xFF39D353)`); otherwise the literal.
    */
   private fun UiBuilderNode.boundColorExpression(name: String): String =
     boundParameter(name) ?: colorExpression(name)
@@ -456,9 +419,7 @@ internal class ComposeEmitter(
           "tabs",
           "selectedTabIndex = ${node.integerExpression("selectedIndex", stateKotlinTypes)}",
         )
-      // A tab that cannot be clicked is a picture of a tab. The wire has carried the binding all
-      // along — the renderer dispatches it — and the export dropped it, so a generated screen
-      // showed a tab row whose selection could never move.
+      // Emit the click binding so the exported tab row's selection can move.
       "m3/tab" ->
         emitSimpleContainer(
           node,
@@ -485,9 +446,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * Whether the `kotlin` that a folded run (`kotlin.repeat(n) { _ -> … }`) qualifies through still
-   * means the package. A design state named `kotlin`, or an adapter renderer import bound to that
-   * name, would capture it; such designs print their cells the long way.
+   * Whether `kotlin` (used by folded `kotlin.repeat`) still means the package. A design state or
+   * renderer import named `kotlin` would capture it; such designs don't fold.
    */
   private val foldsRepeatedSiblings: Boolean by lazy {
     document.stateVariables.keys.none { it.identifier() == "kotlin" } &&
@@ -495,9 +455,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * A slot's children, with runs of identical siblings written as one `repeat` — the same calls in
-   * the same order, just spelled readably. [foldSignature] decides what is interchangeable; the
-   * run's comment names the folded siblings.
+   * A slot's children, with runs of identical siblings written as one `repeat`. [foldSignature]
+   * decides what is interchangeable.
    *
    * Only in non-lazy containers (the carousel included): lazy children carry per-item keys a fold
    * would have to invent. [emitOne] lets a per-child wrapper fold with its child.
@@ -507,10 +466,8 @@ internal class ComposeEmitter(
     level: Int,
     emitOne: (String, Int) -> Unit = ::emitNode,
   ) {
-    // A list too short to hold a run is emitted without asking any of the questions below. Not an
-    // optimisation of the common case but of the *deep* one: a signature walks a whole subtree, so
-    // a chain of single-child containers would have serialised its tail once per level on the way
-    // down, for an answer — "one child cannot be three" — that the length already gives.
+    // Short lists skip signature computation; this matters for deep single-child chains, where each
+    // level would otherwise serialise its whole subtree.
     if (children.size < MINIMUM_FOLDED_RUN) {
       children.forEach { emitOne(it, level) }
       return
@@ -537,8 +494,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * Memoised [foldSignature] answers, nulls included; a signature contains its children's, so an
-   * unmemoised walk is quadratic in depth.
+   * Memoised [foldSignature] answers, nulls included; signatures nest, so unmemoised walks are
+   * quadratic in depth.
    */
   private val foldSignatures = mutableMapOf<String, String?>()
 
@@ -550,9 +507,8 @@ internal class ComposeEmitter(
   private fun foldSignature(nodeId: String, ancestors: Set<String> = emptySet()): String? {
     if (nodeId in foldSignatures) return foldSignatures.getValue(nodeId)
     val signature = computeFoldSignature(nodeId, ancestors)
-    // Not cached under a cycle: the answer there is "this node is its own ancestor *on this path*",
-    // which is a fact about the path rather than about the node. The export gate refuses
-    // `GRAPH_CYCLE` long before emission, so this is a guard rather than a case.
+    // Not cached under a cycle: that answer depends on the path, not the node. `GRAPH_CYCLE` is
+    // refused before emission, so this is only a guard.
     if (ancestors.isEmpty() || signature != null) foldSignatures[nodeId] = signature
     return signature
   }
@@ -580,10 +536,8 @@ internal class ComposeEmitter(
         canonicalJson(node.properties),
         canonicalJson(node.modifiers),
         canonicalJson(node.eventBindings),
-        // What a placement passes is what makes two placements of one component different calls.
-        // Left out, four cells that differ only in the shade they pass folded into one `repeat`
-        // emitting the first one's colour four times — a fold that changed the screen rather than
-        // its spelling, which is the one thing this signature exists to prevent.
+        // Placement arguments are part of the signature, so placements differing only in passed
+        // values never fold together.
         canonicalJson(node.component ?: JsonObject(emptyMap())),
         slots.toString(),
       )
@@ -591,11 +545,9 @@ internal class ComposeEmitter(
   }
 
   /**
-   * The real `SupportingPaneScaffold`, through the same directive the canvas uses, so preview and
-   * app cannot disagree about when a design expands. `layoutMode` becomes the
-   * [PaneScaffoldDirective]; the preferred widths become `PaneScaffoldScope.preferredWidth` and the
-   * spacing `horizontalPartitionSpacerSize` (docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md, gap 2).
-   * Unstated widths are `null` and change nothing.
+   * The real `SupportingPaneScaffold`, through the same directive the canvas uses. `layoutMode`
+   * becomes the [PaneScaffoldDirective]; preferred widths become `PaneScaffoldScope.preferredWidth`
+   * and spacing `horizontalPartitionSpacerSize`. Unstated widths are `null`.
    */
   private fun emitSupportingPane(node: UiBuilderNode, level: Int) {
     emittedSupportingPaneScaffold = true
@@ -651,9 +603,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * `NavigationSuiteScaffold` with its default navigation type, so the generated screen is a rail
-   * on a tablet and a bar on a phone by the library's own decision — the one the canvas draws per
-   * frame. The primary action is written only when the design has one.
+   * `NavigationSuiteScaffold` with its default navigation type (rail on tablet, bar on phone), as
+   * the canvas draws per frame. The primary action is written only when the design has one.
    */
   private fun emitNavigationSuite(node: UiBuilderNode, level: Int) {
     emittedNavigationSuite = true
@@ -730,9 +681,7 @@ internal class ComposeEmitter(
   }
 
   private fun emitColumn(node: UiBuilderNode, level: Int) {
-    // Omitted when it is Compose's own default, so a design that never touched this property
-    // generates byte-identical Kotlin to before the property was honoured. That is the check that
-    // makes this change safe to land: the regenerated Jetcaster fixture has an empty diff.
+    // Omitted at Compose's default, so designs that never set it generate unchanged Kotlin.
     val horizontalAlignment =
       when (node.string("horizontalAlignment")) {
         "center" -> ", horizontalAlignment = Alignment.CenterHorizontally"
@@ -763,13 +712,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * A `FlowRow`: a row whose children wrap onto the next line instead of squeezing.
-   *
-   * Both arrangements are written, and both are the ones this file already computes for a row and a
-   * column, because that is what a flow row's two axes are: along a line it is a row, and down the
-   * lines it is a column. `maxItemsInEachRow` is written only where the design set one — its
-   * default is "as many as fit", which is the reason to reach for the component, and writing
-   * `Int.MAX_VALUE` into somebody's source says nothing they did not already have.
+   * A `FlowRow`: its main axis uses the row arrangement and its cross axis the column arrangement.
+   * `maxItemsInEachRow` is written only when the design set one.
    */
   private fun emitFlowRow(node: UiBuilderNode, level: Int) {
     emittedFlowLayout = true
@@ -935,13 +879,9 @@ internal class ComposeEmitter(
   }
 
   /**
-   * Material 3 Adaptive's imports, and only for a design that has the component.
-   *
-   * Unconditional entries in [GENERATED_IMPORTS] are all from the Compose and Material 3 artifacts
-   * an ordinary consumer of this export already has. Adaptive is a separate artifact on a separate
-   * version line, so an unused import of it is not free: it stops the generated file compiling in a
-   * project that never asked for the dependency. `emitAdaptiveHelper` is gated on the same
-   * predicate, so the helper and its imports cannot come apart.
+   * Material 3 Adaptive's imports, only for a design that uses it. Adaptive is a separate artifact,
+   * so an unused import breaks compilation in projects without it. `emitAdaptiveHelper` uses the
+   * same predicate.
    */
   private fun adaptiveImports(): List<String> =
     if (!emittedSupportingPaneScaffold) emptyList()
@@ -971,9 +911,8 @@ internal class ComposeEmitter(
   private var emittedSupportingPaneScaffold = false
 
   /**
-   * Set by the navigation-suite emitters, for the same reason: the navigation suite is its own
-   * artifact, `androidx.compose.material3:material3-adaptive-navigation-suite`, and an unused
-   * import of it stops the file compiling in a project without it.
+   * Set by the navigation-suite emitters: `material3-adaptive-navigation-suite` is a separate
+   * artifact, so its import must only appear when used.
    */
   private var emittedNavigationSuite = false
 
@@ -1047,14 +986,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * `CenterAlignedTopAppBar`, with the two colours the canvas draws and the scroll behavior it
-   * cannot.
-   *
-   * The colours were read by the renderer and dropped here, which is the "authored, stored,
-   * discarded" shape this file keeps calling out elsewhere — a transparent bar on the canvas
-   * generated an opaque one. `scrollBehavior` is the opposite case and the reason the catalog notes
-   * it: the generated screen gets the real behavior, and the canvas cannot draw one because a
-   * behavior is driven by a nested-scroll connection a document has no scaffold to carry.
+   * `CenterAlignedTopAppBar`, with the canvas's two colours and the scroll behavior the canvas
+   * cannot draw (it needs a nested-scroll connection).
    */
   private fun emitTopAppBar(node: UiBuilderNode, level: Int) {
     line(level, "CenterAlignedTopAppBar(")
@@ -1077,9 +1010,8 @@ internal class ComposeEmitter(
       emitChildren(node.slot(slot), level + 2)
       line(level + 1, "},")
     }
-    // The leading accent bar the canvas draws. It is a `drawBehind` rather than a parameter because
-    // `ListItem` has no such thing, and it was the one part of this component the export left out —
-    // a schedule whose track colours are the entire point generated as a plain list.
+    // The leading accent bar the canvas draws, via `drawBehind` since `ListItem` has no such
+    // parameter.
     val accent = node.string("startAccentColor")
     val modifier =
       if (accent.isEmpty()) node.modifierExpression()
@@ -1090,9 +1022,8 @@ internal class ComposeEmitter(
   }
 
   private fun emitSurface(node: UiBuilderNode, level: Int) {
-    // The theme host's typefaces wrap it, as the canvas draws everything inside it under them: a
-    // `MaterialTheme` around the surface with each named role re-pointed at its Google Fonts
-    // family. See [ThemeTypefaces].
+    // The theme host wraps its content in a `MaterialTheme` with its typefaces, as the canvas does.
+    // See [ThemeTypefaces].
     val host = document.themeHost()?.id == node.id
     val roles =
       if (host) ThemeTypefaces.m3RoleFamilies(ThemeTypefaces.families(node)) else emptyMap()
@@ -1171,11 +1102,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * `Slider`, writing the variable the design bound it to.
-   *
-   * `onValueChange` assigns rather than dispatching an action: a slider's change carries a value,
-   * and the document's action vocabulary writes declared values, so the assignment *is* the action.
-   * An unbound slider assigns nothing, for the reason an unbound text field does.
+   * `Slider`, writing the variable the design bound it to. `onValueChange` assigns directly; an
+   * unbound slider assigns nothing.
    */
   private fun emitSlider(node: UiBuilderNode, level: Int) {
     val variable = node.obj("value").optionalString("variable")?.identifier()
@@ -1192,11 +1120,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * `LinearProgressIndicator` or `CircularProgressIndicator`, determinate or not.
-   *
-   * The two forms are two overloads rather than an argument: Material's indeterminate indicator is
-   * the one you call *without* a progress lambda, so a flag here picks the call rather than a
-   * value.
+   * `LinearProgressIndicator` or `CircularProgressIndicator`. Indeterminate is a different overload
+   * (no progress lambda), so the flag picks the call.
    */
   private fun emitProgress(node: UiBuilderNode, level: Int) {
     val symbol =
@@ -1245,10 +1170,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * `Checkbox` and `Switch`, which differ only in the symbol.
-   *
-   * One emitter for both because their signatures are the same three arguments, and a second copy
-   * would be a second place for the `checked` binding to drift from the renderer's.
+   * `Checkbox` and `Switch`, which differ only in the symbol; one emitter keeps the `checked`
+   * binding consistent with the renderer.
    */
   private fun emitToggle(node: UiBuilderNode, level: Int, symbol: String) {
     line(
@@ -1290,12 +1213,8 @@ internal class ComposeEmitter(
   }
 
   /**
-   * `DatePicker`, with the state the document pins rather than the one Material takes from today.
-   *
-   * The real API, not a helper: `DatePicker(state = …)` is exactly what the canvas draws, and the
-   * only thing this has to be careful about is the state — `rememberDatePickerState()` with no
-   * arguments opens on the current month, so generated source would drift from the design's own
-   * render the day the month changed.
+   * `DatePicker` with the state the document pins; `rememberDatePickerState()` with no arguments
+   * would open on the current month and drift from the design.
    */
   private fun emitDatePicker(node: UiBuilderNode, level: Int) {
     val millis =
@@ -1461,13 +1380,8 @@ private fun UiBuilderNode.integer(name: String, fallback: Int = 0): Int =
   obj(name)["value"]?.jsonPrimitive?.intOrNull ?: fallback
 
 /**
- * An integer property, read from state where the document says so.
- *
- * `selectedTabIndex` is the one place an `Int` decides what the user sees change, so a literal
- * there exported a tab row frozen at whichever index the design was saved with, however the
- * handlers moved the variable. A declared type that is not `Int` is refused rather than coerced:
- * the alternatives — `toInt()` on a `String`, `0` on a `Boolean` — are both a guess about what the
- * author meant, and `TODO` is the refusal the action emitter already uses for the same question.
+ * An integer property, read from state where the document says so (e.g. `selectedTabIndex`). A
+ * declared type other than `Int` is refused with `TODO` rather than coerced.
  */
 private fun UiBuilderNode.integerExpression(name: String, stateTypes: Map<String, String>): String {
   val value = obj(name)
@@ -1483,12 +1397,9 @@ private fun UiBuilderNode.boolValue(name: String, fallback: Boolean = false): Bo
   obj(name)["value"]?.jsonPrimitive?.booleanOrNull ?: fallback
 
 /**
- * A Boolean property: a literal, a `stateEquals` comparison, or a flag read whole.
- *
- * A whole read is what "Bind to state" writes for a Boolean variable, and it used to export as
- * `false` whatever the variable held. With [stateTypes] it reads a `Boolean` as itself and a
- * `Boolean?` as `== true`, the way the canvas reads a missing value as not-true; without them — a
- * semantics modifier, which has no emitter in reach — `== true` compiles for either.
+ * A Boolean property: a literal, a `stateEquals` comparison, or a flag read whole. With
+ * [stateTypes], `Boolean` reads as itself and `Boolean?` as `== true` (matching the canvas);
+ * without them `== true` compiles for either.
  */
 private fun UiBuilderNode.boolExpression(
   name: String,
@@ -1534,11 +1445,8 @@ private fun UiBuilderNode.checkedChangeLambda(stateTypes: Map<String, String>): 
 }
 
 /**
- * One event handler as a lambda literal.
- *
- * `{}` rather than `{ Unit }` for a handler with no actions: the two are the same handler, but a
- * bare `Unit` inside a lambda is an unused expression, and the generated fixture compiles under the
- * same warning-free bar as the rest of the build.
+ * One event handler as a lambda literal. An empty handler is `{}`, not `{ Unit }`, to stay
+ * warning-free.
  */
 private fun UiBuilderNode.actionLambda(event: String, stateTypes: Map<String, String>): String =
   actionExpression(event, stateTypes).let { if (it.isEmpty()) "{}" else "{ $it }" }
@@ -1553,15 +1461,11 @@ private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String
   // Empty, not `Unit`: [actionLambda] turns this into `{}`.
   if (actions.isEmpty()) return ""
   return actions.joinToString("; ") { element ->
-    // A safe cast, because this now visits every entry rather than only the head. A malformed
-    // later entry — a bare primitive or a null — used to sit unread behind the first action and
-    // now reaches the emitter, where `jsonObject` would throw out of `export()` instead of
-    // producing the structured diagnostic `fieldCoverageDiagnostics` already reports for it.
+    // Safe cast: a malformed entry yields a TODO instead of throwing out of `export()`.
     val action = element as? JsonObject ?: return@joinToString "TODO(\"Malformed action\")"
     val name = action.optionalString("variable")
-    // Emitting every action means a later one naming an undeclared variable now reaches the
-    // source, where `doesNotExist = true` compiles into nothing and reports success. Nothing else
-    // checks this: export validation does not read `stateVariables`.
+    // An undeclared variable would compile to nothing; export validation doesn't read
+    // `stateVariables`, so refuse here.
     if (name != null && name !in stateTypes) {
       return@joinToString "TODO(\"Undeclared state variable ${name.escape()}\")"
     }
@@ -1579,10 +1483,8 @@ private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String
       "setText" ->
         when {
           variable == null -> "Unit"
-          // The editor refuses a value the declared type cannot hold, and the editor is not the
-          // only author: a document from another client could carry `set expanded "yes"` against
-          // a `Boolean`, and this emitted `expanded = "yes"` — source nobody can compile, with no
-          // diagnostic, because export validation does not read `stateVariables`.
+          // Documents from other clients can carry a value the declared type cannot hold; refuse
+          // rather than emit uncompilable source.
           action["value"]?.let(UiExpressions::isComputed) == true -> computedActionTodo(name)
           !declaredType.holds(action["value"]) ->
             "TODO(\"${name.orEmpty().escape()} is $declaredType and cannot hold $value\")"
@@ -1601,9 +1503,7 @@ private fun UiBuilderNode.actionExpression(event: String, stateTypes: Map<String
         when {
           variable == null || declaredType?.removeSuffix("?") != "Boolean" ->
             "TODO(\"toggle needs a boolean state variable\")"
-          // A nullable flag is declared `Boolean?`, and `!` does not apply to one. The renderer
-          // reads a missing value as not-true and so toggles null to true; the export says the
-          // same thing rather than either refusing a supported preview or emitting `!flag`.
+          // `!` doesn't apply to `Boolean?`; like the renderer, treat null as not-true.
           declaredType.endsWith("?") -> "$variable = !($variable ?: false)"
           else -> "$variable = !$variable"
         }
@@ -1704,9 +1604,8 @@ private fun UiBuilderNode.modifierExpression(): String {
         else -> error("unsupported modifier $type on $id")
       }
   }
-  // The properties that said this before the vocabulary existed. Printed only when the chain does
-  // not, so a document carrying both — one written by an older client, one by this one — is aligned
-  // and weighted once rather than twice, and the chain is what wins.
+  // Legacy alignment/weight properties, printed only when the modifier chain doesn't say the same,
+  // so neither is applied twice.
   val scoped = modifierTypes()
   if ("weight" in properties && "weight" !in scoped) {
     expression += ".weight(${number("weight", 1f).floatLiteral()})"
@@ -1739,11 +1638,8 @@ private fun UiBuilderNode.textOverflowExpression(): String =
   }
 
 /**
- * The `Arrangement.Vertical` this Column asks for, written exactly as the renderer resolves it.
- *
- * Kept beside the renderer's `verticalArrangement()` in shape as well as in cases: the two used to
- * agree only because both ignored the property, and the point of fixing it is that they agree on
- * what it means.
+ * The `Arrangement.Vertical` this Column asks for, mirroring the renderer's
+ * `verticalArrangement()`.
  */
 private fun UiBuilderNode.verticalArrangementExpression(): String {
   val spacing = number("verticalSpacingDp")
@@ -1781,13 +1677,8 @@ private fun UiBuilderNode.horizontalArrangementExpression(): String {
 }
 
 /**
- * The `Brush` for a `shape/linear-gradient`, in the same vocabulary [UiBuilderRenderer] draws.
- *
- * `horizontal` names the axis without a sense, and it is what the widget templates write.
- * `UiBuilderRenderer` reads it; this did not, so `direction: horizontal` fell through to the
- * vertical `else` and the generated Compose visibly disagreed with the canvas it was generated
- * from. The property is an unrestricted optional string on a base-catalog component, so such a
- * design is perfectly valid rather than malformed — the two readers simply have to agree.
+ * The `Brush` for a `shape/linear-gradient`, in the same vocabulary [UiBuilderRenderer] draws,
+ * including the axis-only `horizontal` the widget templates write.
  */
 private fun UiBuilderNode.linearGradientExpression(): String =
   when (string("direction")) {
@@ -1815,11 +1706,8 @@ private fun JsonObject.paddingValuesExpression(): String =
   "PaddingValues(start = ${number("startDp").dpLiteral()}, top = ${number("topDp").dpLiteral()}, end = ${number("endDp").dpLiteral()}, bottom = ${number("bottomDp").dpLiteral()})"
 
 /**
- * `TopAppBarDefaults.…ScrollBehavior()` for the declared behavior, or null when none is declared.
- *
- * Null rather than a default, because `CenterAlignedTopAppBar`'s own default is no behavior at all,
- * and passing `pinnedScrollBehavior()` where the design asked for nothing would connect the bar to
- * a scroll it never asked to follow.
+ * `TopAppBarDefaults.…ScrollBehavior()` for the declared behavior, or null when none is declared
+ * (the bar's own default is no behavior).
  */
 private fun UiBuilderNode.scrollBehaviorExpression(): String? =
   when (string("scrollBehavior")) {
@@ -1842,10 +1730,8 @@ private fun JsonObject.shapeArgument(): String =
   optionalString("shape")?.let { ", RoundedCornerShape(${shapeDp(it).dpLiteral()})" }.orEmpty()
 
 /**
- * The colour inside a modifier, which is a `UiValueV1` rather than a node property.
- *
- * Same tokens, same literals and the same fallback as [colorExpression] — read through one shape so
- * a background and a `containerColor` cannot resolve the same token differently.
+ * The colour inside a modifier (a `UiValueV1`), resolved like [colorExpression] so tokens cannot
+ * diverge.
  */
 private fun JsonObject.modifierColorExpression(): String =
   colorExpressionFor((this["color"] as? JsonObject)?.optionalString("value").orEmpty())
@@ -1854,10 +1740,8 @@ private fun JsonObject.modifierColorExpression(): String =
 private val SCOPED_ALIGNMENT_MODIFIERS = setOf("align", "alignHorizontal", "alignVertical")
 
 /**
- * `contentAlignment = …` for a `layout/box`, or null for Compose's own `TopStart`.
- *
- * Omitted at the default, and for a spelling that does not resolve, so a design that never touched
- * the property generates byte-identical Kotlin — the same rule the canvas applies when it draws it.
+ * `contentAlignment = …` for a `layout/box`, or null for Compose's default `TopStart` or an
+ * unresolved spelling.
  */
 private fun UiBuilderNode.boxContentAlignmentArgument(): String? =
   string("contentAlignment")
@@ -1920,9 +1804,8 @@ private fun UiBuilderNode.colorExpression(name: String): String = colorExpressio
 private fun colorExpressionFor(value: String): String {
   if (value.startsWith("#")) {
     val digits = value.removePrefix("#").uppercase()
-    // `#RRGGBB` is opaque everywhere else the document is read — the canvas ORs the alpha in — and
-    // `Color(0xRRGGBB)` is not: its top byte is the alpha, so a six-digit literal compiled to a
-    // fully transparent colour. A surface set to `#313338` exported as one that painted nothing.
+    // `#RRGGBB` is opaque in the document, but `Color(0xRRGGBB)` would be transparent; add the
+    // alpha byte.
     return "Color(0x${if (digits.length == 6) "FF$digits" else digits})"
   }
   return when (value) {
@@ -1937,9 +1820,7 @@ private fun colorExpressionFor(value: String): String {
     "surface" -> "MaterialTheme.colorScheme.surface"
     "surfaceContainer" -> "MaterialTheme.colorScheme.surfaceContainer"
     "surfaceContainerLow" -> "MaterialTheme.colorScheme.surfaceContainerLow"
-    // Offered by the inspector's colour picker since the token list was written, and mapped
-    // nowhere: a surface set to it exported as `Color.Unspecified`. It is the dialog's own default
-    // container colour, which is how the gap surfaced.
+    // The dialog's default container colour, offered by the inspector picker.
     "surfaceContainerHigh" -> "MaterialTheme.colorScheme.surfaceContainerHigh"
     "surfaceContainerHighest" -> "MaterialTheme.colorScheme.surfaceContainerHighest"
     "background" -> "MaterialTheme.colorScheme.background"
@@ -2017,8 +1898,7 @@ internal fun UiBuilderNode.warning(code: String, message: String) =
 /**
  * Which component properties this exporter can print as an expression rather than a literal, i.e.
  * what a generated component function can take as a parameter. Also read by
- * [CapabilityComposeCodeExporter.diagnose], so unsupported bindings are refused by name before
- * generation.
+ * [CapabilityComposeCodeExporter.diagnose] to refuse unsupported bindings before generation.
  */
 private val BINDABLE_PROPERTIES: Map<String, Map<String, BindingKind>> =
   mapOf(
@@ -2067,10 +1947,7 @@ internal enum class BindingKind(val kotlinType: String) {
 
 /**
  * The signature this exporter would generate for each component the design defines, and everything
- * it refuses on the way.
- *
- * Computed once and read twice — by the gate and by the emitter — because a signature the gate
- * accepted and the emitter derived again is two statements of the same fact.
+ * it refuses. Computed once and shared by the gate and the emitter.
  */
 internal fun UiBuilderDocument.componentSignatures():
   Pair<
@@ -2087,17 +1964,12 @@ internal fun UiBuilderDocument.componentSignatures():
       return@forEach
     }
     val parameters = linkedMapOf<String, BindingKind>()
-    // Two readings of the same body, and the difference is load-bearing. `body` is the scope whose
-    // bindings become parameters, so it stops at a loop's template — those bindings read the loop's
-    // rows. `contained` is everything the body holds, loop templates included, because "does this
-    // recurse" and "does this reach state the function cannot see" are questions about the whole
-    // subtree. Asking them of the scoped walk let a component place itself from inside a loop.
+    // `body` is the parameter-binding scope and stops at loop templates; `contained` includes
+    // templates, for whole-subtree questions like recursion and state reads.
     val body = bodyNodes(root)
     val contained = subtreeNodes(root)
-    // A component that places itself — directly or through another — would export a composable
-    // that calls itself, and rendering that recurses until the stack is gone. The canvas stops
-    // the same shape with its ancestor guard; generated source has no guard to stop it with, so
-    // it is refused rather than emitted.
+    // A self-placing component would recurse forever in generated code (the canvas has an ancestor
+    // guard), so refuse it.
     if (placesItself(key, contained)) {
       refusals += ExportRefusal("COMPONENT_CYCLE", "component $key places itself", root)
       return@forEach
@@ -2113,9 +1985,8 @@ internal fun UiBuilderDocument.componentSignatures():
             node.id,
           )
       }
-      // A body is a function of its arguments and nothing else. A `state` read or an event
-      // handler names a variable declared inside the screen function, which the component
-      // function cannot see: the export would compile in the editor's head and not in Kotlin.
+      // A body may only use its arguments: state reads and event handlers name screen-scoped
+      // variables the component function cannot see.
       if (
         node.properties.values.any {
           it is JsonObject && it.optionalString("type") in COMPONENT_STATE_VALUE_TYPES
@@ -2149,11 +2020,8 @@ internal fun UiBuilderDocument.componentSignatures():
             )
           return@forEach
         }
-        // A key that normalises to a hard keyword generates `fun Cell(class: Color)`, which is no
-        // more Kotlin than the `val class: Color` a row key generates. The same refusal, because
-        // it is the same mistake: `identifier()` does not escape them and nothing downstream
-        // writes the backticks. Reachable through a placement now that a bound argument
-        // contributes its key to the enclosing component's signature.
+        // A key that normalises to a hard keyword (`fun Cell(class: Color)`) isn't valid Kotlin and
+        // `identifier()` doesn't escape it.
         val identifier = bindingKey.identifier()
         if (identifier in KOTLIN_HARD_KEYWORDS) {
           refusals +=
@@ -2180,10 +2048,8 @@ internal fun UiBuilderDocument.componentSignatures():
       }
     }
     val functionName = component.primitiveString("name").orEmpty().componentFunctionName(key)
-    // Two components that generate one function name, or a key that generates the name the
-    // wrapper already uses, are duplicate declarations and shadowed parameters — source that
-    // looks right and does not compile. Named here rather than discovered by the Kotlin compiler
-    // in whatever project the file was pasted into.
+    // Duplicate function names, or a key matching the wrapper's name, would not compile; refuse
+    // them here.
     signatures.entries
       .firstOrNull { it.value.functionName == functionName }
       ?.let { existing ->
@@ -2222,12 +2088,9 @@ internal fun UiBuilderDocument.componentSignatures():
 }
 
 /**
- * The components, ordered so that one placed with a bound argument is derived before its placer.
- *
- * A bound argument takes its type from the parameter it fills, which is the placed component's — so
- * a body placing a component whose key sorts later saw no signature for it and refused a
- * composition that is perfectly acyclic. Sorted within the order, so the file a design generates
- * does not depend on map iteration; a cycle keeps sorted order and is refused for being one.
+ * The components, ordered so one placed with a bound argument is derived before its placer (the
+ * argument takes the placed component's parameter type). Sorted within the order for determinism; a
+ * cycle keeps sorted order and is refused.
  */
 private fun UiBuilderDocument.componentsInDependencyOrder(): List<Pair<String, JsonObject>> {
   val declared =
@@ -2278,9 +2141,8 @@ internal fun UiBuilderDocument.placementRefusals(
           )
       val arguments = node.component?.get("arguments")?.let { it as? JsonObject }
       buildList {
-        // The canvas dispatches a click bound to a placement; the call this exporter writes has
-        // nowhere to put one, and a dropped interaction is exactly the divergence between preview
-        // and generated screen that this builder exists not to have.
+        // The emitted call has nowhere to put a click bound to a placement, so refuse rather than
+        // drop it.
         if (node.eventBindings.isNotEmpty()) {
           this +=
             ExportRefusal(
@@ -2292,11 +2154,8 @@ internal fun UiBuilderDocument.placementRefusals(
         }
         signature.parameters.forEach { (parameter, kind) ->
           val argument = arguments?.get(parameter) as? JsonObject
-          // An argument that reads the dictionary around the placement is checked as a read rather
-          // than as a value: what fills it is a row or an enclosing component's parameter, and both
-          // are typed where they are declared. Checked here only for having somewhere to read
-          // from — outside a body or a template there is no dictionary, and the emitter would
-          // print the key's own name.
+          // A bound argument is checked only for having a scope to read from; its type is checked
+          // where the row or parameter is declared.
           node.argumentBindingKey(parameter)?.let { key ->
             if (node.id !in scoped) {
               this +=
@@ -2318,9 +2177,8 @@ internal fun UiBuilderDocument.placementRefusals(
               )
             return@forEach
           }
-          // Checked against the kind the body reads it as, before the emitter formats it: a value
-          // of the wrong shape would otherwise become `Color.Unspecified` — which compiles, and
-          // draws the wrong cell — or reach `jsonPrimitive` and throw out of `export()`.
+          // Checked against the body's kind before formatting, so a wrong shape is refused rather
+          // than becoming `Color.Unspecified` or throwing.
           kind.refusalFor(argument)?.let { why ->
             this +=
               ExportRefusal(
@@ -2330,10 +2188,8 @@ internal fun UiBuilderDocument.placementRefusals(
               )
           }
         }
-        // An argument the component does not declare is never written into the call, so it is a
-        // claim the design makes and the export silently drops. Named here rather than left to
-        // binding inference, which called a bound one `UNSUPPORTED_BINDING` — true of nothing, and
-        // said only of bound arguments while a stray plain value went through unremarked.
+        // An argument the component doesn't declare would be silently dropped from the call; refuse
+        // it explicitly.
         val declared = signature.parameters.map { it.first }.toSet()
         arguments
           .orEmpty()
@@ -2352,12 +2208,9 @@ internal fun UiBuilderDocument.placementRefusals(
     }
 
 /**
- * Bindings on a node no component body reaches.
- *
- * A binding is a read of the dictionary in scope, and outside a body there is no scope to read: the
- * emitter would print the property's literal value — a colour that is not a colour becomes
- * `Color.Unspecified`, a text becomes the key itself — and report success. Capability validation
- * cannot catch it either, because it unwraps a binding to the string inside it.
+ * Bindings on a node no component body reaches. Outside a body there is no scope to read, so the
+ * emitter would print the literal and report success; capability validation can't catch this
+ * either.
  */
 internal fun UiBuilderDocument.strayBindingRefusals(
   signatures: Map<String, ComponentSignature>
@@ -2380,18 +2233,12 @@ internal fun UiBuilderDocument.strayBindingRefusals(
 }
 
 /**
- * The data class and rows this exporter would generate for each loop, and what it refuses.
- *
- * Derived by the same reading as a component's parameters — the keys the template binds, typed by
- * the emitter that can print them — because a row and a placement's arguments are the same
- * dictionary seen from two sides. What differs is where the values come from: the design carries a
- * loop's rows, so they are checked here rather than at each placement.
+ * The data class and rows this exporter would generate for each loop, and what it refuses. Derived
+ * like a component's parameters; rows come from the design, so they are checked here.
  */
 internal fun UiBuilderDocument.loopSignatures(
   taken: Set<String>,
-  // Not `components`: that is the document's own map of component declarations, and a parameter by
-  // that name shadows it — which is how the identity check below came to look a component body up
-  // in a map of signatures, find nothing, and pass a design it exists to refuse.
+  // Not `components`: that would shadow the document's own component map.
   componentSignatures: Map<String, ComponentSignature> = emptyMap(),
 ): Pair<Map<String, LoopSignature>, List<ExportRefusal>> {
   val signatures = linkedMapOf<String, LoopSignature>()
@@ -2419,14 +2266,8 @@ internal fun UiBuilderDocument.loopSignatures(
       }
       val properties = linkedMapOf<String, BindingKind>()
       val identifiers = mutableSetOf<String>()
-      // The template's own nodes, and the bodies of any components it places: a placement draws
-      // its body once per row through the same emitted call, so an identity inside that body is
-      // shared exactly as one in the template is. Following only slot edges missed it, because a
-      // body is reached through `component.componentKey` rather than through a slot.
-      // Every iteration reaches one `key("…")`, so an identity anywhere a row draws would tie
-      // remembered or scroll state to whichever row composed last — the sibling fold refuses an
-      // identity-bearing subtree for exactly this reason. "Anywhere a row draws" reaches through
-      // placements at any depth, which is what `drawnNodes` walks.
+      // Identity (`key`) anywhere a row draws, including bodies of placed components at any depth,
+      // would tie remembered state to whichever row composed last; [drawnNodes] walks all of it.
       val drawn = drawnNodes(template)
       drawn.forEach { node ->
         val identity = node.identityClaim()
@@ -2440,9 +2281,8 @@ internal fun UiBuilderDocument.loopSignatures(
             )
         }
       }
-      // Bindings, from the template's own nodes only: a placed body reads the placement's
-      // arguments rather than the row, which is what the placement's own bound arguments carry
-      // across.
+      // Bindings come from the template's own nodes only; a placed body reads its placement's
+      // arguments.
       templateNodes(template).forEach { node ->
         node.bindingKinds(componentSignatures).forEach { (property, key, kind) ->
           if (kind == null) {
@@ -2466,9 +2306,8 @@ internal fun UiBuilderDocument.loopSignatures(
               )
             return@forEach
           }
-          // A key that normalises to a hard keyword generates `val class: Color` and `row.class`,
-          // neither of which is Kotlin. `identifier()` does not escape them — nothing downstream
-          // writes the backticks — so the name has to be refused where it is claimed.
+          // A key that normalises to a hard keyword can't be escaped by `identifier()`, so it's
+          // refused.
           val identifier = key.identifier()
           if (identifier in KOTLIN_HARD_KEYWORDS) {
             refusals +=
@@ -2480,9 +2319,7 @@ internal fun UiBuilderDocument.loopSignatures(
               )
             return@forEach
           }
-          // Two keys that normalise to one Kotlin name would generate a data class with duplicate
-          // properties and a constructor call with duplicate arguments. Refused for the reason a
-          // component's parameters are.
+          // Two keys normalising to one Kotlin name would duplicate data class properties.
           if (properties[key] == null && !identifiers.add(identifier)) {
             refusals +=
               ExportRefusal(
@@ -2496,9 +2333,7 @@ internal fun UiBuilderDocument.loopSignatures(
           properties[key] = kind
         }
       }
-      // Every row answers every key, and answers it in the shape the template reads it: a row
-      // missing one would generate a call with a parameter unfilled, and one holding the wrong
-      // shape would become `Color.Unspecified` — which compiles and paints nothing.
+      // Every row must answer every key in the shape the template reads.
       rows.forEachIndexed { index, row ->
         properties.forEach { (key, kind) ->
           val value = row[key] as? JsonObject
@@ -2567,12 +2402,8 @@ private fun String.rowClassName(taken: Set<String>): String {
 }
 
 /**
- * Where a loop may sit, in the generated file's terms.
- *
- * A lazy container's children are emitted as `item(key = …)` blocks, and rows inside one belong in
- * `items(rows, key = { … })` — a different call with a key per row rather than one key for the
- * loop. Emitting a `forEach` inside an `item` would compose every row as a single item, which
- * scrolls and recycles as one. Refused until that emitter exists.
+ * Where a loop may sit. Inside a lazy container rows would need `items(rows, key = …)`; a `forEach`
+ * in one `item` would scroll and recycle as one item, so it is refused until that emitter exists.
  */
 internal fun UiBuilderDocument.loopPlacementRefusals(): List<ExportRefusal> =
   nodes.values
@@ -2595,13 +2426,7 @@ internal fun UiBuilderDocument.loopPlacementRefusals(): List<ExportRefusal> =
 /** The containers whose children are emitted as lazy items. */
 private val LAZY_CONTAINER_IDS = setOf("layout/lazy-column", "layout/lazy-row", "layout/lazy-grid")
 
-/**
- * Every node with a dictionary around it: a component's body, or a loop's template.
- *
- * The two scopes a binding may read from, in one set, because the question every reader asks is the
- * same one — is there a dictionary here — and two sets that must agree is how they come to
- * disagree.
- */
+/** Every node with a dictionary around it: a component's body or a loop's template, in one set. */
 internal fun UiBuilderDocument.scopedNodeIds(
   signatures: Map<String, ComponentSignature>
 ): Set<String> {
@@ -2617,12 +2442,8 @@ internal fun UiBuilderDocument.scopedNodeIds(
 }
 
 /**
- * The identity this node claims, read without throwing.
- *
- * `string` goes through `jsonPrimitive`, which throws on an object or an array — and a `stableKey`
- * of the wrong shape is exactly what `INVALID_PROPERTY_TYPE` already reports. `diagnose` runs this
- * before it returns those diagnostics, so an accessor that throws here turns a malformed document
- * into an editor that will not draw the panel naming its fault.
+ * The identity this node claims, read without throwing: a malformed `stableKey` is reported as
+ * `INVALID_PROPERTY_TYPE` and must not crash `diagnose`.
  */
 private fun UiBuilderNode.identityClaim(): String {
   fun claim(name: String) =
@@ -2630,26 +2451,15 @@ private fun UiBuilderNode.identityClaim(): String {
   return claim("stableKey").ifEmpty { claim("scrollStateKey") }
 }
 
-/**
- * A loop template's nodes, root first, stopping where a nested loop begins.
- *
- * The nested loop itself is included — it is a node the template draws — but its template is not:
- * those bindings read the inner loop's rows, which the emitter supplies by replacing the row in
- * scope.
- */
+/** A loop template's nodes, root first, including a nested loop node but not its template. */
 private fun UiBuilderDocument.templateNodes(root: String): List<UiBuilderNode> = ownNodes(root)
 
 /** A component body, root first, in the order the emitter walks it. */
 private fun UiBuilderDocument.bodyNodes(root: String): List<UiBuilderNode> = ownNodes(root)
 
 /**
- * The nodes one scope owns: everything from [root] down, **never through a loop's template**.
- *
- * One walk for a component body and for a loop template, because the rule is the same from both
- * sides: a template's bindings read the loop's rows, not the scope around it. A loop node is
- * included — the scope draws it — and its `template` slot is where the next scope begins. Two walks
- * with one rule between them is how a component came to demand the keys of a loop inside it, and a
- * loop the keys of a loop inside that.
+ * The nodes one scope owns: everything from [root] down, never through a loop's template (a
+ * template's bindings read the loop's rows). Shared by component bodies and loop templates.
  */
 private fun UiBuilderDocument.ownNodes(root: String): List<UiBuilderNode> {
   val visited = linkedSetOf<String>()
@@ -2668,13 +2478,8 @@ private fun UiBuilderDocument.ownNodes(root: String): List<UiBuilderNode> {
 }
 
 /**
- * Everything from [root] down, **including** what a loop's template draws.
- *
- * The counterpart to [ownNodes], and the distinction is the point: parameter inference is scoped,
- * because a template's bindings read the loop's rows rather than the scope around it, but the
- * checks that ask *what does this body contain* are not. A component that places itself from inside
- * a loop still recurses forever; a `state` read inside a loop template still names a variable the
- * component function cannot see. Scoping those to [ownNodes] hid them.
+ * Everything from [root] down, including loop templates. Unlike [ownNodes], for whole-subtree
+ * checks such as recursion and state reads.
  */
 private fun UiBuilderDocument.subtreeNodes(root: String): List<UiBuilderNode> {
   val visited = linkedSetOf<String>()
@@ -2712,10 +2517,8 @@ private fun UiBuilderDocument.drawnNodes(
     .distinctBy(UiBuilderNode::id)
 
 /**
- * A Kotlin function name for a component, from the name it declares.
- *
- * The declared name is what a designer typed, so it is sanitised rather than trusted; a component
- * that declares nothing usable is named from its key, which the document guarantees is unique.
+ * A Kotlin function name for a component: the sanitised declared name, or one derived from the
+ * unique key.
  */
 private fun String.componentFunctionName(key: String): String {
   val candidate = ifEmpty { key }.identifier().replaceFirstChar { it.uppercaseChar() }
@@ -2761,20 +2564,14 @@ internal const val DESIGN_COMPONENT_INSTANCE_ID = "design/component-instance"
 private const val FOR_EACH_COMPONENT_ID = "layout/for-each"
 
 /**
- * The scalar a value wrapper holds, or null when it holds an object, an array or nothing.
- *
- * Read with a safe cast rather than `jsonPrimitive`, which throws: an argument arrives over the
- * wire, and a malformed one is a diagnostic rather than an exception out of `export()`.
+ * The scalar a value wrapper holds, or null. Safe cast so a malformed wire argument becomes a
+ * diagnostic, not an exception.
  */
 private fun JsonObject.scalar(): String? = (this["value"] as? JsonPrimitive)?.contentOrNull
 
 /**
- * The text at [name], or null when it is absent or holds an object, an array or a null.
- *
- * `optionalString` throws on a non-primitive, which is right for a field the capability validator
- * has already type-checked and wrong for one it has not. Placement arguments are not validated —
- * they are an open-keyed dictionary — so `diagnose` reads them through this and refuses the
- * document instead of taking the editor down with it.
+ * The text at [name], or null when absent or non-primitive. Placement arguments aren't validated,
+ * so `diagnose` reads them through this instead of throwing `optionalString`.
  */
 private fun JsonObject.primitiveString(name: String): String? =
   (this[name] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.contentOrNull
@@ -2795,23 +2592,16 @@ private fun UiBuilderNode.bindingKey(property: String): String? {
 }
 
 /**
- * Every key this node reads, with what each read needs it to be.
- *
- * A placement reads through its **arguments** rather than its properties — `component.arguments` is
- * where a placement's dictionary lives — and the kind is the one the placed component's own
- * parameter has, because that is the parameter the value is about to fill. Without this a loop
- * whose template is a placement lost every row-varying argument: a colour was refused as
- * `INVALID_ARGUMENT` and a string became the key's own name.
+ * Every key this node reads, with what each read needs it to be. A placement reads through its
+ * arguments, typed by the placed component's parameter.
  */
 private fun UiBuilderNode.bindingKinds(
   components: Map<String, ComponentSignature> = emptyMap()
 ): List<Triple<String, String, BindingKind?>> {
   if (componentId == DESIGN_COMPONENT_INSTANCE_ID) {
     val placed = components[placementKey()] ?: return emptyList()
-    // Only the arguments the placed component actually declares. An argument it does not take is
-    // inert — the emitted call writes `signature.parameters` and nothing else — so inferring a
-    // kind for it produced `UNSUPPORTED_BINDING` on a binding that was never going to be written.
-    // It is still refused, by `strayArgumentRefusals`, under a code that says what is wrong.
+    // Only arguments the placed component declares; undeclared ones are refused by
+    // `strayArgumentRefusals`.
     val arguments = placementArguments()
     return placed.parameters
       .map { it.first }
@@ -2869,9 +2659,7 @@ internal fun UiBuilderNode.fieldCoverageDiagnostics(): List<ComposeExportDiagnos
     if (actions == null || actions.isEmpty()) {
       diagnostics += warning("MALFORMED_EVENT", "event '$event' has no action array")
     } else {
-      // Every action, because the handler emits every action. Reporting only the head both
-      // claimed a partial export that no longer happens and let an unsupported later action
-      // reach the generated source as a bare TODO with nothing warning about it.
+      // Every action, because the handler emits every action.
       actions
         .map { (it as? JsonObject)?.optionalString("type") }
         .filter { it !in SUPPORTED_ACTIONS }
@@ -2889,12 +2677,8 @@ private fun JsonObject.floatValue(name: String): Float? =
   (this[name] as? kotlinx.serialization.json.JsonPrimitive)?.floatOrNull
 
 /**
- * One state variable's declared shape.
- *
- * `valueType` and `nullable` are the document's own words for what a variable holds. `initialValue`
- * is a fallback for a declaration that predates them, and it is read with `isString` respected —
- * `booleanOrNull` on a `JsonPrimitive` parses its content whether or not it was quoted, so a text
- * variable holding `"true"` otherwise reads as a flag.
+ * One state variable's declared shape. `valueType`/`nullable` are authoritative; `initialValue` is
+ * a fallback for older declarations, read respecting `isString`.
  */
 private data class StateDeclaration(
   val kotlinType: String,
@@ -2905,10 +2689,8 @@ private data class StateDeclaration(
     fun of(declaration: JsonObject?): StateDeclaration {
       val initial = declaration?.get("initialValue")
       val primitive = initial as? kotlinx.serialization.json.JsonPrimitive
-      // Read with safe casts, not `jsonPrimitive`/`optionalString`. A document arriving over the
-      // wire can carry `"nullable": {}` or `"valueType": []`, and export validation does not look
-      // at `stateVariables` at all, so an accessor that throws on a non-primitive turns malformed
-      // data into an exception out of `export()` instead of the diagnostic it should be.
+      // Safe casts: `stateVariables` isn't validated, so malformed values must not throw out of
+      // `export()`.
       val nullable =
         (declaration?.get("nullable") as? kotlinx.serialization.json.JsonPrimitive)?.booleanOrNull
           ?: (initial is JsonNull)
@@ -2919,11 +2701,7 @@ private data class StateDeclaration(
       val base =
         when (declaredType) {
           "bool" -> "Boolean"
-          // `Int`, not `Long`. Every integer this exporter writes — the initial value, and the
-          // operand of a `stateEquals` or `selectOrClear` — goes through `kotlinLiteral`, which
-          // emits the JSON number verbatim and so unsuffixed. Declaring `Long` made
-          // `mutableStateOf(0)` and `selectedDay == 1` both type-mismatch against it. The
-          // declaration follows the literals rather than the literals growing a suffix.
+          // `Int`, not `Long`: integer literals are emitted unsuffixed.
           "int" -> "Int"
           "float" -> "Double"
           "string" -> "String"
@@ -2943,22 +2721,16 @@ private data class StateDeclaration(
 }
 
 /**
- * A literal written for the Kotlin type its variable is declared as.
- *
- * `kotlinLiteral` emits a JSON number verbatim, so a `float`-declared variable seeded with `1`
- * produced `var x: Double by remember { mutableStateOf(1) }` — an `Int` delegate behind a `Double`
- * property. The declaration is the authority; the literal is spelled to match it.
+ * A literal spelled for the variable's declared Kotlin type (e.g. `1.0` for a `Double` seeded with
+ * `1`).
  */
 private fun JsonElement?.literalAs(kotlinType: String): String {
   val bare = kotlinType.removeSuffix("?")
   val primitive = this as? kotlinx.serialization.json.JsonPrimitive
   if (bare == "Double" && primitive != null && !primitive.isString) {
     primitive.doubleOrNull?.let { value ->
-      // Spelled from the authored text rather than from the parsed number. `toLong()` saturates,
-      // so a declared `1e20` came out as `9223372036854775807.0` — the preview starting from one
-      // value and the exported screen from another. And `Double.toString` is not the same on
-      // every target this exporter runs on: on JS `1.0` prints as `1`, which is an `Int` literal
-      // again, which is the bug the `.0` exists to stop. The JSON text has neither problem.
+      // Spelled from the authored JSON text: `toLong()` saturates, and `Double.toString` prints
+      // `1.0` as `1` on JS.
       val authored = primitive.content
       return when {
         value.isNaN() -> "Double.NaN"
@@ -2974,12 +2746,8 @@ private fun JsonElement?.literalAs(kotlinType: String): String {
 }
 
 /**
- * Whether the Kotlin type this names can hold [value] as `kotlinLiteral` will write it.
- *
- * Quoting decides it, not content: `booleanOrNull` and `intOrNull` parse a `JsonPrimitive` whether
- * or not it was a string, so `"true"` would pass for a `Boolean` and then emit `flag = "true"`.
- * Finite, for `Double`, for the reason the editor refuses a non-finite: `NaN` is emitted verbatim
- * and is not a literal the generated file declares.
+ * Whether the Kotlin type this names can hold [value] as `kotlinLiteral` will write it. Quoting
+ * decides, not content (`"true"` is not a `Boolean`); `Double` must be finite.
  */
 private fun String?.holds(value: JsonElement?): Boolean {
   if (this == null) return false
@@ -3011,24 +2779,13 @@ private fun String?.nullableStringLiteral(): String =
 
 private fun Float.dpLiteral(): String = if (this % 1f == 0f) "${toInt()}.dp" else "${this}f.dp"
 
-/**
- * A dimension the design stated, as a `Dp` literal, or `null` where it stated none.
- *
- * Absent is not zero. A pane with no authored width is one the scaffold should size itself, and
- * writing `0.dp` would be this exporter inventing a decision out of a missing property.
- */
+/** A dimension the design stated as a `Dp` literal, or `null`; absent is not zero. */
 private fun UiBuilderNode.dpArgument(name: String): String =
   (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.floatOrNull?.dpLiteral() ?: "null"
 
 private fun Float.floatLiteral(): String = if (this % 1f == 0f) "${toInt()}f" else "${this}f"
 
-/**
- * The shape argument for a node, mirroring what the renderer draws for the same node.
- *
- * A `shape` token wins over `shapeDp`, exactly as `UiBuilderNode.shape` decides it in the renderer:
- * they are two spellings of one value and a component that read only one of them disagreed with the
- * preview about half the documents.
- */
+/** The shape argument for a node; a `shape` token wins over `shapeDp`, as in the renderer. */
 private fun UiBuilderNode.shapeExpression(): String {
   val token = string("shape")
   val corner = if (token.isNotEmpty()) shapeDp(token) else number("shapeDp")
@@ -3036,22 +2793,14 @@ private fun UiBuilderNode.shapeExpression(): String {
 }
 
 /**
- * `parameter = <n>.dp, ` when the document carries the dimension, and nothing when it does not.
- *
- * Absent is not zero for every parameter: a divider with no declared thickness wants Material's
- * hairline, and emitting `thickness = 0.dp` would generate a divider that draws nothing.
+ * `parameter = <n>.dp, ` when the document carries the dimension, else nothing (e.g. a divider then
+ * keeps Material's hairline).
  */
 private fun UiBuilderNode.dimensionArgument(parameter: String, property: String): String =
   obj(property)["value"]?.jsonPrimitive?.floatOrNull?.let { "$parameter = ${it.dpLiteral()}, " }
     ?: ""
 
-/**
- * A floating toolbar's own padding, or the 6dp both projections used to hard-code.
- *
- * The catalog exposes four padding edges for this component and nothing read them, so the edit was
- * accepted, stored, and discarded. Absent stays 6dp rather than becoming zero: that is what the
- * toolbar has always drawn, and a `contentPadding` nobody authored should not change it.
- */
+/** A floating toolbar's own padding, defaulting to 6dp when absent. */
 private fun UiBuilderNode.toolbarContentPaddingExpression(): String =
   (properties["contentPadding"] as? JsonObject)?.paddingValuesExpression() ?: "PaddingValues(6.dp)"
 
@@ -3072,15 +2821,7 @@ private fun shapeDp(value: String?): Float =
 // implementation of it, in `:ui-builder-export` beside the export projection.
 private fun String.identifier(): String = exportedStateIdentifier(this)
 
-/**
- * The name an import statement actually binds: its alias where it has one, its last segment where
- * it does not.
- *
- * `import app.artwork.Renderer as kotlin` binds `kotlin`, and reading the last dotted segment of
- * that string answers `Renderer as kotlin` — a name nothing can collide with, which is the wrong
- * answer twice over. The renderer import is written verbatim into the generated file, so whatever
- * it binds is what the file's own names have to be checked against.
- */
+/** The name an import statement binds: its alias if it has one, else its last segment. */
 private fun String.importedSimpleName(): String =
   substringAfterLast(" as ").trim().substringAfterLast('.')
 
@@ -3091,9 +2832,6 @@ private fun String.escapeComment(): String = replace("\n", " ").replace("\r", " 
 
 /**
  * How many identical siblings it takes before a `repeat` reads better than the calls themselves.
- *
- * Two of anything is still a list a reader takes in at a glance, and folding a pair costs two lines
- * to save one. Three is where the pattern starts being the point.
  */
 private const val MINIMUM_FOLDED_RUN = 3
 
@@ -3155,9 +2893,7 @@ internal val SUPPORTED_MODIFIERS =
     "matchParentSize",
     "padding",
     "size",
-    // The vocabulary contracts 2.8.0 added, less the three scope-bearing ones: `align` and
-    // `weight` are printed from the properties of the same name today, and printing them from a
-    // modifier as well would be two ways to say one layout that could disagree.
+    // Scope-bearing `align`/`weight` are excluded: they are printed from the same-named properties.
     "fillMaxHeight",
     "width",
     "height",
@@ -3186,12 +2922,8 @@ private val SUPPORTED_ACTIONS =
   setOf("select", "selectOrClear", "setText", "set", "toggle", "increment", "navigatePage")
 
 /**
- * The components whose `click` binding the Compose export actually emits.
- *
- * Derived from `HANDLED_FIELDS` rather than listed again, so the editor cannot offer a wiring this
- * exporter would drop. The renderer makes anything with a click binding clickable; the exporter
- * emits a handler only where the component's own emitter takes one, and everything else reports
- * `UNEMITTED_EVENT` and generates nothing.
+ * The components whose `click` binding the Compose export emits, derived from `HANDLED_FIELDS` so
+ * the editor cannot offer a wiring this exporter would drop (others report `UNEMITTED_EVENT`).
  */
 internal val COMPOSE_EMITTED_CLICK_COMPONENTS: Set<String> by lazy {
   HANDLED_FIELDS.filterValues { "click" in it.events }.keys

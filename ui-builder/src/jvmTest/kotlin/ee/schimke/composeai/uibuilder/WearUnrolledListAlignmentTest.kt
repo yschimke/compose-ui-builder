@@ -12,13 +12,9 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * The editing canvas draws a Wear list's rows where the watch does.
- *
- * The canvas draws a Wear screen at its whole extent, where `TransformingLazyColumn` is a `Column`
- * (a lazy layout cannot be measured against the extent's unbounded height). The real list hands
- * each row the full width and centres it; the `Column` handed rows nothing, so a `ListHeader`,
- * which centres its label within the width it is given, sat at the start: every header on the
- * canvas was left-aligned while the device previews beside it were centred.
+ * The editing canvas draws a Wear list's rows where the watch does: at the extent the
+ * `TransformingLazyColumn` is a `Column`, which must hand rows the full width and centre them as
+ * the real list does, so a `ListHeader` centres its label.
  */
 class WearUnrolledListAlignmentTest {
 

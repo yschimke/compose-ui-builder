@@ -1,28 +1,36 @@
 package ee.schimke.composeai.uibuilder
 
 /**
- * Where the editor's PAGES live on this host: `/ui-builder/` everywhere by default, and `/` on a
- * builder host serving the editor at its root (compose-preview-server's `--ui-builder-host-root`,
- * which says so in a `<meta name="ui-builder-base-path">` on the editor page).
+ * Where the editor's PAGES live on this host: `/ui-builder/` by default, `/` on a builder host
+ * serving the editor at its root (compose-preview-server's `--ui-builder-host-root`, signalled by
+ * `<meta name="ui-builder-base-path">`).
  *
- * Only pages move. The versioned bundle, the renderer runtimes, the service worker, the
- * `/api/ui-builder/…` API and the form POSTs (`/ui-builder/designs`, `/ui-builder/designs/copy`)
- * stay under `/ui-builder/` on every host, which the server keeps serving there — so this is the
- * one value navigations and shared links are built from, and nothing else reads it.
+ * Only pages move: the versioned bundle, renderer runtimes, service worker, `/api/ui-builder/…` and
+ * the form POSTs (`/ui-builder/designs`, `/ui-builder/designs/copy`) stay under `/ui-builder/`.
+ * Only navigations and shared links read this.
  */
 const val DEFAULT_UI_BUILDER_BASE_PATH: String = "/ui-builder/"
 
 /**
- * [raw] (the meta's content, or null when the page has none) as a path with exactly one leading and
- * one trailing slash. Anything that is not a plain path — empty, a full URL, a protocol-relative
- * `//host` — falls back to [DEFAULT_UI_BUILDER_BASE_PATH], so a malformed meta can never send a
- * navigation off this origin.
+ * [raw] (the meta's content, or null) as a path with exactly one leading and trailing slash.
+ * Anything else (empty, a full URL, a protocol-relative `//host`) falls back to
+ * [DEFAULT_UI_BUILDER_BASE_PATH], so navigation never leaves the origin.
+ *
+ * So does a backslash, a query or fragment character, or a control character: a browser parsing an
+ * http(s) URL reads `\` as `/` and drops tabs and newlines, so `/\evil.example/` and
+ * `/<tab>/evil.example/` are both `//evil.example/` by the time a navigation is built from them.
  */
 fun normalizeUiBuilderBasePath(raw: String?): String {
   val value = raw?.trim().orEmpty()
   // Nothing but slashes is the root (as ui-builder-boot.js reads it), not a protocol-relative URL.
   if (value.isNotEmpty() && value.all { it == '/' }) return "/"
-  if (value.isEmpty() || !value.startsWith("/") || value.startsWith("//") || "://" in value) {
+  if (
+    value.isEmpty() ||
+      !value.startsWith("/") ||
+      value.startsWith("//") ||
+      "://" in value ||
+      value.any { it == '\\' || it == '?' || it == '#' || it.code < 0x20 || it.code == 0x7f }
+  ) {
     return DEFAULT_UI_BUILDER_BASE_PATH
   }
   val segments = value.split('/').filter(String::isNotEmpty)

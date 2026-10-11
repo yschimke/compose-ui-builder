@@ -2,25 +2,16 @@ import ee.schimke.composeai.buildlogic.resolvedPublishedVersion
 
 plugins { id("composeai.maven-publishing-platform") }
 
-// The BOM for everything this repository publishes.
-//
-// Three coordinates on Maven Central — `:ui-builder-runtime`, `:ui-builder-export` and
-// `:ui-builder-render-bundle` — and a consumer naming each one by version has to keep them in step
-// by hand. Importing this platform makes that structural instead:
+// The BOM for everything this repository publishes to Maven Central, so consumers keep the
+// coordinates in step structurally (a mismatch between runtime and export would make browser and
+// service exports differ):
 //
 //     implementation(platform("ee.schimke.composeai:compose-preview-ui-builder-bom:<version>"))
 //     implementation("ee.schimke.composeai:compose-preview-ui-builder-runtime")
 //     implementation("ee.schimke.composeai:compose-preview-ui-builder-export")
 //
-// A mismatch here is not a resolution error: `:ui-builder-runtime` and `:ui-builder-export` share
-// the screen-model generator and disagree about a design's projection, so the symptom is an export
-// that differs between the browser and the service. That is the failure this platform prevents.
-//
-// The constraints are DERIVED, never listed. `settings.gradle.kts` collects every project path
-// whose build script applies `composeai.maven-publishing` and hands them over as a system property;
-// the artifact id comes from `publishedArtifactId`, the same function the publishing plugin uses to
-// name the POM, so the set the BOM promises and the set that publishes cannot drift apart. That is
-// the whole lesson of compose-preview-server's 3.3.0-3.8.0 breakage, applied one layer up.
+// Constraints are derived, never listed: `settings.gradle.kts` collects projects applying
+// `composeai.maven-publishing`, and artifact ids come from `publishedArtifactId`, as the POMs do.
 val publishedProjectPaths =
   providers
     .systemProperty("composeai.publishedProjectPaths")

@@ -16,22 +16,12 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 
 /**
- * A stored design the current catalog or limits cannot serve does not stop the service starting.
+ * A stored design the current catalog or limits cannot serve does not stop the service starting:
+ * every design loads, unservable ones answer requests with the reason, `diagnostics()` counts them,
+ * and the rest of the store is untouched.
  *
- * It used to. The check ran in `init`, so one design out of a possible thousand could stop the
- * whole server coming up — and the shapes that trigger it are ordinary rather than exotic: a
- * catalog revision moves and every design pinned to the old one stops resolving, an operator stops
- * serving a catalog, a node limit is tightened. The blast radius of a content change had no
- * relationship to its cause.
- *
- * Now every design loads, one that cannot be served answers each request naming it with the reason,
- * and `diagnostics()` counts them. The rest of the store is untouched, which is the assertion that
- * matters most here.
- *
- * The line this does not cross is integrity: a state file that fails its checksum, is truncated, or
- * declares a format this build cannot read is still refused by the storage layer, with
- * `restoreBackup` as the recovery. `PersistentUiBuilderServiceTest` owns those, and they still
- * throw.
+ * Integrity failures (checksum, truncation, unknown format) are still refused by the storage layer,
+ * with `restoreBackup` as recovery; `PersistentUiBuilderServiceTest` covers those.
  */
 class UnusableStoredDesignTest {
   @Test
@@ -221,11 +211,11 @@ class UnusableStoredDesignTest {
     // The owner: ownership is answered from the access record the design loaded with, so the
     // delete button the file manager offers actually works.
     assertEquals(
-      UiBuilderServiceResponse.DesignDeleted("orphaned"),
+      UiBuilderServiceResponse.DesignDeleted("orphaned", RESTORABLE_UNTIL),
       execute(reopened, OWNER, UiBuilderServiceRequest.DeleteDesign("orphaned")),
     )
     assertEquals(
-      UiBuilderServiceResponse.DesignDeleted("overgrown"),
+      UiBuilderServiceResponse.DesignDeleted("overgrown", RESTORABLE_UNTIL),
       execute(reopened, OWNER, UiBuilderServiceRequest.DeleteDesign("overgrown")),
     )
 
@@ -267,14 +257,8 @@ class UnusableStoredDesignTest {
     assertTrue(rejected.reason.contains("node count"), rejected.reason)
     assertEquals(setOf("outgrown"), reopened.adminUnusableDesigns().keys, "nothing was written")
 
-    // The repair: within the limit the deployment now enforces.
-    //
-    // Trimming means dropping the child from its parent's slot as well as from the node map. This
-    // test was written against a `create` that made every node its own root, where filtering the
-    // map was the whole edit; #450 gave the helper one root with the rest beneath it, so a
-    // candidate that merely keeps a subset of the map leaves the root naming children that are no
-    // longer in it, and `validateTopology` refuses it for an unknown placed node — a rejection
-    // about topology, not about the size this test is repairing.
+    // The repair: trim within the enforced limit. The child must also leave its parent's slot, or
+    // `validateTopology` refuses the candidate for an unknown placed node.
     val root = stored.nodes.getValue(stored.roots.single())
     val keptChildren = root.slots.getValue("content").take(1)
     val kept = listOf(root.id) + keptChildren

@@ -11,12 +11,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Creating a Wear screen from the New design chooser, which is the front door the canvas needs.
- *
- * Everything downstream of this was already true — the scaffold drew, the list drew, the generator
- * emitted — and none of it was reachable: `wear-m3` offered no templates, so
- * `UiBuilderNewDesignSeed.templateIds` refused every id and there was no way to make a Wear design
- * except by hand-writing a document.
+ * Creating a Wear screen from the New design chooser: `wear-m3` must offer templates through
+ * `UiBuilderNewDesignSeed.templateIds`.
  */
 class WearScreenNewDesignTest {
   private val fixture =
@@ -41,11 +37,8 @@ class WearScreenNewDesignTest {
   }
 
   /**
-   * The list is in the empty template, not something to add afterwards.
-   *
-   * `ScreenScaffold` exists to hold a `TransformingLazyColumn`; its `contentPadding` means nothing
-   * until something reads it, and the generator refuses a scaffold whose content slot holds
-   * anything else. Opening on the pair is opening on the shape of the thing.
+   * The empty template already holds the list: `ScreenScaffold` exists to hold a
+   * `TransformingLazyColumn`, and the generator refuses any other content.
    */
   @Test
   fun `the empty screen opens on a scaffold over an empty list`() {
@@ -63,11 +56,8 @@ class WearScreenNewDesignTest {
   }
 
   /**
-   * The watch's own frame, because the scaffold reads its diameter from the document.
-   *
-   * Seeded on the fixture's handset, a Wear design would fall back to the smallest watch to draw
-   * itself while the Screen inspector said "Pixel" — a disagreement between the picture and the
-   * frame menu that nobody could act on.
+   * Seeded on a watch frame, since the scaffold reads its diameter from the document (a handset
+   * frame would disagree with the Screen inspector).
    */
   @Test
   fun `a wear design is created on the small round frame`() {
@@ -91,11 +81,9 @@ class WearScreenNewDesignTest {
   }
 
   /**
-   * The generated screen carries both previews, and they answer different questions.
-   *
-   * `@WearPreviewDevices` is the screen as a watch shows it — one screenful, transformed, at every
-   * round size. The `ScrollMode.LONG` capture is the whole extent with the transformation off,
-   * which is the picture the builder's canvas draws, so it is the one a parity check compares.
+   * The generated screen carries both previews: `@WearPreviewDevices` (one transformed screenful
+   * per round size) and the `ScrollMode.LONG` capture (the whole extent untransformed, matching the
+   * canvas, for parity checks).
    */
   @Test
   fun `the generated screen carries the single-screen preview and the parity capture`() {

@@ -10,12 +10,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Wear's numbers are editable where their Material 3 counterparts are.
- *
- * The inspector's number editors are catalog metadata keyed on component ids, and every one was
- * keyed on an `m3/…` id. So a Wear Slider showed its value and refused every edit to it with
- * "cannot be safely edited from its catalog metadata", and so did its Stepper, its progress ring
- * and the size of its Text.
+ * Wear's numbers (Slider, Stepper, progress ring, Text size) are editable where their Material 3
+ * counterparts are, though the editor overrides are keyed on `m3/…` ids.
  */
 class WearNumberEditorsTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))

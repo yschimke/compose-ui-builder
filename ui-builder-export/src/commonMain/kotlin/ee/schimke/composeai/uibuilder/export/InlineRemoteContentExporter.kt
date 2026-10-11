@@ -3,38 +3,17 @@ package ee.schimke.composeai.uibuilder.export
 import ee.schimke.composeai.discovery.ComponentRecord
 
 /**
- * Generates the `@RemoteComposable` function a [REMOTE_COMPOSE_INLINE_COMPONENT_ID] subtree is.
+ * Generates the `@RemoteComposable` function a [REMOTE_COMPOSE_INLINE_COMPONENT_ID] subtree is: a
+ * piece of Remote Compose inside somebody else's screen (ordinary Remote catalog roots use the same
+ * emitter). Delivery is the application's choice, so only the body is written, in
+ * [RemoteContentEmitter]'s vocabulary.
  *
- * ## Why this is neither of the other two generators
+ * The call site is deliberately not written: `captureSingleRemoteDocument`'s display info and
+ * density choices have pixel consequences a generator must not guess. See
+ * `docs/design/UI_BUILDER_REMOTE_COMPOSE.md` → "Choosing the density behaviour at the call site".
  *
- * [WearWidgetCodeExporter] writes a whole *widget* — a `GlanceWearWidget`, a `WearWidgetDocument`
- * and the Glance host preview around it — when the design has a Wear widget scaffold.
- * [CapabilityComposeCodeExporter] writes a Jetpack Compose screen. An inline node is a third thing:
- * a piece of Remote Compose *inside* somebody else's screen. Ordinary Remote catalog roots use the
- * same emitter. Their delivery — captured into a document at build time, fetched from a server,
- * played by whichever host the application already has — is the application's choice rather than
- * the design's.
- *
- * So this writes the one part the design does decide, which is the body, in the same vocabulary
- * [RemoteContentEmitter] writes a widget body in. What it deliberately does not write is the call
- * site. `captureSingleRemoteDocument` takes a `RemoteCreationDisplayInfo`, a `RemoteDensity` and a
- * density behaviour, and which of those an application wants is a decision with pixel consequences
- * (the densities disagree, and the disagreement is a bug this stack has already shipped twice). A
- * generator that guessed them would hand somebody code that compiles and draws the wrong size,
- * which is the failure every refusal in this file exists to avoid.
- *
- * Refusing to pick is not the same as having nothing to say about it: `docs/design/
- * UI_BUILDER_REMOTE_COMPOSE.md` → "Choosing the density behaviour at the call site" carries the
- * rule — one target device, capture a constant; several whose densities differ, use expressions and
- * let the document resolve against the host's own `ID_*` density at paint time.
- *
- * ## Refusals are by name
- *
- * The same discipline as the other two. A node the vocabulary cannot write is refused and said out
- * loud, by name and with the reason, rather than approximated into something that does not compile.
- * A custom component is no longer one of them — `remote-creation-compose` publishes
- * `RemoteCustomComponent`, so [RemoteContentEmitter] writes the operation from the node — but an
- * *unnamed* one still is, because the name is the whole contract with the host.
+ * Unwritable nodes are refused by name, including an unnamed custom component (the name is the
+ * whole contract with the host).
  */
 public object InlineRemoteContentExporter {
 
@@ -52,9 +31,8 @@ public object InlineRemoteContentExporter {
   /**
    * The body of the inline node [nodeId], as a pasteable Kotlin file fragment.
    *
-   * @param packageName the package the fragment declares, or null for the editor's pane. A pane is
-   *   read and pasted into a file that already has one; the split is the same one
-   *   [WearWidgetCodeExporter] makes and for the same reason.
+   * @param packageName the package the fragment declares, or null for the editor's pane (as in
+   *   [WearWidgetCodeExporter]).
    */
   public fun export(
     document: UiBuilderDocument,
@@ -174,9 +152,8 @@ public object InlineRemoteContentExporter {
           appendLine()
           appendLine("@RemoteComposable")
           appendLine("@Composable")
-          // The pictures the body draws, as parameters and without defaults: an inline fragment
-          // has no generated preview to construct, and its call site is the application's own —
-          // so the bitmap is asked for where the caller can see it is needed.
+          // Pictures as parameters without defaults: there is no generated preview, and the call
+          // site is the application's.
           appendLine(
             "fun $name(${emitter.imageParameters.joinToString { "${it.identifier}: RemoteImageBitmap" }}) {"
           )
@@ -198,11 +175,8 @@ public object InlineRemoteContentExporter {
   }
 
   /**
-   * `Home screen` + node `hero` becomes `HomeScreenHeroRemoteContent`.
-   *
-   * The node id is in the name because a screen may hold more than one inline node and two
-   * functions of the same name in one file do not compile. The design title alone was enough for a
-   * widget, which has exactly one body.
+   * `Home screen` + node `hero` becomes `HomeScreenHeroRemoteContent`; the node id keeps several
+   * inline nodes in one file from colliding.
    */
   public fun functionName(document: UiBuilderDocument, nodeId: String): String {
     val words =

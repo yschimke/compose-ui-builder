@@ -115,10 +115,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.skia.Image
 
 /**
- * Let the editor own the right button.
- *
- * The editor answers a right-click on a layer with its own menu, and the browser answers the same
- * press with the page menu drawn on top of it. Only one of them can be the one that opens.
+ * Let the editor own the right button: suppress the browser's page menu so the editor's layer menu
+ * is the only one that opens.
  */
 @JsFun(
   """() => {
@@ -141,9 +139,8 @@ fun main() {
       val fixture =
         Json.parseToJsonElement(fetchText("jetcaster-discover-operations-v1.json")).jsonObject
       val fixtureDocument = UiBuilderReducer.replay(fixture).document
-      // The checked-in benchmark predates retained runtimes and carries the placeholder
-      // `candidate` pin. This isolated transport fixture gives that document the exact runtime
-      // selected by the test shell; production documents arrive with this pin already persisted.
+      // The checked-in benchmark carries the placeholder `candidate` pin; this test-only transport
+      // fixture gives it the runtime the test shell selected. Production documents arrive pinned.
       val document =
         fixtureDocument.copy(
           catalogPin =
@@ -161,10 +158,8 @@ fun main() {
   }
   suppressBrowserContextMenu()
   if (!webGlAvailable()) {
-    // Skiko draws through WebGL, and where a browser refuses a context `ComposeViewport` fails
-    // inside a coroutine: the page is blank, and the reason reaches only the console. Say it where
-    // a person is looking instead — a blank editor with no explanation is what sent somebody
-    // hunting through `chrome://gpu` to find out why their design had "disappeared".
+    // Where a browser refuses a WebGL context, `ComposeViewport` fails silently in a coroutine; say
+    // so in the page instead of leaving it blank.
     dismissBootScreen()
     showWebGlRequiredMessage()
     return
@@ -174,9 +169,8 @@ fun main() {
   // One registry for the page: the canvas asks it for the family a design names, the typeface
   // picker for the ones it lists, and a family either loads is then there for both.
   val fonts = browserFontRegistry()
-  // Wear's face first, and only then the first frame: the Wear port resolves the type scale's
-  // `roboto-flex` once, so a Wear screen composed before it was registered would keep the fallback
-  // sans for the life of the page. The file is the bundle's own, cached for good.
+  // Register Wear's font before the first frame: the Wear port resolves `roboto-flex` once, so an
+  // earlier frame would keep the fallback for the page's life.
   MainScope().launch {
     val liveSession = liveSessionEnabled() && !mcpAppEnabled() && !hostBridgeEnabled()
     // Independent I/O: neither identity nor the local-store mirror needs Compose or font metrics.
@@ -198,9 +192,8 @@ fun main() {
     bootPhase("Preparing fonts")
     fonts.registerWearDeviceFonts()
     recordStartupMark("fonts-ready")
-    // Designs kept in this browser live in IndexedDB, which only answers asynchronously: read it
-    // into memory once, here, so every read after this is as synchronous as `localStorage` was.
-    // Only the live session keeps designs; an IDE host or an MCP App owns its document.
+    // Browser-kept designs live in IndexedDB (async only); load them into memory once so later
+    // reads are synchronous. Only the live session keeps designs.
     storage?.await()
     if (!liveSession) recordStartupMark("storage-ready")
     // A page OpenRouter's sign-in returned to: start trading the code for a key beside startup;
@@ -229,13 +222,9 @@ fun main() {
 /**
  * Makes `navigator.languages` something `Intl.Locale` accepts, before Compose reads it.
  *
- * Compose's `Locale.current` is `new Intl.Locale(navigator.languages[0])`, and that throws a
- * `RangeError` on a tag that is not BCP 47. A Chromium started under a POSIX locale reports exactly
- * such a tag — `LANG=C.UTF-8` gives `en-US@posix` — and the editor then stopped at the boot screen
- * with "Incorrect locale information provided", for a reason that had nothing to do with the
- * design. Each tag keeps what is valid in it (`en-US@posix` becomes `en-US`, `en_GB.UTF-8` becomes
- * `en-GB`), one that cannot be rescued is dropped, and an empty list becomes `en-US`. A browser
- * whose tags are all valid is left exactly as it was.
+ * Compose's `Locale.current` throws a `RangeError` on non-BCP-47 tags such as `en-US@posix` (from
+ * `LANG=C.UTF-8`), stopping the editor at boot. Each tag is repaired (`en_GB.UTF-8` becomes
+ * `en-GB`) or dropped, and an empty list becomes `en-US`. Valid tags are left as-is.
  */
 @JsFun(
   """() => {
@@ -262,11 +251,8 @@ fun main() {
 private external fun normalizeBrowserLanguages()
 
 /**
- * Whether this browser will give Skiko a WebGL context, asked before Compose starts.
- *
- * `webgl2` first, then `webgl`: Skiko prefers WebGL2 and falls back to WebGL1 for the 2D canvas
- * path, so either is enough for the editor to draw. The probe canvas is discarded — the context it
- * creates is one a real page would have made anyway.
+ * Whether this browser will give Skiko a WebGL context, asked before Compose starts. Tries `webgl2`
+ * then `webgl`; either is enough.
  */
 @JsFun(
   """() => {
@@ -281,11 +267,8 @@ private external fun normalizeBrowserLanguages()
 private external fun webGlAvailable(): Boolean
 
 /**
- * The message a browser without WebGL gets, in the container Compose would have drawn into.
- *
- * Plain DOM rather than a Compose fallback, because Compose is the thing that cannot start. The
- * design is not the problem and the text says so: the same URL works in a browser with WebGL, and
- * `design render` draws the design without a browser at all.
+ * The message a browser without WebGL gets, in the container Compose would have drawn into. Plain
+ * DOM, since Compose is what cannot start.
  */
 @JsFun(
   """() => {
@@ -330,15 +313,13 @@ internal fun CatalogRuntimeCanvas(
 ) {
   val runtimeId = document.catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull.orEmpty()
   val surfaceId = remember { nextCatalogRuntimeSurfaceId() }
-  // The runtime is sent the document and nothing else, and cannot fetch the design's uploaded
-  // pictures from its sandbox, so the ones the editor has fetched travel inside it.
+  // The runtime gets only the document and can't fetch uploaded pictures from its sandbox, so the
+  // editor's fetched ones travel inside it.
   //
-  // And without its `home`. That is provenance for exports, not something a runtime draws, and a
-  // runtime built before homes existed decodes the document strictly: every design the server
-  // stamped a home on was refused with `INVALID_DOCUMENT`, and all three panes stayed blank.
+  // `home` is stripped: it is export provenance, and older runtimes decode strictly and reject it.
   //
-  // And with a builder template the runtime does not ship resolved into the components it does
-  // (see [forCatalogRuntime]): remote-m3's runtime drew an adaptive widget as an empty frame.
+  // Builder templates the runtime doesn't ship are resolved into components it does (see
+  // [forCatalogRuntime]).
   val runtimeDocument =
     document
       .forCatalogRuntime()
@@ -351,9 +332,8 @@ internal fun CatalogRuntimeCanvas(
   var lastInspection by remember(surfaceId) { mutableStateOf("") }
   var runtimeSnapshot by remember(surfaceId) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
   var coordinates by remember(surfaceId) { mutableStateOf<LayoutCoordinates?>(null) }
-  // Where the surface sits and how large it is drawn, in window pixels. A canvas zoom scales the
-  // runtime's frame without re-rendering it, so its snapshot stays valid but has to be mapped
-  // again.
+  // Where the surface sits and its drawn size, in window pixels. Zoom scales the runtime's frame
+  // without re-rendering, so the snapshot must be re-mapped.
   var placement by remember(surfaceId) { mutableStateOf<Rect?>(null) }
   // Compose's window coordinates are canvas pixels and the host `div` is placed in CSS pixels. On
   // a display whose `devicePixelRatio` is not 1 the two differ by exactly this density.
@@ -361,9 +341,8 @@ internal fun CatalogRuntimeCanvas(
   // Read in composition so opening or closing an editor menu recomposes this and re-stacks the
   // surface: a device frame sits above the canvas to take the pointer, which would bury the menu.
   val editorOverlayOpen = EditorOverlays.anyOpen
-  // What shows wherever the design leaves the frame uncovered: a widget's rounded corners, a round
-  // host shape. The frame and the runtime are transparent there, and the hole punched for them
-  // reaches the page itself — white — so the host paints the colour of the panel it sits in.
+  // Fill for areas the design leaves uncovered (rounded widget corners, round hosts): the frame and
+  // runtime are transparent there and the punched hole would show the page's white.
   val backdropColor =
     MaterialTheme.colorScheme
       .surfaceColorAtElevation(LocalAbsoluteTonalElevation.current)
@@ -371,14 +350,12 @@ internal fun CatalogRuntimeCanvas(
   // What the runtime announced in `initialized`: the editor sends a `revealNode` or a sideways
   // unroll only to a runtime that listed it.
   var capabilities by remember(surfaceId) { mutableStateOf(emptySet<String>()) }
-  // Why the runtime drew nothing, or empty while it has not refused. Said in the pane: a refusal
-  // used to live only on the host element, and a blank pane was all anybody saw.
+  // Why the runtime drew nothing, or empty while it has not refused; shown in the pane.
   var runtimeError by remember(surfaceId) { mutableStateOf("") }
   LaunchedEffect(surfaceId, runtimeId, document.revision) {
     lastInspection = ""
-    // For as long as this revision is on screen, not only until its first answer: a reveal or a
-    // wheel handed to the runtime moves its lists, and the inspection the runtime sends back with
-    // the action's reply is the only way the editor learns where the rows went.
+    // Keep listening while this revision is on screen: actions like reveal or wheel move the
+    // runtime's lists, and only its replies tell the editor where rows went.
     while (true) {
       capabilities =
         readCatalogRuntimeCapabilities(surfaceId).split(',').filter { it.isNotBlank() }.toSet()
@@ -391,14 +368,14 @@ internal fun CatalogRuntimeCanvas(
         }
           .getOrNull()
           ?.takeIf { it.documentId == document.id && it.documentRevision == document.revision }
-          ?.let { runtimeSnapshot = it }
+          // Only the nodes the designer placed: see [authoredIn].
+          ?.let { runtimeSnapshot = it.authoredIn(document) }
       }
       delay(100)
     }
   }
-  // Mapped into the editor whenever either side moves: a new snapshot, or the same snapshot under a
-  // zoom or scroll. Mapped only once, the selection and drop overlays stayed where the canvas had
-  // been when the runtime first answered, and drifted off the design as soon as it was zoomed.
+  // Re-map into the editor whenever the snapshot or the placement (zoom/scroll) changes, so
+  // overlays stay on the design.
   LaunchedEffect(runtimeSnapshot, placement, capabilities) {
     val snapshot = runtimeSnapshot ?: return@LaunchedEffect
     val current = coordinates?.takeIf { it.isAttached } ?: return@LaunchedEffect
@@ -479,12 +456,8 @@ internal fun CatalogRuntimeCanvas(
 
 /**
  * Places the runtime's host `div` under the hole [CatalogRuntimeCanvas] punches in the canvas.
- *
- * The bounds Compose reports are canvas pixels, and the `div` is positioned in CSS pixels, so every
- * edge is divided by [pixelsPerCssPixel] on the way out. Written through unconverted, the host
- * landed at twice its offset and twice its size on a `devicePixelRatio` 2 display: the hole showed
- * the page's white body and the design appeared shifted down and right of it, further the more the
- * canvas was zoomed.
+ * Compose reports canvas pixels; the `div` uses CSS pixels, so every edge is divided by
+ * [pixelsPerCssPixel].
  */
 private fun positionCatalogRuntimeSurface(
   surfaceId: String,
@@ -554,13 +527,9 @@ private external fun nextCatalogRuntimeSurfaceId(): String
 /**
  * Live catalog runtimes whose surface left composition, kept for the next surface that wants one.
  *
- * Every device pane, the phone's device tabs and the editing canvas own a surface each, so changing
- * device disposed one surface and mounted another, and the new one cold-booted the catalog's whole
- * Wasm runtime: a manifest fetch, an iframe load, an `initialize` handshake, and a blank pane for
- * the seconds all that took, every time. A frame cannot move to the new surface's host (an iframe
- * moved in the DOM reloads), so the host moves instead: parked hidden where it is, then adopted by
- * the next surface for the same runtime and composition key under that surface's id, and resized
- * and re-rendered in place by the message a live frame already takes.
+ * Switching device would otherwise cold-boot the whole Wasm runtime (manifest, iframe, handshake)
+ * each time. An iframe moved in the DOM reloads, so the host is parked hidden in place and adopted
+ * by the next surface with the same runtime and composition key, then resized and re-rendered.
  *
  * Bounded, because each is a whole runtime: two per key, and none older than two minutes.
  */
@@ -1273,11 +1242,8 @@ internal data class LiveSessionConfig(
   val catalogSystemId: String,
   val designId: String,
   /**
-   * What in the design this URL means: a revision, a node, a thread.
-   *
-   * Parsed once, here, by [parseDesignUrlSelectors] in common code rather than by a `@JsFun` of its
-   * own, so the grammar a link is written in has one definition and a test that does not need a
-   * browser.
+   * What in the design this URL means: a revision, a node, a thread. Parsed by
+   * [parseDesignUrlSelectors] in common code so the grammar has one tested definition.
    */
   val selectors: DesignUrlSelectors,
   val actorId: String,
@@ -1289,18 +1255,13 @@ internal data class LiveSessionConfig(
   val displayName: String,
   val colorArgbHex: String,
   /**
-   * Whether this design lives in the browser rather than on the server.
-   *
-   * `?storage=local`, a query rather than a path segment, because it says *where the design is
-   * kept* and not *which design* — the same distinction that keeps `actor` and `token` in the
-   * query. The server never sees it: the app shell is served for the same catalog-scoped path
-   * either way, and the page decides what to do with it.
+   * Whether this design lives in the browser rather than on the server (`?storage=local`). A query
+   * because it says where the design is kept, not which design; the server never sees it.
    */
   val localStorage: Boolean,
   /**
-   * Whether the server will take this caller's edits, as `/identity` reported it. An older server
-   * does not say, which reads as yes — exactly the behaviour before the field existed. A hint for
-   * what to offer, never a gate: the server authorizes every write where it lands.
+   * Whether the server will take this caller's edits, as `/identity` reported it; older servers
+   * don't say, which reads as yes. A hint for the UI only; the server authorizes every write.
    */
   val canWrite: Boolean = true,
   val designVisibilitySupported: Boolean = false,
@@ -1309,8 +1270,8 @@ internal data class LiveSessionConfig(
   /** Where to sign in and come back here, when the server offers GitHub sign-in to this caller. */
   val signInUrl: String? = null,
   /**
-   * The edit that made a read-only caller's copy, to apply to that copy once it has opened. Carried
-   * in memory only: a reload must not apply it a second time.
+   * The edit that made a read-only caller's copy, to apply once the copy opens. In memory only, so
+   * a reload doesn't apply it twice.
    */
   val carriedCommand: DesignCommandV1? = null,
   /** The server design this browser copy was just made from, for the notice that says so. */
@@ -1351,16 +1312,11 @@ internal external fun publishDesignSelectors(
 )
 
 /**
- * One native render of a design: the host compiles it and draws it with real Compose.
+ * One native render of a design: the host compiles it and draws it with real Compose. Decoding
+ * lives here so the editor only sees an [ImageBitmap].
  *
- * Decoding happens here rather than in the editor because `wasmJs` and the JVM decode differently
- * and neither belongs in an editor composable — the editor takes an [ImageBitmap] and knows nothing
- * about base64 or HTTP.
- *
- * The three outcomes are kept apart on purpose. A 422 is the generator refusing the design and its
- * reasons are actionable; any other non-200 is this host failing, which is a different sentence;
- * and a 200 with no frame means the compile lane answered without one, which the editor says
- * plainly rather than showing an empty box.
+ * Three distinct outcomes: a 422 is the generator refusing the design (actionable reasons), any
+ * other non-200 is a host failure, and a 200 with no frame means the compile lane produced none.
  */
 internal suspend fun requestNativeRender(
   designId: String,
@@ -1377,9 +1333,8 @@ internal suspend fun requestNativeRender(
             "/api/ui-builder/v1/designs/$designId/native-preview" +
               (revision?.let { "?revision=$it" } ?: ""),
           contentType = "application/json",
-          // The host container to frame a widget in. In the body rather than the query beside the
-          // revision, because it says what to draw rather than which version to read; a host that
-          // predates the field ignores it and draws the squircle, which is what it drew before.
+          // The host shape goes in the body (what to draw), not the query (which version). Hosts
+          // that predate the field draw the squircle.
           body = "{\"hostShape\":\"${hostShape.id}\"}",
         )
       )
@@ -1398,10 +1353,8 @@ internal suspend fun requestNativeRender(
     return UiBuilderNativeRender(failure = it)
   }
   val encoded = result.imageBase64 ?: return UiBuilderNativeRender()
-  // The compile lane's `image` is a `data:image/png;base64,…` URI, because that is what the
-  // playground page puts straight into an `<img src>`. Strict Base64 rejects the prefix, so a frame
-  // that arrived intact used to surface as a decode failure. Tolerant of both spellings rather than
-  // pinned to one: the field is named for its payload, and the prefix is the wrapper.
+  // The compile lane's `image` is a `data:image/png;base64,…` URI; accept both prefixed and bare
+  // base64.
   val payload = encoded.substringAfterLast("base64,")
   return UiBuilderNativeRender(
     image = Image.makeFromEncoded(Base64.decode(payload)).toComposeImageBitmap(),
@@ -1522,13 +1475,10 @@ private external fun captureMode(): String
 private external fun liveSessionEnabled(): Boolean
 
 /**
- * Everything a design kept in this browser needs, assembled once per session.
- *
- * The three pieces are deliberately separate objects. [store] is the browser's keys and knows
- * nothing about catalogs; [catalogs] is network-first with the last successful answer kept, which
- * is what lets an offline reload open a design at all; [service] is the reducer above both,
- * answering the same v1 requests the server answers. [text] is the same network-first rule for the
- * two static files a local session still needs — the device presets and the seed fixture.
+ * Everything a design kept in this browser needs, assembled once per session. [store] is the
+ * browser's keys; [catalogs] is network-first with the last answer kept (so offline reloads work);
+ * [service] is the reducer answering the same v1 requests as the server; [text] applies
+ * network-first to the device presets and seed fixture.
  */
 internal class BrowserLocalSession(config: LiveSessionConfig) {
   private val storage = BrowserLocalDesignStorage()
@@ -1570,10 +1520,9 @@ internal fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
   val defaultDesignId =
     if (catalogSystemId == "m3-catalog") "jetcaster-discover"
     else "$catalogSystemId-jetcaster-discover"
-  // `/ui-builder/<designId>` is the canonical form. The `?designId=` query still works
-  // — bookmarks and automation written against it must not break — and the path wins where both
-  // are present. Neither creates anything: a GET opens a design, and bringing one into existence
-  // is the `POST` the New design form submits, or a `PUT` of the design's own API resource.
+  // `/ui-builder/<designId>` is canonical; `?designId=` still works and the path wins if both are
+  // present. Neither creates a design: that is the New design `POST` or a `PUT` of the design's API
+  // resource.
   val pathDesignId = uiBuilderDesignFromPath()
   val designNamedInPath = pathDesignId.isNotEmpty()
   return LiveSessionConfig(
@@ -1611,12 +1560,9 @@ internal fun liveSessionConfig(serverActorId: String?): LiveSessionConfig {
 }
 
 /**
- * The Screen inspector's device frames, read from the server.
- *
- * The server derives them from `DeviceDimensions`, the JVM-only catalog the render lane resolves
- * against; `wasmJs` cannot depend on it, which is exactly why this crosses the wire instead of
- * being a constant in `:ui-builder`. A failure is not fatal — the inspector falls back to the raw
- * width/height/density fields, which is where it was before the menu existed.
+ * The Screen inspector's device frames, read from the server, which derives them from the JVM-only
+ * `DeviceDimensions`. A failure is not fatal: the inspector falls back to raw width/height/density
+ * fields.
  */
 internal suspend fun loadDevicePresets(
   cache: CachedLocalText?,
@@ -1649,11 +1595,9 @@ internal suspend fun loadDevicePresets(
   }
 
 /**
- * Who the server says this page is, what it may do, and — when it is nobody yet — where to sign in.
- *
- * [actorId] null means the server would not say; the caller keeps the historical default so an
- * unauthenticated page still renders. [authenticationRequired] is a 401: this server lets nobody
- * look without signing in, and [signInUrl] is the way in when the server offers one.
+ * Who the server says this page is, what it may do, and where to sign in if nobody yet. [actorId]
+ * null means the server wouldn't say; [authenticationRequired] is a 401, with [signInUrl] when
+ * offered.
  */
 internal data class ServerIdentity(
   val actorId: String?,
@@ -1664,10 +1608,7 @@ internal data class ServerIdentity(
   val authenticationRequired: Boolean = false,
 )
 
-/**
- * Asks `/identity`. Never fatal: any failure is an identity that says nothing, which is exactly
- * what the page had before the endpoint existed.
- */
+/** Asks `/identity`. Never fatal: any failure is an identity that says nothing. */
 internal suspend fun resolveServerIdentity(): ServerIdentity =
   try {
     val (status, body) = fetchIdentity(sameOriginRequestUrl(IDENTITY_PATH))
@@ -1735,10 +1676,8 @@ private external fun fetchWithStatusPromise(url: String): Promise<JsString>
 @JsFun("(url) => globalThis.location.assign(url)") internal external fun navigateTo(url: String)
 
 /**
- * The actor id the server authenticated this page as, or `null` when it will not say.
- *
- * Not fatal on its own: the caller keeps the historical default so an unauthenticated page still
- * renders and reports the server's own error, rather than failing to mount at all.
+ * The actor id the server authenticated this page as, or `null` when it won't say. The caller then
+ * keeps a default so an unauthenticated page still renders.
  */
 internal suspend fun resolveServerActorId(): String? =
   try {
@@ -1749,23 +1688,16 @@ internal suspend fun resolveServerActorId(): String? =
   } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
     throw cancelled
   } catch (failure: Throwable) {
-    // `Throwable`, not `Exception`, and the difference is the whole point of this branch: a
-    // browser-level failure — an insecure origin refusing something, a `fetch` rejected by the
-    // engine rather than the server — arrives as a Kotlin/Wasm `JsException`, which extends
-    // `Throwable` and not `Exception`. Catching `Exception` let it past this guard and out of the
-    // coroutine, where it took the composition with it: a blank editor on `http://<host>:8723/`
-    // that worked on `http://127.0.0.1:8723/`, with nothing in the console but the coroutine
-    // wrapper. The endpoint is best-effort by design, so a failure here is `null` like any other.
+    // `Throwable`, not `Exception`: browser-level failures (insecure origin, engine-rejected
+    // `fetch`) arrive as Kotlin/Wasm `JsException`, which is not an `Exception`, and would
+    // otherwise crash the composition. Best-effort, so any failure is `null`.
     println("compose-ui-builder: could not resolve the server actor: $failure")
     null
   }
 
 /**
- * How long a settings change waits before it is stored.
- *
- * Long enough that dragging a slider from one end to the other is one request, short enough that
- * closing the tab straight after a nudge keeps it. The pictures do not go through this timer twice
- * — an unchanged picture takes the settings route, which carries no bytes.
+ * How long a settings change waits before it is stored: one request per slider drag, but short
+ * enough to survive closing the tab. Unchanged pictures take the bytes-free settings route.
  */
 internal const val REFERENCE_SAVE_DEBOUNCE_MILLIS = 600L
 
@@ -1784,18 +1716,13 @@ private data class IdentityPayload(
 )
 
 /**
- * Encoded, because a design id is not guaranteed to be URL-safe.
- *
- * The legacy query form only requires an id to be non-blank, so one carrying a `#` would request
- * the report for the part before it — the rest becomes a fragment the server never sees — and one
- * carrying a `/` would address a different route entirely. Either way the broad catch below turns
- * the wrong answer into an empty report, which is silence rather than a visible failure.
+ * Encoded, because a legacy design id may contain `#` or `/`, which would silently address the
+ * wrong report.
  */
 private fun componentDriftPath(designId: String, revision: Long?): String =
   "/api/ui-builder/v1/designs/${encodeUrlComponent(designId)}/component-drift" +
-    // The revision on screen, not the head. A design opened at `?revision=` shows the components
-    // that revision held, and the report has to be about those or it answers a question nobody
-    // asked — silently missing a component the pinned revision imported and head no longer has.
+    // The revision on screen, not the head, so the report matches the components that revision
+    // holds.
     (revision?.let { "?revision=$it" } ?: "")
 
 /** Tolerant like the rest: a state or field this build does not know must not blank the report. */
@@ -1816,16 +1743,11 @@ private data class ComponentDriftWire(
 )
 
 /**
- * Whether the shared components this design imported still match the library they came from.
+ * Whether the shared components this design imported still match their source library; the document
+ * embeds component bodies, so only the server can answer.
  *
- * A design holds the body of every component it imported, so it draws and exports the same way
- * whatever the project does afterwards — which is exactly why nothing in the document can answer
- * this and it has to be asked over the wire.
- *
- * A failure is not fatal, for the reason [loadDevicePresets]'s is not: a host that serves no
- * component library answers 404 here, and an editor that refused to open over that would be an
- * editor most hosts could not run. An unrecognised state is dropped rather than guessed at — a
- * verdict this build cannot name is one it cannot word either.
+ * Not fatal, like [loadDevicePresets]: hosts without a component library answer 404. Unrecognised
+ * states are dropped.
  */
 internal suspend fun loadComponentDrift(
   designId: String,
@@ -1884,16 +1806,9 @@ private data class DevicePresetWire(
 /**
  * The component record this host generates [catalogSystemId]'s exports from, or null.
  *
- * Null on every failure, deliberately and quietly: a host with no record for this catalog answers
- * 404, an older host has no such route at all, and an offline page reaches neither. All three mean
- * the same thing to the editor — judge the design by the record embedded in this build, exactly as
- * it did before the route existed — and none of them is worth a banner over a design that draws and
- * exports regardless.
- *
- * Unknown keys are ignored for the reason `EmbeddedComponentRecordAccess` gives: a record from a
- * newer producer should still parse, and which schema versions may be generated from is the
- * *host's* judgement, made before this is served. A record it would not generate from is not served
- * at all.
+ * Null on any failure (no record, older host without the route, offline): the editor then uses the
+ * record embedded in this build. Unknown keys are ignored so newer records still parse; the host
+ * decides which schema versions it serves.
  */
 internal suspend fun fetchCatalogRecord(catalogSystemId: String): ComponentRecordFile? =
   runCatchingCancellable {
@@ -1923,10 +1838,8 @@ internal suspend fun loadLiveCatalogs(
 /**
  * The catalog-owned cutover flag as the host served this page: the shell's `<meta
  * name="ui-builder-catalog-ownership">`, or a `?catalogOwnership=` override (`all`, `none`, or a
- * comma-separated list), default `none`. The host is the one that knows whether it seeds owned
- * catalogs from their published templates, so it is the one that sets this; see
- * `docs/design/UI_BUILDER_CATALOG_CUTOVER.md`. A value that does not parse is `none`, because the
- * chooser is the wrong place to fail a page over a flag.
+ * comma-separated list), default `none`. Unparseable values are `none`. See
+ * `docs/design/UI_BUILDER_CATALOG_CUTOVER.md`.
  */
 internal fun catalogOwnership(): CatalogOwnership = runCatching {
   CatalogOwnership.parse(catalogOwnershipParameter())
@@ -1953,9 +1866,8 @@ internal val NEW_DESIGN_CATALOG_ORDER =
   )
 
 /**
- * Labelled by what a person is making — a phone screen, a watch screen, a RemoteCompose widget —
- * rather than by the catalog that draws it. "Material 3" and "Wear Material 3" told an M3 reader
- * the truth and everyone else nothing about which chip to press.
+ * Labelled by what a person is making (phone screen, watch screen, RemoteCompose widget) rather
+ * than by the catalog that draws it.
  */
 internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignCatalog? =
   when (catalog.benchmark.catalogSystemId) {
@@ -2026,9 +1938,8 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
               group = WIDGET_GROUP,
             ),
           ) +
-            // The two worked samples, after the empty scaffolds rather than before them: a blank
-            // host is what someone starting their own widget wants, and a sample is what someone
-            // asking "can this express a real one?" wants.
+            // Worked samples after the empty scaffolds: blank first for starting fresh, samples for
+            // exploring.
             WearWidgetSample.entries.map {
               UiBuilderNewDesignTemplate(
                 id = it.templateId,
@@ -2061,9 +1972,7 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
                 "A starting point: a ScreenScaffold with its clock and scroll indicator, over an " +
                   "empty list.",
             ),
-            // After the empty one, for the reason the widget samples come after the empty hosts: a
-            // blank scaffold is what somebody starting their own screen wants, and the worked list
-            // is what somebody asking "does this match a real Wear render?" wants.
+            // After the empty one, like the widget samples.
             UiBuilderNewDesignTemplate(
               id = UiBuilderNewDesignSeed.WEAR_LIST_TEMPLATE,
               label = "Activity list",
@@ -2103,9 +2012,8 @@ internal fun newDesignCatalog(catalog: CatalogCapabilityV1): UiBuilderNewDesignC
             )
           ),
       )
-    // A catalog this build has no templates for — one an operator enabled that the chooser has
-    // never heard of. It still gets a card, named after itself, with the blank starting point the
-    // server's seed gives every unknown catalog, rather than silently missing from the chooser.
+    // A catalog this build has no templates for still gets a card, named after itself, with the
+    // server's blank seed.
     else ->
       UiBuilderNewDesignCatalog(
         systemId = catalog.benchmark.catalogSystemId,
@@ -2154,20 +2062,11 @@ internal val uiBuilderBasePath: String by lazy {
 }
 
 /**
- * The canonical URL for one design: `<base>/<designId>` — `/ui-builder/<designId>`, or
- * `/<designId>` on a builder host serving the editor at its root ([uiBuilderBasePath]).
+ * The canonical URL for one design: `<base>/<designId>` (see [uiBuilderBasePath]).
  *
- * Only the identity and transport values survive as a query — they configure *who* is editing, not
- * *what*. `session`, `create`, `designId`, `template` and `state` do not: the first three are
- * implied by the path, and the last two only ever described how a design that now exists was
- * seeded.
- *
- * The selectors survive too, and they are the reason this takes arguments rather than reading the
- * URL for itself. They say **what in the design** the link means, so a legacy `?designId=` URL that
- * also named a node has to arrive at the path form still naming it — a rewrite that dropped them
- * would silently turn a link to one layer into a link to the design. `revision` and `node` are set
- * from the values the page opened with; the fragment is carried across verbatim, because it never
- * left the browser to begin with.
+ * Only identity and transport query values survive (`session`, `create`, `designId`, `template` and
+ * `state` are dropped). Selectors are carried over so a legacy link to a node still names it:
+ * `revision` and `node` from the opening values, the fragment verbatim.
  */
 @JsFun(
   """(path, carried, revision, node) => {
@@ -2193,9 +2092,8 @@ private external fun canonicalizeUiBuilderUrlWith(
 )
 
 /**
- * The identity query this page keeps, named once in [DESIGN_URL_IDENTITY_KEYS] rather than twice
- * here — the rewrite that keeps it and the link builder that refuses it have to agree, and the way
- * two hand-kept lists disagree is a token in a link somebody pasted into a chat.
+ * Keeps the identity query named in [DESIGN_URL_IDENTITY_KEYS], the same list the link builder
+ * refuses, so tokens don't leak into shared links.
  */
 internal fun canonicalizeUiBuilderUrl(
   designId: String,
@@ -2215,14 +2113,9 @@ internal fun canonicalizeUiBuilderUrl(
 /**
  * The next time the address bar's fragment changes, whatever changed it.
  *
- * A fragment-only navigation — a second `#thread=` link followed from inside the open design, or
- * Back over one — is a *same-document* navigation: the browser does not reload, the Wasm app is
- * never re-entered, and the config parsed at startup keeps naming the thread that was open. Without
- * this the address bar and the panel disagree, which is the one failure a permalink cannot have.
- *
- * One promise per change rather than a persistent callback, because that is what a Kotlin/Wasm
- * caller can await, and it is the shape the paste listener already uses: re-armed by the loop that
- * consumed the last one.
+ * A fragment-only navigation (a `#thread=` link or Back) doesn't reload the app, so without this
+ * the panel keeps showing the startup thread. One promise per change, re-armed by the consuming
+ * loop, since that is what Kotlin/Wasm can await.
  */
 @JsFun(
   """() => new Promise((resolve) => {
@@ -2250,12 +2143,9 @@ internal suspend fun awaitHashChange(): String = suspendCancellableCoroutine { c
 }
 
 /**
- * Takes one selector back out of the address bar, without a round trip and without a history entry.
- *
- * The address bar has to stop naming a node the moment somebody selects a different one, or the URL
- * they copy next — or that their browser restores tomorrow — points at a layer they have not been
- * looking at. `replaceState` rather than `pushState` for the same reason the canonical rewrite uses
- * it: changing selection is not navigation, and Back should leave the design.
+ * Takes one selector back out of the address bar, without a round trip or history entry, so a
+ * copied URL never names a layer no longer selected. `replaceState` because selection is not
+ * navigation.
  */
 @JsFun(
   """(name) => {
@@ -2268,12 +2158,9 @@ internal suspend fun awaitHashChange(): String = suspendCancellableCoroutine { c
 internal external fun dropDesignUrlQuery(name: String)
 
 /**
- * Takes a `?token=` back out of the address bar as the page starts.
- *
- * A token-gated host already answers a browser's first `?token=` page load with an HttpOnly cookie
- * and a redirect to the same URL without it, so this normally finds nothing. It is here for a page
- * that arrived some other way: nothing on this page reads the token from the URL, so keeping it
- * there would only put it into the history, a bookmark or a copied link.
+ * Takes a `?token=` back out of the address bar as the page starts. Token-gated hosts normally
+ * already redirect it away into a cookie; this covers other arrivals so the token doesn't land in
+ * history or copied links.
  */
 internal fun stripPageToken() = dropDesignUrlQuery("token")
 
@@ -2289,12 +2176,8 @@ internal fun stripPageToken() = dropDesignUrlQuery("token")
 internal external fun dropDesignUrlFragment()
 
 /**
- * Leaves a pinned revision for the design as it stands.
- *
- * A real navigation rather than a `replaceState`: the pinned page holds a snapshot of one committed
- * revision and no socket, so the head has to be fetched and subscribed to from a clean start. The
- * identity query rides along untouched, which is what makes this the same session rather than a
- * second sign-in.
+ * Leaves a pinned revision for the design as it stands. A real navigation, since the pinned page
+ * has no socket; the identity query rides along.
  */
 @JsFun(
   """() => {
@@ -2306,11 +2189,8 @@ internal external fun dropDesignUrlFragment()
 internal external fun goToLatestRevision()
 
 /**
- * The same canonical URL, now naming this browser as where the design is kept.
- *
- * `replaceState` rather than a navigation: the page already has the app and the design is already
- * written, so reloading to reach the local mode would cost a round trip to a server the operator
- * may be about to leave behind. What the URL is for is the *next* visit.
+ * The same canonical URL, now naming this browser as where the design is kept. `replaceState`
+ * rather than navigating: the change matters for the next visit.
  */
 @JsFun(
   """(path) => {
@@ -2352,12 +2232,9 @@ internal fun navigateToUiBuilderPage(catalogSystemId: String, designId: String) 
 @JsFun("""() => globalThis.location.origin""") internal external fun pageOrigin(): String
 
 /**
- * Submit the New design form: a real `POST`, whose `303` the browser follows to the permalink.
- *
- * A form rather than `fetch`, because only a form submission makes the redirect a navigation —
- * `fetch` would follow the `303` itself and hand back the editor's HTML, leaving the page on the
- * URL the creation was requested from. The identity query rides on the action URL, where the server
- * reads it to authenticate the write and to carry it into the permalink it redirects to.
+ * Submit the New design form: a real `POST`, whose `303` the browser follows to the permalink. A
+ * form rather than `fetch`, which would follow the redirect itself and leave the URL unchanged. The
+ * identity query rides on the action URL.
  */
 @JsFun(
   """(catalogSystemId, designId, templateId, state, publicRead, carried) => {
@@ -2422,16 +2299,14 @@ internal external fun openUiBuilderGuide()
 
 /**
  * A credential-free handoff: the agent asks for its own scoped grant instead of inheriting the
- * browser session. Keeping this beside the browser host makes the copied endpoint documentary, not
- * a second configuration format that can drift from the served page.
+ * browser session.
  *
- * Written for any agent, not one harness. An agent cannot add an MCP server to its own running
- * session, so the prompt names the server by the name the landing page, `.mcp.json` and the
- * compose-ag-plugin's `compose-catalogs` plugin all give it, `compose-preview-catalog`, and has the
- * agent stop and ask for the one-line setup when it is missing rather than improvise a connection.
+ * Agent-agnostic. Agents can't add MCP servers mid-session, so the prompt names the server
+ * `compose-preview-catalog` (as the landing page, `.mcp.json` and the `compose-catalogs` plugin do)
+ * and asks the agent to stop and request setup if it is missing.
  *
- * The landing page's Get started section (`site/index.html`) quotes this prompt for the hosted
- * service; change it there too.
+ * The landing page's Get started section (`site/index.html`) quotes this prompt; change it there
+ * too.
  */
 internal fun agentUiBuilderPrompt(
   mcpEndpoint: String,
@@ -2471,10 +2346,8 @@ internal fun agentUiBuilderPrompt(
 internal const val UI_BUILDER_MCP_SERVER_NAME: String = "compose-preview-catalog"
 
 /**
- * Leave for the host's index of every design this account may open.
- *
- * The identity query rides along for the same reason it does on every other navigation here: on a
- * token-gated host the page that lands without it is a page that cannot list anything.
+ * Leave for the host's index of every design this account may open, carrying the identity query
+ * (needed on token-gated hosts).
  */
 @JsFun(
   """(path, carried) => {
@@ -2496,11 +2369,8 @@ internal fun navigateToDesignsIndex() =
   )
 
 /**
- * An epoch millisecond as the reader's own locale writes it.
- *
- * The browser's job, not this module's: the home screen is drawn by common code that has no locale,
- * no time zone and no calendar, and an ISO instant is not what "when did I last touch this" looks
- * like to a person.
+ * An epoch millisecond in the reader's locale; formatting is left to the browser since common code
+ * has no locale or time zone.
  */
 @JsFun("""(millis) => new Date(millis).toLocaleString()""")
 internal external fun formatLocalDateTime(millis: Double): String
@@ -2587,14 +2457,8 @@ private external fun liveConfigFlag(name: String): Boolean
 
 /**
  * A per-page nonce for operation ids, generated **without requiring a secure context**.
- *
- * `crypto.randomUUID` exists only in secure contexts. On a plain-HTTP origin — a LAN host, which is
- * exactly how somebody checks a preview from another laptop or a phone — it is `undefined`, and
- * calling it threw a `JsException` straight out of `liveSessionConfig` and killed the editor: a
- * blank page on `http://<host>.local:8723/` that worked on `http://127.0.0.1:8723/` (a trusted
- * origin) and on any HTTPS deployment. `crypto.getRandomValues` is available in insecure contexts
- * and is the fallback; `Math.random` is the last resort, because an operation id needs to be unique
- * within one page, not unguessable.
+ * `crypto.randomUUID` is missing on plain-HTTP origins (e.g. LAN hosts), so fall back to
+ * `crypto.getRandomValues`, then `Math.random`: ids need only be unique within a page.
  */
 @JsFun(
   """() => {
@@ -2630,15 +2494,11 @@ internal fun markReady() {
 private external fun markReadyAttribute()
 
 /**
- * Takes away the boot screen `index.html` draws before any script runs.
+ * Takes away the boot screen `index.html` draws before any script runs. Done here (not in
+ * `ui-builder-boot.js`) so a CSP that blocks that script still works; idempotent.
  *
- * Removed here rather than by `ui-builder-boot.js`, so a host whose CSP refuses that script still
- * gets its editor back. Idempotent, and a no-op for a shell that has no boot screen.
- *
- * At once, not faded out. [markReady] calls this in the same task that sets the ready attribute, so
- * nothing that waits for ready can ever see the screen: compose-preview-server's visual harness
- * screenshots two frames after it, and a 200 ms fade put a half-transparent boot screen in both of
- * its captures — at different opacities — until the comparison failed on every run.
+ * Removed at once, not faded: [markReady] calls this in the same task that sets the ready
+ * attribute, so visual harnesses screenshotting after ready never capture a half-faded boot screen.
  */
 @JsFun(
   """() => {
@@ -2808,10 +2668,9 @@ internal external fun publishInspection(json: String)
 internal val inspectionJson = Json { encodeDefaults = true }
 
 /**
- * Compose reports node bounds synchronously for every laid-out node. Publishing a complete encoded
- * manifest for every callback blocks the browser render opportunity with repeated whole-document
- * serialization. Yielding once coalesces that burst while retaining the latest complete snapshot;
- * [publishInspection] still places the canvas marker only after the subsequent animation frame.
+ * Compose reports node bounds synchronously for every laid-out node; publishing the full manifest
+ * per callback blocks rendering. Yielding once coalesces the burst while keeping the latest
+ * snapshot; [publishInspection] places the canvas marker after the next animation frame.
  */
 internal class CoalescingInspectionPublisher(private val scope: CoroutineScope) {
   private var pending: UiBuilderInspectionCollector? = null
@@ -2989,12 +2848,9 @@ private external fun publishEditorCanvasBoundsValues(
 internal external fun publishEditorDropTarget(hovered: Boolean, label: String)
 
 /**
- * The component packs remembered as on for [catalogSystemId], from this browser's storage.
- *
- * A browser setting rather than a server one, and per catalog rather than per design: which shelves
- * a palette shows is a preference of the person at the keyboard, not a fact about the document, and
- * it is the same answer for every design of one catalog. Storage can be absent or refuse — a
- * private window, a blocked origin — and either reads as "nothing remembered".
+ * The component packs remembered as on for [catalogSystemId], from this browser's storage. Per
+ * catalog and per browser since it is a personal preference; absent or refusing storage reads as
+ * nothing remembered.
  */
 internal fun readEnabledPacks(catalogSystemId: String): Set<String> =
   readBrowserSetting(enabledPacksKey(catalogSystemId))
@@ -3009,11 +2865,8 @@ internal fun writeEnabledPacks(catalogSystemId: String, packs: Set<String>) {
 private fun enabledPacksKey(catalogSystemId: String): String = "ui-builder.packs.$catalogSystemId"
 
 /**
- * The reader's pins for a catalog, or null while they have never said.
- *
- * The marker is what separates "never said" from "said none": an empty stored value is a reader who
- * unpinned everything, and reading that back as null would hand them the catalog's defaults again
- * on the next reload — the one behaviour that makes unstarring a default look broken.
+ * The reader's pins for a catalog, or null while they have never said. A marker separates "never
+ * said" from "unpinned everything", so unstarring all defaults sticks across reloads.
  */
 internal fun readPinnedComponents(catalogSystemId: String): Set<String>? {
   val stored = readBrowserSetting(pinnedComponentsKey(catalogSystemId))
@@ -3072,11 +2925,8 @@ internal fun writeHomeFolders(folders: Map<String, String>) {
 }
 
 /**
- * What the status line calls this session: live against the server, or this browser's own copy.
- *
- * The offline spelling is not cosmetic. A local session that is *also* offline has fallen back to a
- * catalog remembered from an earlier visit, and an author should be told that the palette in front
- * of them is a memory rather than what the server serves today.
+ * What the status line calls this session: live against the server, or this browser's own copy. A
+ * local session that is also offline is labelled so, since its palette is a remembered catalog.
  */
 internal fun sessionModeLabel(config: LiveSessionConfig, session: BrowserLocalSession?): String =
   when {
@@ -3086,12 +2936,9 @@ internal fun sessionModeLabel(config: LiveSessionConfig, session: BrowserLocalSe
   }
 
 /**
- * Seeds one design into this browser, or says why it could not be.
- *
- * The seed comes from [UiBuilderNewDesignSeed], the same object the server's New design form runs,
- * so "a blank Wear screen" means one thing whichever route made it. The operations fixture it reads
- * the environment from is a static file, so it goes through the browser's remembered-text cache and
- * a second design can be made with the network gone.
+ * Seeds one design into this browser, or says why it could not be. Uses [UiBuilderNewDesignSeed]
+ * like the server's New design form; the operations fixture goes through the remembered-text cache
+ * so it works offline.
  */
 internal suspend fun createLocalDesign(
   session: BrowserLocalSession,
@@ -3156,13 +3003,8 @@ internal fun forkDesignIntoBrowser(
 
 /**
  * Copies the design the server is serving into this browser, with the fork point it forked at.
- *
- * The digest and the document come from the same answer on purpose: it is the server's own
- * `documentHash` for that revision, so the claim "this copy forked from revision N of that design"
- * is checkable when it comes home rather than merely asserted.
- *
- * Refuses a design id this browser already holds, for the reason create refuses to replace: two
- * histories under one name is the one thing a later sync could not sort out.
+ * Digest and document come from the same answer (the server's `documentHash`), so the fork claim is
+ * checkable later. Refuses an id this browser already holds.
  */
 internal fun takeDesignOffline(
   wire: DesignDocumentV1,

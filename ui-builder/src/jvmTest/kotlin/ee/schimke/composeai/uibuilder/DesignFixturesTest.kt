@@ -21,27 +21,16 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Every design kept in `docs/design/fixtures/ui-builder/designs/` still works.
- *
- * A file there is a design the repository owns — today the editor's own screens, drawn in the
- * editor's own catalog. Each one is replayed, hashed, validated and exported here so that a catalog
- * change which breaks a committed design, or a design which drifts from the catalog it pins, fails
- * the build rather than the next person who opens it. The directory is read from disk rather than
- * from a hand-kept list, so a file cannot be added without being checked, and the previews in
- * `DesignFixturePreviews.kt` are cross-checked the same way so a file cannot be added without being
+ * Every design kept in `docs/design/fixtures/ui-builder/designs/` still works: replayed, hashed,
+ * validated and exported. The directory is read from disk (not a hand-kept list), and
+ * `DesignFixturePreviews.kt` is cross-checked, so no file can be added without being checked and
  * drawn.
  */
 class DesignFixturesTest {
   private val json = Json { encodeDefaults = true }
   /**
-   * The catalog a fixture pins, rather than one catalog for the whole directory.
-   *
-   * It was `m3-catalog` for everything, which was true while everything here was a mobile screen
-   * and silently wrong the moment one was not: a `wear-m3` design validated against a catalog that
-   * declares none of its components would fail with thirty "unknown component" issues, so the
-   * directory was effectively closed to every catalog but one. Both capability files already sit
-   * beside the designs and are already on this module's resources path, so the fixture's own
-   * `catalogPin.systemId` is enough to pick.
+   * The catalog each fixture pins (its `catalogPin.systemId`), not one catalog for the whole
+   * directory.
    */
   private val catalogs =
     mutableMapOf<String, ee.schimke.composeai.uibuilder.capability.CapabilityCatalog>()
@@ -107,14 +96,9 @@ class DesignFixturesTest {
   }
 
   /**
-   * Exported by whichever generator actually writes that design, which is not one generator.
-   *
-   * A Wear screen's `ScreenScaffold` takes a scroll state no component record can recover, and a
-   * Wear widget ships as Remote Compose, so both go through `RecordFreeExport` — the same call the
-   * editor's Code pane and the server's export make. Asking the record-driven exporter instead
-   * answers a question that design was never posed: every node came back `MISSING_CODE_CAPABILITY:
-   * no Kotlin symbol/import mapping exists`, which is true of that exporter and says nothing about
-   * the design.
+   * Exported by whichever generator actually writes that design: Wear screens and Wear widgets go
+   * through `RecordFreeExport` (as the Code pane and server do), the rest through the record-driven
+   * exporter.
    */
   @Test
   fun `and therefore each exports as Compose`() {

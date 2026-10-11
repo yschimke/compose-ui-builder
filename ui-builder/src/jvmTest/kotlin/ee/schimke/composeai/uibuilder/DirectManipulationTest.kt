@@ -123,8 +123,8 @@ class DirectManipulationTest {
     }
 
   /**
-   * A short node's handle targets are a finger wide, so on "A" they cover its middle as well as its
-   * edges — the case where a right-click used to land on a handle and open nothing (#378).
+   * On a short node the finger-wide handle targets cover its middle too; a right-click there must
+   * still open the menu (see #378).
    */
   private fun ComposeUiTest.selectSmallNodeUnderItsHandle(): Offset {
     onNodeWithText("A").performClick()

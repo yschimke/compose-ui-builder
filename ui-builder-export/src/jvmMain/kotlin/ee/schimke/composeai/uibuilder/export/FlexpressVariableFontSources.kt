@@ -6,13 +6,9 @@ import ee.schimke.flexpress.codegen.VariableFontCodegen
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * [VariableFontSourceGenerator] on flexpress's own code generator: each request becomes the Kotlin
- * file `VariableFontCodegen` writes for it, its outline worked out now from the font file.
- *
- * The fonts are read through [readFont], by [VariableFontText.Font.file]. [fromClasspath] reads the
- * copies this module's JVM jar carries (the vendored `assets/rc-fonts` files, staged by the build),
- * which is what an export host such as compose-preview-server has: it has this jar, not the UI
- * builder's. A font that cannot be read refuses its requests rather than throwing.
+ * [VariableFontSourceGenerator] on flexpress's code generator (`VariableFontCodegen`), computing
+ * outlines from the font files read by [readFont]. [fromClasspath] reads the copies this JVM jar
+ * carries, which export hosts have. An unreadable font refuses its requests rather than throwing.
  */
 class FlexpressVariableFontSources(private val readFont: (file: String) -> ByteArray?) :
   VariableFontSourceGenerator {

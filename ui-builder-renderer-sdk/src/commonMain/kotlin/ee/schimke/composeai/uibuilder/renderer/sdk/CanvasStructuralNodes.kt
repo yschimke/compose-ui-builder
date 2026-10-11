@@ -14,11 +14,9 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 
 /**
- * Render the two structural nodes that change how authored nodes are entered.
- *
- * They belong to the generic document interpreter rather than any component catalog: a loop
- * supplies row arguments to repeated template entries, and a component instance supplies placement
- * arguments to one design-defined body. Catalog adapters receive only the resolved descendants.
+ * Render the two structural nodes owned by the generic interpreter: a loop (row arguments for
+ * repeated entries) and a component instance (placement arguments for a body). Adapters receive
+ * only resolved descendants.
  *
  * @return whether this entry is a structural node, including an invalid component placement whose
  *   diagnostic was drawn by [missingComponent].

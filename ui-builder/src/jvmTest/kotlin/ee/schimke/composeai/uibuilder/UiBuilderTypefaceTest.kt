@@ -10,10 +10,8 @@ class UiBuilderTypefaceTest {
 
   @Test
   fun `every role takes the family, not just the ones a design happens to use`() {
-    // The exported code references roles by name, so a role left on the default face renders one
-    // way in the builder and another in the consuming app. Asserting the whole scale rather than a
-    // sample: a helper that covered fourteen of fifteen would pass a spot check and still leave one
-    // role wrong, and which role that is would depend on the design.
+    // Exported code references roles by name, so every one of the fifteen roles must change; a spot
+    // check could miss one.
     val base = Typography()
     val applied = base.withFontFamily(FontFamily.Monospace)
 

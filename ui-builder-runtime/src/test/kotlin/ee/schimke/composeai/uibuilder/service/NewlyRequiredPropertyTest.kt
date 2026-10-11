@@ -20,14 +20,8 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * A catalog that starts REQUIRING a property does not strand the designs written before it did.
- *
- * On preview.coo.ee the record-built `m3/primary-tab-row` made `selectedTabIndex` required
- * (Compose's `PrimaryTabRow` has no default for it). Five Google1P tablet designs drawn against the
- * Kotlin catalog that left it optional became unopenable: one as `invalid stored design
- * google-play-tablet: required property selectedTabIndex is missing`, and four as `catalog
- * unavailable` -- their pins had moved on, and the automatic catalog recovery left them alone
- * because every upgrade preview came back BLOCKED on the same missing property.
+ * A catalog that starts requiring a property (e.g. `m3/primary-tab-row`'s `selectedTabIndex`) does
+ * not strand older designs, whether their pin still resolves or they need a catalog upgrade.
  */
 class NewlyRequiredPropertyTest {
 
@@ -56,6 +50,37 @@ class NewlyRequiredPropertyTest {
       EnumValueV1("start"),
       requiredPlaceholder(
         property("string", allowed = listOf(JsonPrimitive("start"), JsonPrimitive("end")))
+      ),
+    )
+  }
+
+  @Test
+  fun `a required colour is a drawable theme role, and a required asset key gets nothing`() {
+    for (name in listOf("color", "containerColor")) {
+      val placeholder = requiredPlaceholder(property("string", name = name))
+      // A `string` zero passed validation and was refused at write and export.
+      assertEquals(ColorTokenValueV1("onSurface"), placeholder, name)
+      assertTrue(
+        (placeholder as ColorTokenValueV1).value in
+          CurrentM3UiBuilderCatalogExecutor.CANVAS_COLOR_TOKENS
+      )
+    }
+    assertNull(
+      requiredPlaceholder(property("string", name = "assetKey")),
+      "no key anybody could guess resolves",
+    )
+  }
+
+  @Test
+  fun `a required colour constrained by allowed values takes the first allowed token`() {
+    assertEquals(
+      ColorTokenValueV1("primary"),
+      requiredPlaceholder(
+        property(
+          "string",
+          name = "containerColor",
+          allowed = listOf(JsonPrimitive("primary"), JsonPrimitive("secondary")),
+        )
       ),
     )
   }
@@ -140,6 +165,14 @@ class NewlyRequiredPropertyTest {
       stored.document.nodes.getValue("row").properties["selectedTabIndex"],
       "written through like a moved pin, so the next start does not do it again",
     )
+    // And the retained snapshot of that revision, which `GetSnapshot` and a default export read:
+    // one revision, one document.
+    val retained =
+      stored.revisionSnapshots.single { it.document.revision == stored.document.revision }
+    assertEquals(
+      IntegerValueV1(0),
+      retained.document.nodes.getValue("row").properties["selectedTabIndex"],
+    )
   }
 
   @Test
@@ -165,11 +198,18 @@ class NewlyRequiredPropertyTest {
 
   // ── harness ───────────────────────────────────────────────────────────────────────────────────
 
-  private fun property(type: String, allowed: List<JsonElement> = emptyList()) =
-    property(JsonPrimitive(type), allowed)
+  private fun property(
+    type: String,
+    allowed: List<JsonElement> = emptyList(),
+    name: String = "p",
+  ) = property(JsonPrimitive(type), allowed, name)
 
-  private fun property(type: JsonElement, allowed: List<JsonElement> = emptyList()) =
-    PropertyCapabilityV1.Builder("p", type)
+  private fun property(
+    type: JsonElement,
+    allowed: List<JsonElement> = emptyList(),
+    name: String = "p",
+  ) =
+    PropertyCapabilityV1.Builder(name, type)
       .also {
         it.required = true
         it.allowedValues = allowed

@@ -97,11 +97,8 @@ import kotlinx.serialization.json.JsonObject
 
 /**
  * The navigation suite type the enclosing [AdaptiveNavigationSuiteScaffold] chose for its frame.
- *
- * `NavigationSuiteItem` asks for its type from `currentWindowAdaptiveInfo()` by default, and on the
- * canvas that is the browser window holding every device frame — so a phone frame's items would
- * draw as rail items inside a bar. The scaffold decides once, from its own frame, and its items
- * read that answer here. Outside a scaffold an item draws as a rail item, the widest form.
+ * `NavigationSuiteItem` would otherwise ask `currentWindowAdaptiveInfo()`, i.e. the browser window.
+ * Outside a scaffold, items draw as rail items.
  */
 internal val LocalFrameNavigationSuiteType = compositionLocalOf {
   NavigationSuiteType.WideNavigationRailCollapsed
@@ -127,11 +124,8 @@ internal fun AdaptiveNavigationSuiteScaffold(
       Row(modifier) {
         NavigationSuite(
           navigationSuiteType = type,
-          // The rail lays itself out at exactly its `maxHeight`, and the extent layout's first pass
-          // measures against an unbounded one to find how tall the design is: the rail asked for a
-          // 96 x Int.MAX_VALUE layout and the whole design failed to open. In that pass it is one
-          // screen tall, which the canvas frame never goes below anyway, so the content still
-          // decides the extent; the pass that follows is bounded to it, and the rail fills it.
+          // In the extent layout's unbounded first pass, the rail would request an infinite height;
+          // bound it to one screen so content still decides the extent.
           modifier =
             Modifier.layout { measurable, constraints ->
               val placeable =
@@ -181,9 +175,8 @@ internal fun AdaptiveNavigationSuiteScaffold(
  * not `currentWindowAdaptiveInfo()`, so each device frame in the preview pane is its own window;
  * posture still comes from the real window.
  *
- * The unrolled editor ([LocalUiBuilderUnrolled]) gets [UnfoldedSupportingPaneScaffold] instead: the
- * real scaffold cannot be measured against an unbounded height, and the editing surface always
- * shows every pane. A pane-count disagreement between editor and preview is therefore expected
+ * The unrolled editor ([LocalUiBuilderUnrolled]) gets [UnfoldedSupportingPaneScaffold] instead
+ * (unbounded height, every pane shown), so pane counts may differ from the preview
  * ([`UI_BUILDER_PREVIEW_FIDELITY.md`](../../../../../../docs/design/UI_BUILDER_PREVIEW_FIDELITY.md)).
  */
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -203,9 +196,7 @@ internal fun AdaptiveSupportingPaneScaffold(
   val mainVisible = node.bool(if (listDetail) "listPaneVisible" else "mainPaneVisible", true)
   val supportingVisible =
     node.bool(if (listDetail) "detailPaneVisible" else "supportingPaneVisible", true)
-  // The three widths the catalog declares. Absent is not zero: an unstated width means "whatever
-  // the library would have chosen", which is what every design authored before these were read
-  // has been getting.
+  // The three widths the catalog declares; absent means the library's choice, not zero.
   val mainWidth =
     node.dimension(if (listDetail) "listPanePreferredWidthDp" else "mainPanePreferredWidthDp")
   val supportingWidth =
@@ -587,12 +578,8 @@ internal fun AssetImage(document: UiBuilderDocument, node: UiBuilderNode, modifi
 
 /**
  * The frame of a picture nobody can show here: a neutral ground, a picture glyph, and the key.
- *
- * Neutral rather than an error container, because nothing is necessarily wrong — the bytes may be
- * uploading, may live on a host this lane cannot reach, or may simply not have been given yet. What
- * it must be is *visible* and *legible*: a viewer should see at a glance that a picture belongs
- * here, and read which key to fill. Drawn with the theme's own surface-variant pair so it sits in
- * either scheme, and with nothing animated or random so two renders of one design are one image.
+ * Neutral since the bytes may simply be pending or unreachable; deterministic, in the theme's
+ * surface-variant pair.
  */
 @Composable
 private fun MissingAssetPlaceholder(
@@ -636,10 +623,8 @@ private fun MissingAssetPlaceholder(
         ink.copy(alpha = 0.35f),
       )
     }
-    // The key, on the canvas and in a PNG, where there is room for a word — an avatar-sized frame
-    // shows the glyph alone rather than three clipped letters. Not in a structured SVG: that
-    // recorder fails closed on any text it cannot attribute to an authored text node, which is the
-    // right rule for an export and the wrong place for a label; the SVG keeps the frame and glyph.
+    // The key is shown where there's room, but not in a structured SVG, whose recorder fails closed
+    // on text not attributable to an authored text node.
     if (!LocalUiBuilderExportStructuredIcons.current && maxWidth >= 96.dp && maxHeight >= 48.dp) {
       Text(
         text = assetKey,
@@ -747,13 +732,8 @@ internal fun NativeOnlyPlaceholder(
 }
 
 /**
- * A labelled frame around content that is not what it appears to be drawn with.
- *
- * [NativeOnlyPlaceholder]'s neighbour and deliberately not the same thing. That one stands in for a
- * component the canvas cannot draw *at all*, so it draws a name and a box. This draws the content
- * for real — the stand-ins are the right shapes and the right text — and marks the boundary the
- * content sits on, because a subtree in a different vocabulary is a fact about the design that a
- * flush render would hide.
+ * A labelled frame around content drawn with stand-ins for a different vocabulary. Unlike
+ * [NativeOnlyPlaceholder], the content is drawn for real; the frame marks the vocabulary boundary.
  */
 @Composable
 internal fun RemoteContentFrame(
@@ -789,13 +769,9 @@ internal fun RemoteContentFrame(
 }
 
 /**
- * A Lottie element: what animation it holds, where it came from, and whether it will export.
- *
- * The unresolved case is the one worth drawing loudly. `url` and `json` are two halves of one
- * source — the builder fetches the first into the second — and an element carrying only a URL looks
- * finished in the layers panel while [RemoteContentEmitter] refuses it, because a widget is built
- * with no network to fetch from. Saying so here is what turns that into something an author can fix
- * before they press export.
+ * A Lottie element: what animation it holds, where it came from, and whether it will export. A
+ * URL-only element is flagged loudly, since [RemoteContentEmitter] refuses it (widgets are built
+ * without network).
  */
 @Composable
 internal fun LottiePlaceholder(node: UiBuilderNode, modifier: Modifier) {

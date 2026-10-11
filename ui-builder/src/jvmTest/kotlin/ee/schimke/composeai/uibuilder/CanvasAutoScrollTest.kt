@@ -25,12 +25,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A drag that reaches the edge of the workspace scrolls the design under the pointer.
- *
- * A long design's lower slots are off-screen, and the drag has to be able to reach them without the
- * author letting go, scrolling by hand, and starting again. The scroll is reported upward — the
- * offset is what a hit-test reconciliation will need once the inspection's boxes and the drawn
- * pointer are taught to agree under scroll, which is a separate, pre-existing gap.
+ * A drag that reaches the edge of the workspace scrolls the design under the pointer, so off-screen
+ * slots are reachable mid-drag. The scroll offset is reported upward for a future hit-test
+ * reconciliation under scroll (a separate, pre-existing gap).
  */
 @OptIn(ExperimentalTestApi::class)
 class CanvasAutoScrollTest {
@@ -150,9 +147,8 @@ class CanvasAutoScrollTest {
       mainClock.advanceTimeBy(200)
       waitForIdle()
 
-      // The pointer is drawn over the deep end of the column: the inspection answers in the same
-      // space the pointer arrives in, so the seam is where the eye says it is. Above the band left
-      // for the zoom controls, which is empty scroll room below the design's last row.
+      // The pointer is over the deep end of the column, above the band left for the zoom controls;
+      // the inspection answers in the pointer's space.
       val state = reducer.initial(document)
       val bounds =
         snapshot
@@ -202,10 +198,8 @@ class CanvasAutoScrollTest {
       mainClock.advanceTimeBy(200)
       waitForIdle()
 
-      // What the renderer says is drawn at a screen point, pressed at that same point in the
-      // root: the gesture's own conversion — frame origin plus the frame-local position — is what
-      // turns it into the point the inspection answers in, and that conversion is the thing under
-      // test.
+      // A screen point the renderer reports, pressed at the same root point: the gesture's
+      // frame-origin plus frame-local conversion is what's under test.
       val screenPoint = Offset(30f, 400f)
       val expected =
         snapshot
@@ -272,10 +266,7 @@ class CanvasAutoScrollTest {
   }
 
   private companion object {
-    /**
-     * A design whose content is far taller than the 700px viewport: a column of 150 texts, so the
-     * extent scrolls and the bottom edge has somewhere to take the drag.
-     */
+    /** A design far taller than the 700px viewport (150 texts), so the extent scrolls. */
     private val FIXTURE: kotlinx.serialization.json.JsonObject
       get() {
         val rows =

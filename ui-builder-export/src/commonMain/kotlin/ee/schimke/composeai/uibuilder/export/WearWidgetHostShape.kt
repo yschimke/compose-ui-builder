@@ -1,11 +1,9 @@
 package ee.schimke.composeai.uibuilder.export
 
 /**
- * A host container shape a Wear widget is drawn inside.
- *
- * The frame belongs to the host, not the widget — the launcher draws it from `WearWidgetParams` —
- * so this is a view over a design rather than something it authors, and the generated file emits a
- * `@Preview` per shape. See [hostSpec] for the footprints.
+ * A host container shape a Wear widget is drawn inside. The frame belongs to the host (from
+ * `WearWidgetParams`), so this is a view over a design, with one generated `@Preview` per shape.
+ * See [hostSpec].
  *
  * @property id the stable lowercase wire spelling, carried by native-render requests and stored
  *   preferences.
@@ -16,10 +14,7 @@ enum class WearWidgetHostShape(val id: String, val label: String) {
   /** The broadest rectangular host is the editing frame; previews show every shipped shape. */
   Rectangular("rectangular", "Rectangular"),
 
-  /**
-   * Square corners and a wider, shorter content box; the recommended widget-picker render
-   * (yschimke/compose-preview-server#587).
-   */
+  /** Square corners and a wider, shorter content box; the recommended widget-picker render. */
   Squircle("squircle", "Squircle"),
 
   /**
@@ -57,9 +52,8 @@ enum class WearWidgetHostShape(val id: String, val label: String) {
       entries.firstOrNull { it.id == id?.trim()?.lowercase() } ?: Default
 
     /**
-     * The `environment` key naming the host shape a surface is drawn in. Set by the editor on the
-     * copy of the document each surface is sent, so pinned-runtime panes frame correctly; never
-     * stored.
+     * The `environment` key naming the host shape a surface is drawn in; set by the editor on each
+     * surface's document copy, never stored.
      */
     const val ENVIRONMENT_KEY: String = "wearWidgetHostShape"
   }
@@ -88,13 +82,9 @@ data class WearWidgetHostSpec(
 }
 
 /**
- * What the host draws around a widget of this size in this shape.
- *
- * The numbers are `androidx.glance.wear:wear-tooling-preview`'s own, read out of the
- * `WidgetPreviewParams` providers rather than guessed.
- *
- * Most providers ship two entries, one per screen diameter; this takes the **widest**, matching the
- * generated `@Preview`'s `.maxBy { it.widthDp }`, so a design is judged against one frame.
+ * What the host draws around a widget of this size in this shape, from
+ * `androidx.glance.wear:wear-tooling-preview`'s `WidgetPreviewParams` providers (the widest entry,
+ * matching the generated `@Preview`'s `.maxBy { it.widthDp }`):
  *
  * |                   | content | padding (h/v) | radius | frame   |
  * |-------------------|---------|---------------|--------|---------|
@@ -105,7 +95,7 @@ data class WearWidgetHostSpec(
  * | Round Small       | 200×60  | 15 / 8        | 999    | 230×76  |
  * | Round Large       | 160×136 | 35 / 16       | 999    | 230×168 |
  *
- * The canvas and the native lane both read this table, so the two cannot disagree.
+ * The canvas and the native lane both read this table.
  */
 fun WearWidgetScaffoldSize.hostSpec(shape: WearWidgetHostShape): WearWidgetHostSpec =
   when (shape) {

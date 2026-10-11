@@ -1,18 +1,15 @@
-// A minimal MCP App host for the Compose UI Builder editor, for a static page.
-//
-// The editor archive ships an MCP App shell (`mcp-app/ui-builder-mcp-app.html`) that a chat client
-// renders in a frame and talks to over JSON-RPC `postMessage`: it reads a `.uid` design through
-// `resources/read` and saves it through `openai/resources/write`. This plays the chat client's
-// side with the file held in memory, so the real editor runs on a GitHub Pages site with no
-// server. See docs/design/UI_BUILDER_MCP_APP_HOST.md for the protocol.
+// A minimal MCP App host for the Compose UI Builder editor, for a static page: it plays the chat
+// client's side of the editor's MCP App shell (`mcp-app/ui-builder-mcp-app.html`) over JSON-RPC
+// `postMessage`, holding the `.uid` file in memory (`resources/read`, `openai/resources/write`), so
+// the real editor runs on GitHub Pages with no server. See docs/design/UI_BUILDER_MCP_APP_HOST.md.
 
 /**
  * Mounts the editor into `frame` on `text`, a `.uid` design.
  *
- * `editorBase` is the URL of the unpacked editor archive (ending in `/`); `layout` is `focused` or
- * `full`. `devicePresets` is a URL answering like a host's `/api/ui-builder/v1/device-presets`,
- * which gives the editor its device menus and device previews. `onSave(text)` is called with every save; `onMessage(text)` with each comment the person
- * sends from the editor. Returns `{ text(), replace(text) }`.
+ * `editorBase` is the unpacked editor archive's URL (ending in `/`); `layout` is `focused` or
+ * `full`. `devicePresets` is a URL answering like a host's `/api/ui-builder/v1/device-presets`.
+ * `onSave(text)` is called with every save; `onMessage(text)` with each comment the person sends.
+ * Returns `{ text(), replace(text) }`.
  */
 export async function mountEditor({
   frame, editorBase, fileName, text, layout = 'focused', devicePresets, onSave, onMessage,

@@ -5,11 +5,8 @@ import ee.schimke.composeai.uibuilder.svg.ParsedSvgElement
 import ee.schimke.composeai.uibuilder.svg.parseStrictSvg
 
 /**
- * One rectangle read out of an imported SVG, in fractions of that SVG's own viewport.
- *
- * Fractions rather than user units so the drawing code needs nothing from the parse: the overlay
- * already knows the rectangle the reference is fitted into, and a fraction maps onto it whatever
- * the fit, the nudge and the scale currently are.
+ * One rectangle read out of an imported SVG, in fractions of that SVG's viewport, so it maps onto
+ * the fitted rectangle whatever the fit, nudge and scale.
  */
 data class ReferenceLayoutBox(
   /**
@@ -32,31 +29,19 @@ data class ReferenceLayoutBox(
 }
 
 /**
- * The axis-aligned boxes an SVG declares, for [ReferenceDiffMode.Boxes].
+ * The axis-aligned boxes an SVG declares, for [ReferenceDiffMode.Boxes]: geometry, not paint (Figma
+ * emits one named `<rect>` per frame).
  *
- * **Geometry, not paint.** A design tool's SVG export carries the frames it was laid out with —
- * Figma emits one `<rect>` per frame and names it — and those rectangles are the thing worth
- * comparing a Compose layout against: "is this card the right width" is answered by the box, while
- * the fill, the gradient and the type it is painted with only get in the way of asking it.
- *
- * Reuses [parseStrictSvg], the export lane's own conservative parser, rather than adding a second
- * XML reader with its own idea of what is safe. A file that parser refuses yields no boxes at all;
- * the overlay then simply does not offer the mode, which is the honest answer for a picture whose
- * structure could not be read.
- *
- * **What it deliberately does not do:** rotation and skew. An element whose accumulated transform
- * is not axis-aligned is dropped rather than approximated by its bounding box, because a rotated
- * card's bounding box is not the card and a guide that lies is worse than a guide that is absent.
- * `translate`, `scale` and the axis-aligned `matrix` forms are honoured, which covers every export
- * a layout is normally read from.
+ * Reuses the export lane's conservative [parseStrictSvg]; a refused file yields no boxes and the
+ * mode isn't offered. Elements whose accumulated transform isn't axis-aligned are dropped rather
+ * than approximated; `translate`, `scale` and axis-aligned `matrix` are honoured.
  */
 fun extractSvgLayoutBoxes(svg: String, limit: Int = MAX_LAYOUT_BOXES): List<ReferenceLayoutBox> {
   val document = parseStrictSvg(svg).structure ?: return emptyList()
   val viewport = document.root.svgViewport() ?: return emptyList()
 
-  // One accumulated transform per open ancestor, indexed by depth. The parser emits elements in
-  // document order with their depth, which is all the ancestry this needs: entering depth d means
-  // the enclosing transform is the one recorded at d - 1.
+  // One accumulated transform per open ancestor, indexed by depth (elements arrive in document
+  // order with their depth).
   val enclosing = mutableListOf(SvgTransform.IDENTITY)
   val boxes = LinkedHashSet<ReferenceLayoutBox>()
 
@@ -68,9 +53,8 @@ fun extractSvgLayoutBoxes(svg: String, limit: Int = MAX_LAYOUT_BOXES): List<Refe
     // descendant's coordinates are expressed through it.
     val combined = if (element.attributes["transform"] == null) parent else own?.let(parent::then)
     enclosing += (combined ?: SvgTransform.UNREADABLE)
-    // `readable`, not just non-null: an unreadable transform anywhere above this element means its
-    // coordinates are expressed through a rotation this reader will not vouch for, and the element
-    // itself has no transform of its own to notice that with.
+    // `readable`, not just non-null: a rotation anywhere above makes this element's coordinates
+    // untrustworthy.
     if (combined?.readable != true || element.depth == 0) return@forEach
 
     val geometry = element.rectangle() ?: return@forEach
@@ -151,19 +135,13 @@ private fun ParsedSvgElement.svgViewport(): SvgViewportBox? {
   return if (width > 0f && height > 0f) SvgViewportBox(0f, 0f, width, height) else null
 }
 
-/**
- * A length in user units. Percentages are refused rather than resolved: resolving one needs the
- * containing viewport at that depth, which this walk deliberately does not track.
- */
+/** A length in user units. Percentages are refused (they'd need the viewport at each depth). */
 private fun String.svgLength(): Float? =
   trim().removeSuffix("px").toFloatOrNull()?.takeIf(Float::isFinite)
 
 /**
- * An axis-aligned affine transform: scale then translate, per axis.
- *
- * [UNREADABLE] is a distinct value rather than a null, so that a subtree under a rotation is
- * dropped in one place — [then] propagates it — instead of at every element that has to remember to
- * check its ancestry.
+ * An axis-aligned affine transform: scale then translate, per axis. [UNREADABLE] propagates through
+ * [then], so subtrees under a rotation drop in one place.
  */
 private data class SvgTransform(
   val scaleX: Float,

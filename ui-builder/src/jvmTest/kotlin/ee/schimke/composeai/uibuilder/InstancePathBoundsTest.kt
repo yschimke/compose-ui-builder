@@ -13,14 +13,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * The canvas measures boxes, and today a box is still spelled like the node that describes it.
- *
- * `RenderNode` now carries a [UiBuilderInstancePath] rather than a bare id, because a loop over
- * data and an instance of a reusable component both draw one node more than once and a bare id
- * cannot say which copy was measured. Nothing in the format draws a second copy yet, so this pins
- * the property that makes the seam safe to land ahead of them: with no repetition, every path is
- * character-for-character the node id, so every bounds key, inspection entry and comment anchor is
- * the one that was there before.
+ * `RenderNode` carries a [UiBuilderInstancePath] rather than a bare id, so repeated drawings
+ * (loops, component instances) can be told apart. With no repetition, every path must equal the
+ * node id, so bounds keys, inspection entries and comment anchors are unchanged.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class InstancePathBoundsTest {
@@ -42,10 +37,8 @@ class InstancePathBoundsTest {
   }
 
   /**
-   * A node id may legitimately contain the punctuation a path renders with — `InsertNode` refuses a
-   * blank id and an already-used one, and nothing else. Read back out of a rendered string, `a/b`
-   * would answer `b`, and the renderer looks its node up by that answer, so the box would publish
-   * under a name nothing could match and a text node would take the canvas down looking for it.
+   * A node id may contain the path's punctuation (`a/b`); it must not be re-parsed from the
+   * rendered string, or the box would be keyed under a name nothing matches.
    */
   @Test
   fun `a node id carrying path punctuation is measured under itself`() {
@@ -79,10 +72,7 @@ class InstancePathBoundsTest {
     )
   }
 
-  /**
-   * The same claim from the other end: what the renderer would key a box by, for a node with no
-   * repeat above it, is the id itself.
-   */
+  /** The same claim from the renderer's end: with no repeat above, the box key is the id itself. */
   @Test
   fun `a path built the way the renderer builds one is the node id`() {
     val row = UiBuilderInstancePath.of("root")

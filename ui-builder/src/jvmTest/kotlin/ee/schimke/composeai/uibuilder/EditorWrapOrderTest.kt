@@ -17,10 +17,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
-/**
- * Wrapping and copying are operations whose whole result is an order, and both were reading the
- * order nodes were *clicked* in rather than the order they sit in.
- */
+/** Wrapping and copying produce an order, which must be document order rather than click order. */
 class EditorWrapOrderTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
   private val reducer = UiBuilderEditorReducer(catalog)
@@ -111,9 +108,8 @@ class EditorWrapOrderTest {
 
   @Test
   fun `a paste beside a leaf lands next to it, not at the end of its list`() {
-    // `findDestination` falls back to the selection's own parent slot when the selection cannot
-    // hold the clipboard itself. The paste still anchored to the slot's last child, so copying a
-    // chip and pasting sent the copy past every sibling to the bottom of the row.
+    // When pasting falls back to the selection's parent slot, the copy goes right after the
+    // selection, not to the end of the row.
     val (rowId, rowSlot) =
       document.nodes.values.firstNotNullOf { node ->
         node.slots.entries.firstOrNull { "chip-crime" in it.value }?.let { node.id to it.key }
@@ -140,9 +136,8 @@ class EditorWrapOrderTest {
 
   @Test
   fun `an authoritative document keeps the selection and the clipboard`() {
-    // Every accepted edit and every remote delta rebuilds the editor from a new document. The
-    // multi-selection and the clipboard used to be dropped there, so a collaborator typing in
-    // another panel silently emptied your clipboard and collapsed a range you had just built.
+    // Rebuilding the editor on each accepted edit or remote delta must keep the multi-selection and
+    // the clipboard.
     val copied = reducer.reduce(outOfOrderSelection(), UiBuilderEditorEvent.CopySelected)
     assertEquals(3, copied.selection.size)
     val clipboard = assertIs<EditorClipboard>(copied.clipboard)
@@ -170,11 +165,9 @@ class EditorWrapOrderTest {
 
   @Test
   fun `a property two components spell differently is not offered across both`() {
-    // `m3/button.style` allows filled / filledTonal / text / fab; `m3/text.style` allows the
-    // typography scale. Sharing by name alone offered one `style` dropdown built from the anchor's
-    // declaration, so every choice in it was rejected for the other node — `commitProperty`
-    // validates per node and fails the whole batch, which is right, and left an editable-looking
-    // field that could not be used.
+    // Properties shared by name but with different declarations (`m3/button.style` vs
+    // `m3/text.style`) must not be offered as one multi-node field: every choice would be rejected
+    // for one node.
     val button = reducer.initial(document, selectedNodeId = "toolbar-library")
     assertTrue(
       reducer.propertyFields(button).any { it.name == "style" },
@@ -232,9 +225,8 @@ class EditorWrapOrderTest {
 
   @Test
   fun `toggling something that is not a flag is refused at insert time`() {
-    // The renderer coerces whatever it finds to a boolean string and carries on, so the preview
-    // looks like it works; the exporter refuses and emits a TODO that throws on the first press.
-    // A design should not be able to hold an action only one of its two consumers can perform.
+    // A design must not hold an action only one of its consumers can perform (the renderer coerces,
+    // the exporter refuses).
     val refused = insertWith(textState("caption"), EditorStateAction.Toggle("caption"))
 
     val outcome = assertIs<CommandOutcome.Rejected>(refused.lastOutcome)
@@ -251,8 +243,7 @@ class EditorWrapOrderTest {
 
   @Test
   fun `a value that is not of the declared type is refused rather than coerced`() {
-    // The encoder's fallbacks are `false`, `0` and `0.0`, so this used to insert a control that
-    // wrote a different value from the one asked for — authored-looking and wrong.
+    // The encoder's fallbacks (`false`, `0`, `0.0`) must not silently replace the requested value.
     val flag =
       withState(
         "expanded",
@@ -275,9 +266,8 @@ class EditorWrapOrderTest {
 
   @Test
   fun `a comparison operand is typed against the variable it compares with`() {
-    // The operand is compared against the variable in the exported Kotlin, so a string encoding
-    // gave `expanded == "true"` against a `Boolean`. The fourth place in this reducer where a
-    // declaration and the literal written against it had to be made to agree.
+    // The operand is compared against the variable in exported Kotlin, so it must be encoded in the
+    // variable's declared type.
     val flag =
       withState(
         "expanded",
@@ -354,9 +344,8 @@ class EditorWrapOrderTest {
 
   @Test
   fun `a decimal that is not a finite number is refused`() {
-    // `toDoubleOrNull` accepts `NaN` and `Infinity`, and `kotlinLiteral` emits a JSON number
-    // verbatim — so this authored a screen whose generated source read `value = NaN`, a bare
-    // identifier the exported file never declares.
+    // `NaN` and `Infinity` must be refused: `kotlinLiteral` would emit them as undeclared
+    // identifiers.
     val ratio =
       withState(
         "ratio",
@@ -422,9 +411,7 @@ class EditorWrapOrderTest {
 
   @Test
   fun `a cut pasted back lands where it was cut from, not at the end of the slot`() {
-    // Cut-then-paste is how a node is moved. Cut selects the parent and a paste into a parent goes
-    // to the end of its slot, so cutting the middle chip and pasting it straight back sent it to
-    // the end of the row.
+    // Cut-then-paste moves a node, so pasting straight back must restore its position.
     val cut =
       reducer.reduce(
         reducer.initial(document, selectedNodeId = "chip-news"),
@@ -477,9 +464,8 @@ class EditorWrapOrderTest {
 
   @Test
   fun `a generated node id carries the operation prefix so two clients cannot collide`() {
-    // The sequence is local, so two people wrapping a selection as their own first operation both
-    // reach 1. Operation ids were already qualified and node ids were not, so the server accepted
-    // one insertion and rejected the other as a duplicate — losing that person's edit.
+    // Node ids from wrapping must be qualified like operation ids, or two people's first wraps
+    // collide.
     fun wrapWith(prefix: String): String {
       val client = UiBuilderEditorReducer(catalog, operationIdPrefix = prefix)
       val wrapped =
@@ -500,9 +486,8 @@ class EditorWrapOrderTest {
 
   @Test
   fun `a copy does not take an id a sibling already uses as its key`() {
-    // A copy takes its own node id as its `stableKey`, and that key is an arbitrary string a
-    // sibling may already hold. The exporter turns two siblings under one key into two
-    // `key(...)` groups, which Compose rejects at runtime.
+    // A copy's `stableKey` must not collide with a sibling's (two `key(...)` groups with one key
+    // fail at runtime).
     val collidingKey = "main-episode-card-copy-interactive-canvas-001"
     val poisoned =
       document.copy(

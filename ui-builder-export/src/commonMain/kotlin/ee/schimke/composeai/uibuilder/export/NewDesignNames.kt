@@ -3,21 +3,10 @@ package ee.schimke.composeai.uibuilder.export
 import kotlin.random.Random
 
 /**
- * The name a new design gets before anyone types one.
- *
- * An empty Design ID field made every new design a form to fill in, and the ids people typed under
- * pressure (`test`, `test2`, `asdf`) told nobody anything a week later. A generated adjective–noun
- * pair is unique enough to not collide across a host's designs in practice (the create route still
- * refuses an id that exists, so a collision is a second click, not a lost design), memorable enough
- * to say aloud, and always a valid id.
- *
- * The words are chosen to be mildly disreputable — a `shady-raccoon` is more fun to open than a
- * `design-17` — and no further: every word here is fine to read out in a meeting.
- *
- * In this module rather than in the editor because both ends now ask for one: the New design dialog
- * in the browser, and the server, which pre-fills the Designs page's create and duplicate forms.
- * Two generators would be two vocabularies, and the whole point of the name is that it is
- * recognisable.
+ * The name a new design gets before anyone types one: a mildly disreputable but meeting-safe
+ * adjective–noun pair (`shady-raccoon`), memorable and always a valid id. The create route still
+ * refuses an existing id. Shared by the browser's New design dialog and the server's create and
+ * duplicate forms.
  */
 object NewDesignNames {
   val adjectives: List<String> =

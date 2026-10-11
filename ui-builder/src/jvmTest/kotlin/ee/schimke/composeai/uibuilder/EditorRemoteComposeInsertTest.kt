@@ -21,11 +21,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Adding one of the serving catalog's published Remote Compose documents.
- *
- * The insert is what makes `remote-m3` authorable at all: before it, `remote-compose/document`
- * could be added but only ever held an empty `documentBase64`, which the renderer draws as its own
- * error box.
+ * Adding one of the serving catalog's published Remote Compose documents, so a
+ * `remote-compose/document` arrives with real `documentBase64` content rather than empty.
  */
 class EditorRemoteComposeInsertTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))

@@ -9,20 +9,11 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * How far an `m3/card`'s content box reaches inside the card, on each axis.
  *
- * A card's content slot is a **box** in this catalog: the canvas stacks its children with box
- * alignments (`matchParentSize`, `align`), the editor offers a card child exactly the modifiers a
- * `layout/box` child gets, and every emitter writes `Card { Box { … } }` — the capability exporter
- * and the record-driven projection alike, which is what keeps the native render and the canvas one
- * picture. That box used to be `Modifier.fillMaxSize()` so the alignments had something to align
- * against; a fill against bounded constraints is a fill, though, and a `Column` child's height
- * constraint is bounded by whatever the column has left, so a card with no height ate the rest of
- * its column and every sibling after it was never laid out (compose-preview-server #483).
- *
- * So the box fills only the axes the document sized. A card with `fillMaxWidth` gets a box that
- * fills its width and wraps its height; a card with a `height` keeps a box that fills that height,
- * so a child aligned to its bottom still lands there; a card with nothing wraps both, the way
- * `Card` does. Every reader of this decision reads it here, in the module all three can see, so the
- * picture and the two Kotlins it can become cannot disagree about it.
+ * A card's content slot is a box (canvas and every emitter write `Card { Box { … } }`). The box
+ * fills only the axes the document sized: filling unconditionally would make a card in a `Column`
+ * eat the remaining height. A card with `fillMaxWidth` fills width and wraps height; one with a
+ * `height` fills that height; one with neither wraps both, like `Card`. Shared so canvas and both
+ * exporters agree.
  */
 data class CardContentFill(val width: Boolean, val height: Boolean)
 

@@ -11,14 +11,13 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The catalog read as a grammar: components are the nonterminals, slots the productions, roles and
- * traits the sorts. A catalog that fails one of these is one the editor cannot fully use — a slot
- * nothing fits, a component nothing can hold, a subtree that can never close — and none of it needs
- * a document to show up, so it is checked here on the catalog alone.
+ * The catalog read as a grammar (components as nonterminals, slots as productions, roles and traits
+ * as sorts), checked on the catalog alone: no slot nothing fits, no component nothing can hold, no
+ * subtree that can never close.
  *
  * The acceptance table pins [SlotCapability.accepts] to `slot-acceptance-v1.json`, which the
- * runtime's `SlotAcceptanceTest` pins its own copy of the rule to, over the same catalog. The two
- * modules cannot see each other, so the table is how they are held to one answer.
+ * runtime's `SlotAcceptanceTest` also pins its copy of the rule to; the two modules can't see each
+ * other.
  */
 class CatalogGrammarTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -121,10 +120,9 @@ class CatalogGrammarTest {
   }
 
   /**
-   * The document from `/ui-builder/a`: a lazy grid in the scaffold's top bar, holding cards, a text
-   * and icon buttons. The grid is a `Container`, which the old rule took as enough; now the missing
-   * `TopBar` trait is the finding. The grid's *own* children are fine — a lazy grid's items are an
-   * unconstrained lambda in Compose, and the catalog now says so.
+   * The document from `/ui-builder/a`: a lazy grid in the scaffold's top bar. The grid lacks the
+   * `TopBar` trait, so that is the finding; its own children are fine (a lazy grid's items are
+   * unconstrained).
    */
   @Test
   fun `a lazy grid in a top bar is an incompatible slot child`() {

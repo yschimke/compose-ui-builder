@@ -53,10 +53,7 @@ typealias UiBuilderSemanticsInspection = UiBuilderRendererSemanticsInspectionV1
 
 /**
  * Whether a catalog adapter draws one of the protocol's native text node kinds.
- *
- * `remote-widgets/remote-text` is a component id the canvas draws as text by id, because the
- * published `remote-widgets` record cannot carry `remote-creation-compose`'s `RemoteText` and so no
- * catalog names an adapter for it; with no adapter, its id is what this is asked about.
+ * `remote-widgets/remote-text` is drawn as text by id, since no catalog names an adapter for it.
  */
 fun String.isUiBuilderTextComponent(): Boolean =
   this == "material3/Text" ||
@@ -73,15 +70,8 @@ class UiBuilderInspectionCollector(
   private val onSnapshot: (UiBuilderInspectionSnapshot) -> Unit = {},
   private val onInvalidated: ((UiBuilderInspectionCollector) -> Unit)? = null,
   /**
-   * Which adapter draws each component, where the catalog names one.
-   *
-   * Needed because "is this a text node" is a question about what DREW the node, not about its id.
-   * The canvas keys its dispatch on the adapter id (`UI_BUILDER_CATALOG_CONTRACT.md` item 17), so a
-   * component the catalog points at the text adapter reports a text layout exactly as `m3/text`
-   * does — and a check keyed on the component id alone rejects it, which is an
-   * `IllegalArgumentException` out of a render rather than a wrong picture.
-   *
-   * Empty for every catalog today, which makes this inherit the previous behaviour exactly.
+   * Which adapter draws each component, where the catalog names one: "is this a text node" depends
+   * on what drew it (the canvas dispatches on adapter id), not on its component id. Empty today.
    */
   private val canvasAdapterIds: Map<String, String> = emptyMap(),
 ) {
@@ -112,14 +102,9 @@ class UiBuilderInspectionCollector(
   }
 
   /**
-   * Drops what [nodeId] last reported, because the composable that measured it has left the
-   * composition.
-   *
-   * A lazy layout disposes an item that scrolls out, and nothing else would ever take its box back:
-   * the last position it was placed at stayed in the snapshot for good, so a press over the empty
-   * place a scrolled-away row used to occupy selected that row. Unknown ids are ignored rather than
-   * refused — the node may have been deleted by the very edit whose recomposition disposed it. One
-   * snapshot for the lot, however many left together.
+   * Drops what [nodeIds] last reported, because their composables left the composition (e.g. a lazy
+   * item scrolled out), so stale boxes cannot be hit. Unknown ids are ignored; one snapshot for
+   * all.
    */
   fun forgetNodeBounds(vararg nodeIds: String) {
     var changed = false
@@ -137,10 +122,7 @@ class UiBuilderInspectionCollector(
     lastBaseline: Float,
     contentOffsetY: Float = 0f,
   ) {
-    // Both platforms' text ids. This used to ask the canvas's stand-in table whether the id mapped
-    // to `m3/text`, back when `wear-m3/text` was drawn as one — keyed on the mobile id alone it
-    // failed the first Wear render after the rename. Wear text is drawn by Wear's own `Text` now,
-    // and the question here was never about drawing: a node is a text node if it is one.
+    // A node is a text node if its adapter draws text, on either platform.
     require(adapterFor(nodeId)?.isUiBuilderTextComponent() == true) {
       "text layout belongs to a native text node: $nodeId"
     }

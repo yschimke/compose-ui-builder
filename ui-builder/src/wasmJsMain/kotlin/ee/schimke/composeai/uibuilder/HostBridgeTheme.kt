@@ -12,17 +12,13 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * A host bridge page's theme, so the editor's panels are drawn in the host's colours.
+ * A host bridge page's theme, so the editor's panels are drawn in the host's colours. In Material
+ * 3's vocabulary: [roles] maps `ColorScheme` role names (`background`, `primary`, …) to ARGB, and
+ * [palette] maps [UiBuilderEditorPalette] field names likewise. The host decides the mapping (VS
+ * Code maps its `--vscode-*` variables). Omitted roles keep the base scheme; unknown names are
+ * ignored.
  *
- * The contract is in Material 3's vocabulary, not the host's: [roles] maps `ColorScheme` role names
- * (`background`, `primary`, `onSurfaceVariant`, …) to ARGB, and [palette] maps
- * [UiBuilderEditorPalette] field names the same way. Which host colour becomes which role is the
- * host's decision, made where the host's colours are known: the VS Code page maps its `--vscode-*`
- * variables. A role the host leaves out keeps the base scheme's value, and a name this editor does
- * not know is ignored, so either side can grow.
- *
- * Light or dark is not a field. It is read from [roles]' background, which is what decides whether
- * a light or a dark base is the right one to fill the gaps from.
+ * Light or dark is inferred from [roles]' background, which picks the base scheme.
  */
 @Serializable
 internal data class HostThemeMessage(
@@ -114,10 +110,7 @@ private fun ColorScheme.withRole(role: String, color: Color): ColorScheme =
     else -> this
   }
 
-/**
- * `composeUiBuilderHost.readTheme()`, the host's theme as JSON when the editor starts, or null
- * where the host has none.
- */
+/** `composeUiBuilderHost.readTheme()`: the host's theme as JSON at startup, or null. */
 @JsFun(
   """() => {
   const host = globalThis.composeUiBuilderHost;

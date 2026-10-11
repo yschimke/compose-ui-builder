@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Clock
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.EmptyCoroutineContext
@@ -17,13 +18,16 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonPrimitive
 
+private const val DAY_MILLIS: Long = 24L * 60 * 60 * 1_000
+
 /**
- * The service on the per-design store, end to end.
- *
- * [FileUiBuilderDesignStoreTest] proves the store's own promises against the file tree; this proves
- * the thing that matters to an operator — that a host restarted onto the same directory serves the
- * same designs, that undo still replays, and that an edit to one design writes nothing belonging to
- * another (yschimke/compose-preview-server#578).
+ * When a design deleted at the tests' fixed 1,000 ms leaves the trash, at the default retention.
+ */
+internal const val RESTORABLE_UNTIL: Long = 1_000 + DAY_MILLIS
+
+/**
+ * The service on the per-design store, end to end: a restart onto the same directory serves the
+ * same designs, undo still replays, and an edit to one design writes nothing of another.
  */
 class PersistentUiBuilderServiceFileStoreTest {
   private val owner = AuthenticatedUiBuilderActor("owner")
@@ -264,11 +268,8 @@ class PersistentUiBuilderServiceFileStoreTest {
     val first = service(root)
     create(first, "checkout")
     create(first, "settings")
-    // The header is the thing that names the design and says who owns it. One that will not parse
-    // as a header — here: valid JSON whose checksum no longer matches, so the id is still
-    // recoverable but nothing else is — leaves no access record to check `delete`'s ownership
-    // question against: even the actor that created it is refused, with the reason and the
-    // directory intact. The operator's door is the one that opens.
+    // A header that will not parse leaves no access record, so even the creator's `delete` is
+    // refused (reason and directory intact); only the operator's door opens.
     val headerFile = designDirectory(root, "checkout").resolve("design.json")
     val stored = Files.readString(headerFile)
     val checksum = Regex("\"checksumSha256\":\"([0-9a-f]+)\"").find(stored)!!.groupValues[1]
@@ -358,6 +359,230 @@ class PersistentUiBuilderServiceFileStoreTest {
     )
   }
 
+  @Test
+  fun `an agent may delete what it created for its principal, and nothing else, across a restart`() {
+    val root = createTempDirectory("ui-builder-service-store")
+    val first = service(root)
+    val agent = AuthenticatedUiBuilderActor("agent:abc", onBehalfOfActorId = "owner")
+    val otherAgent = AuthenticatedUiBuilderActor("agent:def", onBehalfOfActorId = "owner")
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(first, agent, UiBuilderServiceRequest.CreateDesign(document("probe")))
+    )
+    create(first, "mine")
+
+    val reopened = service(root)
+    // Owned by the human, as every delegated creation is; the creator rides along.
+    assertEquals(
+      DesignAccessRoleV1.OWNER,
+      assertIs<UiBuilderServiceResponse.Designs>(
+          execute(reopened, owner, UiBuilderServiceRequest.ListDesigns(null, 10))
+        )
+        .designs
+        .single { it.designId == "probe" }
+        .requesterAccess
+        .role,
+    )
+    for ((actor, designId) in listOf(agent to "mine", otherAgent to "probe", outsider to "probe")) {
+      assertEquals(
+        ServiceErrorCodeV1.FORBIDDEN,
+        assertIs<UiBuilderServiceResponse.Error>(
+            execute(reopened, actor, UiBuilderServiceRequest.DeleteDesign(designId))
+          )
+          .error
+          .code,
+        "${actor.actorId} deleting $designId",
+      )
+    }
+    assertEquals(
+      UiBuilderServiceResponse.DesignDeleted("probe", RESTORABLE_UNTIL),
+      execute(reopened, agent, UiBuilderServiceRequest.DeleteDesign("probe")),
+    )
+    assertEquals(
+      UiBuilderServiceResponse.DesignDeleted("mine", RESTORABLE_UNTIL),
+      execute(reopened, owner, UiBuilderServiceRequest.DeleteDesign("mine")),
+    )
+  }
+
+  @Test
+  fun `a deleted design waits in the trash, restorable whole, across a restart`() {
+    val root = createTempDirectory("ui-builder-service-store")
+    val first = service(root)
+    create(first, "checkout")
+    apply(first, "checkout", "op-1", 0, InsertNodeMutationV1(node("node-1"), NodeLocationV1()))
+    assertEquals(
+      UiBuilderServiceResponse.DesignDeleted("checkout", RESTORABLE_UNTIL),
+      execute(first, owner, UiBuilderServiceRequest.DeleteDesign("checkout")),
+    )
+    // Gone for every live path, as a hard delete was.
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      assertIs<UiBuilderServiceResponse.Error>(
+          execute(first, owner, UiBuilderServiceRequest.OpenDesign("checkout"))
+        )
+        .error
+        .code,
+    )
+    assertEquals(emptyList(), first.adminListDesigns())
+    // But its files stay, so the id cannot be created over.
+    assertTrue(Files.exists(designDirectory(root, "checkout")))
+    val refused =
+      assertIs<UiBuilderServiceResponse.Error>(
+        execute(first, owner, UiBuilderServiceRequest.CreateDesign(document("checkout")))
+      )
+    assertTrue(refused.error.message.contains("trash"), refused.error.message)
+    create(first, "settings")
+    val branchRefused =
+      assertIs<UiBuilderBranchResponse.Error>(
+        runSuspend {
+          first.executeBranch(
+            UiBuilderBranchCall(
+              owner,
+              UiBuilderBranchRequest.CreateBranch("settings", "Alt", branchId = "checkout"),
+            )
+          )
+        }
+      )
+    assertTrue(branchRefused.error.message.contains("trash"), branchRefused.error.message)
+
+    val reopened = service(root)
+    val listed =
+      assertIs<UiBuilderServiceResponse.Trash>(
+        execute(reopened, owner, UiBuilderServiceRequest.ListTrash)
+      )
+    assertEquals(
+      listOf(
+        UiBuilderTrashedDesign(
+          designId = "checkout",
+          title = "checkout",
+          ownerActorId = "owner",
+          trashedAtEpochMillis = 1_000,
+          trashedByActorId = "owner",
+          restorableUntilEpochMillis = RESTORABLE_UNTIL,
+        )
+      ),
+      listed.designs,
+    )
+    assertEquals(listed.designs, reopened.adminListTrash())
+    assertEquals(
+      emptyList(),
+      assertIs<UiBuilderServiceResponse.Trash>(
+          execute(reopened, outsider, UiBuilderServiceRequest.ListTrash)
+        )
+        .designs,
+      "only what an actor could have deleted is listed to it",
+    )
+    assertEquals(
+      ServiceErrorCodeV1.FORBIDDEN,
+      assertIs<UiBuilderServiceResponse.Error>(
+          execute(reopened, outsider, UiBuilderServiceRequest.RestoreDesign("checkout"))
+        )
+        .error
+        .code,
+    )
+
+    val restored =
+      assertIs<UiBuilderServiceResponse.DesignRestored>(
+        execute(reopened, owner, UiBuilderServiceRequest.RestoreDesign("checkout"))
+      )
+    assertEquals(1, restored.design.revision)
+    val snapshot =
+      assertIs<UiBuilderServiceResponse.Snapshot>(
+        execute(service(root), owner, UiBuilderServiceRequest.OpenDesign("checkout"))
+      )
+    assertEquals(setOf("node-1"), snapshot.snapshot.state.document.nodes.keys)
+    assertEquals(
+      emptyList(),
+      assertIs<UiBuilderServiceResponse.Trash>(
+          execute(reopened, owner, UiBuilderServiceRequest.ListTrash)
+        )
+        .designs,
+    )
+  }
+
+  @Test
+  fun `the trash is purged once its retention passes, and only then`() {
+    val root = createTempDirectory("ui-builder-service-store")
+    val clock = MutableClock(1_000)
+    val service = service(root, clock)
+    create(service, "old")
+    create(service, "recent")
+    execute(service, owner, UiBuilderServiceRequest.DeleteDesign("old"))
+    clock.nowMillis = 1_000 + DAY_MILLIS / 2
+    execute(service, owner, UiBuilderServiceRequest.DeleteDesign("recent"))
+
+    clock.nowMillis = RESTORABLE_UNTIL - 1
+    assertEquals(emptyList(), service.purgeExpiredTrash())
+    clock.nowMillis = RESTORABLE_UNTIL
+    // Past its deadline a design cannot come back, whether or not the host has purged yet.
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      assertIs<UiBuilderServiceResponse.Error>(
+          execute(service, owner, UiBuilderServiceRequest.RestoreDesign("old"))
+        )
+        .error
+        .code,
+    )
+    assertEquals(listOf("old"), service.purgeExpiredTrash())
+    assertFalse(Files.exists(designDirectory(root, "old")))
+    assertTrue(Files.exists(designDirectory(root, "recent")))
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      assertIs<UiBuilderServiceResponse.Error>(
+          execute(service, owner, UiBuilderServiceRequest.RestoreDesign("old"))
+        )
+        .error
+        .code,
+    )
+    // The id is free again.
+    create(service, "old")
+
+    // The operator's delete is permanent and empties the trash too.
+    assertTrue(service.adminDeleteDesign("recent"))
+    assertFalse(Files.exists(designDirectory(root, "recent")))
+    assertEquals(emptyList(), service.adminListTrash())
+  }
+
+  @Test
+  fun `an agent restores what it deleted, and its trash is nobody else's`() {
+    val root = createTempDirectory("ui-builder-service-store")
+    val service = service(root)
+    val agent = AuthenticatedUiBuilderActor("agent:abc", onBehalfOfActorId = "owner")
+    val otherAgent = AuthenticatedUiBuilderActor("agent:def", onBehalfOfActorId = "owner")
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(service, agent, UiBuilderServiceRequest.CreateDesign(document("probe")))
+    )
+    execute(service, agent, UiBuilderServiceRequest.DeleteDesign("probe"))
+    assertEquals(
+      emptyList(),
+      assertIs<UiBuilderServiceResponse.Trash>(
+          execute(service, otherAgent, UiBuilderServiceRequest.ListTrash)
+        )
+        .designs,
+    )
+    assertEquals(
+      "agent:abc",
+      assertIs<UiBuilderServiceResponse.Trash>(
+          execute(service, owner, UiBuilderServiceRequest.ListTrash)
+        )
+        .designs
+        .single()
+        .trashedByActorId,
+    )
+    assertIs<UiBuilderServiceResponse.DesignRestored>(
+      execute(service, agent, UiBuilderServiceRequest.RestoreDesign("probe"))
+    )
+  }
+
+  private class MutableClock(var nowMillis: Long) : Clock() {
+    override fun getZone(): ZoneId = ZoneOffset.UTC
+
+    override fun withZone(zone: ZoneId): Clock = this
+
+    override fun instant(): Instant = Instant.ofEpochMilli(nowMillis)
+
+    override fun millis(): Long = nowMillis
+  }
+
   private fun designDirectory(root: Path, designId: String): Path =
     root.resolve("designs/${FileUiBuilderDesignStore.slug(designId)}")
 
@@ -374,12 +599,15 @@ class PersistentUiBuilderServiceFileStoreTest {
     return entries
   }
 
-  private fun service(root: Path): PersistentUiBuilderService =
+  private fun service(
+    root: Path,
+    clock: Clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
+  ): PersistentUiBuilderService =
     PersistentUiBuilderService(
       designStore = UiBuilderDesignStateStore.open(root),
       catalogs = TestCatalogs,
       exporter = UiBuilderExportExecutor { error("no export in this test") },
-      clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
+      clock = clock,
     )
 
   private fun create(service: PersistentUiBuilderService, designId: String) {

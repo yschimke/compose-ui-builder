@@ -19,11 +19,8 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
 
 /**
- * What the per-design store promises, stated as tests rather than as a cost model.
- *
- * The claim in yschimke/compose-preview-server#578 is not "this is faster" — it is that an edit
- * writes what the edit changed and touches no other design. Both halves are observable in the file
- * tree, so they are asserted there.
+ * What the per-design store promises: an edit writes only what it changed and touches no other
+ * design, asserted on the file tree.
  */
 class FileUiBuilderDesignStoreTest {
   @Test
@@ -343,16 +340,12 @@ class FileUiBuilderDesignStoreTest {
 
     assertFailsWith<UiBuilderPersistenceException> { store.commit("checkout", null, overBudget) }
 
-    // A headerless directory is worse than the failure: the next open reads it as a corrupt design,
-    // quarantines it under the directory's name, and holds the id against whoever tries to create
-    // it. The discard renames into the store's own deleted directory before unlinking, so what is
-    // left is the store's garbage rather than a phantom design.
+    // A headerless directory would be quarantined as a phantom holding the id; the discard renames
+    // into the store's deleted directory before unlinking.
     val canonical = root.resolve("designs").resolve(FileUiBuilderDesignStore.slug("checkout"))
     assertFalse(Files.exists(canonical))
-    // The rename is the point, and this is what says it happened rather than the unlink that used
-    // to be the whole of it: a recursive delete can stop halfway, and only the rename cannot. The
-    // failure it guards against — an unlink that does not finish — is not reproducible in-process,
-    // so what is asserted is that the path taken was the one that does not have that failure mode.
+    // Asserts the rename path was taken (a half-finished recursive delete is not reproducible
+    // in-process).
     assertTrue(
       Files.exists(root.resolve("designs").resolve(FileUiBuilderDesignStore.DELETED_DIRECTORY)),
       "the discard went through the store's own deleted directory",
@@ -612,11 +605,8 @@ class FileUiBuilderDesignStoreTest {
   fun `a store marker too large to be a marker is refused rather than read`() {
     val root = createTempDirectory("ui-builder-store")
     FileUiBuilderDesignStore(root)
-    // Deliberately a marker that still decodes: the refusal has to be the size, taken before the
-    // bytes are allocated, rather than the parse failing afterwards. A marker large enough to
-    // matter is one there is no room to allocate, and the `OutOfMemoryError` that read would throw
-    // is not an `Exception` — it would escape `serve`'s lane guard and cost the host rather than
-    // the UI-builder lane.
+    // A marker that still decodes: the refusal must come from the size check before allocation,
+    // since an `OutOfMemoryError` would escape `serve`'s lane guard.
     Files.writeString(
       root.resolve("store.json"),
       "{\"format\":\"ui-builder-store-v3\"}" + " ".repeat(200_000),
@@ -634,11 +624,8 @@ class FileUiBuilderDesignStoreTest {
     val store = FileUiBuilderDesignStore(root)
     store.commit("checkout", null, design("checkout"))
     store.commit("settings", null, design("settings"))
-    // An operator restoring a design in place, or leaving a copy of one beside it. The slug is the
-    // address rather than a label — a commit and a delete both derive `designs/<slug(designId)>`
-    // from the id — so a header claiming "checkout" from anywhere else must not be allowed to
-    // answer for it: served, its parts would be reused by a commit that writes into the canonical
-    // directory, naming files that only exist beside the copy.
+    // A copy of a design under another directory name must not answer for its id: commits derive
+    // `designs/<slug(designId)>` and would name parts that exist only beside the copy.
     val canonical = root.resolve("designs").resolve(FileUiBuilderDesignStore.slug("checkout"))
     val copy = canonical.resolveSibling(canonical.fileName.toString() + "-backup")
     copyRecursively(canonical, copy)
@@ -665,10 +652,7 @@ class FileUiBuilderDesignStoreTest {
     val store = FileUiBuilderDesignStore(root)
     store.commit("checkout", null, design("checkout"))
     val canonical = root.resolve("designs").resolve(FileUiBuilderDesignStore.slug("checkout"))
-    // Somebody's copy, kept under a name that reads like something the store wrote. No name is
-    // proof of who wrote it — `checkout.deleted-1700000000000` is a plausible backup — and this
-    // store takes an unfamiliar directory name as operator content, so recursively deleting the
-    // only copy someone has is the one outcome it must never produce.
+    // A backup named like a store tombstone is still operator content and must never be deleted.
     val backup = canonical.resolveSibling("checkout.deleted-1700000000000")
     copyRecursively(canonical, backup)
     // What a delete actually leaves: the design moved into the store's own directory.
@@ -693,10 +677,8 @@ class FileUiBuilderDesignStoreTest {
     val store = FileUiBuilderDesignStore(root)
     store.commit("settings", null, design("settings"))
     store.commit("checkout", null, design("checkout"))
-    // An in-place backup an operator left under a name that happens to be another design's id.
-    // Reported under that name it would mark a design that loads perfectly well unusable, and a
-    // delete aimed at the quarantine would take the live design out of the service while removing
-    // the backup from the disk.
+    // A backup whose directory name is another design's id must not mark the live design unusable
+    // or let a quarantine delete remove it.
     copyRecursively(
       root.resolve("designs").resolve(FileUiBuilderDesignStore.slug("checkout")),
       root.resolve("designs").resolve("settings"),
@@ -743,10 +725,7 @@ class FileUiBuilderDesignStoreTest {
     val root = createTempDirectory("ui-builder-store")
     FileUiBuilderDesignStore(root).commit("checkout", null, design("checkout"))
     val designDirectory = root.resolve("designs").resolve(FileUiBuilderDesignStore.slug("checkout"))
-    // What a crash between writing a part and committing the header leaves: a file the header does
-    // not name. The next open unlinks it — and a gauge measured before that would charge those
-    // bytes against the ceiling for the life of the process, refusing writes for disk that the
-    // same startup had already given back.
+    // A crash leftover the header does not name: unlinked on open, before the gauge measures.
     Files.writeString(designDirectory.resolve("document-deadbeefdeadbeef.json"), "x".repeat(20_000))
 
     val store = FileUiBuilderDesignStore(root)
@@ -800,10 +779,8 @@ class FileUiBuilderDesignStoreTest {
     val designDirectory = root.resolve("designs").resolve(FileUiBuilderDesignStore.slug("checkout"))
     val header = designDirectory.resolve("design.json")
     val before = Files.readAllBytes(header)
-    // The document is unchanged, so the next commit reuses its filename rather than rewriting it —
-    // and the file is not there. Measured as zero bytes the commit would fit the budget, land a
-    // header naming a part that has gone, and the design would quarantine at the next open having
-    // been told its edit was stored.
+    // The document part is reused by name but missing; it must not be counted as zero bytes and let
+    // a header land naming it.
     Files.delete(designDirectory.resolve(readHeaderDocumentFile(header)))
 
     assertFailsWith<UiBuilderPersistenceException> {
@@ -846,10 +823,8 @@ class FileUiBuilderDesignStoreTest {
       ),
     )
 
-    // The access list lives in the header and has no bound of its own, so this design's
-    // `design.json` is one file the reader would refuse. Written out anyway it would be committed
-    // under the marker and quarantined by the very next load, with the pre-migration file already
-    // renamed out of the way.
+    // The header (unbounded access list) exceeds the read budget; migrating it would quarantine the
+    // design on next load after the legacy file was renamed.
     val store = FileUiBuilderDesignStore(root, UiBuilderStoreLimits(maximumDesignBytes = 8_192))
     val loaded = store.load()
 
@@ -1042,10 +1017,7 @@ class FileUiBuilderDesignStoreTest {
         LegacyUiBuilderState.Format.V2,
       ),
     )
-    // The rename is made to fail: a non-empty directory already holds the name it moves to. What
-    // matters is what the failure leaves behind — the marker is the commit point, so it must not
-    // have been written. Written first, this start would report a failed migration and disable the
-    // lane while the next start read the marker, skipped the migration and served the same designs.
+    // Force the rename to fail; the marker (the commit point) must not have been written.
     val blocked = root.resolve(FileUiBuilderStateStorage.STATE_FILE + ".migrated")
     Files.createDirectories(blocked)
     Files.writeString(blocked.resolve("occupied"), "in the way")

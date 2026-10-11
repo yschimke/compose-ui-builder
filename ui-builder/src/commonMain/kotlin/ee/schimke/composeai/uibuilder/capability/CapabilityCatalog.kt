@@ -41,24 +41,18 @@ data class CapabilityCatalog(
   }
 
   /**
-   * Which renderer may claim to be showing you this catalog's designs.
-   *
-   * Read out of [statusSemantics] rather than declared as a field for the reason
-   * [UiBuilderPreviewSurfaces] gives: the wire type is published from another repository. A catalog
-   * that says nothing lands on the default — the canvas is authoritative — which is what every
-   * catalog but `wear-m3` is.
+   * Which renderer may claim to be showing you this catalog's designs. Read from [statusSemantics]
+   * because the wire type is published from another repository (see [UiBuilderPreviewSurfaces]);
+   * the default is the canvas.
    */
   val previewSurfaces: UiBuilderPreviewSurfaces by lazy {
     UiBuilderPreviewSurfaces.from(statusSemantics)
   }
 
   /**
-   * How the builder's insert panel shelves this catalog's components.
-   *
-   * Read out of [statusSemantics] for the same reason [previewSurfaces] is, and documented once in
-   * [ComponentMenu]: the wire type is published from another repository. A catalog that says
-   * nothing lands on [ComponentMenu.EMPTY], and the panel groups by component kind exactly as it
-   * did before any catalog declared a shelf.
+   * How the builder's insert panel shelves this catalog's components. Read from [statusSemantics]
+   * like [previewSurfaces]; see [ComponentMenu]. Defaults to [ComponentMenu.EMPTY] (group by
+   * component kind).
    */
   val componentMenu: ComponentMenu by lazy { ComponentMenu.from(statusSemantics) }
 
@@ -71,12 +65,9 @@ data class CapabilityCatalog(
 
   /**
    * Components this build keeps out of the insert panel although the catalog declares them.
-   *
-   * `RemoteContentEmitter` refuses a repetition unless the build enables Remote Compose authoring,
-   * so a widget palette offering one offered a design with no export. It stays a component of the
-   * catalog all the same: a design that already holds one — saved by an enabled build, or before
-   * this gate — still has to validate, open and take unrelated edits, and only the refusal at
-   * export says what the loop needs. A Compose screen's repetition is exported in every build.
+   * `RemoteContentEmitter` refuses a repetition unless Remote Compose authoring is enabled;
+   * existing designs holding one must still validate, open and edit, so it stays a catalog
+   * component and only export refuses it.
    */
   val paletteHiddenComponentIds: Set<String> by lazy {
     if (
@@ -94,34 +85,24 @@ data class CapabilityCatalog(
   }
 
   /**
-   * Which kind of screen this catalog authors — a phone, a watch, a Remote Compose widget.
-   *
-   * Read out of [statusSemantics] for the same reason [previewSurfaces] is. A catalog that says
-   * nothing is a mobile one, which is what every catalog was before there was another kind.
+   * Which kind of screen this catalog authors: a phone, a watch, a Remote Compose widget. Read from
+   * [statusSemantics] like [previewSurfaces]; defaults to mobile.
    */
   val platform: UiBuilderCatalogPlatform by lazy { UiBuilderCatalogPlatform.from(statusSemantics) }
 
   /**
-   * The component packs the runtime merged into this catalog — another catalog's components,
-   * shelved under their own name and switched on from the editor's settings.
-   *
-   * Read out of [statusSemantics] for the same reason [previewSurfaces] is; see
-   * [UiBuilderComponentPacks] for what a pack is. A catalog that says nothing has none.
+   * The component packs the runtime merged into this catalog (another catalog's components, shelved
+   * under their own name and switched on in settings). Read from [statusSemantics] like
+   * [previewSurfaces]; see [UiBuilderComponentPacks].
    */
   val componentPacks: UiBuilderComponentPacks by lazy {
     UiBuilderComponentPacks.from(statusSemantics)
   }
 
   /**
-   * The components this catalog asks the insert panel to keep at the top.
-   *
-   * Read out of [statusSemantics] for the same reason [previewSurfaces] is, and for the reason
-   * [ComponentMenu] states at length: the catalog is the only thing that knows what its typical app
-   * is made of, and a list here can only ever name the catalogs this repository has heard of. A
-   * catalog that says nothing pins nothing, and the panel is what it always was.
-   *
-   * Ids the catalog does not offer are dropped rather than kept: a pin naming a component that is
-   * no longer there would be a row that inserts nothing.
+   * The components this catalog asks the insert panel to keep at the top. Read from
+   * [statusSemantics] like [previewSurfaces]; only the catalog knows its typical app. Ids the
+   * catalog does not offer are dropped.
    */
   val pinnedComponents: Set<String> by lazy {
     (statusSemantics["pinnedComponents"] as? JsonArray)
@@ -161,9 +142,8 @@ data class CapabilityCatalog(
             ?: when (component.slots.size) {
               0 -> null
               1 -> component.slots.single().name
-              // The widest acceptance wins: the slot that takes the most of this catalog is the
-              // one a person means when they say "drop something in here". `maxByOrNull` answers
-              // ties with the first declared slot, which is the catalog's own order of preference.
+              // The slot accepting the most of this catalog wins; ties go to the first declared
+              // slot.
               else -> component.slots.maxByOrNull { slot -> components.count(slot::accepts) }?.name
             }
         slot?.let { component.componentId to it }
@@ -215,16 +195,12 @@ data class SlotCapability(
 
 /**
  * Whether this slot accepts [component] as a child. The one slot rule, used by the validator, the
- * editor's drop targets and required-slot fill alike, and mirrored verbatim by the server's catalog
- * validation in `:ui-builder-runtime` (`slotAccepts`), which cannot reach this module.
+ * editor's drop targets and required-slot fill alike, and mirrored by the server's `slotAccepts` in
+ * `:ui-builder-runtime`.
  *
- * Each axis is a filter, and a child has to pass **both**: an empty `acceptedRoles` or
- * `acceptedTraits` constrains nothing on that axis, and `AnyContent` in the traits is the same as
- * declaring none. The rule used to pass a child that matched *either* axis, and since every slot
- * lists the coarse roles beside its traits, the roles decided everything: `layout/scaffold.topBar`
- * declares `Container` + `TopBar`, and a lazy grid is a `Container`, so a grid sat in the top bar
- * holding text and icon buttons the way `GridItem` was meant to forbid. Twenty-three of the
- * thirty-nine catalog components fit that slot under the old rule; two do under this one.
+ * A child must pass **both** axes: an empty `acceptedRoles` or `acceptedTraits` constrains nothing
+ * on that axis, and `AnyContent` in the traits is the same as declaring none. (Matching either axis
+ * let coarse roles admit e.g. a lazy grid into `layout/scaffold.topBar`.)
  */
 fun SlotCapability.accepts(component: ComponentCapability): Boolean =
   slotAccepts(acceptedRoles, acceptedTraits, component.role, component.traits)
@@ -266,17 +242,15 @@ data class PropertyCapability(
 )
 
 /**
- * Builder-only presentation metadata for a catalog property. This is deliberately carried by the
- * catalog resource rather than the collaboration wire protocol: it describes how an editor may
- * safely author an existing JSON property shape, not a new persisted value kind.
+ * Builder-only presentation metadata for a catalog property, carried by the catalog resource rather
+ * than the wire protocol: it describes how to author an existing JSON shape, not a new value kind.
  */
 @Serializable
 data class PropertyEditorCapability(
   val control: PropertyEditorControl? = null,
   /**
-   * For a property the catalog declares only as `"object"`, which of the closed value shapes it
-   * holds — `padding`, `adaptiveGrid`. The catalog says `"object"` and stops, so without this the
-   * inspector cannot tell a four-edge padding from an arbitrary map and refuses to edit either.
+   * For a property the catalog declares only as `"object"`, which closed value shape it holds
+   * (`padding`, `adaptiveGrid`), so the inspector can edit it.
    */
   val objectKind: String? = null,
   val minimum: Double? = null,
@@ -284,9 +258,8 @@ data class PropertyEditorCapability(
   val step: Double? = null,
   val suggestedValues: List<String> = emptyList(),
   /**
-   * A count, whatever the catalog's JSON type says. Wear declares a slider's `steps` and a ring's
-   * `segments` as `number`, so without this `3.5` was accepted — and then read back as the default
-   * by the canvas and truncated to 3 by the export.
+   * A count, whatever the catalog's JSON type says (Wear declares `steps` and `segments` as
+   * `number`), so fractional values are refused.
    */
   val integer: Boolean = false,
 )
@@ -306,20 +279,11 @@ data class WasmCapability(
   val adapterStatus: WasmAdapterStatus,
   val notes: String? = null,
   /**
-   * Which canvas adapter draws this component, named by the catalog.
+   * Which canvas adapter draws this component, named by the catalog
+   * (`UI_BUILDER_CATALOG_CONTRACT.md` item 17), so a catalog can reuse an adapter this build has.
    *
-   * The renderer's dispatch is a `when`, and until now it was keyed on the **component id** — so
-   * every id it could draw had to be written into this repository, and a catalog could not say
-   * "draw mine with the one you already have". That is the coupling
-   * `UI_BUILDER_CATALOG_CONTRACT.md` item 17 removes: an adapter id is a name this build either has
-   * a case for or does not, and the catalog chooses it.
-   *
-   * Null means "key on the component id", which is every component today — the published Wear
-   * catalog carries the field and leaves it null on all 78. So this reads as a no-op until a
-   * catalog populates it, which is the point: the consumer half can land first.
-   *
-   * An id this build has no case for is not an error. It draws the named placeholder, the same
-   * picture the shelf already promises for a component with no adapter.
+   * Null means key on the component id. An id this build has no case for draws the named
+   * placeholder, not an error.
    */
   val canvas: String? = null,
   val canvasMapping: CanvasAdapterMappingV1? = null,
@@ -397,10 +361,9 @@ object CapabilityCatalogParser {
   }
 
   /**
-   * Every text component's [FontSettings] properties, for a catalog that does not declare them
-   * itself. The server donates the same pair (`withFontSettingsVocabulary`); doing it here as well
-   * keeps a host that reads a catalog file directly from offering less than the server accepts.
-   * Additive: a catalog's own declaration of either name wins.
+   * Every text component's [FontSettings] properties, for a catalog that doesn't declare them.
+   * Mirrors the server's `withFontSettingsVocabulary` for hosts reading catalog files directly. A
+   * catalog's own declaration wins.
    */
   private fun CapabilityCatalog.withFontSettings(): CapabilityCatalog =
     copy(
@@ -426,9 +389,9 @@ object CapabilityCatalogParser {
     )
 
   /**
-   * Adds builder-only presentation metadata without adding fields to the released catalog wire
-   * shape. Enum choices remain authoritative catalog data; the bounds below describe the range that
-   * both the renderer and Compose exporter can safely round trip.
+   * Adds builder-only presentation metadata without changing the released catalog wire shape. Enum
+   * choices stay authoritative; the bounds are the range the renderer and Compose exporter both
+   * round trip.
    */
   private fun CapabilityCatalog.withEditorMetadata(): CapabilityCatalog =
     copy(
@@ -483,56 +446,36 @@ object CapabilityCatalogParser {
           is UiDrawing.Property.Choice -> Unit
         }
       }
-    // A Wear component edits like its Material 3 counterpart where the two share a property: a Wear
-    // Slider's `value` is the same number in the same units as `m3/slider`'s. Without this every
-    // one
-    // of them was `Unsupported` — a slider nobody could move, a Text whose size nobody could set —
-    // because the overrides above are keyed on the Material 3 ids.
+    // A Wear component edits like its Material 3 counterpart where they share a property (the
+    // overrides above are keyed on Material 3 ids).
     COUNTERPARTS[componentId]?.let { counterpart -> EDITOR_OVERRIDES[counterpart to property.name] }
       ?.let {
         return it
       }
-    // `weight` is a node's share of its Row or Column, whatever the node is — a Column in a Row, a
-    // flow row, a collapsible column, every A2UI component — and it is never a `…Dp`, so without
-    // this it was `Unsupported` everywhere but the few components with an override. Same range as
-    // `m3/text`'s weight.
+    // `weight` is a node's share of its Row or Column for any component, and never a `…Dp`; same
+    // range as `m3/text`'s weight.
     if (property.name == "weight") {
       return numberEditor(0.1, 100.0, 0.1)
     }
-    // A colour property is a colour control, by the name rule `PropertyValueKinds` states. Two
-    // colours had this by override and the other twenty were plain text fields, so the inspector
-    // wrote `containerColor` on an app bar as a `string` — the very spelling both reducers now
-    // refuse (#476). The rule that decides what a value means is the rule that decides how it is
-    // edited, or the editor's own writes are the first thing it turns away.
+    // A colour property gets a colour control, by the same name rule `PropertyValueKinds` uses to
+    // decide what a value means, so the editor never writes a spelling the reducers refuse.
     if (PropertyValueKinds.isColour(property.name)) return colorEditor()
     return when ((property.jsonType as? JsonPrimitive)?.contentOrNull) {
       "string" -> PropertyEditorCapability(control = PropertyEditorControl.TEXT)
       "boolean" -> PropertyEditorCapability(control = PropertyEditorControl.BOOLEAN)
-      // A numeric property carries its unit in its name, and that is enough to give it a range.
-      //
-      // Without one it has no bounds, and a number with no bounds is `Unsupported` in the
-      // inspector — which is how every spacing, size, elevation and thickness in this catalog came
-      // to be uneditable while `m3/text` had six working number fields. Fourteen of the catalog's
-      // twenty-two numeric properties were in that state, including `verticalSpacingDp` on Column
-      // and `horizontalSpacingDp` on Row: the two controls a person reaches for first.
-      //
-      // A rule rather than fourteen more entries in [EDITOR_OVERRIDES], because the next component
-      // to declare a `…Dp` should arrive editable rather than waiting for someone to notice. An
-      // explicit override still wins: it is consulted above this.
+      // A numeric property's unit is in its name (`…Dp`), which is enough to give it a range, so
+      // new components arrive editable. An explicit override (checked above) still wins.
       "number",
       "integer" ->
-        // …and only where a projection reads it. A dimension no emitter takes is a control whose
-        // every value is discarded — worse than no control, because the design then looks
-        // authored and renders and exports as if it were not. `COMPOSE_EMITTED_DP_PROPERTIES` is
-        // derived from the exporter's own field table, so adding a dimension to an emitter is
-        // what makes it editable, rather than someone remembering to.
+        // …and only where a projection reads it: a control whose values every emitter discards
+        // would be misleading. `COMPOSE_EMITTED_DP_PROPERTIES` is derived from the exporter's own
+        // table.
         if (
           property.name.endsWith("Dp") &&
             "$componentId.${property.name}" in COMPOSE_EMITTED_DP_PROPERTIES
         )
-          // Arrangement spacing may be negative — that is how children are made to overlap, and
-          // `Arrangement.spacedBy` and the exporter both take the signed value. A padding or a
-          // size may not, so the floor is per property rather than one blanket zero.
+          // Arrangement spacing may be negative (overlap); padding and sizes may not, so the floor
+          // is per property.
           numberEditor(
             if (property.name.endsWith("SpacingDp")) -MAXIMUM_AUTHORED_DP else 0.0,
             MAXIMUM_AUTHORED_DP,
@@ -543,21 +486,12 @@ object CapabilityCatalogParser {
     }
   }
 
-  /**
-   * Wide enough for any dimension this renderer can lay out and narrow enough to stay a dimension.
-   *
-   * The bound is not a design opinion about how much padding is reasonable — it is the range the
-   * renderer and the Compose exporter both round trip, which is what a number editor's bounds mean
-   * everywhere else in this file.
-   */
+  /** The range the renderer and the Compose exporter both round trip for a dimension. */
   private const val MAXIMUM_AUTHORED_DP = 4096.0
 
   /**
-   * The bound on a slider's own numbers, which are in the design's units rather than in dp.
-   *
-   * Wide enough for the counts and percentages a slider is actually authored against, and finite so
-   * the field still round trips: the renderer and the exporter both carry these as `Float`, and a
-   * value past that range stops being the number that was typed.
+   * The bound on a slider's own numbers (design units, not dp): wide enough for real use, finite so
+   * the `Float` round trip holds.
    */
   private const val MAXIMUM_AUTHORED_VALUE = 1_000_000.0
 
@@ -580,12 +514,9 @@ object CapabilityCatalogParser {
     }
 
   /**
-   * The Remote Material 3 numbers, which no type rule can bound.
-   *
-   * They are declared `["number", "object"]` — a literal or a state read — and none is a `…Dp`, so
-   * without these a widget's slider, stepper and progress indicators arrived with their one value
-   * `Unsupported`: stuck at the starter value and unbindable. Ranges follow the Material ones
-   * above: a fraction is 0..1, an angle a turn either way, a slider's value the design's units.
+   * The Remote Material 3 numbers, declared `["number", "object"]` (literal or state read) and not
+   * `…Dp`, so no type rule can bound them. Ranges follow the Material ones: a fraction 0..1, an
+   * angle a turn either way, a slider's value in design units.
    */
   private val REMOTE_MATERIAL_3_NUMBER_EDITORS =
     listOf(
@@ -635,9 +566,8 @@ object CapabilityCatalogParser {
       "surfaceContainerHigh",
       "surfaceContainerHighest",
       "primary",
-      // Added for the Wear widget samples: a widget on a `primary` background needs the matching
-      // on-colour for its text, and the renderer, the exporter and this list are the three places
-      // that have to agree on a token before a design may hold it.
+      // A token must be known to the renderer, the exporter and this list before a design may hold
+      // it.
       "onPrimary",
       "secondary",
       "onSecondary",
@@ -650,12 +580,9 @@ object CapabilityCatalogParser {
     )
 
   /**
-   * The Wear widget host frames, which declare `WearWidgetContainer`'s parameters.
-   *
-   * Listed rather than matched by prefix because an override table keyed by exact id is what makes
-   * an unrecognised component fall through to the type rules instead of silently inheriting a
-   * neighbour's editor. Declared above [EDITOR_OVERRIDES] because that map reads it while this
-   * object initialises.
+   * The Wear widget host frames, which declare `WearWidgetContainer`'s parameters. Exact ids (not a
+   * prefix) so unknown components fall through to the type rules. Declared above
+   * [EDITOR_OVERRIDES], which reads it during initialisation.
    */
   private val WEAR_WIDGET_CONTAINER_IDS =
     listOf(
@@ -665,8 +592,8 @@ object CapabilityCatalogParser {
     )
 
   /**
-   * Components that edit like another where they share a property name — see [editorMetadata]. A
-   * Stepper is a slider drawn as two buttons, so it takes the slider's ranges too.
+   * Components that edit like another where they share a property name (see [editorMetadata]); a
+   * Stepper takes the slider's ranges.
    */
   private val COUNTERPARTS: Map<String, String> =
     mapOf(
@@ -705,26 +632,19 @@ object CapabilityCatalogParser {
       ("m3/text" to "minLines") to numberEditor(1.0, 100.0, 1.0),
       ("m3/text" to "maxLines") to numberEditor(1.0, 100.0, 1.0),
       ("m3/text" to "weight") to numberEditor(0.1, 100.0, 0.1),
-      // Declared `"object"` and nothing else, so the shape has to be named here. Both are closed
-      // protocol value types the renderer already reads and the exporter already emits; only the
-      // inspector could not reach them.
+      // Declared only as `"object"`, so the closed value shape is named here.
       ("layout/lazy-column" to "contentPadding") to objectEditor("padding"),
       ("layout/lazy-grid" to "contentPadding") to objectEditor("padding"),
       ("layout/lazy-row" to "contentPadding") to objectEditor("padding"),
       ("m3/horizontal-floating-toolbar" to "contentPadding") to objectEditor("padding"),
       ("layout/lazy-grid" to "columns") to objectEditor("adaptiveGrid"),
-      // A clock, not a dimension. The `…Dp` rule below is what gives a number its editor, so
-      // without these two the hour and minute of a time picker would be `Unsupported` in the
-      // inspector — a component whose whole content is two numbers, neither of them editable.
-      // A fraction, and the only value this component has. Bounded 0..1 because that is what both
-      // Material indicators take, so the control cannot author a progress the renderer clamps away.
+      // A fraction, bounded 0..1 as both Material indicators take it.
       ("m3/progress-indicator" to "progress") to numberEditor(0.0, 1.0, 0.05),
       // A count; zero is Compose's own "no limit", which is how the canvas reads it.
       ("layout/flow-row" to "maxItemsInEachRow") to countEditor(0.0, 100.0),
-      // Dimensions the `…Dp` rule cannot reach because the Compose exporter is not what writes
-      // them: a loop's spacing and a collapsible layout's are Remote Compose's, a Wear list's and a
-      // Wear icon's are the Wear generator's, a custom slot's size is the frame the canvas draws
-      // for it, and a search bar's corner is a projection target of the screen exporter.
+      // Dimensions the `…Dp` rule can't reach because the Compose exporter doesn't write them:
+      // Remote Compose loop/collapsible spacing, Wear list and icon sizes, a custom slot's frame,
+      // and the search bar corner.
       ("layout/for-each" to "verticalSpacingDp") to spacingEditor(),
       ("layout/collapsible-column" to "verticalSpacingDp") to spacingEditor(),
       ("layout/collapsible-row" to "horizontalSpacingDp") to spacingEditor(),
@@ -738,9 +658,7 @@ object CapabilityCatalogParser {
       ("remote-m3/lottie" to "progress") to numberEditor(0.0, 1.0, 0.05),
       // Wear's segmented ring: how many arcs it is cut into. A count, so the `…Dp` rule misses it.
       ("wear-m3/progress-indicator" to "segments") to countEditor(1.0, 64.0),
-      // A slider's range and its value are numbers in the design's own units — not dimensions, so
-      // the `…Dp` rule cannot reach them, and a slider whose ends nobody can set is a slider stuck
-      // between zero and one.
+      // A slider's range and value are numbers in the design's own units, not dimensions.
       ("m3/slider" to "value") to
         numberEditor(-MAXIMUM_AUTHORED_VALUE, MAXIMUM_AUTHORED_VALUE, 0.1),
       ("m3/slider" to "valueFrom") to
@@ -768,15 +686,9 @@ object CapabilityCatalogParser {
       VARIABLE_FONT_TEXT_EDITORS
 
   /**
-   * The editor for the container's `background`, which the type rules cannot supply.
-   *
-   * It is declared `"string"`, so it fell through to a plain text field — you could type
-   * `#FF2196F3` into it and nothing would tell you that was the shape it wanted, or that a token
-   * like `primary` was also legal.
-   *
-   * Padding and corner radius had number editors here too, until the container stopped declaring
-   * them: they are the host's (`WearWidgetParams`, per host shape), not the widget's, and the
-   * editor shows each shape as a view instead.
+   * The editor for the container's `background`, declared `"string"`: a colour editor that also
+   * accepts tokens like `primary`. Padding and corner radius are the host's (`WearWidgetParams`,
+   * per host shape), not the widget's.
    */
   private fun widgetContainerEditors(componentId: String) =
     listOf((componentId to "background") to colorEditor())

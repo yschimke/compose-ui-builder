@@ -40,14 +40,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The canvas at the device's frame, with the selection's scrolling container popped out beside it.
- *
- * The extent draws a long list whole and grows the frame to hold it, which is the right surface
- * until the design is a tablet whose every pane is a list. The device view keeps the frame the
- * device's size and lets the lists scroll; what that costs — rows past the fold nobody can click —
- * is paid back by drawing the selected list again beside the frame, unrolled and editable. These
- * pin the four things that makes true: the frame stays put, the selection is scrolled to, the
- * pop-out holds every row and answers a click, and a row that scrolled away stops answering one.
+ * The canvas at the device's frame, with the selection's scrolling container popped out beside it,
+ * unrolled and editable. Pins: the frame stays device-sized, the selection is scrolled to, the
+ * pop-out holds every row and answers clicks, and a row scrolled away stops answering.
  */
 @OptIn(ExperimentalTestApi::class)
 class CanvasDeviceViewTest {
@@ -172,11 +167,7 @@ class CanvasDeviceViewTest {
       assertNotNull(bounds(snapshot, "row-$ROWS"), "the rows now on screen do")
     }
 
-  /**
-   * The overlay that selects on the extent is drawn over the design and takes every pointer event,
-   * which on the device frame would leave its lists unscrollable by the very wheel that is the
-   * reason to look at them.
-   */
+  /** The selecting overlay must let the device frame's lists receive the wheel. */
   @Test
   fun `the wheel scrolls the device frame's list`() =
     runDesktopComposeUiTest(width = 900, height = 700) {
@@ -201,9 +192,8 @@ class CanvasDeviceViewTest {
     }
 
   /**
-   * Moving the selection from one list to another in the same revision re-roots the pop-out on a
-   * different container. Its geometry has to start again with it: the boxes the first list's rows
-   * left behind sat under the second list's rows and, being smaller, won the click.
+   * Re-rooting the pop-out on a different list must reset its geometry, or stale smaller boxes win
+   * the click.
    */
   @Test
   fun `a pop-out re-rooted on another list forgets the first list's boxes`() =
@@ -222,7 +212,7 @@ class CanvasDeviceViewTest {
 
       selected = "b-1"
       waitForIdle()
-      // At the row's left edge, which is where the first list's shorter label used to be.
+      // At the row's left edge, where the previous list's shorter label was.
       val target = popOutNode("Bravo 2").getUnclippedBoundsInRoot()
       onRoot().performTouchInput {
         click(
@@ -238,9 +228,8 @@ class CanvasDeviceViewTest {
     }
 
   /**
-   * A `for-each` draws one authored node several times, and the inspection keeps one box per id —
-   * whichever copy measured last. The device frame's click reads every copy's box instead, so any
-   * copy selects the node rather than whatever ancestor happened to hold the point.
+   * A `for-each` draws one node several times, but inspection keeps one box per id; the device
+   * frame's click reads every copy's box so any copy selects the node.
    */
   @Test
   fun `a click on any copy a loop draws selects its template`() =

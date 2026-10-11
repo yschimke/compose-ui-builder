@@ -17,13 +17,10 @@ import ee.schimke.composeai.uibuilder.editor.CommentNotificationsState
 import ee.schimke.composeai.uibuilder.inspector.CommentNotificationsToggle
 
 /**
- * The comments panel's "Notify me about replies" row in each state it can be drawn in.
- *
- * Only the row, at the comments dock's width, rather than the whole editor four times: the rest of
- * the panel is [UiBuilderCommentsPanelPreview]'s to diff, and what this one has to keep honest is
- * the part no state test can see — the bell beside the switch, the blocked hint in the error
- * colour, and the iPhone sentence that replaces the switch. Hidden, the fifth state and the usual
- * one, draws nothing and so has no picture.
+ * The comments panel's "Notify me about replies" row in each drawable state, at the dock's width:
+ * the bell beside the switch, the blocked hint in the error colour, and the iPhone sentence
+ * replacing the switch. Hidden (the usual state) draws nothing. The rest of the panel is
+ * [UiBuilderCommentsPanelPreview]'s.
  */
 @Preview(widthDp = 360, heightDp = 460)
 @Composable

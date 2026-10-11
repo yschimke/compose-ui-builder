@@ -131,16 +131,15 @@ public object UiBuilderProtocolMapper {
         )
       is UiBuilderServiceRequest.ExportDesign ->
         ExportDesignRequestV1(request.designId, request.revision, request.format)
-      // Not on the v1 wire. `UiBuilderRequestV1` is a released, sealed contract with no rename, no
-      // delete and no way to ask what an actor may do; a host that offers any of them does so
-      // through a door of its own (the MCP tools do, and the sidecar routes ask the last one of
-      // themselves) and answers outside the envelope. Reaching here is a programming error, not a
-      // bad request.
+      // Not on the v1 wire (a released, sealed contract); hosts offer these through their own
+      // routes, so reaching here is a programming error.
       is UiBuilderServiceRequest.RenameDesign,
       is UiBuilderServiceRequest.ExportDocument,
       is UiBuilderServiceRequest.GetDesignActions,
       is UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade,
       is UiBuilderServiceRequest.DeleteDesign,
+      is UiBuilderServiceRequest.RestoreDesign,
+      is UiBuilderServiceRequest.ListTrash,
       is UiBuilderServiceRequest.ListRevisions,
       is UiBuilderServiceRequest.RestoreRevision,
       is UiBuilderServiceRequest.MoveDesignHome,
@@ -171,7 +170,9 @@ public object UiBuilderProtocolMapper {
       is UiBuilderServiceResponse.DesignRenamed,
       is UiBuilderServiceResponse.DesignActions,
       is UiBuilderServiceResponse.Revisions,
-      is UiBuilderServiceResponse.DesignDeleted ->
+      is UiBuilderServiceResponse.DesignDeleted,
+      is UiBuilderServiceResponse.DesignRestored,
+      is UiBuilderServiceResponse.Trash ->
         ErrorResponseV1(
           ServiceErrorV1(
             ServiceErrorCodeV1.INTERNAL,

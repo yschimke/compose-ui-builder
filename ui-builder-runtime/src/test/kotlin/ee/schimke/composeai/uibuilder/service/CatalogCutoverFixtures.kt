@@ -16,13 +16,10 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 
 /**
- * What every catalog repository publishes for the builder, captured from one delivery commit per
- * catalog by `scripts/capture-catalog-cutover-fixtures.sh` into `catalog-cutover/<id>/`.
- *
- * Read the way a host reads a delivery branch: the policy and the record composed by
- * [PublishedUiBuilderCatalog], the seed documents the policy's `templates` names, and the renderer
- * runtime id the branch's `runtime.zip` declares. Nothing here is the builder's own description of
- * a catalog, which is the point: these are the inputs the catalog-owned cutover would serve from.
+ * What every catalog repository publishes for the builder, captured per delivery commit by
+ * `scripts/capture-catalog-cutover-fixtures.sh` into `catalog-cutover/<id>/`, and read as a host
+ * reads a delivery branch: policy and record composed by [PublishedUiBuilderCatalog], the seed
+ * documents, and the `runtime.zip` runtime id.
  */
 internal object CatalogCutoverFixtures {
 

@@ -8,11 +8,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * `layout/box`'s own `contentAlignment` reaches the exported `RemoteBox`.
- *
- * The emitter used to read only the children's own alignment, so a box that centred an unaligned
- * child — a 40dp badge with an arrow in it — exported without `contentAlignment`, and the native
- * render drew the arrow top-left while the browser preview centred it (wear-m3-catalog#594).
+ * `layout/box`'s own `contentAlignment` reaches the exported `RemoteBox`, so an unaligned child is
+ * centred in the native render as in the browser preview.
  */
 class RemoteBoxContentAlignmentTest {
   /** A document property as the builder stores one: `{"type": …, "value": …}`. */

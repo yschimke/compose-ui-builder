@@ -127,17 +127,25 @@ public sealed interface UiBuilderServiceRequest {
   public data class RenameDesign(val designId: String, val title: String) : UiBuilderServiceRequest
 
   /**
-   * Remove a design, its history and its access list, closing every open stream on it.
+   * Move a design into the trash, closing every open stream on it. From then on it is gone for
+   * every request but [RestoreDesign] and [ListTrash] until [UiBuilderAdminPort.purgeExpiredTrash]
+   * removes it, history and access list included, once `trashRetentionMillis` has passed.
    *
-   * Owner only: not a grantee and not a delegate acting on the owner's behalf
-   * (`AGENT_ACCESS_GRANTS.md`); [UiBuilderAdminPort.adminDeleteDesign] covers designs whose owner
-   * is gone. Ownership is checked against the loaded or quarantined access record, so an unservable
-   * design can still be deleted.
-   *
-   * Has no `ui-builder-protocol` request shape yet; see
+   * Owner only, never a grantee, and never a delegate except on a design that delegate created for
+   * the owner (`AGENT_ACCESS_GRANTS.md`); [UiBuilderAdminPort.adminDeleteDesign] covers designs
+   * whose owner is gone. Unservable designs can still be deleted. No protocol shape yet; see
    * [UiBuilderProtocolMapper.toProtocolRequest].
    */
   public data class DeleteDesign(val designId: String) : UiBuilderServiceRequest
+
+  /**
+   * Bring a design back out of the trash exactly as it was deleted: document, history, access list
+   * and revision. Allowed to whoever could have deleted it. No protocol shape (see [RenameDesign]).
+   */
+  public data class RestoreDesign(val designId: String) : UiBuilderServiceRequest
+
+  /** The trashed designs this actor may restore, most recently deleted first. No protocol shape. */
+  public data object ListTrash : UiBuilderServiceRequest
 
   /**
    * The revisions this service retains a whole document for, newest first. Needs read; no protocol
@@ -174,12 +182,9 @@ public sealed interface UiBuilderServiceRequest {
   ) : UiBuilderServiceRequest
 
   /**
-   * Authoritatively replace one stored design from a complete document copy.
-   *
-   * The supplied document must name the stored design and its current home. The service owns the
-   * committed id, home, revision and timestamps; validates the complete candidate; and retains the
-   * previous revision before broadcasting the replacement as a whole snapshot. This is the seam a
-   * host uses to save a temporary copy back or re-import an existing canonical document.
+   * Authoritatively replace one stored design from a complete document copy that names it and its
+   * current home. The service owns id, home, revision and timestamps, validates the candidate, and
+   * retains the previous revision. Used to save a temporary copy back or re-import a document.
    */
   public data class ReplaceDesignDocument(
     val designId: String,
@@ -317,8 +322,20 @@ public sealed interface UiBuilderServiceResponse {
   /** The design as the caller now sees it in a listing, carrying its new title. */
   public data class DesignRenamed(val design: DesignListItemV1) : UiBuilderServiceResponse
 
-  /** The design is gone, durably. */
-  public data class DesignDeleted(val designId: String) : UiBuilderServiceResponse
+  /**
+   * The design is in the trash, durably: gone from every listing and request, and restorable with
+   * [UiBuilderServiceRequest.RestoreDesign] until [restorableUntilEpochMillis].
+   */
+  public data class DesignDeleted(
+    val designId: String,
+    val restorableUntilEpochMillis: Long? = null,
+  ) : UiBuilderServiceResponse
+
+  /** The design is back, as the caller now sees it in a listing. */
+  public data class DesignRestored(val design: DesignListItemV1) : UiBuilderServiceResponse
+
+  /** [UiBuilderServiceRequest.ListTrash]'s answer, most recently deleted first. */
+  public data class Trash(val designs: List<UiBuilderTrashedDesign>) : UiBuilderServiceResponse
 
   /** [UiBuilderServiceRequest.ListRevisions]'s answer, newest first. */
   public data class Revisions(
@@ -411,7 +428,7 @@ public data class UiBuilderServiceDiagnostics(
   val rePinPersistenceFailure: String? = null,
   /**
    * Bytes the durable state occupies and the ceiling writes are refused at; both 0 where unbounded
-   * or unmeasurable (yschimke/compose-preview-server#568).
+   * or unmeasurable.
    */
   val storageBytes: Long = 0,
   val storageMaximumBytes: Long = 0,
@@ -420,3 +437,13 @@ public data class UiBuilderServiceDiagnostics(
 public interface UiBuilderServiceDiagnosticsSource {
   public fun diagnostics(): UiBuilderServiceDiagnostics
 }
+
+/** One design in the trash: what it was, who deleted it, and until when it can come back. */
+public data class UiBuilderTrashedDesign(
+  val designId: String,
+  val title: String,
+  val ownerActorId: String,
+  val trashedAtEpochMillis: Long,
+  val trashedByActorId: String,
+  val restorableUntilEpochMillis: Long,
+)

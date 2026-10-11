@@ -17,13 +17,9 @@ import org.jetbrains.skia.Image
 
 /**
  * A label in a `layout/box` with `contentAlignment = center` is drawn centred in the widget's PNG,
- * with no `alignment` of its own.
- *
- * The structure is the one yschimke/remote-m3-catalog#12 reported drawing top-left: a weighted,
- * full-height `m3/surface` in a row, holding a `fillMaxSize` box that centres its text. The PNG
- * export draws through this surface with the document's packaged catalog provided
- * (`ProductionUiBuilderSurface`), so both are measured: with and without that catalog, for the
- * borrowed `m3/text` and the published `remote-m3/remote-text`.
+ * with no `alignment` of its own. The structure from yschimke/remote-m3-catalog#12 (a weighted,
+ * full-height `m3/surface` in a row holding a `fillMaxSize` box), measured with and without the
+ * packaged catalog (`ProductionUiBuilderSurface`), for both `m3/text` and `remote-m3/remote-text`.
  */
 class WidgetBoxContentAlignmentTest {
 

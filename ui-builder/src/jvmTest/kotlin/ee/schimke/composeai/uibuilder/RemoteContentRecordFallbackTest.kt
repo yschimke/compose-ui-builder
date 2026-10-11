@@ -19,18 +19,13 @@ import kotlinx.serialization.json.put
 
 /**
  * A `remote-m3` component the emitter has no case for, written from the component RECORD.
+ * `remote-material3` takes Remote values (`RemoteText(text: RemoteString)`), so the generic piece
+ * is a design-value → Remote-value mapping per type, and the record says which type each parameter
+ * wants.
  *
- * `RemoteContentEmitter.emit` is a `when` over component ids with a hand-written function each, and
- * "twenty-five components means twenty-five functions" was the wrong unit for what that costs. A
- * `remote-material3` component takes Remote Compose values rather than Kotlin ones —
- * `RemoteText(text: RemoteString)` against a design's `"text": "Next train"` — so the missing piece
- * is a mapping from a design's value to a Remote value, one TYPE at a time, and the record already
- * says which type each parameter wants.
- *
- * The spellings are not invented here. `RemoteValueVocabularyProbe` in wear-m3-catalog compiles
- * `"…".rs`, `true.rb`, `0.5f.rf`, `Color(…).rc` and `lambdaAction {}` against remote-material3 and
- * the creation DSL, which is the only place that can: this repository has no Remote Compose
- * dependency anywhere, by design.
+ * The spellings (`"…".rs`, `true.rb`, `0.5f.rf`, `Color(…).rc`, `lambdaAction {}`) are compiled by
+ * `RemoteValueVocabularyProbe` in wear-m3-catalog; this repository has no Remote Compose dependency
+ * by design.
  */
 class RemoteContentRecordFallbackTest {
 
@@ -188,11 +183,8 @@ class RemoteContentRecordFallbackTest {
   }
 
   /**
-   * `onClick` with nothing authored is `lambdaAction {}`.
-   *
-   * Nine of remote-catalog's components require an `Action` and no design carries one, which read
-   * as an open product question until it was compiled. A design that says nothing about behaviour
-   * means an action that does nothing, and that is a legal `Action`.
+   * `onClick` with nothing authored is `lambdaAction {}`: a design saying nothing about behaviour
+   * means an action that does nothing.
    */
   @Test
   fun `a required action with nothing authored is a lambda that does nothing`() {
@@ -231,11 +223,9 @@ class RemoteContentRecordFallbackTest {
   }
 
   /**
-   * An authored event binding is a `valueChange`, and the variable it writes is declared for it.
-   *
-   * Every action a document carries is a state write, so `hostAction` maps to nothing that exists
-   * and all of them are this. The spellings are compiled in wear-m3-catalog's
-   * `RemoteActionVocabularyProbe`; what is asserted here is that a design reaches them.
+   * An authored event binding is a `valueChange`, and the variable it writes is declared for it
+   * (every document action is a state write). Spellings compiled in wear-m3-catalog's
+   * `RemoteActionVocabularyProbe`.
    */
   @Test
   fun `an authored action writes the design's state`() {
@@ -325,7 +315,7 @@ class RemoteContentRecordFallbackTest {
 
   /**
    * `checked` read whole is two-way bound: its change negates the flag, the Remote spelling of
-   * `onCheckedChange = { notify = it }`, with nothing authored on `checkedChange`.
+   * `onCheckedChange = { notify = it }`.
    */
   @Test
   fun `a checkbox bound to a flag writes it back on change`() {
@@ -499,8 +489,8 @@ class RemoteContentRecordFallbackTest {
   }
 
   /**
-   * `selectOrClear` assigns null, and a Remote value cannot be one. Refused by name rather than
-   * given a sentinel, because clearing a selection and setting it to zero are different designs.
+   * `selectOrClear` assigns null, which a Remote value can't be; refused by name rather than given
+   * a sentinel.
    */
   @Test
   fun `clearing a selection is refused by name`() {
@@ -715,11 +705,8 @@ class RemoteContentRecordFallbackTest {
   }
 
   /**
-   * Without a case and without a record the refusal is the one it always was, so nothing that has
-   * neither changes.
-   *
-   * Use a deliberately nonexistent id rather than a real catalog component: real components can
-   * gain a writer or record as coverage improves, which would stop exercising this fallback.
+   * Without a case and without a record the refusal is unchanged. Uses a nonexistent id so future
+   * coverage can't stop exercising this fallback.
    */
   @Test
   fun `a component with no case and no record is refused by name`() {
@@ -738,8 +725,8 @@ class RemoteContentRecordFallbackTest {
   }
 
   /**
-   * A required parameter the design cannot fill refuses by NAME rather than emitting a call that
-   * does not compile. A missing `RemoteFloat` is not a component drawn slightly wrong.
+   * A required parameter the design can't fill is refused by name rather than emitting uncompilable
+   * code.
    */
   @Test
   fun `a required parameter the design cannot fill refuses by name`() {

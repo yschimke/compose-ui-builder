@@ -16,15 +16,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * One unstored axis the variant strip draws the design on.
- *
- * Devices are deliberately not among these: they live in the document, as
- * `DesignEnvironmentV1.exportDevices`, because the Compose export already writes them as
- * `@Preview(device = …)` and the point of the strip is that the set you look at is the set that
- * ships. These three have no stored home — the environment contract is published from
- * `compose-preview-contracts` and closed to this repository — and are honestly what they are: a way
- * of looking, off again when the design is reopened
- * ([`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md)).
+ * One unstored axis the variant strip draws the design on. Devices are not axes: they are stored as
+ * `DesignEnvironmentV1.exportDevices` and exported as `@Preview(device = …)`. These have no stored
+ * home (the environment contract is closed to this repository) and reset on reopen; see
+ * [`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md).
  */
 enum class EditorVariantAxis(val label: String) {
   /** The design under the dark scheme, whatever its own theme says. */
@@ -34,9 +29,9 @@ enum class EditorVariantAxis(val label: String) {
   Rtl("RTL"),
 
   /**
-   * The design at the largest font scale its platform's accessibility settings commonly reach:
+   * The design at its platform's largest common accessibility font scale:
    * [LARGE_FONT_VARIANT_SCALE], or [WEAR_LARGE_FONT_VARIANT_SCALE] on a watch. [label] is the
-   * phone's; [labelFor] says which one a given design gets.
+   * phone's; see [labelFor].
    */
   LargeFont("Font 1.5×"),
 }
@@ -44,11 +39,7 @@ enum class EditorVariantAxis(val label: String) {
 /** The font scale [EditorVariantAxis.LargeFont] draws a phone, tablet or desktop design at. */
 const val LARGE_FONT_VARIANT_SCALE: Double = 1.5
 
-/**
- * The font scale [EditorVariantAxis.LargeFont] draws a Wear design at: the largest step of Wear
- * OS's own font size setting. A watch never reaches 1.5, so comparing one there would show a layout
- * no wearer can produce while hiding the one the largest setting actually does.
- */
+/** The largest step of Wear OS's font size setting; a watch never reaches 1.5. */
 const val WEAR_LARGE_FONT_VARIANT_SCALE: Double = 1.24
 
 /** The scale [EditorVariantAxis.LargeFont] draws this design at; see the two constants. */
@@ -63,11 +54,8 @@ fun EditorVariantAxis.labelFor(document: UiBuilderDocument): String =
   }
 
 /**
- * One pane of the variant strip: a title, and the document to draw in it.
- *
- * A whole document rather than an environment delta because that is what [UiBuilderSurface] reads —
- * theme, density, font scale and layout direction all come off `document.environment` — so a
- * variant is drawn by the ordinary renderer with no variant-shaped parameter threaded through it.
+ * One pane of the variant strip: a title and the document to draw. A whole document because
+ * [UiBuilderSurface] reads theme, density, font scale and direction from `document.environment`.
  */
 data class UiBuilderVariantPane(
   /** Stable across recompositions and unique in the strip; also the surface's render session id. */
@@ -81,21 +69,17 @@ data class UiBuilderVariantPane(
   /** A widget host frame this pane supplies around [document], or the ambient host frame. */
   val wearWidgetHostShape: WearWidgetHostShape? = null,
   /**
-   * A launcher widget drawn on a patch of home screen and resized across it a cell at a time,
-   * rather than at one fixed size: see [launcherWidgetPreviewPanes]. [widthDp] and [heightDp] are
-   * then the whole patch, [LAUNCHER_RESIZE_MAX], so the strip leaves room for the largest size the
-   * pane reaches and does not reflow around it as it grows.
+   * A launcher widget resized across a patch of home screen a cell at a time; see
+   * [launcherWidgetPreviewPanes]. [widthDp]/[heightDp] are then the whole patch
+   * ([LAUNCHER_RESIZE_MAX]) so the strip does not reflow as it grows.
    */
   val launcherGridResizable: Boolean = false,
 )
 
 /**
- * The preview panes a widget design is drawn in instead of the device and axis strip: a Wear
- * widget's host shapes, or a launcher widget's grid sizes. Null for any other design.
- *
- * [resizable] adds the launcher's animated pane; a host that draws each pane from a fixed render
- * rather than a live composition leaves it out, since a pane that changes size every second would
- * be a render request every second.
+ * The preview panes a widget design uses instead of the device and axis strip (Wear host shapes or
+ * launcher grid sizes), or null. [resizable] adds the animated launcher pane; hosts rendering fixed
+ * stills leave it out.
  */
 internal fun UiBuilderDocument.widgetPreviewPanes(
   resizable: Boolean = true
@@ -104,10 +88,8 @@ internal fun UiBuilderDocument.widgetPreviewPanes(
     ?: if (isLauncherWidget()) launcherWidgetPreviewPanes(resizable) else null
 
 /**
- * The fixed grid sizes a launcher widget is previewed at, the sizes a user most often gives a
- * widget on a phone's home screen: the narrow strip, the square, and the two wide ones. The
- * design's own size is added when it is none of these, so the size being authored is always on
- * screen.
+ * The fixed grid sizes a launcher widget is previewed at (narrow strip, square, two wide), plus the
+ * design's own size when it is none of these.
  */
 internal val LAUNCHER_PREVIEW_SIZES: List<LauncherWidgetGrid.Size> =
   listOf(
@@ -124,12 +106,9 @@ internal val LAUNCHER_RESIZE_MAX: LauncherWidgetGrid.Size = LauncherWidgetGrid.S
 internal const val LAUNCHER_RESIZABLE_PANE_ID = "preview-launcher-resizable"
 
 /**
- * A launcher widget's panes: first the one that resizes across the grid (when [resizable]), then
- * one per [LAUNCHER_PREVIEW_SIZES] entry, smallest first.
- *
- * Each fixed pane is the same document at that size's reference dp, which is what a launcher hands
- * `Content` when the user drags the widget to that many cells, and the label says both: the cell
- * count is what the user picked, the dp is what the design lays out in.
+ * A launcher widget's panes: the resizing one (when [resizable]), then one per
+ * [LAUNCHER_PREVIEW_SIZES] entry, smallest first, each at that size's reference dp. Labels give
+ * both cell count and dp.
  */
 internal fun UiBuilderDocument.launcherWidgetPreviewPanes(
   resizable: Boolean = true
@@ -184,10 +163,7 @@ internal fun UiBuilderDocument.launcherGridSize(): LauncherWidgetGrid.Size? {
   return LauncherWidgetGrid.of(settings.widthDp, settings.heightDp)
 }
 
-/**
- * The cell count nearest this design's frame, on the grid or off it: where the resizable pane
- * starts, so an off-grid design starts beside its own size rather than at an unrelated default.
- */
+/** The cell count nearest this design's frame, where the resizable pane starts. */
 internal fun UiBuilderDocument.nearestLauncherGridSize(): LauncherWidgetGrid.Size {
   val settings = screenEnvironmentSettings()
   return clampLauncherSize(
@@ -215,9 +191,8 @@ internal fun launcherSizeLabel(size: LauncherWidgetGrid.Size): String =
   "${size.label} · ${size.widthDp}×${size.heightDp}dp"
 
 /**
- * The patch of home screen [size] cells cover, in dp: whole cells, margins included, which is the
- * room a widget of that size sits in. Its own dp ([LauncherWidgetGrid.Size.widthDp]) is this less
- * one [LauncherWidgetGrid.CELL_MARGIN_DP], half of it on each side.
+ * The home-screen patch [size] cells cover, in dp, margins included. The widget's own dp
+ * ([LauncherWidgetGrid.Size.widthDp]) is this less one [LauncherWidgetGrid.CELL_MARGIN_DP].
  */
 internal fun launcherGridPatchDp(size: LauncherWidgetGrid.Size): Pair<Float, Float> =
   (LauncherWidgetGrid.CELL_WIDTH_DP * size.columns).toFloat() to
@@ -231,11 +206,8 @@ internal fun clampLauncherSize(
   LauncherWidgetGrid.Size(size.columns.coerceIn(1, max.columns), size.rows.coerceIn(1, max.rows))
 
 /**
- * The three launcher hosts a Wear widget export generates previews for.
- *
- * An adaptive widget previews at both sizes regardless of [size]: each pane draws the design it
- * resolves to at that size (`AdaptiveWearWidget.resolve`), which is the same design its export
- * writes into that size's branch, so a pane shows exactly what that container will get.
+ * The three launcher hosts a Wear widget export generates previews for. Adaptive widgets preview at
+ * both sizes, each pane resolving the design (`AdaptiveWearWidget.resolve`) as the export does.
  */
 internal fun UiBuilderDocument.wearWidgetPreviewPanes(
   size: WearWidgetScaffoldSize
@@ -273,10 +245,8 @@ private fun wearWidgetPreviewPanes(
   }
 
 /**
- * What a compact layout's tab calls this pane. A device or the design's own frame is named alone,
- * since everything after its name is size and density that the pane's own label repeats over the
- * frame. Every other label is kept whole: a widget host's or an axis's second part is what tells
- * two tabs apart, and "Rectangular · Small" cut at its separator is "Rectangular · Large" too.
+ * A compact tab's label: a device or the design's own frame by name alone (the pane repeats the
+ * size); other labels whole, since their second part tells tabs apart.
  */
 internal fun UiBuilderVariantPane.mobileTabLabel(): String =
   if (
@@ -295,8 +265,7 @@ private const val DEVICE_PANE_ID_PREFIX = "variant-device-"
 private const val LAUNCHER_PANE_ID_PREFIX = "preview-launcher-size-"
 
 /**
- * The design at its own frame, as a preview pane: the first frame of a view that has no authoring
- * canvas beside it to show the design's own size.
+ * The design at its own frame as a preview pane, for views with no authoring canvas beside them.
  */
 internal fun UiBuilderDocument.currentFramePane(label: String = "Current"): UiBuilderVariantPane {
   val settings = screenEnvironmentSettings()
@@ -310,16 +279,9 @@ internal fun UiBuilderDocument.currentFramePane(label: String = "Current"): UiBu
 }
 
 /**
- * The panes to draw beside the editing pane, in the order they are shown, or empty for none.
- *
- * Devices first and then the unstored axes, because the devices are the design's own claim and the
- * axes are a question being asked of it. A device the host does not offer a preset for is skipped
- * rather than guessed at: a preset carries the only geometry there is (see
- * [UiBuilderDevicePreset]), so inventing a frame for an unknown id would draw a picture no renderer
- * would reproduce.
- *
- * Every pane is read-only where it is drawn; nothing here decides that, but nothing here makes any
- * sense unless it holds — see the module doc for why one editing pane is the load-bearing rule.
+ * The panes to draw beside the editing pane, in order: devices (the design's claim), then unstored
+ * axes. Devices without a host preset are skipped, since a preset carries the only geometry. Every
+ * pane is read-only.
  */
 fun UiBuilderDocument.variantPanes(
   presets: List<UiBuilderDevicePreset>,
@@ -327,10 +289,7 @@ fun UiBuilderDocument.variantPanes(
 ): List<UiBuilderVariantPane> {
   val settings = screenEnvironmentSettings()
   val devicePanes =
-    // Distinct, because `exportDevices` is stored verbatim: `SetExportDevicesEnvironmentChangeV1`
-    // imposes no uniqueness, so a document written through the protocol or MCP can name one device
-    // a thousand times — and each repeat would be another full `UiBuilderSurface`, all sharing one
-    // pane id. The picker only ever writes a set; this is about what a document can *hold*.
+    // Distinct: `exportDevices` is stored verbatim and protocol/MCP writers may repeat ids.
     settings.exportDevices.distinct().mapNotNull { id ->
       val preset = presets.firstOrNull { it.id == id } ?: return@mapNotNull null
       UiBuilderVariantPane(
@@ -366,18 +325,9 @@ fun UiBuilderDocument.variantPanes(
 }
 
 /**
- * What a device pane is called: the device, and the three properties being applied.
- *
- * A device here is **not** a picture of a handset. Nothing draws a bezel, a notch or a rounded
- * corner — [UiBuilderVariantPane] is the design composed at a size and a density, and that is the
- * whole of what a preset carries ([UiBuilderDevicePreset] has an id, a label, a width, a height and
- * a density and nothing else). So the label says the properties rather than only the name: "Pixel
- * 6" alone leaves somebody comparing two panes to guess which of width, height and density moved,
- * which is the only question the pane can answer.
- *
- * The density is trimmed of a trailing `.0` because `2×` is the number a designer says and `2.0×`
- * reads like a measurement; a fractional one keeps its digits, since 2.625 and 2.75 are different
- * devices and rounding them together would make two panes claim the same frame.
+ * A device pane's label: the device plus width, height and density, since a pane is only the design
+ * at those properties (no handset is drawn). Density drops a trailing `.0` but keeps fractional
+ * digits.
  */
 internal fun deviceVariantLabel(preset: UiBuilderDevicePreset): String =
   "${preset.label} · ${preset.widthDp}×${preset.heightDp}dp · ${trimmedDensity(preset.density)}×"
@@ -396,17 +346,10 @@ private fun EditorVariantAxis.overrides(document: UiBuilderDocument): Map<String
   }
 
 /**
- * This document as a variant reads it: the same tree, the same id, the same revision, one or more
- * environment fields written over.
- *
- * The id and the revision are deliberately untouched. [UiBuilderSurface] keys its remembered bounds
- * on `(document.id, document.revision, renderSessionId)`, so the session id is what separates two
- * panes of the same design — giving a variant a document id of its own would instead make every
- * edit look like a different design arriving, and throw away the composition on every keystroke.
- *
- * Numbers are written as strings, matching how the environment is already read back: every reader
- * goes through `jsonPrimitive.contentOrNull` and parses, so a bare number and its text are the same
- * value to all of them, and the text is what the editor's own environment writes.
+ * This document with environment fields overridden. Id and revision are untouched:
+ * [UiBuilderSurface] keys on them plus `renderSessionId`, and a new id would discard the
+ * composition on every edit. Numbers are written as strings, as every environment reader parses
+ * text.
  */
 internal fun UiBuilderDocument.withEnvironmentOverrides(
   overrides: Map<String, JsonPrimitive>

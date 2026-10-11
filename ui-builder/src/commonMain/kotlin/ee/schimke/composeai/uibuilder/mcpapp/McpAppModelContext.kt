@@ -15,9 +15,7 @@ import kotlinx.serialization.json.putJsonObject
 
 /**
  * The `ui/update-model-context` params this editor sends: `content` blocks and `structuredContent`.
- *
- * Each call replaces the previous one, so [Empty] is how a cleared selection takes the attachment
- * away again.
+ * Each call replaces the last, so [Empty] removes the attachment when the selection clears.
  */
 data class McpAppModelContext(val content: JsonArray, val structuredContent: JsonObject?) {
   fun toParams(): JsonObject = buildJsonObject {
@@ -31,17 +29,15 @@ data class McpAppModelContext(val content: JsonArray, val structuredContent: Jso
 }
 
 /**
- * What the model is told about the selected layer, so "make this bigger" names the right node.
+ * What the model is told about the selected layer, so "make this bigger" names the right node. Two
+ * blocks, per the OpenAI `ui/update-model-context` extension:
+ * - a **visible** text block titled with `_meta["openai/title"]` (a removable composer attachment):
+ *   component, node id, path from the root and properties;
+ * - a **hidden** block (`annotations.audience: ["assistant"]`) with the same facts as JSON plus how
+ *   to act: the design is the opened `.uid` file, and nodes are addressed by their stable id, not
+ *   path.
  *
- * Two blocks, per the OpenAI `ui/update-model-context` extension:
- * - a **visible** text block, titled with `_meta["openai/title"]`, which the host shows as a
- *   removable composer attachment: the component, the node id, its path from the root and its
- *   properties — short enough for a person to read;
- * - a **hidden** block, `annotations.audience: ["assistant"]`, with the same facts as JSON plus how
- *   to act on them: the design is the opened `.uid` file, and a node is addressed by its id, which
- *   is stable across edits where a path is not.
- *
- * `structuredContent` carries the JSON too, for a host that reads it rather than the text.
+ * `structuredContent` carries the JSON too, for hosts that read it.
  */
 object McpAppSelectionContext {
   private val compact = Json { encodeDefaults = true }
@@ -70,7 +66,7 @@ object McpAppSelectionContext {
 
   /**
    * `home.uid: Button `save` (m3/button)`, then the path from the root and the node's properties,
-   * one line each: short enough for a person to read in a composer.
+   * one line each.
    */
   fun summary(file: McpAppFile, document: UiBuilderDocument, node: UiBuilderNode): String =
     buildString {

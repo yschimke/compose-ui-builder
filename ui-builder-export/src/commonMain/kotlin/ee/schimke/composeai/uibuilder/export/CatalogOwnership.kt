@@ -3,22 +3,12 @@ package ee.schimke.composeai.uibuilder.export
 /**
  * Which catalogs answer for themselves: the one flag behind the catalog-owned cutover.
  *
- * `--ui-builder-published-catalogs` already decides where a catalog's *definition* comes from, and
- * production has run every catalog published since 3.27.0. What it never covered is everything else
- * this repository still knows about a catalog by id: the seed templates it offers, the order and
- * copy of the new-design chooser, the Kotlin emitter its designs export through and the synthesised
- * catalog it falls back to when its published file is unusable. A catalog this names gets all of
- * those from what it publishes — its `ui-builder.json`, its `templates` documents and its
- * `composeSourceExport` declaration — and nothing from a `when` on its id. A catalog it does not
- * name behaves exactly as it did before the flag existed.
+ * A named catalog takes its seed templates, chooser copy, export emitter and fallback from what it
+ * publishes (`ui-builder.json`, `templates`, `composeSourceExport`) rather than from code keyed on
+ * its id; others behave as before. Defaults to [NONE]. `CatalogCutoverReadinessTest` turns it on
+ * for every catalog against captured files. See `docs/design/UI_BUILDER_CATALOG_CUTOVER.md`.
  *
- * The flag defaults to [NONE] everywhere, so adding a reader under it changes no deployment.
- * `CatalogCutoverReadinessTest` turns it on for every catalog against the files their repositories
- * publish today, which is the evidence the switch is safe before anybody flips it, and its gap
- * ledger is the list of what still is not. See `docs/design/UI_BUILDER_CATALOG_CUTOVER.md`.
- *
- * Spelled like the server's lever (`all`, `none`, or a comma-separated list) so an operator reads
- * the two the same way.
+ * Spelled like the server's lever (`all`, `none`, or a comma-separated list).
  */
 public class CatalogOwnership private constructor(private val owned: Set<String>?) {
 

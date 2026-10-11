@@ -23,19 +23,13 @@ import ee.schimke.composeai.uibuilder.export.helloWidgetUiBuilderDocument
 
 /**
  * Which surfaces a catalog's pinned runtime draws, on a `remote-m3` widget with the preview panes
- * and the component list open.
+ * and the component list open. A runtime-publishing catalog hands the editor a
+ * [UiBuilderCanvasRenderer]; each surface (editing canvas, device panes, palette tiles, drag ghost)
+ * decides whether to use it, and only this preview passes a renderer.
  *
- * A catalog that publishes a runtime (`remote-m3` in the browser and VS Code) hands the editor a
- * [UiBuilderCanvasRenderer]; everything else draws in-process. The split is a decision about each
- * surface — the editing canvas, every device preview pane, every palette tile, the drag ghost — and
- * getting it wrong is invisible in every other preview, because none of them passes a renderer.
- * `#274` moved the device panes in-process to stop a runtime booting per palette tile, and the
- * panes then drew `remote-m3` components the in-process canvas cannot draw as themselves.
- *
- * The runtime here is a stand-in: the real one is a sandboxed Wasm iframe a preview cannot boot. It
- * draws the same in-process surface, framed in magenta and stamped with the surface mode it was
- * asked for, so the render answers the question directly: a pane stamped `DEVICE` went through the
- * runtime, an unstamped one did not. The editing canvas must be stamped; palette tiles must not.
+ * The runtime is a stand-in (the real one is a sandboxed Wasm iframe): it draws the in-process
+ * surface framed in magenta and stamped with the requested surface mode. The editing canvas must be
+ * stamped; palette tiles must not.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable

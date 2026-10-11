@@ -20,15 +20,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Five components the renderer and the Compose exporter have always supported, and no catalog
- * declared.
- *
- * `m3/center-aligned-top-app-bar`, `m3/list-item`, `m3/primary-tab-row`, `m3/tab` and
- * `shape/colour-dot` had a renderer branch, an emitter, an entry in the exporter's field table —
- * and no capability. The palette could not offer them, the inspector had nothing to show for them,
- * and a document that used them was `UNKNOWN_COMPONENT` to the validator. The checked-in Confetti
- * design is exactly such a document, pinned to this very catalog, which is the test below that
- * would have been most surprising to whoever wrote the fixture.
+ * Five components the renderer and Compose exporter support that no catalog declared
+ * (`m3/center-aligned-top-app-bar`, `m3/list-item`, `m3/primary-tab-row`, `m3/tab`,
+ * `shape/colour-dot`), so they were unoffered, uninspectable, and `UNKNOWN_COMPONENT` to the
+ * validator. The checked-in Confetti design uses them.
  */
 class UnadvertisedComponentTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -45,16 +40,8 @@ class UnadvertisedComponentTest {
       .document
 
   /**
-   * The Confetti design pins `m3-catalog` and names five components that catalog did not declare,
-   * so every node using one was `UNKNOWN_COMPONENT` — a whole screen the validator could say
-   * nothing useful about.
-   *
-   * Scoped to those five rather than to the document, because when this test was written the
-   * fixture had four other, older mismatches — an undeclared `initialIndex`, a missing
-   * `scrollStateKey`, a `sticky` on three surfaces, and a chip's `stateEquals` binding against
-   * types that did not admit an object. Those are fixed now, in `ConfettiFixtureValidatesTest`,
-   * which asserts what this one deliberately does not: that the whole document validates. The
-   * scoping stays, because a failure here should still say "the five" rather than "the fixture".
+   * The Confetti design pins `m3-catalog` and uses these five. Scoped to the five;
+   * `ConfettiFixtureValidatesTest` asserts the whole document validates.
    */
   @Test
   fun `the Confetti design's use of the five now checks out against the catalog it pins`() {
@@ -99,9 +86,7 @@ class UnadvertisedComponentTest {
     val bar = inserted.first.document.nodes.getValue(inserted.second)
 
     assertEquals("Title", inserted.text(bar.slots.getValue("title").single()))
-    // The trait is what makes it droppable where a top bar goes, and until now `m3/search-bar` was
-    // the only component in the catalog that carried it — so a scaffold's `topBar` could hold a
-    // search field or nothing.
+    // The `TopBar` trait makes it droppable in a scaffold's `topBar`.
     assertTrue("TopBar" in catalog.componentsById.getValue("m3/center-aligned-top-app-bar").traits)
   }
 
@@ -145,11 +130,8 @@ class UnadvertisedComponentTest {
   }
 
   /**
-   * The three values the canvas drew and the export dropped.
-   *
-   * Advertising a component means its properties are authorable, and a property the inspector
-   * offers and the export discards is the failure this repository keeps writing down. All three
-   * were in that state on components nobody could insert, so nobody found out.
+   * The three values the canvas drew and the export dropped; advertised properties must be
+   * exported.
    */
   @Test
   fun `the export now carries the colours, the accent bar and the selected tab`() {
@@ -169,13 +151,9 @@ class UnadvertisedComponentTest {
   }
 
   /**
-   * A column holding one of each of the five, built by the reducer and then edited the way an
-   * operator would.
-   *
-   * Assembled here rather than taken from the Confetti fixture because the assertions below are
-   * about *edited* values — a second tab selected, an accent colour, a scrolled app bar's two
-   * container colours — and the fixture carries the defaults. It validates and exports now
-   * (`ConfettiFixtureValidatesTest`); it just does not say anything about these properties.
+   * A column holding one of each of the five, built by the reducer and edited as an operator would
+   * (a second tab, an accent colour, a scrolled app bar's colours), since the Confetti fixture only
+   * carries defaults.
    */
   private fun showcase(selectedTabIndex: Int): UiBuilderDocument {
     var state = reducer.initial(jetcaster, selectedNodeId = "main-background")

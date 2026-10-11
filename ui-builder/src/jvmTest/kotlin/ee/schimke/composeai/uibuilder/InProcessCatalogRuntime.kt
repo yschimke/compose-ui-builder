@@ -38,14 +38,10 @@ import ee.schimke.composeai.uibuilder.renderer.sdk.canvasAdapterRegistry
 
 /**
  * A catalog runtime run in this process, for driving the editor's runtime path on the desktop.
- *
- * [FakeRuntime][CanvasRuntimeDeviceViewTest] reports a box per container and draws nothing, which
- * pins what the editor ASKS of a runtime. This one answers the way a delivered runtime does: it
- * composes the document through the SDK's own [CanvasDocumentHost] and [RenderCanvasNode], inside a
- * root sized exactly to the surface it is handed (`requiredSize(widthDp, heightDp)`, as the
- * catalogs' `Main.kt` do), and reports the inspection the SDK measured. Only the sandbox is
- * missing: the runtime's own coordinates are this window's, so the renderer-space snapshot is the
- * editor's translated back to the surface's origin, which is what the iframe would have measured.
+ * Unlike [FakeRuntime][CanvasRuntimeDeviceViewTest], it really composes the document via the SDK's
+ * [CanvasDocumentHost] and [RenderCanvasNode] in a root sized to the surface
+ * (`requiredSize(widthDp, heightDp)`, as catalogs' `Main.kt` do), and reports the SDK's inspection
+ * translated to the surface's origin, as the iframe would.
  */
 internal class InProcessCatalogRuntime(
   private val registry: CanvasAdapterRegistry = foundationAdapters,
@@ -76,10 +72,9 @@ internal class InProcessCatalogRuntime(
       else CanvasMode.Device
     val density = Density(surface.density)
     var root by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    // Each node's box in the surface's own pixels, as the host measured it relative to itself —
-    // what the sandboxed runtime reports, since its window IS the surface. Not derived from this
-    // window's coordinates: a node that does not move is not measured again, and the editor's box
-    // around the surface moves while the surface grows.
+    // Each node's box in the surface's own pixels, as the sandboxed runtime would report it; not
+    // derived from this window's coordinates, since unmoved nodes aren't re-measured while the
+    // surface's position changes.
     val local = remember { mutableMapOf<String, Rect>() }
     val state = remember { PublishState() }
     fun publish() {

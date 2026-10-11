@@ -21,14 +21,10 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * The editor's two views of a design drawn by a catalog runtime, for the plainest scroller there
- * is: a foundation `Column` with `verticalScroll`, several frames tall.
- *
- * The runtime here is [InProcessCatalogRuntime] — the SDK's real document host inside a root sized
- * to the surface it is handed — so these fail the way the hosted editor does when a runtime lays
- * its content out inside the frame it was given rather than the content's own extent, which is what
- * a Wear screen did: the extent never grew past one screenful, and switching the device view off
- * looked like nothing happened.
+ * The editor's two views of a runtime-drawn design for the plainest scroller: a foundation `Column`
+ * with `verticalScroll`, several frames tall. Uses [InProcessCatalogRuntime] (the SDK's real host
+ * in a surface-sized root), so it fails as the hosted editor does when a runtime lays content out
+ * in its frame rather than at its own extent.
  */
 @OptIn(ExperimentalTestApi::class)
 class CanvasRuntimeScrollingColumnTest {
@@ -39,9 +35,8 @@ class CanvasRuntimeScrollingColumnTest {
     runDesktopComposeUiTest(width = 900, height = 1400) {
       val runtime = InProcessCatalogRuntime()
       var view by mutableStateOf(EditorCanvasView.Extent)
-      // The drawn frame, in dp at this zoom and density. Read from the frame's own positioning
-      // rather than the metrics callback, which the editor reports from an effect this test's
-      // clock does not run until it ends.
+      // The drawn frame, in dp at this zoom and density, read from the frame's positioning (the
+      // metrics callback's effect doesn't run on this test clock).
       var frame = Rect.Zero
       setContent {
         DeviceViewCanvasHost(
@@ -151,9 +146,8 @@ class CanvasRuntimeScrollingColumnTest {
   }
 
   /**
-   * Steps frames until [condition] holds. The editor learns its size in a layout callback and
-   * reports it from an effect, and the runtime's surface grows a frame after that, so settling
-   * takes several frames that an idle test clock does not produce on its own.
+   * Steps frames until [condition] holds: the size is learned in a layout callback, reported from
+   * an effect, and the runtime surface grows a frame later.
    */
   private fun DesktopComposeUiTest.awaitFrames(
     description: String,

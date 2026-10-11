@@ -18,13 +18,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The history says what each change did, and which change the toolbar is aimed at.
- *
- * The editor has always had undo, and never had a way to find out what it would take back. Every
- * fact this panel shows was already being kept — an accepted command carries its own operations and
- * the before/after of everything it moved — so these cases are about the reading, not the record:
- * that the reading names the right change, in the right order, and moves its markers where undo and
- * redo actually move.
+ * The history says what each change did, and which change the toolbar is aimed at. The record
+ * already exists (each accepted command carries its operations and before/after values); these test
+ * the reading: right change, right order, markers moving as undo and redo do.
  */
 class EditorOperationHistoryTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -144,10 +140,8 @@ class EditorOperationHistoryTest {
   }
 
   /**
-   * Somebody else's change is in the list and is not yours to take back.
-   *
-   * The case the panel is for: undo walks this editor's own commands, so a collaborator's edit sits
-   * above the entry undo is aimed at, and without the list there is nothing saying so.
+   * A collaborator's change appears in the list above the undo target, and isn't yours to take
+   * back.
    */
   @Test
   fun `a collaborator's change is listed, and never the one undo is aimed at`() {
@@ -166,12 +160,7 @@ class EditorOperationHistoryTest {
     assertTrue(history[1].mine)
   }
 
-  /**
-   * The line a row shows, in characters the browser build has glyphs for.
-   *
-   * Pinned because the first render of this panel put an arrow between the two ends and the Wasm
-   * font drew a box: the rule is that this line stays inside what the editor can actually draw.
-   */
+  /** The row's line uses only characters the Wasm font has glyphs for (an arrow drew as a box). */
   @Test
   fun `a change reads as what it is now and what it was, without an arrow`() {
     assertEquals(

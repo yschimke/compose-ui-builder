@@ -8,17 +8,14 @@ import ee.schimke.composeai.uibuilder.protocol.UndoCommandV1
 
 /*
  * The pure half of design branches: retention pinning, the rebase a merge applies to each logged
- * command, and the record-to-port mapping. The half that needs the service's lock and state lives in
+ * command, and the record-to-port mapping. The half that needs the service's lock and state lives
+ * in
  * `PersistentUiBuilderService`. The model is `docs/design/UI_BUILDER_BRANCHES.md`.
  */
 
 /**
- * Commands a branch may accumulate before it has to be merged or abandoned.
- *
- * A merge replays every one of them under the service lock and lands each as a revision of the
- * parent, so this bounds both the merge's critical section and how much of the parent's revision
- * window one merge can consume. It also bounds the log's bytes, which unlike the history window are
- * never pruned. An agent exploring an alternative needs tens of commands, not thousands.
+ * Commands a branch may accumulate before it must be merged or abandoned. Bounds the merge's
+ * critical section, the parent revisions it consumes, and the never-pruned log's bytes.
  */
 internal const val MAXIMUM_BRANCH_COMMANDS: Int = 1_024
 
@@ -56,12 +53,9 @@ internal fun List<PositionStateV1>.retainedPositions(
 ): List<PositionStateV1> = takeLastPinned(count, pinned) { it.revision }
 
 /**
- * Why [submission] may not land on this branch, or null when it may.
- *
- * A closed branch takes no more edits — its log is what was merged or abandoned, and growing it
- * afterwards would make that record a lie. A whole-document change cannot be in a log at all: a
- * merge replays operations, and a restore or catalog upgrade is bound by hash to the branch's own
- * document, so it would be refused on the parent at best.
+ * Why [submission] may not land on this branch, or null. A closed branch takes no edits (its log is
+ * the record), and whole-document changes cannot be logged (they are hash-bound to the branch's own
+ * document).
  */
 internal fun PersistedDesignV1.branchWriteRefusal(
   branch: DesignBranchRecordV1,

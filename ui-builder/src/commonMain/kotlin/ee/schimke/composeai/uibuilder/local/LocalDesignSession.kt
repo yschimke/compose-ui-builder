@@ -24,10 +24,8 @@ sealed interface LocalPersistence {
   data class Compacted(val droppedSubmissions: Int) : LocalPersistence
 
   /**
-   * Not written. The edit is applied and displayed; the browser refused to keep it.
-   *
-   * Surfaced rather than thrown, because the document in front of the operator is now newer than
-   * the one in storage and that is a fact the editor should be able to say out loud.
+   * Not written: the edit is applied and displayed, but the browser refused to keep it. Surfaced so
+   * the editor can say storage is behind.
    */
   data class Refused(val reason: String) : LocalPersistence
 }
@@ -40,15 +38,9 @@ data class LocalSubmissionResult(
 
 /**
  * One locally stored design, open: the reducer state, the durable sequence, and the browser key.
+ * The same reducer the server runs, minus multi-author concerns (fan-out, delta windows, presence).
  *
- * This is the whole of what the server's design service does for a single-author design, minus the
- * parts that only mean something with more than one author — fan-out, retained delta windows,
- * presence. The reducer is byte-for-byte the same object the server runs, which is the point: a
- * design edited offline is not edited by a simpler set of rules, it is edited by the same ones with
- * the round trip removed.
- *
- * Not thread-safe, and does not need to be: the page is single-threaded and the editor's own drain
- * loop already serializes submissions.
+ * Not thread-safe; the page is single-threaded and the editor's drain loop serializes submissions.
  */
 class LocalDesignSession
 private constructor(
@@ -62,19 +54,16 @@ private constructor(
   private var state: CollaborationState,
 ) {
   /**
-   * Commands whose replay the reducer refused, which is a locally stored log that no longer agrees
-   * with itself. Non-empty means the design opened at the last revision that did replay.
+   * Commands whose replay the reducer refused; non-empty means the design opened at the last
+   * revision that replayed.
    */
   var replayRefusals: List<String> = emptyList()
     private set
 
   /**
-   * True once another tab of this browser has written this design since this one opened it.
-   *
-   * From then on this session's edits are applied and displayed but **not written**: each would
-   * replace the other tab's record wholesale — one key per design, no partial write — and the other
-   * tab's work would be gone without either tab having said so. Refusing is the side that loses
-   * nothing durable; the editor says why, and a reload picks up what the other tab wrote.
+   * True once another tab of this browser has written this design since this one opened it. From
+   * then on edits are displayed but **not written**, since each write replaces the whole record and
+   * would silently discard the other tab's work. A reload picks up the other tab's version.
    */
   var changedElsewhere: Boolean = false
     private set
@@ -88,8 +77,8 @@ private constructor(
     get() = state.document
 
   /**
-   * [document] as the protocol carries it, with the creation and last-change times this record
-   * holds — the fields the hosted service stamps, so a snapshot and its hash agree across both.
+   * [document] as the protocol carries it, with this record's creation and last-change times, so
+   * snapshots and hashes agree with the hosted service.
    */
   val protocolDocument: DesignDocumentV1
     get() =
@@ -104,11 +93,8 @@ private constructor(
     get() = record.updatedAtEpochMillis
 
   /**
-   * The durable sequence the editor's update cursor is handed.
-   *
-   * Counted rather than stored per entry: one accepted submission is one durable event, so the
-   * seed's sequence plus the log's length *is* the count, and a second copy of it could disagree
-   * with the log after a compaction.
+   * The durable sequence the editor's update cursor is handed: the seed's sequence plus the log's
+   * length (one accepted submission per event), never stored separately.
    */
   val sequence: Long
     get() = record.seedSequence + record.log.size
@@ -135,9 +121,8 @@ private constructor(
       // a retry answers the same way, and nothing durable changed, so nothing is written.
       return LocalSubmissionResult(outcome, sequence, LocalPersistence.Stored)
     }
-    // An idempotent replay is the same accepted command answered twice — the transport retried, or
-    // the operator's client did. Appending it again would grow the log by an event that changes
-    // nothing and would make the sequence claim a commit that never happened.
+    // An idempotent replay changes nothing; appending it would grow the log and advance the
+    // sequence falsely.
     if (outcome.idempotentReplay) {
       return LocalSubmissionResult(outcome, sequence, LocalPersistence.Stored)
     }
@@ -146,12 +131,8 @@ private constructor(
   }
 
   /**
-   * Writes the design, compacting first if the log has outgrown its budget and again if the browser
-   * refuses the write outright.
-   *
-   * Two chances rather than one because the budget is this code's guess at the quota and the quota
-   * is the browser's fact: an origin already full of somebody else's keys refuses a record well
-   * under the budget, and dropping the undo history is a better answer to that than losing the
+   * Writes the design, compacting first if the log exceeds its budget, and again if the browser
+   * refuses the write (the budget only guesses the quota); dropping undo history beats losing the
    * edit.
    */
   private fun persist(): LocalPersistence {
@@ -181,13 +162,8 @@ private constructor(
   }
 
   /**
-   * The design as it stands, with no history before it.
-   *
-   * The reducer state is deliberately *not* reset alongside: tombstones and accepted commands stay
-   * in memory for this page's lifetime, so undo keeps working in the open tab and only a reload
-   * settles the log down to what was written. Rebuilding the state here would take the undo stack
-   * away at the moment of a save, which is the surprising half of a compaction rather than the
-   * necessary half.
+   * The design as it stands, with no history. The in-memory reducer state is not reset, so undo
+   * keeps working in the open tab; only a reload sees the compacted log.
    */
   private fun compacted(): LocalDesignRecordV1 =
     localDesignRecord(
@@ -201,13 +177,9 @@ private constructor(
 
   companion object {
     /**
-     * The byte budget one design's record is allowed before its log is dropped.
-     *
-     * `localStorage` is around five megabytes per *origin* — shared with the theme keys, the pack
-     * settings and every other design in the browser — and it is charged in UTF-16 characters,
-     * which is what a JSON string's length counts. One megabyte leaves room for several designs
-     * beside each other and is far more log than an editing session produces: the Jetcaster fixture
-     * replays in a few hundred commands.
+     * The byte budget one design's record is allowed before its log is dropped. `localStorage` is
+     * ~5 MB per origin, shared, and counted in UTF-16 characters; 1 MB leaves room for several
+     * designs and far exceeds a session's log.
      */
     const val DEFAULT_COMPACTION_THRESHOLD_BYTES: Int = 1_000_000
 
@@ -217,12 +189,9 @@ private constructor(
         "pick up that tab's changes"
 
     /**
-     * Opens [record] by replaying its log onto its seed.
-     *
-     * A refused command stops the replay and is reported through [replayRefusals] rather than
-     * throwing: a log that no longer agrees with itself — a design written by a builder whose
-     * reducer differed, a record edited by hand — should open at the last revision that did apply,
-     * which is recoverable, instead of leaving the design unopenable, which is not.
+     * Opens [record] by replaying its log onto its seed. A refused command stops the replay and is
+     * reported in [replayRefusals], so the design opens at the last revision that applied instead
+     * of failing.
      */
     fun open(
       record: LocalDesignRecordV1,

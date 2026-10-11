@@ -12,11 +12,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * `m3/checkbox` and `m3/switch`, on and off, as the palette inserts and the inspector edits them.
- *
- * Four cells from two components: both arrive checked — that is their starter content — and the two
- * off states are one `checked` edit each, which is the same round trip an operator makes and the
- * one that would break if the property stopped reaching the renderer.
+ * `m3/checkbox` and `m3/switch`, on and off, as the palette inserts and the inspector edits them:
+ * both arrive checked, and each off state is one `checked` edit.
  */
 @Preview(widthDp = 160, heightDp = 56)
 @Composable
@@ -29,9 +26,8 @@ private val PREVIEWED_CONTROLS =
     "m3/slider" to emptyList<Pair<String, String>>(),
     "m3/progress-indicator" to emptyList(),
     "m3/progress-indicator" to listOf("variant" to "circular"),
-    // Circular for the indeterminate cell: at the frozen first frame Material's linear form has not
-    // yet moved its bar, so it draws an empty track — an honest still that reads as a broken
-    // component, where the circular one draws its starting arc.
+    // Circular for the indeterminate cell: at the frozen first frame Material's linear form draws
+    // an empty track.
     "m3/progress-indicator" to listOf("variant" to "circular", "indeterminate" to "true"),
   )
 
@@ -129,9 +125,7 @@ private val sliderProgressPreviewBase: UiBuilderDocument by lazy {
               id = cellId,
               componentId = "layout/box",
               properties = JsonObject(emptyMap()),
-              // A width per cell, because a slider and a linear indicator both fill whatever they
-              // are given: unconstrained, the first one takes the row and the rest of the evidence
-              // is off the frame.
+              // A width per cell, since sliders and linear indicators fill whatever they're given.
               modifiers =
                 JsonArray(
                   listOf(

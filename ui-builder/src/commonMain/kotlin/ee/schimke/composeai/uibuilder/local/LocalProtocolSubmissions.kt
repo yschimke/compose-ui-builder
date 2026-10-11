@@ -53,18 +53,13 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.jsonObject
 
 /**
- * `EditorSubmission.toProtocolSubmission` read backwards, for the session that lives in the page.
+ * `EditorSubmission.toProtocolSubmission` read backwards, for the in-page session: the editor
+ * speaks the v1 wire shape to its local service too, so one client (drain loop, revision
+ * bookkeeping, `UiBuilderLiveSessionSync`) serves both modes, and this turns wire mutations back
+ * into reducer commands.
  *
- * The editor speaks the released v1 wire shape to *its own* service in local mode, exactly as it
- * does to the server, so that one client — the drain loop, the revision bookkeeping, the deferral
- * rules in `UiBuilderLiveSessionSync` — serves both modes rather than being written twice. The
- * price of that reuse is this file: something has to turn the wire spelling back into the reducer's
- * own commands, because the reducer is what actually applies them.
- *
- * Deliberately partial. The wire carries mutations the editor has no way to emit — a catalog
- * upgrade — and the honest answer for those is a refusal naming the mutation, not a silent no-op
- * that would commit a revision doing nothing. When the editor learns to author one, it gains a case
- * here in the same change.
+ * Deliberately partial: mutations the editor can't emit (a catalog upgrade) are refused by name
+ * rather than silently committed as no-ops.
  */
 internal sealed interface LocalSubmissionMapping {
   data class Mapped(val record: LocalSubmissionRecordV1) : LocalSubmissionMapping
@@ -241,9 +236,8 @@ private fun DesignMutationV1.toDesignOperations(): MutationMapping =
           )
         )
       )
-    // One reducer operation per field: the wire batches a design's environment changes into one
-    // mutation, and the reducer versions them one field at a time so two authors editing different
-    // fields do not conflict.
+    // One reducer operation per field: the reducer versions environment fields individually so
+    // authors editing different fields don't conflict.
     is UpdateEnvironmentMutationV1 -> {
       val operations = mutableListOf<DesignOperation>()
       var refusal: String? = null
@@ -292,8 +286,8 @@ private fun EnvironmentChangeV1.toDesignOperation(): DesignOperation.SetEnvironm
   }
 
 /**
- * `beforeNodeId` is a wire anchor the editor never sends and the reducer's location has no field
- * for. Accepting it by dropping it would move a node somewhere other than where it was asked to go.
+ * `beforeNodeId` is a wire anchor the reducer's location can't express; dropping it would misplace
+ * the node.
  */
 private fun NodeLocationV1.reject(): MutationMapping.Rejected? =
   if (beforeNodeId != null) unsupported("a beforeNodeId location anchor") else null
@@ -304,8 +298,8 @@ private fun unsupported(what: String): MutationMapping.Rejected =
 private fun ParentSlotV1?.toReducer(): ParentSlot? = this?.let { ParentSlot(it.nodeId, it.slot) }
 
 /**
- * The wire carries revisions as `Long` and the reducer counts them as `Int`, which is the same
- * narrowing `DesignDocumentV1.toRendererDocument` requires of a document.
+ * Revisions are `Long` on the wire and `Int` in the reducer, the same narrowing
+ * `DesignDocumentV1.toRendererDocument` requires.
  */
 private fun Long.toRevision(): Int {
   require(this in 0..Int.MAX_VALUE.toLong()) { "design revision does not fit the reducer" }

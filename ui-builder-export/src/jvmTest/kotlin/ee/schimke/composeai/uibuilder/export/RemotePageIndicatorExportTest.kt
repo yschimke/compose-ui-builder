@@ -2,7 +2,6 @@ package ee.schimke.composeai.uibuilder.export
 
 import kotlin.test.Test
 import kotlin.test.assertContains
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
@@ -47,8 +46,8 @@ class RemotePageIndicatorExportTest {
     assertContains(source, "RemoteHorizontalPageIndicator(")
     assertContains(source, "rememberRemotePageIndicatorState(pageCount = 5, selectedPage = page)")
     assertContains(source, "selectedColor = RemoteMaterialTheme.colorScheme.primary")
-    // Not a parameter of the alpha12 indicator: never written, so the export compiles against it.
-    assertFalse("backgroundColor" in source, source)
+    // alpha13's indicator takes it, and the canvas draws it: the export keeps what the author set.
+    assertContains(source, "backgroundColor = Color(0x80000000).rc")
     assertContains(source, "val page = rememberMutableRemoteInt(1)")
     assertContains(
       source,

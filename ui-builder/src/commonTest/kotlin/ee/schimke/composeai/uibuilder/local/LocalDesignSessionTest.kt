@@ -9,12 +9,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * What survives a reload, and what a full browser costs.
- *
- * The point of storing a log rather than a document is that the undo stack is part of what a person
- * keeps; the point of compaction is that a log cannot grow forever inside a five-megabyte origin.
- * Both are asserted here rather than described, because both are invisible until the day they are
- * wrong.
+ * What survives a reload (the undo stack, via the stored log) and what a full browser costs
+ * (compaction inside a ~5 MB origin).
  */
 class LocalDesignSessionTest {
   private val storage = InMemoryLocalDesignStorage()
@@ -79,9 +75,7 @@ class LocalDesignSessionTest {
     val session = open(seeded())
     session.submit(LocalDesignFixtures.insert("first", baseRevision = 0))
 
-    // Undo is a compensation the reducer computes from the command it names, so it only means
-    // something to a state that has that command in its history. Replaying the log is what puts it
-    // there; a stored document alone could not answer this.
+    // Undo needs the command in the reducer's history, which only replaying the log provides.
     val reloaded = open(assertNotNull(store.read(LocalDesignFixtures.DESIGN_ID)))
     val undo =
       reloaded.submit(

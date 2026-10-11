@@ -30,29 +30,21 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * Material icons as data: the browser build's replacement for compiling them.
+ * Material icons as data: the browser build's replacement for compiling `material-icons-extended`
+ * (~11,000 builder functions). The JVM keeps the builders; the browser fetches the same vectors as
+ * JSON shards of [SHARD_SIZE] icons, written by `MaterialIconDataGenerator`.
  *
- * `material-icons-extended` is ~11,000 Kotlin functions, one `ImageVector` builder per icon per
- * style, and it was 58% of the editor's Wasm code: downloaded, compiled and held by every tab
- * whether or not a design drew a single icon. The JVM keeps those builders. The browser gets the
- * same vectors as JSON, written from them by `MaterialIconDataGenerator` and split into files of
- * [SHARD_SIZE] icons, so drawing one icon fetches one small file.
- *
- * The format is only as rich as Material icons need: paths with solid fills and strokes, alphas and
- * fill type, nested groups with their transforms and clip, and the vector's own size and mirroring.
- * [encode] refuses anything else (a gradient, a trimmed path, a tint), so an icon artifact that
- * starts using them fails the build rather than drawing wrong. `MaterialIconDataTest` round-trips
- * every icon and requires the result to equal the compiled `ImageVector`.
+ * The format covers what Material icons need (filled/stroked paths, alpha, fill type, nested groups
+ * with transforms and clips, size, mirroring); [encode] refuses anything else so the build fails
+ * rather than drawing wrong. `MaterialIconDataTest` round-trips every icon.
  */
 object MaterialIconData {
   /** Icons per file. */
   const val SHARD_SIZE: Int = 180
 
   /**
-   * Which file holds [key]: its position in [GoogleMaterialIcons], the catalog's own order (label,
-   * then key), which the build compiles into every platform and writes the files from. Neighbours
-   * in the picker are neighbours here, so its first page is one fetch; a hash would have scattered
-   * those 80 icons over nearly every file. Null for a key the catalog does not have.
+   * Which file holds [key]: its position in [GoogleMaterialIcons]'s order (label, then key), so the
+   * picker's first page is one fetch. Null for an unknown key.
    */
   fun shardOf(key: String): Int? =
     GoogleMaterialIconKeys.positionOf(key).takeIf { it >= 0 }?.let { it / SHARD_SIZE }

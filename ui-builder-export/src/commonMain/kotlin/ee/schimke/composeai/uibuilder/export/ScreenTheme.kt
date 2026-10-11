@@ -11,19 +11,13 @@ import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 import kotlinx.serialization.json.Json
 
 /**
- * The theme an `m3/surface` theme host sets, as the canvas reads it, for the server's Compose
- * export.
+ * The theme an `m3/surface` theme host sets, as the canvas reads it (see `UiBuilderRenderer`), for
+ * the server's Compose export: four colours over the light/dark baseline, a type scale, a corner
+ * radius for the shape roles, and [ThemeTypefaces].
  *
- * The canvas draws everything under the first top-level surface in that surface's theme: its four
- * colours over the light or dark baseline scheme, its type scale on every type role, its corner
- * radius on the three shape roles, and its [ThemeTypefaces] on their role groups (see
- * `UiBuilderRenderer`). Until this the export passed those properties to `Surface` as arguments,
- * which it does not declare, so every themed design refused.
- *
- * The export writes them as a `MaterialTheme` around the surface. [COMPONENT_ID] is the node that
- * call is, and [RECORD] the component record it resolves through: no catalog publishes one for
- * `MaterialTheme`, because it is not a design component, so the projection supplies its own and
- * every caller of `ScreenGenerator` resolves through `Outcome.Projected.resolvable`.
+ * Written as a `MaterialTheme` around the surface. [COMPONENT_ID] is that call's node and [RECORD]
+ * its component record, supplied by the projection since no catalog publishes `MaterialTheme`;
+ * callers resolve through `Outcome.Projected.resolvable`.
  */
 internal class ScreenTheme
 private constructor(
@@ -58,8 +52,7 @@ private constructor(
 
     /**
      * Every property a surface carries for its theme, spent on the theme rather than passed to
-     * `Surface`. A surface that is not the host carries them too and the canvas ignores them there,
-     * so the export does the same.
+     * `Surface`. Ignored on non-host surfaces, as on the canvas.
      */
     val PROPERTIES: Set<String> =
       setOf(PRIMARY, BACKGROUND, SURFACE, CONTENT, TYPE_SCALE, CORNER_RADIUS) +

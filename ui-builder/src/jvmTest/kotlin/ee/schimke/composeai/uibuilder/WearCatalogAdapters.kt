@@ -9,17 +9,9 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 
 /**
- * The canvas adapters the Wear catalog declares, for a test that composes the surface itself.
- *
- * The editor provides `LocalUiBuilderCanvasAdapters` from the served catalog, so a design's screen
- * root is drawn by whatever adapter its catalog names — `frame/round-screen` for `wear-m3`. A test
- * that calls `UiBuilderSurface` directly is the host, and a host that declares nothing gets
- * nothing: the frame is not drawn, because nothing said which drawing frames it.
- *
- * Read from the golden rather than restated, because the point of the adapter field is that the
- * catalog owns that fact: a test that wrote `"wear-m3/screen-scaffold" to "frame/round-screen"`
- * itself would keep passing after the catalog changed its mind, which is the failure the field
- * exists to remove.
+ * The canvas adapters the Wear catalog declares, for tests that compose `UiBuilderSurface`
+ * themselves (and so must provide `LocalUiBuilderCanvasAdapters`, e.g. `frame/round-screen` for the
+ * screen root). Read from the golden so tests follow the catalog.
  */
 private val wearCatalog by lazy {
   CapabilityCatalogParser.parse(

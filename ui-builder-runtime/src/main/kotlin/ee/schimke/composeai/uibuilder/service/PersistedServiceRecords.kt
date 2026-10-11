@@ -41,6 +41,20 @@ internal data class PersistedDesignV1(
    * the history window (a merge needs all of it) but by `MAXIMUM_BRANCH_COMMANDS`.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val branchLog: List<DesignSubmissionV1> = emptyList(),
+  /**
+   * The delegate that created this design for its owner (an agent acting under an approved grant),
+   * so that delegate may delete what it made — see [deletableBy]. Null for a design its owner made
+   * with their own credential, and for every design created before this was recorded.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val createdByDelegateActorId: String? = null,
+  /**
+   * When this design was deleted into the trash, or null for a live design. A trashed design keeps
+   * every part on disk so [UiBuilderServiceRequest.RestoreDesign] can bring it back whole, until
+   * [UiBuilderAdminPort.purgeExpiredTrash] removes it. See `UI_BUILDER_TRASH.md`.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val trashedAtEpochMillis: Long? = null,
+  /** Who deleted it into the trash; null for a live design. */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val trashedByActorId: String? = null,
 )
 
 @Serializable
@@ -144,16 +158,11 @@ internal data class AcceptedOperationRecordV1(
 )
 
 /**
- * What one accepted operation touched, without what it wrote.
+ * What one accepted operation touched, without what it wrote. Small enough to keep for the whole
+ * acceptance window (pruned against the oldest retained position snapshot), unlike
+ * `acceptedOperations`, whose byte budget made staleness checks miss conflicts.
  *
- * Staleness checks used to scan [PersistedDesignV1.acceptedOperations], which is pruned by a byte
- * budget ([UiBuilderServiceLimits.retainedUndoBytes]) while acceptance is bounded by retained
- * position snapshots. With large records the two windows diverged and stale submissions were
- * silently reported clean. Touch records are small enough to keep for the whole acceptance window,
- * and are pruned against the oldest retained position snapshot.
- *
- * Keys (see `touchKeys`) are `\u0000`-separated because every segment is caller-supplied and a
- * printable separator could be used to make two touches collide.
+ * Keys (see `touchKeys`) are `\u0000`-separated because every segment is caller-supplied.
  */
 @Serializable
 internal data class ConflictTouchRecordV1(

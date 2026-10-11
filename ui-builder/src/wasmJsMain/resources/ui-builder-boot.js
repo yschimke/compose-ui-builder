@@ -94,16 +94,12 @@
   };
 })();
 
-// The offline service worker (`ui-builder-sw.js`), registered only for a person who asked for it.
+// The offline service worker (`ui-builder-sw.js`), registered only on opt-in: when running as an
+// installed app, or with `?storage=local` or `?offline=1`, since it controls every builder page on
+// the origin (harnesses included). `?sw=off` removes it and its caches.
 //
-// A worker at the editor's root controls every builder page on this origin — including every
-// automated harness that drives one — so it is never registered on its own: only when the editor is
-// running as an installed app, or the address says `?storage=local` (a design kept in this browser,
-// whose point is to work offline) or `?offline=1`. `?sw=off` takes it away again, caches included.
-//
-// The script and the scope are resolved against the page, not hard-coded, so the same bundle works
-// behind compose-preview-server (`/ui-builder/…`, assets under a versioned prefix) and served as
-// plain files from anywhere. Registered after `load`, so it never competes with the Wasm download.
+// Script and scope resolve against the page, so the bundle works behind compose-preview-server and
+// as plain files. Registered after `load` so it doesn't compete with the Wasm download.
 (() => {
   try {
     if (!('serviceWorker' in navigator) || !globalThis.isSecureContext) return;
@@ -138,12 +134,9 @@
     return;
   }
 
-  // A builder host serving the editor at its ROOT (`<meta name="ui-builder-base-path" content="/">`,
-  // compose-preview-server's --ui-builder-host-root) keeps its pages at `/<design>`, but the worker
-  // is only served at `/ui-builder/ui-builder-sw.js`, and a worker cannot control pages outside the
-  // path it is served from. So root-mode pages run without it — online, as every page did before the
-  // worker existed — rather than registering a script that is not there. The `/ui-builder/` pages of
-  // that host still offer it, and `?sw=off` above still clears it.
+  // A root-mode host (`<meta name="ui-builder-base-path" content="/">`, compose-preview-server's
+  // --ui-builder-host-root) serves pages at `/<design>`, outside the worker's `/ui-builder/` path,
+  // so those pages run without it; its `/ui-builder/` pages still offer it.
   const basePath = (
     document.querySelector('meta[name="ui-builder-base-path"]')?.getAttribute('content') || ''
   ).trim();

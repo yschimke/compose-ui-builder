@@ -21,12 +21,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * `m3/text-field` and `m3/radio-button`: the form pair.
- *
- * The text field is the first component whose value the operator *types*, so the question it raises
- * is where that text goes. It goes to a declared state variable, the way a search input's does — a
- * field that kept its own `remember` would look like it worked on the canvas and would generate a
- * screen whose text nothing else can read.
+ * `m3/text-field` and `m3/radio-button`: the form pair. Typed text goes to a declared state
+ * variable (like a search input's), never a local `remember` the generated screen couldn't read.
  */
 class TextInputTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -38,12 +34,8 @@ class TextInputTest {
       .document
 
   /**
-   * A bindable property is still a property somebody types into.
-   *
-   * `["string", "object"]` is how the catalog spells "text, or a read of a state variable", and
-   * judging the control by the whole declaration made every such property `Unsupported` — the text
-   * a field shows could be bound but not typed. The boolean branch beside it had already learned
-   * this for `["boolean", "string"]`.
+   * A bindable property (`["string", "object"]`: text or a state read) is still typeable, as
+   * `["boolean", "string"]` already was.
    */
   @Test
   fun `the inspector can type into a value that is also bindable`() {
@@ -84,10 +76,8 @@ class TextInputTest {
   }
 
   /**
-   * The bound field, which is what the component is for.
-   *
-   * `searchQuery` is declared by the frozen Jetcaster design, so this is the real seam a form uses:
-   * the canvas reads the variable through the live state and the export writes back to it.
+   * The bound field: `searchQuery` (declared by the frozen Jetcaster design) is read live by the
+   * canvas and written back by the export.
    */
   @Test
   fun `a bound text field reads and writes the design's own variable`() {
@@ -105,10 +95,8 @@ class TextInputTest {
   }
 
   /**
-   * An unbound field writes nowhere, deliberately.
-   *
-   * The alternative is a local `remember` in the generated screen, which would type back at you and
-   * be a different screen from the one designed.
+   * An unbound field writes nowhere, rather than a local `remember` that would make a different
+   * screen.
    */
   @Test
   fun `an unbound text field emits a literal and an empty handler`() {

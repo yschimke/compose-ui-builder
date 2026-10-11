@@ -1,20 +1,16 @@
 // Opens the Wasm editor as an MCP App inside a fake MCP App host, and checks the file round trip.
 //
-// The host plays ChatGPT/Codex desktop's side of an OpenAI file-extension entrypoint
-// (compose-ui-builder#364): `ui/initialize`, `ui/notifications/tool-input` with a `FileInput`,
-// `resources/read` / `resources/subscribe` / `openai/resources/write` on an opaque
-// `host-resource://` URI with etags, and `ui/update-model-context`. It is the browser half of what
-// `McpAppDesignSessionTest` checks against a fake bridge on the JVM.
+// The host plays a ChatGPT/Codex desktop file-extension entrypoint: `ui/initialize`,
+// `ui/notifications/tool-input` with a `FileInput`, `resources/read` / `resources/subscribe` /
+// `openai/resources/write` on a `host-resource://` URI with etags, and `ui/update-model-context`.
+// The browser half of `McpAppDesignSessionTest`.
 //
-// Two passes (compose-ui-builder#374): the full editor, with the shell's layout placeholder filled
-// in as `full` the way compose-preview-server fills it from `uiBuilderMcpAppLayout`, for the file
-// round trip; then the focused canvas, with the placeholder left unfilled, for the default layout,
-// the switch to the full editor and back, and a comment sent from a node's menu (`ui/message`).
+// Two passes: the full editor (layout placeholder filled as `full`) for the file round trip; then
+// the focused canvas (placeholder unfilled) for the default layout, switching layouts, and a
+// node-menu comment (`ui/message`).
 //
-// Three origins, as a real host has them: the host page, the sandbox frame the MCP App shell runs
-// in, and the server origin serving the editor archive (named in the shell's `<base href>`, and
-// the resource's CSP `resourceDomains` / `connectDomains`). The archive origin answers with CORS
-// headers, because module scripts and the Wasm fetch are cross-origin from the frame.
+// Three origins as in a real host: host page, sandbox frame, and the archive origin (from the
+// shell's `<base href>` and the CSP domains), which answers with CORS headers.
 //
 // Usage: node mcp-app-host.mjs <wasmDist directory> <design .uid> [screenshot directory]
 
@@ -306,11 +302,8 @@ try {
   expect(state.writes.length === 0, `opening the design wrote it (${state.writes.length} writes)`);
   if (shots) await page.screenshot({ path: join(shots, 'mcp-app-opened.png') });
 
-  // Select a layer on the canvas: it becomes model context. The point is the fixture's button at
-  // this viewport, as the editor frames `state-actions.uid` (the root column cannot be deleted,
-  // which is why the step below needs a child). A different design or viewport needs another one.
-  // Waits for a context sent after the click, not for any context: opening the design can
-  // already have sent one for the root, and a wait that returned on that raced the click.
+  // Select a layer (the fixture's button at this viewport) so it becomes model context. Wait for a
+  // context sent after the click, since opening the design may already have sent one for the root.
   const box = await (await page.$('#app')).boundingBox();
   const openedContexts = state.contexts.length;
   await page.mouse.click(box.x + 180, box.y + 209);
@@ -330,12 +323,8 @@ try {
     'the model context had no assistant-only detail block',
   );
 
-  // Select its parent, the button, through the breadcrumb (the inspector has opened beside the
-  // canvas by now), and delete it: an edit, which autosaves with the etag it read. The label
-  // itself cannot go: a button's content slot must have one child.
-  // Waits for the selection to move before deleting, rather than for a fixed half second: on a
-  // slow runner the Delete landed while the label was still selected, and a button's only label
-  // cannot be deleted, so nothing was saved.
+  // Select the parent button via the breadcrumb and delete it (an edit that autosaves with the
+  // etag). Wait for the selection to move first: a button's only label cannot be deleted.
   const contextsBefore = state.contexts.length;
   await page.mouse.click(box.x + 160, box.y + 140);
   await page.waitForFunction(
@@ -373,14 +362,10 @@ try {
   failures.push(`not ready: ${error.message.split('\n')[0]}`);
 }
 
-// The focused canvas, in a panel the size of a chat host's: the placeholder left unfilled, as a
-// server that predates `uiBuilderMcpAppLayout` leaves it. Points are in the frame, for
-// `state-actions.uid` framed in a 680 × 900 panel: the centre of the button's label — a short text
-// node, whose resize handles, once it is selected, cover its centre — the rows of the menu a
-// right-click there opens, and the label's quick editor's Fill for width.
-//
-// The first right-click selects the label; every one after it lands on the selected label's
-// handles. Those used to swallow the secondary press, so no menu opened (compose-ui-builder#378).
+// The focused canvas in a chat-sized panel, placeholder unfilled. Points are frame coordinates for
+// `state-actions.uid` in a 680 × 900 panel: the button label's centre, the context menu's rows, and
+// the label's quick editor's Fill for width. Later right-clicks land on the selected label's
+// handles.
 const FOCUSED = {
   label: [192, 90],
   quickEdit: [271, 121],

@@ -15,23 +15,13 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Which record the code pane and the problems panel judge a design by.
+ * Which record the code pane and the problems panel judge a design by. The embedded `m3-catalog`
+ * record (from `:ui-builder:embedComponentRecord`) is the wrong one for a **published** catalog,
+ * whose shelf comes from a host-fetched record; the host now serves that record and the editor
+ * reads it (see compose-preview-server#714).
  *
- * The editor had exactly one: `m3-catalog`'s authored record, embedded in this module at build time
- * by `:ui-builder:embedComponentRecord`, whatever catalog the design was pinned to. Against a
- * **published** catalog that is not an incomplete record, it is the wrong one — the shelf is
- * composed from a record fetched by the host, and the components it adds are not in this build at
- * all. So the pane answered "no component `m3/…` in this catalog" for components the server's
- * export wrote call sites for, which is the browser/server disagreement `ScreenExportGate` was
- * extracted to prevent (compose-preview-server#714).
- *
- * The host now serves that record and the editor reads it. These two tests are the wiring: the same
- * catalog and the same design, asked once with the served record and once without.
- *
- * The **parity** claim — that the two lanes then give the same answer for every component of a real
- * published shelf — is `PublishedGeneratedM3CatalogEquivalenceTest`'s, where both lanes and the
- * generated m3 fixtures are on one classpath. This is the half that fails if nothing hands the
- * record to the reducer, which is the defect it is pinning.
+ * These two tests are the wiring: same catalog and design, with and without the served record. Full
+ * lane parity over a real published shelf is `PublishedGeneratedM3CatalogEquivalenceTest`'s.
  */
 class EditorReadsTheServedRecordTest {
 
@@ -47,11 +37,9 @@ class EditorReadsTheServedRecordTest {
 
   @Test
   fun `without it the pane still says what it always said`() {
-    // The same catalog and the same design, judged by the record embedded in this build. It has no
-    // `m3/badge`, and the sentence below is the one a designer read while the export worked — kept
-    // as the assertion rather than deleted, because "nothing is served" is a real state (a host
-    // with no record for this catalog, an older host with no such route, a page that could not
-    // reach it) and falling back to it must stay a refusal rather than become an invented call.
+    // Without a served record (no record for this catalog, an older host, or unreachable), the
+    // embedded record lacks `m3/badge`, and the fallback must stay a refusal rather than invent a
+    // call.
     val reducer = UiBuilderEditorReducer(catalog, catalogRecord = null)
 
     val generated = reducer.generatedCode(design)
@@ -91,11 +79,9 @@ class EditorReadsTheServedRecordTest {
     )
 
   /**
-   * What the host serves for that catalog: its own record, already wearing the builder ids the
-   * published file gave its components (`ScreenGeneratorComposeExportExecutor.exportRecord`).
-   *
-   * Decoded from JSON rather than constructed, so this test describes the bytes that cross the wire
-   * and not a Kotlin constructor it happens to share with the producer.
+   * What the host serves for that catalog: its own record, already using the builder ids
+   * (`ScreenGeneratorComposeExportExecutor.exportRecord`). Decoded from JSON so the test describes
+   * the wire bytes.
    */
   private val servedRecord: ComponentRecordFile = Json {
     ignoreUnknownKeys = true

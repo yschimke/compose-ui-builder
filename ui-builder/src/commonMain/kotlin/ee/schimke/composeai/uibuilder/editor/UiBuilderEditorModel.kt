@@ -121,6 +121,26 @@ data class EditorCatalogItem(
 )
 
 /**
+ * One row of the `/` quick insert: a component, or one of its variants when the search named it.
+ * Enter sends what the palette's Add sends for the same row, [variant] included.
+ */
+data class QuickInsertEntry(
+  val item: EditorCatalogItem,
+  val variant: EditorCatalogVariant? = null,
+) {
+  val componentId: String
+    get() = item.componentId
+
+  /** "Card", or "Card · Outlined" for a variant row. */
+  val label: String
+    get() = variant?.let { "${item.displayName} \u00b7 ${it.label}" } ?: item.displayName
+
+  /** Unique within one list: a component and its variants share [componentId]. */
+  val key: String
+    get() = variant?.let { "$componentId#${it.value}" } ?: componentId
+}
+
+/**
  * One variant of a component: a value for the single property its catalog entry nominates (e.g.
  * `m3/card` filled / elevated / outlined).
  */
@@ -143,17 +163,31 @@ data class EditorCatalogVariant(
  * `LazyColumn` can scroll it.
  */
 sealed interface EditorCatalogRow {
-  /** A catalog family — "Actions", "Selection" — and how many components are under it. */
-  data class Group(val name: String, val count: Int, val expanded: Boolean) : EditorCatalogRow
+  /**
+   * A catalog family — "Actions", "Selection" — and how many components are under it.
+   *
+   * [id] is what the row is keyed and collapsed by, and is [name] for a catalog's own shelf. A
+   * shelf the editor adds itself gives an id no catalog can name, so a catalog that happens to call
+   * one of its shelves by the same label gets a second heading rather than a duplicate key and a
+   * shared collapsed state.
+   */
+  data class Group(
+    val name: String,
+    val count: Int,
+    val expanded: Boolean,
+    val id: String = name,
+  ) : EditorCatalogRow
 
   /**
    * A component's row. [pinned] is part of the row's identity: the "Pinned" shelf copy and the
-   * shelf copy are the same component twice, and a list keyed by id alone would drop one.
+   * shelf copy are the same component twice, and a list keyed by id alone would drop one. [recent]
+   * is the same for the "Recently used" copy.
    */
   data class Component(
     val item: EditorCatalogItem,
     val expanded: Boolean,
     val pinned: Boolean = false,
+    val recent: Boolean = false,
   ) : EditorCatalogRow
 
   /**
@@ -165,6 +199,8 @@ sealed interface EditorCatalogRow {
     val componentName: String,
     /** Which copy of the component this variant hangs under — see [Component.pinned]. */
     val pinned: Boolean = false,
+    /** Whether it hangs under the "Recently used" copy — see [Component.recent]. */
+    val recent: Boolean = false,
   ) : EditorCatalogRow
 }
 
@@ -460,6 +496,12 @@ data class UiBuilderEditorState(
    * by the host.
    */
   val pinnedComponents: Set<String>? = null,
+  /**
+   * The catalog components most recently inserted or dropped, most recent first and each at most
+   * once — see [withRecentComponent]. Session-scoped editor state: unlike the pins it is not a
+   * choice the reader made, so nothing asks the host to remember it.
+   */
+  val recentComponents: List<String> = emptyList(),
   /**
    * The last component-library drift read for this design's imports; empty means not asked. Kept on
    * the state because [problems] must stay a pure function of the document.

@@ -20,12 +20,9 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.skia.Image
 
 /**
- * Remote, one-shot native render for a locally held design.
- *
- * The server's native-preview route deliberately renders saved designs only. To keep the Desktop
- * application's local workspace local, this client creates a short-lived private design, renders
- * it, then deletes it. Authentication is requested only on the first Preview action, through the
- * server's device-grant page; the token never appears in a command line, URL, or persisted file.
+ * Remote, one-shot native render for a locally held design: creates a short-lived private design,
+ * renders it, then deletes it (the server renders saved designs only). Authentication happens on
+ * first Preview via the device-grant page; the token never appears in a command line, URL or file.
  */
 internal class RemotePreviewClient(
   server: String,

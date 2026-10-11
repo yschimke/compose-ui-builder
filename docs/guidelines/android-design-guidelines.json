@@ -1,6 +1,6 @@
 {
   "schema": "compose-ui-builder/design-guidelines/v1",
-  "version": 9,
+  "version": 10,
   "about": "Design rules a model checks a UI-builder design against. Each rule quotes the guidance it comes from and links its source: a page on developer.android.com or m3.material.io, the Android Knowledge Base for agent skills, a component set in the Wear OS Material 3 Figma kit, or the androidx source whose KDoc it quotes. `check` is a yes/no question where YES means the design follows the rule. `kind` is `structure` when the design tree is enough evidence, `visual` when it needs a picture of the design. Candidates are extracted with scripts/guidelines/extract-guidance.mjs and reviewed by a person before they are added here. Visual rules say which picture to judge: the device picture (the first frame on the watch) or the unrolled picture (the whole scrolling content, scrolled to the end so a revealed edge button shows). `surfaces` (optional) narrows a rule to `screen` or `widget` designs on its platform; a rule without it applies to every surface.",
   "rules": [
     {
@@ -1005,10 +1005,10 @@
       "surfaces": [
         "screen"
       ],
-      "kind": "structure",
+      "kind": "visual",
       "severity": "info",
       "guidance": "Button: Primary label (1-3 lines); Secondary label (1-2 lines). (Text properties of the Button component set in the Wear OS Material 3 Design Kit.)",
-      "check": "Does each wear-m3/button keep its label to 3 lines or fewer and its secondaryLabel to 2 lines or fewer at the device width? Answer not_applicable when there are no buttons.",
+      "check": "Does each wear-m3/button keep its label to 3 lines or fewer and its secondaryLabel to 2 lines or fewer as the pictures draw them? Answer not_applicable when there are no buttons.",
       "source": "https://www.figma.com/design/B24oss2tTeXAFykyeyusz0/?node-id=35239-93088"
     },
     {
@@ -1019,10 +1019,10 @@
       "surfaces": [
         "screen"
       ],
-      "kind": "structure",
+      "kind": "visual",
       "severity": "info",
       "guidance": "Card: Title text (1-2 lines). (A text property of the Card component set in the Wear OS Material 3 Design Kit.)",
-      "check": "Does each wear-m3/card keep its title to 2 lines or fewer at the device width? The body's budget is wear.card.text-budget's. Answer not_applicable when there are no cards.",
+      "check": "Does each wear-m3/card keep its title to 2 lines or fewer as the pictures draw it? The body's budget is wear.card.text-budget's. Answer not_applicable when there are no cards.",
       "source": "https://www.figma.com/design/B24oss2tTeXAFykyeyusz0/?node-id=38437-5746"
     },
     {

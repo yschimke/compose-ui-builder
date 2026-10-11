@@ -9,21 +9,13 @@ import kotlinx.serialization.json.contentOrNull
 /**
  * Two-way binding of a control's value property to a state variable.
  *
- * A control that reports its own change — `Checkbox(checked, onCheckedChange)`, `Switch`, Wear's
- * `CheckboxButton` and `SwitchButton` — is two-way bound when its value property reads a variable
- * with a bare `{"type": "state", "variable": …}` wrapper: the change callback writes the reported
- * value back to that variable, then runs the event's authored actions. That is the shape a Slider
- * and a TextField already had (`onValueChange = { x = it }`); without it a bound checkbox drew the
- * variable but never changed it unless its author also added a `toggle`.
+ * A control that reports its own change (`Checkbox`, `Switch`, Wear's `CheckboxButton` /
+ * `SwitchButton`) whose value property is a bare `{"type": "state", "variable": …}` read writes the
+ * reported value back, then runs the event's actions — like `onValueChange = { x = it }`.
  *
- * Explicit actions win. When the event's own actions already write the bound variable — the
- * `toggle` an author added by hand before this existed, or a `set` that forces a value — the write
- * back is skipped, so the variable is written once, by the action the author chose, rather than
- * twice in an order the reader has to work out. A `stateEquals` read is a comparison, not a
- * variable the control holds, and is never written back.
- *
- * One rule for every lane — the canvas SDK, the Compose, Wear and Remote Compose exporters — so the
- * preview and the generated code cannot disagree about what a tap does.
+ * Explicit actions win: when they already write the bound variable (a `toggle` or `set`), the write
+ * back is skipped. `stateEquals` reads are never written back. One rule for the canvas SDK and the
+ * Compose, Wear and Remote exporters.
  */
 object TwoWayStateBinding {
   /** The action kinds that write the variable they name. */
@@ -49,11 +41,8 @@ object TwoWayStateBinding {
     }
 
   /**
-   * The event a control's own change runs, named as every lane names an event: the callback
-   * parameter without `on`. A checked control's `onCheckedChange` is `checkedChange`; a Wear or
-   * Remote radio row's `onSelect` is `select`; Remote's split radio row's `onSelectionClick` is
-   * `selectionClick`. Null for a component with no such callback, whose interaction stays `click`
-   * (`onClick`) — an m3 `RadioButton` among them.
+   * The event a control's own change runs: the callback name without `on` (`checkedChange`,
+   * `select`, `selectionClick`). Null when there is no such callback, so interaction stays `click`.
    */
   fun changeEvent(componentId: String, properties: Set<String>): String? =
     when {
@@ -62,11 +51,8 @@ object TwoWayStateBinding {
     }
 
   /**
-   * The event a change of [property] runs on a node carrying [eventBindings].
-   *
-   * Its own change event when the node binds it; otherwise `click` when the node binds that, which
-   * is how designs authored before the names were made consistent wired a checkbox; otherwise the
-   * change event, so a newly authored action lands under the consistent name.
+   * The event a change of [property] runs: its own change event when bound; else `click` when bound
+   * (older designs); else the change event, for new actions.
    */
   fun eventFor(property: String, eventBindings: Map<String, JsonElement>): String {
     val candidates = PROPERTY_EVENTS[property].orEmpty()

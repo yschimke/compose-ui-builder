@@ -13,6 +13,7 @@ import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.protocol.CatalogCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.ComponentCapabilityV1
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
+import ee.schimke.composeai.uibuilder.protocol.PropertyCapabilityV1
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -20,28 +21,20 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * What would change for one catalog if it were catalog-owned, measured against what it publishes
- * right now: the check a deployment runs in **shadow** for a catalog it is considering flipping,
- * and the one `CatalogCutoverReadinessTest` runs against captured fixtures. One answer for both, so
- * a box's shadow report and the readiness ledger cannot disagree about what "ready" means.
+ * now: the shadow check a deployment runs before flipping, and what `CatalogCutoverReadinessTest`
+ * runs on fixtures, so both agree on "ready".
  *
- * Nothing here changes what is served. [ownedFindings] builds a private executor that owns just
- * this catalog and asks it the questions the flag would make real; [catalogDifferences] compares
- * the Kotlin catalog this build would otherwise synthesise with the published one, which is what
- * deleting that Kotlin would lose. Each returns one line per finding, `<catalog>[/<template>]:
- * <finding>`, and an empty list is the clean answer.
+ * Nothing here changes what is served. [ownedFindings] asks a private executor owning just this
+ * catalog; [catalogDifferences] compares the synthesised Kotlin catalog with the published one.
+ * Each returns `<catalog>[/<template>]: <finding>` lines; empty is clean.
  */
 public object CatalogCutoverShadow {
 
   /**
-   * The whole shadow answer for [catalogId]: [ownedFindings], and what an editor would see change
-   * if the catalog were owned and the Kotlin catalog deleted.
-   *
-   * The comparison is between the two catalogs an editor is actually *served*: the Kotlin catalog
-   * as this build serves it today (with the builder vocabulary and font settings it adds), and the
-   * published one as served owned. Comparing the raw published file instead would report the
-   * builder's own layout components as lost, which no flip loses. [Report.differences] is null for
-   * a catalog this build synthesises nothing for, which has nothing to lose, and for one that
-   * cannot be owned at all because it declares no platform.
+   * The whole shadow answer for [catalogId]: [ownedFindings], and what an editor would see change.
+   * Compares the two catalogs as actually served (builder vocabulary and font settings included),
+   * so builder-owned components are not reported lost. [Report.differences] is null when nothing is
+   * synthesised or the catalog declares no platform.
    */
   public fun report(
     catalogId: String,
@@ -81,13 +74,8 @@ public object CatalogCutoverShadow {
   }
 
   /**
-   * [report]'s answer. [ready] when there are no [findings] AND no [losses]: owning the catalog
-   * must neither refuse something it serves now nor take away something an editor can do today. A
-   * difference that only adds — a component, trait, modifier or property the published catalog has
-   * and the Kotlin one does not, or a constraint it relaxes — does not block it.
-   *
-   * [losses] is the subset of [differences] that takes something away; null exactly when
-   * [differences] is.
+   * [report]'s answer. [ready] when there are no [findings] and no [losses]; purely additive or
+   * relaxing differences do not block. [losses] is null exactly when [differences] is.
    */
   public class Report
   internal constructor(
@@ -103,11 +91,9 @@ public object CatalogCutoverShadow {
   /**
    * One line of [catalogDifferences], with whether it takes something away from an editor.
    *
-   * A loss is: a component only the Kotlin catalog has; a changed role; a trait, modifier, property
-   * or slot (or a slot's accepted role or trait) the published catalog drops; a property type that
-   * drops an alternative (`["boolean","object"] -> "boolean"` loses binding to state); a property
-   * that becomes required; allowed values that narrow; a slot cardinality that narrows. A line that
-   * both loses and gains is a loss.
+   * Losses: a Kotlin-only component; a changed role; a dropped trait, modifier, property, slot, or
+   * accepted slot role/trait; a property type losing an alternative; a newly required property;
+   * narrowed allowed values or cardinality. A line that both loses and gains is a loss.
    */
   public class Difference internal constructor(public val text: String, public val loss: Boolean) {
     override fun toString(): String = (if (loss) "loss: " else "") + text
@@ -133,15 +119,13 @@ public object CatalogCutoverShadow {
   /**
    * Everything that is not clean about serving [catalogId] owned, from [published] alone.
    *
-   * - **Seeds:** the templates it publishes ([templates]; null or empty is a finding), each of
-   *   which must validate against the catalog it is served as.
-   * - **Export:** its declared `composeSourceExport` route, which must be one this build ships, and
-   *   every seed must export through it: a launcher widget through the launcher emitter at the
-   *   catalog's own sizes, a record-free platform through its emitter, anything else through the
-   *   generic record export against [exportRecord].
+   * - Seeds: its published [templates] (none is a finding), each validating against the catalog.
+   * - Export: its declared `composeSourceExport` route must ship in this build, and every seed must
+   *   export through it (launcher emitter, record-free emitter, or record export against
+   *   [exportRecord]).
    *
-   * [fixture] is the operations fixture the deployment seeds new designs from; [packComponents] are
-   * the composed catalog's records, which the record-free emitters resolve call sites from.
+   * [fixture] is the operations fixture new designs seed from; [packComponents] are the composed
+   * catalog's records for the record-free emitters.
    */
   public fun ownedFindings(
     catalogId: String,
@@ -242,20 +226,13 @@ public object CatalogCutoverShadow {
   }
 
   /**
-   * What the published catalog does not say that the Kotlin catalog this build synthesises does,
-   * and the reverse: the cost of deleting the Kotlin, component by component.
+   * The differences between the synthesised Kotlin catalog and the published one: the cost of
+   * deleting the Kotlin, component by component.
    *
-   * Compared are the components each offers, and for a component both offer, its role, traits,
-   * properties (name, JSON type, required, allowed values) and slots (name, cardinality, accepted
-   * roles and traits). Display names, notes and canvas adapters are presentation and are left out:
-   * they differ by design and a report full of them would hide the ones that matter.
-   *
-   * What the published catalog's `statusSemantics.supersedes` carries across is not lost: a saved
-   * design is moved through it ([planCatalogUpgrade]) rather than stranded. A Kotlin-only component
-   * it supersedes, every successor of which the published catalog offers, is reported as superseded
-   * and not as a loss; and a property it migrates — the `variants.property` that chooses the
-   * successor, a property renamed onto one the successor declares, or one restated as a modifier —
-   * is reported as migrated rather than lost.
+   * Compares components, roles, traits, properties (name, JSON type, required, allowed values) and
+   * slots (name, cardinality, accepted roles/traits); presentation fields are ignored. What the
+   * published `statusSemantics.supersedes` carries across ([planCatalogUpgrade]) is reported as
+   * superseded or migrated, not lost.
    */
   public fun catalogDifferences(
     synthesised: CatalogCapabilityV1,
@@ -270,12 +247,14 @@ public object CatalogCutoverShadow {
     val id = published.benchmark.catalogSystemId
     val kotlin = synthesised.components.associateBy { it.componentId }
     val owned = published.components.associateBy { it.componentId }
-    // A catalog's own ids already carry its prefix (`wear-m3/button`); the builder's do not
-    // (`layout/column`), and those are the ones that need it to say which catalog lost them.
+    // A catalog's own ids already name it (`wear-m3/button`, and `m3/button` or `a2ui/Column`,
+    // whose namespace is not the system id); the builder's do not (`layout/column`), and those are
+    // the ones that need it to say which catalog lost them.
     fun line(componentId: String, finding: Finding): Difference =
       Difference(
-        if (componentId.startsWith("$id/")) "$componentId: ${finding.text}"
-        else "$id/$componentId: ${finding.text}",
+        if (BUILDER_NAMESPACES.any { componentId.startsWith(it) })
+          "$id/$componentId: ${finding.text}"
+        else "$componentId: ${finding.text}",
         finding.loss,
       )
     val successors = successors(published)
@@ -328,14 +307,18 @@ public object CatalogCutoverShadow {
   private fun migratedProperties(
     successor: ComponentSuccessor,
     owned: Map<String, ComponentCapabilityV1>,
-  ): Set<String> {
+  ): Map<String, String?> {
     val declared = owned[successor.componentId]?.properties?.map { it.name }?.toSet().orEmpty()
-    return buildSet {
+    return buildMap {
       successor.variants?.let { variants ->
-        if (variants.components.values.all { it in owned }) add(variants.property)
+        if (variants.components.values.all { it in owned }) put(variants.property, null)
       }
-      successor.properties.forEach { (from, to) -> if (to in declared) add(from) }
-      addAll(successor.modifiers.keys)
+      // A rename keeps where it goes, so its value's constraints are compared with the
+      // destination's: [planCatalogUpgrade] copies the value across unchanged.
+      successor.properties.forEach { (from, to) -> if (to in declared) put(from, to) }
+      // Only a modifier [planCatalogUpgrade] can write: any other blocks the upgrade
+      // (`UNSUPPORTED_MODIFIER`), so the property is lost, not migrated.
+      successor.modifiers.forEach { (from, to) -> if (canWriteUpgradeModifier(to)) put(from, null) }
     }
   }
 
@@ -349,7 +332,7 @@ public object CatalogCutoverShadow {
   private fun componentDifferences(
     kotlin: ComponentCapabilityV1,
     published: ComponentCapabilityV1,
-    migrated: Set<String> = emptySet(),
+    migrated: Map<String, String?> = emptyMap(),
   ): List<Finding> = buildList {
     // A role decides where the component may be placed and what may be placed in it, so a changed
     // one can strand designs either way: counted as a loss rather than guessed at.
@@ -365,7 +348,7 @@ public object CatalogCutoverShadow {
       ?.let(::add)
     val kotlinProperties = kotlin.properties.associateBy { it.name }
     val publishedProperties = published.properties.associateBy { it.name }
-    val carried = (kotlinProperties.keys - publishedProperties.keys) intersect migrated
+    val carried = (kotlinProperties.keys - publishedProperties.keys) intersect migrated.keys
     differ("properties", kotlinProperties.keys - carried, publishedProperties.keys)?.let(::add)
     if (carried.isNotEmpty()) {
       add(
@@ -376,32 +359,20 @@ public object CatalogCutoverShadow {
       )
     }
     (kotlinProperties.keys intersect publishedProperties.keys).sorted().forEach { name ->
-      val a = kotlinProperties.getValue(name)
-      val b = publishedProperties.getValue(name)
-      if (a.jsonType != b.jsonType) {
-        add(
-          Finding(
-            "property $name type ${a.jsonType} -> ${b.jsonType}",
-            loss = !jsonTypes(b.jsonType).containsAll(jsonTypes(a.jsonType)),
-          )
+      addAll(
+        propertyDifferences(
+          name,
+          kotlinProperties.getValue(name),
+          publishedProperties.getValue(name),
         )
-      }
-      if (a.required != b.required) {
-        add(Finding("property $name required ${a.required} -> ${b.required}", loss = b.required))
-      }
-      if (a.allowedValues.toSet() != b.allowedValues.toSet()) {
-        // An empty list allows anything, so narrowing to any list is a loss and widening to none
-        // is not.
-        val narrows =
-          b.allowedValues.isNotEmpty() &&
-            (a.allowedValues.isEmpty() || !b.allowedValues.containsAll(a.allowedValues))
-        add(
-          Finding(
-            "property $name allowed values ${a.allowedValues} -> ${b.allowedValues}",
-            loss = narrows,
-          )
-        )
-      }
+      )
+    }
+    // A renamed property's value is copied onto its destination unchanged, so the destination has
+    // to accept everything the old property did.
+    carried.sorted().forEach { from ->
+      val to = migrated[from] ?: return@forEach
+      val destination = publishedProperties[to] ?: return@forEach
+      addAll(propertyDifferences("$from -> $to", kotlinProperties.getValue(from), destination))
     }
     val kotlinSlots = kotlin.slots.associateBy { it.name }
     val publishedSlots = published.slots.associateBy { it.name }
@@ -423,10 +394,65 @@ public object CatalogCutoverShadow {
           )
         )
       }
-      differ("slot $name accepted roles", a.acceptedRoles.toSet(), b.acceptedRoles.toSet())
+      slotFilter("slot $name accepted roles", a.acceptedRoles.toSet(), b.acceptedRoles.toSet())
         ?.let(::add)
-      differ("slot $name accepted traits", a.acceptedTraits.toSet(), b.acceptedTraits.toSet())
+      slotFilter("slot $name accepted traits", a.acceptedTraits.toSet(), b.acceptedTraits.toSet())
         ?.let(::add)
+    }
+  }
+
+  /** How one property's constraints moved, [label] naming it (or the rename that carries it). */
+  private fun propertyDifferences(
+    label: String,
+    a: PropertyCapabilityV1,
+    b: PropertyCapabilityV1,
+  ): List<Finding> = buildList {
+    if (a.jsonType != b.jsonType) {
+      add(
+        Finding(
+          "property $label type ${a.jsonType} -> ${b.jsonType}",
+          loss = !admitsAll(jsonTypes(b.jsonType), jsonTypes(a.jsonType)),
+        )
+      )
+    }
+    if (a.required != b.required) {
+      add(Finding("property $label required ${a.required} -> ${b.required}", loss = b.required))
+    }
+    if (a.allowedValues.toSet() != b.allowedValues.toSet()) {
+      // An empty list allows anything, so narrowing to any list is a loss and widening to none
+      // is not.
+      val narrows =
+        b.allowedValues.isNotEmpty() &&
+          (a.allowedValues.isEmpty() || !b.allowedValues.containsAll(a.allowedValues))
+      add(
+        Finding(
+          "property $label allowed values ${a.allowedValues} -> ${b.allowedValues}",
+          loss = narrows,
+        )
+      )
+    }
+  }
+
+  /**
+   * Whether the JSON types [published] admits every value [kotlin] did. `integer` is a subtype of
+   * `number` — the runtime's `number` accepts an integral value — so widening one to the other
+   * loses nothing.
+   */
+  private fun admitsAll(published: Set<String>, kotlin: Set<String>): Boolean = kotlin.all {
+    it in published || (it == "integer" && "number" in published)
+  }
+
+  /**
+   * [differ] for a slot's accepted roles or traits, where an EMPTY list accepts everything
+   * (`slotAccepts`): adding a filter to an empty one narrows the slot, and dropping every filter
+   * widens it, whatever the strings say.
+   */
+  private fun slotFilter(what: String, kotlin: Set<String>, published: Set<String>): Finding? {
+    val finding = differ(what, kotlin, published) ?: return null
+    return when {
+      kotlin.isEmpty() -> Finding(finding.text, loss = true)
+      published.isEmpty() -> Finding(finding.text, loss = false)
+      else -> finding
     }
   }
 

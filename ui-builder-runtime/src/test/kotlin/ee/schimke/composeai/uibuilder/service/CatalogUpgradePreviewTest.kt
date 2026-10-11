@@ -19,13 +19,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Moving a design off the two Material 3 ids the synthesised `remote-m3` catalog used to borrow.
- *
- * Six designs on `preview.coo.ee` name `m3/text` or `m3/surface` against a published catalog that
- * declares neither, and an unknown component is fatal where an undeclared property is not — there
- * is nothing to draw. The preview says what moving them onto the vocabulary the catalog does
- * publish would cost, BEFORE anything is moved: `remote-m3/remote-text` for the text, a box with a
- * background for the surface, and a named list of what neither can carry.
+ * Moving a design off the two Material 3 ids the synthesised `remote-m3` catalog used to borrow
+ * (`m3/text`, `m3/surface`), which the published catalog does not declare. The preview reports the
+ * cost before anything moves: `remote-m3/remote-text`, a box with a background, and what neither
+ * can carry.
  */
 class CatalogUpgradePreviewTest {
 
@@ -40,10 +37,8 @@ class CatalogUpgradePreviewTest {
         .withNode(
           node("label", "m3/text", mapOf("text" to "Discover Weekly", "color" to "#FFFFFF"))
         )
-        // A size is a NUMBER on both sides -- `fontSizeSp` is `jsonType: number` on the borrowed
-        // component and `fontSize` is one on the published one, because
-        // `ComponentRecordPacks.jsonTypeOf` maps `RemoteTextUnit` that way. Authoring it as a
-        // string would be a design production would refuse before this plan ever ran.
+        // A size is a number on both sides (`fontSizeSp` and `fontSize`, via
+        // `ComponentRecordPacks.jsonTypeOf`).
         .withProperty("label", "fontSizeSp", DecimalValueV1(14.0))
 
     val outcome = planCatalogUpgrade(document, remoteM3(), TARGET)
@@ -263,8 +258,8 @@ class CatalogUpgradePreviewTest {
   }
 
   /**
-   * The case the whole feature is for, and the one a service-level test has to cover: the designs
-   * that need a preview are precisely the ones already refused everywhere else.
+   * The designs that need a preview are exactly the ones refused everywhere else, so this is
+   * covered at the service level.
    */
   @Test
   fun `a quarantined design can still be asked what moving it would cost`() {
@@ -433,13 +428,9 @@ class CatalogUpgradePreviewTest {
   // ── harness ───────────────────────────────────────────────────────────────────────────────────
 
   /**
-   * The published catalog's vocabulary, narrowed to what these cases turn on.
-   *
-   * The `supersedes` block is the fixture's own, and that is the point: the runtime states no
-   * catalog's successors (`ui-builder-catalog-literals.sh`), so the mapping under test is the one a
-   * catalog publishes. These two entries are the ones `remote-catalog/ui-builder.policy.json` in
-   * yschimke/wear-m3-catalog is to declare — `RemoteText` for the borrowed Material 3 text, a box
-   * with a background for the surface Remote Compose Material 3 does not publish.
+   * The published catalog's vocabulary, narrowed to these cases. The `supersedes` block is the
+   * fixture's own (the runtime names no catalog's successors): `RemoteText` for borrowed text, a
+   * box with a background for the surface.
    */
   private fun remoteM3(containerColorBecomes: String = "background"): CatalogCapabilityV1 =
     CatalogCapabilityV1.Builder(
@@ -455,12 +446,8 @@ class CatalogUpgradePreviewTest {
         listOf(
           component(
             "remote-m3/remote-text",
-            // What the PUBLISHED catalog really declares, which is still less than `RemoteText`'s
-            // signature: `ComponentRecordPacks.jsonTypeOf` drops every parameter it has no JSON
-            // type for. `RemoteTextUnit` joined the mapped types in #845, so `fontSize` is a
-            // property a design can author; `RemoteTextStyle` and the `androidx.compose.ui.text`
-            // enums (`fontWeight`, `textAlign`, `overflow`) are not, and declaring them here would
-            // make this fixture agree with a catalog that does not exist.
+            // What the published catalog declares: `jsonTypeOf` drops parameters without a JSON
+            // type (`RemoteTextStyle`, text enums), while `RemoteTextUnit` maps to `fontSize`.
             listOf("text", "color", "maxLines", "fontSize"),
           ),
           component("layout/box", listOf("contentAlignment")),
@@ -525,10 +512,8 @@ class CatalogUpgradePreviewTest {
 
   /**
    * Serves the published catalog under [TARGET] and the borrowed vocabulary under [SOURCE].
-   *
-   * [borrowedStillDeclaresText] false is the live situation rather than a hypothetical: the box was
-   * flipped to the published catalogs, so the pin a stored design carries now resolves to a catalog
-   * that has never declared `m3/text`, and the design is quarantined at boot.
+   * [borrowedStillDeclaresText] false is the live situation: the stored pin resolves to a catalog
+   * without `m3/text`, so the design is quarantined at boot.
    */
   private inner class TwoPinCatalogs(
     private val borrowedStillDeclaresText: Boolean = true,

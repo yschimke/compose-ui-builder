@@ -8,21 +8,14 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * The sentence a reader gets when a design will not open.
- *
- * Asserted apart from the composable because the claim worth pinning is not how it is laid out: it
- * is whether the reader is told to retry something that cannot work. Before this screen existed the
- * editor drew nothing at all for these cases, so every one of them looked identical — a white page
- * — whether the design was missing, private, or pinned to a catalog the host had stopped serving.
+ * The sentence a reader gets when a design will not open, tested apart from layout: the claim is
+ * whether they're told to retry something that can't work.
  */
 class UnopenableDesignGuidanceTest {
 
   /**
-   * The case that produced the bug report: 36 designs on `preview.coo.ee` after the catalog source
-   * flip, every one of them opening to nothing.
-   *
-   * Reloading is precisely what does not help here. The page now offers a validated recovery, so
-   * the guidance points at that action rather than an operator or the retry reflex.
+   * A design pinned to a catalog the host no longer serves: reloading won't help, so the guidance
+   * points at the validated recovery action.
    */
   @Test
   fun `an unavailable catalog points the reader at exact pin recovery`() {
@@ -43,12 +36,7 @@ class UnopenableDesignGuidanceTest {
     )
   }
 
-  /**
-   * Only the codes that genuinely cannot be retried say so.
-   *
-   * The fallback exists for codes this screen has no specific answer for, and for those a reload is
-   * a reasonable first move — so it must keep offering it.
-   */
+  /** Only codes that genuinely can't be retried say so; the fallback still offers a reload. */
   @Test
   fun `the fallback still offers a reload`() {
     assertTrue(unopenableDesignGuidance(null).contains("Reloading the page may help"))

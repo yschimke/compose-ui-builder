@@ -21,6 +21,7 @@
 9 ui-builder-host-jvm/src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/host/PublishedCatalogStore.kt
 2 ui-builder-renderer-sdk/src/commonMain/kotlin/ee/schimke/composeai/uibuilder/renderer/sdk/UiBuilderInspection.kt
 2 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/A2uiCatalog.kt
+1 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/ComposeFoundationCatalog.kt
 3 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/ProductionUiBuilderRuntime.kt
 4 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/RemoteM3Catalog.kt
 62 ui-builder-runtime/src/main/kotlin/ee/schimke/composeai/uibuilder/service/WearM3Catalog.kt

@@ -27,66 +27,25 @@ import kotlinx.serialization.json.jsonObject
 /**
  * The canvas lays a Wear component out against the document's watch, not against the host window.
  *
- * ## The bug this pins
+ * The CMP port reads the device from `LocalWearDeviceConfiguration`, which on Wasm defaults to the
+ * browser viewport; unprovided, Wear components were laid out against the editor window. A JVM test
+ * can't reach the browser default, so it composes the canvas inside a host that answers with a
+ * viewport and asserts the canvas overrides it with the document's frame (as `renderDensity` does
+ * for density). The trigger is the catalog's declared platform (`LocalUiBuilderCatalogPlatform`),
+ * not component ids.
  *
- * `androidx.wear.compose` reads the device out of Android's `Configuration`, which does not exist
- * off Android. The CMP port replaces it with one composition local, `LocalWearDeviceConfiguration`,
- * and each platform answers it for itself: the JVM takes the 192dp reference watch, and the browser
- * reports **its own viewport** — `window.innerWidth` / `window.innerHeight` — because a viewport is
- * the closest thing a browser has to `Configuration.screenWidthDp`.
- *
- * The canvas never provided it, so on Wasm every Wear component that branches on the screen was
- * laid out against the editor window. Measured on the real `ScreenScaffold`, whose content padding
- * is 5.2% of the screen's width and 10% of its height: 10dp x 20dp on the watch and **75dp x 90dp
- * in a 1440x900 window**. The same design on the desktop canvas got the watch, so two lanes of one
- * canvas disagreed about what a watch is.
- *
- * ## Why the host's answer has to be provided from outside
- *
- * The JVM's own answer is the reference watch, so changing the scene size proves nothing here — the
- * browser's behaviour is not reachable from a JVM test. What is reachable is the *shape* of it: a
- * host that answers with its viewport. So the test composes the canvas inside exactly that host,
- * the way `window.innerWidth` reaches it on Wasm, and asserts the canvas overrides it with the
- * document's frame.
- *
- * Overriding is the point rather than a side effect, and it is the same call `renderDensity`
- * already makes: the design is drawn at the frame and the density its environment names, not the
- * host's, so the device it is drawn *for* has to be the document's too. A canvas that took the
- * host's answer would draw a 192dp watch with a 1440dp watch's insides.
- *
- * The trigger is the platform the *catalog* declares, so the test says "this is a Wear catalog" the
- * way the editor does — `LocalUiBuilderCatalogPlatform` — rather than relying on the component ids
- * in the document happening to be ones this build recognises.
- *
- * ## Why a ring, and why pixels
- *
- * The observable has to be something a *component* does with the screen size rather than something
- * the document says. `CircularProgressIndicator` is the cleanest: its stroke is `if
- * (isSmallScreen()) 8.dp else 12.dp`, so the number of pixels in the ring's edge is a direct read
- * of which screen the canvas thought it was drawing for — 16 or 24 at the Wear template's 2.0
- * density.
- *
- * A bounds assertion cannot make this point — `DatePicker` and friends fill whatever height they
- * are given, so their measured box says nothing about the screen they think they are on. That is
- * why this one counts pixels, and why `WearScreenParityTest` next door, which does measure the
- * template's boxes, could not have caught it either.
+ * The observable is `CircularProgressIndicator`'s stroke (`if (isSmallScreen()) 8.dp else 12.dp`),
+ * counted in pixels; bounds can't show it, since pickers fill whatever they're given.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class WearCanvasDeviceSizeTest {
 
-  /**
-   * The device the browser reports: its viewport, which is what the Wasm host hands the port when
-   * nobody overrides it.
-   */
+  /** The device the browser reports when nobody overrides it: its viewport. */
   private val browserViewport = WearDeviceConfiguration(screenWidthDp = 1440, screenHeightDp = 900)
 
   /**
-   * The frame is drawn by the adapter the catalog names, not by recognising a component id.
-   *
-   * `frame/round-screen` is a drawing this build ships; a catalog points its screen root at it. The
-   * test draws a screen root under a name this build has never seen and asserts the same ring is
-   * the same picture — which is the property that lets a catalog published under other ids use the
-   * frame, and the reason the renderer no longer has to recognise `wear-m3/`.
+   * The frame is drawn by the adapter the catalog names (`frame/round-screen`), not by recognising
+   * a component id, so a screen root under an unknown id draws the same.
    */
   @Test
   fun `a screen root drawn by the frame adapter is framed the same way`() {
@@ -122,9 +81,7 @@ class WearCanvasDeviceSizeTest {
         "The canvas is inheriting the host's viewport instead of providing the document's watch — " +
         "see UiBuilderDocument.wearDeviceConfiguration.",
     )
-    // Asserted as well, because "both hosts agree" is also true of two hosts that are both wrong.
-    // 8dp at 2.0 density is 16px; the large screen's stroke is 12dp, 24px, and a canvas reading the
-    // browser's 1440dp viewport drew exactly that.
+    // Also assert the absolute value: both hosts agreeing doesn't prove either is right.
     assertEquals(WATCH_STROKE_PX, inABrowser.first, "the ring's leading edge on a 192dp watch")
     assertEquals(WATCH_STROKE_PX, inABrowser.second, "the ring's trailing edge on a 192dp watch")
   }
@@ -204,10 +161,8 @@ class WearCanvasDeviceSizeTest {
     var snapshot: UiBuilderInspectionSnapshot? = null
     val image =
       renderComposeScene(SCENE_PX, SCENE_PX, Density(1f)) {
-        // The catalog the design is authored against, declared the way a served catalog declares
-        // itself: `platform: "wear"`. Without it the canvas is drawing for no declared platform, so
-        // it leaves the device question to the host — which is what the second half of this test
-        // needs to be able to see.
+        // Declare the catalog's `platform: "wear"`; without it the canvas leaves the device
+        // question to the host.
         CompositionLocalProvider(
           LocalUiBuilderCatalogPlatform provides UiBuilderCatalogPlatform.WEAR.wireValue
         ) {
@@ -302,8 +257,8 @@ class WearCanvasDeviceSizeTest {
     const val FRAME_WIDTH_PX = 384
 
     /**
-     * `CircularProgressIndicator`'s stroke on a small screen: 8dp at 2.0 density. The large
-     * screen's is 12dp, which is 24px — what a canvas reading a 1440dp browser viewport drew.
+     * `CircularProgressIndicator`'s small-screen stroke: 8dp at 2.0 density (the large screen's
+     * 12dp would be 24px).
      */
     const val WATCH_STROKE_PX = 16
   }

@@ -3,12 +3,9 @@ package ee.schimke.composeai.uibuilder.client
 import ee.schimke.composeai.uibuilder.protocol.OpenDesignRequestV1
 
 /**
- * HTTP bootstrap boundary shared by the Wasm entry point and deterministic session tests.
- *
- * Opening is all the browser does. It used to create too — seeding a document and posting it when
- * the open came back `notFound` — which made loading a page a mutation. Creation is a `POST` to
- * `/ui-builder/designs` (the New design form) or a `PUT` of the design's own API resource, both of
- * which the server answers by seeding the document itself.
+ * HTTP bootstrap boundary shared by the Wasm entry point and deterministic session tests. Opening
+ * only: creation is a `POST` to `/ui-builder/designs` (the New design form) or a `PUT` of the
+ * design's API resource, both seeded by the server.
  */
 class UiBuilderLiveSessionApi(
   private val designId: String,

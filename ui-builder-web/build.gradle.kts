@@ -5,18 +5,9 @@ import java.util.zip.ZipFile
 
 plugins { `java-library` }
 
-// NOT `composeai.maven-publishing`, and that absence is the decision.
-//
-// Applying it is what puts a module in the Central release set and in the BOM. This archive is a
-// 40 MB Wasm distribution that a host unpacks — nothing compiles against it, nothing resolves it
-// transitively — so it ships as a GitHub release asset instead, and compose-preview-server reaches
-// it through a group-fenced ivy repository over that release. Central carries the three jars a
-// consumer actually compiles or resolves against.
-//
-// Leaving the plugin off is also what keeps the BOM honest: the set is derived, so a module that
-// does not publish cannot be constrained by a platform that promises it. A BOM entry for a
-// coordinate nobody uploaded is exactly what made compose-preview-serve 3.3.0 through 3.8.0
-// unresolvable.
+// Not `composeai.maven-publishing`, deliberately: this 40 MB Wasm distribution ships as a GitHub
+// release asset (reached by compose-preview-server through a group-fenced ivy repository), not a
+// Central coordinate. Leaving the plugin off also keeps it out of the derived BOM.
 group = "ee.schimke.composeai"
 
 // The same derivation the convention plugin applies to the published modules: `PLUGIN_VERSION` in
@@ -31,28 +22,21 @@ version =
       "$major.$minor.${patch + 1}-SNAPSHOT"
     }
 
-// The editor <-> server HTTP API this editor speaks. compose-preview-server serves a pinned editor
-// only when its `ServeUiBuilderEditor.SUPPORTED_SERVER_API` contains this number, which is what
-// lets an instance pin an editor release without a server release (compose-preview-server#1035).
-// Bump it only for a change to the routes the editor calls that an older server cannot answer, and
-// land the server's support for the new number first.
+// The editor <-> server HTTP API version; compose-preview-server serves a pinned editor only when
+// `ServeUiBuilderEditor.SUPPORTED_SERVER_API` contains it. Bump only for route changes an older
+// server cannot answer, after landing server support.
 val serverApiVersion = 1
 
-// The host-bridge postMessage contract (`HostBridgeApp.kt`) an IDE host speaks to embed this
-// editor over a document it owns — the VS Code extension's custom editor for `.uid` files. The
-// same idea as `serverApi`, for the host that has no server: a host refuses an archive whose number
-// it does not support rather than opening an editor that never answers. Absent means no bridge.
-// Bump it only for a change to the messages an existing host cannot handle.
+// The host-bridge postMessage contract (`HostBridgeApp.kt`) for IDE hosts embedding the editor over
+// a document they own (e.g. VS Code's `.uid` editor). Hosts refuse unsupported numbers. Bump only
+// for message changes existing hosts cannot handle.
 val hostBridgeVersion = 1
 
 // The MCP App shell (`src/mcp-app/ui-builder-mcp-app.html`, `McpAppHostApp.kt`) a server serves as
-// a `text/html;profile=mcp-app` resource for its `.uid` file entrypoint (#364). The number is the
-// contract between that shell and the server: the placeholder it must fill in
-// (`__COMPOSE_UI_BUILDER_ASSET_BASE__`), the ones it may (`__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__`,
-// `focused` or `full`; left alone it means `focused`; and `__COMPOSE_UI_BUILDER_DEVICE_PRESETS__`,
-// a device-presets URL; left alone there are none), and where the shell sits in the archive
-// (`mcp-app/ui-builder-mcp-app.html`). Bump it only for a change a server that fills in version 1
-// would get wrong — an optional placeholder a version-1 server leaves untouched is not one.
+// a `text/html;profile=mcp-app` resource. The contract: the required placeholder
+// `__COMPOSE_UI_BUILDER_ASSET_BASE__`; optional `__COMPOSE_UI_BUILDER_MCP_APP_LAYOUT__` (`focused`
+// or `full`, default `focused`) and `__COMPOSE_UI_BUILDER_DEVICE_PRESETS__` (a URL, default none);
+// and the shell's path in the archive. Bump only for changes a version-1 server would get wrong.
 val mcpAppVersion = 1
 
 abstract class WriteUiBuilderWebManifest : DefaultTask() {

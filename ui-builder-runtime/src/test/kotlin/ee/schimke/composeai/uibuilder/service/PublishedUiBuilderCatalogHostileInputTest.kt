@@ -10,21 +10,11 @@ import kotlin.test.fail
 import kotlinx.serialization.json.Json
 
 /**
- * A published `ui-builder.json` comes from **another repository**, over the network, and is read at
- * startup. Nothing in this process reviews it first.
- *
- * [PublishedUiBuilderCatalogTest] pins the refusals this reader was written to make — a schema
- * major it does not know, a missing prefix, a policy that expects an inventory it does not have.
- * This pins the weaker and more important property: that **no** document reaches the end of
- * `compose` by throwing. The refusal list is what the author thought of; a hostile document is what
- * nobody did.
- *
- * Why it matters more than a returned `Unusable`: the call site in `ServeRunner` handles both
- * `Result` branches, and an exception is neither. It escapes into `openUiBuilderLane`, whose caller
- * turns any failure into `uiBuilderDisabledWarning` and a null lane — so one catalog's malformed
- * file would take the UI builder away from **every** catalog on the host, which is exactly the
- * blast radius the per-catalog fallback exists to prevent. The server itself survives either way;
- * this is about the builder surviving with it.
+ * A published `ui-builder.json` comes from another repository over the network and is read at
+ * startup unreviewed. This pins that no document makes `compose` throw: an exception escapes into
+ * `openUiBuilderLane` and disables the UI builder for every catalog on the host, the blast radius
+ * the per-catalog fallback exists to prevent. Specific refusals are in
+ * [PublishedUiBuilderCatalogTest].
  */
 class PublishedUiBuilderCatalogHostileInputTest {
 
@@ -82,8 +72,8 @@ class PublishedUiBuilderCatalogHostileInputTest {
     )
 
   /**
-   * Each case is a document a generator would never write and a mistake — or an attacker —
-   * plausibly could. None is expected to compose; every one is expected to *return*.
+   * Documents a generator would never write but a mistake or attacker could. None should compose;
+   * all must return.
    */
   private val hostile: List<Pair<String, String>> =
     listOf(
@@ -116,9 +106,7 @@ class PublishedUiBuilderCatalogHostileInputTest {
          "statusSemantics":{"componentIdPrefix":"../../../etc/"}}
         """
           .trimIndent(),
-      // The two collections this reader iterates. A policy naming a record id that is not in the
-      // record, and a builtin colliding with a component, are the two shapes that decide what
-      // `taken` and `skipped` end up holding.
+      // The two shapes that decide what `taken` and `skipped` hold.
       "a policy for a record component that does not exist" to
         """
         {"schema":"compose-ui-builder-catalog/v1","catalog":{"id":"h"},
@@ -150,9 +138,8 @@ class PublishedUiBuilderCatalogHostileInputTest {
          "statusSemantics":{"componentIdPrefix":"h/"}}
         """
           .trimIndent(),
-      // The reader decodes `components` as a Map; anything else fails its decode. Pinned because
-      // `.github/scripts/ui-builder-equivalence.sh` now refuses these for the same reason, and the
-      // two refusals have to agree about which documents are refusable.
+      // `components` decodes as a Map; `.github/scripts/ui-builder-equivalence.sh` refuses the same
+      // shapes, and the two must agree.
       "components is an array" to
         """
         {"schema":"compose-ui-builder-catalog/v1","catalog":{"id":"h"},
@@ -204,37 +191,14 @@ class PublishedUiBuilderCatalogHostileInputTest {
   }
 
   /**
-   * The record-to-record collision branch, exercised rather than merely named.
-   *
-   * `Widget` carries `componentIds: ["Widgets/Widget"]`, so with no policy it derives `h/widget`.
-   * The policy below hands that **same** id to `Nameless`, and the record is walked in order, so
-   * `Widget` takes `h/widget` first and `Nameless` hits `taken.containsKey(componentId)`.
-   *
-   * A first draft of this case used the keys `"h/same"` and `"h/same "` and proved nothing: the
-   * component ids are the map keys, `compose` does not trim them, so the two are distinct and both
-   * components were admitted. It read like a collision test and exercised no collision — the same
-   * failure mode this whole file exists to catch, one level up. The assertion below is what stops
-   * it recurring: a fixture that stopped colliding would take two components, not one.
+   * The record-to-record collision branch, exercised: `Widget` derives `h/widget`, the policy hands
+   * the same id to `Nameless`, so `Nameless` hits `taken.containsKey`. The assertion (one
+   * component, not two) guards against a fixture that silently stops colliding.
    */
   /**
-   * A builtin's properties reach `builtinCapability` by the same route a component's reach
-   * `capability`, and are read by the same validator — checking only `components` was the container
-   * half of that fix.
-   *
-   * Written against this file's own two-component record rather than m3-catalog's published
-   * fixture, which is where it started. That fixture states no builtins at all (m3-catalog's policy
-   * says the catalog owns none), so the test inserted one by string-splicing a `builtins` block
-   * ahead of the first `"components": {` it found. It passed, and it was one regeneration of that
-   * fixture away from splicing into nothing and passing anyway. A refusal test that depends on the
-   * shape of an unrelated catalog is checking that catalog, not the validator.
-   *
-   * The second half of the same lesson, found the next time this file was read: the key here was
-   * `propertyCapabilities`, which is what the SERVER called the field and not what a catalog can
-   * write. `ui-builder.policy.schema.json` spells a builtin's list `properties` with
-   * `additionalProperties: false`, so the only documents this validator had ever seen were the ones
-   * this test wrote for it. Every real builtin composed with zero properties and nothing said so.
-   * The key below is now the wire name, which makes this a mutation check on it: rename the field
-   * back and this test fails.
+   * A builtin's properties are validated like a component's. Uses this file's own record so the
+   * test cannot depend on another catalog's fixture shape, and the wire key `properties` (per
+   * `ui-builder.policy.schema.json`), so renaming the field back fails this test.
    */
   @Test
   fun `a builtin's malformed jsonType is refused`() {
@@ -261,15 +225,8 @@ class PublishedUiBuilderCatalogHostileInputTest {
   }
 
   /**
-   * `max` below `min` is a slot no child count satisfies, so the component cannot be authored at
-   * all — the same "impossible to author" the malformed `jsonType` above is refused for.
-   *
-   * `validateCatalog` requires `catalogSystemId == "m3-catalog"`, so it only ever sees the packaged
-   * catalog; a published one reaches the shelf unvalidated unless this refuses it.
-   *
-   * Moved here for the reason above, and for one more: its previous form spliced `"max": 0,` into
-   * the first `"cardinality": {` in m3-catalog's fixture, so which slot of which component it
-   * corrupted was whatever the serialiser happened to order first.
+   * `max` below `min` is a slot no child count satisfies, so it is refused. `validateCatalog` only
+   * sees `m3-catalog`, so published catalogs rely on this check.
    */
   @Test
   fun `a slot cardinality no child count satisfies is refused`() {
@@ -296,17 +253,8 @@ class PublishedUiBuilderCatalogHostileInputTest {
   }
 
   /**
-   * The same rule over the pair a **builtin** derives, which nothing applied until a builtin could
-   * state `max`.
-   *
-   * The builtins loop checked only properties, and that was sound while `required` set the minimum
-   * and the maximum was always unbounded: no pair it could produce was impossible. A writable bound
-   * makes `required: true` with `max: 0` reachable, and it composes to the `min = 1, max = 0` the
-   * test above refuses for a component — a slot no child count satisfies, on a catalog that loaded
-   * cleanly.
-   *
-   * Raised by the review bot on compose-preview-server#747 against the change that added the field,
-   * and true: it is that change's own gap rather than a pre-existing one.
+   * The same rule over a builtin's derived pair: with `max` writable, `required: true` plus `max:
+   * 0` yields an impossible `min = 1, max = 0`.
    */
   @Test
   fun `a builtin slot bound no child count satisfies is refused`() {
@@ -349,10 +297,8 @@ class PublishedUiBuilderCatalogHostileInputTest {
 
   @Test
   fun `a components field that is not a map is refused, not read as empty`() {
-    // The sweep above only proves these RETURN. The claim the equivalence gate now makes about them
-    // is stronger — that the reader REFUSES them — and `.github/scripts/ui-builder-equivalence.sh`
-    // refuses the same two shapes on the strength of it. Asserting "does not throw" and calling
-    // that agreement would be a check that does not check, so the stronger claim is pinned here.
+    // The sweep only proves these return; the equivalence script relies on the reader refusing
+    // them, so pin that stronger claim.
     listOf("components is an array", "components is null").forEach { label ->
       val document = hostile.first { it.first == label }.second
       val result = PublishedUiBuilderCatalog.compose(document, record, exports)

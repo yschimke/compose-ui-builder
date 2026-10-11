@@ -1,21 +1,19 @@
 package ee.schimke.composeai.uibuilder.service
 
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * The shadow report every captured catalog gives today: exactly what compose-preview-server logs
- * for it at startup (`serve: UI-builder catalog <id> shadow: …`), computed by the same
- * [CatalogCutoverShadow.report] against the same published files ([CatalogCutoverFixtures]).
- *
- * Committed so the answer to "could this catalog be owned now?" is a reviewable fact rather than a
- * box log: a re-capture that changes any row fails here and shows the change as a diff. A row that
- * gains a finding or a loss is a regression in that catalog's repository, not a table to update.
+ * The shadow report each captured catalog gives today (what compose-preview-server logs at
+ * startup), computed by [CatalogCutoverShadow.report] against [CatalogCutoverFixtures] and
+ * committed so changes show as a diff. A row gaining a finding or loss is a catalog regression, not
+ * a table to update.
  *
  * - [Row.ready]: owning it would refuse nothing it serves now and take nothing away.
  * - [Row.findings]: what owning it would refuse — the gap ledger's lines for that catalog.
- * - [Row.losses]: what owning it would take away from an editor, against its Kotlin catalog. `null`
- *   when the builder synthesises nothing for the catalog, so there is nothing to compare.
+ * - [Row.losses]: what owning it would take away, against its Kotlin catalog; `null` when nothing
+ *   is synthesised for it.
  */
 class CatalogCutoverShadowTableTest {
 
@@ -27,7 +25,7 @@ class CatalogCutoverShadowTableTest {
         Row(
           ready = false,
           findings = emptyList(),
-          losses = listOf("m3-catalog/m3/navigation-suite-scaffold: role Scaffold -> Container"),
+          losses = listOf("m3/navigation-suite-scaffold: role Scaffold -> Container"),
         ),
       "wear-m3" to
         Row(
@@ -47,36 +45,36 @@ class CatalogCutoverShadowTableTest {
           findings = emptyList(),
           losses =
             listOf(
-              "a2ui-catalog/a2ui/AudioPlayer: property description type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/AudioPlayer: property url type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/Button: property checks type [\"array\",\"object\"] -> \"array\"",
-              "a2ui-catalog/a2ui/CheckBox: property checks type [\"array\",\"object\"] -> \"array\"",
-              "a2ui-catalog/a2ui/CheckBox: property label type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/CheckBox: property value type [\"boolean\",\"object\"] -> \"boolean\"",
-              "a2ui-catalog/a2ui/ChoicePicker: property checks type [\"array\",\"object\"] -> \"array\"",
-              "a2ui-catalog/a2ui/ChoicePicker: property label type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/ChoicePicker: property options type [\"array\",\"object\"] -> \"array\"",
-              "a2ui-catalog/a2ui/ChoicePicker: property value type [\"array\",\"object\"] -> \"array\"",
-              "a2ui-catalog/a2ui/Column: slot children cardinality 0..null -> 1..null",
-              "a2ui-catalog/a2ui/DateTimeInput: property checks type [\"array\",\"object\"] -> \"array\"",
-              "a2ui-catalog/a2ui/DateTimeInput: property label type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/DateTimeInput: property max type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/DateTimeInput: property min type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/DateTimeInput: property value type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/Image: property description type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/Image: property url type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/List: slot children cardinality 0..null -> 1..null",
-              "a2ui-catalog/a2ui/Row: slot children cardinality 0..null -> 1..null",
-              "a2ui-catalog/a2ui/Slider: property checks type [\"array\",\"object\"] -> \"array\"",
-              "a2ui-catalog/a2ui/Slider: property label type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/Slider: property value type [\"number\",\"object\"] -> \"number\"",
-              "a2ui-catalog/a2ui/Tabs: properties: loses titles; gains tabs",
-              "a2ui-catalog/a2ui/Tabs: slots: loses tabs",
-              "a2ui-catalog/a2ui/Text: property text type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/TextField: property checks type [\"array\",\"object\"] -> \"array\"",
-              "a2ui-catalog/a2ui/TextField: property label type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/TextField: property value type [\"string\",\"object\"] -> \"string\"",
-              "a2ui-catalog/a2ui/Video: property url type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/AudioPlayer: property description type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/AudioPlayer: property url type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/Button: property checks type [\"array\",\"object\"] -> \"array\"",
+              "a2ui/CheckBox: property checks type [\"array\",\"object\"] -> \"array\"",
+              "a2ui/CheckBox: property label type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/CheckBox: property value type [\"boolean\",\"object\"] -> \"boolean\"",
+              "a2ui/ChoicePicker: property checks type [\"array\",\"object\"] -> \"array\"",
+              "a2ui/ChoicePicker: property label type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/ChoicePicker: property options type [\"array\",\"object\"] -> \"array\"",
+              "a2ui/ChoicePicker: property value type [\"array\",\"object\"] -> \"array\"",
+              "a2ui/Column: slot children cardinality 0..null -> 1..null",
+              "a2ui/DateTimeInput: property checks type [\"array\",\"object\"] -> \"array\"",
+              "a2ui/DateTimeInput: property label type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/DateTimeInput: property max type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/DateTimeInput: property min type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/DateTimeInput: property value type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/Image: property description type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/Image: property url type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/List: slot children cardinality 0..null -> 1..null",
+              "a2ui/Row: slot children cardinality 0..null -> 1..null",
+              "a2ui/Slider: property checks type [\"array\",\"object\"] -> \"array\"",
+              "a2ui/Slider: property label type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/Slider: property value type [\"number\",\"object\"] -> \"number\"",
+              "a2ui/Tabs: properties: loses titles; gains tabs",
+              "a2ui/Tabs: slots: loses tabs",
+              "a2ui/Text: property text type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/TextField: property checks type [\"array\",\"object\"] -> \"array\"",
+              "a2ui/TextField: property label type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/TextField: property value type [\"string\",\"object\"] -> \"string\"",
+              "a2ui/Video: property url type [\"string\",\"object\"] -> \"string\"",
             ),
         ),
       "glimmer-catalog" to
@@ -98,16 +96,7 @@ class CatalogCutoverShadowTableTest {
   fun `each catalog's shadow report is exactly the committed table`() {
     val actual =
       CatalogCutoverFixtures.catalogIds.associateWith { id ->
-        val report =
-          CatalogCutoverShadow.report(
-            catalogId = id,
-            published = CatalogCutoverFixtures.catalog(id),
-            templates = CatalogCutoverFixtures.templates(id),
-            fixture = CatalogCutoverProbe.fixture,
-            packComponents = CatalogCutoverFixtures.composed(id).records,
-            exportRecord = CatalogCutoverFixtures.exportRecord(id),
-            nativeRuntimeId = CatalogCutoverFixtures.rendererRuntimeId(id),
-          )
+        val report = report(id)
         Row(report.ready, report.findings, report.losses)
       }
     // Per catalog, so a failure names the catalog whose answer moved.
@@ -132,5 +121,50 @@ class CatalogCutoverShadowTableTest {
         expected.getValue(it).ready
       },
     )
+  }
+
+  /**
+   * The rest of each report: the differences that are not losses. A delivery branch that adds a
+   * component, trait or property, or relaxes a constraint, changes what the server logs while
+   * `ready`, `findings` and `losses` stay put, so the table above alone let such a recapture pass
+   * unreviewed. Too long to sit in the table (a couple of hundred lines), so it is a committed text
+   * file, rewritten with `-PuiBuilderGoldens=write` and read as a diff.
+   */
+  @Test
+  fun `each catalog's other differences are exactly the committed golden`() {
+    val actual =
+      CatalogCutoverFixtures.catalogIds.sorted().joinToString("") { id ->
+        val report = report(id)
+        val others = report.differences?.minus(report.losses.orEmpty().toSet())
+        "## $id\n" +
+          (others?.joinToString("") { "$it\n" } ?: "(the build synthesises nothing to compare)\n")
+      }
+    val file = File(DIFFERENCES_GOLDEN)
+    if (System.getProperty("ui.builder.goldens") == "write") {
+      file.writeText(actual)
+      return
+    }
+    assertEquals(
+      file.takeIf { it.isFile }?.readText(),
+      actual,
+      "$DIFFERENCES_GOLDEN is stale or missing. Re-run with -PuiBuilderGoldens=write and read " +
+        "the diff: every line is one the server's shadow log changes by.",
+    )
+  }
+
+  private fun report(id: String): CatalogCutoverShadow.Report =
+    CatalogCutoverShadow.report(
+      catalogId = id,
+      published = CatalogCutoverFixtures.catalog(id),
+      templates = CatalogCutoverFixtures.templates(id),
+      fixture = CatalogCutoverProbe.fixture,
+      packComponents = CatalogCutoverFixtures.composed(id).records,
+      exportRecord = CatalogCutoverFixtures.exportRecord(id),
+      nativeRuntimeId = CatalogCutoverFixtures.rendererRuntimeId(id),
+    )
+
+  private companion object {
+    /** Relative to the module, the test's working directory; a test resource, so a task input. */
+    const val DIFFERENCES_GOLDEN = "src/test/resources/cutover-shadow-differences.txt"
   }
 }

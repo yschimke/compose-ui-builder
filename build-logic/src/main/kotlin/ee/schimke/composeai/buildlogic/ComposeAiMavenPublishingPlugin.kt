@@ -26,13 +26,9 @@ abstract class ComposeAiMavenPublishingExtension @Inject constructor(objects: Ob
 }
 
 /**
- * Applied by a module that publishes a library. Applying it IS what puts the module in the release
- * set — `settings.gradle.kts` derives that set by looking for this plugin id, the BOM writes a
- * constraint per member, and the root build's `checkPublishedPomCoordinates` runs against each one.
- *
- * Nothing lists the published modules anywhere. compose-preview-server learned twice what a list
- * costs: two hand-kept copies of the set disagreed for six releases and shipped POMs naming an
- * artifact nobody had uploaded. Its root build carries that story in full.
+ * Applied by a module that publishes a library. Applying it is what puts the module in the release
+ * set: `settings.gradle.kts` derives the set from this plugin id, the BOM constrains each member,
+ * and `checkPublishedPomCoordinates` checks each. Nothing lists the published modules anywhere.
  */
 class ComposeAiMavenPublishingPlugin : Plugin<Project> {
   override fun apply(project: Project) {

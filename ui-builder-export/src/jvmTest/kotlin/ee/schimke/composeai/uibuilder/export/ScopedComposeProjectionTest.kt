@@ -27,19 +27,11 @@ class ScopedComposeProjectionTest {
     generateSequence(File(".").absoluteFile) { it.parentFile }
       .first { File(it, "docs/design/fixtures/ui-builder/m3-catalog-components-v1.json").isFile }
   /**
-   * The m3 record plus the builder's own `layout/`, `shape/` and `asset/` components.
+   * The m3 record plus the builder's own `layout/`, `shape/` and `asset/` components
+   * (`compose-foundation-components-v1.json`), since the fixture is mostly layout.
    *
-   * Two files because they are two records: `androidx.compose.foundation` publishes one `Column`
-   * rather than one per design system, so it belongs to no catalog and lives in
-   * `compose-foundation-components-v1.json`. The fixture this test projects is mostly layout, so
-   * reading the m3 one alone would exercise an export that refuses every node in it.
-   *
-   * The skip is the server's, rule for rule — `ComponentRecordSource.withFoundation` drops a
-   * foundation entry whose canonical id OR whose component id the catalog already claims, and a
-   * projection judged against a looser record would see an id claimed twice and refuse what the
-   * server writes. This module cannot see that class, so the rule is restated rather than shared;
-   * the two files share neither key today, and a rule that only holds while that is true is not the
-   * rule.
+   * The skip restates `ComponentRecordSource.withFoundation` (drop a foundation entry whose
+   * canonical id or component id the catalog already claims), which this module cannot see.
    */
   private val records = Json {
     ignoreUnknownKeys = true

@@ -30,9 +30,8 @@ sealed interface TunableTarget {
   }
 
   /**
-   * One numeric field of the modifier at [index] in the node's chain, which must still be a [type]:
-   * a chain that changed underneath the link leaves it unresolved rather than tuning whichever
-   * modifier moved into that place.
+   * One numeric field of the modifier at [index], which must still be a [type]; if the chain
+   * changed, the link stays unresolved rather than tuning another modifier.
    */
   data class Modifier(
     override val nodeId: String,
@@ -55,10 +54,9 @@ sealed interface TunableTarget {
  * A named number an author drags to try a design at different values: a range, a default, and the
  * properties it drives.
  *
- * A tunable is a way of *looking*, like a variant axis: while one is linked, the canvas and the
- * preview panes draw its value in place of what each target holds, but the document is not touched
- * until the author applies it. So dragging costs no revision, sends nothing to collaborators and
- * leaves undo alone, and an export is always of the stored design.
+ * A way of looking, like a variant axis: canvas and preview panes draw its value, but the document
+ * is untouched (no revision, collaborators or undo) until applied. Exports are always of the stored
+ * design.
  */
 data class DesignTunable(
   val name: String,
@@ -69,8 +67,8 @@ data class DesignTunable(
   val integer: Boolean = false,
   val targets: List<TunableTarget> = emptyList(),
   /**
-   * The design token this tunable drives, if it was made from one. Its targets are then the token's
-   * — re-read as the design changes — rather than a list the author keeps.
+   * The design token this tunable drives, if made from one; its targets are then re-read from the
+   * token.
    */
   val token: String? = null,
 ) {
@@ -85,10 +83,8 @@ data class DesignTunable(
   }
 
   /**
-   * The step a slider value lands on: whole numbers for an integer tunable or a range of 20 or
-   * more, which is every dp range worth dragging; tenths below that; hundredths under 2, which is
-   * an alpha or a weight. A slider reports a `Float`, so without this a drag writes
-   * `254.11764526367188` into the design.
+   * The step a slider value snaps to: whole numbers for integer tunables or ranges of 20+, tenths
+   * below that, hundredths under 2 (alpha, weight). Avoids writing raw float noise into the design.
    */
   val resolution: Double
     get() =
@@ -170,10 +166,8 @@ fun UiBuilderDocument.canTune(target: TunableTarget): Boolean {
 }
 
 /**
- * This document with every linked target holding its tunable's current value — what the canvas and
- * the preview panes draw while a tunable is linked. Targets that no longer resolve are left alone,
- * never failing the frame. The same instance comes back when nothing changes, so a design with no
- * tunables costs the canvas nothing.
+ * This document with linked targets holding their tunables' current values, as the canvas and
+ * previews draw it. Unresolved targets are skipped; returns the same instance when nothing changes.
  */
 fun UiBuilderDocument.tuned(
   tunables: List<DesignTunable>,
@@ -232,8 +226,7 @@ internal fun UiBuilderDocument.tunableWrites(
 }
 
 /**
- * The tunables with every target that no longer resolves in [document] dropped, so a deleted node
- * or a rewritten modifier chain does not leave a dead row in the panel.
+ * The tunables minus targets that no longer resolve in [document], so the panel shows no dead rows.
  */
 fun List<DesignTunable>.resolvedIn(document: UiBuilderDocument): List<DesignTunable> =
   map { tunable ->
@@ -245,10 +238,8 @@ fun List<DesignTunable>.resolvedIn(document: UiBuilderDocument): List<DesignTuna
 fun suggestedTunableRange(current: Double, bounds: EditorNumberBounds?): Pair<Double, Double> {
   val floorValue = bounds?.minimum ?: 0.0
   val ceiling = bounds?.maximum ?: Double.MAX_VALUE
-  // Wide enough to see a difference, narrow enough that a drag is not all one end of the range:
-  // a 16 dp padding gets 0..48 rather than 0..10000.
-  // Most numbers here are dp, so a value at zero still gets room to show something. A range the
-  // catalog bounds tightly (an alpha, a weight in 0..1) is clamped back to it below.
+  // A range around the value (a 16 dp padding gets 0..48), with room even at zero; tightly bounded
+  // catalog ranges are clamped below.
   val span = maxOf(abs(current) * 2, if (bounds?.integer == true) 10.0 else 24.0)
   val low = maxOf(floorValue, if (current >= 0) 0.0 else floor(current - span))
   // Whole ends, so a 254.1 value gets 0..763 rather than 0..762.35.
@@ -266,8 +257,8 @@ fun freshTunableName(label: String, taken: Collection<String>): String {
 }
 
 /**
- * The ranges a modifier field is tuned over where its meaning bounds it; every other field gets a
- * range around its value, from zero for one that is not negative.
+ * Ranges for modifier fields whose meaning bounds them; other fields get a range around their
+ * value, from zero when non-negative.
  */
 internal val MODIFIER_TUNING_BOUNDS: Map<String, EditorNumberBounds> =
   mapOf(

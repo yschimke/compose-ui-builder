@@ -10,12 +10,9 @@ import kotlinx.serialization.json.Json
 
 /**
  * The browser half of the review section: read who approved what, and record this person's verdict.
- *
- * The host's review routes (compose-preview-server#1255) take the decider from the credential, so a
- * verdict recorded from this page is a person's — the one an agent waiting with
- * `ui_builder_await_decision` is waiting for. There is no feed: a verdict is rare, the page reloads
- * the record after recording one and whenever the revision on screen changes, and an agent's
- * verdict reaches a person through the comment it is expected to leave beside it.
+ * The host's review routes (compose-preview-server#1255) take the decider from the credential, so
+ * verdicts here are a person's (what `ui_builder_await_decision` waits for). No feed: the page
+ * reloads the record after deciding and when the revision on screen changes.
  */
 internal class BrowserReviewHost(private val designId: String) {
   /** The review record, or null when the host would not say — no review routes, a refusal. */
@@ -31,10 +28,8 @@ internal class BrowserReviewHost(private val designId: String) {
 
   /**
    * Record [verdict] on [revision]. Returns the review now in force, or a sentence for the panel.
-   *
-   * `decisionId` is generated per click, so a double-click records two verdicts rather than one
-   * replayed — each is a person pressing a button — while a retried request inside one click would
-   * carry the same id.
+   * `decisionId` is per click, so a double-click records two verdicts while retries within one
+   * click share the id.
    */
   suspend fun decide(
     revision: Long,

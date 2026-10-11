@@ -11,29 +11,13 @@ import kotlin.test.assertTrue
 
 /**
  * The generator writes `transformation` on exactly the components Wear Material 3 declares it on.
+ * `SurfaceTransformation` is a surface treatment; writing it on every list row produced e.g.
+ * `Slider(…, transformation = SurfaceTransformation(spec))`, which doesn't compile (no such
+ * parameter on `Slider`, `IconButton`, `TextButton`).
  *
- * ## The bug this exists for
- *
- * `SurfaceTransformation` is a surface treatment, and upstream declares the parameter only on
- * components that draw a surface. `WearContentEmitter.surfaceArguments` wrote it on every row of a
- * `TransformingLazyColumn`, so a design with a `wear-m3/slider` in its list generated:
- * ```kotlin
- * Slider(value = …, onValueChange = { … }, transformation = SurfaceTransformation(spec))
- * ```
- *
- * `Slider` has no such parameter. The same was true of `wear-m3/icon-button` and
- * `wear-m3/text-button`. None of it was caught, because every other test of this generator asserts
- * the emitted **text** — and text is exactly what was right. It surfaced only when the committed
- * `google-home-wear` sample was exported and the result put in front of a compiler, where its three
- * sliders failed with *"No parameter with name 'transformation' found"*.
- *
- * ## Why this asks the library rather than a list
- *
- * A second hand-written list of surface-bearing components would be a second thing to be wrong, and
- * would agree with the generator by construction. So the expectation is read out of the port's own
- * jar: a symbol carries the treatment exactly when some function of that name declares a
- * `SurfaceTransformation` parameter. That makes this a test of the generator against Wear Compose,
- * which is the disagreement that costs somebody a broken build.
+ * The expectation is read from the port's own jar (a symbol takes the treatment iff some function
+ * of that name declares a `SurfaceTransformation` parameter), rather than a second hand-written
+ * list.
  */
 class WearSurfaceTransformationTest {
   /** Every Wear Material 3 function name whose signature declares a `SurfaceTransformation`. */
@@ -71,10 +55,8 @@ class WearSurfaceTransformationTest {
   }
 
   /**
-   * One Wear screen per component, each with that component as the sole row of the list.
-   *
-   * A row of the `TransformingLazyColumn` is the only position where `transformation` is written at
-   * all, so it is the only position that can be wrong.
+   * One Wear screen per component, as the sole list row (the only position where `transformation`
+   * is written).
    */
   private fun emittedRow(node: UiBuilderNode): String {
     val base =
