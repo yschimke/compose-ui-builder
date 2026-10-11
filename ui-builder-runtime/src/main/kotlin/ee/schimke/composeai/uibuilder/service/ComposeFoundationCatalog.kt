@@ -138,6 +138,14 @@ private val FOUNDATION_CURATIONS =
         },
         menu = { wearComponentMenu() },
       ),
+    // An A2UI catalog borrows nothing. The A2UI basic catalog is its own closed vocabulary — Row,
+    // Column, List and the rest are `a2ui/` components — and neither A2UI exporter
+    // (`A2uiDocumentExporter`, `A2uiComposeExporter`) has a case for a `layout/`, `shape/` or
+    // `asset/` component, so every one offered here could be placed and then not exported. The
+    // synthesised a2ui catalog never donated any, and its thumbnails and drag ghosts are framed in
+    // `a2ui/Column` because of it; falling back to the mobile curation handed a catalog-owned
+    // a2ui-catalog all seventeen, and `layout/box` took the frame.
+    "a2ui" to FoundationCuration(ids = emptyList(), menu = { JsonObject(emptyMap()) }),
     // A Remote Compose document body. `shape/radial-gradient` is deliberately absent —
     // `RemoteContentEmitter` writes linear gradient chains and has an authored refusal for
     // `asset/image`, while a radial one would fall through to a generic "is not a widget background
