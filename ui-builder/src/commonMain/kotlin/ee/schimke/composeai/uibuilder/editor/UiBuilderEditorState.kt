@@ -665,6 +665,19 @@ class UiBuilderEditorReducer(
     return node.contentLabel(capability) ?: capability.displayName
   }
 
+  /**
+   * What kind of thing this node is — `Button`, `Card`, or a local component's own name — for a
+   * sentence that names it in passing. Unlike [nodeLabel] it never reads the node's content:
+   * "Deleted Episode 140: Lorem ipsum dolor" is a quote, not a description of what went.
+   */
+  internal fun nodeKindLabel(state: UiBuilderEditorState, nodeId: String): String {
+    val node = state.document.nodes[nodeId] ?: return nodeId
+    node.placementKey()?.let {
+      return componentDeclarationName(state.document.components[it]) ?: it
+    }
+    return componentLabel(node.componentId)
+  }
+
   private fun componentLabel(componentId: String): String =
     catalog.componentsById[componentId]?.displayName ?: componentId
 
