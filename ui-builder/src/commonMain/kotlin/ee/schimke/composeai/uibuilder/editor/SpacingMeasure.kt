@@ -218,7 +218,6 @@ internal fun Modifier.measureHover(state: MeasureHoverState): Modifier =
       while (true) {
         val event = awaitPointerEvent(PointerEventPass.Initial)
         val change = event.changes.firstOrNull() ?: continue
-        println()
         if (change.type != PointerType.Mouse) continue
         when (event.type) {
           PointerEventType.Exit -> state.point = null
