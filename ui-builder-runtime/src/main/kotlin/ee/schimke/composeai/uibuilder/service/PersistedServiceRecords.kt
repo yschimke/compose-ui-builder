@@ -41,6 +41,12 @@ internal data class PersistedDesignV1(
    * the history window (a merge needs all of it) but by `MAXIMUM_BRANCH_COMMANDS`.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val branchLog: List<DesignSubmissionV1> = emptyList(),
+  /**
+   * The delegate that created this design for its owner (an agent acting under an approved grant),
+   * so that delegate may delete what it made — see [deletableBy]. Null for a design its owner made
+   * with their own credential, and for every design created before this was recorded.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val createdByDelegateActorId: String? = null,
 )
 
 @Serializable

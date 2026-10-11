@@ -99,9 +99,10 @@ internal fun PersistedDesignV1.allows(
 ): Boolean = actor.accessIdentities.any { allows(it, action) }
 
 /**
- * True when this actor owns the design itself. Owner-only actions (delete, managing access,
- * transferring ownership) are never delegated: an actor acting for the owner may read, write and
- * export through [allows] like any editor, but these stay with the owner's own credential.
+ * True when this actor owns the design itself. Owner-only actions (managing access, transferring
+ * ownership, and delete bar [deletableBy]'s one exception) are never delegated: an actor acting for
+ * the owner may read, write and export through [allows] like any editor, but these stay with the
+ * owner's own credential.
  */
 internal fun DesignAccessControlV1.ownedBy(actor: AuthenticatedUiBuilderActor): Boolean =
   sameActor(actor.actorId, ownerActorId)
@@ -112,6 +113,23 @@ private fun DesignAccessControlV1.delegatedByOwner(actor: AuthenticatedUiBuilder
 
 internal fun PersistedDesignV1.ownedBy(actor: AuthenticatedUiBuilderActor): Boolean =
   access.ownedBy(actor)
+
+/**
+ * True when this actor may delete the design: its owner, or the delegate that created it acting for
+ * that same owner. The one owner-only action a delegate shares, and only on its own creations, so
+ * an agent can clean up the probes it made without reaching the rest of its principal's designs.
+ */
+internal fun DesignAccessControlV1.deletableBy(
+  actor: AuthenticatedUiBuilderActor,
+  createdByDelegateActorId: String?,
+): Boolean =
+  ownedBy(actor) ||
+    (delegatedByOwner(actor) &&
+      createdByDelegateActorId != null &&
+      sameActor(actor.actorId, createdByDelegateActorId))
+
+internal fun PersistedDesignV1.deletableBy(actor: AuthenticatedUiBuilderActor): Boolean =
+  access.deletableBy(actor, createdByDelegateActorId)
 
 internal fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): DesignListItemV1 =
   DesignListItemV1(
