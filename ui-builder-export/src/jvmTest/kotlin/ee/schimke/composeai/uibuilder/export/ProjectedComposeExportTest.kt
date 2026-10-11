@@ -79,6 +79,13 @@ class ProjectedComposeExportTest {
           slot = true,
           receiver = "androidx.compose.foundation.layout.RowScope",
         ),
+        parameter(
+          "secondaryLabel",
+          "RowScope.() -> Unit",
+          default = true,
+          slot = true,
+          receiver = "androidx.compose.foundation.layout.RowScope",
+        ),
       ),
     )
 
@@ -89,6 +96,19 @@ class ProjectedComposeExportTest {
         listOf(
           button("Button", listOf("wear-m3/button")),
           button("FilledTonalButton", emptyList()),
+          record(
+            "ListHeader",
+            listOf("wear-m3/list-header"),
+            listOf(
+              parameter("modifier", "Modifier", "androidx.compose.ui.Modifier", default = true),
+              parameter(
+                "content",
+                "RowScope.() -> Unit",
+                slot = true,
+                receiver = "androidx.compose.foundation.layout.RowScope",
+              ),
+            ),
+          ),
           record(
             "Text",
             listOf("wear-m3/text"),
@@ -132,6 +152,30 @@ class ProjectedComposeExportTest {
       """
       { "targets": [ { "record": "wear/androidx.wear.compose.material3.TextKt.Text",
           "parameters": { "text": { "property": "text", "codec": "text" } } } ] }
+      """
+    )
+
+  /** The button again, recognising one or two lines as `label` and `secondaryLabel`. */
+  private val patternedButtonProjection =
+    Json.parseToJsonElement(
+      """
+      { "targets": [
+          { "record": "wear/androidx.wear.compose.material3.ButtonKt.Button",
+            "slotPatterns": { "content": {
+              "patterns": [ { "match": [
+                { "lines": { "text": "wear-m3/text", "min": 1, "max": 2 },
+                  "to": ["label", "secondaryLabel"] } ] } ] } } } ] }
+      """
+    )
+
+  /** `ListHeader`'s header is its `text` property, written as the catalog's own `Text`. */
+  private val listHeaderProjection =
+    Json.parseToJsonElement(
+      """
+      { "targets": [
+          { "record": "wear/androidx.wear.compose.material3.ListHeaderKt.ListHeader",
+            "synthesize": { "content": { "component": "wear-m3/text",
+                                         "properties": { "text": "text" } } } } ] }
       """
     )
 
@@ -299,6 +343,112 @@ class ProjectedComposeExportTest {
     assertEquals(
       ScreenExportGate.export(document, records),
       ScreenExportGate.export(document, records, emptyMap()),
+    )
+  }
+
+  private fun patterned(): Map<String, ExportProjection> =
+    projections +
+      ("wear-m3/button" to ExportProjectionJson.decode(patternedButtonProjection).getOrThrow())
+
+  /** A button whose content is [content], over [extra] nodes beside the `Go` label. */
+  private fun withContent(content: List<String>, vararg extra: DesignNodeV1): DesignDocumentV1 {
+    val base = document(button().copy(slots = mapOf("content" to content)))
+    return base.copy(nodes = base.nodes + extra.associateBy { it.id })
+  }
+
+  private fun text(id: String, text: String) =
+    DesignNodeV1(id, "wear-m3/text", properties = mapOf("text" to StringValueV1(text)))
+
+  @Test
+  fun `a column of two texts becomes the label and secondary label, and the column is not written`() {
+    val column =
+      DesignNodeV1(
+        "lines",
+        "layout/column",
+        slots = mapOf("children" to listOf("label", "later")),
+      )
+    val outcome =
+      ScreenExportGate.export(
+        withContent(listOf("lines"), column, text("later", "Later")),
+        records,
+        patterned(),
+      )
+    val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
+    assertContains(source, "label = {")
+    assertContains(source, "secondaryLabel = {")
+    assertContains(source, "Text(text = \"Later\")")
+    assertFalse("Column" in source, source)
+  }
+
+  @Test
+  fun `a single text is the label alone`() {
+    val source =
+      ScreenExportGate.export(document(button()), records, patterned()).let {
+        assertIs<ScreenExportGate.Outcome.Emitted>(it, it.toString()).source
+      }
+    assertContains(source, "Text(text = \"Go\")")
+    assertFalse("secondaryLabel" in source, source)
+  }
+
+  @Test
+  fun `children no pattern matches are refused with the slot and what they were`() {
+    val arranged =
+      DesignNodeV1(
+        "lines",
+        "layout/column",
+        properties = mapOf("verticalArrangement" to EnumValueV1("center")),
+        slots = mapOf("children" to listOf("label")),
+      )
+    val outcome =
+      ScreenExportGate.export(withContent(listOf("lines"), arranged), records, patterned())
+    val reasons = assertIs<ScreenExportGate.Outcome.Refused>(outcome).reasons
+    assertTrue(
+      reasons.any { "node `go`.`content`" in it && "[layout/column]" in it },
+      reasons.toString(),
+    )
+  }
+
+  @Test
+  fun `a property written as a child exports through that child's own projection`() {
+    val header =
+      DesignNodeV1(
+        "header",
+        "wear-m3/list-header",
+        properties = mapOf("text" to StringValueV1("Settings")),
+      )
+    val base = document(button())
+    val outcome =
+      ScreenExportGate.export(
+        base.copy(roots = listOf("header"), nodes = mapOf("header" to header)),
+        records,
+        projections +
+          ("wear-m3/list-header" to ExportProjectionJson.decode(listHeaderProjection).getOrThrow()),
+      )
+    val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
+    assertContains(source, "ListHeader {")
+    assertContains(source, "Text(text = \"Settings\")")
+  }
+
+  @Test
+  fun `a synthesized child of a component with no projection is refused by name`() {
+    val header =
+      DesignNodeV1(
+        "header",
+        "wear-m3/list-header",
+        properties = mapOf("text" to StringValueV1("Settings")),
+      )
+    val outcome =
+      ScreenExportGate.export(
+        document(button()).copy(roots = listOf("header"), nodes = mapOf("header" to header)),
+        records,
+        mapOf(
+          "wear-m3/list-header" to ExportProjectionJson.decode(listHeaderProjection).getOrThrow()
+        ),
+      )
+    val reasons = assertIs<ScreenExportGate.Outcome.Refused>(outcome).reasons
+    assertTrue(
+      reasons.any { "`content` is written as a `wear-m3/text`" in it },
+      reasons.toString(),
     )
   }
 
