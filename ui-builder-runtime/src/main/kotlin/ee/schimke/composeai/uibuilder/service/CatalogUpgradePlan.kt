@@ -10,6 +10,7 @@ import ee.schimke.composeai.uibuilder.protocol.CatalogUpgradeIssueV1
 import ee.schimke.composeai.uibuilder.protocol.DESIGN_COMPONENT_INSTANCE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.DesignModifierV1
+import ee.schimke.composeai.uibuilder.protocol.EnumValueV1
 import ee.schimke.composeai.uibuilder.protocol.RemoveCatalogUpgradeChangeV1
 import ee.schimke.composeai.uibuilder.protocol.ReplaceCatalogUpgradeChangeV1
 import ee.schimke.composeai.uibuilder.protocol.UiValueV1
@@ -31,7 +32,8 @@ import kotlinx.serialization.json.contentOrNull
  *     "componentId": "<what it becomes>",
  *     "properties":  { "<old name>": "<new name>" },   // a property the target spells differently
  *     "slots":       { "<old slot>": "<new slot>" },   // a slot the target spells differently
- *     "modifiers":   { "<old property>": "background" } // a property the target states as a modifier
+ *     "modifiers":   { "<old property>": "background" }, // a property the target states as a modifier
+ *     "setProperties": { "<name>": "<value>" }        // a value the old id implied, e.g. a style
  *   }
  * }
  * ```
@@ -56,6 +58,12 @@ internal data class ComponentSuccessor(
   val slots: Map<String, String>,
   val modifiers: Map<String, String>,
   val variants: VariantSuccessor?,
+  /**
+   * Values the old id implied and the successor states as a property: the reverse of [variants].
+   * `m3/outlined-card` becoming `m3/card` with `style = outlined` is one, since the id is the only
+   * place the old design said it was outlined.
+   */
+  val setProperties: Map<String, String> = emptyMap(),
 )
 
 /** A legacy selector whose value chooses one of several concrete successor components. */
@@ -97,6 +105,7 @@ internal fun successors(catalog: CatalogCapabilityV1): Map<String, ComponentSucc
               val property = variants["property"]?.stringOrNull() ?: return@let null
               VariantSuccessor(property, variants.stringMap("components"))
             },
+          setProperties = rule.stringMap("setProperties"),
         )
     }
     .toMap()
@@ -213,6 +222,28 @@ internal fun planCatalogUpgrade(
           changes += RemoveCatalogUpgradeChangeV1(propertyPath(nodeId, name), value.encoded())
           changes += AddCatalogUpgradeChangeV1(propertyPath(nodeId, renamed), value.encoded())
         }
+      }
+      rule?.setProperties?.forEach { (name, literal) ->
+        // The old id said it; the rule writes it, over whatever the node held under that name.
+        val value = EnumValueV1(literal)
+        val previous = properties.put(name, value)
+        if (previous == value) return@forEach
+        changes +=
+          if (previous == null)
+            AddCatalogUpgradeChangeV1(propertyPath(nodeId, name), value.encoded())
+          else
+            ReplaceCatalogUpgradeChangeV1(
+              propertyPath(nodeId, name),
+              previous.encoded(),
+              value.encoded(),
+            )
+        issues +=
+          CatalogUpgradeIssueV1(
+            CatalogUpgradeIssueSeverityV1.INFO,
+            "COMPONENT_BECOMES_VARIANT",
+            propertyPath(nodeId, name),
+            "${node.componentId} becomes $componentId with $name = $literal",
+          )
       }
       val slots = mutableMapOf<String, List<String>>()
       node.slots.forEach { (slot, children) ->
