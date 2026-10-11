@@ -80,6 +80,31 @@ class WrapChooserTest {
   }
 
   @Test
+  fun `the roles are read from the catalog, so A2UI's own Column and Row are offered`() {
+    // A2UI has no `layout/*` floor and no Box: its containers are `a2ui/Column` and `a2ui/Row`, and
+    // the chooser must find them without the builder knowing either id.
+    val a2ui = CapabilityCatalogParser.parse(resource("/a2ui-catalog-capabilities-v1.json"))
+    val a2uiReducer = UiBuilderEditorReducer(a2ui)
+    val preview = assertNotNull(a2uiReducer.previewDocument("a2ui/Text"))
+    val text = preview.nodes.values.single { it.componentId == "a2ui/Text" }.id
+    val selected = a2uiReducer.initial(preview, selectedNodeId = text)
+
+    val choices = quickWrapChoices(a2uiReducer.wrapCandidates(selected))
+    assertEquals(
+      listOf(1 to "a2ui/Column", 2 to "a2ui/Row"),
+      choices.map { it.digit to it.item.componentId },
+    )
+
+    val row = choices.single { it.digit == 2 }
+    val wrapped =
+      a2uiReducer.reduce(selected, UiBuilderEditorEvent.WrapSelection(row.item.componentId))
+    assertIs<CommandOutcome.Accepted>(wrapped.lastOutcome)
+    val container = assertNotNull(wrapped.selectedNodeId)
+    assertEquals("a2ui/Row", wrapped.document.nodes.getValue(container).componentId)
+    assertEquals(listOf(text), wrapped.document.nodes.getValue(container).slots.values.flatten())
+  }
+
+  @Test
   fun `arrows move the highlight, Enter and digits pick, Esc closes`() {
     val choices =
       listOf(

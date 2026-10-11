@@ -33,16 +33,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
 /**
- * The three containers the wrap chord offers, each with the digit that picks it. The digit belongs
- * to the container, not to its row: `Ctrl/Cmd+Alt+G` then `2` is always a Row, even on a selection
- * a Column cannot hold, so the hand learns one sequence rather than reading the list every time.
+ * The three container roles the wrap chord offers, in digit order. The digit belongs to the role,
+ * not to its row: `Ctrl/Cmd+Alt+G` then `2` is always a Row, even on a selection a Column cannot
+ * hold, so the hand learns one sequence rather than reading the list every time.
  *
- * Floor ids only, from the `layout` namespace every catalog carries. The full list of containers
- * stays behind the node menu's "Wrap in…"; this is the short path for the three that cover most
- * wraps.
+ * Roles, not component ids: the floor's are `layout/column`, A2UI's are `a2ui/Column`, and naming
+ * either here would be catalog knowledge the catalog-id ratchet keeps out of the builder. No
+ * catalog publishes an axis trait yet, so a candidate's role is read from its display name, which
+ * every catalog in use spells the same way. A catalog with no Box simply has no row 3. The full
+ * list of containers stays behind the node menu's "Wrap in…"; this is the short path for the three
+ * that cover most wraps.
  */
-internal val QUICK_WRAP_CONTAINERS: List<String> =
-  listOf("layout/column", "layout/row", "layout/box")
+internal val QUICK_WRAP_ROLES: List<String> = listOf("Column", "Row", "Box")
 
 /** One row of the wrap chooser: the container and the digit that picks it. */
 internal data class QuickWrapChoice(val digit: Int, val item: EditorCatalogItem)
@@ -53,12 +55,15 @@ internal data class QuickWrapChoice(val digit: Int, val item: EditorCatalogItem)
  * uses, so the chooser never offers a wrap the reducer would refuse. Empty when none fits, which is
  * when the chord says so instead of opening an empty list.
  */
-internal fun quickWrapChoices(candidates: List<EditorCatalogItem>): List<QuickWrapChoice> {
-  val byId = candidates.associateBy(EditorCatalogItem::componentId)
-  return QUICK_WRAP_CONTAINERS.mapIndexedNotNull { index, id ->
-    byId[id]?.let { QuickWrapChoice(index + 1, it) }
+internal fun quickWrapChoices(candidates: List<EditorCatalogItem>): List<QuickWrapChoice> =
+  QUICK_WRAP_ROLES.mapIndexedNotNull { index, role ->
+    candidates
+      .filter { it.displayName.trim().equals(role, ignoreCase = true) }
+      // Should two components answer to one name (a pack's own Row beside the catalog's), the
+      // one the catalog files as a container is the layout primitive.
+      .minByOrNull { if (it.kind == EditorComponentKind.Container) 0 else 1 }
+      ?.let { QuickWrapChoice(index + 1, it) }
   }
-}
 
 /** What a key does to the open chooser. Pure, so the keyboard contract is testable without UI. */
 internal sealed interface WrapChooserKeyResult {

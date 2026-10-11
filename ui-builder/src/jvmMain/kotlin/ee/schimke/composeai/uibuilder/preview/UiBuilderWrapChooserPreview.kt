@@ -10,7 +10,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.editor.EditorCatalogItem
 import ee.schimke.composeai.uibuilder.editor.EditorComponentKind
-import ee.schimke.composeai.uibuilder.editor.QUICK_WRAP_CONTAINERS
+import ee.schimke.composeai.uibuilder.editor.QUICK_WRAP_ROLES
 import ee.schimke.composeai.uibuilder.editor.WrapChooserPanel
 import ee.schimke.composeai.uibuilder.editor.quickWrapChoices
 
@@ -20,10 +20,10 @@ import ee.schimke.composeai.uibuilder.editor.quickWrapChoices
 fun UiBuilderWrapChooserPreview() {
   val choices =
     quickWrapChoices(
-      QUICK_WRAP_CONTAINERS.map { id ->
+      QUICK_WRAP_ROLES.map { role ->
         EditorCatalogItem(
-          componentId = id,
-          displayName = id.substringAfter('/').replaceFirstChar(Char::uppercase),
+          componentId = "layout/${role.lowercase()}",
+          displayName = role,
           kind = EditorComponentKind.Container,
           group = "Layout",
         )
