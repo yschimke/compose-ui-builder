@@ -1164,18 +1164,27 @@ class UiBuilderEditorReducer(
 
   /**
    * What the `/` quick insert lists for [query]: the insert panel's matches in the panel's order,
-   * less anything the selection has no slot for, so Enter on any row inserts. With no query the
-   * "Recently used" shelf leads, most recent first, because the component wanted next is most often
-   * one just placed; everything else follows in the panel's browsing order.
+   * less anything the selection has no slot for, so Enter on any row inserts. A component found by
+   * its name is a component row; each variant the query names is a row of its own, as the panel's
+   * opened variant rows are, so typing "outlined" offers the outlined Card rather than a Card that
+   * inserts as filled. With no query the "Recently used" shelf leads, most recent first, because
+   * the component wanted next is most often one just placed; everything else follows in the panel's
+   * browsing order.
    */
-  fun quickInsertItems(state: UiBuilderEditorState, query: String): List<EditorCatalogItem> {
+  fun quickInsertItems(state: UiBuilderEditorState, query: String): List<QuickInsertEntry> {
     val needle = query.trim().lowercase()
     val items =
       searchedCatalogItems(state, needle).filter { dropTarget(state, it.componentId) != null }
-    if (needle.isNotEmpty()) return items
+    if (needle.isNotEmpty()) {
+      return items.flatMap { item ->
+        val component =
+          if (item.matchesOwnName(needle)) listOf(QuickInsertEntry(item)) else listOf()
+        component + item.variants.filter { it.matches(needle) }.map { QuickInsertEntry(item, it) }
+      }
+    }
     val byId = items.associateBy(EditorCatalogItem::componentId)
     val recent = state.recentComponents.mapNotNull(byId::get)
-    return recent + (items - recent.toSet())
+    return (recent + (items - recent.toSet())).map(::QuickInsertEntry)
   }
 
   private fun ComponentCapability.editorCatalogItem(): EditorCatalogItem {

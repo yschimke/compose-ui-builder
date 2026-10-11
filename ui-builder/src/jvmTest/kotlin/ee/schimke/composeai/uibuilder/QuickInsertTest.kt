@@ -32,6 +32,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Quick insert: `/` with a layer selected opens a search beside it; typing narrows the catalog as
@@ -101,6 +102,32 @@ class QuickInsertTest {
   }
 
   @Test
+  fun `a query naming a variant offers that variant, not the component's default`() {
+    // "outlined" is no component's name; it is a value of the Card's variant property. The row
+    // must carry the variant, or Enter would insert a filled card for a search for an outlined one.
+    val entries = reducer.quickInsertItems(grid, "outlined")
+    val card = entries.single { it.componentId == "m3/card" }
+    assertEquals("outlined", card.variant?.value)
+    assertEquals("Card \u00b7 Outlined", card.label)
+
+    // A name match stays a component row, with no variant rows for variants the query did not name.
+    val byName = reducer.quickInsertItems(grid, "card").filter { it.componentId == "m3/card" }
+    assertEquals(listOf(null), byName.map { it.variant })
+
+    // And the row inserts what the palette's own variant Add inserts.
+    val inserted =
+      reducer.reduce(
+        grid,
+        UiBuilderEditorEvent.InsertComponent(
+          card.componentId,
+          checkNotNull(reducer.dropTarget(grid, card.componentId)),
+          card.variant,
+        ),
+      )
+    assertEquals("outlined", variantOf(inserted))
+  }
+
+  @Test
   fun `only components the selection can take are offered`() {
     // A Text holds nothing, so nothing inserts into it; every row Enter could pick must land.
     val label = reducer.initial(document, selectedNodeId = "main-episode-title")
@@ -164,6 +191,47 @@ class QuickInsertTest {
     }
 
   @Test
+  fun `Enter on a variant row in the real editor inserts that variant`() =
+    runDesktopComposeUiTest(width = 1600, height = 1050) {
+      var latest: UiBuilderEditorState? = null
+      setContent {
+        MaterialTheme {
+          UiBuilderEditor(
+            document,
+            catalog,
+            chrome = PointerTestUiBuilderChrome,
+            initialSelectedNodeId = "discover-grid",
+            initialLayersOpen = true,
+            onStateChanged = { latest = it },
+          )
+        }
+      }
+      waitForIdle()
+      // A press on the grid's layer row keeps it selected and gives the editor the keys.
+      onNodeWithContentDescription("Select discover-grid").performMouseInput { click() }
+      waitForIdle()
+      val before = checkNotNull(latest)
+      val row =
+        reducer.quickInsertItems(before, "outlined").indexOfFirst { it.componentId == "m3/card" }
+      assertTrue(row >= 0)
+
+      window().performKeyInput { pressKey(Key.Slash) }
+      waitForIdle()
+      val search = onNodeWithContentDescription("Quick insert search")
+      search.performTextInput("outlined")
+      waitForIdle()
+      search.performKeyInput {
+        repeat(row) { pressKey(Key.DirectionDown) }
+        pressKey(Key.Enter)
+      }
+      waitForIdle()
+
+      val after = checkNotNull(latest)
+      assertEquals("m3/card", after.recentComponents.first())
+      assertEquals("outlined", variantOf(after))
+    }
+
+  @Test
   fun `Esc closes it without inserting, and slash opens it again`() =
     runDesktopComposeUiTest(width = 1600, height = 1050) {
       var latest: UiBuilderEditorState? = null
@@ -197,6 +265,13 @@ class QuickInsertTest {
       waitForIdle()
       onNodeWithContentDescription("Quick insert").assertExists()
     }
+
+  /** The `variant` property written on the node the last insert selected. */
+  private fun variantOf(state: UiBuilderEditorState): String? {
+    val node = state.document.nodes.getValue(checkNotNull(state.selectedNodeId))
+    assertEquals("m3/card", node.componentId)
+    return node.properties["variant"]?.jsonObject?.get("value")?.jsonPrimitive?.content
+  }
 
   private companion object {
     /** A point on the Jetcaster design as a 1600 × 1050 window draws it. */

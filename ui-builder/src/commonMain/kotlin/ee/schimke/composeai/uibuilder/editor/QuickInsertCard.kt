@@ -52,9 +52,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun QuickInsertCard(
   label: String,
-  search: (String) -> List<EditorCatalogItem>,
+  search: (String) -> List<QuickInsertEntry>,
   recentComponents: List<String>,
-  onInsert: (EditorCatalogItem) -> Unit,
+  onInsert: (QuickInsertEntry) -> Unit,
   onDismiss: () -> Unit,
   onTextInputFocusChanged: (Boolean) -> Unit,
   dragHandle: Modifier = Modifier,
@@ -166,7 +166,7 @@ internal fun QuickInsertCard(
         )
       } else {
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 264.dp), state = listState) {
-          itemsIndexed(items, key = { _, item -> item.componentId }) { position, item ->
+          itemsIndexed(items, key = { _, item -> item.key }) { position, item ->
             // One item with its heading rather than a heading item, so the highlight's index and
             // the list's index stay the same number.
             Column {
@@ -193,7 +193,7 @@ private fun QuickInsertHeading(text: String) {
 }
 
 @Composable
-private fun QuickInsertRow(item: EditorCatalogItem, highlighted: Boolean, onClick: () -> Unit) {
+private fun QuickInsertRow(item: QuickInsertEntry, highlighted: Boolean, onClick: () -> Unit) {
   Row(
     Modifier.fillMaxWidth()
       .background(
@@ -204,13 +204,13 @@ private fun QuickInsertRow(item: EditorCatalogItem, highlighted: Boolean, onClic
       .clickable(onClick = onClick)
       .padding(horizontal = 8.dp, vertical = 6.dp)
       .semantics {
-        contentDescription = "Insert ${item.displayName}"
+        contentDescription = "Insert ${item.label}"
         selected = highlighted
       },
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Text(
-      item.displayName,
+      item.label,
       Modifier.weight(1f),
       color =
         if (highlighted) MaterialTheme.colorScheme.onSecondaryContainer
@@ -221,7 +221,7 @@ private fun QuickInsertRow(item: EditorCatalogItem, highlighted: Boolean, onClic
     )
     // The family, so two components with one name (a Material and a Wear button) can be told apart.
     Text(
-      item.group,
+      item.item.group,
       Modifier.padding(start = 8.dp),
       color = MaterialTheme.colorScheme.onSurfaceVariant,
       style = MaterialTheme.typography.labelSmall,

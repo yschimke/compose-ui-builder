@@ -1735,7 +1735,9 @@ fun UiBuilderEditor(
                   quickInsertNodeId = null
                   focusEditor()
                   reducer.dropTarget(state, item.componentId)?.let { target ->
-                    dispatch(UiBuilderEditorEvent.InsertComponent(item.componentId, target))
+                    dispatch(
+                      UiBuilderEditorEvent.InsertComponent(item.componentId, target, item.variant)
+                    )
                   }
                 },
                 onDismiss = {
