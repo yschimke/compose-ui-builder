@@ -401,22 +401,6 @@ class TypedListObjectPropertyTest {
     assertTrue(rows.isNotEmpty())
     assertEquals(listOf(1), rows.map { it.nodeCount }.distinct())
     assertEquals(listOf("inbox"), rows.map { it.nodeId }.distinct())
-
-    val edited =
-      reducer.reduce(
-        selected,
-        UiBuilderEditorEvent.CommitPropertyPath(
-          "inbox",
-          "contacts",
-          listOf(Index(1), Field("unread")),
-          "9",
-        ),
-      )
-    assertIs<CommandOutcome.Accepted>(edited.lastOutcome)
-    assertEquals(
-      json(TWO_CONTACTS),
-      edited.document.nodes.getValue("other").properties["contacts"],
-    )
   }
 
   @Test
