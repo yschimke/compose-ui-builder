@@ -409,6 +409,42 @@ class ProjectedComposeExportTest {
   }
 
   @Test
+  fun `a column whose arrangement is bound or unknown is not read as lines`() {
+    for (arrangement in listOf<UiValueV1>(StateValueV1("arrangement"), EnumValueV1("sideways"))) {
+      val column =
+        DesignNodeV1(
+          "lines",
+          "layout/column",
+          properties = mapOf("verticalArrangement" to arrangement),
+          slots = mapOf("children" to listOf("label")),
+        )
+      val outcome =
+        ScreenExportGate.export(withContent(listOf("lines"), column), records, patterned())
+      val reasons = assertIs<ScreenExportGate.Outcome.Refused>(outcome).reasons
+      assertTrue(reasons.any { "[layout/column]" in it }, "$arrangement: $reasons")
+    }
+  }
+
+  @Test
+  fun `a column stating its default arrangement and alignment is still read as lines`() {
+    val column =
+      DesignNodeV1(
+        "lines",
+        "layout/column",
+        properties =
+          mapOf(
+            "verticalArrangement" to EnumValueV1("top"),
+            "horizontalAlignment" to EnumValueV1("start"),
+          ),
+        slots = mapOf("children" to listOf("label")),
+      )
+    val outcome =
+      ScreenExportGate.export(withContent(listOf("lines"), column), records, patterned())
+    val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
+    assertFalse("Column" in source, source)
+  }
+
+  @Test
   fun `a property written as a child exports through that child's own projection`() {
     val header =
       DesignNodeV1(
