@@ -5,6 +5,8 @@ import ee.schimke.composeai.uibuilder.canvas.DEFAULT_PICKED_MINUTE
 import ee.schimke.composeai.uibuilder.canvas.DEFAULT_SELECTED_DATE
 import ee.schimke.composeai.uibuilder.canvas.DIALOG_CORNER_DP
 import ee.schimke.composeai.uibuilder.canvas.DIALOG_TONAL_ELEVATION_DP
+import ee.schimke.composeai.uibuilder.canvas.cardStyle
+import ee.schimke.composeai.uibuilder.canvas.iconButtonStyle
 import ee.schimke.composeai.uibuilder.canvas.isoDateToEpochMillis
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalog
 import ee.schimke.composeai.uibuilder.editor.themeHost
@@ -950,7 +952,7 @@ internal class ComposeEmitter(
         ""
       }
     val function =
-      when (node.string("variant")) {
+      when (node.iconButtonStyle()) {
         "filled" -> "FilledIconButton"
         "tonal" -> "FilledTonalIconButton"
         "outlined" -> "OutlinedIconButton"
@@ -1052,7 +1054,7 @@ internal class ComposeEmitter(
   private fun emitCard(node: UiBuilderNode, level: Int) {
     line(
       level,
-      "Card(${node.modifierArgument()}, shape = RoundedCornerShape(${shapeDp(node.string("shape").ifEmpty { "large" }).dpLiteral()}), elevation = CardDefaults.cardElevation(defaultElevation = ${node.number("elevationDp").dpLiteral()}), colors = builderCardColors(${node.boundColorExpression("containerColor")})) {",
+      "${node.cardCall()}(${node.modifierArgument()}, shape = RoundedCornerShape(${shapeDp(node.string("shape").ifEmpty { "large" }).dpLiteral()}), elevation = ${node.cardElevation()}, colors = builderCardColors(${node.boundColorExpression("containerColor")})) {",
     )
     // The same decision the canvas makes — see [cardContentFill] — so the generated screen wraps
     // an unsized card exactly where the picture did.
@@ -1068,6 +1070,27 @@ internal class ComposeEmitter(
     emitChildren(node.slot("content"), level + 2)
     line(level + 1, "}")
     line(level, "}")
+  }
+
+  /** The Material 3 card function for the node's [cardStyle]. */
+  private fun UiBuilderNode.cardCall(): String =
+    when (cardStyle()) {
+      "elevated" -> "ElevatedCard"
+      "outlined" -> "OutlinedCard"
+      else -> "Card"
+    }
+
+  /** The elevation argument for [cardCall]: the style's own defaults unless the design set one. */
+  private fun UiBuilderNode.cardElevation(): String {
+    val set = "elevationDp" in properties
+    val dp = number("elevationDp").dpLiteral()
+    return when (cardStyle()) {
+      "elevated" ->
+        if (set) "CardDefaults.elevatedCardElevation(defaultElevation = $dp)"
+        else "CardDefaults.elevatedCardElevation()"
+      "outlined" -> "CardDefaults.outlinedCardElevation(defaultElevation = $dp)"
+      else -> "CardDefaults.cardElevation(defaultElevation = $dp)"
+    }
   }
 
   private fun emitButton(node: UiBuilderNode, level: Int) {
@@ -3049,7 +3072,10 @@ private val HANDLED_FIELDS =
         setOf("click"),
       ),
     "m3/card" to
-      HandledFields(setOf("containerColor", "elevationDp", "shape", "stableKey"), setOf("content")),
+      HandledFields(
+        setOf("containerColor", "elevationDp", "shape", "stableKey", "style", "variant"),
+        setOf("content"),
+      ),
     "m3/center-aligned-top-app-bar" to
       HandledFields(
         setOf("containerColor", "scrolledContainerColor", "scrollBehavior"),
@@ -3080,7 +3106,7 @@ private val HANDLED_FIELDS =
     "m3/icon" to HandledFields(setOf("iconKey", "contentDescription", "color", "sizeDp")),
     "m3/icon-button" to
       HandledFields(
-        setOf("alignment", "contentDescription", "selected", "sizeDp", "variant"),
+        setOf("alignment", "contentDescription", "selected", "sizeDp", "style", "variant"),
         slots = setOf("content"),
       ),
     "m3/list-item" to

@@ -325,6 +325,78 @@ class CapabilityComposeCodeExporterTest {
   }
 
   @Test
+  fun `a card and an icon button write the composable their style names`() {
+    // `style` is the catalog's spelling; `variant` is what designs saved before it carry. Both pick
+    // Material 3's own function, so an outlined card is never drawn as a filled one.
+    fun node(
+      id: String,
+      componentId: String,
+      vararg properties: Pair<String, JsonObject>,
+      slots: Map<String, List<String>> = emptyMap(),
+    ) = UiBuilderNode(id, componentId, JsonObject(mapOf(*properties)), slots = slots)
+    fun enum(value: String) = property("enum", JsonPrimitive(value))
+    fun text(id: String) = node(id, "m3/text", "text" to property("string", JsonPrimitive(id)))
+    val styled =
+      document.copy(
+        roots = listOf("column"),
+        nodes =
+          mapOf(
+            "column" to
+              node(
+                "column",
+                "layout/column",
+                slots =
+                  mapOf("content" to listOf("outlined", "elevated", "legacy", "plain", "tonal")),
+              ),
+            "outlined" to
+              node(
+                "outlined",
+                "m3/card",
+                "style" to enum("outlined"),
+                slots = mapOf("content" to listOf("a")),
+              ),
+            "elevated" to
+              node(
+                "elevated",
+                "m3/card",
+                "style" to enum("elevated"),
+                slots = mapOf("content" to listOf("b")),
+              ),
+            "legacy" to
+              node(
+                "legacy",
+                "m3/card",
+                "variant" to enum("outlined"),
+                slots = mapOf("content" to listOf("c")),
+              ),
+            "plain" to node("plain", "m3/card", slots = mapOf("content" to listOf("d"))),
+            "tonal" to
+              node(
+                "tonal",
+                "m3/icon-button",
+                "style" to enum("tonal"),
+                slots = mapOf("content" to listOf("glyph")),
+              ),
+            "glyph" to node("glyph", "m3/icon", "iconKey" to enum("filled/home")),
+            "a" to text("a"),
+            "b" to text("b"),
+            "c" to text("c"),
+            "d" to text("d"),
+          ),
+      )
+    val result = CapabilityComposeCodeExporter.export(styled, catalog)
+    val source = assertNotNull(result.source, result.diagnostics.toString())
+    assertEquals(2, Regex("""\bOutlinedCard\(""").findAll(source).count(), source)
+    assertTrue(Regex("""\bElevatedCard\(""").containsMatchIn(source), source)
+    assertTrue(Regex("""(?<![A-Za-z])Card\(""").containsMatchIn(source), "the plain one stays Card")
+    assertTrue(
+      "CardDefaults.elevatedCardElevation()" in source,
+      "an unset elevation is the style's",
+    )
+    assertTrue("FilledTonalIconButton(" in source, source)
+  }
+
+  @Test
   fun `the adaptive imports appear exactly when the source calls the adaptive helper`() {
     // The imports are turned on only by `emitSupportingPane` actually writing the call (the header
     // is written after the body), not by a document-wide prediction. Asserted in both directions on
