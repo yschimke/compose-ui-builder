@@ -131,9 +131,9 @@ private val BACKGROUND_PROPERTIES = listOf("containerColor", "background", "back
  * The container colour the canvas draws for a component that has one when the design does not set
  * it, as the renderer's own fallbacks have it: a theme role, [TRANSPARENT_CONTAINER] for a
  * component that draws nothing behind its content, or null for one whose default this inspector
- * cannot name (Wear's components take Wear's own scheme, not the one the inspector previews), where
- * no badge is better than a wrong one. `m3/button` is not here: its container follows its style;
- * see [buttonFill].
+ * cannot name, where no badge is better than a wrong one. `m3/button` is not here: its container
+ * follows its style; see [buttonFill]. Only the packaged floor is listed — every other catalog is
+ * declined wholesale by [isFloorComponent].
  */
 private val CONTAINER_DEFAULTS: Map<String, String?> =
   mapOf(
@@ -143,15 +143,20 @@ private val CONTAINER_DEFAULTS: Map<String, String?> =
     "m3/horizontal-floating-toolbar" to "surfaceContainerHighest",
     "m3/surface" to TRANSPARENT_CONTAINER,
     "m3/center-aligned-top-app-bar" to TRANSPARENT_CONTAINER,
-    "wear-m3/button" to null,
-    "wear-m3/card" to null,
-    "wear-m3/edge-button" to null,
-    "wear-m3/icon-button" to null,
-    "wear-m3/screen-scaffold" to null,
-    "remote-m3/widget-container-small" to null,
-    "remote-m3/widget-container-large" to null,
-    "remote-m3/widget-container-adaptive" to null,
   )
+
+/**
+ * Whether [componentId] is one of the packaged floor's (the `m3/` and `layout/` namespaces), whose
+ * drawing the inspector's preview scheme describes.
+ *
+ * A component from any other catalog — a Wear screen, a widget host, a third party's card — paints
+ * with that catalog's own scheme and defaults, which this inspector cannot see. It is declined
+ * rather than named: listing those catalogs' ids here would be the builder learning catalog facts
+ * the catalogs should publish (`.github/scripts/catalog-id-ratchet.sh`), and a component it does
+ * not know is exactly the case where no badge beats a wrong one.
+ */
+private fun isFloorComponent(componentId: String) =
+  componentId.startsWith("m3/") || componentId.startsWith("layout/")
 
 private const val TRANSPARENT_CONTAINER = "transparent"
 
@@ -295,6 +300,7 @@ private fun UiBuilderNode.scalar(name: String) =
   (properties[name] as? JsonObject)?.get("value")?.primitiveOrNull()
 
 private fun containerFill(node: UiBuilderNode, scheme: ColorScheme): ContainerFill {
+  if (!isFloorComponent(node.componentId)) return ContainerFill.Unknown
   if (node.componentId == "m3/button") return buttonFill(node, scheme)
   val written = writtenContainer(node, scheme)
   if (written != null) return surfaceTint(node, written, scheme)

@@ -211,6 +211,20 @@ class ColorContrastTest {
   }
 
   @Test
+  fun aComponentOutsideThePackagedFloorIsDeclined() {
+    // A catalog the inspector knows nothing about: even a literal container colour is not trusted,
+    // because that catalog's own renderer decides what it draws.
+    val white =
+      JsonObject(mapOf("type" to JsonPrimitive("color"), "value" to JsonPrimitive("#FFFFFFFF")))
+    val doc =
+      document(
+        node("card", "acme/card", mapOf("containerColor" to white), children = listOf("t")),
+        node("t", "m3/text"),
+      )
+    assertNull(contrastReading(doc, "t", "color", "#FF000000", scheme))
+  }
+
+  @Test
   fun iconsAreGradedAsNonText() {
     val doc = document(node("i", "m3/icon"))
     val reading = assertNotNull(contrastReading(doc, "i", "color", "#FF000000", scheme))
