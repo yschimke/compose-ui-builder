@@ -4,9 +4,9 @@ These captures render the actual common editor used by the browser, with a priva
 a fake host reporting Claude Code activity, and no provider calls. The separate Sharing and
 Connect invitation strips are absent. Wide layouts keep Private/Public beside the agent control;
 compact layouts show the visibility icon beside the title and offer More → Sharing.
-Between the compact breakpoint (840dp) and 1200dp, New design, Fork this design and Sharing
-move into More so the agent control and More itself are never clipped.
-Below 1000dp the viewer list ("Viewers · N") moves into More as well.
+Below the Large window width class (Medium and Expanded), New design, Fork this design, Sharing
+and the viewer list ("Viewers · N") move into More so the agent control and More itself are never
+clipped.
 
 AgentToolbarTest checks Sharing callbacks in both layouts, access notices and Sign in, named
 agent activity, browser chat readiness/work, and the external activity tab. It regenerates these

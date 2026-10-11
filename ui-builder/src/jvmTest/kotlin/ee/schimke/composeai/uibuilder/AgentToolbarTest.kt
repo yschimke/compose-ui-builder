@@ -218,14 +218,88 @@ class AgentToolbarTest {
       assertEquals(2, sharingOpened)
     }
 
+  // The fold follows the window size class, so each width is its own window rather than a resized
+  // box inside one.
   @Test
-  fun `hosted toolbar keeps every trailing action reachable at intermediate widths`() =
-    runDesktopComposeUiTest(width = 1440, height = 700) {
-      var width by mutableStateOf(960)
-      val host = Host()
-      var newOpened = 0
-      var forked = 0
-      var sharingOpened = 0
+  fun `hosted toolbar folds session actions and viewers into More below the Large width class`() {
+    for (width in listOf(960, 848)) {
+      hostedToolbar(width) { output ->
+        // The agent control and More are the trailing controls the row used to clip.
+        assertFullyOnToolbar(hasText("Connect agent"), 100.dp)
+        assertFullyOnToolbar(hasContentDescription("More editor actions"), 40.dp)
+        onNodeWithContentDescription("New design").assertDoesNotExist()
+        onNodeWithContentDescription("Fork this design").assertDoesNotExist()
+        onNodeWithContentDescription("Sharing · Private · invited collaborators only")
+          .assertDoesNotExist()
+        onNodeWithText("Viewers · 2").assertDoesNotExist()
+        onNodeWithContentDescription("More editor actions").performSemanticsAction(
+          SemanticsActions.OnClick
+        ) {
+          it()
+        }
+        onNodeWithText("New design").assertIsDisplayed()
+        onNodeWithText("Fork this design").assertIsDisplayed()
+        onNodeWithText("Private · invited collaborators only").assertIsDisplayed()
+        onNodeWithText("Viewers · 2").assertIsDisplayed()
+        onNodeWithText("Ada · browser").assertIsDisplayed()
+        onNodeWithText("Fork this design").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        assertEquals(1, forked)
+        onNodeWithContentDescription("More editor actions").performSemanticsAction(
+          SemanticsActions.OnClick
+        ) {
+          it()
+        }
+        onNodeWithText("Sharing").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        assertEquals(1, sharingOpened)
+        capture(output, "intermediate-$width.png")
+      }
+    }
+  }
+
+  @Test
+  fun `hosted toolbar shows every action from the Large width class up`() =
+    hostedToolbar(1440) { output ->
+      capture(output, "wide-1440.png")
+      assertFullyOnToolbar(hasContentDescription("New design"), 40.dp)
+      assertFullyOnToolbar(hasContentDescription("Fork this design"), 40.dp)
+      assertFullyOnToolbar(
+        hasContentDescription("Sharing · Private · invited collaborators only"),
+        40.dp,
+      )
+      assertFullyOnToolbar(hasText("Viewers · 2"), 40.dp)
+      assertFullyOnToolbar(hasText("Connect agent"), 100.dp)
+      assertFullyOnToolbar(hasContentDescription("More editor actions"), 40.dp)
+    }
+
+  private class HostedToolbar(test: ComposeUiTest) : ComposeUiTest by test {
+    var forked = 0
+    var sharingOpened = 0
+
+    fun capture(output: File, name: String) {
+      ImageIO.write(
+        onNodeWithTag("toolbar-overflow-layout").captureToImage().toAwtImage(),
+        "png",
+        File(output, name),
+      )
+    }
+
+    // Whole and full size, not merely intersecting the window: a control squeezed to a sliver or
+    // half pushed off the end still counts as displayed.
+    fun assertFullyOnToolbar(matcher: SemanticsMatcher, minWidth: Dp) {
+      val node =
+        onNode(matcher).assertIsDisplayed().assertWidthIsAtLeast(minWidth).fetchSemanticsNode()
+      val layout = onNodeWithTag("toolbar-overflow-layout").fetchSemanticsNode().boundsInRoot
+      assertTrue(
+        node.boundsInRoot.right <= layout.right,
+        "${matcher.description} ends at ${node.boundsInRoot.right}",
+      )
+    }
+  }
+
+  /** The editor filling a [width]dp window, with everything LiveSessionApp supplies at once. */
+  private fun hostedToolbar(width: Int, block: HostedToolbar.(output: File) -> Unit) =
+    runDesktopComposeUiTest(width = width, height = 700) {
+      val toolbar = HostedToolbar(this)
       val empty = JsonObject(emptyMap())
       val document =
         UiBuilderDocument(
@@ -263,92 +337,25 @@ class AgentToolbarTest {
         )
       setContent {
         MaterialTheme {
-          Box(Modifier.width(width.dp).height(700.dp).testTag("toolbar-overflow-layout")) {
-            // Everything LiveSessionApp supplies for a hosted design at once.
+          Box(Modifier.fillMaxSize().testTag("toolbar-overflow-layout")) {
             UiBuilderEditor(
               document,
               catalog,
               collaborators = listOf(reviewer),
-              agentHost = host,
+              agentHost = Host(),
               exportHost = exportHost,
               newDesignCatalogs =
                 listOf(UiBuilderNewDesignCatalog("m3", "Material 3", emptyList())),
-              onCreateDesign = { _, _, _, _ -> newOpened++ },
+              onCreateDesign = { _, _, _, _ -> },
               onBrowseDesigns = {},
-              onForkDesign = { forked++ },
+              onForkDesign = { toolbar.forked++ },
               visibilityLabel = "Private · invited collaborators only",
-              onManageVisibility = { sharingOpened++ },
+              onManageVisibility = { toolbar.sharingOpened++ },
             )
           }
         }
       }
-      val output = File("build/toolbar-overflow").apply { mkdirs() }
-      // Whole and full size, not merely intersecting the window: a control squeezed to a sliver or
-      // half pushed off the end still counts as displayed.
-      fun assertFullyOnToolbar(matcher: SemanticsMatcher, minWidth: Dp) {
-        val node =
-          onNode(matcher).assertIsDisplayed().assertWidthIsAtLeast(minWidth).fetchSemanticsNode()
-        val layout = onNodeWithTag("toolbar-overflow-layout").fetchSemanticsNode().boundsInRoot
-        assertTrue(
-          node.boundsInRoot.right <= layout.right,
-          "${matcher.description} ends at ${node.boundsInRoot.right}",
-        )
-      }
-      // 960dp is in the session-action fold; 848dp is just above the compact breakpoint, where
-      // presence folds as well.
-      for (size in listOf(960, 848)) {
-        runOnIdle { width = size }
-        waitForIdle()
-        ImageIO.write(
-          onNodeWithTag("toolbar-overflow-layout").captureToImage().toAwtImage(),
-          "png",
-          File(output, "intermediate-$size.png"),
-        )
-        // The agent control and More are the trailing controls the row used to clip.
-        assertFullyOnToolbar(hasText("Connect agent"), 100.dp)
-        assertFullyOnToolbar(hasContentDescription("More editor actions"), 40.dp)
-        onNodeWithContentDescription("New design").assertDoesNotExist()
-        onNodeWithContentDescription("Fork this design").assertDoesNotExist()
-        onNodeWithContentDescription("Sharing · Private · invited collaborators only")
-          .assertDoesNotExist()
-        val presenceFolded = size < 1000
-        if (presenceFolded) onNodeWithText("Viewers · 2").assertDoesNotExist()
-        onNodeWithContentDescription("More editor actions").performSemanticsAction(
-          SemanticsActions.OnClick
-        ) {
-          it()
-        }
-        onNodeWithText("New design").assertIsDisplayed()
-        onNodeWithText("Fork this design").assertIsDisplayed()
-        onNodeWithText("Private · invited collaborators only").assertIsDisplayed()
-        if (presenceFolded) {
-          onNodeWithText("Viewers · 2").assertIsDisplayed()
-          onNodeWithText("Ada · browser").assertIsDisplayed()
-        }
-        onNodeWithText("Fork this design").performSemanticsAction(SemanticsActions.OnClick) { it() }
-        onNodeWithContentDescription("More editor actions").performSemanticsAction(
-          SemanticsActions.OnClick
-        ) {
-          it()
-        }
-        onNodeWithText("Sharing").performSemanticsAction(SemanticsActions.OnClick) { it() }
-      }
-      assertEquals(2, forked)
-      assertEquals(2, sharingOpened)
-
-      // Wide enough for every action: they stay on the toolbar itself.
-      runOnIdle { width = 1440 }
       waitForIdle()
-      ImageIO.write(
-        onNodeWithTag("toolbar-overflow-layout").captureToImage().toAwtImage(),
-        "png",
-        File(output, "wide-1440.png"),
-      )
-      onNodeWithContentDescription("New design").assertIsDisplayed()
-      onNodeWithContentDescription("Fork this design").assertIsDisplayed()
-      onNodeWithContentDescription("Sharing · Private · invited collaborators only")
-        .assertIsDisplayed()
-      onNodeWithText("Connect agent").assertIsDisplayed()
-      onNodeWithContentDescription("More editor actions").assertIsDisplayed()
+      toolbar.block(File("build/toolbar-overflow").apply { mkdirs() })
     }
 }
