@@ -336,11 +336,15 @@ object ScreenDocumentProjection {
     // Components are not behind this flag: a placement exports as a private composable in the same
     // file.
     if (!UiBuilderBuildFeatures.remoteCompose) {
+      // An event with no actions on a node inside a component definition is a callback parameter
+      // of that component: intent the caller handles, with nothing stateful in the document.
+      val callbacksOnly = componentNodes(document)
       document.nodes.values
         .filter {
           SHOW_BY_STATE in it.properties ||
             it.componentId == "layout/for-each" ||
-            it.eventBindings.isNotEmpty() ||
+            (it.eventBindings.isNotEmpty() &&
+              !(it.id in callbacksOnly && it.eventBindings.values.all { a -> a.isEmpty() })) ||
             it.properties.values.any { value ->
               value is StateValueV1 || value is StateEqualsValueV1
             }
@@ -355,6 +359,17 @@ object ScreenDocumentProjection {
       systemFontFamilies = pass.systemFontFamilies.toList(),
       variableFontTexts = VariableFontText.requests(pass.variableFontSpecs),
     )
+  }
+
+  /** Every node inside a component definition's body, reached through its slots. */
+  private fun componentNodes(document: DesignDocumentV1): Set<String> {
+    val reached = mutableSetOf<String>()
+    fun walk(id: String) {
+      if (!reached.add(id)) return
+      document.nodes[id]?.slots?.values?.flatten()?.forEach(::walk)
+    }
+    document.components.values.forEach { walk(it.root) }
+    return reached
   }
 
   /** One `asset/image` the source draws with a placeholder painter in place of its picture. */
@@ -501,7 +516,11 @@ object ScreenDocumentProjection {
 
     private fun callback(node: DesignNodeV1, event: String): ScreenValue? {
       functionScope?.let { function ->
-        return function.capture("event:${node.id}:$event", null) { callback(node, event) }
+        // An action-free event is the component's API, so it reads as one (`onCancelClick`). A
+        // callback forwarding authored actions keeps its positional name, as before.
+        val intent = node.eventBindings[event].orEmpty().isEmpty()
+        val name = if (intent) callbackName(node.id, event) else null
+        return function.capture("event:${node.id}:$event", null, name) { callback(node, event) }
       }
       val projected = node.eventBindings[event].orEmpty().mapNotNull { action(it, node.id, event) }
       val json = Json
@@ -520,6 +539,13 @@ object ScreenDocumentProjection {
         )
       }
     }
+
+    /** `cancel` + `click` → `onCancelClick`: the parameter a caller passes a node's event as. */
+    private fun callbackName(nodeId: String, event: String): String =
+      "on" +
+        (nodeId.split(Regex("[^A-Za-z0-9]+")) + event)
+          .filter { it.isNotEmpty() }
+          .joinToString("") { it.replaceFirstChar(Char::uppercaseChar) }
 
     private fun action(action: DesignActionV1, nodeId: String, event: String): ScreenAction? {
       val where = "node `$nodeId`.`eventBindings.$event`"
@@ -602,15 +628,38 @@ object ScreenDocumentProjection {
       val captures = linkedMapOf<String, Pair<JsonObject, () -> ScreenValue?>>()
       var root: ScreenNode? = null
 
-      fun capture(key: String, type: String?, supply: () -> ScreenValue?): ScreenValue? {
+      fun capture(
+        key: String,
+        type: String?,
+        preferredName: String? = null,
+        supply: () -> ScreenValue?,
+      ): ScreenValue? {
         val parameter =
-          captures.getOrPut(key) { parameter("capture${captures.size}", type) to supply }.first
+          captures.getOrPut(key) { parameter(captureName(preferredName), type) to supply }.first
         return scopedRead(
           "ParameterRead",
           "parameter",
           parameter.getValue("name").jsonPrimitive.content,
           type ?: "kotlin.Function0",
         )
+      }
+
+      /**
+       * [preferred] when it is a plain Kotlin name no other parameter of this function claims (a
+       * callback reads `onCancelClick`, not `capture0`); otherwise an opaque positional name.
+       */
+      private fun captureName(preferred: String?): String {
+        val taken =
+          setOf("modifier") +
+            bindings.fields.values.map { it.name } +
+            captures.values.map { it.first.getValue("name").jsonPrimitive.content }
+        val usable =
+          preferred != null &&
+            CALLBACK_NAME.matches(preferred) &&
+            preferred !in KOTLIN_HARD_KEYWORDS &&
+            preferred !in taken &&
+            !Regex("(argument|capture)\\d+").matches(preferred)
+        return if (usable) checkNotNull(preferred) else "capture${captures.size}"
       }
 
       fun encode(): JsonObject = buildJsonObject {
@@ -713,8 +762,9 @@ object ScreenDocumentProjection {
         return it
       }
       if (functionScope == null) return emptyMap()
+      // Inside a component every bound event is a parameter, an action-free one included: the
+      // caller decides what the intent does.
       return node.eventBindings
-        .filterValues { it.isNotEmpty() }
         .mapNotNull { (event, _) ->
           if (event == "click" && node.componentId in MODIFIER_CLICK_COMPONENTS) null
           else
@@ -885,7 +935,9 @@ object ScreenDocumentProjection {
 
     private fun scalarType(value: UiValueV1): String? =
       when (value) {
-        is StringValueV1 -> "kotlin.String"
+        is StringValueV1,
+        // A string resource argument is the translated `String` the component reads.
+        is ResourceValueV1 -> "kotlin.String"
         is BooleanValueV1 -> "kotlin.Boolean"
         is IntegerValueV1 -> "kotlin.Int"
         is DecimalValueV1 -> "kotlin.Float"
@@ -898,7 +950,12 @@ object ScreenDocumentProjection {
     private fun scalar(value: UiValueV1, type: String, where: String): ScreenValue? {
       if (value is StateValueV1) return stateRead(value.variable, where)
       return when (type) {
-        "kotlin.String" -> (value as? StringValueV1)?.let { ScreenValue.Text(it.value) }
+        "kotlin.String" ->
+          when (value) {
+            is StringValueV1 -> ScreenValue.Text(value.value)
+            is ResourceValueV1 -> return stringResource(value.resourceKey, where)
+            else -> null
+          }
         "kotlin.Boolean" -> (value as? BooleanValueV1)?.let { ScreenValue.Bool(it.value) }
         "kotlin.Int" -> (value as? IntegerValueV1)?.let { ScreenValue.Whole(it.value) }
         "kotlin.Float" -> {
@@ -3531,6 +3588,8 @@ object ScreenDocumentProjection {
   private const val STRING_RESOURCE_TYPE = "org.jetbrains.compose.resources.StringResource"
   /** A generated `Res.string` member name: a plain Kotlin identifier. */
   private val RESOURCE_KEY = Regex("[A-Za-z_][A-Za-z0-9_]*")
+  /** A generated callback parameter name: `on` and a plain Kotlin identifier. */
+  private val CALLBACK_NAME = Regex("on[A-Z][A-Za-z0-9]*")
   private const val DP = "androidx.compose.ui.unit.Dp"
   private const val SHAPE = "androidx.compose.ui.graphics.Shape"
 
