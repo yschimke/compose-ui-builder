@@ -124,8 +124,8 @@ class ProjectedCompositeExportTest {
     val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
     assertContains(source, "listOf(")
     assertContains(source, "Contact(name = \"Ada\", unread = 2)")
-    // A field left out is left to the class's own default.
-    assertContains(source, "Contact(name = \"Grace\")")
+    // A field left out is written as the default its codec declares.
+    assertContains(source, "Contact(name = \"Grace\", unread = 0)")
     assertContains(source, "Contact(name = \"Linus\", unread = 7)")
   }
 
@@ -176,6 +176,6 @@ class ProjectedCompositeExportTest {
 
   private companion object {
     const val CONTACT =
-      """{ "object": { "type": "com.example.Contact", "fields": { "name": "text", "unread": "whole" } } }"""
+      """{ "object": { "type": "com.example.Contact", "fields": { "name": "text", "unread": { "codec": "whole", "default": { "type": "int", "value": 0 } } } } }"""
   }
 }

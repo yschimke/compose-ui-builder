@@ -161,7 +161,7 @@ object ScreenExportGate {
         is ExportProjection.Codec.ListOf -> codec(written.element)
         is ExportProjection.Codec.Object -> {
           add(written.callableFqn)
-          written.fields.values.forEach(::codec)
+          written.fields.values.forEach { codec(it.codec) }
         }
         else -> Unit
       }
