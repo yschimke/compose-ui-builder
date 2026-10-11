@@ -4,15 +4,20 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
 import ee.schimke.composeai.uibuilder.editor.EditorCatalogRow
 import ee.schimke.composeai.uibuilder.editor.RECENT_COMPONENT_LIMIT
 import ee.schimke.composeai.uibuilder.editor.RECENT_SHELF
+import ee.schimke.composeai.uibuilder.editor.RECENT_SHELF_ID
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorState
+import ee.schimke.composeai.uibuilder.editor.catalogRowKey
 import ee.schimke.composeai.uibuilder.editor.withRecentComponent
 import ee.schimke.composeai.uibuilder.export.UiBuilderReducer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
@@ -154,10 +159,65 @@ class RecentComponentsTest {
   @Test
   fun `the shelf collapses like any other`() {
     val used = inserted(componentId = "m3/text")
-    val collapsed = reducer.reduce(used, UiBuilderEditorEvent.ToggleCatalogGroup(RECENT_SHELF))
+    val collapsed = reducer.reduce(used, UiBuilderEditorEvent.ToggleCatalogGroup(RECENT_SHELF_ID))
 
     val rows = reducer.catalogRows(collapsed)
     assertEquals(RECENT_SHELF, shelfNames(rows).first())
     assertTrue(recentShelf(collapsed).isEmpty())
+  }
+
+  @Test
+  fun `a catalog shelf called Recently used is a different shelf from the editor's`() {
+    // The fixture catalog with one shelf of its own, labelled exactly as the editor's shelf is.
+    val base = Json.parseToJsonElement(resource("/m3-catalog-capabilities-v1.json")).jsonObject
+    val menu =
+      JsonObject(
+        mapOf(
+          "groupOrder" to JsonArray(listOf(JsonPrimitive(RECENT_SHELF))),
+          "components" to
+            JsonObject(
+              mapOf("m3/button" to JsonObject(mapOf("group" to JsonPrimitive(RECENT_SHELF))))
+            ),
+        )
+      )
+    val semantics =
+      JsonObject(base["statusSemantics"]?.jsonObject.orEmpty() + ("componentMenu" to menu))
+    val reducer =
+      UiBuilderEditorReducer(
+        CapabilityCatalogParser.parse(JsonObject(base + ("statusSemantics" to semantics)))
+      )
+    val state =
+      reducer
+        .initial(document, selectedNodeId = "discover-grid")
+        .copy(recentComponents = listOf("m3/text"))
+
+    val headings = reducer.catalogRows(state).filterIsInstance<EditorCatalogRow.Group>()
+    val sameLabel = headings.filter { it.name == RECENT_SHELF }
+    assertEquals(2, sameLabel.size, "both shelves are drawn")
+    // Distinct lazy keys across the whole panel: two rows under one key is a crash in a lazy grid.
+    val keys = reducer.catalogRows(state).map { it.catalogRowKey() }
+    assertEquals(keys.size, keys.toSet().size, "duplicate keys: ${keys - keys.toSet()}")
+
+    // Collapsing the editor's shelf leaves the catalog's open, and the other way round.
+    val editorCollapsed =
+      reducer.reduce(state, UiBuilderEditorEvent.ToggleCatalogGroup(RECENT_SHELF_ID))
+    assertEquals(
+      listOf(false, true),
+      reducer
+        .catalogRows(editorCollapsed)
+        .filterIsInstance<EditorCatalogRow.Group>()
+        .filter { it.name == RECENT_SHELF }
+        .map { it.expanded },
+    )
+    val catalogCollapsed =
+      reducer.reduce(state, UiBuilderEditorEvent.ToggleCatalogGroup(RECENT_SHELF))
+    assertEquals(
+      listOf(true, false),
+      reducer
+        .catalogRows(catalogCollapsed)
+        .filterIsInstance<EditorCatalogRow.Group>()
+        .filter { it.name == RECENT_SHELF }
+        .map { it.expanded },
+    )
   }
 }

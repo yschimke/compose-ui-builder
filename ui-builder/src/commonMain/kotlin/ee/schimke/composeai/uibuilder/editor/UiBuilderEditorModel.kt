@@ -143,8 +143,20 @@ data class EditorCatalogVariant(
  * `LazyColumn` can scroll it.
  */
 sealed interface EditorCatalogRow {
-  /** A catalog family — "Actions", "Selection" — and how many components are under it. */
-  data class Group(val name: String, val count: Int, val expanded: Boolean) : EditorCatalogRow
+  /**
+   * A catalog family — "Actions", "Selection" — and how many components are under it.
+   *
+   * [id] is what the row is keyed and collapsed by, and is [name] for a catalog's own shelf. A
+   * shelf the editor adds itself gives an id no catalog can name, so a catalog that happens to call
+   * one of its shelves by the same label gets a second heading rather than a duplicate key and a
+   * shared collapsed state.
+   */
+  data class Group(
+    val name: String,
+    val count: Int,
+    val expanded: Boolean,
+    val id: String = name,
+  ) : EditorCatalogRow
 
   /**
    * A component's row. [pinned] is part of the row's identity: the "Pinned" shelf copy and the

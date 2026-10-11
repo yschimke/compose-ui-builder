@@ -256,8 +256,15 @@ internal fun <T> Set<T>.toggled(value: T): Set<T> =
  */
 internal const val RECENT_COMPONENT_LIMIT = 6
 
-/** The heading of that shelf, and the name its collapsed state is remembered under. */
+/** The heading of that shelf. */
 internal const val RECENT_SHELF = "Recently used"
+
+/**
+ * That shelf's identity: its lazy key and the entry its collapsed state is remembered under. Not
+ * [RECENT_SHELF], because a catalog may name a shelf of its own "Recently used"; a catalog's shelf
+ * names are labels a person reads, and none starts with a NUL.
+ */
+internal const val RECENT_SHELF_ID = "\u0000editor/recently-used"
 
 /**
  * [componentId] moved to the front of a most-recently-used list, each id at most once, trimmed to

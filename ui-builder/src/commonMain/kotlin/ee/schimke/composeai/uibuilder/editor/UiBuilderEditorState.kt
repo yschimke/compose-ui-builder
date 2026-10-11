@@ -1165,8 +1165,9 @@ class UiBuilderEditorReducer(
       val byId = items.associateBy(EditorCatalogItem::componentId)
       val recentItems = state.recentComponents.mapNotNull(byId::get)
       if (recentItems.isNotEmpty()) {
-        val expanded = RECENT_SHELF !in state.collapsedCatalogGroups
-        rows += EditorCatalogRow.Group(RECENT_SHELF, recentItems.size, expanded)
+        val expanded = RECENT_SHELF_ID !in state.collapsedCatalogGroups
+        rows +=
+          EditorCatalogRow.Group(RECENT_SHELF, recentItems.size, expanded, id = RECENT_SHELF_ID)
         if (expanded) {
           recentItems.forEach { item ->
             val open =

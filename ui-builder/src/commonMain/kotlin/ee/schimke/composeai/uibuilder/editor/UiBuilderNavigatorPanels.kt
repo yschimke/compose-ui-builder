@@ -449,7 +449,7 @@ private fun InsertPanel(
               name = row.name,
               count = row.count,
               expanded = row.expanded,
-              onToggle = { dispatch(UiBuilderEditorEvent.ToggleCatalogGroup(row.name)) },
+              onToggle = { dispatch(UiBuilderEditorEvent.ToggleCatalogGroup(row.id)) },
             )
           is EditorCatalogRow.Component ->
             CatalogComponentTile(
@@ -1708,9 +1708,9 @@ private suspend fun AwaitPointerEventScope.awaitCatalogPickUp(
  * kind is part of the key — without it, expanding a group would reuse the group row's slot for the
  * first component under it and the list would animate the wrong things.
  */
-private fun EditorCatalogRow.catalogRowKey(): String =
+internal fun EditorCatalogRow.catalogRowKey(): String =
   when (this) {
-    is EditorCatalogRow.Group -> "group:$name"
+    is EditorCatalogRow.Group -> "group:$id"
     // The pinned and recent copies are the same component two or three times, so which copy is
     // part of the key: a list that saw two rows with one key would drop one of them rather than
     // draw the component twice.
