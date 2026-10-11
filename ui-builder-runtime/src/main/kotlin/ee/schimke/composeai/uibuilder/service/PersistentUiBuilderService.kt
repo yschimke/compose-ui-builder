@@ -2296,6 +2296,10 @@ public class PersistentUiBuilderService(
     if (branchId.isEmpty()) {
       return branchError(ServiceErrorCodeV1.BAD_REQUEST, "branch id is blank")
     }
+    if (branchId in trash) {
+      // Committing here would overwrite the trashed design's files and lose the restore.
+      return branchError(ServiceErrorCodeV1.BAD_REQUEST, "design $branchId is in the trash")
+    }
     persisted.designs[branchId]?.let { existing ->
       val existingBranch = existing.branch
       // A retried create: the same branch, asked for again by somebody who may see it.
@@ -4673,8 +4677,10 @@ public class PersistentUiBuilderService(
   override fun adminDeleteDesign(designId: String): Boolean {
     val closed: List<SubscriberMailbox> = lock.withLock {
       // The operator's delete is permanent, so it also empties a design out of the trash.
-      if (trash.remove(designId) != null) {
+      if (designId in trash) {
+        // Durable first: were the unlink to fail, the trash entry still holds the id.
         store.remove(designId)
+        trash.remove(designId)
         return@withLock emptyList()
       }
       // An unreadable design is not in the map but is still on disk; retiring it must keep working.
@@ -4736,6 +4742,10 @@ public class PersistentUiBuilderService(
   ): LockedExecution {
     val trashed = trash[designId] ?: return serviceError(notFound(designId))
     if (!trashed.deletableBy(actor)) return serviceError(forbidden("restore", designId))
+    // Held to the deadline [DesignDeleted] advertised, whether or not the host has purged yet.
+    if ((trashed.trashedAtEpochMillis ?: 0L) + limits.trashRetentionMillis <= clock.millis()) {
+      return serviceError(notFound(designId))
+    }
     if (designId in persisted.designs) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "design $designId already exists")
     }
@@ -4786,11 +4796,17 @@ public class PersistentUiBuilderService(
         .filter { (it.trashedAtEpochMillis ?: 0L) + limits.trashRetentionMillis <= now }
         .map { it.document.id }
         .sorted()
-    expired.forEach { designId ->
-      store.remove(designId)
-      trash.remove(designId)
+    // One at a time, durable first: a design whose unlink fails stays in the trash for the next
+    // purge, and every design already gone is still reported so the host can drop its records.
+    expired.filter { designId ->
+      try {
+        store.remove(designId)
+        trash.remove(designId)
+        true
+      } catch (_: UiBuilderPersistenceException) {
+        false
+      }
     }
-    expired
   }
 
   /**

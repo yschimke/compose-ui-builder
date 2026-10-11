@@ -430,6 +430,19 @@ class PersistentUiBuilderServiceFileStoreTest {
         execute(first, owner, UiBuilderServiceRequest.CreateDesign(document("checkout")))
       )
     assertTrue(refused.error.message.contains("trash"), refused.error.message)
+    create(first, "settings")
+    val branchRefused =
+      assertIs<UiBuilderBranchResponse.Error>(
+        runSuspend {
+          first.executeBranch(
+            UiBuilderBranchCall(
+              owner,
+              UiBuilderBranchRequest.CreateBranch("settings", "Alt", branchId = "checkout"),
+            )
+          )
+        }
+      )
+    assertTrue(branchRefused.error.message.contains("trash"), branchRefused.error.message)
 
     val reopened = service(root)
     val listed =
@@ -500,6 +513,15 @@ class PersistentUiBuilderServiceFileStoreTest {
     clock.nowMillis = RESTORABLE_UNTIL - 1
     assertEquals(emptyList(), service.purgeExpiredTrash())
     clock.nowMillis = RESTORABLE_UNTIL
+    // Past its deadline a design cannot come back, whether or not the host has purged yet.
+    assertEquals(
+      ServiceErrorCodeV1.NOT_FOUND,
+      assertIs<UiBuilderServiceResponse.Error>(
+          execute(service, owner, UiBuilderServiceRequest.RestoreDesign("old"))
+        )
+        .error
+        .code,
+    )
     assertEquals(listOf("old"), service.purgeExpiredTrash())
     assertFalse(Files.exists(designDirectory(root, "old")))
     assertTrue(Files.exists(designDirectory(root, "recent")))
