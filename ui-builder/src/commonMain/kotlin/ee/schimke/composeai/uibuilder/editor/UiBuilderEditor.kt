@@ -717,6 +717,9 @@ fun UiBuilderEditor(
   // The shortcuts dialog the `?` key opens. The toolbars keep their own for their menu entry; this
   // one exists because a key has no toolbar to belong to, and the focused layout has none at all.
   var showShortcutsDialog by remember { mutableStateOf(false) }
+  // The Column / Row / Box chooser the wrap chord opens, holding the choices worked out when the
+  // chord was pressed; null while closed.
+  var wrapChoices by remember { mutableStateOf<List<QuickWrapChoice>?>(null) }
   // How many design canvases are composed right now — in practice none or one. Counted from the
   // canvas's own composition rather than inferred from the panes, because the open editor pane does
   // not mean the canvas is drawn: a revision or suggestion review replaces it, and the compact
@@ -2479,6 +2482,20 @@ fun UiBuilderEditor(
           }
         )
       }
+      wrapChoices?.let { choices ->
+        WrapChooserDialog(
+          choices = choices,
+          onPick = { choice ->
+            wrapChoices = null
+            focusEditor()
+            dispatch(UiBuilderEditorEvent.WrapSelection(choice.item.componentId))
+          },
+          onDismiss = {
+            wrapChoices = null
+            focusEditor()
+          },
+        )
+      }
       BoxWithConstraints(Modifier.fillMaxSize()) {
         // A host drawing the toolbar and rails has taken the width they cost, and its panes are
         // resized by the person rather than by a phone, so it keeps the desktop layout.
@@ -2522,11 +2539,27 @@ fun UiBuilderEditor(
                     is EditorViewCommand.Zoom ->
                       canvasZoom = canvasZoomAfter(command.zoom, canvasZoom ?: canvasDrawnScale)
                     EditorViewCommand.ShowShortcuts -> showShortcutsDialog = true
+                    EditorViewCommand.ChooseWrap -> {
+                      // Said rather than shown empty: a chooser with no rows is a dead end, and
+                      // the reason is usually the selection, which a sentence can name.
+                      val choices = quickWrapChoices(reducer.wrapCandidates(state))
+                      when {
+                        state.selectionRoots().isEmpty() -> say("Select something to wrap first")
+                        choices.isEmpty() -> say("This selection cannot go in a Column, Row or Box")
+                        else -> {
+                          // The wrap replaces the layer the search was beside, so an open quick
+                          // insert would be left pointing at a node that has just moved.
+                          quickInsertNodeId = null
+                          wrapChoices = choices
+                        }
+                      }
+                    }
                     EditorViewCommand.QuickInsert ->
                       if (state.selection.size == 1) {
                         // One card beside the selection at a time: the search replaces the quick
                         // editor or a Comment field rather than stacking over it.
                         commentNodeId = null
+                        wrapChoices = null
                         dispatch(UiBuilderEditorEvent.HideQuickEditor)
                         quickInsertNodeId = state.selectedNodeId
                       } else {

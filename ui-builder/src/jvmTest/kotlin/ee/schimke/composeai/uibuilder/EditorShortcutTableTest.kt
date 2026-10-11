@@ -30,7 +30,8 @@ class EditorShortcutTableTest {
     // fire, and the panel would still advertise it. This is the test that stops that happening.
     EDITOR_SHORTCUTS.forEachIndexed { index, shortcut ->
       shortcut.keys.forEach { key ->
-        val chord = EditorChord(key, shortcut.command, shortcut.shift ?: false)
+        val chord =
+          EditorChord(key, shortcut.command, shortcut.shift ?: false, shortcut.alt ?: false)
         assertEquals(
           index,
           EDITOR_SHORTCUTS.indexOfFirst { it.matches(chord) },
@@ -240,6 +241,38 @@ class EditorShortcutTableTest {
           canvasShown = true,
         )
         ?.view,
+    )
+  }
+
+  @Test
+  fun `the wrap chord opens the chooser and only with both modifiers`() {
+    assertEquals(
+      EditorViewCommand.ChooseWrap,
+      resolve(EditorChord(Key.G, command = true, shift = false, alt = true))?.view,
+    )
+    // Ctrl/Cmd+G alone is the browser's find-next, and a bare or Alt-only G is typing (Option+G is
+    // a character on a Mac): none of them is ours.
+    assertNull(resolve(EditorChord(Key.G, command = true, shift = false)))
+    assertNull(resolve(EditorChord(Key.G, command = false, shift = false, alt = true)))
+    assertNull(resolve(EditorChord(Key.G, command = false, shift = false)))
+  }
+
+  @Test
+  fun `the wrap chord edits, so a closed canvas leaves it inert`() {
+    assertNull(
+      editorShortcutFor(
+        EditorChord(Key.G, command = true, shift = false, alt = true),
+        editing = false,
+      )
+    )
+  }
+
+  @Test
+  fun `holding Alt does not change what the older chords do`() {
+    // They were written before Alt meant anything to the table, and `alt = null` keeps them so.
+    assertEquals(
+      UiBuilderEditorEvent.Undo,
+      resolve(EditorChord(Key.Z, command = true, shift = false, alt = true))?.event,
     )
   }
 }
