@@ -310,7 +310,12 @@ private constructor(
               templateId = templateId,
             )
         when (val created = service.create(seed)) {
-          is SnapshotResponseV1 -> mutableSnapshot.value = created
+          is SnapshotResponseV1 -> {
+            // Publish the first snapshot after the new pin is saved, so queued edits cannot
+            // race this initial write and be overwritten by it.
+            if (initialDocument != null && seed != initialDocument) persistThroughHost(created)
+            mutableSnapshot.value = created
+          }
           is ErrorResponseV1 -> mutableFailure.value = created.error.message
           else -> mutableFailure.value = "unexpected response while creating the desktop design"
         }
@@ -323,19 +328,21 @@ private constructor(
     when (val result = service.execute(OpenDesignRequestV1(designId))) {
       is SnapshotResponseV1 -> {
         mutableSnapshot.value = result
-        if (persist) {
-          try {
-            onDocumentCommitted(result.snapshot.state.document)
-            mutableFailure.value = null
-          } catch (failure: Exception) {
-            mutableFailure.value =
-              "the design changed in memory but could not be written: " +
-                (failure.message ?: failure::class.simpleName)
-          }
-        }
+        if (persist) persistThroughHost(result)
       }
       is ErrorResponseV1 -> mutableFailure.value = result.error.message
       else -> mutableFailure.value = "unexpected response while opening the desktop design"
+    }
+  }
+
+  private suspend fun persistThroughHost(snapshot: SnapshotResponseV1) {
+    try {
+      onDocumentCommitted(snapshot.snapshot.state.document)
+      mutableFailure.value = null
+    } catch (failure: Exception) {
+      mutableFailure.value =
+        "the design changed in memory but could not be written: " +
+          (failure.message ?: failure::class.simpleName)
     }
   }
 

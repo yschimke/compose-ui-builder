@@ -1,6 +1,9 @@
 package ee.schimke.composeai.uibuilder.host
 
+import ee.schimke.composeai.uibuilder.editor.EditorSubmission
+import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorReducer
+import ee.schimke.composeai.uibuilder.editor.screenEnvironmentSettings
 import ee.schimke.composeai.uibuilder.export.toUiBuilderDocument
 import ee.schimke.composeai.uibuilder.local.FileLocalDesignStorage
 import ee.schimke.composeai.uibuilder.local.LocalDesignStore
@@ -15,6 +18,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -22,6 +26,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 class PublishedCatalogStoreTest {
@@ -247,8 +252,11 @@ class PublishedCatalogStoreTest {
             },
           )
         for (project in listOf(false, true)) {
+          val committed =
+            CompletableDeferred<ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1>()
           val session =
-            if (project) OfflineUiBuilderSession.projectDocument(original) {}
+            if (project)
+              OfflineUiBuilderSession.projectDocument(original) { committed.complete(it) }
             else OfflineUiBuilderSession(workspace, catalogSystemId = "wear-m3")
           session.use {
             val reopened =
@@ -268,6 +276,11 @@ class PublishedCatalogStoreTest {
               val saved =
                 checkNotNull(LocalDesignStore(FileLocalDesignStorage(workspace)).read(original.id))
               assertEquals(reopened.catalogPin, saved.seed.catalogPin)
+            } else {
+              assertEquals(
+                reopened,
+                withTimeout(10.seconds) { committed.await() }.toUiBuilderDocument(),
+              )
             }
           }
         }
@@ -275,4 +288,62 @@ class PublishedCatalogStoreTest {
         PublishedCatalogStore.shared = previous
       }
     }
+
+  @Test
+  fun `an edit queued during project repinning is saved after the updated pin`() = runBlocking {
+    val original =
+      OfflineUiBuilderSession(
+          Files.createTempDirectory("early-repin-seed"),
+          catalogSystemId = "wear-m3",
+        )
+        .use { session ->
+          withTimeout(10.seconds) { session.snapshot.filterNotNull().first() }
+            .snapshot
+            .state
+            .document
+            .toUiBuilderDocument()
+        }
+    val drifted =
+      original.copy(
+        catalogPin =
+          JsonObject(
+            original.catalogPin + ("catalogRevision" to JsonPrimitive("previous-publication"))
+          )
+      )
+    val saving = CompletableDeferred<Unit>()
+    val release = CompletableDeferred<Unit>()
+    val edited = CompletableDeferred<ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1>()
+    val writes = mutableListOf<ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1>()
+    OfflineUiBuilderSession.projectDocument(drifted) { document ->
+        if (writes.isEmpty()) {
+          saving.complete(Unit)
+          release.await()
+        }
+        writes.add(document)
+        if (document.revision > original.revision) edited.complete(document)
+      }
+      .use { session ->
+        withTimeout(10.seconds) { saving.await() }
+        val reducer = UiBuilderEditorReducer(session.catalog, "early-repin", "early-repin")
+        val initial = reducer.initial(drifted)
+        val settings = drifted.screenEnvironmentSettings()
+        val changed =
+          reducer.reduce(
+            initial,
+            UiBuilderEditorEvent.UpdateEnvironment(settings.copy(heightDp = settings.heightDp + 1)),
+          )
+        session.submit(
+          assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, changed))
+        )
+        assertNull(session.snapshot.value, "edits must wait for the repinned seed to be saved")
+        release.complete(Unit)
+        val saved = withTimeout(10.seconds) { edited.await() }.toUiBuilderDocument()
+        assertEquals(
+          listOf(original.revision.toLong(), original.revision + 1L),
+          writes.map { it.revision },
+        )
+        assertEquals(original.catalogPin, saved.catalogPin)
+        assertEquals(settings.heightDp + 1, saved.screenEnvironmentSettings().heightDp)
+      }
+  }
 }
