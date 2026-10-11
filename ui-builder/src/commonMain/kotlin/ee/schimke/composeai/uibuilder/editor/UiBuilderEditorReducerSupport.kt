@@ -200,12 +200,23 @@ internal fun ComponentCapability.slot(name: String): SlotCapability? =
  * and variant labels are all matchable.
  */
 internal fun EditorCatalogItem.matches(needle: String): Boolean =
+  matchesOwnName(needle) || variants.any { it.matches(needle) }
+
+/**
+ * Whether [needle] finds the component itself — name, catalog id, kind or family — rather than only
+ * one of its variants. Quick insert lists a component row only then; a variant-only match is a
+ * variant row, so Enter inserts the variant that was typed.
+ */
+internal fun EditorCatalogItem.matchesOwnName(needle: String): Boolean =
   needle.isEmpty() ||
     displayName.lowercase().contains(needle) ||
     componentId.lowercase().contains(needle) ||
     kind.label.lowercase().contains(needle) ||
-    group.lowercase().contains(needle) ||
-    variants.any { it.label.lowercase().contains(needle) || it.value.lowercase().contains(needle) }
+    group.lowercase().contains(needle)
+
+/** Whether a search for [needle] finds this variant by its label or its catalog value. */
+internal fun EditorCatalogVariant.matches(needle: String): Boolean =
+  label.lowercase().contains(needle) || value.lowercase().contains(needle)
 
 /** Exact names lead search results; matches found only through a shelf or variant follow them. */
 internal fun EditorCatalogItem.searchRank(needle: String): Int =
@@ -214,9 +225,7 @@ internal fun EditorCatalogItem.searchRank(needle: String): Int =
     displayName.lowercase().startsWith(needle) -> 1
     componentId.lowercase() == needle -> 2
     componentId.lowercase().contains(needle) -> 3
-    variants.any {
-      it.label.lowercase().contains(needle) || it.value.lowercase().contains(needle)
-    } -> 4
+    variants.any { it.matches(needle) } -> 4
     kind.label.lowercase().contains(needle) -> 5
     else -> 6
   }
