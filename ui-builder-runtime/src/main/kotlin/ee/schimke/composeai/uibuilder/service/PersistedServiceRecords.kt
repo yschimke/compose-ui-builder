@@ -47,6 +47,14 @@ internal data class PersistedDesignV1(
    * with their own credential, and for every design created before this was recorded.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val createdByDelegateActorId: String? = null,
+  /**
+   * When this design was deleted into the trash, or null for a live design. A trashed design keeps
+   * every part on disk so [UiBuilderServiceRequest.RestoreDesign] can bring it back whole, until
+   * [UiBuilderAdminPort.purgeExpiredTrash] removes it. See `UI_BUILDER_TRASH.md`.
+   */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val trashedAtEpochMillis: Long? = null,
+  /** Who deleted it into the trash; null for a live design. */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val trashedByActorId: String? = null,
 )
 
 @Serializable

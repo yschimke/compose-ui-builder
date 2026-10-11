@@ -164,6 +164,10 @@ internal data class StoredDesignHeaderV3(
    * [PersistedDesignV1.createdByDelegateActorId]; in the header so a quarantined design keeps it.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val createdByDelegateActorId: String? = null,
+  /** [PersistedDesignV1.trashedAtEpochMillis]. */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val trashedAtEpochMillis: Long? = null,
+  /** [PersistedDesignV1.trashedByActorId]. */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val trashedByActorId: String? = null,
 )
 
 /** One retained revision: the document at it, the positions at it, or both. */
@@ -447,6 +451,8 @@ internal class FileUiBuilderDesignStore(
             journalCompactedBytes = written.compactedBytes,
             branch = next.branch,
             createdByDelegateActorId = next.createdByDelegateActorId,
+            trashedAtEpochMillis = next.trashedAtEpochMillis,
+            trashedByActorId = next.trashedByActorId,
           )
         var header = headerFor(journal)
         // The budget is checked before the header lands, since the header makes the generation
@@ -681,6 +687,8 @@ internal class FileUiBuilderDesignStore(
       branch = header.branch,
       branchLog = journal.branchLog,
       createdByDelegateActorId = header.createdByDelegateActorId,
+      trashedAtEpochMillis = header.trashedAtEpochMillis,
+      trashedByActorId = header.trashedByActorId,
     )
   }
 
@@ -1270,6 +1278,8 @@ internal class FileUiBuilderDesignStore(
         journalCompactedBytes = journal.compactedBytes,
         branch = next.branch,
         createdByDelegateActorId = next.createdByDelegateActorId,
+        trashedAtEpochMillis = next.trashedAtEpochMillis,
+        trashedByActorId = next.trashedByActorId,
       )
     // Refuse any file over the per-design read budget, or the next load would quarantine it after
     // the legacy file was already renamed. Per file, not total: an over-budget design still loads
