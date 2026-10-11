@@ -49,6 +49,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -82,6 +83,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.window.core.layout.WindowSizeClass
 import ee.schimke.composeai.uibuilder.CommandOutcome
 import ee.schimke.composeai.uibuilder.DesignRevisionPin
 import ee.schimke.composeai.uibuilder.DesignUrlSelectors
@@ -559,6 +561,15 @@ internal fun EditorToolbar(
   var showShortcuts by remember { mutableStateOf(false) }
   var overflowOpen by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
+  // The row does not wrap, so up to the Expanded width class the session actions (New, Fork,
+  // Sharing) and the viewer list move into More rather than pushing the agent control and More
+  // itself off the end; from Large up they are on the toolbar. Below 840dp the editor shows
+  // MobileEditorToolbar instead.
+  val foldToMore =
+    !currentWindowAdaptiveInfo(supportLargeAndXLargeWidth = true)
+      .windowSizeClass
+      .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_LARGE_LOWER_BOUND)
+  val showPresence = collaborators.isNotEmpty() || agentHost != null
   if (showShortcuts) {
     EditorShortcutsDialog(onDismiss = { showShortcuts = false })
   }
@@ -609,18 +620,20 @@ internal fun EditorToolbar(
           WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
         }
       }
-      if (collaborators.isNotEmpty() || agentHost != null) {
+      if (showPresence && !foldToMore) {
         Spacer(Modifier.width(6.dp))
         PresenceRow(collaborators)
         Spacer(Modifier.width(6.dp))
       }
-      if (onNewDesign != null) {
-        ToolbarIconAction("New design", "", UiBuilderChromeIcon.New, true, onNewDesign)
+      if (!foldToMore) {
+        if (onNewDesign != null) {
+          ToolbarIconAction("New design", "", UiBuilderChromeIcon.New, true, onNewDesign)
+        }
+        if (onForkDesign != null) {
+          ToolbarIconAction("Fork this design", "", UiBuilderChromeIcon.Copy, true, onForkDesign)
+        }
+        if (visibilityLabel != null) VisibilityToolbarAction(visibilityLabel, onManageVisibility)
       }
-      if (onForkDesign != null) {
-        ToolbarIconAction("Fork this design", "", UiBuilderChromeIcon.Copy, true, onForkDesign)
-      }
-      if (visibilityLabel != null) VisibilityToolbarAction(visibilityLabel, onManageVisibility)
       if (agentHost != null) {
         AgentToolbarAction(agentHost, onOpenAgentPrompt)
       } else if (onCopyAiPrompt != null) {
@@ -633,6 +646,42 @@ internal fun EditorToolbar(
           overflowOpen = true
         }
         val menuEntries = buildList {
+          if (foldToMore) {
+            if (showPresence) {
+              add(UiBuilderMenuEntry.Heading(presenceLabel(collaborators)))
+              presenceRows(collaborators).forEach { row ->
+                add(UiBuilderMenuEntry.Action(row) { overflowOpen = false })
+              }
+              add(UiBuilderMenuEntry.Divider)
+            }
+            if (visibilityLabel != null) {
+              add(UiBuilderMenuEntry.Heading(visibilityLabel))
+              if (onManageVisibility != null)
+                add(
+                  UiBuilderMenuEntry.Action("Sharing") {
+                    overflowOpen = false
+                    onManageVisibility()
+                  }
+                )
+              add(UiBuilderMenuEntry.Divider)
+            }
+            if (onNewDesign != null) {
+              add(
+                UiBuilderMenuEntry.Action("New design") {
+                  overflowOpen = false
+                  onNewDesign()
+                }
+              )
+            }
+            if (onForkDesign != null) {
+              add(
+                UiBuilderMenuEntry.Action("Fork this design") {
+                  overflowOpen = false
+                  onForkDesign()
+                }
+              )
+            }
+          }
           if (onBrowseDesigns != null) {
             add(
               UiBuilderMenuEntry.Action("My designs", icon = UiBuilderMenuIcon.Folder) {
@@ -1056,29 +1105,34 @@ private fun WorkspacePanesMenu(
 private fun PresenceRow(collaborators: List<UiBuilderCollaborator>) {
   var expanded by remember { mutableStateOf(false) }
   Box {
-    TextButton(onClick = { expanded = true }) { Text("Viewers · ${collaborators.size + 1}") }
+    TextButton(onClick = { expanded = true }) { Text(presenceLabel(collaborators)) }
     androidx.compose.material3.DropdownMenu(
       expanded = expanded,
       onDismissRequest = { expanded = false },
     ) {
-      DropdownMenuItem(text = { Text("You · browser") }, onClick = { expanded = false })
-      collaborators.forEach { collaborator ->
-        DropdownMenuItem(
-          text = {
-            Text(
-              "${collaborator.displayName} · ${when (collaborator.kind) {
-          UiBuilderParticipantKind.Browser -> "browser"
-          UiBuilderParticipantKind.Agent -> "agent"
-          UiBuilderParticipantKind.Unknown -> "participant"
-        }}${collaborator.modelName?.let { " · $it (reported)" }.orEmpty()}"
-            )
-          },
-          onClick = { expanded = false },
-        )
+      presenceRows(collaborators).forEach { row ->
+        DropdownMenuItem(text = { Text(row) }, onClick = { expanded = false })
       }
     }
   }
 }
+
+private fun presenceLabel(collaborators: List<UiBuilderCollaborator>) =
+  "Viewers · ${collaborators.size + 1}"
+
+/** One line per viewer, this browser first: the presence menu's rows, wherever it is shown. */
+private fun presenceRows(collaborators: List<UiBuilderCollaborator>): List<String> =
+  listOf("You · browser") +
+    collaborators.map { collaborator ->
+      val kind =
+        when (collaborator.kind) {
+          UiBuilderParticipantKind.Browser -> "browser"
+          UiBuilderParticipantKind.Agent -> "agent"
+          UiBuilderParticipantKind.Unknown -> "participant"
+        }
+      "${collaborator.displayName} · $kind" +
+        collaborator.modelName?.let { " · $it (reported)" }.orEmpty()
+    }
 
 /**
  * Everything that can be done to the selection, as menu rows: used by the layers tree context menu,

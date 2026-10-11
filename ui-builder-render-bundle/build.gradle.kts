@@ -105,10 +105,13 @@ val verifyRenderBundlePackaged =
     // Coordinates the renderer needs that no packed preview reaches: `WindowSizeClass` (used by
     // `AdaptiveSupportingPaneScaffold` for `layout/supporting-pane-scaffold`) and
     // `NavigationSuiteScaffold` (for `m3/navigation-suite-scaffold`). Matched with KMP variant
-    // suffixes, since the resolved JVM artifact is e.g. `window-core-desktop`.
+    // suffixes, since the resolved JVM artifact is e.g. `window-core-jvm`. From window-core 1.5 the
+    // JetBrains `org.jetbrains.androidx.window:window-core-desktop` jar is an empty redirect to
+    // Google's `androidx.window:window-core-jvm`, which holds `WindowSizeClass`, so that is the
+    // coordinate the bundle must carry.
     val required =
       listOf(
-        "org.jetbrains.androidx.window:window-core",
+        "androidx.window:window-core",
         "org.jetbrains.compose.material3:material3-adaptive-navigation-suite",
       )
     val variantSuffixes = listOf("", "-desktop", "-jvm")
