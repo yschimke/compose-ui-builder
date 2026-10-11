@@ -28,6 +28,8 @@ import ee.schimke.composeai.uibuilder.capability.CapabilityValidator
 import ee.schimke.composeai.uibuilder.capability.ComponentCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyCapability
 import ee.schimke.composeai.uibuilder.capability.PropertyEditorControl
+import ee.schimke.composeai.uibuilder.capability.PropertyValueShape
+import ee.schimke.composeai.uibuilder.capability.PropertyValueShapes
 import ee.schimke.composeai.uibuilder.capability.SlotCapability
 import ee.schimke.composeai.uibuilder.capability.accepts
 import ee.schimke.composeai.uibuilder.client.toProtocolDocument
@@ -366,6 +368,14 @@ class UiBuilderEditorReducer(
       is UiBuilderEditorEvent.MoveNodeInto -> moveInto(state, event)
       is UiBuilderEditorEvent.CommitProperty ->
         commitProperty(state, event.nodeId, event.property, event.draft)
+      is UiBuilderEditorEvent.CommitPropertyPath ->
+        editStructuredProperty(state, event.nodeId, event.property) { shape, stored ->
+          StructuredProperties.commit(event.property, shape, stored, event.path, event.draft)
+        }
+      is UiBuilderEditorEvent.EditPropertyList ->
+        editStructuredProperty(state, event.nodeId, event.property) { shape, stored ->
+          StructuredProperties.editList(event.property, shape, stored, event.path, event.edit)
+        }
       is UiBuilderEditorEvent.BindPropertyToState ->
         bindPropertyToState(state, event.nodeId, event.property, event.variable, event.equalsValue)
       is UiBuilderEditorEvent.BindPropertyToFormula ->
@@ -1418,6 +1428,16 @@ class UiBuilderEditorReducer(
       .filterNot { it.name in THEME_PROPERTIES }
       .filter { nodes.size == 1 || sharedByAll(it) }
       .flatMap { property ->
+        // A typed adapter's list or object: one row per field and per item, all the way down.
+        property.editor?.valueShape?.let { shape ->
+          return@flatMap StructuredProperties.fields(
+            nodes,
+            node,
+            property,
+            shape,
+            state.propertyErrors[EditorPropertyLocation(node.id, property.name)],
+          )
+        }
         val objectEdges =
           property.editor?.objectKind?.let { kind ->
             EDITOR_OBJECT_VALUE_EDGES[kind]?.let { kind to it }
@@ -1435,6 +1455,9 @@ class UiBuilderEditorReducer(
         val numberBounds = property.numberBounds(typeNames)
         val control =
           when {
+            // A list or object whose published shape did not parse stays uneditable.
+            declaredControl == PropertyEditorControl.LIST ||
+              declaredControl == PropertyEditorControl.OBJECT -> EditorPropertyControl.Unsupported
             declaredControl == PropertyEditorControl.COLOR -> EditorPropertyControl.Color
             property.allowedValues.isNotEmpty() || declaredControl == PropertyEditorControl.ENUM ->
               EditorPropertyControl.Enum
@@ -2798,6 +2821,22 @@ class UiBuilderEditorReducer(
     val node = state.document.nodes[nodeId] ?: return state
     if (node.componentId == COMPONENT_INSTANCE_ID)
       return setComponentArgument(state, node, propertyName, draft)
+    // `contacts[0].name` addresses one scalar inside a typed adapter's list or object, as
+    // `contentPadding.topDp` addresses one edge of a padding.
+    PropertyValueShapes.parse(propertyName)
+      ?.takeIf { (base, path) ->
+        path.isNotEmpty() &&
+          catalog.componentsById[node.componentId]
+            ?.propertiesByName
+            ?.get(base)
+            ?.editor
+            ?.valueShape != null
+      }
+      ?.let { (base, path) ->
+        return editStructuredProperty(state, nodeId, base) { shape, stored ->
+          StructuredProperties.commit(base, shape, stored, path, draft)
+        }
+      }
     node.properties[propertyName]?.bindingKey()?.let { parameter ->
       return state.rejected(
         sequence,
@@ -2894,6 +2933,50 @@ class UiBuilderEditorReducer(
         if (targets.size > 1) edited.copy(selection = targets.map(UiBuilderNode::id)) else edited
       }
       .withCommittedColour(state, field, value)
+  }
+
+  /**
+   * One edit of a typed adapter's list or object [propertyName] on [nodeId]: [edit] makes the
+   * property's whole new wrapper from its published shape and stored value, which is validated and
+   * written as one `SetProperty`, so it undoes, redoes and merges like any other property write.
+   * Only the edited node: rows are a node's own, and a multi-selection disagreeing on them shows
+   * the property as mixed rather than as rows.
+   */
+  private fun editStructuredProperty(
+    state: UiBuilderEditorState,
+    nodeId: String,
+    propertyName: String,
+    edit: (PropertyValueShape, JsonObject?) -> StructuredProperties.Outcome,
+  ): UiBuilderEditorState {
+    val sequence = state.operationSequence + 1
+    val node = state.document.nodes[nodeId] ?: return state
+    fun refuse(message: String) =
+      state.rejected(sequence, RejectionCode.INVALID_PROPERTY, message, nodeId, propertyName)
+    node.properties[propertyName]?.bindingKey()?.let { parameter ->
+      return refuse("This is the component's `$parameter` parameter; set it on each placement")
+    }
+    val shape =
+      catalog.componentsById[node.componentId]
+        ?.propertiesByName
+        ?.get(propertyName)
+        ?.editor
+        ?.valueShape
+        ?: return refuse("$propertyName is not a list or object property of ${node.componentId}")
+    val stored = node.properties[propertyName] as? JsonObject
+    val encoded =
+      when (val outcome = edit(shape, stored)) {
+        is StructuredProperties.Outcome.Refused -> return refuse(outcome.message)
+        is StructuredProperties.Outcome.Written -> outcome.value
+      }
+    if (encoded == stored) return state
+    validator.validate(state.document, nodeId, propertyName, encoded)?.let { issue ->
+      return refuse(issue.message)
+    }
+    return state.apply(
+      sequence,
+      listOf(DesignOperation.SetProperty(nodeId, propertyName, encoded)),
+      selectionAfter = nodeId,
+    )
   }
 
   /**

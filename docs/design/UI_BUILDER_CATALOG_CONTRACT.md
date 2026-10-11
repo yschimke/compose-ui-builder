@@ -374,6 +374,17 @@ the type. A declaration this build cannot honour is ignored and the property kee
 so a bad editor costs the catalog its range, never the property. `propertyCapabilities` entries are
 raw JSON in compose-ai-tools' policy schema already, so this needs no generator change.
 
+A typed adapter's **list and object properties** (compose-ai-tools' `AdapterValueCodecs.list` and
+`.obj`) publish `control` `list` or `object` with a recursive shape instead of a range — `"element"`
+for a list, `"objectType"` and `"fields"` (each `name`, `required`, an optional `default` wrapper,
+and its own shape) for an object, a shape being `jsonType`, `literalType`, optional `allowedValues`
+and, nested, its own `editor`. The editor reads it from the policy entry or from the component's
+own property capability (`PropertyValueShapes`), validates a stored value against it
+(`{"type": "list", "values": […]}`, `{"type": "object", "fields": {…}}`, nesting wrappers), and
+edits it structurally: an object is one row per field, a list one row per item with add, remove and
+move, each edit one `SetProperty` of the whole value. A shape that does not parse leaves the
+property uneditable rather than editable wrongly.
+
 **Insert content** is what a component arrives holding when it is inserted from the palette —
 `StarterContent`'s two tables in one shape:
 
