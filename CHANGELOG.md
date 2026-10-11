@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.105.0](https://github.com/yschimke/compose-ui-builder/compare/v3.104.0...v3.105.0) (2026-10-11)
+
+
+### Features
+
+* **editor:** offer Undo in a snackbar after delete, cut and unwrap ([#678](https://github.com/yschimke/compose-ui-builder/issues/678)) ([49f590c](https://github.com/yschimke/compose-ui-builder/commit/49f590c156fc1b989e0c1908d67eef25d16c617e))
+
+
+### Bug Fixes
+
+* **catalog:** give an a2ui catalog none of the builder's layout, shape or asset vocabulary ([#671](https://github.com/yschimke/compose-ui-builder/issues/671)) ([8f66549](https://github.com/yschimke/compose-ui-builder/commit/8f6654916b5a0e1789e90f91079cefc847ff45f1))
+* **deps:** update dependency ee.schimke.composeai:compose-preview-contracts-bom to v3.26.0 ([#652](https://github.com/yschimke/compose-ui-builder/issues/652)) ([51c7ebc](https://github.com/yschimke/compose-ui-builder/commit/51c7ebcf32d42b901efda5b464a5ed738e248205))
+* **renderer:** handle unavailable Cache Storage in opaque frames ([#668](https://github.com/yschimke/compose-ui-builder/issues/668)) ([74ed3c1](https://github.com/yschimke/compose-ui-builder/commit/74ed3c1666f266e64985d3ece15de19ef2fadbbe))
+* **ui-builder:** a catalog that starts requiring a property no longer strands designs written before it did ([#663](https://github.com/yschimke/compose-ui-builder/issues/663)) ([fa5b964](https://github.com/yschimke/compose-ui-builder/commit/fa5b964b991d668b0515fb99d9cecce0e5a7c826))
+* **ui-builder:** draw a PNG export with the served catalog when the renderer packages none for its pin ([#665](https://github.com/yschimke/compose-ui-builder/issues/665)) ([dda6dd7](https://github.com/yschimke/compose-ui-builder/commit/dda6dd78790d1986559b507647c868544a2446b3))
+* **ui-builder:** resolve an adaptive Wear widget before the catalog runtime draws the canvas ([#664](https://github.com/yschimke/compose-ui-builder/issues/664)) ([2d5c640](https://github.com/yschimke/compose-ui-builder/commit/2d5c640d28bc13a7f6d5bd71cac67b07f62be006))
+
 ## [3.104.0](https://github.com/yschimke/compose-ui-builder/compare/v3.103.0...v3.104.0) (2026-10-10)
 
 
