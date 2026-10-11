@@ -8,9 +8,11 @@ import ee.schimke.composeai.uibuilder.editor.EditorChord
 import ee.schimke.composeai.uibuilder.editor.EditorMoveDirection
 import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.editor.EditorSelectionMove
+import ee.schimke.composeai.uibuilder.editor.EditorShortcutGroup
 import ee.schimke.composeai.uibuilder.editor.EditorViewCommand
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.editorShortcutFor
+import ee.schimke.composeai.uibuilder.editor.editorShortcutSections
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -93,6 +95,24 @@ class EditorShortcutTableTest {
     assertEquals(chords.distinct(), chords, "two rows would advertise the same chord")
     assertTrue(EDITOR_SHORTCUTS.all { it.chord.isNotBlank() && it.description.isNotBlank() })
     assertTrue(EDITOR_GESTURES.all { it.first.isNotBlank() && it.second.isNotBlank() })
+  }
+
+  @Test
+  fun `the panel lists every chord once, under its section`() {
+    val sections = editorShortcutSections()
+    assertEquals(EditorShortcutGroup.entries, sections.map { it.first }, "an empty section")
+    // Merged rows join their chords, so every chord must still appear in exactly one row.
+    val listed = sections.flatMap { (_, rows) -> rows.map { it.first } }
+    EDITOR_SHORTCUTS.forEach { shortcut ->
+      assertEquals(
+        1,
+        listed.count { row -> row == shortcut.chord || shortcut.chord in row.split(" / ") },
+        "${shortcut.chord} should be listed once",
+      )
+    }
+    // The two redo chords are one action, so one row.
+    val history = sections.single { it.first == EditorShortcutGroup.History }.second
+    assertEquals(listOf("Redo", "Undo"), history.map { it.second })
   }
 
   @Test
