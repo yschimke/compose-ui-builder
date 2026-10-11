@@ -1100,6 +1100,53 @@ internal fun UiBuilderDocument.subtreeOf(nodeId: String): Set<String> {
   return collected
 }
 
+/**
+ * This design re-rooted at [nodeId]: the node's subtree as the whole screen, or null when there is
+ * no such node. What an export of one layer is run on.
+ *
+ * Everything else the subtree reads comes with it unchanged — environment, state variables, assets
+ * and the title, so the function keeps the design's name — plus the bodies of the local components
+ * it places, transitively, since a placement exports as a call to its component's function. Other
+ * components are dropped so their functions are not written beside a layer that never calls them. A
+ * theme on the design's surface is not carried: it belongs to that surface, and a copied layer is
+ * pasted inside a theme of the reader's own.
+ *
+ * The one change to the layer itself: its [PARENT_SCOPED_MODIFIERS] go. A `weight` or `align` is
+ * addressed to the parent the layer is being copied out of, and at the root there is no row or box
+ * to supply it, so keeping them refused every weighted list item. The reader's own parent decides.
+ */
+internal fun UiBuilderDocument.subtreeDocument(nodeId: String): UiBuilderDocument? {
+  if (nodeId !in nodes) return null
+  val kept = subtreeOf(nodeId).toMutableSet()
+  val placed = mutableSetOf<String>()
+  val pending = ArrayDeque(kept.mapNotNull { nodes[it]?.placementKey() })
+  while (pending.isNotEmpty()) {
+    val key = pending.removeFirst()
+    if (!placed.add(key)) continue
+    // A body can place another component; those come along too.
+    componentBody(key).forEach { bodyNodeId ->
+      if (kept.add(bodyNodeId)) nodes[bodyNodeId]?.placementKey()?.let(pending::addLast)
+    }
+  }
+  val root = nodes.getValue(nodeId)
+  val unscoped =
+    root.copy(
+      modifiers =
+        JsonArray(
+          root.modifiers.filterNot {
+            (it as? JsonObject)?.get("type")?.primitiveOrNull()?.contentOrNull in
+              PARENT_SCOPED_MODIFIERS
+          }
+        )
+    )
+  return copy(
+    roots = listOf(nodeId),
+    // Document order rather than traversal order, so the projection walks what it always walks.
+    nodes = nodes.filterKeys { it in kept } + (nodeId to unscoped),
+    components = JsonObject(components.filterKeys { it in placed }),
+  )
+}
+
 internal fun UiBuilderDocument.children(parent: ParentSlot?): List<String> =
   if (parent == null) roots else nodes.getValue(parent.nodeId).slots[parent.slot].orEmpty()
 

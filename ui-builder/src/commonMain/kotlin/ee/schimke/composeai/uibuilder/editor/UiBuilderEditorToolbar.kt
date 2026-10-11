@@ -1110,6 +1110,11 @@ internal fun editorSelectionMenuEntries(
   onComment: (() -> Unit)? = null,
   /** Copies a link that opens this design on this layer, or null where nothing is selected. */
   onCopyLink: (() -> Unit)? = null,
+  /**
+   * Copies the Kotlin the code pane's export writes for just this layer, or null where there is no
+   * single selection to export.
+   */
+  onCopyCode: (() -> Unit)? = null,
   onDismiss: () -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ): List<UiBuilderMenuEntry> = buildList {
@@ -1165,7 +1170,28 @@ internal fun editorSelectionMenuEntries(
       )
     )
   }
-  if (onOpenProperties != null || onQuickEdit != null || onComment != null || onCopyLink != null) {
+  // Beside Copy link for the same reason: it is about this layer, where the code pane and the
+  // Export menu are about the whole design.
+  if (onCopyCode != null) {
+    add(
+      UiBuilderMenuEntry.Action(
+        label = "Copy as Compose code",
+        icon = UiBuilderMenuIcon.Code,
+        contentDescription = "Copy this layer as Compose code",
+        onClick = {
+          onDismiss()
+          onCopyCode()
+        },
+      )
+    )
+  }
+  if (
+    onOpenProperties != null ||
+      onQuickEdit != null ||
+      onComment != null ||
+      onCopyLink != null ||
+      onCopyCode != null
+  ) {
     add(UiBuilderMenuEntry.Divider)
   }
   add(
@@ -1288,6 +1314,36 @@ internal fun editorSelectionMenuEntries(
     add(UiBuilderMenuEntry.Action("Unwrap") { act(UiBuilderEditorEvent.UnwrapSelection) })
   }
 }
+
+/**
+ * Runs one "Copy as Compose code" for the layer called [layer] and returns the sentence to show,
+ * like [copyLinkSentence]. A refusal copies nothing — a clipboard of half a screen is worse than an
+ * unchanged one — and says why in the code pane's words; [write] failing is a sentence too.
+ */
+internal suspend fun copyCodeSentence(
+  code: EditorGeneratedCode,
+  layer: String,
+  write: suspend (String) -> Unit,
+): String =
+  when (code) {
+    is EditorGeneratedCode.Source ->
+      try {
+        write(code.kotlin)
+        "Copied $layer as Compose code"
+      } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+        throw cancelled
+      } catch (failure: Exception) {
+        "Could not copy: ${failure.message ?: "unknown error"}"
+      }
+    is EditorGeneratedCode.Refused -> {
+      // The first reason in full, since a notice has room for a sentence, not the pane's list; the
+      // count says there is more. Not "in the code pane": that lists the whole design's reasons.
+      val more = code.reasons.size - 1
+      "No Compose source · the export would refuse $layer" +
+        (code.reasons.firstOrNull()?.let { ": $it" } ?: "") +
+        (if (more > 0) " (and $more more)" else "")
+    }
+  }
 
 /**
  * Runs one Copy link against the host and returns the sentence to show; failures are sentences too,

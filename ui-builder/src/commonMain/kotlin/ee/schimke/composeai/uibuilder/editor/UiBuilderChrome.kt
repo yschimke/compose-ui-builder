@@ -390,6 +390,8 @@ enum class UiBuilderMenuIcon {
   Help,
   Copy,
   Link,
+  /** Generated source, as the code pane's own toolbar icon. */
+  Code,
   Download,
   Properties,
   /** The quick editor: a pencil, since the Properties panel already has the sliders. */
@@ -1434,6 +1436,7 @@ private fun UiBuilderMenuIcon.materialIcon(): ImageVector =
     UiBuilderMenuIcon.Help -> Icons.AutoMirrored.Filled.HelpOutline
     UiBuilderMenuIcon.Copy -> Icons.Filled.ContentCopy
     UiBuilderMenuIcon.Link -> Icons.Filled.Link
+    UiBuilderMenuIcon.Code -> Icons.Filled.Code
     UiBuilderMenuIcon.Download -> Icons.Filled.Download
     UiBuilderMenuIcon.Properties -> Icons.Filled.Tune
     UiBuilderMenuIcon.QuickEdit -> Icons.Filled.Edit

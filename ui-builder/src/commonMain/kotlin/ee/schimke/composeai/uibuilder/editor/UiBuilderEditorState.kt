@@ -2005,6 +2005,20 @@ class UiBuilderEditorReducer(
     screenCode(document, assetBytes).withRemoteContent(document).withA2uiMessages(document)
 
   /**
+   * The Kotlin [generatedCode] writes for just [nodeId] and what is under it, for the selection
+   * menu's "Copy as Compose code"; null when there is no such node.
+   *
+   * Not a second generator: the same export, run on the design re-rooted at the node (see
+   * [subtreeDocument]), so a layer copies exactly what the whole design's code writes for it, and
+   * an unexportable layer is refused in the code pane's own words.
+   */
+  fun subtreeCode(
+    document: UiBuilderDocument,
+    nodeId: String,
+    assetBytes: (contentDigest: String) -> ByteArray? = { null },
+  ): EditorGeneratedCode? = document.subtreeDocument(nodeId)?.let { generatedCode(it, assetBytes) }
+
+  /**
    * An A2UI design's streamed messages appended under its Kotlin as line comments, both from
    * `A2uiDocumentExporter.lower`.
    */
