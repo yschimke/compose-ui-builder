@@ -9,10 +9,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A design holds the body of every shared component it imported, so it keeps drawing whatever it
- * imported no matter what the library does afterwards. That is the point — and it is also why
- * nothing in the document can tell you the library has moved. The Issues panel says it instead,
- * from findings the host fetched.
+ * A design holds the bodies of its imported components, so nothing in it can tell the library
+ * moved; the Issues panel reports host-fetched findings instead.
  */
 class ComponentDriftProblemsTest {
   private fun finding(
@@ -66,9 +64,8 @@ class ComponentDriftProblemsTest {
 
   @Test
   fun `withdrawn and unusable do not read the same`() {
-    // The whole reason the server keeps these apart. A branch that is unreachable today is not a
-    // deletion, and telling somebody their component was removed when it was not is the worse
-    // error of the two — they would go looking for a symbol that is still there.
+    // An unreachable branch is not a deletion; claiming removal would send people looking for a
+    // symbol that still exists.
     val withdrawn =
       componentDriftProblems(listOf(finding("streak-badge", ComponentDriftState.WITHDRAWN)))
         .single()
@@ -78,9 +75,8 @@ class ComponentDriftProblemsTest {
     assertEquals("COMPONENT_UNUSABLE", unusable.code)
     assertTrue(withdrawn.message.contains("no longer publishes"), withdrawn.message)
     assertTrue(unusable.message.contains("cannot be checked against"), unusable.message)
-    // Says nothing about what the project currently holds. The server returns this state for a
-    // host with no coordinate for the system at all, where it has read nothing — claiming the
-    // symbol is published would send a reader looking for a malformed component that may not exist.
+    // Says nothing about the project's contents: the server returns this when the host has no
+    // coordinate for the system and read nothing.
     assertTrue(!unusable.message.contains("publishes"), unusable.message)
     assertTrue(unusable.message.contains("unknown"), unusable.message)
   }
@@ -124,9 +120,8 @@ class ComponentDriftProblemsTest {
 
   @Test
   fun `the palette id comes from the wire rather than being rebuilt here`() {
-    // The server owns the naming rule and publishes it on every row. If this side re-derived it,
-    // the two could disagree and the disagreement would show up as an Issues row selecting
-    // nothing — so the finding's own `paletteId` has to be what lands on the problem.
+    // The finding's own server-published `paletteId` lands on the problem, so the row selects the
+    // right component.
     val problem =
       componentDriftProblems(
           listOf(
@@ -188,9 +183,8 @@ class ComponentDriftProblemsTest {
 
   @Test
   fun `a re-import drops the row it answered`() {
-    // The arriving edit can be the very import that resolves the drift, and a row saying a design
-    // has drifted from a symbol it now matches is worse than no row at all. The host's next fetch
-    // is the only thing that can say what the library holds now.
+    // The arriving edit may be the re-import that resolves the drift; only the host's next fetch
+    // can say what the library holds now.
     assertEquals(
       emptyList(),
       listOf(finding("contribution-cell", ComponentDriftState.DRIFTED))
@@ -200,9 +194,7 @@ class ComponentDriftProblemsTest {
 
   @Test
   fun `drift rows are never presented as export blockers`() {
-    // The panel's copy is a claim about every row it shows — "what the Compose export gate
-    // refuses". A design exports the body it holds however far the library has moved, so a drift
-    // row listed among refusals tells somebody their export will fail when it will not.
+    // Drift rows aren't export refusals: the design exports the bodies it holds.
     val problems =
       componentDriftProblems(
         listOf(
@@ -216,10 +208,8 @@ class ComponentDriftProblemsTest {
 
   @Test
   fun `a key re-imported from elsewhere drops its row even when the content is identical`() {
-    // Two projects publishing the same component is ordinary, not contrived, so the digest alone
-    // does not identify what a finding was about: re-pointing a key at another project leaves the
-    // digest matching, and a row kept on that basis goes on naming a project this design no
-    // longer references.
+    // The digest alone doesn't identify a finding: two projects can publish identical content, so a
+    // re-pointed key must drop the row.
     val drifted = listOf(finding("contribution-cell", ComponentDriftState.DRIFTED))
     assertEquals(
       emptyList(),

@@ -1,11 +1,8 @@
 package ee.schimke.composeai.uibuilder
 
 /**
- * What a typeface offers a text's [ee.schimke.composeai.uibuilder.export.FontSettings]: the
- * variation axes it has, each with its range, and the OpenType layout features it carries.
- *
- * Read from the font file itself, so the inspector offers exactly what the face the text is drawn
- * in can do, rather than a fixed list that is right for Roboto Flex and wrong for everything else.
+ * What a typeface offers a text's [ee.schimke.composeai.uibuilder.export.FontSettings] — its
+ * variation axes with ranges and its OpenType layout features — read from the font file itself.
  */
 data class TypefaceInfo(val axes: List<TypefaceAxis>, val features: List<String>) {
   val isVariable: Boolean
@@ -35,10 +32,9 @@ data class TypefaceAxis(
 )
 
 /**
- * Read [data], a TrueType or OpenType font (or the first face of a collection), into its
- * [TypefaceInfo]: the `fvar` axes, named from the `name` table, and the `GSUB` and `GPOS` feature
- * tags. Anything unreadable reads as nothing rather than failing: a font the inspector cannot read
- * still draws.
+ * Read [data] (TrueType/OpenType, or a collection's first face) into its [TypefaceInfo]: `fvar`
+ * axes named from `name`, plus `GSUB`/`GPOS` feature tags. Unreadable fonts yield nothing rather
+ * than failing.
  */
 fun readTypefaceInfo(data: ByteArray): TypefaceInfo = runCatching {
   OpenTypeReader(data).read()

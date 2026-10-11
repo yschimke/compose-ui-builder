@@ -159,10 +159,8 @@ object CollaborationReducer {
         )
       }
     }
-    // Once, after the command, for the reason [requireSingleRoot] gives: it is the one topology
-    // rule
-    // about the document rather than about a node, and a command is what commits. The half-applied
-    // states inside the loop above are nobody's document.
+    // Once, after the command (see [requireSingleRoot]): intermediate states inside the loop aren't
+    // committed.
     try {
       trace.state.document.requireSingleRoot()
       trace.state.document.requireKnownComponents()
@@ -331,9 +329,8 @@ object CollaborationReducer {
           !it.isPropertyWrite() && it !is DesignOperation.SetEnvironment
         }
     val mixed = target.propertyChanges.isNotEmpty() && target.structuralChanges.isNotEmpty()
-    // A batch that mixes a modifier write with anything else has no lane here, and quietly
-    // compensating half of it is worse than refusing: the editor submits modifier writes on their
-    // own, so this is a client that did something else.
+    // A modifier write mixed with other changes has no lane here; refuse rather than
+    // half-compensate (the editor submits modifier writes alone).
     if (target.modifierChanges.isNotEmpty() && !modifierOnly) {
       return state.rejected(
         RejectionCode.UNSUPPORTED_COMPENSATION,
@@ -348,10 +345,9 @@ object CollaborationReducer {
     }
     val targetActiveRevision =
       state.activeOperationVersions[target.command.operationId] ?: target.committedRevision
-    // The property and environment lanes compare against the target's own revision: both undo and
-    // redo restore version stamps rather than minting them, so an operation's addresses always
-    // carry the revision that operation committed at. Anything else on the address — a
-    // collaborator's write — leaves a different revision and is still refused.
+    // Property and environment lanes compare against the target's own revision: undo and redo
+    // restore version stamps rather than minting them. A collaborator's write leaves a different
+    // revision and is refused.
     if (scalarOnly) {
       target.propertyChanges.asReversed().distinctBy(PropertyChange::address).forEach { change ->
         val current = state.document.valueAt(change.address)
@@ -510,14 +506,12 @@ object CollaborationReducer {
         canonicalDocument,
         targetActiveRevision,
       )
-    // An undo is a rewind, not a new write: it puts each address back to the value *and the
-    // revision* it held before the target touched it. Stamping `committedRevision` here instead
-    // left the address owned by the undo, so the next undo compared that against the older
-    // command's `committedRevision`, saw a mismatch and refused as `UNSAFE_COMPENSATION` — which
-    // is why undo worked exactly once and then silently stopped while `canUndo` stayed true.
+    // An undo is a rewind: it restores each address's value *and revision* from before the target,
+    // so a following undo of an older command still sees that command's revision (rather than
+    // refusing as `UNSAFE_COMPENSATION`).
     //
-    // `asReversed()` so that a command writing one address twice restores the version from before
-    // its *first* write, matching the value `before` restores.
+    // `asReversed()` so a command writing one address twice restores the version from before its
+    // first write, matching `before`.
     val propertyVersions =
       if (target.propertyChanges.isNotEmpty())
         target.propertyChanges.asReversed().fold(changed.propertyVersions) { versions, change ->
@@ -657,10 +651,7 @@ object CollaborationReducer {
     val environmentOnly = hasEnvironment && !hasProperties && !hasStructure
     val structuralOnly = hasStructure && !hasProperties
     val mixed = hasProperties && hasStructure && !hasEnvironment
-    // "Nothing has touched this address since the undo" — and since the undo *rewound* the
-    // address to the revision that owned it beforehand rather than stamping its own, that is the
-    // revision to expect here. Comparing against `undo.committedRevision` was the matching half of
-    // the stamp that made sequential undo impossible.
+    // Expect the revision the undo rewound to, not `undo.committedRevision`.
     if (scalarOnly) {
       undo.target.propertyChanges.distinctBy(PropertyChange::address).forEach { change ->
         val current = state.document.valueAt(change.address)
@@ -821,13 +812,9 @@ object CollaborationReducer {
     val committedRevision = state.document.revision + 1
     val document = changed.document.copy(revision = committedRevision)
     val canonicalDocument = canonicalDocument(document)
-    // Redo is the mirror of undo: it puts the target's own revision back on every address the
-    // target owned, rather than minting a new one. Minting made the *second* redo in a chain find
-    // this redo's revision where it expected the earlier operation's, and refuse — the same shape
-    // of failure the undo stamp caused, one lane over.
-    //
-    // Structural versions below keep minting `committedRevision`, and the structural guards keep
-    // reading `activeOperationVersions`. That lane is untouched here.
+    // Redo mirrors undo: it restores the target's own revision rather than minting one, so chained
+    // redos work. Structural versions still mint `committedRevision` and are guarded by
+    // `activeOperationVersions`.
     val propertyVersions =
       if (hasProperties)
         undo.target.propertyChanges.fold(changed.propertyVersions) { versions, change ->

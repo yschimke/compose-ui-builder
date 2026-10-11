@@ -45,17 +45,14 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Every palette thumbnail of every catalog this build ships, drawn the way the component browser
- * draws it — the same composable, under the same catalog locals the editor provides — and checked
- * for the ways a thumbnail has gone wrong before:
- * - a component whose insert is refused has no picture, and cannot be added either;
- * - a component that animates keeps the panel drawing every frame for as long as it is on screen;
- * - a component that opens a window (a real `Dialog`) escapes its tile and covers the editor;
- * - a picker or dialog squeezed into the default frame is cropped rather than shown as a miniature.
+ * Every palette thumbnail of every catalog this build ships, drawn as the component browser draws
+ * it, and checked for known failure modes:
+ * - a refused insert (no picture, can't be added);
+ * - animation (the panel redraws every frame);
+ * - a real `Dialog` window escaping its tile;
+ * - pickers or dialogs cropped in the default frame.
  *
- * Writes one contact sheet per catalog to `build/catalog-thumbnails/`, which is the thing to look
- * at when changing how thumbnails draw: whether a picture reads as its component is a judgement no
- * assertion here makes.
+ * Writes one contact sheet per catalog to `build/catalog-thumbnails/` for human review.
  */
 @OptIn(ExperimentalTestApi::class, ExperimentalLayoutApi::class)
 class CatalogThumbnailRenderTest {
@@ -232,10 +229,9 @@ class CatalogThumbnailRenderTest {
       get() = componentId + (variant?.let { " · ${it.value}" } ?: "")
 
     /**
-     * What the contact sheet prints under a picture: the call the export writes for exactly this
-     * variant — `Text()`, `FloatingActionButton()`, `OutlinedTextField()` — and, where a variant is
-     * an argument to the same call, which one: `Card() · Outlined`. Where the export writes no
-     * composable of the component's own, the catalog's display name.
+     * What the contact sheet prints under a picture: the call the export writes for this variant
+     * (`Text()`, `OutlinedTextField()`), plus the variant when it's an argument (`Card() ·
+     * Outlined`); otherwise the display name.
      */
     val label: String
       get() {
@@ -250,9 +246,7 @@ class CatalogThumbnailRenderTest {
 
   /**
    * The call the Compose export writes for [componentId] in its thumbnail document, read from the
-   * exported source rather than predicted: the emitter comments each node with its component, and
-   * the line after the comments is the node's own call. The sheet then prints the export's own
-   * variant-to-callable choice rather than a guess at it.
+   * exported source: the line after the node's component comment.
    */
   private fun exportedCall(
     document: UiBuilderDocument,

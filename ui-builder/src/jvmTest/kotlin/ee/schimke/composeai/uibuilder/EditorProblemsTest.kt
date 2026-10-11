@@ -27,8 +27,8 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The editor validates each write, so a rejected edit never lands. Nothing checked the document as
- * a whole, and the first anyone knew of a broken one was the export refusing.
+ * The editor validates each write; this checks the panel reports problems with the document as a
+ * whole before export does.
  */
 class EditorProblemsTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -43,15 +43,9 @@ class EditorProblemsTest {
 
   @Test
   fun `the checked-in fixture reports what the real export would refuse`() {
-    // This asserted `emptyList()` while the panel read only `CapabilityComposeCodeExporter`, which
-    // has an emitter for every catalog id. The panel now also runs the projection and generator the
-    // **server's export** runs, and against those the flagship Jetcaster design does not export:
-    // enum values with no Kotlin member, state comparisons, a text callback consuming an event
-    // value, and an adaptive grid specification.
-    //
-    // Those refusals were always true — the export has always produced them — and the panel was
-    // silent about every one. Asserting the old emptiness now would be asserting that the panel
-    // keeps a promise it cannot keep.
+    // The panel also runs the server export's projection and generator, against which Jetcaster
+    // doesn't export (enum values without Kotlin members, state comparisons, a text callback
+    // consuming an event value, an adaptive grid spec).
     val reported = problems(document)
     assertTrue(reported.isNotEmpty(), "the export refuses this design; the panel should say so")
     assertTrue(
@@ -67,9 +61,8 @@ class EditorProblemsTest {
   }
 
   /**
-   * The one problem that is not a refusal: the export runs, and the picture is right, but a root
-   * surface's `containerColor` is not the ground its author took it for (#485). The served export
-   * says the same thing on its diagnostics; the panel says it where the person is.
+   * The one problem that is not a refusal: a root surface's `containerColor` isn't the ground its
+   * author assumed (see #485). The served export reports the same diagnostic.
    */
   @Test
   fun `a coloured root surface that does not fill the frame is a problem, and names the root`() {
@@ -95,21 +88,16 @@ class EditorProblemsTest {
 
   @Test
   fun `a wear widget is judged by the emitter that writes it, not by the record-driven gate`() {
-    // Reported live on the deployed builder: the Weather sample showed two COMPOSE_EXPORT_REFUSED
-    // problems, and neither was true of it. `remote-m3/widget-container-large` is the *host* frame
-    // — the launcher draws it, `WearWidgetCodeExporter` erases it — and the panel called it "no
-    // component in this catalog"; `center` is an alignment `RemoteContentEmitter` writes, and the
-    // panel said nothing mapped it to a Kotlin member. Both came from asking `ScreenExportGate`
-    // about a design it does not write.
+    // A widget is written by `WearWidgetCodeExporter`/`RemoteContentEmitter`, not
+    // `ScreenExportGate`; the panel must not report the gate's refusals (host frame "no component",
+    // unmapped `center`) for it.
     val widget =
       weatherWidgetUiBuilderDocument("weather", document.catalogPin, document.environment)
 
     val reported = problems(widget).filter { it.code == "COMPOSE_EXPORT_REFUSED" }
 
-    // Scoped to the export gate's own code: this reducer holds `m3-catalog`, so the capability half
-    // still — correctly — reports the widget's components as absent from the catalog it is being
-    // judged against. That is a real pin problem and not the one this test is about. What must be
-    // gone is the *export* refusing a design it exports.
+    // Scoped to the export gate's code: the capability half still correctly reports the widget's
+    // components missing from `m3-catalog`.
     assertEquals(emptyList(), reported, "this widget exports; the panel should refuse nothing")
     // And the pane and the panel agree, which is the property that broke: one said "here is your
     // widget's Kotlin" while the other said two of its nodes could not be written.
@@ -118,10 +106,8 @@ class EditorProblemsTest {
 
   @Test
   fun `a widget's background picture exports from the bytes the editor fetched`() {
-    // The server's export reads an uploaded picture from its asset store; the panel and the code
-    // pane run the same emitter in the browser and were handed no bytes at all, so every widget
-    // with a photo background was refused "whose bytes this export could not read" there while the
-    // artifact generated fine. They read what the editor has fetched instead.
+    // The panel and code pane run the emitter in the browser with the editor's fetched picture
+    // bytes, as the server reads its asset store.
     val widget =
       weatherWidgetUiBuilderDocument("weather", document.catalogPin, document.environment)
     val rootId = widget.roots.single()
@@ -177,9 +163,7 @@ class EditorProblemsTest {
 
   @Test
   fun `a widget the emitter genuinely cannot write is still reported`() {
-    // The panel is not simply silenced for these designs. A container holds one body, so a second
-    // one is something the emitter refuses — and that refusal, unlike the two above, is about the
-    // design in front of the person reading it.
+    // The panel isn't silenced for widgets: a second body in a container is a real refusal.
     val widget =
       weatherWidgetUiBuilderDocument("weather", document.catalogPin, document.environment)
     val rootId = widget.roots.single()
@@ -290,9 +274,8 @@ class EditorProblemsTest {
 
   @Test
   fun `the panel reports exactly what the export gate refuses`() {
-    // The point of reading the exporter rather than writing a second set of rules: a panel with
-    // its own opinion would eventually disagree with the thing that actually refuses, and the
-    // disagreement would surface at export time — the moment this exists to avoid.
+    // The panel reads the exporter rather than having its own rules, so it can't disagree with the
+    // export.
     val placeholder = document.nodes.getValue("search-placeholder")
     val broken =
       document.copy(
@@ -305,9 +288,8 @@ class EditorProblemsTest {
             ),
       )
 
-    // A superset now: the capability errors *plus* what the projection and generator refuse. The
-    // original claim — that the panel never invents an opinion of its own — is what this still
-    // checks, by requiring every capability error to appear.
+    // A superset: capability errors plus projection and generator refusals. Every capability error
+    // must still appear.
     assertTrue(
       problems(broken)
         .map { it.code to it.message }
@@ -382,11 +364,8 @@ class EditorProblemsTest {
 
   @Test
   fun `something only the Compose projection refuses is reported too`() {
-    // A structurally valid document the Compose export still will not take:
-    // `remote-compose/document`
-    // is a declared container with a Kotlin symbol and no typed call emitter. Reading only
-    // `validateDocumentForExport` made the panel say nothing was blocking an export right up until
-    // the export refused — which is the one moment this panel exists to come before.
+    // `remote-compose/document` is structurally valid but has no typed call emitter; the panel must
+    // report it before export does.
     val player =
       UiBuilderNode(
         id = "player",
@@ -418,9 +397,8 @@ class EditorProblemsTest {
 
   @Test
   fun `a mobile component with no Kotlin symbol is still reported against its node`() {
-    // The Wear fix drops this diagnostic where a dedicated emitter writes the design, because there
-    // it is the wrong exporter describing itself. A Material 3 screen the record-driven export
-    // refuses is not that case: the node with no symbol is one the designer can be pointed at.
+    // The Wear fix drops this diagnostic only where a dedicated emitter writes the design; a
+    // refused Material 3 screen still points at the node.
     val unmapped =
       CapabilityCatalogParser.parse(
         Json.encodeToString(
@@ -458,9 +436,8 @@ class EditorProblemsTest {
 
   @Test
   fun `a warning the export proceeds through is not listed as a blocker`() {
-    // The panel's one claim is what stops the build. A diagnostic the export notes and carries on
-    // past would make that claim untrue in the other direction. The checked-in fixture holds a
-    // floating toolbar, whose dependency-floor compatibility note is exactly such a warning.
+    // The panel reports only what stops the build; warnings (like the floating toolbar's
+    // dependency-floor note) are excluded.
     val diagnostics = CapabilityComposeCodeExporter.diagnose(document, catalog)
     assertTrue(
       diagnostics.any {
@@ -477,10 +454,8 @@ class EditorProblemsTest {
 
   @Test
   fun `a graph the panel exists to describe can still be drawn`() {
-    // The navigator is built before the inspector, so an unknown child reference or a cycle took
-    // the editor down — with `getValue` or an unbounded recursion — before the panel could name
-    // either. The one document that most needs the Issues panel was the one that could not show
-    // it.
+    // The navigator is built before the inspector, so an unknown child or a cycle must not crash it
+    // before the panel can name either.
     val row = document.nodes.getValue("category-row")
     val dangling =
       document.copy(
@@ -512,9 +487,8 @@ class EditorProblemsTest {
 
   @Test
   fun `a property encoded as the wrong shape is reported rather than thrown`() {
-    // `INVALID_PROPERTY_TYPE` is one of the things this panel reports, and building the inspector's
-    // fields for the same node went through `jsonPrimitive`, which throws on an array. Selecting
-    // the node — or merely loading the document — crashed instead of showing the diagnostic.
+    // Building inspector fields for an `INVALID_PROPERTY_TYPE` node must not throw (`jsonPrimitive`
+    // on an array).
     val placeholder = document.nodes.getValue("search-placeholder")
     val malformed =
       document.copy(

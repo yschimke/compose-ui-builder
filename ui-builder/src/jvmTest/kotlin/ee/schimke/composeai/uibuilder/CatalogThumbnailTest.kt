@@ -22,12 +22,9 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * The documents the component menu's thumbnails draw.
- *
- * A thumbnail here is not a baked picture: it is the component inserted into an empty frame by the
- * same reducer the row's Add uses, rendered small. So what has to be true of it is what has to be
- * true of an insert — it validates, it holds the component, and it carries whatever the component
- * arrives holding — and that is what these assert. How it *looks* is the chrome previews' job.
+ * The documents the component menu's thumbnails draw: the component inserted into an empty frame by
+ * the row's own Add reducer. So each must validate, hold the component and carry its starter
+ * content; looks are the chrome previews' job.
  */
 class CatalogThumbnailTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -35,10 +32,8 @@ class CatalogThumbnailTest {
 
   @Test
   fun `every component in the catalog draws its own insert`() {
-    // All of them, and that is worth asserting rather than assuming: `layout/box` accepts every
-    // role and `AnyContent`, so even a Scaffold — a whole screen — lands in the frame and draws.
-    // A component that stops drawing loses its picture in the panel and nothing else complains,
-    // so this is the thing that complains.
+    // Every component lands and draws (`layout/box` accepts every role and `AnyContent`); a
+    // component that stops drawing loses its picture silently otherwise.
     val undrawn =
       catalog.components.map { it.componentId }.filter { reducer.previewDocument(it) == null }
 
@@ -63,8 +58,8 @@ class CatalogThumbnailTest {
   }
 
   /**
-   * A catalog with no `layout/box` frames its thumbnails with its own list container. A2UI's
-   * palette is `a2ui/<Component>` and nothing else, and a box frame was refused for all of them.
+   * A catalog without `layout/box` (A2UI's `a2ui/<Component>` palette) frames thumbnails with its
+   * own list container.
    */
   @Test
   fun `every A2UI component draws its own insert, framed by the catalog's own column`() {

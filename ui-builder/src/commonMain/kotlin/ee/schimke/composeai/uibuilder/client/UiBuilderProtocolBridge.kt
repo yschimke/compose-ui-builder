@@ -78,23 +78,16 @@ fun DesignDocumentV1.toRendererDocument(): UiBuilderDocument {
 }
 
 /**
- * Creates a v1 service document from the renderer model used by deterministic fixture replay.
- *
- * Delegated to the shared conversion the seeding module owns, so the browser and the server turn a
- * candidate document into a service document by exactly one piece of code.
+ * Creates a v1 service document from the renderer model, via the seeding module's shared conversion
+ * so browser and server use one implementation.
  */
 fun UiBuilderDocument.toProtocolDocument(): DesignDocumentV1 = toDesignDocumentV1()
 
 /**
- * Applies the authoritative pushed fast path used by live property editing.
- *
- * Structural edits and undo/redo deliberately fall back to a snapshot because the renderer model
- * does not retain the server's tombstones and compensation history. A property-only delta is safe
- * to reduce directly after the strict update client has established sequence continuity. Retaining
- * and reducing the authoritative protocol document avoids a lossy renderer round-trip; callers must
- * still verify [expectedHash] before displaying the projected renderer document. Outcomes written
- * before the authoritative document timestamp was added cannot reproduce the hashed document and
- * deliberately return null so the caller retains the snapshot fallback.
+ * Applies the authoritative pushed fast path used by live property editing. Structural edits and
+ * undo/redo fall back to a snapshot (the renderer model lacks tombstones and compensation history).
+ * Callers must still verify [expectedHash]. Outcomes lacking the authoritative document timestamp
+ * return null so the caller keeps the snapshot fallback.
  */
 /** One property write out of a committed batch; a null [value] is a removal. */
 private data class PropertyWrite(val nodeId: String, val property: String, val value: UiValueV1?)
@@ -117,9 +110,8 @@ internal fun DesignDocumentV1.preparePropertyDelta(
   var renderer = rendererDocument
   delta.operations.forEach { committed ->
     val command = committed.submission as? DesignCommandV1 ?: return null
-    // A property write in either spelling: a set, a null set, or the explicit removal. A removal
-    // (#480) takes the property off both documents rather than storing a null the canvas would
-    // then read as a value.
+    // A property write in either spelling: a set, a null set, or the explicit removal (see #480),
+    // which removes the property rather than storing a null.
     val writes =
       command.operations.map { mutation ->
         when (mutation) {
@@ -202,13 +194,10 @@ private fun canonicalProtocolJson(element: JsonElement): String =
   }
 
 /**
- * [this] submission on the wire, based on [authoritativeRevision].
- *
- * [stalenessBaseRevision] is the revision the author had actually seen when the edit was made, for
- * a replayed offline run whose base chain has moved past it
- * (`DesignCommandV1.stalenessBaseRevision` — the service reads `STALE_*` from it while positions
- * resolve against the base). Sent only on a batch, and only when it differs from the base: a live
- * edit, and a run's first command, saw their base, and send what they always sent.
+ * [this] submission on the wire, based on [authoritativeRevision]. [stalenessBaseRevision] is the
+ * revision the author actually saw, for a replayed offline run whose base chain moved past it
+ * (`DesignCommandV1.stalenessBaseRevision`; the service reads `STALE_*` from it). Sent only on a
+ * batch, and only when it differs from the base.
  */
 fun EditorSubmission.toProtocolSubmission(
   actorId: String,
@@ -265,8 +254,8 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
         property,
         bridgeJson.decodeFromString(UiValueV1.serializer(), value.toString()),
       )
-    // Its own mutation since compose-preview-contracts 2.10.0 (#480); the server reads it as the
-    // same removal a null `setProperty` is, which is what this sent before the wire could say it.
+    // Its own mutation since compose-preview-contracts 2.10.0; the server treats it like a null
+    // `setProperty`.
     is DesignOperation.RemoveNodeProperty -> RemoveNodePropertyMutationV1(nodeId, property)
     is DesignOperation.SetStateVariable ->
       SetStateVariableMutationV1(
@@ -314,9 +303,8 @@ private fun DesignOperation.toProtocolMutation(): DesignMutationV1 =
               SetLayoutDirectionEnvironmentChangeV1(
                 LayoutDirectionV1.valueOf(value.jsonPrimitive.content.uppercase())
               )
-            // Reset rather than an empty Set, because the protocol distinguishes them and the
-            // document's own default is the empty set: clearing the picker should leave a design
-            // saying exactly what one written before the field ever existed says.
+            // Reset rather than an empty Set (the protocol distinguishes them), so clearing the
+            // picker returns to the document default.
             "exportDevices" ->
               value.jsonArray
                 .map { it.jsonPrimitive.content }

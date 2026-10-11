@@ -9,13 +9,12 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * Evidence a host can gather beyond the first pass, which a cheap decision model is asked about
- * before anything is drawn: a check sends the pictures that are always worth it (80% of the
- * signal), and draws a dark-theme or large-font picture, or attaches the accessibility tree, only
- * for the designs where it would change an answer.
+ * Evidence a host can gather beyond the first pass (a dark-theme or large-font picture, the
+ * accessibility tree), offered to a cheap decision model first so it is only gathered where it
+ * would change an answer.
  *
- * [key] is the decision's name; [question] is asked as a yes/no with a probability; [settings]
- * describe the extra render, empty for evidence that is not a picture.
+ * [key] names the decision; [question] is asked as yes/no with a probability; [settings] describe
+ * the extra render, empty for non-picture evidence.
  */
 data class GuidelineEvidenceOffer(
   val key: String,
@@ -59,9 +58,8 @@ const val JEV_DECISION_MODEL: String = "typesafe/jev-1.13"
 const val OPENROUTER_DECISIONS_URL: String = "https://openrouter.ai/api/alpha/decisions"
 
 /**
- * The decisions request asking [model] which of [offers] would help judge [request]'s rules. Jev
- * reads text only, so it is given the user message (design tree, source and rule list) — about 0.3s
- * and a few hundredths of a cent.
+ * The decisions request asking [model] which [offers] would help judge [request]'s rules. Text
+ * only: the user message (design tree, source and rule list).
  */
 fun DesignGuidelinePrompt.triageBody(
   request: DesignGuidelineRequest,

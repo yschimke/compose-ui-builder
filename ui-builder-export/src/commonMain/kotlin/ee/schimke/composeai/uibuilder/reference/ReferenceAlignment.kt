@@ -7,13 +7,9 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * Two pictures of one frame on one grid: the design as it renders, and the reference as it is
- * placed over it. [samplesPerDp] grid pixels to a dp, so a grid rectangle is a dp rectangle times
- * that.
- *
- * Built by `measureReference` from what is on screen; built by hand in tests. Everything below
- * works in frame dp at its edges and in grid pixels inside, and converts in exactly one place each
- * way.
+ * Two pictures of one frame on one grid: the design as rendered and the reference as placed.
+ * [samplesPerDp] grid pixels per dp. Built by `measureReference`, or by hand in tests; converts
+ * between frame dp and grid pixels in exactly one place each way.
  */
 class ReferenceMeasureFrame(
   val design: ReferenceRaster,
@@ -70,11 +66,9 @@ data class ReferenceLayer(
 )
 
 /**
- * A layer lined up against the reference.
- *
- * [current] and [target] are the same *kind* of box — both ink for text measured from pixels or a
- * drawn box, both layout bounds otherwise — so their difference is the correction. [scale] is the
- * text scale the target implies, 1 for everything else.
+ * A layer lined up against the reference. [current] and [target] are the same kind of box (ink or
+ * layout bounds), so their difference is the correction; [scale] is the implied text scale (else
+ * 1).
  */
 data class ReferenceLayerMatch(
   val nodeId: String,
@@ -89,21 +83,14 @@ data class ReferenceLayerMatch(
 )
 
 /**
- * Line [layer] up against the reference, from the best evidence available.
+ * Line [layer] up against the reference, from the best evidence available, in order of trust:
  *
- * In order of how much the evidence can be trusted:
+ * 1. A box the operator drew overlapping the layer (narrowed to the ink inside it, for text).
+ * 2. An SVG layout box that plainly matches (Figma exports one per frame).
+ * 3. The pixels: a search near the layer's position, at a range of scales for text. This can fail,
+ *    so it reports whether it is [confident][ReferenceLayerMatch.confident].
  *
- * 1. **A box the operator drew** over the reference that overlaps the layer. It is a statement —
- *    "this goes here" — and needs no pixels at all to act on. For text, the box is narrowed to the
- *    ink inside it, so a generous box round a heading still measures the heading.
- * 2. **An SVG layout box** that is plainly the same thing (most of each covers the other). Figma
- *    exports one per frame, and a frame's box is what a Compose layout box should equal.
- * 3. **The pixels.** The layer's own rendering is searched for in the reference near where it sits,
- *    at a range of scales for text. This is the case that needs no preparation, and the one that
- *    can fail — a label whose words differ from the mock's has nothing to line up with — so it says
- *    whether it is [confident][ReferenceLayerMatch.confident].
- *
- * Null when there is nothing to compare: no box, no layout box, and no texture in the layer.
+ * Null when there is no box, no layout box and no texture in the layer.
  */
 fun matchLayer(
   frame: ReferenceMeasureFrame,
@@ -111,9 +98,8 @@ fun matchLayer(
   boxMarks: List<ReferenceBox>,
   layoutBoxes: List<ReferenceBox>,
   /**
-   * Whether the reference's pixels may be searched. False when the picture is not placed dp for dp
-   * ([ReferenceFacts.pixelComparable]): a box the operator drew still means what it says, but a
-   * search of a stretched picture would find the layer at a stretched size and call it a font.
+   * Whether the reference's pixels may be searched; false when the picture is not placed dp for dp
+   * ([ReferenceFacts.pixelComparable]), since a stretched search would misread the size.
    */
   pixelSearch: Boolean = true,
 ): ReferenceLayerMatch? {
@@ -194,11 +180,8 @@ fun matchLayer(
 }
 
 /**
- * The edit that would make a layer agree with its match, in the units the document speaks.
- *
- * Whole dp for movement and size, because a design reads `padding(start = 13.dp)` and not 12.62;
- * half sp for type, the precision the Material type scale itself uses. A correction smaller than
- * the rounding is no correction, and is left out rather than offered as a no-op button.
+ * The edit that would make a layer agree with its match: whole dp for position and size, half sp
+ * for type (Material's precision). Corrections smaller than the rounding are omitted.
  */
 data class ReferenceAlignment(
   val nodeId: String,
@@ -223,12 +206,8 @@ data class ReferenceAlignment(
 }
 
 /**
- * The correction for [match], given the font size the layer draws at now (null where unknown or not
- * text).
- *
- * The move is anchored to the node's own top-left, and accounts for the type growing: the ink of a
- * label sits a fixed fraction of its font size below the top of its box, so scaling the font moves
- * the ink too, and a move computed without that would overshoot by exactly the growth.
+ * The correction for [match], given the layer's current font size (null if unknown or not text).
+ * Anchored to the node's top-left, accounting for the ink moving as the font grows.
  */
 fun alignmentFor(match: ReferenceLayerMatch, currentFontSizeSp: Float?): ReferenceAlignment {
   val scaleText =

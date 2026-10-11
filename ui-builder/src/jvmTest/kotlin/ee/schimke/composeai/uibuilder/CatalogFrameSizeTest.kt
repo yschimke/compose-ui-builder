@@ -15,11 +15,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A catalog's own frame sizes — `frame.geometry.sizesDp` — in the Screen dock's frame picker.
- *
- * The case they exist for is a launcher widget catalog (`remote-widgets`), whose designs are
- * measured in launcher grid cells rather than devices: `3x2` is a size a person picks a widget by,
- * and no phone or watch frame is.
+ * A catalog's own frame sizes (`frame.geometry.sizesDp`) in the Screen dock's frame picker, e.g. a
+ * launcher widget catalog's (`remote-widgets`) grid sizes like `3x2`.
  */
 class CatalogFrameSizeTest {
 
@@ -84,8 +81,8 @@ class CatalogFrameSizeTest {
   }
 
   /**
-   * A grid size is smaller than any screen — 2x1 is 130 × 102 dp — so a launcher widget takes the
-   * widget minimum, as a Wear widget does, or picking one of its own sizes is refused.
+   * A grid size (2x1 is 130 × 102 dp) is below any screen, so it takes the widget minimum, as Wear
+   * widgets do.
    */
   @Test
   fun `a launcher widget accepts its own grid sizes, a screen still does not`() {

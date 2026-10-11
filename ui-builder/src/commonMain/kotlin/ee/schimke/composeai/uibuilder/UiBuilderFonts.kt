@@ -3,16 +3,12 @@ package ee.schimke.composeai.uibuilder
 import ee.schimke.wearcmp.port.WearFonts
 
 /**
- * Hand the Wear port the face Wear's type scale names, from this host's vendored fonts.
+ * Hand the Wear port the face Wear's type scale names (`DeviceFontFamilyName("roboto-flex")`,
+ * resolved via `WearFonts` and the platform font manager), from this host's vendored fonts;
+ * otherwise Wear text falls back to a wider sans that clips the clock and wraps labels.
  *
- * Wear Material 3 sets every role in `DeviceFontFamilyName("roboto-flex")` — the watch's system
- * face, which the port resolves through `WearFonts` and then the platform's font manager. Nothing
- * registered it, and no desktop or browser has a font by that name, so every Wear screen on the
- * canvas was set in the platform's fallback sans: wider than Roboto Flex, enough to cut the clock
- * to "10:1" and wrap labels that fit on a watch.
- *
- * Call it before anything composes a Wear component. The port resolves the name once, when its type
- * scale is first read, and keeps the answer.
+ * Call it before anything composes a Wear component: the port resolves the name once and keeps the
+ * answer.
  */
 suspend fun UiBuilderFontRegistry.registerWearDeviceFonts() {
   val manifest = runCatching { parseVendoredFontManifest(readManifestText()) }.getOrNull() ?: return
@@ -35,10 +31,8 @@ internal inline fun registerWearDeviceFonts(
 internal const val WEAR_DEVICE_FONT_FAMILY = "Roboto Flex"
 
 /**
- * Register Wear's face from what this platform bundles, synchronously, if it bundles one.
- *
- * The JVM (previews, tests, the desktop app) reads it off the classpath the first time a Wear
- * surface composes. The browser has nothing to read synchronously, so its hosts call
- * [registerWearDeviceFonts] before they start composing, and this does nothing there.
+ * Register Wear's face synchronously from what this platform bundles, if anything. The JVM reads it
+ * off the classpath; the browser can't, so its hosts call [registerWearDeviceFonts] first and this
+ * is a no-op there.
  */
 internal expect fun ensureBundledWearDeviceFonts()

@@ -17,29 +17,10 @@ import kotlinx.serialization.json.JsonPrimitive
  * `compose-foundation` donates exactly what the synthesised catalogs donate — component for
  * component, note for note, shelf for shelf.
  *
- * ## Why this test can only be written now
- *
- * [#819](https://github.com/yschimke/compose-preview-server/issues/819) deletes `remoteM3Catalog`
- * and `wearM3Catalog`, whose only remaining job is to be the donor
- * [`withBuilderVocabulary`][CurrentM3UiBuilderCatalogExecutor] hands a published catalog its
- * `layout/`, `shape/`, `asset/` and `remote-compose/` from. All three catalogs serve from their
- * published files as of 3.27.0, so nothing else reads them.
- *
- * "Redundant" is a claim, and this is the check. It compares the new source against the old one
- * **while both still exist**, which is a window that closes the moment the generators go: after
- * that there is no left-hand side to compare to, only a golden of the thing being changed. So the
- * order is deliberate — introduce, prove equal, then delete — and a reviewer of the deletion can
- * read this test rather than re-derive three component lists by hand.
- *
- * ## What a failure means
- *
- * Before the deletion: the extraction dropped or changed something, and the diff says what. The
- * per-platform sets are NOT interchangeable — a watch palette handed the mobile seventeen offers
- * `layout/lazy-grid` and `layout/scaffold`, which `WearScreenCodeExporter` refuses by name, so the
- * design fails at export rather than at insert.
- *
- * After the deletion this test goes with the generators, and `SynthesisedCatalogGoldenTest`'s
- * frozen fixtures are what the foundation is measured against instead.
+ * Proves the extraction equal to `remoteM3Catalog`/`wearM3Catalog` while both still exist, before
+ * those generators are deleted; afterwards this test goes with them and
+ * `SynthesisedCatalogGoldenTest`'s fixtures take over. The per-platform sets are not
+ * interchangeable (e.g. Wear must not get `layout/lazy-grid`).
  */
 class ComposeFoundationFaithfulnessTest {
 
@@ -63,8 +44,7 @@ class ComposeFoundationFaithfulnessTest {
 
   /**
    * The seam source the runtime builds when no published catalog declares a `remote-compose/`
-   * component -- which is every deployment today, so this is the live configuration rather than a
-   * convenience: the packaged catalog's own seams.
+   * component (every deployment today): the packaged catalog's own seams.
    */
   private fun packagedSeams(base: CatalogCapabilityV1) =
     base.components
@@ -72,12 +52,9 @@ class ComposeFoundationFaithfulnessTest {
       .associateBy { it.componentId }
 
   /**
-   * The foundation for a synthesised catalog's platform, derived from the SERVED packaged catalog.
-   *
-   * `baseCatalog` is private to the runtime, so this takes the m3-catalog entry `listCatalogs`
-   * returns. It differs from `baseCatalog` only by the `UiBuilderBuildFeatures.remoteCompose`
-   * property filter, which is applied uniformly to every component of every catalog — so both sides
-   * of every assertion below see the same filtering, whichever way the flag is set.
+   * The foundation for a synthesised catalog's platform, derived from the served packaged catalog
+   * (`baseCatalog` is private). The only difference, the `remoteCompose` property filter, applies
+   * uniformly to both sides.
    */
   private fun foundationFor(catalog: CatalogCapabilityV1) =
     synthesised(DEFAULT_CATALOG_SYSTEM_ID).let { base ->
@@ -88,9 +65,8 @@ class ComposeFoundationFaithfulnessTest {
     val old = synthesised(systemId)
     val new = foundationFor(old)
 
-    // Component by component rather than set-wise: the ORDER decides where an injected component
-    // lands in the insert panel, and the note and the modifier list are the two fields nothing else
-    // in the suite looks at.
+    // Component by component: order decides insert-panel placement, and notes and modifier lists
+    // are checked nowhere else.
     assertEquals(
       old.donated().map { it.componentId },
       new.components.map { it.componentId },
@@ -100,12 +76,8 @@ class ComposeFoundationFaithfulnessTest {
   }
 
   /**
-   * The weak one of the three, and said so rather than left to look like proof.
-   *
-   * Mobile's curation is the identity applied to the same namespace filter, so this holds by
-   * construction and would keep holding if the filter were wrong. It is here to catch a later
-   * change that gives mobile a curation of its own -- the wear and remote-compose cases below are
-   * where the derivation is actually being checked against a different one.
+   * Holds by construction (mobile's curation is the identity); here to catch a future mobile
+   * curation. The wear and remote-compose cases are the real checks.
    */
   @Test
   fun `the mobile foundation donates what the packaged catalog donates`() {
@@ -123,12 +95,8 @@ class ComposeFoundationFaithfulnessTest {
   }
 
   /**
-   * The other two things a donor is read for, and neither is a component.
-   *
-   * `withBuilderVocabulary` takes the donor's asset registry (so `asset/image` arrives with keys
-   * that validate rather than with a null registry that accepts anything) and the donor's shelves
-   * AND shelf order (so `layout/box` is filed under "Layout" where the donor puts it, rather than
-   * appended below every catalog group under a generic role heading).
+   * The donor's asset registry and its shelves with their order, both read by
+   * `withBuilderVocabulary`.
    */
   @Test
   fun `every foundation carries the donor's asset registry and shelves`() {
@@ -148,10 +116,7 @@ class ComposeFoundationFaithfulnessTest {
         "$systemId: the foundation's asset registry differs, so a donated asset/image validates " +
           "against different keys",
       )
-      // Per donated component rather than whole-object: `remote-m3`'s menu also carries a shelf
-      // for `remote-m3/lottie`, which is that catalog's own component and not the foundation's.
-      // What `withBuilderVocabulary` reads is each injected component's group, plus the order it
-      // places a NEW group relative to the ones a catalog already has.
+      // Per donated component: `remote-m3`'s menu also shelves its own `remote-m3/lottie`.
       for (componentId in new.components.map { it.componentId }) {
         assertEquals(
           old.statusSemantics.shelfOf(componentId),
@@ -172,12 +137,7 @@ class ComposeFoundationFaithfulnessTest {
     }
   }
 
-  /**
-   * The premise, asserted so these tests cannot pass by comparing one thing to itself.
-   *
-   * If the three platforms donated the same vocabulary there would be nothing to curate and a
-   * single list would do — and this suite would be green while checking nothing.
-   */
+  /** The premise: the platforms donate different vocabularies, so these tests are not vacuous. */
   @Test
   fun `the three platforms really do donate different vocabularies`() {
     val sets =
@@ -204,6 +164,20 @@ class ComposeFoundationFaithfulnessTest {
     }
   }
 
+  /**
+   * An A2UI catalog borrows none of the builder's vocabulary: no A2UI exporter writes a `layout/`,
+   * `shape/` or `asset/` component, so offering one is a palette entry that fails at export.
+   */
+  @Test
+  fun `the a2ui foundation donates nothing`() {
+    val base = synthesised(DEFAULT_CATALOG_SYSTEM_ID)
+
+    assertEquals(
+      emptyList(),
+      composeFoundationCatalog(base, "a2ui", packagedSeams(base)).components,
+    )
+  }
+
   /** An unknown platform gets the mobile vocabulary, which is where the fallback always pointed. */
   @Test
   fun `a platform the foundation has never heard of falls back to mobile`() {
@@ -221,17 +195,9 @@ class ComposeFoundationFaithfulnessTest {
   }
 
   /**
-   * The one answer this change deliberately moves, pinned so it is a decision rather than a drift.
-   *
-   * The old chain picked a donor by catalog ID first, so a published catalog was handed the Wear
-   * vocabulary whenever its id was `wear-m3` -- even while declaring itself mobile, and even though
-   * `UiBuilderPreviewSurfaces` and `ComponentMenu` both read the declared platform and would have
-   * treated the same catalog as mobile. Now the declared platform wins, so the palette agrees with
-   * the exporter that has to write it.
-   *
-   * The id is still consulted when a catalog declares NO platform, which is what
-   * `WearM3ScreenCatalogTest."a published catalog wins over the synthesised one of the same id"`
-   * exercises; that hop goes with `synthesisedCatalogs` at #819 step 3.
+   * Deliberate change: the donor is chosen by declared platform, not catalog id, so the palette
+   * agrees with the exporter. The id is still consulted when no platform is declared (see
+   * `WearM3ScreenCatalogTest`).
    */
   @Test
   fun `a declared platform beats the id, and no declaration still falls back to it`() {
@@ -267,17 +233,8 @@ class ComposeFoundationFaithfulnessTest {
   }
 
   /**
-   * The `remote-compose/` seams are Remote Compose's, and the foundation only says where they sit.
-   *
-   * `remote-m3` describes Remote Compose, so a seam IT declares is the one handed out; the packaged
-   * catalog is the fallback for the ones it does not. Today it declares none — every published
-   * catalog publishes only its own prefix — so the fallback is always taken, which is why the
-   * faithfulness assertions above still hold unchanged. This is the part that will stop being a
-   * fallback (#819).
-   *
-   * Sourced from what a catalog PUBLISHED rather than from what the server serves it: the served
-   * `remote-m3` has seams injected into it by `withBuilderVocabulary`, so reading that one back
-   * would be circular.
+   * A `remote-compose/` seam that `remote-m3` publishes wins; the packaged catalog is the fallback.
+   * Sourced from what was published, since the served catalog already has seams injected.
    */
   @Test
   fun `a seam remote-m3 declares itself wins over the packaged one`() {
@@ -289,9 +246,7 @@ class ComposeFoundationFaithfulnessTest {
         .also { it.displayName = "Remote Compose document, as remote-m3 says it" }
         .build()
 
-    // The Remote Compose platform rather than Wear. Wear used to take all three seams and no
-    // longer takes any — they were offered there without being exportable — so this reads through
-    // the platform Remote Compose content is actually authored on.
+    // Read through the Remote Compose platform; Wear no longer takes the seams.
     val foundation =
       composeFoundationCatalog(
         base,
@@ -299,19 +254,15 @@ class ComposeFoundationFaithfulnessTest {
         packagedSeams(base) + ("remote-compose/document" to remoteM3Owned),
       )
 
-    // On the display name rather than the whole component: this platform's curation narrows
-    // `modifierCapabilities` on everything it donates, so whole-object equality would be asserting
-    // the curation as well as the override. The name is the mark this test varies, and it is the
-    // one that says WHICH seam won.
+    // Compare display names: this platform's curation also narrows modifiers, and the name shows
+    // which seam won.
     assertEquals(
       remoteM3Owned.displayName,
       foundation.components.single { it.componentId == "remote-compose/document" }.displayName,
       "the packaged seam beat the catalog that owns Remote Compose",
     )
-    // `remote-compose/inline` is donated to NO platform now, and that is a consequence worth
-    // asserting rather than losing. It was on Wear's borrow list alone, so withdrawing the seams
-    // there withdrew it everywhere; the Remote Compose platform never took it, because a document
-    // does not embed a switch into itself. It returns with the Wear seams.
+    // `remote-compose/inline` is donated to no platform now (a document does not embed a switch
+    // into itself).
     assertTrue(
       foundation.components.none { it.componentId == REMOTE_COMPOSE_INLINE_COMPONENT_ID },
       "the inline seam is donated to no platform while the Wear seams are withdrawn",
@@ -319,12 +270,8 @@ class ComposeFoundationFaithfulnessTest {
   }
 
   /**
-   * A seam no source has is left off the palette rather than invented.
-   *
-   * The shape a deployment gets once `remote-m3` owns the seams and the packaged catalog stops
-   * carrying them: no Remote Compose catalog served means no Remote Compose on the shelf. Asserted
-   * now because the alternative — a `getValue` on the seam map — would be a startup crash rather
-   * than a missing palette entry, and the difference only shows up on someone's box.
+   * A seam no source has is left off the palette rather than invented, instead of a `getValue`
+   * startup crash.
    */
   @Test
   fun `a seam no source declares is left off the palette`() {
@@ -389,12 +336,8 @@ class ComposeFoundationFaithfulnessTest {
       .build()
 
   /**
-   * The two things `withBuilderVocabulary` reads out of a donor's `componentMenu`, spelled here.
-   *
-   * The runtime's own `menuGroups`/`menuGroupOrder` are file-private to
-   * `ProductionUiBuilderRuntime` and widening them for a test would be widening the wrong thing --
-   * a second reading of the same JSON is what a golden would do anyway, and this one fails if the
-   * shape ever changes.
+   * The two things `withBuilderVocabulary` reads out of a donor's `componentMenu`, re-read here
+   * because the runtime's helpers are file-private.
    */
   private fun JsonObject.shelfOf(componentId: String): String? =
     ((((this["componentMenu"] as? JsonObject)?.get("components") as? JsonObject)?.get(componentId)

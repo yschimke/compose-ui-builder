@@ -14,25 +14,12 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 /**
- * What is actually inside a `ui-builder-service-v1.json`, by design and by section.
- *
- * The store keeps every design in one file and rewrites the whole thing on every accepted edit, so
- * the only number an operator had was the total — 23.4 MB against the ceiling, with no way to see
- * which design or which retained list was spending it
- * ([#568](https://github.com/yschimke/compose-preview-server/issues/568)). This answers that, and
- * it is the measurement the per-design store in
+ * What is actually inside a UI-builder state store, by design and by section — the measurement
  * [`docs/design/UI_BUILDER_STATE_STORAGE.md`](../../docs/design/UI_BUILDER_STATE_STORAGE.md)
- * argues from: run it before the migration and after it.
+ * argues from. Run it before and after a migration.
  *
- * Run against the live store it immediately overturned the guess it was written to check. The bytes
- * are not in the revision snapshots: 36 designs sat at revision 1-20, and undo bookkeeping
- * (`acceptedOperations`, `tombstones`, `operationOutcomes`, `history`) held 55% of the file against
- * the snapshots' 35% and the live documents' 4%. One design held 53% of the store on its own. That
- * is the whole argument for measuring rather than modelling.
- *
- * Sizes are the serialized length of each subtree in UTF-8 bytes. They sum to slightly less than
- * the file, because the envelope, the key names above a section and the punctuation between
- * sections belong to no section; `overheadBytes` carries that remainder.
+ * Sizes are the serialized UTF-8 length of each subtree. They sum to slightly less than the file;
+ * `overheadBytes` carries the envelope, key names and punctuation.
  */
 
 /** Sections of a stored design, in the order the report prints them. */
@@ -52,11 +39,8 @@ export const DESIGN_SECTIONS = [
 /** What `FileUiBuilderStateStorage` refuses a write at: the ceiling of the single-file store. */
 const DEFAULT_MAXIMUM_BYTES = 128 * 1024 * 1024;
 /**
- * What `UiBuilderStoreLimits.maximumBytes` gauges the per-design store against.
- *
- * Reported against the wrong one, an ordinary v3 deployment at 102 MB reads as 80% full and exits
- * non-zero while using a tenth of what it is measured by — so the default follows the store the
- * path actually holds, and `--maximum-bytes` still overrides both.
+ * What `UiBuilderStoreLimits.maximumBytes` gauges the per-design store against. The default
+ * follows the store format the path holds; `--maximum-bytes` overrides both.
  */
 const DEFAULT_STORE_MAXIMUM_BYTES = 1024 * 1024 * 1024;
 const DEFAULT_WARN_PERCENT = 80;
@@ -82,9 +66,8 @@ function countOf(value) {
 }
 
 /**
- * The `designs` map of either envelope format. v1 puts the service directly in `payload`, v2 wraps
- * it as `payload.service` beside the catalog-pin manifest; both are read here because a deployment
- * that never ran `--ui-builder-migrate-state` is still on v1.
+ * The `designs` map of either envelope format: v1 has the service in `payload`, v2 in
+ * `payload.service` beside the catalog-pin manifest.
  */
 function serviceOf(root) {
   if (!root || typeof root !== "object") {
@@ -103,9 +86,8 @@ function serviceOf(root) {
 
 /**
  * Break [root] — a parsed state envelope — into per-design and per-section byte counts.
- *
- * [totalBytes] is the size of the file when one was read, and the length of the re-encoded envelope
- * otherwise; the two differ by whitespace, so pass the real size when reporting on a real file.
+ * [totalBytes] is the real file size when known; otherwise the re-encoded length (differs by
+ * whitespace).
  */
 export function analyzeUiBuilderState(root, { totalBytes } = {}) {
   const service = serviceOf(root);
@@ -118,10 +100,8 @@ export function analyzeUiBuilderState(root, { totalBytes } = {}) {
       sections[section] = {
         bytes: byteLength(design[section]),
         count: countOf(design[section]),
-        // The individual entry sizes, for the two array sections retention trims — see
-        // `projectRetention`, which sums the prefix it would drop rather than assuming the
-        // entries are all the same size. Undefined for the object sections, which retention
-        // does not touch.
+        // Per-entry sizes for the array sections retention trims, so `projectRetention` can sum the
+        // exact prefix it would drop. Undefined for object sections.
         entryBytes: Array.isArray(design[section])
           ? design[section].map((entry) => byteLength(entry))
           : undefined,
@@ -160,14 +140,8 @@ export function analyzeUiBuilderState(root, { totalBytes } = {}) {
 }
 
 /**
- * What a shallower revision retention would actually save, measured per design.
- *
- * This used to scale the two snapshot sections by `keep / retained`, assuming every design sat at
- * the configured retention depth. Against a real store that was badly wrong: the live file's
- * designs are at revision 1-20, nowhere near the 1,025 cap, so nothing would have been dropped and
- * the reported saving of 7.66 MB did not exist. A design only gives bytes back for the snapshots it
- * holds **beyond** [keep], so the count is what the arithmetic has to come from — and a store whose
- * designs are all shallower than [keep] correctly projects a saving of zero.
+ * What a shallower revision retention would save, measured per design: a design only gives back
+ * the snapshots it holds beyond [keep], so designs shallower than [keep] save nothing.
  */
 export function projectRetention(report, { keep = 64 } = {}) {
   let snapshotBytes = 0;
@@ -177,11 +151,8 @@ export function projectRetention(report, { keep = 64 } = {}) {
       const { bytes, count, entryBytes } = design.sections[section];
       snapshotBytes += bytes;
       if (count <= keep) continue;
-      // Retention drops the OLDEST entries, and a design's snapshots are not all the same size —
-      // a document that grew across its revisions makes the dropped prefix the small end and the
-      // retained tail the large one. Scaling the section by `keep / count` assumed otherwise and
-      // overstated the saving for exactly the growing designs the cut is aimed at, so sum the
-      // prefix that would actually go.
+      // Retention drops the oldest entries, and snapshot sizes vary, so sum the actual prefix
+      // rather than scaling.
       savedBytes += entryBytes
         ? entryBytes.slice(0, count - keep).reduce((sum, it) => sum + it, 0)
         : Math.round(bytes * (1 - keep / count));
@@ -202,29 +173,20 @@ export function projectRetention(report, { keep = 64 } = {}) {
 }
 
 /**
- * The same report, read from the per-design store the single file became.
- *
- * The sections are deliberately the ones above, so a before/after against the same store reads as
- * one table rather than two vocabularies. Where they come from changes: `document`, `positions` and
- * the retained revisions are their own files, while the five collections that make up undo state
- * live in the design's journal and are measured by replaying it — which is also how the journal's
- * own slack becomes visible, as the difference between what the file costs and what it still says.
+ * The same report, read from the per-design store, with the same sections so before/after reads
+ * as one table. Undo-state collections are measured by replaying the journal, which also exposes
+ * the journal's slack.
  */
 export function analyzeUiBuilderStore(directory) {
   const designsDirectory = join(directory, "designs");
-  // A store that has been opened but never written to has a marker and no `designs/` at all, which
-  // is an empty deployment rather than a broken one — and the report exists to be runnable against
-  // a host before anyone has edited anything.
+  // An opened but never-written store has no `designs/`; that is an empty deployment, not an error.
   const entries = existsSync(designsDirectory)
     ? readdirSync(designsDirectory, { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
         .map((entry) => entry.name)
     : [];
-  // The store's own `.deleted` directory holds designs whose deletion committed by rename and whose
-  // unlink did not finish. It retries them on the next open, so tabulating what is in there would
-  // count deleted designs as live ones — and show an id twice, once as a tombstone and once as the
-  // design since recreated under it. Those bytes are still on the disk and still charged against
-  // the ceiling, so they are counted here too, as overhead with no sections.
+  // The store's `.deleted` directory holds tombstones whose unlink did not finish. Not tabulated
+  // (they are not live designs) but their bytes still count, as overhead.
   const slugs = entries.filter((name) => name !== DELETED_DIRECTORY);
 
   let totalBytes = fileBytes(join(directory, "store.json"));
@@ -234,21 +196,14 @@ export function analyzeUiBuilderStore(directory) {
   const designs = [];
   for (const slug of slugs) {
     const designDirectory = join(designsDirectory, slug);
-    // A `quarantine.json` is the store's own record that this design does not load, and it says so
-    // whether or not the header still parses — the usual quarantine is a missing or corrupt part
-    // under a header that reads perfectly well. Tabulating one would report a design the host does
-    // not serve, with sections measured from whatever survived.
+    // A `quarantine.json` means the design does not load; don't tabulate it as live.
     const quarantined = existsSync(join(designDirectory, "quarantine.json"));
     const parsed = quarantined ? null : payloadOf(join(designDirectory, "design.json"));
-    // The slug is the address, not a label. A design restored or copied under another basename is
-    // one the store quarantines at load — without writing a record, because it decides that from
-    // the name — so a report that trusted the header would tabulate it as another live design and
-    // show the same `designId` twice.
+    // The slug is the address: a design copied under another basename is quarantined at load, so
+    // trusting its header would list the same `designId` twice.
     const header = parsed && slugOf(parsed.designId) === slug ? parsed : null;
     if (!header) {
-      // Still on the disk, and the store counts it: a report that dropped it would understate a
-      // store precisely when corrupt state is what is filling it. It has no sections to attribute,
-      // so it is counted and not tabulated.
+      // Still on disk and counted by the store, so counted here (not tabulated: no sections).
       totalBytes += directoryBytes(designDirectory);
       continue;
     }
@@ -265,9 +220,7 @@ export function analyzeUiBuilderStore(directory) {
 
     sections.revisionSnapshots.entryBytes = [];
     sections.positionSnapshots.entryBytes = [];
-    // Sorted by revision, the way `readDesign` sorts them. Object key order is not the store's
-    // ordering, and `projectRetention` drops a PREFIX — so an unordered list would sum an
-    // arbitrary five files rather than the five oldest.
+    // Sorted by revision as `readDesign` does, since `projectRetention` drops a prefix.
     const revisionFiles = Object.entries(header.revisionFiles ?? {}).sort(
       ([left], [right]) => (Number(left) || 0) - (Number(right) || 0),
     );
@@ -374,11 +327,8 @@ function payloadOf(path) {
 }
 
 /**
- * The live collections a design's journal describes, replayed the way the store replays them.
- *
- * Only the bytes the header commits to are read: a commit that appended and died before its header
- * landed left records that are not part of the design, and counting them would report bytes nothing
- * will ever load.
+ * The live collections a design's journal describes, replayed as the store does: only the bytes
+ * the header commits to.
  */
 function replayJournal(designDirectory, header) {
   const live = {
@@ -391,13 +341,8 @@ function replayJournal(designDirectory, header) {
   if (!header.journalFile) return { live };
   let committed;
   try {
-    // Only the committed prefix, as the store itself reads: a journal with a large uncommitted tail
-    // — a runaway append, an interrupted write — would otherwise exhaust the heap here while the
-    // host it is reporting on carries on serving that design perfectly well.
-    //
-    // And the length is bounded before it is allocated, also as the store reads it: the number
-    // comes out of a header, so a corrupt or hand-edited one can ask for more memory than there is,
-    // and a diagnostic that dies on a store the host quarantines calmly is no diagnostic.
+    // Only the committed prefix, and bounded before allocating, as the store reads it: a runaway or
+    // corrupt header must not exhaust the heap here.
     const length = header.journalBytes ?? 0;
     if (length > MAXIMUM_DESIGN_BYTES) return { live };
     committed = Buffer.alloc(length);
@@ -421,10 +366,7 @@ function replayJournal(designDirectory, header) {
       continue;
     }
     if (!entry) continue;
-    // Presence, not truthiness. A trim to nothing — an asset write clearing a long history — is
-    // encoded as an empty append with `keep: 0`, and both of those are falsy: read as booleans, the
-    // report would go on counting every superseded record as live and attribute a journal's slack
-    // to retained state.
+    // Presence, not truthiness: a trim to nothing is an empty append with `keep: 0`.
     if (entry.historySet !== undefined) live.history = entry.historySet;
     if (entry.historyAppend !== undefined) {
       live.history = live.history.concat(entry.historyAppend);

@@ -15,14 +15,12 @@ import kotlinx.serialization.json.decodeFromJsonElement
 /**
  * What a catalog states about its own components that this build otherwise answers from a Kotlin
  * table: the role a component plays, the range a property is edited over, and what a component
- * arrives holding when it is inserted.
+ * arrives holding when inserted.
  *
- * All three are read out of [CapabilityCatalog.statusSemantics] — the catalog's published policy,
- * which reaches the editor verbatim — rather than from new wire fields, because the wire types are
- * released from another repository and these are builder presentation, not design data. Each reader
- * is consulted **before** the Kotlin table it replaces and falls back to it, so a catalog that
- * publishes none of this is edited exactly as before. `UI_BUILDER_CATALOG_CONTRACT.md` § Catalog-
- * published editor policy is the contract.
+ * Read from [CapabilityCatalog.statusSemantics] (the catalog's published policy), not new wire
+ * fields, since the wire types are released elsewhere and this is presentation, not design data.
+ * Each reader is consulted **before** the Kotlin table it replaces and falls back to it. Contract:
+ * `UI_BUILDER_CATALOG_CONTRACT.md` § Catalog-published editor policy.
  */
 internal object CatalogPublishedPolicy {
 
@@ -38,9 +36,8 @@ internal object CatalogPublishedPolicy {
 
   /**
    * The editor a catalog states for [property] of [componentId]: the `editor` object of the
-   * matching `propertyCapabilities` entry (a builtin's `properties`). Null when it states none, or
-   * states one this build cannot honour — a number range with no finite bounds, or bounds the wrong
-   * way round — so a bad declaration costs the catalog its range, never the property.
+   * matching `propertyCapabilities` entry (a builtin's `properties`). Null when absent or unusable
+   * (no finite bounds, or reversed), so a bad declaration costs only the range.
    */
   fun editorFor(
     statusSemantics: JsonObject,
@@ -72,19 +69,9 @@ internal object CatalogPublishedPolicy {
   }
 
   /**
-   * What a catalog says [componentId] arrives holding: `insertContent`, shaped like [StarterNode] —
-   *
-   * ```json
-   * "insertContent": {
-   *   "properties": { "checked": {"type": "boolean", "value": true} },
-   *   "slots": { "label": [ {"componentId": "acme/text",
-   *                          "properties": {"text": {"type": "string", "value": "Checkbox"}}} ] }
-   * }
-   * ```
-   *
-   * Null when it says nothing, or says something that does not decode; the insert then falls back
-   * to the Kotlin starter table, and the catalog check that already guards that table
-   * (`resolveStarterChildren`) guards this too.
+   * What a catalog says [componentId] arrives holding: `insertContent`, shaped like [StarterNode].
+   * Null when absent or undecodable; the insert then falls back to the Kotlin starter table, and
+   * `resolveStarterChildren` guards both.
    */
   fun insertContentFor(statusSemantics: JsonObject, componentId: String): StarterNode? {
     val declared =
@@ -151,9 +138,9 @@ internal val LocalUiBuilderCatalogScrollers =
   staticCompositionLocalOf<CatalogScrollers> { CatalogScrollers.NONE }
 
 /**
- * The component a slot accepting text is filled with, by [CatalogBuilderRoles.TEXT]: the one in
- * [ownerId]'s namespace first, then any. Null when no text component in this catalog carries the
- * role, which is every catalog today; the caller then falls back to the id it knew.
+ * The component a slot accepting text is filled with, by [CatalogBuilderRoles.TEXT]: [ownerId]'s
+ * namespace first, then any. Null when no text component carries the role; the caller falls back to
+ * the id it knew.
  */
 internal fun CapabilityCatalog.textComponentFor(
   slot: SlotCapability,

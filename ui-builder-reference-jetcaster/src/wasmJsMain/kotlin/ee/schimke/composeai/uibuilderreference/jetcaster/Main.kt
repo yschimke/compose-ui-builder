@@ -188,29 +188,9 @@ private val JetcasterPaneSpacing = 24.dp
 private fun JetcasterReferenceApp() {
   MaterialTheme(colorScheme = ReferenceColors) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-      // The real `SupportingPaneScaffold`, not a `BoxWithConstraints` imitating one.
-      //
-      // This app is the independent oracle the builder is measured against, so it has to reach for
-      // the component an app author would reach for. While it hand-rolled the split -- a `Row`
-      // with a 744.dp main pane above a 1280.dp breakpoint -- it disagreed with the builder by
-      // ~7.7% at expanded width from #788 onward, which is 7x the convergence bound. Nothing said
-      // so, because the `toMatchSnapshot` assertions on the same tests failed first and the
-      // convergence gate never ran.
-      // The design's own pane widths, which this app states because the design states them.
-      //
-      // It did not, and that was invisible while the builder did not read them either: two
-      // implementations ignoring the same three properties agree perfectly.
-      // yschimke/compose-preview-server#924
-      // taught the builder to honour `mainPanePreferredWidthDp`, `supportingPanePreferredWidthDp`
-      // and `paneSpacingDp`, and this app immediately disagreed with it by 7.67% at expanded width
-      // — the divergence the comment below describes, in mirror image, and for the same reason:
-      // one side placing the split where the design asked and the other where the library's
-      // default put it.
-      //
-      // So these are not here to match the builder. They are here because an author implementing
-      // `jetcaster-discover-expanded` would write them, and an oracle that leaves out what the
-      // design specifies is not an independent implementation of that design — it is an
-      // implementation of a different one that happened to agree.
+      // The real `SupportingPaneScaffold`, with the design's own pane widths: this app is the
+      // independent oracle the builder is measured against, so it must implement what the design
+      // specifies the way an app author would, not imitate the builder.
       val directive =
         calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())
           .copy(horizontalPartitionSpacerSize = JetcasterPaneSpacing)

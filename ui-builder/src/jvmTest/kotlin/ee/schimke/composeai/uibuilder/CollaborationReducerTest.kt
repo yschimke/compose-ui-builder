@@ -601,9 +601,8 @@ class CollaborationReducerTest {
         slots = mapOf("content" to listOf("child")),
       )
     val b = UiBuilderNode(id = "b", componentId = "button")
-    // One root, because a document with two is one nothing can export and the reducer now refuses
-    // it (yschimke/compose-preview-server#429). `b` is a second slot of the container rather than a
-    // second root, which is what the moves below need it to be: somewhere to move *from*.
+    // One root (a second is refused, see yschimke/compose-preview-server#429), so `b` is a second
+    // slot of the container, giving the moves below somewhere to move from.
     val container =
       UiBuilderNode(
         id = "container",

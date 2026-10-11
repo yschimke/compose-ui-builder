@@ -44,16 +44,11 @@ sealed interface UiBuilderDocumentPreview {
 
 /**
  * The selected browser Preview variants, played from exported documents rather than redrawn by the
- * editing canvas.
+ * canvas. Opted into via `CatalogCapabilityV1.browserPreview`; catalog-agnostic. Value-equal
+ * documents are captured once and shared (e.g. the three Wear host shapes).
  *
- * The catalog opts into this through `CatalogCapabilityV1.browserPreview`; this composable knows
- * nothing about catalog ids or platforms. Documents equal by value are captured once and shared —
- * the three Wear widget host shapes deliberately carry one document — while device and environment
- * variants whose documents differ receive their own export.
- *
- * A successful frame remains on screen while a newer revision is prepared. Clearing it first made
- * an ordinary property edit flash a blank Preview for the entire compile/capture round trip, which
- * turns an asynchronous fidelity upgrade into a worse editing surface.
+ * A successful frame stays on screen while a newer revision is prepared, so edits do not flash a
+ * blank Preview.
  */
 @Composable
 internal fun RemoteDocumentDesignPreviewPane(

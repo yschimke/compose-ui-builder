@@ -29,28 +29,15 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * The canvas's Wear list hands its rows the **whole** transformation, not half of it.
+ * The canvas's Wear list hands its rows the **whole** transformation: `Modifier.transformedHeight`
+ * (layout: rows shorten) and `SurfaceTransformation` (drawing: scale and fade, applied by the
+ * component).
  *
- * `TransformingLazyColumn` applies a row's transformation in two halves:
- * `Modifier.transformedHeight` (the layout half — the row gets shorter) and `SurfaceTransformation`
- * (the drawing half — the scale and the fade, which the *component* applies to itself). The canvas
- * had exactly one: it passed the first and not the second, so a Wear list drew as a plain column of
- * full-size, full-brightness rows while the generated screen beside it scaled and faded. That is
- * what somebody reported from the editor.
- *
- * ## Why this asserts calls rather than pixels
- *
- * The transformation is **animated** — the spec settles as frames advance — so a still render shows
- * every row at full scale and cannot tell the two halves apart. Two attempts at a pixel test proved
- * it: with the transformation wired and with it removed, the measured widths differed by the same
- * 4% (the rounded corner), which would have been a green test guarding nothing.
- *
- * So this asks the question directly, in two halves that together cover the chain:
- *
- * - the **list** provides a transformation to its rows (the local is not null inside an item), and
- * - a **component** applies the transformation it is given — observed through a recording
- *   implementation of the interface, whose `apply*` methods the library calls while drawing, so
- *   they are called **if and only if** the component passed it on.
+ * Asserts calls rather than pixels: the transformation is animated, so a still render can't tell
+ * the halves apart. Two halves:
+ * - the **list** provides a transformation to its rows (the local is non-null inside an item), and
+ * - a **component** applies what it is given, observed through a recording implementation whose
+ *   `apply*` methods the library calls while drawing.
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 class WearListTransformationTest {
@@ -133,9 +120,8 @@ class WearListTransformationTest {
   }
 
   /**
-   * A list's last row is often a `ButtonGroup`, and upstream is explicit that the group takes the
-   * transformation and its buttons do not: applied to both, each button is scaled about its own
-   * centre inside a group that is not, which is how that row drew wrong on the canvas.
+   * A `ButtonGroup` row takes the transformation; its buttons must not (upstream: applying to both
+   * scales each button about its own centre).
    */
   @Test
   fun `a button group takes the transformation and hides it from its buttons`() {
@@ -176,10 +162,7 @@ class WearListTransformationTest {
     assertEquals(1, applied)
   }
 
-  /**
-   * A row whose component takes no transformation is left to the list, which transforms it whole:
-   * nothing claims it, so the list's own layer does.
-   */
+  /** A row whose component takes no transformation is transformed whole by the list. */
   @Test
   fun `a plain text row leaves the transformation to the list`() {
     val row = WearRowTransformation(RecordingTransformation())
@@ -192,10 +175,7 @@ class WearListTransformationTest {
     assertEquals(0, applied)
   }
 
-  /**
-   * The half the list owns: a row composed inside the canvas's Wear list is handed the real
-   * transformation, so the component above has something to apply.
-   */
+  /** The list's half: a row inside the canvas's Wear list is handed the real transformation. */
   @Test
   fun `the list hands its rows a transformation`() {
     var handed: SurfaceTransformation? = null
@@ -217,10 +197,7 @@ class WearListTransformationTest {
     )
   }
 
-  /**
-   * Outside a list there is none, and nothing fabricates one: the library's own default is what a
-   * card that is not in a `TransformingLazyColumn` should use.
-   */
+  /** Outside a list there is none; the library's own default applies. */
   @Test
   fun `a card outside a list is handed no transformation`() {
     var handed: SurfaceTransformation? = null

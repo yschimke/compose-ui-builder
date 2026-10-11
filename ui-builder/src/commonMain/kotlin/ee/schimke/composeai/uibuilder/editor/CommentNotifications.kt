@@ -10,29 +10,21 @@ import kotlinx.serialization.json.Json
 /**
  * "Notify me about replies": Web Push for the comment board, offered beside it.
  *
- * compose-preview-server sends a push when somebody replies on a thread a person has written in, or
- * `@mentions` them (`docs/serve/NOTIFICATIONS.md` over there). Its Settings page has always been
- * able to turn that on; this is the same switch where the conversation actually is. It mirrors the
- * server's own client (`serve-web/src/push/settings.ts`) step for step, because the server's rules
- * are written against that flow:
- * - **Permission is asked from the click and nowhere else.**
- *   [CommentNotificationsController.toggle] calls [CommentNotificationHost.requestPermission]
- *   before it suspends on anything else, so the browser sees the gesture, and
- *   [CommentNotificationsController.load] never asks.
- * - **An existing subscription is re-posted before it is shown as on.** A subscription belongs to
- *   the browser's origin, not to whoever is signed in; the `POST` without `kinds` rebinds it to the
- *   person signed in now. A 4xx means the server will not take it for this person, so the browser
- *   drops it too; a 5xx or no answer only means it could not be confirmed, and it is kept.
- * - **The toggle is two kinds, not all of them.** It turns on [REPLY_KINDS] and keeps whatever else
- *   the person chose in Settings (`reviews`), read from the server first.
+ * compose-preview-server pushes when someone replies on a thread a person wrote in, or `@mentions`
+ * them. This mirrors the server's own client (`serve-web/src/push/settings.ts`), whose flow the
+ * server's rules assume: permission is asked only from the click
+ * ([CommentNotificationsController.toggle] asks before suspending;
+ * [CommentNotificationsController.load] never asks); an existing subscription is re-posted without
+ * `kinds` to rebind it to the signed-in person before showing as on (4xx drops it, 5xx keeps it);
+ * and the toggle turns on [REPLY_KINDS] while keeping other kinds chosen in Settings.
  *
- * Everything unportable — the `Notification` API, the service worker, `fetch` — is behind
- * [CommentNotificationHost]; this class is the whole state machine and runs in a JVM test.
+ * Everything unportable (`Notification`, the service worker, `fetch`) is behind
+ * [CommentNotificationHost], so this state machine runs in a JVM test.
  */
 sealed interface CommentNotificationsState {
   /**
-   * Nothing is drawn: not hosted by compose-preview-server, not a secure context, no `PushManager`,
-   * push turned off on the server (the key route 404s), signed out (401), or not yet known.
+   * Nothing drawn: not hosted by compose-preview-server, insecure context, no `PushManager`, push
+   * off on the server (404), signed out (401), or not yet known.
    */
   data object Hidden : CommentNotificationsState
 
@@ -43,10 +35,7 @@ sealed interface CommentNotificationsState {
   /** The browser's permission is `denied`: the switch is shown off, with how to undo that. */
   data class Blocked(val message: String = BLOCKED_MESSAGE) : CommentNotificationsState
 
-  /**
-   * An iPhone or iPad in an ordinary Safari tab. Safari offers push only to a site added to the
-   * Home Screen and opened from there, so the honest answer is how to get there, not "unsupported".
-   */
+  /** iOS Safari in an ordinary tab: push needs the site added to the Home Screen, so say how. */
   data object InstallFirst : CommentNotificationsState
 }
 
@@ -69,12 +58,9 @@ enum class PushPermission {
 }
 
 /**
- * What this page and this browser can do about Web Push, read once.
- *
- * The four probes are `serve-web/src/push/support.ts`'s; [hostedByServer] is this editor's own: the
- * switch is about compose-preview-server's routes, so it is false for a design kept in this browser
- * (`?storage=local`), for a page inside a frame (an IDE webview, an MCP App, somebody's embed), and
- * for every host that is not the live session at all.
+ * What this page and browser can do about Web Push, read once. The probes are
+ * `serve-web/src/push/support.ts`'s; [hostedByServer] is false for browser-stored designs
+ * (`?storage=local`), framed pages (IDE webviews, MCP Apps, embeds) and non-live hosts.
  */
 data class PushEnvironment(
   val hostedByServer: Boolean,
@@ -114,8 +100,8 @@ fun pushAvailability(env: PushEnvironment): PushAvailability {
 }
 
 /**
- * iPhone, iPod or iPad — including the iPad that, since iPadOS 13, reports itself as a Mac and
- * gives itself away only by having a touchscreen. `support.ts`'s `isIos`.
+ * iPhone, iPod or iPad, including iPadOS 13+ iPads that report as a Mac but have touch.
+ * `support.ts`'s `isIos`.
  */
 fun isIosDevice(userAgent: String, maxTouchPoints: Int): Boolean {
   if (IOS_DEVICE.containsMatchIn(userAgent)) return true
@@ -138,8 +124,8 @@ interface CommentNotificationHost {
   fun permission(): PushPermission
 
   /**
-   * `Notification.requestPermission()`. Must make the browser call before it first suspends: the
-   * controller calls it straight from the click, and Safari shows its prompt only for a gesture.
+   * `Notification.requestPermission()`. Must call the browser before first suspending, since Safari
+   * prompts only within a gesture.
    */
   suspend fun requestPermission(): PushPermission
 
@@ -147,9 +133,9 @@ interface CommentNotificationHost {
   suspend fun existingSubscription(): PushSubscriptionInfo?
 
   /**
-   * Registers `/push-sw.js` at scope `/`, waits for it to activate, and subscribes with
-   * `userVisibleOnly` and [publicKey] — replacing a subscription made under a different key, which
-   * would never deliver. Throws with a sentence when the browser refuses.
+   * Registers `/push-sw.js` at scope `/`, waits for activation, and subscribes with
+   * `userVisibleOnly` and [publicKey], replacing a subscription under another key. Throws with a
+   * sentence when refused.
    */
   suspend fun subscribe(publicKey: String): PushSubscriptionInfo
 
@@ -210,10 +196,7 @@ class CommentNotificationsController(private val host: CommentNotificationHost) 
   private var bound = false
   private var busy = false
 
-  /**
-   * Decide what to show. Asks the server, never the person: no permission prompt, no worker
-   * registration, no new subscription.
-   */
+  /** Decide what to show by asking the server only: no prompt, registration or new subscription. */
   suspend fun load() {
     mutableState.value = settle { loadState() }
   }
@@ -254,8 +237,8 @@ class CommentNotificationsController(private val host: CommentNotificationHost) 
   }
 
   /**
-   * Post this browser's existing subscription again, without `kinds`, so the person's own choice
-   * stands and the endpoint is bound to whoever is signed in now. `refresh` in `settings.ts`.
+   * Re-post this browser's subscription without `kinds`, keeping the person's choice and binding
+   * the endpoint to whoever is signed in. `refresh` in `settings.ts`.
    */
   private suspend fun rebind(subscription: PushSubscriptionInfo): CommentNotificationsState {
     val response =
@@ -287,8 +270,8 @@ class CommentNotificationsController(private val host: CommentNotificationHost) 
   }
 
   /**
-   * The click. The first thing it does when turning on is ask for permission, before any other
-   * suspension, so a caller that starts it undispatched from the click handler keeps the gesture.
+   * The click. Turning on asks for permission before any other suspension, so an undispatched start
+   * from the click handler keeps the gesture.
    */
   suspend fun toggle() {
     val current = mutableState.value
@@ -458,8 +441,7 @@ class CommentNotificationsController(private val host: CommentNotificationHost) 
 
   private companion object {
     /**
-     * Answers that mean "do not offer this here": signed out (the routes want a GitHub sign-in) and
-     * push turned off on the server.
+     * Statuses meaning "do not offer this here": signed out (401) and push off on the server (404).
      */
     val HIDDEN_STATUSES = setOf(401, 404)
   }

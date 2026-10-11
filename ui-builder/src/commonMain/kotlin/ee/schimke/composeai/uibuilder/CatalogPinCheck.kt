@@ -6,13 +6,10 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Why [document] cannot be edited against [catalog], or null when it can.
- *
- * A design is pinned to one catalog, and every component in it, every template it came from and
- * every export it goes to is that catalog's. Opened against another — a host that read the wrong
- * capability file — the list would offer the other catalog's components, and a remote-m3 widget
- * would fill with m3 components its runtime cannot draw and its export cannot write. The host
- * chooses the catalog; this is the editor refusing to take that choice on trust.
+ * Why [document] cannot be edited against [catalog], or null when it can. A design is pinned to one
+ * catalog; opened against another (a host reading the wrong capability file), the palette would
+ * offer components its runtime can't draw and its export can't write. The editor doesn't take the
+ * host's choice on trust.
  */
 fun catalogPinMismatch(document: UiBuilderDocument, catalog: CapabilityCatalog): String? {
   val pinned = document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull

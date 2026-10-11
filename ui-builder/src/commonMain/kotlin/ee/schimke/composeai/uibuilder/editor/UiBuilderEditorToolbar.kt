@@ -186,11 +186,8 @@ internal fun MobileEditorToolbar(
               )
             add(UiBuilderMenuEntry.Divider)
           }
-          // The host container shapes, on a widget design. Rows rather than the wide toolbar's
-          // menu-inside-a-menu, because this is already the overflow: a second dropdown off one
-          // row is a worse thing to hit on a narrow screen than two rows that read as a pair. The
-          // wide toolbar's control is the same choice, and without these the whole rectangular
-          // frame — canvas and native render — would be unreachable under 840dp.
+          // Widget host shapes as rows (this is already the overflow, so no nested menu), keeping
+          // the rectangular frame reachable under 840dp.
           state.document.wearWidgetScaffoldSize()?.let { size ->
             WearWidgetHostShape.entries.forEach { option ->
               val spec = size.hostSpec(option)
@@ -344,12 +341,8 @@ internal fun MobileEditorToolbar(
 }
 
 /**
- * The compact layout's bottom dock: the wide layout's two rails as one row a thumb can reach.
- *
- * Five buttons, which is what a phone's width holds without breaking a label. The four panels an
- * author reaches for while editing are buttons of their own — Issues among them, with the same
- * count the wide rail shows, because a problem nobody can find is one nobody fixes. The rest of the
- * wide rail's docks are behind More, by the names that rail gives them.
+ * The compact layout's bottom dock: the wide layout's two rails as one thumb-reachable row. The
+ * four panels used while editing get buttons (Issues with its count); the rest are behind More.
  */
 @Composable
 internal fun MobilePanelDock(
@@ -434,15 +427,8 @@ private fun androidx.compose.foundation.layout.RowScope.MobileMorePanelsButton(
 }
 
 /**
- * The compact layout's view switcher: the editing canvas first, then one tab per frame the wide
- * layout's Preview pane draws side by side.
- *
- * A phone has no room for that pane beside the canvas, so before this the only device a phone could
- * see was the design's own frame, through the canvas's device toggle. Each tab here is one frame
- * drawn whole and live, at the width the screen has, rather than a row of thumbnails.
- *
- * Scrollable, because the tabs are the design's: a design that targets five devices has six, and
- * squeezing them into one screen's width would break every name in it.
+ * The compact layout's view switcher: the editing canvas, then one tab per frame the wide Preview
+ * pane draws, each drawn whole and live. Scrollable, since a design may target many devices.
  */
 @Composable
 internal fun MobileViewTabs(
@@ -492,10 +478,8 @@ private fun androidx.compose.foundation.layout.RowScope.MobilePanelButton(
 }
 
 /**
- * A dock button's word, and the count the wide rail puts on the same dock.
- *
- * One line, always: a label is a word, and a word broken across two lines is not one. On a screen
- * narrower than the label needs it shrinks to fit rather than wrapping or clipping.
+ * A dock button's word plus the wide rail's count. Always one line, shrinking to fit rather than
+ * wrapping.
  */
 @Composable
 private fun MobilePanelLabel(label: String, selected: Boolean, badge: Int) {
@@ -529,16 +513,8 @@ private fun MobilePanelLabel(label: String, selected: Boolean, badge: Int) {
 }
 
 /**
- * The editor's top bar: what is being edited, history, what the canvas is for, and which panels are
- * open.
- *
- * Four zones in that order, because this row used to be eighteen text buttons of equal weight.
- * `Duplicate` and `Cut` sat beside `Help` and `Reconnect`, most of them greyed most of the time,
- * and the one control that changes what the canvas *is* — `Preview` — was indistinguishable from
- * the rest. Editing verbs moved to [SelectionActionBar], where they sit beside the thing they act
- * on and are only present when there is one; the document's revision and the session moved to
- * [CanvasStatusBar], where a status line belongs. What is left here is global: identity, undo, the
- * canvas mode, and the panels.
+ * The editor's top bar, in four zones: identity, undo/redo, the canvas mode, and the panels.
+ * Editing verbs live in [SelectionActionBar] and status in [CanvasStatusBar].
  */
 @Composable
 internal fun EditorToolbar(
@@ -600,9 +576,7 @@ internal fun EditorToolbar(
         dispatch(UiBuilderEditorEvent.Redo)
       }
       Spacer(Modifier.weight(1f))
-      // Only once there is something to hide — a picture, a placed piece or a mark. An
-      // always-present control for a feature most designs never use is exactly the crowding the
-      // rest of this change is undoing.
+      // Only once the reference has content, since most designs never use it.
       if (state.reference.hasContent) {
         ToolbarToggleAction(
           label = if (state.reference.settings.visible) "Hide reference" else "Show reference",
@@ -627,10 +601,8 @@ internal fun EditorToolbar(
       if (availablePanes.size > 1) {
         WorkspacePanesMenu(panes, availablePanes, previewSurfaces, nativeAvailable, dispatch)
       }
-      // Beside the panes menu, because they are the two "what am I looking at" choices: which panes
-      // are open, and which host frame the native render is drawn inside. Only while that pane is
-      // open: the editing surface always draws the editing frame, and the preview pane draws every
-      // shape at once, so the native render is the one view a single choice still steers.
+      // Beside the panes menu, as the other "what am I looking at" choice. Only while the native
+      // pane is open, the one view a single shape choice still steers.
       state.document.wearWidgetScaffoldSize()?.let { size ->
         if (EditorPane.Native in panes) {
           WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
@@ -751,14 +723,9 @@ internal fun EditorToolbar(
 }
 
 /**
- * The Export menu: the design as a picture, out of the builder and into Figma, a link or a file.
- *
- * One button, because the catalog viewer's preview page has one row and this toolbar has no room
- * for six; the rows are [exportMenuEntries], grouped by verb. Each row hands its work to the host
- * and shows the sentence the host answers with beside the button for a moment — "SVG copied", or
- * why it was not — since a clipboard write that says nothing is indistinguishable from one that
- * failed. The button stays enabled while a row runs: a second press while an export renders is a
- * second export, which is harmless, and a disabled button reads as a broken one.
+ * The Export menu: the design as a picture, into Figma, a link or a file. Rows are
+ * [exportMenuEntries], grouped by verb; each shows the host's result sentence briefly ("SVG copied"
+ * or why not). The button stays enabled while a row runs.
  */
 @Composable
 private fun ExportMenu(host: UiBuilderExportHost, showStatus: Boolean = true) {
@@ -835,12 +802,8 @@ private fun ExportMenu(host: UiBuilderExportHost, showStatus: Boolean = true) {
 }
 
 /**
- * The rows of the Export menu, without the popup around them.
- *
- * Separate from [ExportMenu] so a preview can draw them: a `DropdownMenu` is a popup window, which
- * a static render does not capture, and rows nobody can diff are rows that drift. The verb groups
- * are divided, and every row carries its second line, because "Copy SVG" alone does not say that it
- * is the Figma route.
+ * The rows of the Export menu without the popup, so a static preview can capture them. Every row
+ * carries its second line (e.g. that "Copy SVG" is the Figma route).
  */
 @Composable
 internal fun ExportMenuRows(
@@ -897,9 +860,8 @@ private fun DocumentIdentity(state: UiBuilderEditorState, modifier: Modifier = M
 }
 
 /**
- * What kind of thing the design is, named the way the New design form names it: "Wear app" rather
- * than `wear-m3`. Without it nothing on screen said which form factor a design was (#356). Null for
- * a catalog this build has no name for, where the caller falls back to the id.
+ * The design's form factor as the New design form names it ("Wear app" rather than `wear-m3`), or
+ * null when unknown (callers fall back to the id).
  */
 internal fun catalogFormFactorLabel(document: UiBuilderDocument): String? =
   when (document.catalogPin["systemId"]?.jsonPrimitive?.contentOrNull) {
@@ -929,21 +891,11 @@ private fun FormFactorChip(label: String) {
 }
 
 /**
- * Which host container a Wear widget is framed in, as a menu of the shapes the platform ships.
+ * Which host container a Wear widget is framed in, offered only on widget designs.
  *
- * Offered only on a widget design, and that is not a cosmetic gate: on anything else the choice
- * would change nothing, and a control that does nothing is worse than no control.
- *
- * The shape is the **host's**, not the design's — the launcher draws the frame from
- * `WearWidgetParams`, and the same `WearWidgetDocument` appears inside each one. So this switches a
- * view rather than editing anything: no revision, no operation, nothing in the export. What it buys
- * a designer is the answer to "does my widget survive the other frame", which for the rectangular
- * container is a real question — its content box and padding both differ from the squircle's, so a
- * layout that just fits in one can clip in the other.
- *
- * A menu rather than a segmented pair, matching [WorkspacePanesMenu] beside it: each position wants
- * a sentence, and there is room for a third shape here if the round container's per-diameter
- * footprint is ever worth drawing.
+ * The shape is the host's (the launcher draws it from `WearWidgetParams`), so switching it changes
+ * the view, not the document. It answers whether a widget survives another frame: the rectangular
+ * container's content box and padding differ from the squircle's.
  */
 @Composable
 private fun WidgetHostShapeMenu(
@@ -989,12 +941,8 @@ private fun WidgetHostShapeMenu(
 }
 
 /**
- * Where a reference [piece]'s centre falls, in the render pixels the canvas inspection reports.
- *
- * A piece is placed in fractions of the frame the canvas draws, so it converts through that same
- * frame — [canvasFrameDp], which for a Wear widget is its host container rather than the 1280x800dp
- * environment widget designs carry. Converting through the environment put a piece laid over a
- * widget's slot hundreds of dp outside it, and promoting it fell back to the current selection.
+ * Where a reference [piece]'s centre falls in canvas inspection pixels, converted through
+ * [canvasFrameDp] (a widget's host container, not its 1280x800dp environment).
  */
 internal fun UiBuilderDocument.referencePieceCentrePx(
   piece: ReferencePiece,
@@ -1007,12 +955,9 @@ internal fun UiBuilderDocument.referencePieceCentrePx(
 }
 
 /**
- * The frame the editing canvas draws [this] design in, as width and height in dp.
- *
- * A Wear widget is framed by its host container in [hostShape], not by the environment. Widget
- * designs are seeded with the phone fixture's environment — 1280x800dp — so framing by it drew a
- * 216x124dp widget as a tile in the middle of an empty tablet, with "Fit" fitting the tablet. The
- * host frame comes from the same table the preview panes beside the canvas are drawn at.
+ * The frame the editing canvas draws this design in, in dp. A Wear widget uses its host container
+ * in [hostShape] rather than the phone environment widget designs are seeded with; the same table
+ * the preview panes use.
  */
 internal fun UiBuilderDocument.canvasFrameDp(hostShape: WearWidgetHostShape): Pair<Float, Float> {
   wearWidgetScaffoldSize()?.hostSpec(hostShape)?.let {
@@ -1023,15 +968,12 @@ internal fun UiBuilderDocument.canvasFrameDp(hostShape: WearWidgetHostShape): Pa
 }
 
 /**
- * The widget container this design's root is, or null when it is not a widget design at all.
- *
- * Read from the root rather than from the catalog, because the frame follows the scaffold the
- * design was created with and nothing else can change it.
+ * The widget container this design's root is, or null for a non-widget design. Read from the root
+ * scaffold, which fixes the frame.
  */
 /**
- * This design as a catalog runtime surface drawn in [shape] is sent it: the shape named in its
- * environment under [WearWidgetHostShape.ENVIRONMENT_KEY], so the runtime frames the widget the way
- * the pane does. Anything that is not a Wear widget is sent unchanged.
+ * This design as sent to a catalog runtime drawn in [shape]: the shape named in its environment
+ * under [WearWidgetHostShape.ENVIRONMENT_KEY]. Non-widgets are sent unchanged.
  */
 internal fun UiBuilderDocument.withWearWidgetHostShape(
   shape: WearWidgetHostShape
@@ -1053,28 +995,16 @@ internal fun UiBuilderDocument.wearWidgetScaffoldSize(): WearWidgetScaffoldSize?
 }
 
 /**
- * Which design panes are open, as three switches rather than a rung on a ladder.
- *
- * It used to be one value — "1 pane", "2 panes", "3 panes" — which is a control that can only count
- * and cannot say what it is counting. You could not ask for the preview without the editor, you
- * could not ask for the native render without the preview, and the second rung was the one that
- * cost a compile. Each pane is now its own row and its own answer.
- *
- * The last open pane's row is disabled: switching it off would leave a blank workspace, and a
- * control whose only outcome is nothing is worse than no control. A host with no compile lane keeps
- * the native row too, disabled and carrying the catalog's own sentence about why — a row that
- * vanishes teaches nobody that the pane exists.
+ * Which design panes are open, as independent switches. The last open pane cannot be switched off;
+ * a host with no compile lane keeps the native row disabled with the catalog's reason.
  */
 @Composable
 private fun WorkspacePanesMenu(
   panes: Set<EditorPane>,
   availablePanes: Set<EditorPane>,
   /**
-   * The catalog's own claims, so a pane that cannot tell the truth says so where it is chosen.
-   *
-   * The Wasm panes are never *removed* on such a catalog: the browser canvas is what a node is
-   * selected and dragged on, and an editor with no canvas is not an editor. What they lose is the
-   * word "immediate" standing alone as their whole description.
+   * The catalog's own claims, so a pane that cannot render faithfully says so where it is chosen.
+   * Wasm panes are never removed: the canvas is where nodes are selected and dragged.
    */
   surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT,
   /** Whether the host can draw the native pane at all. */
@@ -1101,9 +1031,7 @@ private fun WorkspacePanesMenu(
           .map { pane ->
             val shown = pane in panes
             val available = pane != EditorPane.Native || nativeAvailable
-            // Off it may not go while it is the only thing on screen; on it may not go where the
-            // host
-            // cannot draw it.
+            // Cannot turn off the only pane, nor turn on one the host cannot draw.
             val enabled = available && !(shown && panes.size == 1)
             UiBuilderMenuEntry.Action(
               label = pane.title,
@@ -1152,12 +1080,8 @@ private fun PresenceRow(collaborators: List<UiBuilderCollaborator>) {
 }
 
 /**
- * Everything that can be done to the current selection, as menu rows.
- *
- * One list, three places: the layers tree's context menu, the canvas's, and the overflow beside the
- * selection label. The verbs used to exist only as a row of icon buttons above the canvas — always
- * present, mostly greyed, and nowhere near the layer they act on. A context menu puts them under
- * the pointer that is already on the thing, which is where every other design tool keeps them.
+ * Everything that can be done to the selection, as menu rows: used by the layers tree context menu,
+ * the canvas context menu and the selection overflow.
  */
 internal fun editorSelectionMenuEntries(
   /** The layout modifiers this selection can be given or have taken away; empty for many nodes. */
@@ -1172,8 +1096,8 @@ internal fun editorSelectionMenuEntries(
   canUnwrap: Boolean,
   onOpenProperties: (() -> Unit)?,
   /**
-   * Why the selection cannot become a component, or null when it can — the menu always offers the
-   * verb on a single selection, so a refusal is said rather than a row going missing.
+   * Why the selection cannot become a component, or null. The verb is always offered on a single
+   * selection, with the refusal as its text.
    */
   makeComponentRefusal: String? = null,
   /** Whether to offer "Make component" at all: one node is selected. */
@@ -1226,10 +1150,8 @@ internal fun editorSelectionMenuEntries(
       }
     )
   }
-  // Beside Properties rather than among the clipboard verbs, because both of these are ways of
-  // *pointing at* the selected layer while Copy and Cut are ways of moving it. The Export menu's
-  // Copy link is the design's address; this one is a layer's, which is the thing somebody pastes
-  // when they mean "this button, here".
+  // Beside Properties: both point at the selected layer. This copies a layer's address; the Export
+  // menu's link is the design's.
   if (onCopyLink != null) {
     add(
       UiBuilderMenuEntry.Action(
@@ -1296,8 +1218,7 @@ internal fun editorSelectionMenuEntries(
       act(UiBuilderEditorEvent.DeleteSelected)
     }
   )
-  // Layout before the container verbs, because it is what a right-click on a laid-out node is
-  // usually for: the chain is the node's own business, and wrapping is its parent's.
+  // Layout before container verbs: the chain is the node's own business, wrapping its parent's.
   if (modifierToggles.isNotEmpty()) {
     add(UiBuilderMenuEntry.Divider)
     modifierToggles.forEach { toggle ->
@@ -1369,11 +1290,8 @@ internal fun editorSelectionMenuEntries(
 }
 
 /**
- * Runs one Copy link against the host and hands back the sentence to show.
- *
- * A failure is a sentence too, for the reason the export host gives: the affordance is a button in
- * a menu, and a clipboard the browser refused should be reported where the button was rather than
- * swallowed into a console nobody has open.
+ * Runs one Copy link against the host and returns the sentence to show; failures are sentences too,
+ * shown where the button was.
  */
 internal suspend fun copyLinkSentence(
   copy: suspend (DesignUrlSelectors) -> String,
@@ -1426,12 +1344,8 @@ private fun VisibilityToolbarAction(label: String, onManage: (() -> Unit)?) {
 }
 
 /**
- * What a pinned revision, a stale selector or a just-copied link has to say, over the canvas.
- *
- * One strip rather than three, because all three are the same kind of sentence — something about
- * *this opening of this design* that the canvas cannot show — and a page that grows a new bar per
- * kind of news is a page whose design moves under the reader. The revision line is the only one
- * that persists; the rest expire, which is why they are drawn after it rather than instead of it.
+ * One strip over the canvas for a pinned revision, a stale selector or a just-copied link. The
+ * revision line persists; the others expire.
  */
 @Composable
 internal fun EditorUrlBanner(
@@ -1489,26 +1403,15 @@ internal fun EditorUrlBanner(
 }
 
 /**
- * The one thing a host's [openingNotice][EditorUrlBanner] asks the person to do — sign in, most
- * often — drawn as a button beside the sentence rather than left as advice in it.
+ * The one action a host's [openingNotice][EditorUrlBanner] asks for (often sign-in), drawn as a
+ * button beside the sentence.
  */
 class EditorNoticeAction(val label: String, val onClick: () -> Unit)
 
 /**
- * What can be done to the selection, beside the selection, only while there is one.
- *
- * These seven verbs used to live in the top bar, where they were greyed out for the whole of every
- * session that never selected anything — which is what an empty document is. Here they name their
- * subject: the bar says what is selected and then what can be done to it, and it is absent entirely
- * when the answer is "nothing".
- *
- * Icons for the six that every tool draws the same way, words for the two that no icon conveys —
- * wrapping a selection in a container, and taking it back out.
- *
- * The label is the selection's path, read root to leaf, when the selection is a single layer: each
- * rung is a press away from being the selection, which is the question "which component is this,
- * inside what" answered in the order the layers panel draws it. Multi-select keeps the count — a
- * path is a fact about one layer, and a count about several.
+ * What can be done to the selection, beside it, only while there is one. Icons for verbs every tool
+ * draws the same; words for wrap and unwrap. For a single layer the label is its root-to-leaf path;
+ * for several, the count.
  */
 @Composable
 internal fun SelectionActionBar(
@@ -1548,17 +1451,14 @@ internal fun SelectionActionBar(
       if (onOpenProperties != null) {
         TextButton(
           onClick = onOpenProperties,
-          // Not "Open properties panel", which is the rail switch's name: two controls answering
-          // to one name is a locator that resolves to both and a screen reader that cannot say
-          // which is which.
+          // Distinct from the rail switch's "Open properties panel", so locators and screen readers
+          // can tell them apart.
           modifier = Modifier.semantics { contentDescription = "Edit properties" },
         ) {
           Text("Properties")
         }
       }
-      // One control where seven icons were. Everything they did is now a right-click away on the
-      // layer itself, in the tree or on the canvas; this is the same menu for anyone who reaches
-      // for a button instead, and it is where the chords are written down.
+      // One overflow menu: the same verbs as right-click, plus the chords.
       Box {
         ToolbarIconAction("Selection actions", "", UiBuilderChromeIcon.More, true) {
           menuOpen = true
@@ -1574,17 +1474,9 @@ internal fun SelectionActionBar(
 }
 
 /**
- * The selection's path, read root to leaf, as pressable rungs.
- *
- * A rung carries the layer's name and, where saying it is information, the slot it sits in from the
- * rung above — the same distinction the layers panel draws slot lines for. The leaf is the
- * selection and is drawn selected rather than pressable-elsewhere; pressing an ancestor re-roots
- * the selection there, which is the only verb a path can honestly offer.
- *
- * A path longer than the bar is *elided from the root*, never from the leaf: the thing the reader
- * needs to see is where they are, and a bar that shows `Surface › Supporting pane scaffold › …` and
- * cuts the selection off is answering the question nobody asked. The rungs that remain scroll when
- * even they do not fit, and the scroll follows the selection so the leaf is the end it rests at.
+ * The selection's path, root to leaf, as pressable rungs. Each rung shows the layer name and, where
+ * informative, its slot. Pressing an ancestor selects it; the leaf is drawn selected. Long paths
+ * elide from the root, never the leaf, and scroll to keep the leaf visible.
  */
 @Composable
 private fun SelectionBreadcrumbs(
@@ -1675,13 +1567,7 @@ internal fun dropPlanLabel(plan: UiBuilderDropPlan?): String =
     else -> "${plan.target.nodeId}.${plan.target.slot} · position ${plan.index + 1}"
   }
 
-/**
- * The line under the canvas: what the document is at, where a drag would land, and the session.
- *
- * Every one of these was in the top bar, competing with controls. None of them is a control — they
- * are the answers to "is this saved", "did that land" and "what happens if I let go", which is the
- * bottom of the window in every tool that has them.
- */
+/** The line under the canvas: document revision, where a drag would land, and the session. */
 @Composable
 internal fun CanvasStatusBar(
   state: UiBuilderEditorState,
@@ -1706,9 +1592,7 @@ internal fun CanvasStatusBar(
         StatusText("Revision ${state.document.revision}")
         StatusText("${state.document.nodes.size} nodes")
         if (state.selection.size > 1) StatusText("${state.selection.size} selected")
-        // Only while something is being dragged. The drop target is the answer to a question nobody
-        // is asking with both hands still: it read "No compatible slot" at rest, which is a warning
-        // about nothing.
+        // Only while dragging; at rest the drop target is meaningless.
         if (dragging) {
           StatusText("Drop target: $dropTargetLabel", color = MaterialTheme.colorScheme.primary)
         }
@@ -1738,22 +1622,13 @@ private fun StatusText(text: String, color: Color = MaterialTheme.colorScheme.on
   Text(text, color = color, style = MaterialTheme.typography.labelSmall, maxLines = 1)
 }
 
-/**
- * What the toolbar button says: the open panes, in the enum's own order.
- *
- * Named rather than counted. "2 panes" answers a question nobody asked — the question is *which*
- * two, and on a workspace where the second one might be a compile that is not a detail.
- */
+/** The toolbar button's label: the open panes named in enum order, not counted. */
 internal fun panesLabel(panes: Set<EditorPane>): String =
   EditorPane.entries.filter { it in panes }.joinToString(" + ") { it.label }.ifEmpty { "No panes" }
 
 /**
- * One line under each pane's name, which is where a catalog's own caveat belongs.
- *
- * "Drawn in this browser" is a complete description on `m3-catalog`, where the canvas draws the
- * same Material 3 the export names. On `wear-m3` it is the least interesting true thing about it,
- * and the interesting one — those are stand-ins for a library no browser can link — is exactly what
- * somebody choosing a pane needs to read.
+ * One line under each pane's name for the catalog's own caveat, e.g. that `wear-m3` canvas
+ * components are browser stand-ins.
  */
 internal fun EditorPane.supportingText(
   surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT
@@ -1762,13 +1637,8 @@ internal fun EditorPane.supportingText(
     if (surfaces.wasm.fidelity.isAuthoritative) "Wasm" else "Wasm stand-in, for authoring"
   return when (this) {
     EditorPane.Editor -> "Edit the design · $wasmDescription"
-    // What it varies, and the two claims that matter: it does not edit, and it does not compile.
-    // The second is why it is worth switching on at all rather than waiting for the native one.
-    //
-    // "Devices" here means device *properties* — a width, a height and a density written over the
-    // design's environment — never a picture of a handset. Nothing in this pane draws a bezel, a
-    // notch or a rounded corner, and a mock that is not photoreal is worse than none: it invites a
-    // judgement about a screen from a drawing of a phone that is not the phone.
+    // It does not edit and does not compile. "Devices" means device properties (width, height,
+    // density), never a drawn handset.
     EditorPane.Preview -> "Devices, overrides and themes · not editable · $wasmDescription"
     EditorPane.Native ->
       if (surfaces.native.backend == UiBuilderPreviewSurfaces.BACKEND_ANDROID)
@@ -1778,11 +1648,8 @@ internal fun EditorPane.supportingText(
 }
 
 /**
- * Why a pane cannot be switched on, said where it is refused.
- *
- * Only [EditorPane.Native] ever needs one — the other two are this browser drawing what it already
- * has — and it is the catalog's own sentence wherever the catalog wrote one, so the refusal is an
- * explanation rather than a greyed row.
+ * Why a pane cannot be switched on. Only [EditorPane.Native] needs one, using the catalog's own
+ * sentence where written.
  */
 internal fun EditorPane.unavailableText(
   surfaces: UiBuilderPreviewSurfaces = UiBuilderPreviewSurfaces.DEFAULT
@@ -1794,10 +1661,8 @@ internal fun EditorPane.unavailableText(
   }
 
 /**
- * One icon control, with the label and its chord in the tooltip and in the semantics.
- *
- * The contentDescription keeps the `"$label ($shortcut)"` shape the text buttons had, because it is
- * what the accessibility tree and every script that drives this editor look for.
+ * One icon control, with label and chord in the tooltip and semantics. The contentDescription keeps
+ * the `"$label ($shortcut)"` shape scripts and the accessibility tree look for.
  */
 @Composable
 internal fun ToolbarIconAction(
@@ -1842,12 +1707,8 @@ private fun EditorAction(
 }
 
 /**
- * The component-pack settings: one switch per pack the catalog carries.
- *
- * A dialog rather than a panel because it is a *setting* — a decision about what the palette
- * offers, made once per catalog and remembered by the host — and not a thing to look at while
- * designing. The components of a pack that is off stay in the catalog: switching a pack off after
- * dropping one of its components hides the shelf, not the node.
+ * The component-pack settings: one switch per pack. A dialog because it is a setting remembered by
+ * the host. Switching a pack off hides its shelf, not placed nodes.
  */
 @Composable
 internal fun ComponentPacksDialog(
@@ -1930,11 +1791,8 @@ internal fun EditorShortcutsDialog(onDismiss: () -> Unit) {
 }
 
 /**
- * The shortcut table, rendered from [EDITOR_SHORTCUTS] and [EDITOR_GESTURES] rather than retyped.
- *
- * Separate from the dialog so it can be previewed on its own: a help surface that drifts from the
- * handler is worse than no help surface, and the only way to keep it honest is for both to read the
- * same list and for a render to show what the list currently says.
+ * The shortcut table, rendered from [EDITOR_SHORTCUTS] and [EDITOR_GESTURES] so help cannot drift
+ * from the handler. Separate from the dialog so it can be previewed.
  */
 @Composable
 internal fun EditorShortcutsPanel(modifier: Modifier = Modifier) {
@@ -1971,16 +1829,9 @@ private fun EditorShortcutRow(chord: String, description: String) {
 }
 
 /**
- * The command modifier in every shortcut hint the editor draws — menu rows, tooltips, the shortcuts
- * panel, a host's toolbar — spelled in letters.
- *
- * Not `⌘`. No font the Wasm build carries has that glyph, so Compose fetches Noto Sans Symbols 2
- * from `fonts.gstatic.com` the first time a hint needs it; inside an MCP App the host's CSP refuses
- * that fetch, and the glyph draws as a box. Bundling a symbols font would add bytes to every load
- * for one character and still lean on Compose's internal fallback lookup finding it; letters are in
- * every font, need no network, read the same on every host (IntelliJ, desktop, a browser, a
- * sandboxed panel) and are what a screen reader says anyway. The editor answers Ctrl and Cmd alike,
- * so the hint names both.
+ * The command modifier in every shortcut hint, spelled in letters. Not `⌘`: no bundled font has it,
+ * Compose would fetch a symbols font that an MCP App's CSP refuses, and it would draw as a box. The
+ * editor answers Ctrl and Cmd alike.
  */
 internal const val COMMAND_MODIFIER = "Ctrl/Cmd"
 
@@ -2017,14 +1868,9 @@ internal fun editorShortcut(
 }
 
 /**
- * The shortcut a chord resolves to, or null when none does.
- *
- * Pure, so the table's precedence and the suppression below can be tested without synthesising a
- * key event — which on this target is more machinery than the rule being tested.
- *
- * With the authoring canvas switched off, only the chords that open a pane are live. There is then
- * no selection overlay on screen to show what a Delete or an arrow just did, so those chords would
- * edit invisibly and surprise later — and a pane toggle is the way back to seeing them.
+ * The shortcut a chord resolves to, or null. Pure so precedence is testable without key events.
+ * With the canvas switched off ([editing] false), only pane-opening chords are live, so nothing
+ * edits invisibly.
  */
 internal fun editorShortcutFor(
   chord: EditorChord,
@@ -2050,11 +1896,8 @@ internal fun editorShortcutFor(
 internal data class EditorChord(val key: Key, val command: Boolean, val shift: Boolean)
 
 /**
- * One chord the editor answers to.
- *
- * [shift] is `null` for "does not care", which is not the same as `false`: `Ctrl/⌘+Z` fires whether
- * or not shift is down, and only reaches the undo entry because the redo entry above it claims the
- * shifted spelling first.
+ * One chord the editor answers to. [shift] null means "does not care": `Ctrl/⌘+Z` reaches undo only
+ * because redo claims the shifted spelling first.
  */
 internal data class EditorShortcut(
   val chord: String,
@@ -2075,33 +1918,21 @@ internal data class EditorShortcut(
 }
 
 /**
- * What a chord does to the person's view of the design rather than to the design.
- *
- * Not a [UiBuilderEditorEvent]: the zoom is deliberately not editor state (see `canvasZoom` in
- * [UiBuilderEditor]) and the shortcuts dialog is a window, so neither has a reducer to go through,
- * and an event every reducer had to ignore would be a hole in the type rather than a command.
+ * What a chord does to the person's view rather than to the design. Not a [UiBuilderEditorEvent]:
+ * the zoom is not editor state and the shortcuts dialog is a window, so neither has a reducer.
  */
 internal sealed interface EditorViewCommand {
   data class Zoom(val zoom: CanvasZoomCommand) : EditorViewCommand
 
-  /** Opens the panel these rows are drawn in, which until now only a menu reached. */
+  /** Opens the panel these rows are drawn in. */
   data object ShowShortcuts : EditorViewCommand
 }
 
 /**
- * Every key chord the editor answers to, in the order it tries them, and the list the shortcuts
- * panel renders.
+ * Every key chord in match order, also rendered by the shortcuts panel so help stays accurate.
  *
- * One table rather than a `when` plus a hand-written help sheet, because the second of those is
- * wrong within two commits. Most of what this editor learned to do — extending a selection,
- * reordering, wrapping, the clipboard — arrived with no visible affordance at all: reorder is a
- * chord and a drag gesture and appears on no button, and arrow-key navigation appears nowhere. A
- * capability nobody can find is one the tool does not have.
- *
- * Order is behaviour: the redo entry has to precede undo, and the reordering arrows have to precede
- * the navigating ones or a modified arrow is eaten by selection. `editorShortcutsAreAllReachable`
- * asserts every entry is the first match for its own chord, so a reordering that shadows one fails
- * rather than quietly dropping a row the panel still advertises.
+ * Order is behaviour: redo precedes undo, and reordering arrows precede navigating ones.
+ * `editorShortcutsAreAllReachable` asserts each entry is the first match for its own chord.
  */
 internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
   listOf(
@@ -2137,11 +1968,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
       command = true,
       shift = true,
     ),
-    // Enter rather than P. The builder ships in a browser, and Ctrl/\u2318+P is the print dialog:
-    // a chord whose worst case is a print preview over the design is not a chord worth having,
-    // and whether Compose consumes it before the browser sees it is not something to find out in
-    // production. Ctrl/\u2318+Enter is unclaimed, and "run it" is already what it means everywhere
-    // else.
+    // Enter rather than P: Ctrl/⌘+P is the browser's print dialog.
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+Enter",
       description = "Show or hide the preview beside the design",
@@ -2150,9 +1977,8 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
       command = true,
       shift = false,
     ),
-    // A letter, not Enter: this table is read in the editor's *preview* pass, ahead of every
-    // focused control, and a plain Enter taken here would stop a focused button or layer row from
-    // answering its own Enter. Nothing in the editor answers to a bare E.
+    // A letter, not Enter: this table is read in the preview pass ahead of focused controls, which
+    // must keep their own Enter.
     EditorShortcut(
       chord = "E",
       description = "Open or close the selection's quick editor",
@@ -2293,10 +2119,8 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
   )
 
 /**
- * The pointer gestures, which no chord and no button can advertise.
- *
- * They are the least discoverable thing in the editor and the most load-bearing: without them a
- * selection is one node, and every batch operation this editor gained is unreachable.
+ * The pointer gestures, which no chord or button can advertise; without them a selection is one
+ * node.
  */
 internal val EDITOR_GESTURES: List<Pair<String, String>> =
   listOf(
@@ -2309,11 +2133,8 @@ internal val EDITOR_GESTURES: List<Pair<String, String>> =
   )
 
 /**
- * [EditorToolbar]'s controls, published to a host that draws them itself.
- *
- * The same verbs as the desktop toolbar, less the ones a host editor already owns: the document's
- * name is the host's tab title, and new, browse, export, reconnect and the AI prompt belong to
- * hosts with a server. The shortcuts dialog is still drawn here, because it describes this canvas.
+ * [EditorToolbar]'s controls published to a host that draws them itself, minus what the host owns
+ * (name, new, browse, export, reconnect, AI prompt). The shortcuts dialog is still drawn here.
  */
 @Composable
 internal fun HostChromeToolbar(

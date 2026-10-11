@@ -2,25 +2,13 @@ package ee.schimke.composeai.uibuilder.export
 
 /**
  * The typefaces a design's theme host can set, one per group of type-scale roles, and the property
- * each is authored as.
+ * each is authored as. The theme host is `m3/surface`, `wear-m3/screen-scaffold`, or a
+ * `remote-m3/widget-container-*`.
  *
- * A theme host is the node everything in a design reads its theme from: `m3/surface` for Material
- * 3, `wear-m3/screen-scaffold` for a Wear screen, a `remote-m3/widget-container-*` for a Remote
- * Material 3 widget. Before these, a Wear or Remote design could not change its face at all, and an
- * agent asked for three branded variants could only change their colours
- * (yschimke/wear-m3-catalog#684).
- *
- * Per group rather than one family, because a brand's type is almost always a pair — a display face
- * for the large roles and a text face for the rest — and some designs go further (a display face
- * used for the display roles alone). A group left unset keeps the platform's own face for those
- * roles.
- *
- * The value is a family name: a vendored family, or any Google Fonts family, optionally spelled
- * with Remote Compose's `google:` prefix. The canvas resolves it through the host's font registry,
- * and the code generators write it as a `GoogleFont`.
- *
- * One list, read by the catalogs that declare the properties, the canvas that draws them and the
- * generators that write them, so none of them can disagree about which roles a group covers.
+ * Per group because brand type is usually a display/text pair; unset groups keep the platform face.
+ * Values are family names (vendored or Google Fonts, optionally `google:`-prefixed), resolved by
+ * the canvas's font registry and written as `GoogleFont` by the generators. One list shared by
+ * catalogs, canvas and generators.
  */
 object ThemeTypefaces {
   /** One group of roles and the theme-host property that sets their family. */
@@ -123,17 +111,10 @@ object ThemeTypefaces {
 }
 
 /**
- * The type role a theme host sets text in when the text names none.
- *
- * Both `MaterialTheme`s provide `bodyLarge` as the ambient text style, so a text with no `style`
- * has always been set in the body role — and so in the body typeface. That is right for running
- * text and wrong for a design whose plain text is mostly labels or figures, which then had to name
- * a role on every node. This makes the ambient role the theme's choice: the canvas, the catalog
- * runtimes and the generated code all provide it as `ProvideTextStyle(typography.<role>)` inside
- * the theme. Unset keeps `bodyLarge`.
- *
- * One property, read by both scales. A role one scale lacks resolves to its nearest member of that
- * scale ([m3Role], [wearRole]), so a design keeps drawing when its theme host moves between them.
+ * The type role a theme host sets text in when the text names none (default `bodyLarge`, as both
+ * `MaterialTheme`s provide). Canvas, catalog runtimes and generated code all apply it as
+ * `ProvideTextStyle(typography.<role>)` inside the theme. A role one scale lacks maps to its
+ * nearest member ([m3Role], [wearRole]).
  */
 object ThemeTextStyle {
   const val PROPERTY: String = "themeTextStyle"

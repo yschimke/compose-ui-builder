@@ -13,14 +13,8 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * The four components that had a renderer and an emitter and no capability, as the palette inserts
- * them.
- *
- * Four cells rather than five: `m3/tab` is not dropped on its own, it arrives inside the tab row,
- * which is exactly what its starter content is for.
- *
- * Built through the reducer for the same reason the other component previews are: it is a picture
- * of what an insert produces, so seeding one of these badly changes this render rather than going
- * unnoticed.
+ * them (`m3/tab` arrives inside the tab row). Built through the reducer, so a bad seed changes this
+ * render.
  */
 @Preview(widthDp = 460, heightDp = 120)
 @Composable

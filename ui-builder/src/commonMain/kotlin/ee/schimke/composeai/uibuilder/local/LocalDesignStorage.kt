@@ -1,21 +1,15 @@
 package ee.schimke.composeai.uibuilder.local
 
 /**
- * The browser key/value store the local design mode writes to, as a seam rather than a call.
+ * The browser key/value store the local design mode writes to, as a seam so the store's rules
+ * (seed-plus-log replay, compaction under quota) are testable on the JVM. `localStorage` is the
+ * page implementation ([the wasmJs binding][ee.schimke.composeai.uibuilder.local]).
  *
- * `localStorage` is the implementation in the page ([the wasmJs
- * binding][ee.schimke.composeai.uibuilder.local]), but nothing above this interface may know that:
- * the store's rules — a design is replayed from a seed and a log, a log is compacted before it
- * outgrows the origin's quota — are the part worth testing, and they are testable on the JVM only
- * if the bytes can go somewhere that is not a browser.
- *
- * Three properties the browser forces on every caller, and this interface therefore states:
+ * Guarantees every implementation states:
  * * a read of something never written answers null rather than throwing;
- * * a write can **fail** — the origin's quota is a few megabytes and a private window can refuse
- *   storage outright — and it fails by throwing [LocalDesignStorageException], which callers handle
- *   rather than propagate, because a design that cannot be saved is still a design being edited;
- * * [keys] is an enumeration of this origin's keys, which is how the library lists what a browser
- *   holds without a server to ask.
+ * * a write can **fail** (quota of a few MB, private windows), by throwing
+ *   [LocalDesignStorageException], which callers handle so editing continues;
+ * * [keys] enumerates this origin's keys, which is how the library lists designs without a server.
  */
 interface LocalDesignStorage {
   fun read(key: String): String?
@@ -30,20 +24,15 @@ interface LocalDesignStorage {
 }
 
 /**
- * A store that refused a write, or a page whose storage is unavailable altogether.
- *
- * One type for both because the caller does the same thing with them: say so in the editor's status
- * line and keep the in-memory document, which is the only copy left.
+ * A store that refused a write, or a page whose storage is unavailable altogether. One type, since
+ * the caller reports it in the status line and keeps the in-memory document either way.
  */
 class LocalDesignStorageException(message: String, cause: Throwable? = null) :
   IllegalStateException(message, cause)
 
 /**
- * The store used by tests, and by a page whose browser will not give the builder any storage.
- *
- * [quotaBytes] exists so the compaction rule can be proven rather than described: the browser's own
- * limit is around five megabytes per origin and cannot be reached in a unit test in reasonable
- * time.
+ * The store used by tests, and by a page whose browser gives no storage. [quotaBytes] lets tests
+ * prove the compaction rule without filling a real ~5 MB quota.
  */
 class InMemoryLocalDesignStorage(private val quotaBytes: Int = Int.MAX_VALUE) : LocalDesignStorage {
   private val entries = mutableMapOf<String, String>()

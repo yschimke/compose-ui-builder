@@ -12,18 +12,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The seam between this module and `:ui-builder-render-bundle`, which is a string.
- *
- * The bundle is no longer a resource this module's own build copies in — it is a sibling artifact,
- * and the only thing joining the two is that both name
- * `ee/schimke/composeai/uibuilder/renderer/ui-builder-renderer.bundle.png`. Nothing in Gradle
- * checks that: a rename on either side compiles, publishes, and fails at a consumer's first render
- * with "packaged UI-builder renderer bundle is missing".
- *
- * So the join is asserted here, in the module that declares the constant, against the artifact that
- * supplies the bytes. It is deliberately not folded into [ProductionUiBuilderRuntimeTest]: that
- * test exercises `copyTo`'s staging behaviour and would fail for this reason among several, where
- * this one can only fail for this reason.
+ * The seam between this module and `:ui-builder-render-bundle` is a string: both name
+ * `ee/schimke/composeai/uibuilder/renderer/ui-builder-renderer.bundle.png`, and Gradle does not
+ * check it. Asserted on its own (not in [ProductionUiBuilderRuntimeTest]) so this test can only
+ * fail for this reason.
  */
 class UiBuilderRenderBundleResourcePathTest {
 

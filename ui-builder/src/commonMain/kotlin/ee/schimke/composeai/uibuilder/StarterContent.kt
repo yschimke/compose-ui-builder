@@ -10,62 +10,30 @@ import kotlinx.serialization.json.JsonPrimitive
 /**
  * What a container arrives holding when it is inserted from the palette.
  *
- * ## Why a container should not arrive empty
+ * Components with a recognisable shape (a button has a label, a list has items, a search field has
+ * a placeholder and a magnifier) are seeded with typical content, so inserts don't need repairing.
+ * Seeded children are ordinary nodes, so a wrong guess costs one keystroke.
  *
- * Insertion used to fill exactly the slots a component could not legally be without — the ones
- * whose cardinality declares a minimum — and to fill them with whatever the slot's accepted traits
- * implied: a `m3/text` reading "New text", a `m3/icon` showing the first icon in the enum, or a
- * bare `layout/box`. Everything else came in empty. That is defensible as a rule about validity and
- * it is the wrong thing to look at: a Card that is one line of "New text", a lazy column that is a
- * blank rectangle and a floating toolbar with nothing on it all render as something nobody would
- * have designed, so the first thing an operator does after every insert is repair the component
- * into the shape it obviously wanted.
+ * Not seeded: the pure layout primitives (`layout/box`, `layout/row`, `layout/column`,
+ * `m3/surface`), whose shape is whatever they hold.
  *
- * A component seeded with typical content starts at that shape instead. An icon button arrives
- * showing an icon, a button arrives reading "Button", a list arrives with three items in it. The
- * seeded children are ordinary nodes — selectable, editable, deletable — so the cost of a wrong
- * guess is one keystroke, while the cost of an empty container is retyping the same subtree every
- * time.
- *
- * ## What is deliberately not seeded
- *
- * The pure layout primitives: `layout/box`, `layout/row`, `layout/column` and `m3/surface`. They
- * exist to hold whatever is put in them and have no typical content to be right about, so anything
- * seeded there is a node the operator has to delete rather than one they would have drawn. The
- * dividing line is the one the goal states: a component complex enough that its *shape* is
- * recognisable — a button has a label, a list has items, a search field has a placeholder and a
- * magnifier — is seeded; a container whose shape is whatever it holds is not.
- *
- * ## The rules the table obeys
- *
- * Every entry is checked against the catalog before it is used, at
- * [ee.schimke.composeai.uibuilder.appendDefaultSubtree]'s call site, and an entry that does not
- * check out degrades to the old required-slot fill rather than failing the insert. `StarterContent`
- * is a nicety and must never be the reason a component cannot be added. `StarterContentTest` holds
- * the same rules as assertions, so a table entry that stops matching the catalog — a renamed slot,
- * a dropped icon key, a component that left the catalog — fails a test rather than silently
- * degrading in the product.
- *
- * A component the table says nothing about behaves exactly as it did before: required slots filled
- * generically, optional slots left empty.
+ * Every entry is checked against the catalog at
+ * [ee.schimke.composeai.uibuilder.appendDefaultSubtree]'s call site; one that doesn't check out
+ * degrades to the required-slot fill rather than failing the insert. `StarterContentTest` asserts
+ * the same rules. Components the table doesn't mention get required slots filled generically and
+ * optional slots left empty.
  */
 internal data class StarterNode(
   val componentId: String,
   /**
-   * Encoded property values to set on the seeded node, over the component's own defaults.
-   *
-   * Encoded — `{"type":"string","value":"Button"}` — because that is what a document node holds; a
-   * bare primitive here would produce a node the validator rejects and the renderer cannot read.
+   * Encoded property values to set on the seeded node, over the component's own defaults (e.g.
+   * `{"type":"string","value":"Button"}`, as a document node holds them).
    */
   val properties: Map<String, JsonObject> = emptyMap(),
   /**
-   * Children by slot name.
-   *
-   * A slot named here is authored exactly, and the seeded child does **not** then get its own
-   * starter content: the entry has already said what belongs in it. A slot left unnamed falls back
-   * to the ordinary expansion — that component's own starter entry, then the required-slot fill —
-   * which is what lets `m3/search-bar` say nothing at all and still arrive holding a search field
-   * with a placeholder and a magnifier in it.
+   * Children by slot name. A named slot is authored exactly and its children get no further starter
+   * content. An unnamed slot falls back to the ordinary expansion (the child's own starter entry,
+   * then the required-slot fill).
    */
   val slots: Map<String, List<StarterNode>> = emptyMap(),
 )
@@ -84,19 +52,15 @@ internal object StarterContent {
 
   /**
    * Values to set on [componentId] itself when it is inserted, over the catalog's own defaults.
-   *
-   * Most components need none: their defaults are already sensible, or the property is required and
-   * the catalog's first allowed value answers it. This exists for the ones whose default is not a
-   * value anybody wants to look at — `shape/colour-dot` forced it, because a dot with no colour and
-   * no diameter is a dot you cannot see.
+   * Only for components whose default is invisible (e.g. `shape/colour-dot` with no colour or
+   * diameter).
    */
   fun propertiesFor(componentId: String): Map<String, JsonObject> =
     PROPERTY_TABLE[componentId].orEmpty()
 
   /**
-   * Remote Material 3's required values, seeded for the reasons Wear's are — and because here a
-   * missing one is also a refusal: `RemoteCheckboxButton(checked = …)` has no default, so a
-   * checkbox dropped without one is a widget that does not export.
+   * Remote Material 3's required values; a missing one also blocks export
+   * (`RemoteCheckboxButton(checked = …)` has no default).
    */
   private val REMOTE_MATERIAL_3_PROPERTIES: Map<String, Map<String, JsonObject>> =
     mapOf(
@@ -115,14 +79,11 @@ internal object StarterContent {
     )
 
   /**
-   * The A2UI basic catalog's required values that no neutral default can supply.
-   *
-   * Each is required by the catalog's own schema and none is a string, so the generic default — an
-   * empty string — would be refused by validation and the insert with it: a Button has to say what
-   * it dispatches, a Slider needs its `max`, a CheckBox its state, a ChoicePicker its options and
-   * the selection among them. Seeded to the smallest value that draws as the component, so a drop
-   * from the palette is a component rather than a refusal. Lists and objects use the builder's own
-   * `list` and `object` wrappers, which the A2UI export lowers to plain JSON.
+   * The A2UI basic catalog's required values that no neutral default can supply. Each is
+   * schema-required and non-string, so the empty-string default would fail validation (Button's
+   * action, Slider's `max`, CheckBox's state, ChoicePicker's options and selection). Seeded to the
+   * smallest value that draws; lists and objects use the builder's `list`/`object` wrappers,
+   * lowered to plain JSON by the A2UI export.
    */
   private val A2UI_PROPERTIES: Map<String, Map<String, JsonObject>> =
     mapOf(
@@ -159,12 +120,7 @@ internal object StarterContent {
       // A word to see the axes move on, rather than an empty outline.
       VariableFontText.M3_ID to VARIABLE_FONT_TEXT_STARTER,
       VariableFontText.WEAR_ID to VARIABLE_FONT_TEXT_STARTER,
-      // Ticked and on. Material draws an unchecked box as an empty square and an off switch as a
-      // grey pill, and a palette drop that looks like neither a checkbox nor a switch is the case
-      // starter content exists for. Turning one off is a click.
-      // The lists arrive holding cards, and cards with no gap between them meet edge to edge: three
-      // cards in a row read as one strip of text, "Item oneItem twoItem three". Material's own list
-      // samples space their items; so do these.
+      // Lists hold cards, which need spacing so they don't run together.
       "layout/lazy-row" to mapOf("horizontalSpacingDp" to starterNumber(8)),
       "layout/lazy-column" to mapOf("verticalSpacingDp" to starterNumber(8)),
       "layout/lazy-grid" to
@@ -172,9 +128,7 @@ internal object StarterContent {
       "m3/checkbox" to mapOf("checked" to starterBool(true)),
       // One of a group is chosen, or the group is a row of empty circles.
       "m3/radio-button" to mapOf("selected" to starterBool(true)),
-      // Something to look at. A slider at zero is a track with the thumb jammed against the left
-      // end, and a progress indicator at zero is an empty line — both read as broken rather than as
-      // new, which is the whole point of seeding a value.
+      // Mid-range values, so a new slider or progress indicator doesn't look broken.
       "m3/slider" to mapOf("value" to starterFraction(0.5), "valueTo" to starterNumber(1)),
       "m3/progress-indicator" to mapOf("progress" to starterFraction(0.6)),
       "m3/switch" to mapOf("checked" to starterBool(true)),
@@ -185,11 +139,8 @@ internal object StarterContent {
       // An item has to say whether it is the current destination, and one the author has to set
       // first is one that inserts looking wrong in a rail or bar where another is selected.
       "m3/navigation-suite-item" to mapOf("selected" to starterBool(false)),
-      // Wear's own, and the reason each needs a seed is the reason its mobile counterpart does —
-      // with one difference that matters. These are not drawn on the canvas at all: they show as a
-      // named placeholder, and the picture comes from the Android preview. So a seeded `label` is
-      // the *only* thing that distinguishes one dropped row from the next until somebody renders,
-      // which makes the seed more load-bearing here than on the mobile side rather than less.
+      // Wear rows show as named placeholders on the canvas, so a seeded `label` is what
+      // distinguishes them until rendered.
       WearScreenCodeExporter.CHECKBOX_BUTTON to
         mapOf("label" to starterLiteral("string", "Checkbox"), "checked" to starterBool(true)),
       WearScreenCodeExporter.SWITCH_BUTTON to
@@ -205,9 +156,7 @@ internal object StarterContent {
       WearScreenCodeExporter.STEPPER to
         mapOf("value" to starterFraction(0.5), "valueTo" to starterNumber(1)),
       WearScreenCodeExporter.PROGRESS_INDICATOR to mapOf("progress" to starterFraction(0.6)),
-      // A dialog arrives *showing*. Its `visible` flag is what the generated code reads, and a
-      // dialog seeded hidden is a node in the layers panel with nothing to look at on any surface —
-      // including the Android one, which is where the whole point of this component is.
+      // A dialog arrives showing (`visible`), otherwise it has nothing to look at on any surface.
       WearScreenCodeExporter.ALERT_DIALOG to
         mapOf("title" to starterLiteral("string", "Are you sure?"), "visible" to starterBool(true)),
       WearScreenCodeExporter.CONFIRMATION_DIALOG to
@@ -217,9 +166,7 @@ internal object StarterContent {
 
   private val TABLE: Map<String, Map<String, List<StarterNode>>> =
     mapOf(
-      // A button is its label. The generic fill got this one actively wrong: `content` accepts
-      // `TextContent` *and* `IconContent`, the icon branch was tested first, and so every button
-      // inserted from the palette arrived as a button containing a clock.
+      // A button is its label (the generic fill would pick an icon, since `content` accepts both).
       "m3/button" to mapOf("content" to listOf(text("Button", "labelLarge"))),
       // The same reason, in the A2UI palette: a button is its label.
       "a2ui/Button" to
@@ -232,19 +179,15 @@ internal object StarterContent {
               )
             )
         ),
-      // The example from the goal. `content` takes exactly one `IconContent` child, so the only
-      // decision here is which icon — and any icon reads as an icon button, while the enum's first
-      // entry (`accessTime`) reads as a clock somebody forgot to change.
+      // `content` takes exactly one `IconContent` child; seed a recognisable icon rather than the
+      // enum's first (`accessTime`, a clock).
       "m3/icon-button" to mapOf("content" to listOf(icon("favorite", "Favorite"))),
-      // The Wear pair, seeded for the same reasons as the mobile ones above: an icon button whose
-      // one required child is missing is an empty circle, and a text button with no label is a
-      // pill. `wear-m3/icon` takes the same icon keys `m3/icon` does — the vectors are
-      // `androidx.compose.material.icons`, which both platforms share.
+      // The Wear pair: an icon button without its icon is an empty circle and a text button without
+      // a label a pill. `wear-m3/icon` shares `m3/icon`'s keys.
       WearScreenCodeExporter.ICON_BUTTON to mapOf("content" to listOf(wearIcon("favorite"))),
       WearScreenCodeExporter.TEXT_BUTTON to mapOf("content" to listOf(wearText("Button"))),
-      // Required, not only nicer: `content` has a minimum of one, and without a seed the generic
-      // fill went looking for `m3/text` in a catalog that has only `wear-m3/text` and refused the
-      // insert — so a Wear Button or Card could not be added from the palette at all.
+      // Required: `content` has a minimum of one, and the generic fill would look for `m3/text` in
+      // a catalog that only has `wear-m3/text` and refuse the insert.
       WearScreenCodeExporter.BUTTON to mapOf("content" to listOf(wearText("Button"))),
       // A list of three rows, the way a Wear list is used: an empty one fills the screen with
       // nothing, which on the canvas is an empty watch and on the palette an empty black circle.
@@ -270,11 +213,9 @@ internal object StarterContent {
             )
         ),
       WearScreenCodeExporter.EDGE_BUTTON to mapOf("content" to listOf(wearText("Done"))),
-      // Remote Material 3, labelled for the reason its Wear counterparts are: a button with no
-      // label is a pill and a card with no content is an empty rounded rectangle. The label is
-      // `m3/text`, which is what this palette's Text is and what exports as `RemoteText`.
       // The adaptive widget arrives with each role filled, so both preview sizes have something to
-      // show: the Small panes keep the headline and the button and drop the supporting line.
+      // show (Small drops the supporting line). Remote Material 3 labels are `m3/text`, exported as
+      // `RemoteText`.
       AdaptiveWearWidget.COMPONENT_ID to
         mapOf(
           AdaptiveWearWidget.HEADLINE to listOf(remoteText("Headline")),
@@ -315,9 +256,7 @@ internal object StarterContent {
       "remote-m3/remote-split-radio-button" to mapOf("label" to listOf(remoteText("Option"))),
       "m3/filter-chip" to mapOf("label" to listOf(text("Filter", "labelLarge"))),
       "m3/center-aligned-top-app-bar" to mapOf("title" to listOf(text("Title", "titleLarge"))),
-      // A label and a placeholder, which is the field Material's own samples draw. An empty text
-      // field is a rounded rectangle: nothing about it says what it is for, and `label` is the part
-      // a form is unreadable without.
+      // A label and a placeholder, as Material's samples draw a text field.
       "m3/text-field" to
         mapOf(
           "label" to listOf(text("Label", "bodyLarge")),
@@ -348,10 +287,8 @@ internal object StarterContent {
             )
         ),
       "m3/tab" to mapOf("text" to listOf(text("Tab", "titleSmall"))),
-      // The example the goal named: a dialog that arrives saying something and offering the two
-      // answers every dialog offers. `confirmButton` has a minimum of one, so without this entry
-      // the required fill would put an empty `layout/box` where the OK button belongs — a dialog
-      // with a blank rectangle for its primary action.
+      // A dialog with a message and the two usual answers; `confirmButton` has a minimum of one,
+      // which the generic fill would satisfy with an empty box.
       "m3/dialog" to
         mapOf(
           "title" to listOf(text("Dialog title", "headlineSmall")),
@@ -402,9 +339,8 @@ internal object StarterContent {
           "mainPane" to listOf(column(text("Main pane", "titleMedium"))),
           "supportingPane" to listOf(column(text("Supporting pane", "titleMedium"))),
         ),
-      // Three destinations with the first selected, over one content pane: a rail or bar with one
-      // item is not navigation, and one where none is selected draws no indicator. The type is the
-      // library's per frame, so the same insert is a rail on a tablet and a bar on a phone.
+      // Three destinations with the first selected, over one content pane. The library picks rail
+      // or bar per frame.
       "m3/navigation-suite-scaffold" to
         mapOf(
           "navigationItems" to
@@ -429,9 +365,7 @@ internal object StarterContent {
         mapOf("items" to itemCards("Item one", "Item two", "Item three", "Item four")),
       "layout/horizontal-carousel" to
         mapOf("items" to itemCards("Item one", "Item two", "Item three")),
-      // One template, and it reads the row rather than holding a literal: an inserted loop that
-      // drew the same words three times would look like a bug in the loop rather than like a
-      // design waiting for its data.
+      // The template reads the row, so the three rows differ.
       "layout/for-each" to mapOf("template" to listOf(rowTemplate())),
       "m3/horizontal-floating-toolbar" to
         mapOf(
@@ -489,11 +423,8 @@ private fun icon(iconKey: String, contentDescription: String): StarterNode =
   )
 
 /**
- * `wear-m3/text`, seeded the way [text] seeds the mobile one — minus the style.
- *
- * No `style` argument: Wear's type scale is its own, and a role seeded from the mobile catalog's
- * names would put a value in the document that the Wear generator would then have to refuse. The
- * component's default is Wear's own, which is the right answer.
+ * `wear-m3/text`, seeded like [text] but without a `style`: Wear's type scale is its own, and its
+ * default is right.
  */
 private fun wearText(value: String): StarterNode =
   StarterNode(
@@ -554,12 +485,9 @@ private fun iconButton(iconKey: String, contentDescription: String): StarterNode
   )
 
 /**
- * A card per label, each holding one line.
- *
- * Cards rather than bare text because every one of the four repeating containers accepts a card —
- * `ListItem`, `GridItem` and `CarouselItem` are all traits it declares — and because an item with a
- * surface behind it is what makes the spacing between items visible. Their `content` is authored
- * here, which is what stops each item from also picking up `m3/card`'s own two-line starter.
+ * A card per label, each holding one line. Every repeating container accepts a card, and the
+ * surface makes item spacing visible. Authored `content` stops each card picking up `m3/card`'s own
+ * starter.
  */
 private fun itemCards(vararg labels: String): List<StarterNode> = labels.map { label ->
   StarterNode(

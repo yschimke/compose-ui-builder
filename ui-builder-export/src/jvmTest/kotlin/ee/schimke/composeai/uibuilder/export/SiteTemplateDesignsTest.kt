@@ -9,12 +9,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The landing page's template designs (`site/designs/`) are exactly what New from template seeds.
- *
- * The site opens these in the real editor, for its screenshots and its live gallery, so a template
- * change that did not reach them would advertise a starting point the builder no longer gives. Each
- * is seeded here by [UiBuilderNewDesignSeed], the same object the server's New design form and the
- * browser's local designs run, against the catalog pin of the capability file the editor bundles.
+ * The landing page's template designs (`site/designs/`) are exactly what New from template seeds
+ * via [UiBuilderNewDesignSeed], against the bundled capability file's pin.
  *
  * Regenerate after a template change: `UPDATE_SITE_DESIGNS=1 ./gradlew :ui-builder-export:jvmTest
  * --tests '*SiteTemplateDesignsTest*'`.

@@ -9,11 +9,8 @@ import org.jetbrains.skia.Surface
 import org.jetbrains.skia.svg.SVGDOM
 
 /**
- * Skia decode for an imported reference. See the `expect` declaration for why this exists twice.
- *
- * Everything here is failure-tolerant by construction: the bytes came from an operator's clipboard
- * and a picture that will not decode must leave the editor working, without a reference, rather
- * than take the canvas down with it.
+ * Skia decode for an imported reference (see the `expect` declaration). Failure-tolerant:
+ * undecodable clipboard bytes leave the editor working without a reference.
  */
 internal actual fun decodeReferenceBitmap(
   bytes: ByteArray,
@@ -29,12 +26,9 @@ internal actual fun decodeReferenceBitmap(
   }
 
 /**
- * An SVG at a fixed pixel size, letterboxed the way the overlay will letterbox it anyway.
- *
- * `setContainerSize` alone would stretch a portrait artboard across a square surface, so the
- * intrinsic size decides a contain scale first and the canvas is translated to centre what is
- * drawn. An SVG with no intrinsic size (a `viewBox` and nothing else) falls back to the container,
- * which is Skia's own behaviour and the only sensible one.
+ * An SVG at a fixed pixel size, letterboxed: the intrinsic size picks a contain scale and the
+ * canvas is translated to centre it (`setContainerSize` alone would stretch). Without an intrinsic
+ * size (only a `viewBox`), Skia's container fallback applies.
  */
 private fun rasterizeSvg(bytes: ByteArray, widthPx: Int, heightPx: Int): ImageBitmap? {
   val dom = SVGDOM(Data.makeFromBytes(bytes))

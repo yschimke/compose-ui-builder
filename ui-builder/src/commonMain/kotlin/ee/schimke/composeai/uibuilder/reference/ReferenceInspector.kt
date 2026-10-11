@@ -54,13 +54,9 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 /**
- * What the host does when the operator asks for a picture, and what came back.
- *
- * Three outcomes rather than a nullable image, because the three mean different things to the
- * panel: a cancelled picker says nothing, a refusal has a sentence the operator needs to read, and
- * an import replaces what is attached. The host owns every part of this that is not portable —
- * opening a file picker, reading the clipboard, rendering a snapshot, sniffing the bytes, minting
- * the identity — because none of that exists in common Compose.
+ * What the host does when the operator asks for a picture, and what came back: a cancelled picker
+ * says nothing, a refusal carries a sentence, an import replaces the attachment. The host owns
+ * everything non-portable (file picker, clipboard, snapshot, sniffing, ids).
  */
 sealed interface ReferenceImportOutcome {
   data class Imported(val image: ReferenceImage) : ReferenceImportOutcome
@@ -74,11 +70,8 @@ sealed interface ReferenceImportOutcome {
 
 /**
  * The reference panel: attach a picture, compare against it, mark it up, and fold the result back
- * into the next round.
- *
- * Lives under the screen frame rather than in a tab of its own. A reference is fitted to the frame
- * and judged against it, so the two controls belong to one question; and the tab row is already at
- * the width its four labels fit in.
+ * into the next round. Lives under the screen frame since a reference is fitted to and judged
+ * against it.
  */
 @Composable
 internal fun ReferenceInspector(
@@ -359,9 +352,8 @@ private fun ReferenceMarkupControls(
   if (reference.tool.markupKind.carriesText()) {
     ReferenceLabelField(reference.markupText) { dispatch(UiBuilderEditorEvent.SetMarkupText(it)) }
   }
-  // The design's own background and surface sit in the palette beside the marker colours, because
-  // the erase brush is only an erase when it is painted in the colour the screen already is —
-  // and making the operator find that hex by hand is how a hole ends up nearly, visibly, wrong.
+  // The design's background and surface colours join the palette so the erase brush can match the
+  // screen exactly.
   val swatches =
     REFERENCE_MARKUP_COLORS.map { it to null as String? } +
       listOfNotNull(
@@ -501,13 +493,10 @@ private fun ReferenceMarkupControls(
       color = MaterialTheme.colorScheme.onSurfaceVariant,
       style = MaterialTheme.typography.labelSmall,
     )
-    // Wrapped and on its own line under the count, because three verbs do not fit beside a label
-    // in a 320 dp dock: squeezed into one row, "5 marks" is broken one letter per line, which
-    // reads as a rendering fault rather than as a count.
+    // Wrapped onto its own line: three verbs beside the count don't fit a 320dp dock.
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-      // The link into the discussion, at the point somebody has just finished drawing: this row
-      // is where "I have circled the problem" turns into "…and here is what is wrong with it".
-      // The Talk panel opens with its pin already offering the last mark drawn.
+      // Links into the discussion right after drawing; the Talk panel opens with its pin offering
+      // the last mark.
       TextButton(
         onClick = { dispatch(UiBuilderEditorEvent.ShowInspector(EditorInspectorMode.Comments)) }
       ) {
@@ -524,10 +513,8 @@ private fun ReferenceMarkupControls(
 }
 
 /**
- * The words the next text mark or image placeholder will carry.
- *
- * Typed before the shape is drawn, so the field is here rather than appearing over the canvas where
- * the drag ended — and so the same label can be dropped in three places without retyping it.
+ * The words the next text mark or image placeholder will carry, typed before the shape is drawn so
+ * one label can be dropped in several places.
  */
 @Composable
 private fun ReferenceLabelField(text: String, onChange: (String) -> Unit) {
@@ -569,9 +556,7 @@ private fun ReferenceSectionHeading(label: String) {
 
 @Composable
 private fun ReferenceStatusText(message: String) {
-  // Every refusal this panel shows — a paste the browser would not decode, a store that would not
-  // keep the image — comes through here, so this is the one place that has to be selectable for
-  // any of them to be quotable.
+  // Every refusal this panel shows comes through here, so it's selectable for quoting.
   SelectionContainer {
     Text(
       message,
@@ -597,12 +582,7 @@ private fun ReferenceSwitchRow(label: String, checked: Boolean, onChange: (Boole
   }
 }
 
-/**
- * The nudge, in whole dp, as buttons.
- *
- * Buttons rather than a field because aligning a mock is a sequence of one-dp corrections, and each
- * of those is a press rather than a select-all-and-retype.
- */
+/** The nudge, in whole dp, as buttons, since aligning a mock is a sequence of one-dp presses. */
 @Composable
 private fun ReferenceNudgeAxis(
   label: String,
@@ -667,10 +647,8 @@ private fun ReferenceDiffMode.explanation(): String =
   }
 
 /**
- * A `#AARRGGBB` (or `#RRGGBB`) theme colour as a markup ARGB value, or null when it is not one.
- *
- * Null rather than a fallback colour: an unreadable theme value should leave the swatch out of the
- * palette, not put a black one in it that claims to be the screen's background.
+ * A `#AARRGGBB` (or `#RRGGBB`) theme colour as a markup ARGB value, or null so an unreadable value
+ * leaves the swatch out rather than showing black.
  */
 private fun String.markupArgbOrNull(): Long? {
   val digits = trim().removePrefix("#")
@@ -683,11 +661,8 @@ private fun String.markupArgbOrNull(): Long? {
 }
 
 /**
- * The catalog, as a menu, for capturing a component onto the reference.
- *
- * A menu rather than a second component list: the panel beside this one already *is* the catalog,
- * and duplicating it here would be two lists to keep in step. This one exists because the catalog
- * panel's own gesture inserts a real node, which is precisely what placing a piece is not.
+ * The catalog, as a menu, for capturing a component onto the reference. The catalog panel's own
+ * gesture inserts a real node, which placing a piece is not.
  */
 @Composable
 private fun ReferenceComponentMenu(
@@ -719,11 +694,9 @@ private fun ReferenceComponentMenu(
 }
 
 /**
- * The half of the reference panel that measures: what the picture is, whether it can be compared,
- * where it differs from the design, and the edit that would make one layer agree with it.
- *
- * One value rather than a dozen parameters, because it crosses three composables on its way from
- * the editor — which owns the photograph, the canvas layout and the dispatch — to this panel.
+ * The measuring half of the reference panel: what the picture is, whether it can be compared, where
+ * it differs from the design, and the edit that would make one layer agree. One value since it
+ * crosses three composables from the editor.
  */
 internal class ReferenceWorkbench(
   val facts: ReferenceFacts?,

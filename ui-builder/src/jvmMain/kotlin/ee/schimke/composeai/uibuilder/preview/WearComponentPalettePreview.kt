@@ -17,23 +17,10 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The Wear components on the canvas, one row each: every one drawn by the Wear Compose port.
- *
- * ## What this preview is for
- *
- * It used to be the picture of the opposite decision. When the canvas had no Wear library to link,
- * each of these was a dashed placeholder carrying its name, and this preview said that a row which
- * started drawing a real component would be a regression. The port changed that: the canvas draws
- * the real `CheckboxButton`, `Slider`, `DatePicker` and the rest, and a row that went back to a
- * placeholder, or to a lookalike, is now the regression.
- *
- * It had also stopped drawing anything. It composed the surface without the pinned catalog's canvas
- * adapters, so the screen root had no drawing and the capture was the red *Unsupported component:
- * wear-m3/screen-scaffold* box — the bug the design-fixture previews were fixed for, which this one
- * never got. It goes through [PinnedCatalog] now.
- *
- * Unrolled and wrapped, like the extent fixtures: the palette is taller than a watch, and the point
- * is every row.
+ * The Wear components on the canvas, one row each, every one drawn by the Wear Compose port
+ * (`CheckboxButton`, `Slider`, `DatePicker`, …). A row falling back to a placeholder or lookalike
+ * is a regression. Composed through [PinnedCatalog] so the screen root has its adapter. Unrolled
+ * and wrapped so every row is in the capture.
  */
 @Preview
 @Composable
@@ -50,10 +37,8 @@ fun WearComponentPalettePreview() {
 }
 
 /**
- * One list, one row per component, in the order the palette groups them.
- *
- * Built as a literal document rather than through the reducer because the point is the *drawing*: a
- * reducer round trip would be testing insertion, and insertion is `StarterContentTest`'s job.
+ * One list, one row per component, in palette order. A literal document (not via the reducer),
+ * since drawing is under test; insertion is `StarterContentTest`'s.
  */
 private val wearComponentPaletteDocument: UiBuilderDocument by lazy {
   val rows =

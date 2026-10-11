@@ -13,11 +13,8 @@ import ee.schimke.composeai.uibuilder.editor.EDITOR_SHORTCUTS
 import ee.schimke.composeai.uibuilder.editor.EditorShortcutsPanel
 
 /**
- * The shortcuts panel on its own, so what the editor advertises is diffed.
- *
- * It renders [EDITOR_SHORTCUTS] and [EDITOR_GESTURES] — the same lists the key handler matches
- * against — so adding a chord without a description, or removing one the panel still claims, shows
- * up here as a changed image rather than as a help sheet nobody re-read.
+ * The shortcuts panel on its own, rendering [EDITOR_SHORTCUTS] and [EDITOR_GESTURES] (the key
+ * handler's own lists), so changes to what the editor advertises are diffed.
  */
 @Preview(widthDp = 560, heightDp = 1080)
 @Composable

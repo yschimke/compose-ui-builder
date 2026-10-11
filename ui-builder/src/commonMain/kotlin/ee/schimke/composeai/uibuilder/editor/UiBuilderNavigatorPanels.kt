@@ -138,27 +138,15 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The two questions the left panel answers: what can I add, and what is already here.
- *
- * "Components" rather than "Insert", which reads better on a rail: it is the word this editor
- * already uses for the panel, for its heading and in the accessibility name every script that
- * drives the editor looks for — a rail that renamed the panel would be a silent break for all
- * three.
+ * The left panel's two questions: what can I add, and what is already here. "Components" is also
+ * the panel's heading and the accessibility name scripts look for.
  */
 internal enum class NavigatorTab(val label: String) {
   Insert("Components"),
   Layers("Layers"),
 }
 
-/**
- * The left panel: insert something, or find something already inserted.
- *
- * One tab at a time rather than the three stacked scroll windows this used to be — a 240 dp catalog
- * above a 180 dp palette above whatever height was left for the layers. Every one of them was too
- * short to use on the design it was describing, and none of them could borrow the space the other
- * two were wasting. Tabs give each list the whole panel, and the tab strip says which question is
- * being asked.
- */
+/** The left panel: one tab at a time, so each list gets the whole panel. */
 @Composable
 internal fun EditorNavigator(
   state: UiBuilderEditorState,
@@ -188,12 +176,8 @@ internal fun EditorNavigator(
   onCatalogDrop: (String, EditorCatalogVariant?, Offset) -> Unit,
   canAddCatalogComponent: (String) -> Boolean,
   /**
-   * Why an Add beside would refuse *this component*, or null.
-   *
-   * Separate from [besideRefusal], which is the document's answer and belongs on the destination
-   * line: this one is about the thing being added, so it belongs on that thing's row. Without it a
-   * Wear scaffold on a design that already has a board was a disabled Add and no reason anywhere —
-   * the row knew why and did not say.
+   * Why an Add beside would refuse this component, or null. Shown on the component's row, unlike
+   * [besideRefusal], which is the document's answer on the destination line.
    */
   catalogAddRefusal: (String) -> String? = { null },
   /** Why an Add beside would refuse, or null — see `UiBuilderEditorReducer.besideRefusal`. */
@@ -270,19 +254,14 @@ internal fun EditorNavigator(
 }
 
 /**
- * Everything that can be put on the canvas, in one list that owns the whole panel.
- *
- * The catalog and the Remote Compose palette share a search field and a scroll, because they answer
- * one question — "what can I put here?" — and a typed name has to narrow both or it narrows
- * neither.
+ * Everything that can be put on the canvas, in one list. The catalog and the Remote Compose palette
+ * share a search field and scroll, so a typed name narrows both.
  */
 @Composable
 private fun InsertPanel(
   state: UiBuilderEditorState,
   catalogRows: List<EditorCatalogRow>,
-  /**
-   * Every component the catalog has, which is what the All row counts — not what survived a filter.
-   */
+  /** Every component the catalog has (the All row's count), regardless of filters. */
   totalCatalogComponents: Int,
   /** The components at the top of the panel — see [UiBuilderEditorReducer.pinnedComponents]. */
   pinnedComponents: Set<String> = emptySet(),
@@ -299,14 +278,7 @@ private fun InsertPanel(
   onCatalogDrag: (String, EditorCatalogVariant?, Offset?) -> Unit,
   onCatalogDrop: (String, EditorCatalogVariant?, Offset) -> Unit,
   canAddCatalogComponent: (String) -> Boolean,
-  /**
-   * Why an Add beside would refuse *this component*, or null.
-   *
-   * Separate from [besideRefusal], which is the document's answer and belongs on the destination
-   * line: this one is about the thing being added, so it belongs on that thing's row. Without it a
-   * Wear scaffold on a design that already has a board was a disabled Add and no reason anywhere —
-   * the row knew why and did not say.
-   */
+  /** Why an Add beside would refuse this component, or null; see the overload above. */
   catalogAddRefusal: (String) -> String? = { null },
   /** Why an Add beside would refuse, or null — see `UiBuilderEditorReducer.besideRefusal`. */
   besideRefusal: String? = null,
@@ -333,10 +305,8 @@ private fun InsertPanel(
     ) {
       dispatch(UiBuilderEditorEvent.SearchCatalog(it))
     }
-    // Where an Add would land, said before it is pressed rather than after it is refused. The
-    // beginner's question about this panel is not what the components are called.
-    // Where an Add beside would land, in the same voice as the line above it: a board says how many
-    // items it already holds, and a design that has to be wrapped says that is what will happen.
+    // Where an Add (or Add beside) would land, said before it is pressed: a board says how many
+    // items it holds, and a design that must be wrapped says so.
     val boardRootId = state.document.boardRootId
     val besideDestination =
       when {
@@ -535,10 +505,8 @@ private fun LayersPanel(
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ) {
   val matches = layerRows.count { it is EditorLayerRow.Node && it.row.matched }
-  // Where each layer row sits vertically, in root pixels, kept in a plain map rather than snapshot
-  // state: it is written from layout on every scroll and every relayout, and a recomposition per
-  // frame of scrolling is a price the panel does not need to pay. The drag reads it from a
-  // callback, which is the only place it is ever read.
+  // Each layer row's vertical root-pixel range. A plain map, not snapshot state, since it is
+  // written every scroll and only read by the drag callback.
   val rowBounds = remember(layerRows) { mutableMapOf<Int, ClosedFloatingPointRange<Float>>() }
   var draggedLayer by remember { mutableStateOf<String?>(null) }
   var landing by remember { mutableStateOf<LayerLanding?>(null) }
@@ -605,8 +573,7 @@ private fun LayersPanel(
               indent = row.indent,
               modifier = recordBounds,
               selectionMenu = selectionMenu,
-              // Every selected node is highlighted, not just the anchor — a selection you cannot
-              // see is one you cannot trust before pressing Delete.
+              // Every selected node is highlighted, not just the anchor.
               selected = row.nodeId in state.selection,
               dragged = row.nodeId == draggedLayer,
               landing =
@@ -645,10 +612,7 @@ private fun LayersPanel(
                 landing = null
                 if (drop != null) {
                   onEditorInteraction()
-                  // Sent even when it will be refused: the reducer owns that answer and reports it
-                  // through the same channel as every other refused edit, which is how the
-                  // operator learns *why* a slot would not take the layer rather than watching the
-                  // gesture evaporate.
+                  // Sent even when it will be refused, so the reducer reports why.
                   dispatch(
                     UiBuilderEditorEvent.MoveNodeInto(row.nodeId, drop.target, drop.afterNodeId)
                   )
@@ -697,10 +661,8 @@ internal enum class EditorDock(val label: String) {
 }
 
 /**
- * The inspector mode a dock stands for, or null for the one that is not an inspector.
- *
- * The mapping is one way on purpose: [EditorInspectorMode] is document state that survives a reload
- * and travels to a collaborator, and which dock is open is not.
+ * The inspector mode a dock stands for, or null. One way on purpose: the mode is document state
+ * that travels to collaborators; the open dock is not.
  */
 internal fun EditorDock.inspectorMode(): EditorInspectorMode? =
   when (this) {
@@ -714,13 +676,8 @@ internal fun EditorDock.inspectorMode(): EditorInspectorMode? =
   }
 
 /**
- * The strip of panel switches that flanks the canvas.
- *
- * Every panel in this editor used to be nailed open: 300 dp of catalog on the left and 360 dp of
- * inspector on the right, on every screen, whether or not the design being drawn was 400 dp wide.
- * The canvas — the thing the editor is for — got whatever was left. A rail makes each panel a
- * switch: the icon says the panel exists, pressing it opens the panel, pressing it again gives the
- * space back to the design.
+ * The strip of panel switches flanking the canvas: each icon toggles its panel, giving the space
+ * back to the design when closed.
  */
 @Composable
 internal fun EditorRail(items: List<EditorRailItem>, modifier: Modifier = Modifier) {
@@ -812,11 +769,8 @@ internal fun SearchField(
 }
 
 /**
- * The heading over a run of rows grouped by something the reducer decided — the Remote Compose
- * palette's source groups.
- *
- * A label rather than a control, unlike [CatalogGroupRow]: nothing collapses here, because the list
- * it heads is short and a twisty that hides four rows is a twisty nobody presses.
+ * A plain heading over a reducer-defined group (the Remote Compose palette's source groups). Not
+ * collapsible: the groups are short.
  */
 @Composable
 private fun GroupHeading(group: String) {
@@ -824,10 +778,8 @@ private fun GroupHeading(group: String) {
 }
 
 /**
- * One published Remote Compose document, addable or draggable into a compatible slot.
- *
- * The thumbnail is the grip, like [CatalogRow]. A drop captures the exact slot immediately, then
- * fetches the document bytes; the reducer revalidates that captured slot when the fetch completes.
+ * One published Remote Compose document, addable or draggable into a compatible slot. The thumbnail
+ * is the grip; a drop captures the slot before fetching, and the reducer revalidates it afterwards.
  */
 @Composable
 private fun RemoteComposeSourceRow(
@@ -1085,15 +1037,8 @@ private fun CatalogVariantTile(
 }
 
 /**
- * A palette tile that is its own grip: press anywhere on it — the picture, the name, the space
- * around them — and drag.
- *
- * It used to be only the picture, which on a tile that has stopped framing its picture is a target
- * nobody can see the edge of. The tile's buttons still win their own presses: they are children,
- * and a press that becomes a drag is taken from them only once it has moved past the slop.
- *
- * While the tile is being carried it stays where it was, faded: the thing in the air is the
- * component, and the tile left behind says where it came from.
+ * A palette tile that is its own grip: press anywhere on it and drag. Its buttons still win presses
+ * until the drag passes the slop. While carried, the tile stays in place, faded.
  */
 @Composable
 private fun CatalogDragTile(
@@ -1124,27 +1069,14 @@ private fun CatalogDragTile(
 /**
  * A palette row's picture: the component itself, inserted into an empty frame and shrunk.
  *
- * **Rendered, not baked.** The catalog's tree shows a prebaked PNG per row because that page has
- * the pixels on disk; the builder has something better — the renderer that is about to draw the
- * thing for real. So the row draws [UiBuilderEditorReducer.previewDocument], which is the result of
- * the same `InsertComponent` the row's Add dispatches. A thumbnail therefore cannot disagree with
- * what pressing Add does, no generator task has to be re-run when a default changes, no PNGs are
- * committed, and a catalog nobody has baked artwork for still gets pictures.
+ * **Rendered, not baked**: draws [UiBuilderEditorReducer.previewDocument], produced by the same
+ * `InsertComponent` the row's Add dispatches, so it cannot disagree with Add and needs no committed
+ * PNGs.
  *
- * Drawn at [PREVIEW_FRAME_WIDTH_DP] and scaled down rather than laid out at 44 dp, which is the
- * difference between a shrunken component and a component squeezed until its text wraps to nothing.
- * `graphicsLayer` rather than `scale`, so the shrink is a draw-time transform over a subtree that
- * laid itself out at a sensible size.
- *
- * **Unframed.** It used to sit in a filled, rounded tile, which made every component a small
- * picture *of* a component — a Button inside a grey card is a thumbnail, not a button. Now only the
- * component's own box is drawn, clipped to it with a few dp of room for its shadow, straight onto
- * the panel, in the panel's own light or dark: the list reads as the parts themselves laid out on a
- * shelf. Never magnified past its own size for the same reason — a 24dp icon blown up to fill the
- * cell stops looking like the icon it is.
- *
- * The drag is its tile's — see [CatalogDragTile] — so the picture only has to stop the component
- * inside it from answering presses of its own.
+ * Laid out at [PREVIEW_FRAME_WIDTH_DP] and shrunk with `graphicsLayer` (a draw-time transform),
+ * never magnified past its own size. **Unframed**: only the component's own box is drawn (with room
+ * for its shadow), so the list reads as the parts themselves. The drag belongs to the tile
+ * ([CatalogDragTile]).
  */
 @Composable
 internal fun CatalogThumbnail(
@@ -1153,9 +1085,8 @@ internal fun CatalogThumbnail(
   label: String,
   size: DpSize,
   /**
-   * Whether the component holds children. Only then is a picture that measured nothing an empty
-   * container, drawn as the arrangement it would give them; anything else that draws nothing — a
-   * curved indicator with no canvas of its own here — is a component with no picture, not a layout.
+   * Whether the component holds children. Only then is an empty measurement drawn as a container
+   * schematic; otherwise it has no picture.
    */
   container: Boolean,
   /** Told what the thumbnail ended up drawing. For tests that sweep a whole catalog. */
@@ -1168,9 +1099,8 @@ internal fun CatalogThumbnail(
     NoPictureThumbnail(label, size)
     return
   }
-  // Set when the component draws its stand-in for content nobody has given it yet: an empty
-  // document's error box, an animation's "add a URL" line. Right on the canvas, where it says what
-  // to fill; wrong here, where a shelf of error boxes reads as a broken catalog.
+  // Set when the component draws its "content needed" stand-in (empty document error, "add a URL"):
+  // useful on the canvas, misleading on a shelf.
   var needsContent by remember(componentId) { mutableStateOf(false) }
   if (needsContent) {
     onOutcome?.let { report -> SideEffect { report(CatalogThumbnailOutcome.NeedsContent) } }
@@ -1181,9 +1111,8 @@ internal fun CatalogThumbnail(
   // The panel's brightness, not the catalog's pinned dark: a component drawn in the opposite
   // theme to the list it sits on is a dark block on a light panel — a frame by another name.
   val panelDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-  // Whether the component filled the default frame and is drawn again in a roomy one — see
-  // [PREVIEW_ROOMY_FRAME]. Saveable so the lazy grid keeps the answer for a tile scrolled out and
-  // back: without it every return would draw the squeezed picture for a frame, then jump.
+  // Whether the component filled the default frame and is redrawn in a roomy one; see
+  // [PREVIEW_ROOMY_FRAME]. Saveable so a tile scrolled back does not jump.
   var roomy by rememberSaveable(componentId, label) { mutableStateOf(false) }
   val wear = LocalUiBuilderCatalogPlatform.current == UiBuilderCatalogPlatform.WEAR.wireValue
   val roomyFrame = if (wear) PREVIEW_ROOMY_WEAR_FRAME else PREVIEW_ROOMY_FRAME
@@ -1202,22 +1131,17 @@ internal fun CatalogThumbnail(
   // A miniature gets a square tile rather than the landscape one: what needs the roomy frame is a
   // picker or a dialog, taller than it is wide, and in a 72 dp high tile it would be a smudge.
   val tile = if (roomy) DpSize(size.width, size.width) else size
-  // The whole frame inside the tile until the component has been measured: that first snapshot is
-  // the one the roomy-frame question is asked of, and a frame hanging off the tile's edge would be
-  // measured clipped.
+  // The whole frame inside the tile until measured, so the roomy-frame check is not measured
+  // clipped.
   val fallbackScale = minOf(tile.width.value / frame.widthDp, tile.height.value / frame.heightDp)
   val fullFrame =
     with(density) { Size(frame.widthDp.dp.toPx(), frame.heightDp.dp.toPx()) } * fallbackScale
   var contentBounds by remember(document.id, frame) { mutableStateOf<UiBuilderPixelBounds?>(null) }
-  // Measured, and nothing in it has a size: an empty Box, Column or Row lays out at 0x0, so its
-  // picture was a blank tile indistinguishable from one that failed to draw.
+  // Measured with no size (an empty Box/Column/Row lays out at 0x0).
   var drewNothing by remember(document.id) { mutableStateOf(false) }
   val tileSize = with(density) { Size(tile.width.toPx(), tile.height.toPx()) }
-  // A Wear miniature is the whole watch: what fills a Wear frame is a screen — a picker, a dialog,
-  // a ring — designed against a round black face. On the panel's grey it read as broken: a picker
-  // fades its unfocused rows to the face's black, which on grey is a black box over the numbers,
-  // and the column it centres looked pushed off the edge of nothing. So the frame is drawn whole,
-  // on black, cut to the circle, rather than cropped to the component.
+  // A Wear miniature is the whole watch: the frame drawn whole on black, cut to the circle, since
+  // Wear screens are designed against a black round face.
   val watchFace = roomy && wear
   val transform =
     if (watchFace) {
@@ -1255,8 +1179,7 @@ internal fun CatalogThumbnail(
   Box(Modifier.size(tile), contentAlignment = Alignment.TopStart) {
     Box(
       Modifier.matchParentSize().drawWithContent {
-        // Nothing until the component has been measured once: the frame around it is not the
-        // component, and one frame of it is the framed tile this replaced.
+        // Nothing until measured once.
         val keep = visible ?: return@drawWithContent
         clipRect(keep.left, keep.top, keep.right, keep.bottom) {
           this@drawWithContent.drawContent()
@@ -1264,16 +1187,13 @@ internal fun CatalogThumbnail(
       }
     ) {
       Box(
-        // Pinned to the tile's top start before it is sized. A `requiredSize` larger than its
-        // constraints is centred by default, which put the frame's origin at (-36, -28) in a
-        // 104x72 tile while the transform below assumes (0, 0): every thumbnail drew shifted up
-        // and left, so a Button read as "utton" with its top cut off.
+        // Pinned top-start before sizing: an oversize `requiredSize` is centred by default, which
+        // the transform below does not expect.
         Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
           .requiredSize(frame.widthDp.dp, frame.heightDp.dp)
           .graphicsLayer {
-            // Top-start is intentional. The inspection snapshot below is in post-transform root
-            // pixels; a fixed origin lets it recover the component's source-frame bounds without
-            // guessing how Compose centred a 176dp child in a 44dp tile.
+            // Top-start origin so the post-transform inspection can be mapped back to source-frame
+            // bounds.
             transformOrigin = TransformOrigin(0f, 0f)
             scaleX = transform.scale
             scaleY = transform.scale
@@ -1281,37 +1201,27 @@ internal fun CatalogThumbnail(
             translationY = transform.translation.y
           }
           .then(if (watchFace) Modifier.clip(CircleShape).background(Color.Black) else Modifier)
-          // A picture of a Switch is not a Switch. Without this the row would publish every
-          // semantics node inside the thumbnail — so a screen reader would read a palette row as a
-          // switch it could toggle, and `getByRole("button", …)` would match forty pictures of
-          // buttons that are not on the canvas. The row's own name is set on the overlay below.
+          // A picture of a component is not the component: clear its semantics so screen readers
+          // and role queries ignore it. The row's own name is set on the overlay below.
           .clearAndSetSemantics {}
       ) {
         val inspection: (UiBuilderInspectionSnapshot) -> Unit = { snapshot ->
-          // Asked before the first bounds land, so of a snapshot laid out under the fallback
-          // transform: whole, unclipped, at a scale this pass agrees with.
+          // Asked of the first snapshot, laid out whole under the fallback transform.
           if (!roomy && contentBounds == null && thumbnailNeedsRoomyFrame(snapshot, fullFrame)) {
             roomy = true
           }
           val next = thumbnailContentBounds(snapshot, transform.scale)
-          // Measured under the transform these bounds produce, so each pass reads them back a
-          // fraction of a pixel off and would re-transform forever. Only a real change moves it.
+          // Bounds read back are a fraction off each pass; only a real change moves them, avoiding
+          // a re-layout loop.
           if (!sameThumbnailBounds(next, contentBounds)) contentBounds = next
           val empty =
             next == null &&
               snapshot.nodes.any { it.nodeId == PREVIEW_FRAME_CELL_ID && it.bounds != null }
           if (empty != drewNothing) drewNothing = empty
         }
-        // Always in-process, never the catalog's pinned runtime. On a catalog that publishes
-        // one, that runtime is a sandboxed iframe booting its own Wasm: one per tile was dozens of
-        // whole runtimes for one list, each polling for its inspection and each a DOM layer
-        // re-placed by hand as the list scrolled. The editing canvas is the one place it draws.
-        // Reduce motion: a thumbnail is a still picture. Wear's dialogs, indicators and pagers read
-        // it and draw their settled state rather than animating into it — the open-on-phone
-        // dialog otherwise ran its four-second countdown ring every time its tile scrolled into
-        // view, keeping the panel drawing frames for a picture nobody watches. Not
-        // `MotionDurationScale`: that is read from the composition's coroutine context, which a
-        // tile shares with the whole editor.
+        // Always in-process: the catalog's pinned runtime is a sandboxed Wasm iframe, far too heavy
+        // per tile. Reduce motion so Wear components draw their settled state rather than animating
+        // (not `MotionDurationScale`, which tiles share with the editor).
         CompositionLocalProvider(
           LocalUiBuilderContentMissing provides { needsContent = true },
           LocalReduceMotion provides true,
@@ -1345,9 +1255,8 @@ internal fun CatalogThumbnail(
         NoPictureGlyph(Modifier.matchParentSize())
       }
     }
-    // ON TOP of the picture rather than under it. A Switch drawn in a thumbnail is a real Switch
-    // and would take the press meant for the tile; a later sibling wins the hit test, so this
-    // sees every press first, consumes none of them, and the tile's drag gets them all.
+    // On top of the picture: a real Switch in a thumbnail would take the press. This sees every
+    // press first, consumes none, and the tile's drag gets them.
     Box(
       Modifier.matchParentSize()
         .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
@@ -1371,23 +1280,17 @@ internal enum class CatalogThumbnailOutcome {
 }
 
 /**
- * Whether a component measured in the default frame was squeezed by it, and needs the roomy one.
- *
- * Filling the frame's height is the sign: almost nothing is exactly 128 dp tall by choice, and what
- * reaches it is either a screen that fills whatever it is given — which is better as a miniature of
- * a screen — or a picker cut short. Filling only the width is ordinary for a text field, a list
- * item or an app bar, and those read better at the default frame's scale; they escalate only when
- * they are also most of the frame tall, which is where a clock input or a carousel sits.
+ * Whether a component measured in the default frame was squeezed and needs the roomy one: filling
+ * the frame's height is the sign; filling only the width is normal and escalates only when also
+ * most of the frame tall.
  */
 internal fun thumbnailNeedsRoomyFrame(
   snapshot: UiBuilderInspectionSnapshot,
   /** The frame cell's size in the snapshot when nothing clips it: the frame at the tile's scale. */
   fullFrame: Size,
 ): Boolean {
-  // Fractions of the frame cell as the same snapshot measured it, never source pixels recovered
-  // through the tile's transform. And only of a whole cell: the collector's bounds are clipped to
-  // what is on screen, so a tile half scrolled out of the grid measures a short frame, and every
-  // component in it would look as if it filled one.
+  // Fractions of the frame cell from the same snapshot, and only for a whole cell: bounds are
+  // clipped to the screen, so a half-scrolled tile would look full.
   val frame =
     snapshot.nodes.singleOrNull { it.nodeId == PREVIEW_FRAME_CELL_ID }?.bounds ?: return false
   if (abs(frame.width - fullFrame.width) > 1f || abs(frame.height - fullFrame.height) > 1f) {
@@ -1419,8 +1322,7 @@ internal fun sameThumbnailBounds(a: UiBuilderPixelBounds?, b: UiBuilderPixelBoun
 private val THUMBNAIL_MARGIN = 6.dp
 
 /**
- * How far past its own box a thumbnail's component is still drawn: enough for an elevated button's
- * shadow to read as a shadow, not enough for the frame around it to read as a tile.
+ * How far past its own box a thumbnail is drawn: enough for a shadow, not enough to read as a tile.
  */
 private val THUMBNAIL_SHADOW_ROOM = 4.dp
 
@@ -1437,9 +1339,8 @@ internal enum class ContainerSchematic {
 }
 
 /**
- * Which sketch an empty container draws, read from its id because that is the one thing every
- * catalog's layout components share. Checked in this order so `flow-column` is a column and
- * `lazy-grid` a grid rather than whichever word came first.
+ * Which sketch an empty container draws, read from its id (shared across catalogs). Order matters:
+ * `flow-column` is a column, `lazy-grid` a grid.
  */
 internal fun emptyContainerSchematic(componentId: String): ContainerSchematic {
   val name = componentId.substringAfterLast('/').lowercase()
@@ -1452,10 +1353,8 @@ internal fun emptyContainerSchematic(componentId: String): ContainerSchematic {
 }
 
 /**
- * A container with nothing in it, drawn as the arrangement it would give its children.
- *
- * A dashed outline for the container and solid blocks for placeholder children, in the outline
- * colour so it reads as a diagram and never as a rendered component.
+ * A container with nothing in it, drawn as the arrangement it would give its children: a dashed
+ * outline and solid placeholder blocks in the outline colour.
  */
 @Composable
 private fun EmptyContainerSchematic(schematic: ContainerSchematic, modifier: Modifier) {
@@ -1510,17 +1409,16 @@ private fun EmptyContainerSchematic(schematic: ContainerSchematic, modifier: Mod
 internal data class ThumbnailContentTransform(val scale: Float, val translation: Offset)
 
 /**
- * Fit the component's source-frame bounds into a palette tile without magnifying it into an
- * artefact. Bounds are source pixels; [translation] is therefore also a graphics-layer pixel value.
+ * Fit the component's source-frame bounds into a palette tile without magnifying it. Bounds are
+ * source pixels, so [translation] is a graphics-layer pixel value too.
  */
 internal fun thumbnailContentTransform(
   contentBounds: UiBuilderPixelBounds?,
   tileSize: Size,
   fallbackScale: Float,
   /**
-   * Kept clear on every side, in tile pixels. Without it a component wider than the tile was scaled
-   * to touch both edges, and a pill-shaped Button or a FAB read as the tile's own shape rather than
-   * a thing sitting in it.
+   * Clearance on every side, in tile pixels, so a pill-shaped component does not read as the tile's
+   * own shape.
    */
   margin: Float = 0f,
   /** The largest magnification allowed — see [CatalogThumbnail] for why the palette uses 1. */
@@ -1554,9 +1452,8 @@ internal fun thumbnailContentTransform(
 }
 
 /**
- * Convert the inspection collector's post-transform root pixels back into source-frame pixels. The
- * frame entry provides the origin, so this stays correct when the palette scrolls or the tile
- * itself is placed anywhere in the editor.
+ * Convert the inspection collector's post-transform root pixels back into source-frame pixels,
+ * using the frame entry as origin so scrolling and placement do not matter.
  */
 internal fun thumbnailContentBounds(
   snapshot: UiBuilderInspectionSnapshot,
@@ -1573,9 +1470,8 @@ internal fun thumbnailContentBounds(
       .filter { it.width > 0f && it.height > 0f }
       .toList()
   if (componentBounds.isEmpty()) return null
-  // Kept to the frame. A lazy row lays out the item it is scrolling towards past the frame's edge,
-  // and counting that item scaled the whole row down to a strip of unreadable cards; cut at the
-  // edge, the row keeps its size and the item peeks in, which is what says it scrolls.
+  // Clipped to the frame: a lazy row's next item laid out past the edge would otherwise shrink the
+  // whole row.
   val frameWidth = frame.width / scale
   val frameHeight = frame.height / scale
   val left = componentBounds.minOf { (it.x - frame.x) / scale }.coerceIn(0f, frameWidth)
@@ -1587,13 +1483,8 @@ internal fun thumbnailContentBounds(
 }
 
 /**
- * A palette tile with no picture of its component: a quiet glyph where the picture would be, sized
- * like one so the grid does not jump, and the name the tile already carries under it.
- *
- * One look for every reason there is no picture — a root-only scaffold, a component that measured
- * nothing, one that would only have drawn a "fill me in" message — because the reader's question is
- * the same in each case: what is this, and can I pick it up. The name answers the first and the
- * tile's grip the second.
+ * A palette tile with no picture: a quiet glyph at picture size so the grid does not jump, with the
+ * name under it. One look for every reason there is no picture.
  */
 @Composable
 private fun NoPictureThumbnail(label: String, size: DpSize) {
@@ -1615,23 +1506,12 @@ private fun NoPictureGlyph(modifier: Modifier) {
 }
 
 /**
- * The drag a palette row starts: report where the pointer is, and on release either drop there or
- * withdraw.
+ * The drag a palette row starts: report the pointer and on release drop there or withdraw. A
+ * modifier so catalog tiles and Remote Compose rows share one implementation.
  *
- * A modifier rather than a composable, because two different things carry this gesture — a catalog
- * tile and a Remote Compose row — and two copies of the drag bookkeeping is two chances for a drop
- * threshold to drift apart.
- *
- * **A mouse and a finger are asked different questions.** A mouse press that moves is a drag in any
- * direction, because a wheel scrolls the list. A finger that moves *up or down* is scrolling the
- * list — the palette is a grid of tiles edge to edge, and a grip that took every vertical swipe
- * left nowhere to scroll it from. So a touch picks the component up when it moves *sideways*,
- * towards the canvas, or when it is held still for a long press and then moved anywhere, which is
- * how a phone lets you pick up an icon on a home screen; a vertical swipe is left to the list.
- *
- * The origin is the element's *unclipped* position in the root, not its clipped bounds: a tile half
- * scrolled out of the top of the grid has a visible box whose top is the grid's, and adding a
- * pointer offset to that put every drop from a half-visible tile that far below the pointer.
+ * A mouse drag picks up in any direction. A touch picks up on a sideways move or after a long
+ * press, leaving vertical swipes to scroll the list. The origin is the element's unclipped root
+ * position, so half-scrolled tiles drop at the pointer.
  */
 private fun Modifier.catalogDrag(
   dragKey: String,
@@ -1674,8 +1554,8 @@ private fun Modifier.catalogDrag(
 private const val CATALOG_DROP_THRESHOLD_PX = 8f
 
 /**
- * Wait for [down] to become a pick-up, per [catalogDrag]'s rules, and return the change it started
- * on — or null when the press became something else: a tap, a scroll, or nothing.
+ * Wait for [down] to become a pick-up per [catalogDrag]'s rules and return the starting change, or
+ * null for a tap, scroll or nothing.
  */
 private suspend fun AwaitPointerEventScope.awaitCatalogPickUp(
   down: PointerInputChange,
@@ -1702,11 +1582,8 @@ private suspend fun AwaitPointerEventScope.awaitCatalogPickUp(
 }
 
 /**
- * A stable identity per row, for the `LazyColumn`.
- *
- * A group and a component can share a name and a component and its variant share an id, so the row
- * kind is part of the key — without it, expanding a group would reuse the group row's slot for the
- * first component under it and the list would animate the wrong things.
+ * A stable `LazyColumn` key per row. The row kind is part of it, since groups, components and
+ * variants can share names or ids.
  */
 private fun EditorCatalogRow.catalogRowKey(): String =
   when (this) {
@@ -1720,11 +1597,8 @@ private fun EditorCatalogRow.catalogRowKey(): String =
   }
 
 /**
- * Where a dragged layer would land, and what the panel draws to say so.
- *
- * [marker] is the row the indicator is drawn on rather than a coordinate, because the indicator has
- * to survive the list scrolling under the pointer between the frame that resolved it and the frame
- * that draws it.
+ * Where a dragged layer would land and how the panel shows it. [marker] is a row, not a coordinate,
+ * so it survives scrolling between resolve and draw.
  */
 private data class LayerLanding(
   val target: ParentSlot,
@@ -1745,14 +1619,9 @@ private sealed interface LayerLandingMarker {
 }
 
 /**
- * The place a layer released at [y] would go, or null when the pointer is over nothing that can
- * take it.
- *
- * Resolved against the rows' measured bounds rather than a row height times an index: the panel
- * mixes node lines and slot lines, and the list scrolls. A node line splits in half — the top half
- * lands the drag before it, the bottom half after it, both in *that row's* slot, which is what
- * makes a drag between slots expressible at all. A slot line lands it first in that slot, which is
- * the only way into a slot that is still empty.
+ * Where a layer released at [y] would go, or null. Resolved against measured row bounds (mixed node
+ * and slot lines, scrolling). A node line's top half lands before it, bottom half after, in that
+ * row's slot; a slot line lands first in that slot, the only way into an empty slot.
  */
 private fun layerLanding(
   nodeId: String,
@@ -1802,10 +1671,8 @@ private fun LayerLanding.markerColor(): Color =
   if (refusal == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
 
 /**
- * The slot a group of children sits in.
- *
- * Not selectable and not draggable: a slot is not a node, it is the place one goes. It is a drop
- * target, though, and the only one an empty slot has.
+ * The slot a group of children sits in: not selectable or draggable, but a drop target (the only
+ * one an empty slot has).
  */
 @Composable
 private fun SlotRow(
@@ -1842,8 +1709,7 @@ private fun SlotRow(
       overflow = TextOverflow.Ellipsis,
     )
     Text(
-      // What is in the slot and what it will take, because "full" is the commonest reason a drop
-      // is refused and the panel should have said so before the drop.
+      // Show contents and capacity, since "full" is the commonest refusal.
       when {
         row.childCount == 0 -> "empty"
         row.maxChildren != null -> "${row.childCount}/${row.maxChildren}"
@@ -1874,9 +1740,8 @@ private fun LayerRow(
   onDragCancel: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  // Where the handle sits in the window, so the pointer's offset inside it can be turned into the
-  // one coordinate the whole panel shares. A drag leaves the handle immediately, and every row it
-  // then passes over reports its own bounds in that same space.
+  // The handle's window position, converting pointer offsets into the panel-wide coordinate space
+  // the rows report in.
   var handleOrigin by remember { mutableStateOf(Offset.Zero) }
   // Where the right-click landed inside this row, and null while no menu is open.
   var menuAt by remember(row.nodeId) { mutableStateOf<Offset?>(null) }
@@ -1896,9 +1761,8 @@ private fun LayerRow(
       .height(34.dp)
       .background(background)
       .drawBehind {
-        // Drawn as a line at the edge the layer would land on rather than as a highlight over the
-        // row, because "before this one" and "after this one" are different answers and a
-        // highlight cannot tell them apart.
+        // A line at the landing edge rather than a highlight, since before and after are different
+        // answers.
         if (marker == null) return@drawBehind
         val above = landing.marker is LayerLandingMarker.Above
         drawRect(
@@ -1954,13 +1818,9 @@ private fun LayerRow(
     Row(
       Modifier.fillMaxHeight()
         .weight(1f)
-        // Not `clickable`: it cannot see which modifier keys are down, and ctrl/⌘-click and
-        // shift-click are how a selection is built up in every tool people arrive from.
-        //
-        // On the release, not the press. Every attempt to scroll this list on a touch screen
-        // begins with a press, and selecting there meant scrolling the layers panel changed the
-        // selection. `waitForUpOrCancellation` returns null once an ancestor claims the gesture,
-        // which is the cancellation `clickable` gave for free and this had to get back.
+        // Not `clickable`: it cannot see modifier keys (ctrl/⌘/shift-click). Selects on release,
+        // not press, so scrolling on touch does not select; `waitForUpOrCancellation` returns null
+        // when an ancestor claims the gesture.
         .pointerInput(row.nodeId) {
           awaitEachGesture {
             awaitFirstDown(requireUnconsumed = false)
@@ -1976,11 +1836,8 @@ private fun LayerRow(
             )
           }
         }
-        // Dropping `clickable` also dropped the activation action, the focusability and the key
-        // handling it supplied, so a screen reader could find a layer and not select it, and the
-        // keyboard could neither reach one nor activate it. The pointer path keeps the modifier
-        // keys; these restore the rest. `focusable` and a semantics action are not enough on their
-        // own: they expose focus and an accessibility action, and leave Enter and Space inert.
+        // Restores what dropping `clickable` lost: focusability, key activation (Enter/Space) and
+        // the accessibility action.
         .onKeyEvent { event ->
           if (
             event.type == KeyEventType.KeyUp &&

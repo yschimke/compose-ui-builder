@@ -43,17 +43,12 @@ import kotlinx.serialization.json.jsonObject
 
 /**
  * The editor's in-page service and the hosted runtime service answer the same v1 requests alike.
+ * `LocalUiBuilderService` (browser local mode, desktop app, IntelliJ plugin) and
+ * `PersistentUiBuilderService` (compose-preview-server) are driven with the same requests (the
+ * hosted one via `UiBuilderProtocolMapper`) and must match down to the committed document hash.
  *
- * Two implementations answer the released protocol: `LocalUiBuilderService`, which the browser's
- * local mode, the desktop app and the IntelliJ plugin run, and `PersistentUiBuilderService`, which
- * compose-preview-server hosts. The editor above them is the same client with the same ordering
- * rules, so every place they disagree about an answer is a place a design behaves differently
- * offline than on the server. Each scenario here drives both with the same requests — the hosted
- * one through `UiBuilderProtocolMapper`, the way a transport reaches it — and asserts the answers
- * match, down to the committed document hash.
- *
- * What is deliberately not compared: access control, exports and catalog upgrades, which the local
- * service refuses by name because there is nobody to share with and nothing to render with.
+ * Not compared: access control, exports and catalog upgrades, which the local service refuses by
+ * name.
  */
 class ServiceConformanceTest {
   private val executor = CurrentM3UiBuilderCatalogExecutor()

@@ -451,14 +451,9 @@ private fun CollaborationState.restoreNode(nodeId: String): CollaborationState {
 }
 
 /**
- * Replace one node's modifier chain.
- *
- * Every entry has to be a modifier the renderer can actually apply: [uiBuilderModifier] is the same
- * reading the canvas does, and it answers null for a type this build does not know and for a `size`
- * naming neither dimension. Refusing here is the difference between a rejected write and a node
- * that silently loses its layout at composition. Whether the *component* is allowed to carry the
- * modifier is the catalog's question, and the document validator asks it over the whole document
- * once the batch has been applied.
+ * Replace one node's modifier chain. Every entry must be one the renderer can apply
+ * ([uiBuilderModifier] answers null otherwise), so the write is refused rather than silently losing
+ * layout. Whether the component may carry it is checked by the document validator after the batch.
  */
 private fun CollaborationState.setModifiers(
   operation: DesignOperation.SetModifiers
@@ -796,10 +791,9 @@ internal fun propertyWrapperIssue(type: String, encodedValue: JsonObject): Strin
     // catalog check, which is where the declarations are.
     UiExpressions.EXPR,
     UiExpressions.SYSTEM -> UiExpressions.shapeIssue(encodedValue)
-    // Every name here is in `PropertyValueKinds.WRAPPER_TYPES`; that set is wider, because `list`
-    // arrives on inserts this function never sees and is checked by
-    // `inspectUiBuilderArgumentBindings` instead. `WrapperVocabularyTest` holds the union against
-    // the corpus, which is what an invented wrapper slipped through before (#901).
+    // A subset of `PropertyValueKinds.WRAPPER_TYPES` (`list` arrives on inserts and is checked by
+    // `inspectUiBuilderArgumentBindings`). `WrapperVocabularyTest` holds the union against the
+    // corpus.
     else -> "uses unsupported wrapper type $type"
   }
 
@@ -862,13 +856,9 @@ private fun CollaborationState.validateDestination(
   basePositions: Map<String, StableNodePosition>,
   movingNodeId: String?,
 ) {
-  // The parent has to be there. The *slot* does not have to be there yet: a node's `slots` map
-  // holds the children each slot has, so a slot with none is simply an absent key, and requiring
-  // the key made every empty slot unreachable — neither an insert nor a move could land in one.
-  // A document authored here carries every declared slot from the moment its node is inserted, so
-  // this only ever bit documents replayed from the wire, where the editor offered the empty slot
-  // as a drop target and the operation was then refused. Which slot names a component actually has
-  // is the catalog's question, and the document validator asks it of the result.
+  // The parent must exist, but the slot need not: a slot with no children is an absent key, and
+  // requiring it made empty slots unreachable for wire-replayed documents. Which slot names are
+  // valid is the document validator's question.
   if (parent != null) {
     liveNode(parent.nodeId)
   }
@@ -963,20 +953,12 @@ private const val POSITION_STEP = 1024
 /**
  * A document has at most one root, every node is placed exactly once, and nothing cycles.
  *
- * The root count is bounded here rather than only in the exporter because a second root is a state
- * nothing can get out of: `validateDocumentForExport` refuses it with `ROOT_CARDINALITY` and
- * `ScreenDocumentProjection` refuses it again, and the editor cannot delete a root without deleting
- * its whole subtree. Until this bound existed such a document could be created, persisted, loaded
- * and edited, and only refused when somebody asked for Kotlin or SVG out of it — by which time it
- * was the stored state of a real design (yschimke/compose-preview-server#429).
+ * A second root can't be undone without deleting a whole subtree and is refused by every export, so
+ * it is bounded here. Zero roots is legal: a design starts empty and the first insert creates the
+ * root.
  *
- * At most one, not exactly one: a design legitimately begins with no root at all — `create_design`
- * takes an empty document and the first insert names no parent (`NodeLocation` with a null parent
- * is the root list) — and that state is one insert from being exportable. Two roots is the state
- * that is one *deletion of everything* from being exportable, so it is the one refused.
- *
- * Kept for the callers that hold a whole document and ask one question of it. The reducer asks the
- * two halves separately, and [requireSingleRoot] says why.
+ * For callers holding a whole document; the reducer asks the two halves separately (see
+ * [requireSingleRoot]).
  */
 internal fun UiBuilderDocument.requireValidTopology() {
   requireSingleRoot()
@@ -985,18 +967,9 @@ internal fun UiBuilderDocument.requireValidTopology() {
 }
 
 /**
- * At most one root — the bound [requireValidTopology] describes, asked on its own.
- *
- * Separate because it is the one rule in that function that is about the *document* rather than
- * about a node, and so it is the one rule a half-applied command may legitimately break. Wrapping
- * an existing root in a board takes an insert beside it and a move inside it
- * ([`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md)),
- * and the document has two roots in between — a state no reader ever sees, because a command is
- * what commits.
- *
- * So the reducer runs this once, after the command, which is what `PersistentUiBuilderService` has
- * always done with its own `validateTopology`. A command that *ends* with two roots is refused with
- * the code and the message it was always refused with; only the moment of asking moved.
+ * At most one root, asked on its own. Separate because a half-applied command may legitimately
+ * break it (wrapping a root in a board inserts beside it, then moves it inside), so the reducer
+ * checks it once after the command, as `PersistentUiBuilderService` does.
  */
 internal fun UiBuilderDocument.requireSingleRoot() {
   if (roots.size > 1) {
@@ -1005,9 +978,8 @@ internal fun UiBuilderDocument.requireSingleRoot() {
 }
 
 /**
- * Every placement names a component the document declares — asked once per command, beside
- * [requireSingleRoot], for the same reason: making a component inserts the placement, then moves
- * the body out and declares it, and the states in between are nobody's document.
+ * Every placement names a component the document declares. Checked once per command like
+ * [requireSingleRoot], since making a component passes through intermediate states.
  */
 internal fun UiBuilderDocument.requireKnownComponents() {
   nodes.values.forEach { node ->
@@ -1018,10 +990,8 @@ internal fun UiBuilderDocument.requireKnownComponents() {
 }
 
 /**
- * Every node placed exactly once, every placed node known, and nothing cycling.
- *
- * Every rule here is about a node, so every one of them holds after each operation: a node placed
- * twice or missing is wrong the instant it happens, whatever the rest of the command intended.
+ * Every node placed exactly once, every placed node known, and nothing cycling. Node-level rules,
+ * so they hold after each operation.
  */
 internal fun UiBuilderDocument.requireValidPlacement() {
   val locations = mutableMapOf<String, Int>()
@@ -1062,9 +1032,7 @@ internal fun UiBuilderDocument.requireValidPlacement() {
     visiting += nodeId
     val node = nodes.getValue(nodeId)
     node.slots.values.flatten().forEach(::visit)
-    // A placement naming a component nothing declares yet is [requireKnownComponents]'s question,
-    // asked once the command is done: making a component inserts its first placement before the
-    // declaration exists.
+    // Unknown components are [requireKnownComponents]'s question, asked after the command.
     node.component?.let { placement ->
       val key = (placement["componentKey"] as? JsonPrimitive)?.contentOrNull
       componentRoots[key]?.let(::visit)
@@ -1320,24 +1288,11 @@ internal fun fail(
 /**
  * The document at every revision from [oldest] up to the current one, newest first.
  *
- * Nothing new is stored to answer this. Every mutation the reducer accepted already carries the
- * compensating changes that undo replays — the before and after of every property, modifier chain,
- * environment field and structural move — so a rewind is those same changes applied in reverse
- * order, which is what [compensate] already does one change at a time. Keeping a copy of the
- * document per revision instead would be a second account of the history that can disagree with the
- * first, and on a long session the largest thing in the editor's memory.
+ * Rewinds by applying the recorded compensating changes in reverse ([compensate]), so no
+ * per-revision copies are stored. One walk covers the whole range.
  *
- * One walk for the whole range rather than one per revision, because the walk back to revision *n*
- * passes through every revision above it: a history bar drawing forty pictures asks forty
- * questions, and answering each from the current document would redo the same work forty times.
- *
- * **Read-only.** What comes back is a picture, not a place to edit from: the version stamps that
- * make undo safe are deliberately not rewound, because nothing submits from here. Committing at an
- * old revision is what undo is for, and it has guards this does not.
- *
- * The map stops early rather than approximating — at a revision this state's record does not cover
- * (a design reopened from a stored snapshot has history the client never saw), or at a compensation
- * that refuses. A thumbnail that cannot be drawn is better absent than wrong.
+ * **Read-only**: version stamps are not rewound, since nothing submits from here. Stops early
+ * rather than approximating at a revision the record doesn't cover or a compensation that refuses.
  */
 internal fun CollaborationState.documentsBackTo(oldest: Int): Map<Int, UiBuilderDocument> {
   val documents = linkedMapOf(document.revision to document)
@@ -1362,13 +1317,9 @@ internal fun CollaborationState.documentAtRevision(revision: Int): UiBuilderDocu
   if (revision > document.revision) null else documentsBackTo(revision)[revision]
 
 /**
- * The oldest revision [documentsBackTo] can reach: the one below this state's unbroken run of
- * recorded mutations.
- *
- * The run has to be unbroken back from the current revision, not merely present somewhere. A client
- * that opened a design from a stored snapshot holds the mutations made since it connected and none
- * of the ones that built the document it was handed, so its timeline starts where its record does —
- * and says so, rather than offering rows it cannot picture.
+ * The oldest revision [documentsBackTo] can reach: the bottom of the unbroken run of recorded
+ * mutations back from the current revision (a client that opened from a snapshot lacks earlier
+ * ones).
  */
 internal fun CollaborationState.reconstructableFromRevision(): Int {
   val recorded = inverseByRevision().keys
@@ -1379,11 +1330,8 @@ internal fun CollaborationState.reconstructableFromRevision(): Int {
 
 /**
  * Every recorded mutation as the change that takes the document back over it, keyed by the revision
- * it committed.
- *
- * All three kinds, because all three moved the document and a rewind that skipped one would replay
- * the others onto a state they were never applied to. An undo is inverted by replaying its target
- * forwards — which is precisely a redo — and a redo by taking that target back again.
+ * it committed. All three kinds: an undo is inverted by replaying its target forwards (a redo), and
+ * a redo by taking it back again.
  */
 private fun CollaborationState.inverseByRevision():
   Map<Int, (CollaborationState) -> CollaborationState> {

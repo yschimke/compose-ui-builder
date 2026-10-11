@@ -22,14 +22,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The history bar's two claims, checked where they are actually made.
- *
- * The strip claims that each row is a picture of *that* revision, and the compare pane claims that
- * what it lists is the difference between two of them. Both come out of the same record the History
- * panel reads, so what these cases are about is the rebuilding: that a rewound document is the one
- * that revision held, that a revision the record cannot reach is refused rather than approximated,
- * and that the diff is read off the two documents rather than off the operations between them —
- * which is the difference an undo in the range would otherwise hide.
+ * The history bar's two claims: each strip row pictures *that* revision, and the compare pane lists
+ * the difference between two. Checks that rewound documents match, unreachable revisions are
+ * refused rather than approximated, and diffs are read from documents rather than operations.
  */
 class RevisionTimelineTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -94,9 +89,8 @@ class RevisionTimelineTest {
   }
 
   /**
-   * An undo moves the document and mints a revision of its own, so the strip has to be able to
-   * rewind over it — and to name it after the change it took back, because "Undo" is the one thing
-   * about such a row a reader already knows.
+   * An undo mints its own revision, so the strip must rewind over it and name it after the change
+   * it took back.
    */
   @Test
   fun `an undo is a row of its own, named after what it took back`() {
@@ -106,9 +100,8 @@ class RevisionTimelineTest {
 
     val entries = revisionTimeline(state, reducer.operationHistory(state))
     val undoRow = entries.last()
-    // Named after its target, and its target names the node as the canvas names it *now* — which,
-    // the undo having put the old text back, is the old text. The strip borrows the History panel's
-    // summaries rather than writing its own, so the two cannot drift apart on this.
+    // Named after its target as the canvas names that node now (the old text, after the undo); the
+    // strip reuses the History panel's summaries.
     assertEquals("Took back: Set text on $originalTitle", undoRow.summary)
     assertEquals(originalTitle, assertNotNull(undoRow.document).title(titleId))
     // And the revision it took back is still on the strip, still showing what it did.
@@ -128,8 +121,8 @@ class RevisionTimelineTest {
   }
 
   /**
-   * A design reopened from a stored snapshot has history this client never saw. The strip has to
-   * refuse those revisions rather than draw a picture of a document it guessed at.
+   * A design reopened from a stored snapshot has history this client never saw; those revisions are
+   * refused, not guessed.
    */
   @Test
   fun `a revision the record does not cover is refused, not approximated`() {
@@ -182,8 +175,8 @@ class RevisionTimelineTest {
   }
 
   /**
-   * The reason the diff is computed from the documents rather than from the operations between
-   * them: a change and its own reversal are two operations and no difference at all.
+   * A change and its own reversal are two operations but no difference, which is why the diff
+   * compares documents.
    */
   @Test
   fun `an edit and its undo are no difference`() {
@@ -216,10 +209,7 @@ class RevisionTimelineTest {
     assertEquals("2.0", diff.environment.single().after)
   }
 
-  /**
-   * Looking at an old revision is not being at one — the design does not move, and edits still
-   * land.
-   */
+  /** Looking at an old revision doesn't move the design; edits still land. */
   @Test
   fun `an edit made while peeking brings the canvas back to the design`() {
     var state = reducer.initial(document, selectedNodeId = titleId)

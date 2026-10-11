@@ -8,43 +8,28 @@ import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 
 /**
- * Where the **bytes** behind a design's `assets` map live.
+ * Where the bytes behind a design's `assets` map live.
  *
- * ## Why the bytes are not in the document
+ * Uploaded bytes are not embedded in the document: retained revision snapshots would rewrite them
+ * on every edit. The document names the bytes; this store holds them once.
  *
- * `DesignDocumentV1.assets` binds an `assetKey` to an [AssetBindingV1], and the protocol offers
- * three sources for one: a catalog key, an embedded base64 payload, and an uploaded storage key.
- * The embedded form is the tempting one — a self-contained document renders anywhere without a
- * second fetch — and it is the wrong one for anything a person uploads. This service keeps a
- * whole-document snapshot per retained revision (`retainedRevisionSnapshots`, over a thousand of
- * them) inside one state file, so a 300 KiB photograph embedded in the document would be written
- * again on every accepted edit until the state file's ceiling refused the next one. The document
- * carries the **name** of the bytes; this store carries the bytes, once.
- *
- * ## Content-addressed, deliberately
- *
- * The storage key *is* the SHA-256 of the bytes, which is also the binding's `contentDigest`. That
- * gives three things for free: the same picture pinned under two keys or in two designs is stored
- * once; a document naming a digest can be checked against what the store hands back; and there is
- * nothing to delete when a key is re-pointed — the old bytes are simply no longer named. There is
- * no eviction: an asset is design content, and content that vanished under a design would be a
- * worse failure than a directory that grows. The per-asset and per-design caps in
- * [UiBuilderServiceLimits] bound how fast it can.
+ * Content-addressed: the storage key is the SHA-256 of the bytes (the binding's `contentDigest`),
+ * so duplicates are stored once, documents can verify what they get, and re-pointing a key leaves
+ * nothing to delete. No eviction (assets are design content); [UiBuilderServiceLimits] caps growth.
  */
 public interface UiBuilderAssetStore {
   /** The bytes stored under [storageKey], or null when nothing is. */
   public fun read(storageKey: String): ByteArray?
 
   /**
-   * Store [bytes] under [storageKey]. Idempotent: writing the bytes a key already holds is a no-op,
-   * and a key never changes what it holds because the key is the digest of the content.
+   * Store [bytes] under [storageKey]. Idempotent: a key is the digest of its content, so it never
+   * changes.
    */
   public fun write(storageKey: String, bytes: ByteArray)
 }
 
 /**
- * One file per digest under [root], written atomically so a crash mid-write leaves either the whole
- * asset or none of it, never a truncated PNG a renderer would fail on.
+ * One file per digest under [root], written atomically so a crash never leaves a truncated asset.
  */
 public class FileUiBuilderAssetStore(private val root: Path) : UiBuilderAssetStore {
   init {
@@ -83,9 +68,8 @@ public class FileUiBuilderAssetStore(private val root: Path) : UiBuilderAssetSto
   }
 
   /**
-   * The file a key names, or null for a key that is not one this store minted. A key is a digest
-   * ([UiBuilderAssetDigests]), so the path is a fixed-width hex name and nothing an uploader chose
-   * ever becomes a filename.
+   * The file a key names, or null for a key this store did not mint. Keys are fixed-width hex
+   * digests ([UiBuilderAssetDigests]), so no uploader-chosen text becomes a filename.
    */
   private fun fileFor(storageKey: String): Path? {
     val hex = UiBuilderAssetDigests.hexOf(storageKey) ?: return null
@@ -109,22 +93,17 @@ public object UiBuilderAssetDigests {
 }
 
 /**
- * The asset lane of the UI-builder service: bytes in, a pinned binding out.
- *
- * A port beside [UiBuilderServicePort] rather than a request inside it, because the released
- * `UiBuilderRequestV1` / `DesignMutationV1` wire has no asset write and adding one means releasing
- * `ui-builder-protocol`. The HTTP route and the MCP tool that call this are the same kind of thing
- * as the native-preview route: a door beside the envelope, gated by the same authorization and the
- * same design access control, until the wire grows the request.
+ * The asset lane of the UI-builder service: bytes in, a pinned binding out. A separate port because
+ * the released wire has no asset write; the HTTP route and MCP tool use the same authorization and
+ * design access control until it does.
  */
 public interface UiBuilderAssetPort {
   /**
    * Store [UiBuilderAssetWrite.bytes] and pin them into the design's `assets` under the key.
    *
-   * Answers [UiBuilderServiceResponse.OperationOutcome] — accepted with the new revision, or
-   * `idempotentReplay` when the key already names exactly these bytes — or
-   * [UiBuilderServiceResponse.Error] for a design that cannot be found or written, bytes that are
-   * not a raster image, or a limit.
+   * Answers [UiBuilderServiceResponse.OperationOutcome] (accepted, or `idempotentReplay` when the
+   * key already names these bytes) or [UiBuilderServiceResponse.Error] (not found, not writable,
+   * not a raster image, or a limit).
    */
   public suspend fun putAsset(write: UiBuilderAssetWrite): UiBuilderServiceResponse
 
@@ -154,8 +133,8 @@ public sealed interface UiBuilderAssetReadResult {
 }
 
 /**
- * What a design may name an asset: the same alphabet as a node id, bounded, so a key is safe in a
- * URL path segment, a Kotlin identifier after sanitising, and a filename none of this ever makes.
+ * What a design may name an asset: the node-id alphabet, bounded, so a key is safe in URL paths and
+ * as a sanitised Kotlin identifier.
  */
 public object UiBuilderAssetKeys {
   public const val MAXIMUM_LENGTH: Int = 64
@@ -169,9 +148,8 @@ public object UiBuilderAssetKeys {
 }
 
 /**
- * A raster image, sniffed from its bytes. The formats are the ones every renderer lane here decodes
- * through Skia and a browser draws natively; SVG is deliberately absent because it is a document
- * that can carry script, and an asset is bytes a design shows, not a page it runs.
+ * A raster image, sniffed from its bytes, in formats every renderer lane decodes. SVG is excluded
+ * because it can carry script.
  */
 internal data class UiBuilderImageBytes(
   val mediaType: String,

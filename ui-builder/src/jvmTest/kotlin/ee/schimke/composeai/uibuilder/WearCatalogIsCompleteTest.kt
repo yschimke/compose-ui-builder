@@ -5,32 +5,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Every Wear component the catalog declares is drawn by the canvas, and vice versa.
+ * Every Wear component the catalog declares is drawn by the canvas, and vice versa. `adapterStatus`
+ * tells authors what the canvas can be trusted for and drives `nativeOnlyComponentIds`, so a
+ * `supported` component without a renderer branch would draw a dashed box under a false claim.
  *
- * ## The disagreement this exists to stop
- *
- * `adapterStatus` is what the editor shows an author to say what the canvas can be trusted for, and
- * it is read by `nativeOnlyComponentIds` to decide which components get drawn as a named
- * placeholder instead of as themselves. So a component declaring `supported` while the renderer has
- * no branch for it is the canvas saying "this is what it looks like" about a dashed box.
- *
- * That is exactly what had happened. Twenty-three components declared `supported`; six had a
- * branch. Two that *were* drawn, the card and the button, declared `planned` — the field was wrong
- * in both directions at once, because `wearOwn` inherited whatever status the borrowed Material 3
- * component happened to carry rather than deciding one per component.
- *
- * Nothing caught it. The catalog is a generated golden and the renderer is a `when`, and no test
- * compared them, so the claim and the drawing drifted apart silently and were only noticed by
- * authoring a Wear screen and looking at the picture.
- *
- * ## Why it reads the renderer's source
- *
- * A `when` cannot be enumerated at runtime, and the alternative — compose every component and look
- * at what came out — answers a different and weaker question, because a component can draw
- * *something* without drawing itself. The two sets here are the two claims that must agree: what
- * the catalog tells an author, and what the renderer has a branch for.
- * `WearCanvasDrawsRealComponentsTest` covers the part this cannot: that the branches draw the real
- * components rather than lookalikes.
+ * Reads the renderer's source because a `when` can't be enumerated at runtime, and composing each
+ * component only shows that it draws *something*. `WearCanvasDrawsRealComponentsTest` checks the
+ * branches draw the real components.
  */
 class WearCatalogIsCompleteTest {
   private val catalogJson =
@@ -48,25 +29,15 @@ class WearCatalogIsCompleteTest {
       }
 
   /**
-   * The labels the renderer has a dispatch branch for: component ids and canvas adapter ids alike.
-   *
-   * A component is drawn when the renderer has a case for **its id or for the adapter its catalog
-   * declares** — `wasm.canvas` in the golden, which the editor reads into
-   * `LocalUiBuilderCanvasAdapters` and the renderer dispatches on. That is the whole point of the
-   * adapter field: a catalog whose screen root is not called `wear-m3/screen-scaffold` asks for the
-   * same drawing by naming `frame/round-screen`, so a check that only looked for ids would report
-   * it as undrawn.
-   *
-   * Branch labels are read as any quoted string followed by `->` at the dispatch's own indentation,
-   * because a branch may name several (`ROUND_SCREEN_FRAME, WEAR_SCREEN_SCAFFOLD ->`) and the id
-   * that is still there for a synthesised catalog is a label like any other.
+   * The labels the renderer has a dispatch branch for: component ids and canvas adapter ids
+   * (`wasm.canvas`, read via `LocalUiBuilderCanvasAdapters`) alike, so a screen root named
+   * differently but declaring `frame/round-screen` counts as drawn. Labels are quoted strings
+   * before `->` at the dispatch's indentation, possibly several per branch.
    */
   private fun drawnLabels(): Set<String> {
     assertTrue(rendererSource.isFile, "cannot find the renderer source at $rendererSource")
     val source = rendererSource.readText()
-    // A branch may name a constant rather than a literal (`ROUND_SCREEN_FRAME ->`), so the
-    // constants in this file are resolved first: a check that only read quoted labels would report
-    // a component drawn by a named adapter as undrawn.
+    // Constants are resolved first, since a branch may name one (`ROUND_SCREEN_FRAME ->`).
     val constants =
       Regex("const val ([A-Za-z0-9_]+) = \"([^\"]+)\"").findAll(source).associate {
         it.groupValues[1] to it.groupValues[2]

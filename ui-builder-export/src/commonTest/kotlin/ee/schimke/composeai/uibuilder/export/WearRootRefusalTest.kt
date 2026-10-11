@@ -10,12 +10,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * A Wear design whose root is neither the screen scaffold nor a widget container.
- *
- * Both Wear emitters route on the root, so a bare `wear-m3/button` at the root used to fall through
- * to the record-driven generator, which has no record for any `wear-m3` component and answered "no
- * component `wear-m3/button` in this catalog" — once per component, and none of them the cause. The
- * cause is the root, and the fix is to put the content inside a Wear screen.
+ * A Wear design whose root is neither the screen scaffold nor a widget container gets one refusal
+ * naming the root, not a "no component" refusal per node.
  */
 class WearRootRefusalTest {
   private val expected =

@@ -28,12 +28,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The table in [StarterContent] against the catalog it seeds, and the inserts it produces.
- *
- * The runtime drops a starter entry that does not fit rather than failing the insert — which is the
- * right behaviour in the product and would make a stale table entry invisible. These tests are the
- * other half of that trade: every entry is checked here, so a renamed slot or a dropped icon key
- * fails a build rather than quietly reverting a component to arriving empty.
+ * The table in [StarterContent] against the catalog it seeds, and the inserts it produces. The
+ * runtime silently drops entries that don't fit, so these tests make a stale entry (renamed slot,
+ * dropped icon key) fail the build.
  */
 class StarterContentTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -62,13 +59,9 @@ class StarterContentTest {
 
   @Test
   fun `every starter entry names a component slot and value the catalog declares`() {
-    // `wear-m3` is synthesised at runtime by `:ui-builder-runtime` from this same M3 fixture, and
-    // this module may not depend on that one — so its components are not in the catalog parsed
-    // here and cannot be checked against it. The pairing is not lost, it is split: this test
-    // checks that a Wear seed at least names a component the generator publishes, and
-    // `WearM3ScreenCatalogTest` over in the runtime checks that the palette offers exactly those
-    // ids. A seed for a Wear component nobody publishes fails here; one for a component the
-    // palette does not offer fails there.
+    // `wear-m3` is synthesised at runtime by `:ui-builder-runtime` (not a dependency here), so Wear
+    // seeds are only checked to name a component the generator publishes; `WearM3ScreenCatalogTest`
+    // in the runtime checks the palette offers exactly those ids.
     StarterContent.componentIds
       .filter { it.startsWith("wear-m3/") }
       .forEach { componentId ->
@@ -104,10 +97,8 @@ class StarterContentTest {
   }
 
   /**
-   * The values a Remote Material 3 component is inserted with name properties it declares.
-   *
-   * These are required values — `checked`, `progress` — whose absence is an export refusal, so a
-   * seed naming a property the component does not declare is a component arriving refused.
+   * The values a Remote Material 3 component is inserted with name properties it declares
+   * (`checked`, `progress` are required for export).
    */
   @Test
   fun `every Remote Material 3 number has an editor with finite bounds`() {
@@ -221,11 +212,8 @@ class StarterContentTest {
   }
 
   /**
-   * The property the whole change exists for: inserting any component in the catalog leaves a
-   * document the validator accepts.
-   *
-   * Every component, not the seeded ones, because starter content changed the shape of every insert
-   * — a seed that fits its own slot and breaks the *parent's* cardinality would only show up here.
+   * Inserting any catalog component leaves a document the validator accepts, including parent
+   * cardinality.
    */
   @Test
   fun `inserting any catalog component leaves a capability valid document`() {
@@ -248,9 +236,8 @@ class StarterContentTest {
   }
 
   /**
-   * The same property for the A2UI palette, into its own seed: every one of the eighteen inserts
-   * into the column and leaves a valid document, which is what the seeded `action`, `max`, `value`
-   * and `options` are for — each is required by A2UI's schema and none has a neutral default.
+   * The same for the A2UI palette: all eighteen insert into the column validly, thanks to the
+   * seeded schema-required `action`, `max`, `value` and `options`.
    */
   @Test
   fun `inserting any A2UI component into the A2UI seed leaves a valid document`() {
@@ -294,9 +281,7 @@ class StarterContentTest {
   }
 
   /**
-   * A2UI's numbers are neither `…Dp` nor declared with a range, so without the catalog's editor
-   * rules a dropped Slider would keep its starter `value` and `max` forever and every component's
-   * `weight` would be `Unsupported`.
+   * A2UI's numbers aren't `…Dp` or ranged, so they need the catalog's editor rules to be editable.
    */
   @Test
   fun `an A2UI slider's range, value and weight are editable numbers`() {
@@ -341,9 +326,8 @@ class StarterContentTest {
   }
 
   /**
-   * The insert this change fixes outright rather than improves. `m3/button`'s content slot accepts
-   * text and icons alike, and the generic fill tested the icon branch first, so a button arrived
-   * holding the first icon in the enum — a clock.
+   * A button arrives with a text label, not the enum's first icon (the generic fill tried icons
+   * first).
    */
   @Test
   fun `a button arrives reading Button rather than holding an icon`() {
@@ -387,9 +371,8 @@ class StarterContentTest {
   }
 
   /**
-   * A seed reached through a required-slot fill rather than through its own palette insert: nothing
-   * in the table mentions `m3/search-bar`, and the search field its `inputField` minimum resolves
-   * to carries the placeholder and magnifier.
+   * A seed reached through a required-slot fill: `m3/search-bar`'s `inputField` minimum resolves to
+   * a search field carrying the placeholder and magnifier.
    */
   @Test
   fun `a search bar arrives with a placeholder and a leading icon`() {
@@ -427,9 +410,8 @@ class StarterContentTest {
   }
 
   /**
-   * Wrapping supplies the content itself, so the container it creates is not seeded. A seeded
-   * subtree here would be inserted and deleted inside one batch, and the deeper half of it would
-   * outlive the sweep that removes the wrap slot's placeholders.
+   * Wrapping supplies the content itself, so the created container isn't seeded (its seed would
+   * outlive the placeholder sweep).
    */
   @Test
   fun `wrapping a selection does not seed starter content`() {
@@ -442,10 +424,8 @@ class StarterContentTest {
   }
 
   /**
-   * The batch a seeded insert submits stays far inside `maximumOperationsPerBatch` (256), which is
-   * what an atomic insert has to fit in. The bound is deliberately much tighter than the limit: a
-   * seed anyone would call typical is a handful of nodes, and one that is not is a table entry to
-   * reconsider rather than a batch to enlarge.
+   * A seeded insert's batch stays far inside `maximumOperationsPerBatch` (256); a large seed should
+   * be reconsidered, not the batch enlarged.
    */
   @Test
   fun `no seeded insert exceeds a reviewable number of nodes`() {

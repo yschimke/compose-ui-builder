@@ -15,16 +15,12 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
 
 /**
- * What a Figma frame read back says was changed since it was exported, as one command.
+ * What a Figma frame read back says was changed since it was exported, as one command. [command] is
+ * null when nothing changed; [diagnostics] are the import's.
  *
- * [command] is null when nothing changed. [diagnostics] are the import's, for the parts of the
- * frame a designer added that the map cannot name.
- *
- * [deletions] are the layers a designer removed, held back from [command] when the design has moved
- * on since the export: the reducer refuses a stale delete outright, and would reject the edits with
- * it. They are submitted afterwards, at whatever revision the design is then at — see
- * [deletionCommand] — once the host has shown them, because deleting on the strength of an old
- * picture of the design is the one edit that is not merged.
+ * [deletions] are held back from [command] when the design has moved on since the export (the
+ * reducer refuses stale deletes and would reject the edits with them); they are submitted
+ * afterwards via [deletionCommand], once the host has shown them.
  */
 data class FigmaRoundTripResult(
   val command: DesignCommand?,
@@ -48,17 +44,10 @@ data class FigmaRoundTripResult(
  * Figma edits → a [DesignCommand] at the revision the scene was exported from. See
  * `docs/design/UI_BUILDER_FIGMA_INTEGRATION.md` § Round trip.
  *
- * The comparison is between two imports — of the [FigmaScene] Figma was given, and of the
- * [FigmaSnapshot] read back — never between the snapshot and the document. Both sides pass through
- * the same importer, so whatever the export could not express is lost from both identically and
- * cannot read as "removed in Figma". What differs is exactly what a designer changed, in the
- * vocabulary the map covers, and that is what is written onto the design: properties one by one,
- * the modifiers Figma can express merged into the node's chain without disturbing the rest, moves,
- * inserts and deletes.
- *
- * The command is authored against the scene's revision. The reducer applies it to whatever the
- * design has become since, with its ordinary per-property conflict notices — Figma is a
- * collaborator whose round trip took a day.
+ * Compares two imports (of the exported [FigmaScene] and of the read-back [FigmaSnapshot]), never
+ * snapshot against document, so anything the export couldn't express is lost identically from both.
+ * The difference becomes property writes, merged Figma-expressible modifiers, moves, inserts and
+ * deletes, applied by the reducer with its ordinary per-property conflict notices.
  */
 class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
   private val importer = FigmaSnapshotImporter(catalog, map)
@@ -90,18 +79,16 @@ class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
     val beforeParents = before.parents()
     val afterParents = after.parents()
 
-    // Only the topmost removed node: the reducer takes its subtree with it. Applied last, so a
-    // child
-    // a designer moved out of a container before deleting it is out before the container goes.
+    // Only the topmost removed node (its subtree goes with it), applied last so children moved out
+    // first survive.
     val deletes =
       before.nodes.keys
         .filter { it !in after.nodes && it in base.nodes }
         .filter { id -> beforeParents[id]?.first?.let { it in after.nodes } != false }
         .map { DesignOperation.DeleteNode(it) }
 
-    // Which nodes kept their place: per parent slot, the longest run of siblings both sides list in
-    // the same order. Only the rest moved — so dragging one card to the end is one move, not one
-    // for every sibling it passed.
+    // Per parent slot, the longest run of siblings in the same order on both sides stayed; only the
+    // rest moved, so dragging one card is one move.
     val stayed = stayedInOrder(before, after, beforeParents, afterParents)
 
     // Inserts and moves in the order the received tree lists its nodes, so a parent exists before
@@ -208,8 +195,7 @@ class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
 
     /**
      * [current]'s chain with its Figma-expressible modifiers replaced by [received]'s, placed where
-     * the first of them was — Compose reads a chain in order, so what Figma cannot express keeps
-     * its position relative to the rest.
+     * the first of them was, so the rest keep their relative order.
      */
     fun mergeModifiers(
       current: JsonArray,
@@ -235,10 +221,7 @@ class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
 
     fun JsonObject.type(): String? = optionalString("type")
 
-    /**
-     * Figma cannot hug a frame without auto layout, so a box the scene built at its measured size
-     * reads back with that size fixed. That is the size it was given, not an edit.
-     */
+    /** A box without auto layout reads back with its measured size fixed; that's not an edit. */
     fun JsonObject.isBuiltSize(size: Pair<Double, Double>): Boolean {
       fun near(name: String, expected: Double) =
         (this[name] as? JsonPrimitive)?.doubleOrNull?.let { abs(it - expected) < 0.5 } == true
@@ -321,9 +304,8 @@ class FigmaRoundTrip(catalog: CapabilityCatalog, map: FigmaComponentMap) {
       }
 
     /**
-     * The slot a received child goes in on the design itself. The importer puts a frame's children
-     * in `children`, which is right for Row, Column and Box but not for a component a frame stood
-     * in for — so a parent the design already has keeps the slot its children were in.
+     * The slot a received child goes in on the design. The importer uses `children`, which is wrong
+     * for a component a frame stood in for, so existing parents keep their children's slot.
      */
     fun baseSlot(
       base: UiBuilderDocument,

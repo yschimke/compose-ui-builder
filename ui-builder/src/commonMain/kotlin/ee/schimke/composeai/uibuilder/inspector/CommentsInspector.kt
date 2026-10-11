@@ -68,24 +68,11 @@ import kotlin.math.roundToInt
 /**
  * The comments panel: read what has been said about this design, say something, close a thread.
  *
- * Its own tab rather than a section under Screen — where the reference lives — because a discussion
- * is about the design as a whole as often as it is about one part of it, and because the panel has
- * to be readable while somebody is editing rather than only while they are aligning a mock.
+ * A new thread is pinned to nothing (the design), the selected layer, or the last mark drawn on the
+ * reference; [CommentPinOverlay] draws the pin on the canvas.
  *
- * ### Its link to markup
- *
- * A new thread is pinned to one of three things, offered as chips: nothing (the design), the
- * selected layer, or the last mark drawn on the reference. That third one is the point of putting
- * comments and markup in the same product: circle the thing that is wrong, then say why. The pin is
- * drawn on the canvas by [CommentPinOverlay], so the sentence and the stroke are one gesture apart.
- *
- * ### Why it holds no cache
- *
- * Everything here is read from [board], which the host replaces whenever the server says the
- * discussion moved — over a socket while the page is open. There is deliberately no local list that
- * a post appends to: a comment is not shown until the host has stored it and told everybody, which
- * is the same rule the editor already applies to a design edit, and it means the panel cannot show
- * a reply that an agent never received.
+ * No local cache: everything is read from [board], which the host replaces whenever the server
+ * reports a change. A comment appears only once stored and broadcast, as with design edits.
  */
 @Composable
 internal fun CommentsInspector(
@@ -98,11 +85,8 @@ internal fun CommentsInspector(
   selectedThreadId: String?,
   onSelectThread: (String?) -> Unit,
   /**
-   * The thread a `#thread=` link named, brought into view once as the panel opens.
-   *
-   * Once, and only for a thread the URL named: scrolling to a thread somebody just clicked would
-   * move a panel they are already looking at, and re-scrolling later would take the page away from
-   * whatever they read next.
+   * The thread a `#thread=` link named, scrolled into view once as the panel opens (never for
+   * clicked threads or later).
    */
   revealThreadId: String? = null,
   /** The scroll the panel sits in, so [revealThreadId] can be brought into view. */
@@ -121,9 +105,8 @@ internal fun CommentsInspector(
   var draft by remember { mutableStateOf("") }
   var reply by remember(selectedThreadId) { mutableStateOf("") }
   var showResolved by remember { mutableStateOf(false) }
-  // Where each thread card sits in the scrolled content, recorded on layout so the one a link
-  // named can be scrolled to once its position is known — which is a frame or two after the panel
-  // first draws, and is why this is state rather than something read at the call.
+  // Each thread card's offset in the scrolled content, recorded on layout so a linked thread can be
+  // scrolled to once positioned.
   val threadOffsets = remember { mutableStateMapOf<String, Int>() }
   var revealed by remember(revealThreadId) { mutableStateOf(revealThreadId == null) }
   val revealOffset = if (revealed) null else revealThreadId?.let(threadOffsets::get)
@@ -217,9 +200,8 @@ internal fun CommentsInspector(
                 CommentAnchorChoice.Layer -> DesignCommentAnchor(nodeId = selectedNodeId)
                 CommentAnchorChoice.LastMark ->
                   lastMark?.let { mark ->
-                    // Both the mark and the point it resolves to today. The mark is the link a
-                    // reader follows; the point is what keeps the pin on the frame after the
-                    // reference is replaced and the stroke is gone.
+                    // Both the mark and its current point: the mark is the link to follow; the
+                    // point keeps the pin after the reference is replaced.
                     val centre = DesignCommentAnchor(markId = mark.id).pointOn(reference.marks)
                     DesignCommentAnchor(
                       markId = mark.id,
@@ -258,11 +240,8 @@ internal fun CommentsInspector(
 
   HorizontalDivider(Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline)
 
-  // A thread the URL named is shown whether or not it is resolved, and without turning "Show
-  // resolved" on for everything else. A permalink to a conversation that was settled is exactly the
-  // link somebody sends to explain a decision, and hiding it behind a toggle the reader does not
-  // know to press makes that link open a panel with nothing in it — the reveal below would also
-  // wait forever for an offset no card ever records.
+  // A thread the URL named is shown even if resolved (permalinks often point at settled decisions),
+  // without enabling "Show resolved" for the rest.
   val shown =
     if (showResolved) board.threads
     else board.threads.filterNot { it.resolved && it.id != revealThreadId }
@@ -340,9 +319,8 @@ private fun CommentThreadCard(
       .hoverable(hover)
       .padding(top = 8.dp)
       .onGloballyPositioned { coordinates ->
-        // Where this card sits inside the scrolled column, asked of the parent rather than of the
-        // root: the panel's own position on screen moves with the window, and the number the
-        // scroll takes is an offset into the content.
+        // Offset within the scrolled column (relative to the parent), which is what the scroll
+        // takes.
         coordinates.parentLayoutCoordinates?.let {
           onPositioned(it.localPositionOf(coordinates, Offset.Zero).y.roundToInt())
         }
@@ -369,9 +347,7 @@ private fun CommentThreadCard(
         )
       }
     }
-    // Collapsed shows the question and how many answers it drew; expanded shows the conversation.
-    // The opening line is the title on purpose — the last word on a thread is rarely the point of
-    // it, and a panel that showed the most recent reply would make every thread read the same.
+    // Collapsed shows the opening comment and the reply count; expanded shows the conversation.
     val visible = if (expanded) thread.comments else listOfNotNull(thread.opening)
     visible.forEach { comment ->
       Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
@@ -424,10 +400,7 @@ private fun CommentThreadCard(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
       TextButton(onClick = onToggle) { Text(if (expanded) "Collapse" else "Open") }
-      // The reason this panel needed a link at all: a thread is the one thing in a design a
-      // person quotes somewhere else, and until now the only way to say which one was to describe
-      // it. Every row carries it, open or collapsed — you do not have to expand a thread to point
-      // at it.
+      // Every thread row, open or collapsed, offers a link to it.
       onCopyLink?.let {
         TextButton(
           onClick = it,
@@ -480,11 +453,8 @@ internal fun DesignCommentThread.anchorLabel(
 }
 
 /**
- * Comment pins, over the frame, in the same coordinate space the marks are drawn in.
- *
- * Real composables rather than a [androidx.compose.foundation.Canvas] pass, because a pin is
- * something a person clicks and a screen reader announces — the presence overlay beside it draws
- * rectangles nobody interacts with, which is why that one is a canvas and this one is not.
+ * Comment pins, over the frame, in the marks' coordinate space. Real composables (not a Canvas
+ * pass) because pins are clickable and announced by screen readers.
  */
 /**
  * The comment thread a pointer is over in the panel, shared with the canvas's [CommentPinOverlay];

@@ -3,51 +3,26 @@ package ee.schimke.composeai.uibuilder.export
 import ee.schimke.composeai.discovery.ComponentRecord
 
 /**
- * The source the **native preview lane** compiles for a Wear widget design.
+ * The source the native preview lane compiles for a Wear widget design.
  *
- * ## Why the exported widget file is not what this lane submits
+ * Not [WearWidgetCodeExporter]'s artifact, which is shaped for a reader: pictures as parameters
+ * (which would render as blank placeholders here), a `@Preview` per host shape, and widget-class
+ * ceremony. This writes only the `@RemoteComposable` body with pictures inlined, the widget's
+ * `WearWidgetBrush`, and the selected host shape's `WearWidgetParams` (padding and radius from
+ * `hostSpec`). The server writes the preview entry.
  *
- * [WearWidgetCodeExporter] writes the artifact a designer keeps, and every choice in it is made for
- * a reader who will paste it into their own module: a `GlanceWearWidget` class, the
- * `WearWidgetDocument` it provides, a content picture asked for as a **parameter** because it is
- * application data, and a `@Preview` per host container shape driven by the shipped
- * `WidgetPreviewParams` providers because those are the only container specs such a file can name.
- *
- * Each of those is exactly wrong for a lane whose whole job is to draw *this design*:
- *
- * 1. nothing downstream can pass an argument, so a picture asked for as a parameter arrives as the
- *    blank 1×1 placeholder the widget class defaults to — a render with a hole in it where the
- *    canvas beside it shows the album art;
- * 2. the providers' `@Preview` per shape is several frames, and this lane draws the one host shape
- *    the editor is showing; and
- * 3. the widget class and its `provideWidgetData` are ceremony around a body nobody here calls
- *    through them.
- *
- * So this writes the three things the lane actually needs and nothing else: the `@RemoteComposable`
- * body with its pictures **inlined**, the widget's own `WearWidgetBrush`, and the
- * `WearWidgetParams` of the selected predefined host shape. Padding and radius are the host's
- * (`hostSpec`), never the design's: a legacy override on the container is ignored. The preview
- * entry that puts them together lives in the server, beside the entry it already synthesizes for a
- * screen.
- *
- * ## What it still does not do
- *
- * It does not tag nodes. A `testTag` is a Compose UI modifier and this body is Remote Compose —
- * recorded into a document, not composed into a semantics tree — so a widget's frame comes back as
- * a picture without the clickable overlay a screen's has. That is the honest outcome rather than a
- * gap to paper over: the layers panel still selects, and a rectangle the lane could not measure is
- * one it must not draw.
+ * Nodes are not tagged: Remote Compose has no semantics tree, so a widget frame has no clickable
+ * overlay.
  */
 internal object WearWidgetNativePreviewExporter {
 
   /** What a design generates for this lane, or why it does not. */
   sealed interface Result {
     /**
-     * @property name the base identifier the file declares three things under — `<name>Content`,
-     *   `<name>Background` and `<name>Params`. One name rather than three, because the entry the
-     *   server writes derives them and a trio on the wire is three ways for them to disagree.
-     * @property widthDp the frame the container occupies: the content box plus its padding on both
-     *   edges, which is what `WearWidgetPreview` measures and what the canvas already draws.
+     * @property name the base identifier for `<name>Content`, `<name>Background` and `<name>Params`
+     *   (the server derives all three).
+     * @property widthDp the container's frame: content plus padding on both edges, as
+     *   `WearWidgetPreview` measures and the canvas draws.
      */
     data class Emitted(
       val source: String,
@@ -60,13 +35,10 @@ internal object WearWidgetNativePreviewExporter {
   }
 
   /**
-   * @param shape which host container to build the params for. The design does not carry this — the
-   *   frame is the host's — so it arrives from whoever asked for the render, and the editor's
-   *   canvas is drawing the same shape beside this pane.
-   * @param components the catalog's own component record, by component id, for the fallback in
-   *   `RemoteContentEmitter`. The same map the export lane passes, because a design that exports
-   *   and does not render — or renders and does not export — is the one disagreement between the
-   *   two surfaces worth refusing outright.
+   * @param shape which host container to build params for; the requester supplies it, matching the
+   *   editor's canvas.
+   * @param components the catalog's component record by id, for `RemoteContentEmitter`'s fallback —
+   *   the same map the export lane passes, so render and export cannot disagree.
    */
   fun export(
     authored: UiBuilderDocument,
@@ -90,9 +62,7 @@ internal object WearWidgetNativePreviewExporter {
 
     val contentIds = root.slots["content"].orEmpty()
     val refusals = mutableListOf<String>()
-    // The same throwaway probe the two other emitters run, and for the same reason: the theme
-    // wrapper moves every line of the body one level right, and whether it is wanted is something
-    // an emitter only learns by emitting. Its refusals are dropped; the real pass below reports.
+    // The same throwaway depth probe as the other emitters; its refusals are dropped.
     val depth =
       if (
         RemoteContentEmitter(
@@ -165,9 +135,7 @@ internal object WearWidgetNativePreviewExporter {
           appendLine()
           appendLine("@RemoteComposable")
           appendLine("@Composable")
-          // No parameters, and that is the difference from every other emitter here: the pictures
-          // are inlined above rather than asked for, because this function's only caller is a
-          // generated `@Preview`.
+          // No parameters: pictures are inlined, since the only caller is a generated `@Preview`.
           appendLine("fun ${name}Content() {")
           emitter.stateLocals().forEach { appendLine("$INDENT$it") }
           if (emitter.usesTheme) {
@@ -184,9 +152,8 @@ internal object WearWidgetNativePreviewExporter {
           }
           appendLine("}")
           appendLine()
-          // A function rather than a `val`, for the reason the widget's `provideWidgetData` is one:
-          // a theme-token background instantiates a `RemoteColorScheme` first, and a top-level val
-          // reading an inlined bitmap declared below it would compile to "must be initialized".
+          // A function, not a `val`: a top-level val reading an inlined bitmap declared below would
+          // not be initialized.
           appendLine("fun ${name}Background(): WearWidgetBrush {")
           background.locals.forEach { appendLine("$INDENT$it") }
           appendLine("${INDENT}return ${background.expression}")
@@ -206,9 +173,7 @@ internal object WearWidgetNativePreviewExporter {
           appendLine("$INDENT${INDENT}verticalPaddingDp = ${verticalPadding.dpLiteral()},")
           appendLine("$INDENT${INDENT}cornerRadiusDp = ${cornerRadius.dpLiteral()},")
           appendLine("$INDENT)")
-          // Below the declarations for the reason the widget export puts them there: a base64 PNG
-          // is thousands of columns, and a reader who has to scroll past it to reach the body has
-          // been handed a worse file than one who can stop reading at the params.
+          // Inlined bitmaps go last, so readers can stop before the base64.
           inlineBitmapDeclarations(emitter.inlineBitmaps).forEach {
             appendLine()
             appendLine(it)
@@ -240,8 +205,8 @@ internal val WearWidgetScaffoldSize.containerType: String
     }
 
 /**
- * Inert in a preview capture — it only matters to a live host round-trip — and distinct per size
- * for the reason `wear-m3-catalog`'s stickers keep it distinct: two widgets in one carousel.
+ * Inert in a preview capture, but distinct per size (as wear-m3-catalog's stickers keep it) for two
+ * widgets in one carousel.
  */
 internal val WearWidgetScaffoldSize.instanceId: Int
   get() =

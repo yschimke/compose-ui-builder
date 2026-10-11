@@ -17,17 +17,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The proof the catalog contract exists for: a catalog **this binary has never heard of** becomes a
- * servable capability catalog from its own published files.
- *
- * `test-catalog` is deliberately not one of the three ids in `ProductionUiBuilderRuntime` — there
- * is no `testCatalog()` synthesiser, no enum value, no `when` branch. If this passes, the only
- * thing the server knows about it came out of the two files below, which is exactly what
- * `docs/design/UI_BUILDER_CATALOG_CONTRACT.md` sets as the test of the whole design.
- *
- * Kept trivial on purpose. The real catalogs are proved equivalent to what the server synthesises
- * by `.github/scripts/ui-builder-equivalence.sh` against the frozen goldens; this is about the
- * *route* being open, not about any particular catalog's contents.
+ * A catalog this binary has never heard of (`test-catalog`: no synthesiser, enum value or `when`
+ * branch) becomes servable from its own published files — the test of
+ * `docs/design/UI_BUILDER_CATALOG_CONTRACT.md`. Kept trivial: real catalogs are checked by
+ * `.github/scripts/ui-builder-equivalence.sh`.
  */
 class PublishedUiBuilderCatalogTest {
 
@@ -256,22 +249,16 @@ class PublishedUiBuilderCatalogTest {
 
   @Test
   fun `an unannotated component gets the derived id a saved design would store`() {
-    // `RTLText` -> `rtl-text`: a run of capitals is one word. This is the one derivation the reader
-    // and the generator have to agree on without a field to agree through, so it is pinned here as
-    // well as by the equivalence gate.
+    // A run of capitals is one word. The reader and generator must agree on this derivation, so it
+    // is pinned here and by the equivalence gate.
     assertEquals("rtl-text", PublishedUiBuilderCatalog.slug("RTLText"))
     assertEquals("checkbox-button", PublishedUiBuilderCatalog.slug("CheckboxButton"))
     assertEquals("button2", PublishedUiBuilderCatalog.slug("Button2"))
     assertEquals("top-app-bar", PublishedUiBuilderCatalog.slug("TopAppBar"))
-    // The two cases that separate this from a naive port, both reported by Codex against the
-    // JavaScript one in `.github/scripts/ui-builder-equivalence.sh`, which pins the same table.
-    //
-    // `lowercaseChar()` is a SINGLE-character mapping: U+0130 lowercases to `i`, where a
-    // JavaScript `toLowerCase()` yields `i` plus a combining dot.
+    // Cases that separate this from a naive port (also pinned by the JavaScript port in
+    // `.github/scripts/ui-builder-equivalence.sh`): `lowercaseChar()` maps U+0130 to a single `i`.
     assertEquals("i-button", PublishedUiBuilderCatalog.slug("\u0130Button"))
-    // And this loop walks `Char`s, so a supplementary code point is two surrogates, neither of
-    // which is a letter — both separate. A port iterating code points keeps it and produces an id
-    // with half a surrogate pair in it.
+    // The loop walks `Char`s, so a supplementary code point's two surrogates both separate.
     assertEquals("a-b", PublishedUiBuilderCatalog.slug("A\uD801\uDC00B"))
     // `isLetterOrDigit()` is `isLetter() || isDigit()`, and `isDigit()` is the DECIMAL category
     // alone — a superscript two is numeric but not a digit, so it separates.
@@ -279,9 +266,7 @@ class PublishedUiBuilderCatalogTest {
     // And the word-boundary test asks `isDigit()` too, so a decimal digit outside ASCII starts a
     // word after it — the same predicate as the admission test, which a port can easily split.
     assertEquals("a\u0662-b", PublishedUiBuilderCatalog.slug("A\u0662B"))
-    // `isLowerCase()` is a case PROPERTY, not "differs from its uppercase form": U+02B0 is
-    // lowercase to the JVM and has no distinct case conversion, so a round-trip heuristic — which
-    // is what a port reaches for — calls it neither upper nor lower and misses the boundary.
+    // `isLowerCase()` is a case property: U+02B0 is lowercase with no distinct case conversion.
     assertEquals("\u02B0-a", PublishedUiBuilderCatalog.slug("\u02B0A"))
   }
 
@@ -307,10 +292,8 @@ class PublishedUiBuilderCatalogTest {
 
   @Test
   fun `a file that expects a record is refused when none arrived`() {
-    // The dangerous case, and the reason it is a refusal rather than a shrug: composing a policy
-    // that expects an inventory against no inventory SUCCEEDS, with the builtins alone — so a cold
-    // host would replace a full shelf with a nearly empty one and say nothing. The file states the
-    // count it was generated against, which is what makes the mistake detectable at all.
+    // Composing against no inventory would succeed with builtins alone and silently shrink the
+    // shelf; the file's stated record count makes it detectable, so it is refused.
     val result = PublishedUiBuilderCatalog.compose(published(), record = null, exports)
     assertTrue(result is PublishedUiBuilderCatalog.Result.Unusable)
     assertTrue(
@@ -320,24 +303,9 @@ class PublishedUiBuilderCatalogTest {
   }
 
   /**
-   * Everything a builtin declares reaches the shelf, which nothing checked.
-   *
-   * A builtin is the only way a catalog can offer a component the record cannot carry — a host
-   * frame, a shape, an image asset with no call site — so what it declares is all there is. Three
-   * fields were being read past:
-   * - `properties` was decoded under the server's own name `propertyCapabilities`, which
-   *   `ui-builder.policy.schema.json` forbids (`additionalProperties: false`), so every builtin a
-   *   real catalog could publish composed with **zero** properties;
-   * - `slots` was `Map<String, JsonElement>`, so `required` became `min = 0` and `acceptedTraits`
-   *   vanished — the rules that stop a design putting a scaffold inside a widget's background slot
-   *   with it;
-   * - `traits` was hardcoded to the empty list, so no other component's slot could accept one.
-   *
-   * `max` joined them later, for the same reason and from the same case: a `remote-m3` widget
-   * container hosts exactly one child and a builtin had no way to write the bound.
-   *
-   * Each is asserted here against the wire names, so the fixture is a document a catalog could
-   * actually publish rather than one written to match the reader.
+   * Everything a builtin declares reaches the shelf: `properties` (under its wire name), `slots`
+   * (with `required`, `max` and `acceptedTraits`) and `traits`. Asserted against wire names so the
+   * fixture is a document a catalog could actually publish.
    */
   @Test
   fun `a builtin's declared vocabulary reaches the shelf`() {
@@ -380,9 +348,7 @@ class PublishedUiBuilderCatalogTest {
       }
 
     assertEquals("The Host", host.displayName)
-    // `screen-root` is the structural role, and the shelf role that follows from it is Scaffold —
-    // not the Container that "it has slots" would derive. A design root arriving as an ordinary
-    // container is what the editor then calls it.
+    // `screen-root` maps to the Scaffold shelf role, not the Container slots would derive.
     assertEquals("Scaffold", host.role)
     assertEquals(listOf("WidgetHost"), host.traits)
     assertEquals(listOf("padding"), host.modifierCapabilities)
@@ -402,9 +368,7 @@ class PublishedUiBuilderCatalogTest {
       content.cardinality.min,
       "a required slot that accepts zero children is not required",
     )
-    // The other end, and the last thing a frozen widget container needed a builtin to say. Without
-    // it `remote-m3`'s two `WidgetContainer` components composed with an unbounded `content` slot,
-    // so the shelf offered a widget host a design could put three children into.
+    // `max`: a widget container hosts exactly one child.
     assertEquals(
       1,
       content.cardinality.max,
@@ -424,10 +388,8 @@ class PublishedUiBuilderCatalogTest {
 
   @Test
   fun `a builtin states its shelf role, its lanes, its call and its slot order`() {
-    // Five things this composed for a builtin by DERIVING them, which is not the same as a catalog
-    // being silent: the derived answer was served as though the catalog had agreed with it. Each
-    // assertion below is a value the derivation gets wrong for the donor catalog that publishes
-    // the builder's own vocabulary (`compose-foundation`, yschimke/m3-catalog).
+    // Values the derivation gets wrong for the donor catalog (`compose-foundation`); a stated value
+    // must win over the derivation.
     val document =
       published(
         extra =
@@ -470,9 +432,7 @@ class PublishedUiBuilderCatalogTest {
     // from the adapter id, so stating one field is not a claim about the other two.
     assertEquals("true", box.wasm.platformSupported.toString())
     assertEquals("Drawn on the canvas by the `layout/box` adapter.", box.wasm.notes)
-    // A builtin has no record entry, so before it could state this it published no code capability
-    // whatsoever — and nothing in a foundation catalog's record can name `Box`, because discovery
-    // scopes library components to material3/material/wear.
+    // A builtin can now state its code capability; no foundation record can name `Box`.
     assertEquals("Box", assertNotNull(box.code).symbol)
     assertEquals(listOf("androidx.compose.foundation.layout.Box"), assertNotNull(box.code).imports)
     assertEquals(SvgCapabilityStatusV1.VERIFIED, assertNotNull(box.svg).status)
@@ -492,10 +452,8 @@ class PublishedUiBuilderCatalogTest {
 
   @Test
   fun `the editing canvas's mock reaches the wire for a component and a builtin`() {
-    // A container drawn as itself cannot show a child past the frame's edge, so a catalog states
-    // how the canvas lays its children out while an author is inside it. The policy states it
-    // beside `canvas` for both kinds of component; the wire nests it under `wasm`, because that is
-    // the canvas-lane block there — and this composition is what carries it across.
+    // The editing-canvas layout for a container: stated beside `canvas` in the policy, nested under
+    // `wasm` on the wire.
     val document =
       published(
         extra =
@@ -537,9 +495,7 @@ class PublishedUiBuilderCatalogTest {
     assertEquals("190", assertNotNull(lazyList.wasm.unrolled).cellWidthDp.toString())
     assertEquals("4", assertNotNull(lazyList.wasm.unrolled).spacingDp.toString())
 
-    // The layout word is the BUILDER's vocabulary, exactly as `canvas` is, so the server carries a
-    // name it has never heard of rather than refusing it — the builder resolves it against its own
-    // registry and an unknown name is inert.
+    // The layout word is builder vocabulary, so an unknown name is carried, not refused.
     val tabs = components.single { it.componentId == "test-catalog/tabs" }
     assertEquals("carousel-of-cards", assertNotNull(tabs.wasm.unrolled).layout)
 
@@ -551,11 +507,8 @@ class PublishedUiBuilderCatalogTest {
 
   @Test
   fun `a word this build cannot decode costs its field, never the catalog`() {
-    // `adapterStatus`, `svg.status` and `svg.fallback` are closed enums on the wire, and a
-    // capability document carrying a word the builder cannot decode fails the WHOLE document
-    // rather than one field. A catalog is published once and read by builders of several vintages
-    // that its publisher cannot upgrade, so a typo — or a word from a later minor — must cost that
-    // field and leave the palette standing.
+    // Closed wire enums: an undecodable word would fail the whole capability document, so a typo or
+    // a newer word costs only that field.
     val document =
       published(
         extra =

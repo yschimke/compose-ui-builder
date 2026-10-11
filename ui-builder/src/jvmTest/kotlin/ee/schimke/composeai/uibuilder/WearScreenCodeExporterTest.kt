@@ -28,12 +28,9 @@ class WearScreenCodeExporterTest {
   private val environment = JsonObject(emptyMap())
 
   /**
-   * The whole point of the stand-in, in one assertion set.
-   *
-   * The canvas draws a stadium with a plain Column in it. What has to come out the other end is the
-   * real thing: `ScreenScaffold` around a `TransformingLazyColumn`, with the row transformation on
-   * every item. If the generated source ever stops carrying `transformedHeight` and
-   * `SurfaceTransformation`, the fake container has stopped being a stand-in and become a lie.
+   * The canvas draws a plain Column in a stadium; the generated source must be the real
+   * `ScreenScaffold` around a `TransformingLazyColumn`, with `transformedHeight` and
+   * `SurfaceTransformation` on every item.
    */
   @Test
   fun `the screen generates a real ScreenScaffold over a TransformingLazyColumn`() {
@@ -60,9 +57,8 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * The status strip is `AppScaffold`'s, and `AppScaffold` is the app root's rather than the
-   * screen's: the previews wrap the screen in it, frozen at the design's time, and the screen
-   * itself is a `ScreenScaffold` an app can drop into its own navigation.
+   * The status strip is `AppScaffold`'s, which belongs to the app root: previews wrap the screen in
+   * it (frozen at the design's time), and the screen itself is a droppable `ScreenScaffold`.
    */
   @Test
   fun `a declared timeText is the previews' AppScaffold, not the screen's`() {
@@ -83,9 +79,8 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * The native lane renders without the export's previews, so it is handed a wrapper that puts the
-   * screen in its `AppScaffold`: a native render without the status strip would be a picture of a
-   * screen no watch shows.
+   * The native lane renders without the export's previews, so it gets a wrapper putting the screen
+   * in its `AppScaffold`.
    */
   @Test
   fun `the native lane is given the screen inside its AppScaffold`() {
@@ -122,20 +117,15 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * The native preview lane compiles this source against a **catalog's runtime bundle**, and
-   * neither `compose-ui-tooling` nor compose-ai-tools' `preview-annotations` is on one. Emitting
-   * the fan-out anyway made every Wear design fail to compile there with `Unresolved reference
-   * 'WearPreviewDevices'` — a message about artifacts the host deliberately does not have, read as
-   * a broken design. The lane wraps the composable in its own `@Preview`, so the artifact's
-   * previews are pure cost for it.
+   * The native preview lane compiles against a catalog runtime bundle without `compose-ui-tooling`
+   * or `preview-annotations`, and wraps the composable in its own `@Preview`, so the preview
+   * fan-out must be omitted there.
    */
   @Test
   fun `the native lane's source carries no preview fan-out, and the artifact's does`() {
     val document = wearScreenUiBuilderDocument("activity", pin, environment)
-    // `tagNodes = true` alone, with no `previews` argument: the lane asks for tags, and that is
-    // the whole of what it has to say. Requiring it to also spell out `previews = false` would be
-    // an API change the server could not compile against until this module published — a
-    // two-repository release for one flag.
+    // `tagNodes = true` alone must suffice, so the server needn't pass `previews = false` (a
+    // cross-repo API change).
     val native =
       assertIs<WearScreenCodeExporter.Result.Emitted>(
           WearScreenCodeExporter.export(
@@ -177,12 +167,8 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * A borrowed component with no Wear counterpart is named, not approximated.
-   *
-   * `wear-m3` lends its content components from `m3-catalog` while it has none of its own, and the
-   * canvas will happily draw all of them. Only some map to Wear Compose Material 3, and a generator
-   * that guessed at the rest would emit Kotlin that does not compile — which is worse than a
-   * refusal that says which node to replace.
+   * A borrowed `m3-catalog` component with no Wear counterpart is refused by name rather than
+   * approximated with uncompilable Kotlin.
    */
   @Test
   fun `a borrowed component with no Wear counterpart is refused by node`() {
@@ -204,9 +190,8 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * Authored text is escaped for the literal it lands in. The upstream ComposeStarter greeting is
-   * two lines — `"From the Round world,\nHello, Android!"` — and used to generate a `"…"` literal
-   * broken across two source lines, which does not compile.
+   * Authored text is escaped for the literal it lands in (e.g. the two-line ComposeStarter
+   * greeting).
    */
   @Test
   fun `a label with a line break or a dollar sign is written as an escaped literal`() {
@@ -231,8 +216,8 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * Two ids that fold to one Kotlin name get distinct state, not a redeclaration: `volume-level`
-   * and `volume_level` both read `volumeLevelValue`.
+   * Two ids that fold to one Kotlin name (`volume-level`, `volume_level`) get distinct state, not a
+   * redeclaration.
    */
   @Test
   fun `node ids that fold to the same state name get distinct locals`() {
@@ -264,8 +249,8 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * A button's lines are written into its slots only when their column says nothing of its own: a
-   * column with authored modifiers keeps the content form, and its modifiers with it.
+   * A button's lines go into its slots only when their column has no modifiers of its own;
+   * otherwise the content form keeps them.
    */
   @Test
   fun `a button's column with modifiers is not collapsed into slots`() {
@@ -321,13 +306,10 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * A **pack** node — another catalog's composable admitted into `wear-m3` — is written from its
-   * record rather than refused as a stranger.
-   *
-   * The fixture is Confetti's Wear `SectionHeader` as its record describes it: a `String` text, a
-   * defaulted `Modifier`, a defaulted `SurfaceTransformation`. Dropped into the list as an item it
-   * takes the design's text, the row treatment on both the modifier and the transformation argument
-   * — the same two `ListHeader` takes — and its callable is imported from the record.
+   * A **pack** node (another catalog's composable admitted into `wear-m3`) is written from its
+   * record rather than refused. The fixture is Confetti's Wear `SectionHeader`: in a list it gets
+   * the design's text, the row treatment on its modifier and transformation (as `ListHeader` does),
+   * and its import from the record.
    */
   @Test
   fun `a pack component in the list is written from its record`() {
@@ -361,9 +343,9 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * A required parameter the design does not set takes the placeholder the record's proven call
-   * site used for it, read back out of `code.call` by name; a defaulted one it does not set is
-   * omitted; and a slot holds the node's children, emitted as Wear content.
+   * An unset required parameter takes the placeholder from the record's proven call site
+   * (`code.call`); an unset defaulted one is omitted; a slot holds the node's children as Wear
+   * content.
    */
   @Test
   fun `a pack container takes its placeholders from the proven call site and its children in its slot`() {
@@ -432,8 +414,7 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * A required parameter with neither a design value nor a placeholder refuses by node and name,
-   * rather than inventing a value that the compile would then reject in the pack's vocabulary.
+   * A required parameter with neither a design value nor a placeholder is refused by node and name.
    */
   @Test
   fun `a pack node missing a required value with no placeholder is refused by name`() {
@@ -484,9 +465,9 @@ class WearScreenCodeExporterTest {
     JsonObject(mapOf("type" to JsonPrimitive(type), "value" to value))
 
   /**
-   * Three Confetti Wear components as a pack's aliased record describes them — `SectionHeader` as
-   * its real signature reads, and two shapes it does not have (a container with a required
-   * callback, a leaf whose only parameter has no placeholder) so each rule has a case.
+   * Three Confetti Wear components as a pack's aliased record describes them: `SectionHeader` as it
+   * really is, plus two invented shapes (a container with a required callback, a leaf whose only
+   * parameter has no placeholder) so each rule has a case.
    */
   private fun confettiWear(): Map<String, ComponentRecord> =
     listOf(
@@ -594,15 +575,9 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * Three properties the generated screen reads and the canvas cannot, each of which was declared
-   * and honoured nowhere.
-   *
-   * `scrollIndicator` is the design's choice of chrome and the capture guard is not: the emitter
-   * always drew an indicator, so a design that turned it off still generated one. `stableKey` is
-   * the item's identity, which only the generated `item(key = …)` can carry — the canvas draws the
-   * extent as a Column, with no item identity to keep, which is the same division the mobile lane
-   * already makes. `maxLines` and `overflow` belong to the label rather than the header, because
-   * upstream's `ListHeader` takes a content lambda and the string is a `Text` inside it.
+   * Three properties the generated screen reads and the canvas cannot: `scrollIndicator` (design
+   * chrome), `stableKey` (item identity, only in `item(key = …)`), and the label's
+   * `maxLines`/`overflow` (inside `ListHeader`'s content lambda).
    */
   @Test
   fun `the properties only the generated screen can honour are written`() {
@@ -672,12 +647,8 @@ class WearScreenCodeExporterTest {
   }
 
   /**
-   * A disabled button generates a disabled button, in both places a button can be.
-   *
-   * The emitter used to drop `enabled` on the floor while the canvas honoured it, so a design that
-   * disabled one published a picture of a disabled button and source for a working one. The edge
-   * button is the interesting half: it is generated by a different branch, from a `wear-m3/button`
-   * node in the scaffold's slot.
+   * A disabled button generates a disabled button, including the edge button, which comes from a
+   * different branch (a `wear-m3/button` in the scaffold's slot).
    */
   @Test
   fun `a disabled Wear button is written disabled`() {

@@ -26,12 +26,9 @@ import ee.schimke.composeai.uibuilder.editor.INSTALL_FIRST_HINT
 import ee.schimke.composeai.uibuilder.editor.INSTALL_FIRST_TITLE
 
 /**
- * The comments panel's "Notify me about replies" switch, or nothing.
- *
- * A row in the panel's header, under the sentence that says what the panel is: it is about the
- * discussion as a whole, not one thread, and a person who has just posted a question is the person
- * who wants to know when it is answered. See [CommentNotificationsState] for when each state is
- * shown and for why [CommentNotificationsState.Hidden] is the answer more often than not.
+ * The comments panel's "Notify me about replies" switch, or nothing: a header row, since it
+ * concerns the whole discussion. See [CommentNotificationsState] for when each state shows and why
+ * [CommentNotificationsState.Hidden] is common.
  */
 @Composable
 internal fun CommentNotificationsToggle(

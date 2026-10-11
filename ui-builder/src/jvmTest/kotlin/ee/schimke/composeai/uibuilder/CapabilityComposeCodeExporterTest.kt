@@ -104,17 +104,15 @@ class CapabilityComposeCodeExporterTest {
     assertEquals(document.id, first.provenance.designId)
     assertEquals(document.revision, first.provenance.designRevision)
     assertEquals("candidate", first.provenance.capabilityDigest)
-    // The scaffold is no longer a compatibility helper, so there is no longer a diagnostic saying
-    // so: `BuilderSupportingPaneScaffold` is a wrapper that hands the design's two booleans to the
-    // real `SupportingPaneScaffold`, and the adaptive decision is the library's.
+    // No compatibility-helper diagnostic: `BuilderSupportingPaneScaffold` only hands the design's
+    // two booleans to the real `SupportingPaneScaffold`.
     assertFalse(first.diagnostics.any { it.code == "ADAPTIVE_COMPATIBILITY_HELPER" })
     assertTrue(source.contains("SupportingPaneScaffold(directive = directive"))
     assertTrue(
       source.contains("import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold")
     )
-    // The directive is the scaffold's own bounds, not the window's. A scaffold under a `width` or
-    // any narrower parent inside a wide window would otherwise ask the window, request two
-    // partitions, and disagree with the preview pane that measured the real bounds.
+    // The directive comes from the scaffold's own bounds, not the window's, so a constrained
+    // scaffold matches the preview pane.
     assertTrue(source.contains("WindowSizeClass.compute(maxWidth.value, maxHeight.value)"))
     assertFalse(first.diagnostics.any { it.code == "ASSET_BINDING_REQUIRED" })
     assertEquals(artworkAdapter.id, first.provenance.assetAdapterId)
@@ -146,7 +144,7 @@ class CapabilityComposeCodeExporterTest {
 
   /**
    * The root surface's typefaces wrap it in a `MaterialTheme` whose typography re-points each named
-   * role at a Google Fonts family the file declares, as the canvas draws everything inside it.
+   * role at a declared Google Fonts family, as the canvas draws.
    */
   /**
    * The root surface's default text role ([ThemeTextStyle]) is provided inside the theme, so text
@@ -252,10 +250,8 @@ class CapabilityComposeCodeExporterTest {
 
   @Test
   fun `a design without the adaptive scaffold carries neither its helper nor its imports`() {
-    // Material 3 Adaptive is a separate artifact on a separate version line, so an unused import of
-    // it is not free the way an unused `androidx.compose.material3.*` one is: it stops the
-    // generated file compiling in a project that never added the dependency. The helper and the
-    // imports are gated on the same predicate so they cannot come apart.
+    // Adaptive is a separate artifact, so an unused import breaks compilation without the
+    // dependency; helper and imports share one predicate.
     val plain =
       document.copy(
         roots = listOf("solo"),
@@ -330,12 +326,9 @@ class CapabilityComposeCodeExporterTest {
 
   @Test
   fun `the adaptive imports appear exactly when the source calls the adaptive helper`() {
-    // The invariant rather than one escape route. A document-wide "does any node use it?" is a
-    // *prediction* about emission, and emission drops nodes for reasons a predicate has to keep up
-    // with — today an unplaced component's body, tomorrow something else. So the flag is set by
-    // `emitSupportingPane` and the header is written after the body: the only thing that can turn
-    // the imports on is the call being written. This asserts the two agree on every fixture, in
-    // both directions, so a future emitter change cannot drift them apart silently.
+    // The imports are turned on only by `emitSupportingPane` actually writing the call (the header
+    // is written after the body), not by a document-wide prediction. Asserted in both directions on
+    // every fixture.
     val plainRoot =
       document.nodes.getValue("discover-grid").let { grid ->
         document.copy(roots = listOf(grid.id))
@@ -500,9 +493,8 @@ class CapabilityComposeCodeExporterTest {
 
   @Test
   fun `the scoped modifiers are exported from the chain, and the chain outranks the properties`() {
-    // The node is a text inside a column, so `alignHorizontal` and `weight` are both in scope. It
-    // also carries the property spelling of an alignment, which is what documents written before
-    // the vocabulary existed say. Exporting both would emit `.align` twice and not compile.
+    // A text in a column carrying the legacy property alignment as well: exporting both would emit
+    // `.align` twice.
     val title = document.nodes.getValue("detail-podcast-title")
     val edited =
       document.copy(
@@ -821,9 +813,7 @@ class CapabilityComposeCodeExporterTest {
 
   @Test
   fun `a dimension the inspector offers is a dimension the export emits`() {
-    // Every `…Dp` the catalog exposes as a number field used to be editable whether or not any
-    // emitter read it, so a grid's spacing, a card's elevation, a divider's thickness and a
-    // surface's tonal elevation were authored, stored, and discarded by both projections.
+    // `…Dp` properties are editable only where an emitter reads them.
     val edited =
       document.copy(
         nodes =

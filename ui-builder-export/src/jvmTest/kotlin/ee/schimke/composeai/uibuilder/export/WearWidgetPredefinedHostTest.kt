@@ -8,12 +8,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * A widget's frame is one of the predefined host shapes and nothing else.
- *
- * Designs saved while padding and radius were authorable still carry `horizontalPaddingDp`,
- * `verticalPaddingDp` and `cornerRadiusDp` on the container. They used to draw a frame no launcher
- * produces (#492: "999 gives a pill", "padding grows the frame"). Now every lane ignores them: the
- * native preview builds the selected shape's published params, and the export no longer refuses.
+ * A widget's frame is one of the predefined host shapes and nothing else: legacy
+ * `horizontalPaddingDp`, `verticalPaddingDp` and `cornerRadiusDp` on the container are ignored by
+ * every lane, and the export does not refuse them.
  */
 class WearWidgetPredefinedHostTest {
   private fun float(value: Float) =

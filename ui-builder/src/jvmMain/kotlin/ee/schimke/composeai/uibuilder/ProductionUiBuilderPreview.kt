@@ -21,13 +21,10 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Fixed daemon entrypoint for revision-pinned production exports.
- *
- * The persisted document travels as a named string override on every render. It is decoded inside
- * composition and rendered by the same [UiBuilderSurface] as the interactive Wasm editor; the
- * daemon therefore produces both the exact PNG and its `compose/figma-svg` product from one
- * override-bearing frame. Malformed input fails the render rather than falling back to a different
- * document.
+ * Fixed daemon entrypoint for revision-pinned production exports. The persisted document arrives as
+ * a named string override, is decoded in composition and drawn by the same [UiBuilderSurface] as
+ * the Wasm editor, so one frame yields both the PNG and its `compose/figma-svg`. Malformed input
+ * fails the render rather than falling back.
  */
 @Preview(widthDp = 1280, heightDp = 800)
 @Composable
@@ -63,11 +60,8 @@ internal fun ProductionUiBuilderSurface(
 
 /**
  * [content] with [document]'s pinned catalog's canvas vocabulary provided, or bare when this
- * renderer carries no catalog for the pin.
- *
- * Separate from [ProductionUiBuilderSurface] so a preview that draws a surface of its own (a host
- * shape, a size) gets the same adapters: without them a published component such as
- * `remote-m3/remote-text` draws as "Unsupported component".
+ * renderer carries no catalog for the pin. Separate so previews drawing their own surface get the
+ * same adapters.
  */
 @Composable
 internal fun ProvideProductionCatalog(
@@ -86,10 +80,9 @@ internal fun ProvideProductionCatalog(
   } else {
     CompositionLocalProvider(
       LocalUiBuilderCanvasAdapters provides catalog.productionCanvasAdapterIds(),
-      // The editor provides both of these beside the adapter ids, and this entrypoint did not: a
-      // mapping is what routes a `remote-m3/remote-title-card`'s slots into the Wear card that
-      // draws it, and the component ids are what let an adapter-less component draw as a named
-      // placeholder rather than as an error.
+      // Provide the adapter mappings (e.g. routing `remote-m3/remote-title-card` slots into the
+      // Wear card) and component ids (so adapter-less components draw as named placeholders), as
+      // the editor does.
       LocalUiBuilderCanvasAdapterMappings provides catalog.productionCanvasAdapterMappings(),
       LocalUiBuilderCatalogComponentIds provides catalog.componentsById.keys,
       LocalUiBuilderFrameGeometry provides catalog.frameGeometry,
@@ -103,16 +96,10 @@ internal fun decodeProductionRendererDocument(source: String): UiBuilderDocument
   productionPreviewJson.decodeFromString(UiBuilderDocument.serializer(), source)
 
 /**
- * The catalog [document] is drawn with: the one this renderer packages for its pin, else the one
- * the host serves ([servedCatalog]), else none.
- *
- * Packaged first, so the catalogs this renderer was built against draw exactly as they always have.
- * The served catalog is for one it predates: a catalog-owned catalog such as `glimmer-catalog`,
- * whose PNG export and design-card thumbnail drew every component as "Unsupported component"
- * because, with no catalog at all, the renderer did not even know they were the catalog's. With it,
- * a component this renderer has no adapter for draws as its named placeholder, children and all,
- * the way the editor's own canvas falls back. An unreadable served catalog is ignored rather than
- * failing the render.
+ * The catalog [document] is drawn with: the one this renderer packages for its pin, else the
+ * host-served one ([servedCatalog]), else none. The served catalog covers catalogs this renderer
+ * predates (e.g. `glimmer-catalog`), so unknown components draw as named placeholders. An
+ * unreadable served catalog is ignored.
  */
 internal fun productionCatalogFor(
   document: UiBuilderDocument,
@@ -135,14 +122,9 @@ internal fun productionPreviewCatalog(document: UiBuilderDocument): CapabilityCa
 }
 
 /**
- * Canvas adapters for components a published catalog serves and the packaged catalog predates.
- *
- * This renderer reads the frozen `remote-m3` golden, while preview.coo.ee serves wear-m3-catalog's
- * published `remote-m3`, which writes text as `remote-m3/remote-text`. The golden has no entry for
- * it, so every widget's text drew as "Unsupported component" in a PNG export. `RemoteText` takes
- * the same arguments as Wear's `Text`, which is the adapter the golden already uses for the rest of
- * the Remote Material 3 family, so that is what draws it here. A catalog that names an adapter of
- * its own for one of these ids keeps it.
+ * Canvas adapters for components a published catalog serves and the packaged catalog predates: the
+ * packaged `remote-m3` golden lacks `remote-m3/remote-text`, which takes the same arguments as
+ * Wear's `Text`. A catalog naming its own adapter keeps it.
  */
 internal val PUBLISHED_COMPONENT_CANVAS_FALLBACKS: Map<String, String> =
   mapOf(REMOTE_TEXT_COMPONENT_ID to "wear-m3/text")

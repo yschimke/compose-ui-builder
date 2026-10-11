@@ -5,10 +5,9 @@
 //   android docs search "wear"            # downloads ~/.android/cli/docs/kbzip/dac.zip once
 //   node scripts/guidelines/extract-guidance.mjs [--zip <dac.zip>] [--prefix <path>] [--out <file>]
 //
-// Every normative sentence ("must", "should", "don't", "avoid", "at least", ...) under the design
-// guides becomes a candidate with the page it came from. Candidates are raw material, not rules:
-// a person rewrites the ones worth checking as entries in docs/guidelines/android-design-guidelines.json,
-// each with a yes/no `check` and a `kind` (structure or visual).
+// Every normative sentence ("must", "should", "don't", ...) under the design guides becomes a
+// candidate with its page. Candidates are raw material: a person rewrites worthwhile ones into
+// docs/guidelines/android-design-guidelines.json with a yes/no `check` and a `kind`.
 
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";

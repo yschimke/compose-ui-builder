@@ -139,11 +139,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The design pinned in the workspace: framed or zoomed, scrolled, and hit-tested.
- *
- * Internal rather than private so a test can measure what the frame hands the design. How big that
- * frame is depends on the density the design is drawn at, which is a fact about a *rendered*
- * composition and not one any amount of reading the arithmetic below settles.
+ * The design pinned in the workspace: framed or zoomed, scrolled, and hit-tested. Internal so a
+ * test can measure the frame, which depends on the rendered density.
  */
 @Composable
 internal fun PinnedDesignCanvas(
@@ -154,19 +151,16 @@ internal fun PinnedDesignCanvas(
   onCanvasBounds: (Rect) -> Unit,
   dropHovered: Boolean,
   /**
-   * Where the drag hovering over the canvas would land, or null while no legal slot is under the
-   * pointer. Both a palette drag and a canvas move resolve one, and the marker is drawn from it.
+   * Where the hovering drag would land, or null while no legal slot is under the pointer; the
+   * marker is drawn from it.
    */
   dropPlan: UiBuilderDropPlan? = null,
   /**
-   * The empty recommended slots, drawn as dashed "a component goes here" regions until they are
-   * populated — see [UiBuilderEditorReducer.slotPlaceholders].
+   * Empty recommended slots drawn as dashed placeholders; see
+   * [UiBuilderEditorReducer.slotPlaceholders].
    */
   slotPlaceholders: List<UiBuilderSlotPlaceholder> = emptyList(),
-  /**
-   * The dragged component carried beside the pointer, at the size it would land — a ghost of the
-   * component itself, not of the thumbnail frame it was pictured in.
-   */
+  /** The dragged component carried beside the pointer, at the size it would land. */
   dragPreview: UiBuilderDocument? = null,
   /** The published Remote Compose capture carried while its document bytes are still remote. */
   dragPreviewBitmap: ImageBitmap? = null,
@@ -177,21 +171,20 @@ internal fun PinnedDesignCanvas(
   /** Pointer position in the editor root coordinate space. */
   dragPosition: Offset? = null,
   /**
-   * Where the node a canvas move picked up still sits, in root pixels — drawn as a dashed outline
-   * so the original and the ghost are two things the eye can tell apart.
+   * Where the moved node still sits, in root pixels, drawn dashed to tell it apart from the ghost.
    */
   moveOrigin: UiBuilderPixelBounds? = null,
   /** The canvas pane's own box — the workspace a beside-drop's empty ground is measured against. */
   onWorkspaceBounds: (Rect) -> Unit = {},
   /**
-   * The workspace's current scroll offset, reported so the drag hit-test can read the pointer in
-   * the same (unshifted) layout space the inspection's node boxes answer in.
+   * The workspace's scroll offset, so the drag hit-test can use the same unshifted space as the
+   * inspection's boxes.
    */
   onCanvasScroll: (Offset) -> Unit = {},
   showSelectionOverlay: Boolean,
   /**
-   * Whether the canvas move gesture is on. The editor wires the handlers below; a canvas composed
-   * without them — the tests, the read-only panes — must not let a press-and-hold eat a scroll.
+   * Whether the canvas move gesture is on; off where no handlers are wired so press-and-hold does
+   * not eat a scroll.
    */
   moveDragEnabled: Boolean = false,
   /** A press-and-hold that becomes a drag of the node under the pointer. */
@@ -208,8 +201,8 @@ internal fun PinnedDesignCanvas(
   /** The last measurement against the reference, outlined over the frame. */
   referenceFindings: ReferenceFindings? = null,
   /**
-   * The frame's unclipped box in the editor root, on every placement. The inspection answers in
-   * root pixels and a measurement works in frame dp; this is the conversion between them.
+   * The frame's unclipped box in the editor root on every placement; converts between root pixels
+   * and frame dp.
    */
   onFrameRootBounds: (Rect) -> Unit = {},
   collaborators: List<UiBuilderCollaborator>,
@@ -223,18 +216,15 @@ internal fun PinnedDesignCanvas(
   /** The verbs a layer answers to, for the canvas's own context menu. */
   selectionMenu: (() -> Unit) -> List<UiBuilderMenuEntry>,
   /**
-   * The selection's quick editor, or null while it is closed. Positioned here, because only the
-   * canvas knows where the design is drawn and where there is room beside it. Given the modifier
-   * that makes a part of it the grip the author moves it by.
+   * The selection's quick editor, or null while closed. Positioned here because only the canvas
+   * knows where there is room; [dragHandle] makes part of it a grip.
    */
   hoverEditor: (@Composable (dragHandle: Modifier) -> Unit)?,
   /** A press anywhere else on the canvas closes the quick editor. */
   onHoverEditorDismiss: () -> Unit = {},
   /**
-   * Whether [hoverEditor] takes the keyboard while it is open. False for the quick editor, whose
-   * fields take the caret when clicked while the editor's keys stay the editor's; true for a card
-   * that is only for typing — the node's Comment field — so every key goes to it, and a press
-   * outside it closes it.
+   * Whether [hoverEditor] takes the keyboard: false for the quick editor, true for a typing-only
+   * card (Comment), where an outside press closes it.
    */
   hoverEditorFocusable: Boolean = false,
   /** A double-click on the design, with the node under it — the deepest one, as a click picks. */
@@ -245,7 +235,7 @@ internal fun PinnedDesignCanvas(
   onInlineTextDone: (text: String?, focusMovedAway: Boolean) -> Unit = { _, _ -> },
   onTextInputFocusChanged: (Boolean) -> Unit = {},
   /**
-   * How the selected node is sized, for its resize handles, or null where it gets none — see
+   * How the selected node is sized, for its resize handles, or null for none; see
    * [UiBuilderEditorReducer.sizing].
    */
   sizing: EditorNodeSizing? = null,
@@ -255,25 +245,20 @@ internal fun PinnedDesignCanvas(
   zoom: Float?,
   onZoomChanged: (Float?) -> Unit,
   /**
-   * The scale the design was just drawn at — [zoom], or the fit when that is null. For the zoom
-   * chords, which step from what is on screen and are handled where the fit is not known.
+   * The scale the design was just drawn at ([zoom], or the fit), for the zoom chords to step from.
    */
   onScaleDrawn: (Float) -> Unit = {},
   /**
-   * Whether the frame companion is drawn beside the extent when the content outgrows the frame.
-   *
-   * False while the preview or native pane is open, because both of those draw the design at its
-   * frame — see the call site. The companion exists to answer "what does someone see on the
-   * device?" for a design being edited at its whole extent, and it is the wrong place to answer it
-   * twice. And never for a Wear or mobile (m3) design, which leaves previewing to the preview pane.
+   * Whether the frame companion is drawn beside the extent when content outgrows the frame. Off
+   * while the preview or native pane is open (they already draw the frame) and for Wear or m3
+   * designs.
    */
   frameCompanion: Boolean =
     LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.WEAR.wireValue &&
       LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.MOBILE.wireValue,
   /**
-   * The extent, or the device frame with its scrolling container popped out — see
-   * [EditorCanvasView]. Honoured only where the device view is offered at all: in-process, and not
-   * for a Wear widget, whose device views are the preview pane's.
+   * The extent, or the device frame with its scroller popped out; see [EditorCanvasView]. Only
+   * honoured in-process and not for Wear widgets.
    */
   canvasView: EditorCanvasView = EditorCanvasView.Extent,
   /** Switches the view from the zoom bar, or null to leave the switch out of it. */
@@ -285,20 +270,9 @@ internal fun PinnedDesignCanvas(
 ) {
   val (sourceWidth, sourceHeight) = document.canvasFrameDp(LocalWearWidgetHostShape.current)
   val density = LocalDensity.current
-  // What one of the design's pixels is worth in the workspace's.
-  //
-  // The workspace is measured at the host's density — the browser's `devicePixelRatio`, which is
-  // usually 1 — while the design inside the frame is measured at the one its environment names: 2.0
-  // for a watch, 2.625 for a phone. So `240.dp` written here and `240.dp` written inside the design
-  // are not the same width, and sizing the frame with the workspace's dp handed a 240dp watch 240
-  // of the *workspace's* pixels, which the design then read as 120dp. Everything authored wider
-  // than that was clamped to it: a 216x124dp Wear widget came out 120dp wide against an unclamped
-  // 124dp tall, which is the square frame with the text column crushed out of it in #521.
-  //
-  // So the frame is sized in the design's pixels — every dp below multiplied through this — and
-  // drawn back down to the workspace by [drawScale], which leaves what is on screen exactly where
-  // the zoom says. It is 1 wherever the two densities agree, which is why the 1280x800-at-1.0
-  // fixture the harness drives never showed any of this.
+  // One design pixel in workspace pixels. The workspace uses the host density (usually 1) while the
+  // design uses its environment's (2.0 watch, 2.625 phone), so the frame is sized in design pixels
+  // and drawn back down by [drawScale]. Sizing it in workspace dp clamped wide designs.
   val densityRatio = document.renderDensity(density).density / density.density
   var inspection by
     remember(document.id, document.revision) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
@@ -320,21 +294,12 @@ internal fun PinnedDesignCanvas(
       } else null
     }
   BoxWithConstraints(modifier.clipToBounds(), contentAlignment = contentAlignment) {
-    // What "fit" means: the largest scale at which the whole frame is on screen. It is no longer
-    // capped at 1:1, which is the whole of "autozoom": a 411 x 891 dp phone opened in a desktop
-    // workspace was drawn as a stamp in the middle of an empty page, and a 1280 x 800 dp design in
-    // a narrow window was drawn shrunk with room to spare beside it. Neither is the design framed.
-    // Named, because the scrolling box below is a different receiver and cannot see the
-    // constraints scope these come from.
+    // "Fit" is the largest scale showing the whole frame, uncapped at 1:1. Named here because the
+    // scrolling box below cannot see these constraints.
     val workspaceWidth = maxWidth
     val workspaceHeight = maxHeight
-    // How tall the design actually is, which is not how tall its frame is.
-    //
-    // A screen is drawn at one frame and is usually longer than it: a list of twelve rows on a
-    // 914dp phone is a design whose author is working on rows nine to twelve as much as on the
-    // first four. So the canvas draws the *extent* — the frame's width, the content's height — and
-    // that is the surface edits land on, the way the Wear stadium already works. Until the content
-    // has been measured this is the frame's own height, which is what a design that fits stays at.
+    // The design's measured content height, which may exceed the frame: the canvas draws the extent
+    // (frame width, content height). Until measured, the frame height.
     var expandedHeightDp by remember(document.id) { mutableStateOf(sourceHeight) }
     LaunchedEffect(document.revision, canvasRenderer) {
       if (canvasRenderer != null) expandedHeightDp = sourceHeight
@@ -344,10 +309,8 @@ internal fun PinnedDesignCanvas(
     val overflowsFrame = !deviceView && expandedHeightDp > sourceHeight + 0.5f
     // The device view draws the frame and never grows it: what does not fit is what scrolls.
     val frameHeightDp = if (deviceView) sourceHeight else expandedHeightDp
-    // The frame's own box in root pixels, unclipped. Both the pop-out's cross size and its offset
-    // are read as a share of it rather than divided by the scale: the inspection's boxes and this
-    // one are reported by the same layout pass, so their ratio is right even in the frame after a
-    // zoom, when either one alone is still the old scale's.
+    // The frame's unclipped root box. Pop-out size and offset are read as a share of it, since it
+    // and the inspection come from the same layout pass and stay consistent mid-zoom.
     var frameRootBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
     var popOutRootBounds by remember(document.id) { mutableStateOf<Rect?>(null) }
     val popOutBounds = popOut?.let { container ->
@@ -373,8 +336,7 @@ internal fun PinnedDesignCanvas(
       popOut?.let { container ->
         popOutExtent?.takeIf { it.first == container.nodeId }?.second
           ?: if (canvasRenderer != null) {
-            // A runtime surface is handed its size rather than measuring its own, so the first
-            // draw is into a generous budget the content is then measured inside.
+            // Runtime surfaces are handed a size, so they first draw into a generous budget.
             RUNTIME_POP_OUT_BUDGET_DP
           } else if (container.horizontal) sourceWidth else sourceHeight
       } ?: 0f
@@ -398,9 +360,7 @@ internal fun PinnedDesignCanvas(
       if (!showPopOut) 0f else if (popOut!!.horizontal) popOutExtentDp else popOutCrossDp!!
     val popOutHeightDp =
       if (!showPopOut) 0f else if (popOut!!.horizontal) popOutCrossDp!! else popOutExtentDp
-    // The frame, plus the extent companion when the content outgrows it, or the pop-out when one
-    // is open. Fit frames what is actually drawn rather than the frame alone: zooming to fit a
-    // design whose companion is off the right edge is not fitting the design.
+    // The frame plus the companion or pop-out: fit frames everything drawn.
     val pairWidth =
       sourceWidth +
         (if (overflowsFrame) sourceWidth + CANVAS_PANE_GAP_DP.value else 0f) +
@@ -408,9 +368,7 @@ internal fun PinnedDesignCanvas(
     // Fit frames the design above the zoom controls rather than under them: they sit over the
     // workspace's bottom edge, and a fitted frame reaching it had its corner covered.
     val fitHeight = (workspaceHeight.value - ZOOM_CONTROLS_ROOM_DP).coerceAtLeast(1f)
-    // The width always fits; the height fits only down to a readable floor. Fitting a portrait
-    // phone into a landscape window by its height drew it as a 6px-text strip (#355), where a
-    // canvas that scrolls vertically keeps it legible.
+    // The width always fits; the height only down to a readable floor, then the canvas scrolls.
     val fitScale =
       minOf(
           workspaceWidth.value / pairWidth,
@@ -427,12 +385,9 @@ internal fun PinnedDesignCanvas(
         .coerceIn(MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM)
     val scale = zoom ?: fitScale
     SideEffect { onScaleDrawn(scale) }
-    // The frame is laid out in the design's pixels, so it is drawn back down by the same ratio it
-    // was sized up by. Equal to [scale] whenever the design's density is the host's, which is what
-    // keeps the zoom readout and the fit above honest: the frame still covers `sourceWidth * scale`
-    // of the workspace's dp.
+    // Undo the density ratio the frame was sized up by. Equals [scale] when the densities agree.
     val drawScale = scale / densityRatio
-    // In dp, because that is what the metrics callback reports and what the frame is measured in.
+    // In dp, as the metrics callback reports.
     var measuredDp by remember(document.id) { mutableStateOf(0 to 0) }
     // Reported on every change of either, not just on a resize: the frame's own size does not move
     // when somebody zooms, and the drop hit-test reads this scale.
@@ -442,31 +397,21 @@ internal fun PinnedDesignCanvas(
     // The frame's own rectangle in the window, kept because the inspection answers in that space
     // and a press on the canvas arrives in the frame's.
     var frameBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
-    // Where the frame's own top-left is in root space, *unclipped*. `frameBounds` above is the
-    // frame's visible box — `boundsInRoot` is clipped to the viewport — which is what "is the
-    // pointer over the design" means, but not what a frame-local point has to be added to: once
-    // the canvas is scrolled, the frame's origin is above the viewport and its visible top is the
-    // viewport's. `positionInRoot` is the placement without that clipping, and it is current after
-    // a scroll, which is what every conversion below needs.
+    // The frame's unclipped top-left in root space. `frameBounds` is clipped to the viewport;
+    // frame-local conversions need the unclipped `positionInRoot`, which is current after a scroll.
     var frameOrigin by remember(document.id) { mutableStateOf(Offset.Zero) }
     // The workspace's own rectangle, so a node's root-space box can be turned into an offset in
     // this box — which is where the hover editor is placed.
     var workspaceBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
-    // Where a right-click landed on the design, in the frame's own pixels, and null while no menu
-    // is
-    // open. Out here rather than in the frame because the frame is not the only thing a secondary
-    // click lands on: the selection's resize handles sit over it, and on a small node a handle's
-    // finger-sized target covers the node's middle.
+    // Where a right-click landed, in frame pixels, or null while no menu is open. Out here because
+    // resize handles over the frame also take secondary clicks.
     var menuAt by remember(document.id) { mutableStateOf<Offset?>(null) }
-    // Where it last opened. The menu is still drawn while it animates closed, and an offset read
-    // from the cleared `menuAt` sent it to the frame's top-left for that moment before it vanished.
+    // The last menu position, used while the menu animates closed after `menuAt` clears.
     var menuShownAt by remember(document.id) { mutableStateOf(Offset.Zero) }
     // A secondary click at [rootPoint]: select the node under it and open its menu there.
     fun openNodeMenu(rootPoint: Offset) {
       if (!showSelectionOverlay) return
-      // The design already reports every node's box, in root pixels, which is what the presence
-      // overlay and the catalog drop both hit-test against. Smallest box wins: the deepest node
-      // containing the point is the one under the pointer.
+      // Smallest reported node box containing the point: the deepest node under the pointer.
       val hit =
         inspection
           ?.nodes
@@ -480,10 +425,7 @@ internal fun PinnedDesignCanvas(
           }
           .minByOrNull { (_, bounds) -> bounds.width * bounds.height }
           ?.first
-      // The inspection callback follows the first rendered frame. A right-click can arrive before
-      // it, especially immediately after opening a design; in that interval retain the current
-      // selection as the menu subject rather than making the secondary button appear dead. Once
-      // bounds are available, the node under the pointer remains authoritative.
+      // Before the first inspection arrives, fall back to the selection so right-click is not dead.
       val menuNode = hit ?: selectedNodeId ?: return
       if (menuNode != selectedNodeId) onNodeSelected(menuNode)
       // Back into the frame's own pixels, where the menu is anchored.
@@ -501,21 +443,13 @@ internal fun PinnedDesignCanvas(
     val dismissHoverEditor = rememberUpdatedState(onHoverEditorDismiss)
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
-    // While a drag is in the air, the pointer near an edge scrolls the workspace under it.
-    //
-    // A long design's lower slots are off-screen, and without this the only way to reach them was
-    // to let go, scroll, and start the drag again — which the seam marker made more painful, not
-    // less, since the plan it promised is lost on the way. The effect restarts on every pointer
-    // move (so a moving drag re-arms continuously) and runs one frame-step at a time until the
-    // pointer is out of the band or the edge has nothing left to give, which is also what keeps
-    // the test clock idle once the content is exhausted.
+    // Auto-scroll while dragging near an edge, so off-screen slots are reachable. Restarts on every
+    // pointer move and steps a frame at a time until the pointer leaves the band or the edge is
+    // exhausted (keeping the test clock idle).
     val currentDragPosition = rememberUpdatedState(dragPosition)
     val currentWorkspaceBounds = rememberUpdatedState(workspaceBounds)
-    // The scroll offset, reported upward: the inspection's node boxes are in the content's own
-    // (unshifted) layout space, while a pointer arrives in the drawn space the scroll shifted, and
-    // the resolver that answers "what is under the pointer" needs both in one space. Scrolling
-    // does not re-fire position callbacks — it translates a layer — so this is the one place the
-    // two spaces can be reconciled from.
+    // Report the scroll offset: node boxes are in unshifted layout space while pointers arrive
+    // shifted, and scrolling does not re-fire position callbacks.
     LaunchedEffect(horizontalScrollState.value, verticalScrollState.value) {
       onCanvasScroll(
         Offset(horizontalScrollState.value.toFloat(), verticalScrollState.value.toFloat())
@@ -542,11 +476,9 @@ internal fun PinnedDesignCanvas(
         if (dy != 0f) verticalScrollState.dispatchRawDelta(dy)
       }
     }
-    // The zoom a pinch or Ctrl+wheel asked for, and the design point that has to stay under the
-    // hand. Anchored on the design itself — the frame's real origin on screen — rather than on
-    // `scroll + pointer`, because a design smaller than the workspace is centred in it and that
-    // margin is not scroll. Applied once the new scale has been laid out: until then the frame is
-    // where the old scale put it, and the scroll range is the old one's.
+    // A requested zoom and the design point to keep under the hand, anchored on the frame's real
+    // origin (a centred small design's margin is not scroll). Applied after the new scale is laid
+    // out.
     var zoomAnchor by remember(document.id) { mutableStateOf<ZoomAnchor?>(null) }
     LaunchedEffect(scale) {
       val anchor = zoomAnchor ?: return@LaunchedEffect
@@ -559,10 +491,8 @@ internal fun PinnedDesignCanvas(
       verticalScrollState.dispatchRawDelta(drift.y)
       zoomAnchor = null
     }
-    // The node under a press in the workspace, asked at the moment of the press — see
-    // [onDoubleClick] for why the first click's answer is the one kept. Through an updated state,
-    // because the gesture outlives the composition that made it, and the scale and origin it
-    // converts with change when the canvas re-fits.
+    // The node under a press, asked at press time (see [onDoubleClick]). Through updated state
+    // because the gesture outlives the composition.
     val nodeUnderPress = rememberUpdatedState { position: Offset ->
       if (!showSelectionOverlay) return@rememberUpdatedState null
       val point = workspaceBounds.topLeft + position
@@ -593,9 +523,8 @@ internal fun PinnedDesignCanvas(
           capture = { position -> nodeUnderPress.value(position) },
           onDoubleClick = { nodeId -> doubleClicked.value(nodeId) },
         )
-        // Clicking somewhere else closes the quick editor. Watched in the initial pass and never
-        // consumed, so the press still selects, drags or pans exactly as it would have. The card
-        // is a sibling drawn over this box, so a press on the card never arrives here.
+        // Clicking elsewhere closes the quick editor. Observed in the initial pass, never consumed;
+        // the card is a sibling, so presses on it never arrive here.
         .pointerInput(hoverEditor != null) {
           if (hoverEditor == null) return@pointerInput
           awaitEachGesture {
@@ -603,8 +532,8 @@ internal fun PinnedDesignCanvas(
             dismissHoverEditor.value()
           }
         }
-        // Outside the scrolls, so the positions it reads are the workspace's own and it sees a
-        // pinch before the scroll can take one finger of it.
+        // Outside the scrolls so it reads workspace positions and sees a pinch before the scroll
+        // takes a finger.
         .canvasZoomGestures(
           scale = zoomAnchor?.scale ?: scale,
           onZoom = { request ->
@@ -634,9 +563,8 @@ internal fun PinnedDesignCanvas(
         .horizontalScroll(horizontalScrollState)
         .verticalScroll(verticalScrollState)
     ) {
-      // The scaled frame takes the room it is drawn in — the graphicsLayer below scales the
-      // painting, not the layout — so that zooming past the workspace scrolls rather than clips,
-      // and a frame smaller than the workspace still sits where [contentAlignment] says.
+      // The scaled frame takes its drawn size (graphicsLayer scales painting, not layout), so
+      // zooming past the workspace scrolls rather than clips.
       Box(
         // The band the zoom controls sit in is left out of where the frame is placed, and is
         // scroll room below a zoomed-in design, so its last row can be brought out from under them.
@@ -652,10 +580,8 @@ internal fun PinnedDesignCanvas(
           Box(Modifier.size((sourceWidth * scale).dp, (frameHeightDp * scale).dp)) {
             Surface(
               Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
-                // The frame's width, the content's height, never shorter than the frame — the
-                // extent. `requiredSize` here is what used to cut a long list off at the frame and
-                // leave the rest of it somewhere nobody could edit; the device view asks for
-                // exactly that, and has the pop-out for the rest.
+                // The extent: frame width, content height, never shorter than the frame. The device
+                // view uses the frame size and the pop-out for the rest.
                 .requiredWidth((sourceWidth * densityRatio).dp)
                 .then(
                   if (deviceView) Modifier.requiredHeight((sourceHeight * densityRatio).dp)
@@ -674,10 +600,8 @@ internal fun PinnedDesignCanvas(
                   scaleX = drawScale
                   scaleY = drawScale
                   transformOrigin = TransformOrigin(0f, 0f)
-                  // A runtime renderer's pixels are in a DOM layer under the editor, reached
-                  // through a `BlendMode.Clear` hole it punches in this frame. An offscreen layer
-                  // would take that hole into its own buffer and composite the buffer back over
-                  // the workspace, so the design never showed through: the frame drew blank.
+                  // A runtime renderer's pixels show through a `BlendMode.Clear` hole into a DOM
+                  // layer below; an offscreen layer would clear its own buffer instead.
                   compositingStrategy =
                     if (canvasRenderer == null) CompositingStrategy.Offscreen
                     else CompositingStrategy.Auto
@@ -704,18 +628,16 @@ internal fun PinnedDesignCanvas(
                   .canvasNodeDrag(
                     key = document.id,
                     enabled = moveDragEnabled && showSelectionOverlay,
-                    // The frame's own pixels reach the screen through [drawScale]; a press arrives
-                    // in the frame's space, so the same conversion the secondary click and the
-                    // drop hit-test use answers for this gesture too.
+                    // Presses arrive in frame space; convert like the secondary click and drop
+                    // hit-test.
                     rootPoint = { position ->
                       Offset(
                         frameOrigin.x + position.x * drawScale,
                         frameOrigin.y + position.y * drawScale,
                       )
                     },
-                    // Inside the selection, the selection: having chosen the card is how somebody
-                    // says "move the card", and picking up the text under the pointer instead made
-                    // a container impossible to drag by anything but its padding.
+                    // Inside the selection, drag the selection, so a container can be moved by more
+                    // than its padding.
                     insideSelection = { point ->
                       selectedNodeId != null &&
                         inspection
@@ -729,9 +651,8 @@ internal fun PinnedDesignCanvas(
                               point.y <= it.bottom
                           } == true
                     },
-                    // Otherwise the design already reports every node's box; the smallest
-                    // containing one is the deepest node under the point — the same answer the tap
-                    // and the context menu give, so a drag picks up what a click would select.
+                    // Otherwise the smallest containing box, the same answer tap and context menu
+                    // give.
                     hitTest = { point ->
                       val selected = selectedNodeId?.let { id ->
                         inspection?.nodes?.firstOrNull { it.nodeId == id }?.bounds
@@ -789,9 +710,7 @@ internal fun PinnedDesignCanvas(
                     } else Modifier
                   )
                   .onSecondaryClick(document.id) { position ->
-                    // The press arrives in the frame's own pixels, which reach the screen through
-                    // [drawScale] from its *unclipped* origin — a scrolled frame's visible top is
-                    // the viewport's, not the frame's.
+                    // Convert from frame pixels via [drawScale] from the unclipped origin.
                     openNodeMenu(
                       Offset(
                         frameOrigin.x + position.x * drawScale,
@@ -799,8 +718,7 @@ internal fun PinnedDesignCanvas(
                       )
                     )
                   },
-                // A runtime's surface is as tall as the editor asks, from the runtime's last
-                // measurement; the extent follows that rather than the frame it first measured.
+                // A runtime surface is as tall as its last measurement; the extent follows it.
                 probeKey = if (canvasRenderer != null) frameHeightDp else null,
               ) {
                 Box {
@@ -824,10 +742,9 @@ internal fun PinnedDesignCanvas(
                       editorOverlay = showSelectionOverlay,
                       selectedNodeId = selectedNodeId,
                       onNodeSelected = onNodeSelected,
-                      // The extent is a proxy: lists unrolled, scrolling dropped, sized by content.
-                      // Compose will not measure a real scrollable against an unbounded height, so
-                      // this is what lets a long list be drawn — and edited — whole. The device
-                      // view is the real composition at the frame, lazy lists and all.
+                      // The extent is a proxy: lists unrolled and scrolling dropped so long lists
+                      // are drawn and edited whole (Compose cannot measure a scrollable against
+                      // unbounded height). The device view is the real composition.
                       unrolled = !deviceView,
                       onInspectionSnapshot = { snapshot ->
                         inspection = snapshot
@@ -837,10 +754,9 @@ internal fun PinnedDesignCanvas(
                     )
                   }
                 } else {
-                  // The runtime's device view: the real composition at the frame, left UNDER the
-                  // editor so a click selects (the tap above hit-tests the runtime's inspection),
-                  // with the selection sent to it to reveal and a wheel over one of its lists
-                  // handed on as that list's `scrollBy`.
+                  // The runtime's device view: the real composition at the frame, under the editor
+                  // so clicks select; the selection is sent to reveal, and list wheels are
+                  // forwarded as `scrollBy`.
                   Box(
                     Modifier.requiredSize(
                         (sourceWidth * densityRatio).dp,
@@ -879,12 +795,9 @@ internal fun PinnedDesignCanvas(
                                 runtimeScroll =
                                   UiBuilderCanvasScroll(
                                     nodeId = target,
-                                    // The runtime scrolls in its own pixels, the design's. On
-                                    // the web, the only host with a runtime, the wheel's delta is
-                                    // already CSS pixels (about 100 a notch), and a CSS pixel is
-                                    // one of the editor's dp: so it is only converted, never
-                                    // multiplied by a per-notch step, which threw a list its
-                                    // whole length on one notch.
+                                    // On the web the wheel delta is already CSS pixels (one editor
+                                    // dp), so it is only converted, never multiplied by a per-notch
+                                    // step.
                                     deltaY =
                                       change.scrollDelta.y *
                                         document.renderDensity(density).density,
@@ -944,12 +857,8 @@ internal fun PinnedDesignCanvas(
                   frameOrigin = frameOrigin,
                   drawScale = drawScale,
                 )
-                // Over the document and under the collaborators: the reference is being compared
-                // against
-                // what the document draws, so it goes on top of that; another person's selection is
-                // a
-                // fact
-                // about this session and must not be hidden by a mock.
+                // Over the document (the reference is compared against it) and under collaborators'
+                // selections.
                 ReferenceOverlayCanvas(
                   reference,
                   onMarkDrawn,
@@ -958,15 +867,10 @@ internal fun PinnedDesignCanvas(
                   findings = referenceFindings,
                 )
                 RemotePresenceOverlay(collaborators, inspection, frameOrigin, drawScale)
-                // Over the design and its collaborators, under the comment pins: a finding is
-                // advice about what is drawn, and a pin is still the one thing a person came to
-                // click.
+                // Over the design and collaborators, under the comment pins.
                 GuidelineFindingsOverlay(inspection, frameOrigin, drawScale, onNodeSelected)
-                // Above everything, because a pin is the one thing on this canvas a person clicks
-                // that is
-                // not part of the design: it must not end up under a mock somebody just turned up
-                // the
-                // opacity of, and it must not be what a selection outline is drawn over.
+                // Above everything: pins are the clickable non-design element and must not hide
+                // under a mock or a selection outline.
                 CommentPinOverlay(
                   threads = commentThreads,
                   marks = reference.marks,
@@ -976,11 +880,8 @@ internal fun PinnedDesignCanvas(
               }
             }
           }
-          // The companion is the *frame* view of a design that outgrows it — what someone sees on
-          // the device, beside the extent they edit. It is not drawn when another pane is already
-          // showing the frame: the preview and native panes both do, at the design's own size and
-          // at every device it claims, so a third copy inside the editor costs the editing surface
-          // a third of its width to say what the pane next door says better.
+          // The companion shows the frame view of a design that outgrows it; skipped when another
+          // pane already shows the frame.
           if (overflowsFrame && frameCompanion) {
             ConstrainedFramePane(
               document = document,
@@ -1047,9 +948,7 @@ internal fun PinnedDesignCanvas(
     // A handle in hand hides the hover editor for the reason a drag does: it answers the previous
     // question while the pointer is asking the next one.
     var resizing by remember(document.id) { mutableStateOf(false) }
-    // Not while a drag is in the air: the tight editor follows the *selection*, and a drag is a
-    // question about the target — a panel of the selected node's fields floating over the canvas
-    // is answering the previous question while the pointer asks the next one.
+    // Not while dragging: the quick editor follows the selection, while a drag is about the target.
     if (
       hoverEditor != null &&
         showSelectionOverlay &&
@@ -1082,9 +981,8 @@ internal fun PinnedDesignCanvas(
           DpOffset(it.x.coerceIn(minX, maxX), it.y.coerceIn(0.dp, maxY))
         }
       val currentPosition = rememberUpdatedState(position)
-      // A popup, so the pane's clip does not cut the card off where it is placed over the pane
-      // beside this one. Not focusable: the editor's keys stay the editor's, and a field in the
-      // card still takes the caret when it is clicked.
+      // A popup so the pane's clip does not cut the card off. Not focusable: editor keys stay the
+      // editor's, though fields still take the caret on click.
       Box(Modifier.align(Alignment.TopStart)) {
         Popup(
           offset = with(density) { IntOffset(position.x.roundToPx(), position.y.roundToPx()) },
@@ -1138,9 +1036,7 @@ internal fun PinnedDesignCanvas(
     ) {
       val pxPerDp = density.density * scale
       val rtl = document.environment["layoutDirection"]?.jsonPrimitive?.contentOrNull == "rtl"
-      // Where Fill actually reaches: the parent's box less its own padding, which is the room it
-      // offers its children. Snapping to the outer box made a padded parent's Fill land short of
-      // where the handle was let go.
+      // Fill reaches the parent's box minus its padding.
       val parentBounds =
         document.location(sizing.nodeId)?.nodeId?.let { parentId ->
           inspection
@@ -1169,7 +1065,7 @@ internal fun PinnedDesignCanvas(
         // A design dp is `scale` workspace dp — see [drawScale] — and the root counts in the
         // workspace's pixels.
         pxPerDp = pxPerDp,
-        // Its own scale and every ancestor's: the canvas measured the node after all of them.
+        // Its own scale and every ancestor's.
         nodeScale =
           document.nodes[sizing.nodeId]?.modifiers.orEmpty().let { chain ->
             drawnScale(chain, EditorAxis.Width) *
@@ -1186,18 +1082,12 @@ internal fun PinnedDesignCanvas(
       )
     }
     if (dragPosition != null) {
-      // The ghost follows the pointer wherever it goes. Vanishing over an illegal region would
-      // answer "can it land here" twice — once with the marker, once by taking the preview away —
-      // and only one of those answers says anything.
-      //
-      // This state leaves the composition when the drag ends, so consecutive drags cannot inherit
-      // each other's measurement. Keying on the pointer position would instead reset it on every
-      // move and keep the ghost permanently empty.
+      // The ghost always follows the pointer; the marker alone answers whether it can land. This
+      // state resets per drag, not per pointer move.
       var ghostContentBounds by
         remember(document.id) { mutableStateOf<UiBuilderPixelBounds?>(null) }
-      // Capped by the slot under the pointer, in the ghost's own pixels: a component that will
-      // fill its landing slot is drawn filling it while still in the air. The conversion is the
-      // design's density, which the ghost deliberately does not carry — see [dragGhostDocument].
+      // Capped by the landing slot, in the ghost's pixels via the design density (which the ghost
+      // does not carry; see [dragGhostDocument]).
       val landing = dropPlan?.bounds
       val ghostConstraints = landing?.let {
         Modifier.sizeIn(
@@ -1205,15 +1095,8 @@ internal fun PinnedDesignCanvas(
           maxHeight = with(density) { (it.height / densityRatio).toDp() },
         )
       }
-      // Anchored on the ghost's content, not its cell: the component itself rides under the
-      // pointer, the way the part rides under the cursor in every canvas tool. Until the ghost has
-      // been measured once it is drawn empty rather than one frame in the wrong place.
-      //
-      // The anchor is the content's *size*, never its reported position: the position comes back
-      // from the ghost's own inspection in root space — which includes the very offset this is
-      // computing — and reading it would make the offset chase itself, a loop that oscillates every
-      // layout and leaves the scene never idle. The content sits at the cell's top-start, so the
-      // size is all the anchor needs.
+      // Anchored on the ghost's content, drawn empty until measured once. Uses the content's size
+      // only: its reported position includes this offset and would make the layout oscillate.
       val ghostModifier =
         Modifier.align(Alignment.TopStart)
           .offset(
@@ -1274,23 +1157,12 @@ internal fun PinnedDesignCanvas(
 }
 
 /**
- * The empty recommended slots, drawn as dashed regions that say "a component goes here".
+ * The empty recommended slots, drawn as dashed "a component goes here" regions. The reducer
+ * computes one region per slot, which both the drawing and the drop hit-test read, so what is seen
+ * is what a drop lands in. Shown only while dragging.
  *
- * The alternative to a placeholder is the panel's destination line — "Adds into
- * root-surface.content" — which answers the same question in a sentence about ids. This answers it
- * where the answer belongs, and it is the region a drop hits: the reducer computes one region per
- * empty slot and both the drawing and the hit test read it, so what a reader sees is what a drop
- * lands in. It is drawn under the drag marker and gone the moment the slot is populated, because
- * the reducer only reports empty slots, and the editor hands it placeholders only while a drag is
- * in hand.
- *
- * The slot's name is drawn only where it fits: a 7dp swatch clipped "content" to a lone "c" in
- * every cell, which read as stray text in the design rather than as an invitation. The dashed
- * region alone still says where the drop lands.
- *
- * Strokes and type are screen-sized, not design-sized: a hint that thins with the zoom is a hint
- * lost exactly when the design is too small to read. The label is scaled back up through the same
- * factor the frame is scaled down by.
+ * The slot name is drawn only where it fits. Strokes and type are screen-sized, scaled back up by
+ * the frame's scale factor, so they stay legible when zoomed out.
  */
 @Composable
 private fun SlotPlaceholderOverlay(
@@ -1386,12 +1258,8 @@ private fun SlotPlaceholderOverlay(
 }
 
 /**
- * Where a drag would land, drawn so the eye never has to ask.
- *
- * The slot it is entering is tinted, the way it always was; the seam between the children the drop
- * lands between is drawn as a bar across the slot — the honest answer to "where in here", which a
- * slot tint alone never gave. An empty slot has no seams, so it keeps the full highlight: its whole
- * box is the landing region, and saying so is the highlight's job.
+ * Where a drag would land: the entered slot is tinted, and the seam between the children it lands
+ * between is drawn as a bar. Empty slots keep the full highlight.
  */
 @Composable
 private fun DropTargetOverlay(
@@ -1409,15 +1277,11 @@ private fun DropTargetOverlay(
       height = bounds.height / drawScale,
     )
   val color = MaterialTheme.colorScheme.primary
-  // Stroke widths are screen widths, not design widths: the marker is an affordance, and an
-  // affordance that thins with the zoom is one the reader loses exactly when the design is too
-  // small to read — which is when "where will it land" matters most. The canvas is inside the
-  // scaled layer, so the conversion back is dividing by the scale it was drawn at.
+  // Screen-width strokes, divided by the draw scale, so the marker stays visible when zoomed out.
   val hairline = screenStroke(3.5f, drawScale)
   val glow = screenStroke(10f, drawScale)
   Canvas(Modifier.fillMaxSize().clearAndSetSemantics {}) {
-    // The seam is the message; the tint is the container it sits in. Dimmer than it used to be,
-    // so the two read as background and figure rather than as two boxes.
+    // Dim tint so the seam reads as figure and the slot as ground.
     drawRect(
       color = color.copy(alpha = 0.10f),
       topLeft = Offset(local.x, local.y),
@@ -1491,12 +1355,8 @@ private fun DropTargetOverlay(
 }
 
 /**
- * Where the node a canvas move picked up still sits, dashed.
- *
- * A carried button and its own ghost are two pictures of the same thing; without this outline the
- * eye has to work out which one follows the pointer. It is drawn for as long as the move is in
- * flight and vanishes with it — the origin is the one place the drop cannot land, because the
- * release there is the no-op it should be.
+ * Where the node a canvas move picked up still sits, dashed, so the original and its ghost are
+ * distinguishable. Dropping there is a no-op.
  */
 @Composable
 private fun MoveOriginOverlay(
@@ -1528,17 +1388,11 @@ private fun MoveOriginOverlay(
 }
 
 /**
- * The dragged thing itself, travelling with the pointer at the size it would land.
+ * The dragged thing itself, travelling with the pointer at the size it would land: the component
+ * (or moved subtree) in an unconstrained cell, scaled by the zoom and capped by the landing slot.
  *
- * The ghost used to be a 88x66 stamp of the thumbnail frame — a picture of a picture, half the size
- * of what would land. This renders the component (or, for a canvas move, the subtree being carried)
- * into an unconstrained cell, scales it by the canvas zoom so one of its dp lands as one of the
- * design's dp, and caps it by the landing slot so a component that will fill that slot is drawn
- * filling it while still in the air.
- *
- * [onContentBounds] reports where the document's root drew inside the surface, so the canvas can
- * anchor the **content** on the pointer rather than the cell around it — and until the first
- * measurement lands the ghost is drawn empty rather than one frame in the wrong place.
+ * [onContentBounds] reports where the root drew inside the surface, so the canvas can anchor the
+ * content (not the cell) on the pointer; until measured the ghost is drawn empty.
  */
 @Composable
 private fun DragLivePreviewGhost(
@@ -1626,19 +1480,11 @@ private fun DragBitmapPreviewGhost(bitmap: ImageBitmap, modifier: Modifier = Mod
 }
 
 /**
- * The design at its frame, beside the extent: what fits on the device, scrollable.
+ * The design at its frame beside the extent: read-only, scrollable, showing what fits on the device
+ * (e.g. the fold), while the extent is the editing surface.
  *
- * Read-only, and that is the point of it rather than a limitation. The extent beside it is the
- * editing surface — one live coordinate space, one hit-test, one place a drop or a comment pin can
- * land — and this pane answers the other question that space cannot: *what does someone actually
- * see when they open the screen?* A list edited at full height hides the thing a phone shows first,
- * which is the fold; a frame that clips and scrolls puts it back without asking anybody to switch
- * between two views of their own design.
- *
- * Its own [renderSessionId] because [UiBuilderSurface] keys its bounds, overlay boxes and
- * inspection collector on that: sharing the editing pane's id would have the two panes' geometry
- * overwrite each other, and the inspection the editor hit-tests against would be whichever composed
- * last.
+ * Has its own [renderSessionId] because [UiBuilderSurface] keys bounds, overlays and inspection on
+ * it; sharing the editing pane's would mix their geometry.
  */
 @Composable
 internal fun ConstrainedFramePane(
@@ -1652,20 +1498,16 @@ internal fun ConstrainedFramePane(
   renderSessionId: String = FRAME_COMPANION_SESSION,
   wearWidgetHostShape: WearWidgetHostShape? = null,
   /**
-   * The catalog's pinned runtime, for a device preview pane only. A catalog whose components the
-   * in-process renderer cannot draw (remote-m3) otherwise shows each pane as labelled stand-ins.
+   * The catalog's pinned runtime, for a device preview pane only. Otherwise catalogs the in-process
+   * renderer cannot draw (remote-m3) show labelled stand-ins.
    */
   deviceRenderer: UiBuilderCanvasRenderer? = null,
   /** Bumped when whatever scrolls this pane moves, so a runtime frame is placed again. */
   positionVersion: Int = 0,
 ) {
-  // **Read in the editor's composition, never inside the scene.** A scene starts with no
-  // `CompositionLocal`s, so `provides LocalX.current` written in the content lambda below resolves
-  // against the scene's empty context and yields each local's default. That is what silently cost
-  // this pane the catalog's frame geometry — and with it the scaffold's content padding, so its
-  // rows ran to the bezel and were clipped — along with the catalog's component ids, its canvas
-  // adapters, its platform word, the widget host shape and the asset registry. Reading them here
-  // captures the values the editor is actually running with.
+  // **Read in the editor's composition, never inside the scene**: a scene starts with no
+  // `CompositionLocal`s, so reading `.current` there yields defaults (frame geometry, ids,
+  // adapters, assets were all lost that way).
   val nativeOnlyIds = LocalUiBuilderNativeOnly.current
   val catalogComponentIds = LocalUiBuilderCatalogComponentIds.current
   val canvasAdapters = LocalUiBuilderCanvasAdapters.current
@@ -1676,9 +1518,8 @@ internal fun ConstrainedFramePane(
   val remoteDocuments = LocalRemoteComposeDocuments.current
   val assetBitmaps = LocalUiBuilderAssetBitmaps.current
   val assetBytes = LocalUiBuilderAssetBytes.current
-  // The design's typefaces: the registry the scene asks for a family, and the families it has.
-  // Without them the scene drew every theme typeface in the stock Wear face. The loaded names
-  // re-key the scene below, because a family that lands after it has settled asks nothing of it.
+  // The design's typefaces. Loaded names re-key the scene, since a family arriving after it settles
+  // would not be picked up.
   val fontRegistry = LocalUiBuilderFontRegistry.current
   val fontFamilies = LocalUiBuilderFontFamilies.current
   val loadedFontNames = fontFamilies.keys.toSet()
@@ -1692,14 +1533,10 @@ internal fun ConstrainedFramePane(
           scaleX = scale / densityRatio
           scaleY = scale / densityRatio
           transformOrigin = TransformOrigin(0f, 0f)
-          // Clipped at the device's edge: content past it is what the person scrolls to rather than
-          // something that spills onto the canvas. Inside the layer rather than before it, so the
-          // clip scales with the frame. A clip outside it stays at the unscaled size, and any scale
-          // above the density ratio magnified the design into a box it could not grow.
+          // Clip at the device edge, inside the layer so the clip scales with the frame.
           clip = true
-          // Not offscreen under the runtime, for the editing canvas's reason: its pixels are a DOM
-          // layer reached through a `BlendMode.Clear` hole, and an offscreen buffer would clear the
-          // hole in itself and composite back opaque — the pane blank whenever a menu lowers it.
+          // Not offscreen under the runtime, for the editing canvas's reason: the `BlendMode.Clear`
+          // hole would be cleared in the buffer instead.
           compositingStrategy =
             if (deviceRenderer == null) CompositingStrategy.Offscreen else CompositingStrategy.Auto
         },
@@ -1707,28 +1544,13 @@ internal fun ConstrainedFramePane(
       color = if (deviceRenderer == null) MaterialTheme.colorScheme.surface else Color.Transparent,
       shadowElevation = 0.dp,
     ) {
-      // The real composition, deliberately: this pane is the one that answers what a device
-      // actually shows, so its list is the lazy one, and the scrolling is the design's own —
-      // the `LazyColumn` or the `verticalScroll` the author put there, at a live position.
-      //
-      // No outer scroll wrapped around it, for two reasons that happen to agree. It would measure
-      // the design against an unbounded height, which is the thing this whole pane exists to avoid.
-      // And a design that overflows *without* a scrollable of its own is a design that overflows on
-      // the device too: clipping it here is not a gap in the pane, it is the answer to the question
-      // the pane is asking. The extent beside it is where the rest of that content is legible.
-      //
-      // **In its own scene**, so the design can be *driven*: a wheel over the pane arrives as a
-      // rotating side button and a Wear list turns through its own snap behaviour — see
-      // [DeviceSceneHost] for why that needs a scene rather than a subtree. The locals are carried
-      // by value because a scene starts with none of them, and the list is the pane's own: a
-      // design's components, its assets, its fonts and the host shape it is drawn in are the same
-      // ones the canvas beside it uses.
-      //
-      // In-process unless a device pane is handed the catalog's pinned runtime. That runtime is a
-      // sandboxed iframe booting its own Wasm, so the palette, drag ghost and frame companion never
-      // use it; a device pane does, because for a catalog like remote-m3 the in-process renderer
-      // draws only labelled stand-ins, and a preview of those is no preview. One frame per device,
-      // kept alive across edits.
+      // The real composition: lazy lists and the design's own scrolling, at a live position. No
+      // outer scroll, since that would measure against unbounded height, and content that overflows
+      // without its own scrollable overflows on the device too.
+      // **In its own scene** so the design can be driven (a wheel arrives as a rotary side button;
+      // see [DeviceSceneHost]); locals are carried by value. In-process unless the pane gets the
+      // catalog's pinned runtime, which a device pane uses because in-process remote-m3 draws only
+      // stand-ins. One frame per device, kept alive across edits.
       if (deviceRenderer != null) {
         deviceRenderer(
           document.withWearWidgetHostShape(wearWidgetHostShape ?: ambientWidgetHostShape),
@@ -1748,11 +1570,8 @@ internal fun ConstrainedFramePane(
         DeviceSceneHost(
           key = "$renderSessionId:${document.id}:$widthDp:$heightDp",
           contentKey = document to loadedFontNames,
-          // The Surface's own pixels: it is `widthDp * densityRatio` *dp* wide, so the scene is
-          // that
-          // times the host's density. Sized as that many pixels instead, it matched only at host
-          // density 1; on a 2.625x screen a 216dp widget was laid out in 82dp of room, clipped, and
-          // drawn in the top-left third of its frame.
+          // The Surface is `widthDp * densityRatio` dp wide, so the scene is that times the host
+          // density in pixels.
           sizePx =
             IntSize(
               (widthDp * densityRatio * LocalDensity.current.density).roundToInt(),
@@ -1789,9 +1608,8 @@ internal fun ConstrainedFramePane(
 }
 
 /**
- * The first length a runtime pop-out is drawn at, before its content has been measured inside it. A
- * runtime surface is handed its size, so a list longer than this is found by filling it and
- * doubling; a shorter one is trimmed to what it drew.
+ * The first length a runtime pop-out is drawn at before measurement. Longer content is found by
+ * filling and doubling; shorter is trimmed.
  */
 internal const val RUNTIME_POP_OUT_BUDGET_DP = 2000f
 
@@ -1802,12 +1620,8 @@ private const val FRAME_COMPANION_SESSION = "frame-companion"
 private val CANVAS_PANE_GAP_DP = 24.dp
 
 /**
- * One read-only pane of the variant strip: what it is called, and the design under that frame.
- *
- * The label sits outside the scaled frame, like the hover editor and for its reason: it names a
- * picture rather than being part of one, so it stays legible however far the design is zoomed out.
- * Which is also why it is the pane's own [Column] rather than an overlay — a name drawn on top of a
- * variant would be the one thing in the strip that is not the design.
+ * One read-only pane of the variant strip: its label and the design under that frame. The label
+ * sits outside the scaled frame so it stays legible at any zoom.
  */
 @Composable
 internal fun VariantPane(
@@ -1867,14 +1681,9 @@ private val HOVER_EDITOR_GAP = 16.dp
 private val INLINE_TEXT_MIN_WIDTH = 160.dp
 
 /**
- * Where the quick editor opens, in the workspace's dp: beside the design, never over it, where
- * there is room.
- *
- * To the right of what is drawn first, then to its left, level with the selected node so the eye
- * does not have to travel far; failing both inside the canvas, the same two places out over the
- * panes beside it. Only a window with no room either side — a design zoomed to fill it — falls back
- * to beside the node itself, below it or above it, which is where the card always used to go; there
- * it can be dragged aside.
+ * Where the quick editor opens, in workspace dp: beside the design, never over it. Right of the
+ * drawing, then left, level with the selected node; then the same places over neighbouring panes;
+ * only as a last resort below or above the node, where it can be dragged aside.
  */
 internal fun hoverEditorPlacement(
   workspace: Rect,
@@ -1884,9 +1693,8 @@ internal fun hoverEditorPlacement(
   workspaceWidth: Dp,
   workspaceHeight: Dp,
   /**
-   * How far the window reaches past the workspace's left and right edges. The card is drawn in a
-   * popup, so a canvas pane too narrow to hold it beside the design — one beside a Preview pane —
-   * can still have it beside the design, over the neighbouring pane rather than over the design.
+   * How far the window reaches past the workspace's left and right edges; the card is a popup so it
+   * may sit over a neighbouring pane.
    */
   roomLeft: Dp = 0.dp,
   roomRight: Dp = 0.dp,
@@ -1916,12 +1724,8 @@ internal fun hoverEditorPlacement(
   }
 
 /**
- * The number a just-added modifier hands the caret to.
- *
- * Only the ones whose menu row picks a value on the author's behalf: `padding` starts at 16 and
- * `weight` at 1 because something has to be typed in the box, and the box is where the real number
- * is chosen. A fill has no number and takes no caret, and an alignment is a list to pick from
- * rather than a value to type.
+ * The field a just-added modifier focuses. Only modifiers whose menu row picks a starting value
+ * (`padding` 16, `weight` 1); fills and alignments have nothing to type.
  */
 internal val MODIFIER_FOCUS_FIELDS = mapOf("padding" to "startDp", "weight" to "weight")
 
@@ -1931,19 +1735,16 @@ private val CANVAS_ZOOM_STOPS = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f, 
 internal const val MIN_CANVAS_ZOOM = 0.1f
 
 /**
- * The least Fit shrinks a design to make its height fit: below it the frame overflows the workspace
- * and scrolls vertically. The width is still always fitted, so a frame wider than the workspace
- * goes under this rather than scrolling sideways.
+ * The least Fit shrinks a design to fit its height; below it the frame scrolls vertically. The
+ * width always fits.
  */
 internal const val FIT_HEIGHT_FLOOR = 0.75f
 
 internal const val MAX_CANVAS_ZOOM = 4f
 
 /**
- * The next stop above or below [from].
- *
- * Stepped from whatever the canvas is *currently drawn at* rather than from the last button press,
- * so the first zoom out of a design framed at 62% goes to 50% and not to some remembered 100%.
+ * The next stop above or below [from], stepping from the current drawn scale rather than the last
+ * button press.
  */
 internal fun canvasZoomStep(from: Float, zoomIn: Boolean): Float =
   if (zoomIn) CANVAS_ZOOM_STOPS.firstOrNull { it > from + 0.001f } ?: MAX_CANVAS_ZOOM
@@ -1979,10 +1780,8 @@ internal fun canvasZoomLabel(scale: Float, fitting: Boolean): String {
 }
 
 /**
- * Zoom out, the current scale, zoom in, and back to framing the design.
- *
- * The percentage is a button as well as a readout: pressing it pins 100%, which is the one scale
- * worth a control of its own, and the fit toggle is how you get back from it.
+ * Zoom out, current scale, zoom in, and fit. Pressing the percentage pins 100%; the fit toggle
+ * returns.
  */
 @Composable
 private fun CanvasZoomControls(
@@ -2046,9 +1845,7 @@ private fun RemotePresenceOverlay(
       val color = collaborator.colorArgbHex.toPresenceColor()
       collaborator.selectedNodeIds.forEach { nodeId ->
         val bounds = boundsByNode[nodeId] ?: return@forEach
-        // The inspection answers in root space and this canvas draws inside the frame, so a
-        // collaborator's outline needs the same conversion the drop marker's does — without it
-        // their selection sits wherever the frame's origin happens to be.
+        // Convert the collaborator's root-space box into the frame, like the drop marker.
         drawRect(
           color = color,
           topLeft =

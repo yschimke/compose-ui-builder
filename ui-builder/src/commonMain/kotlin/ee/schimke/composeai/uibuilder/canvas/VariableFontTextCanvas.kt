@@ -15,15 +15,10 @@ import kotlin.math.roundToInt
 
 /**
  * The style a variable font text's canvas stand-in draws in: [base] in the node's font, instanced
- * at the axes the node sets, at its size.
- *
- * flexpress draws the real thing from the font's outlines on the JVM alone, so the canvas sets the
- * same text in the same vendored variable file through the platform text stack, which instances it
- * at the same coordinates — close to what export draws, but laid out as text rather than as the
- * outline. An axis bound to state or computed has already been resolved to its value by the time a
- * node reaches the renderer, so a slider driving `wght` moves the stand-in as it would the exported
- * text. Until the family has loaded, `wght` is the text's weight, so the first frame is at least as
- * bold as it should be.
+ * at the node's axes and size. Export (flexpress, JVM only) draws from outlines; the canvas sets
+ * the same vendored file through the platform text stack, close but laid out as text. Bound or
+ * computed axes arrive resolved, so a slider driving `wght` moves the stand-in. Until the family
+ * loads, `wght` is the text weight.
  */
 @Composable
 internal fun variableFontTextStyle(node: UiBuilderNode, base: TextStyle): TextStyle {

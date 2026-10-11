@@ -24,12 +24,8 @@ import ee.schimke.composeai.uibuilder.UidDesignCollection
 data class UiBuilderFileDesign(val id: String, val title: String)
 
 /**
- * The top-level designs the open file holds, for the strip above the canvas.
- *
- * The editor edits [active] and nothing else; the others are the host's, and so is moving between
- * them, because switching is a write to the file (it changes which design opens and previews) and
- * the host owns the file. Each action is null where the host cannot do it, which hides its control:
- * a read-only file, say, lists its designs without offering to switch.
+ * The top-level designs the open file holds, for the strip above the canvas. The editor edits
+ * [active] only; switching is a file write the host owns. Null actions hide their controls.
  */
 data class UiBuilderFileDesigns(
   val designs: List<UiBuilderFileDesign>,
@@ -61,10 +57,8 @@ fun UidDesignCollection.fileDesigns(
 internal fun UiBuilderFileDesign.label(): String = title.ifBlank { id }
 
 /**
- * The strip above the canvas listing the file's designs, the active one selected.
- *
- * [activeTitle] is the active design's title as the editor has it now, so renaming it in the Screen
- * inspector renames its chip at once rather than at the next open.
+ * The strip listing the file's designs, active one selected. [activeTitle] is the live title so a
+ * rename shows immediately.
  */
 @Composable
 internal fun EditorDesignStrip(

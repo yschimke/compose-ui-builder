@@ -5,31 +5,26 @@ import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 import ee.schimke.composeai.uibuilder.protocol.ServiceErrorCodeV1
 
 /**
- * The rules for a caller who may read a server's designs but not write them (#342), kept apart from
- * the page that follows them so they can be asserted without a browser.
- *
- * The server is the only enforcement point. Everything here decides what to *offer*: a caller the
- * server would refuse is not sent to it, and a refusal that arrives anyway loses nothing.
+ * The rules for a caller who may read a server's designs but not write them (see #342), kept apart
+ * from the page so they're testable without a browser. The server enforces; this only decides what
+ * to offer.
  */
 
 /** Where an edit made in the editor goes. */
 enum class EditorEditRoute {
-  /** Queued for the server this design lives on, as every edit was before #342. */
+  /** Queued for the server this design lives on. */
   Server,
 
   /**
-   * Copied into this browser under a new id first, then applied to the copy. Nothing is sent to the
-   * server, which would refuse it.
+   * Copied into this browser under a new id first, then applied to the copy; nothing is sent to the
+   * server.
    */
   BrowserCopy,
 }
 
 /**
- * Which way an edit goes.
- *
- * [keptInBrowser] is a design this browser already holds, whose "server" is the local service: its
- * edits never leave the page. [revisionPinned] is a page showing history, which takes no edits of
- * its own — and a copy made from it would silently become a copy of history.
+ * Which way an edit goes. [keptInBrowser]: a browser-held design, whose service is local.
+ * [revisionPinned]: a history page, which takes no edits (a copy would be a copy of history).
  */
 fun editorEditRoute(
   keptInBrowser: Boolean,
@@ -40,21 +35,16 @@ fun editorEditRoute(
   else EditorEditRoute.Server
 
 /**
- * Whether a refused save was refused for who is asking, rather than for what was asked.
- *
- * Such an edit is still a good edit: the session expired, or the caller never could write here, or
- * the design's owner took write access away. It becomes a browser copy rather than a lost change.
- * Every other refusal is about the edit itself, and the reducer's reconciliation already answers
- * those.
+ * Whether a refused save was refused for who is asking (expired session, no or revoked write
+ * access) rather than for the edit itself. Such edits become a browser copy; other refusals are
+ * reconciled by the reducer.
  */
 fun isWriteRefusal(code: ServiceErrorCodeV1): Boolean =
   code == ServiceErrorCodeV1.UNAUTHORIZED || code == ServiceErrorCodeV1.FORBIDDEN
 
 /**
- * This browser's designs, as the home screen's **In this browser** panel lists them.
- *
- * [updatedLabel] formats an epoch millisecond, which is the browser's question (its locale, its
- * time zone), not this module's.
+ * This browser's designs, as the home screen's **In this browser** panel lists them. [updatedLabel]
+ * formats epoch millis in the browser's locale and time zone.
  */
 fun browserHomeDesigns(
   summaries: List<LocalDesignSummary>,
@@ -73,13 +63,9 @@ fun browserHomeDesigns(
 }
 
 /**
- * What to tell a person about this browser's room for designs, or null when there is nothing worth
- * saying.
- *
- * Browsers give an origin about five megabytes of `localStorage` and count it in UTF-16 code units,
- * some of them two bytes each, so [budgetChars] is the conservative half of that. Past
- * [warnFraction] of it the next edit may be the one that is refused, and the way out — download a
- * copy, then delete it — is worth knowing before that happens rather than after.
+ * What to tell a person about this browser's room for designs, or null. `localStorage` is ~5 MB per
+ * origin counted in UTF-16 units, so [budgetChars] is the conservative half; past [warnFraction]
+ * the person is told to download and delete before an edit is refused.
  */
 fun localStorageNotice(
   summaries: List<LocalDesignSummary>,
@@ -103,11 +89,8 @@ fun localStorageNotice(
 }
 
 /**
- * What `navigator.storage.estimate()` and `persisted()` say about this origin.
- *
- * [indexedDb] is where the designs are, which decides which number matters: in `localStorage` the
- * five-megabyte area runs out long before the origin's quota does, so the designs' own size is the
- * warning; in IndexedDB the origin's quota is the only limit.
+ * What `navigator.storage.estimate()` and `persisted()` say about this origin. [indexedDb] decides
+ * which limit matters: the design size for `localStorage`, the origin quota for IndexedDB.
  */
 data class BrowserStorageEstimate(
   val usageBytes: Long,
@@ -134,13 +117,9 @@ data class BrowserStorageEstimate(
 const val LOCAL_STORAGE_BUDGET_CHARS: Int = 2_500_000
 
 /**
- * A browser design as the server's create route takes it: `PUT /api/ui-builder/v1/designs/{id}`
- * with `If-None-Match: *`.
- *
- * At revision 0, because a create starts history there and the route refuses anything else — the
- * revisions this browser counted are its own, and mean nothing to the server. Without a `home`,
- * because the server stamps its own; a copy never had one to carry. Everything else is the design
- * as it stands in this browser.
+ * A browser design as the server's create route takes it (`PUT /api/ui-builder/v1/designs/{id}`
+ * with `If-None-Match: *`): at revision 0 (the route requires it; local revisions mean nothing to
+ * the server) and without a `home` (the server stamps its own).
  */
 fun publishableDocument(document: DesignDocumentV1): DesignDocumentV1 =
   document.copy(revision = 0, home = null)

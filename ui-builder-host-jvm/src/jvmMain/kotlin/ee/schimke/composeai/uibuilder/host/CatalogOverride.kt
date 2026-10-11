@@ -7,13 +7,10 @@ import java.nio.file.Path
 import kotlinx.serialization.json.Json
 
 /**
- * A capability catalog read from disk, used in place of the packaged one with the same system id.
- *
- * The offline hosts author against the three catalogs compiled into them. A catalog repository that
- * has just regenerated its `*-capabilities-v1.json` had no way to see it in the editor short of
- * rebuilding the editor with the file copied in. With an override the packaged catalog's seeds and
- * templates still apply — which is why the system id must be one this host packages — but the
- * palette, properties and validation come from the file.
+ * A capability catalog read from disk in place of the packaged one with the same system id, so a
+ * catalog repository can try a regenerated `*-capabilities-v1.json` without rebuilding the editor.
+ * The packaged seeds and templates still apply; palette, properties and validation come from the
+ * file.
  */
 class CatalogOverride private constructor(val systemId: String, val text: String) {
   companion object {

@@ -8,13 +8,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * A Figma frame as a plugin read it: `compose-ui-builder-figma-snapshot/v1`.
- *
- * Deliberately close to the plugin API and deliberately not Figma's REST document — the REST tree
- * carries neither `layoutSizingHorizontal` nor shared plugin data, and the stamp that makes a round
- * trip possible lives in the second. Every field a reader does not need is optional, so a snapshot
- * written by hand for a test, by the design-parity plugin, or by an agent through the Figma MCP all
- * parse. See `docs/design/UI_BUILDER_FIGMA_INTEGRATION.md`.
+ * A Figma frame as a plugin read it: `compose-ui-builder-figma-snapshot/v1`. Close to the plugin
+ * API, not Figma's REST document (which lacks `layoutSizingHorizontal` and shared plugin data,
+ * where the round-trip stamp lives). Non-essential fields are optional so hand-written, plugin and
+ * Figma-MCP snapshots all parse. See `docs/design/UI_BUILDER_FIGMA_INTEGRATION.md`.
  */
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
@@ -103,9 +100,8 @@ data class FigmaSizing(val horizontal: String = FIXED, val vertical: String = FI
 }
 
 /**
- * A solid paint: `color` as `#AARRGGBB`, and the name of the variable it is bound to, if any. A
- * bound variable is what lets an import say "surface" rather than a hex that stops following the
- * theme.
+ * A solid paint: `color` as `#AARRGGBB`, and the bound variable's name, if any, so an import can
+ * follow the theme.
  */
 @Serializable data class FigmaPaint(val color: String? = null, val variable: String? = null)
 
@@ -141,12 +137,9 @@ data class FigmaInstance(
 
 /**
  * The identity a node exported by this editor carries back, read from shared plugin data under
- * [NAMESPACE].
- *
- * [componentId] and [slot] say what the node was and which slot of its parent it sat in, so a frame
- * standing in for a component Figma has no counterpart for is still recognisable. [labelNodeId] is
- * the `m3/text` child a kit instance's label property stood for: the label is a property in Figma
- * and a node in the builder, and the round trip has to land an edit to it on that node.
+ * [NAMESPACE]. [componentId] and [slot] identify what the node was and where it sat; [labelNodeId]
+ * is the `m3/text` child a kit instance's label property stood for, so label edits land on that
+ * node.
  */
 @Serializable
 data class FigmaStamp(
@@ -163,10 +156,8 @@ data class FigmaStamp(
 }
 
 /**
- * Which Figma component is which catalog component: `compose-ui-builder-figma-map/v1`.
- *
- * The first [FigmaComponentRule] that matches an instance wins, so the more specific rule goes
- * first.
+ * Which Figma component is which catalog component: `compose-ui-builder-figma-map/v1`. The first
+ * matching [FigmaComponentRule] wins, so specific rules go first.
  */
 @Serializable
 data class FigmaComponentMap(

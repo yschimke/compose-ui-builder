@@ -13,14 +13,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Suggestion mode: an agent's proposed edits waiting on the design, in the Talk panel, and one of
- * them shown in place of the canvas beside the design as it is now.
- *
- * A new visual surface is wired into the preview workflow so the next change to it is diffed
- * without anyone remembering to. What these keep honest is what no state test sees: the card's
- * who/when/diff lines, the Accept / Reject / Show row, the outcome sentence, and the two pictures
- * and change list of the canvas swap. Everything is fixed — the proposal is the Jetcaster Discover
- * screen with two labels rewritten, built here.
+ * Suggestion mode: an agent's proposed edits in the Talk panel, and one shown in place of the
+ * canvas beside the current design. Diffs the card's who/when/diff lines, the Accept / Reject /
+ * Show row, the outcome sentence, and the canvas swap's pictures and change list. Fixed: the
+ * proposal is the Jetcaster Discover screen with two labels rewritten.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable

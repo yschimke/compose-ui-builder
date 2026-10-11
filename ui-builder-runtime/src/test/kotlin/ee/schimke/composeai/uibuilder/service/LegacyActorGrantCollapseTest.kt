@@ -6,17 +6,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertSame
 
 /**
- * A stored ACL holding two case-variants of one GitHub login resolves to the later grant.
- *
- * Folding a login on the way in fixes grants written since that started working. A record persisted
- * before it can hold `github:Alice` AND `github:alice`, because the replacement it went through
- * compared exact strings — a mixed-case EDITOR share followed by a lowercase VIEWER downgrade left
- * both entries. Authorization then asked `any` of that list, which is the UNION of the two, so the
- * downgrade did not take WRITE away; and the listing answered with `firstOrNull`, so the role a
- * reader was shown could disagree with the one being enforced.
- *
- * The service can no longer create such a record, which is why this is built by hand: it is a
- * migration question, not a behaviour of the current write path.
+ * A stored ACL holding two case-variants of one GitHub login resolves to the later grant, rather
+ * than the union for authorization and the first for display. Built by hand: the current write path
+ * cannot create such a record.
  */
 class LegacyActorGrantCollapseTest {
 

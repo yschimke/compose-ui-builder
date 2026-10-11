@@ -15,17 +15,9 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * A text size crosses into Remote Compose as `<Int>.rsp`, or not at all.
- *
- * The server now derives `fontSize` as a `number` property, so a design can carry an authored size
- * onto a published Remote Compose text component. That is only honest if the generator can write
- * one: a property that is authorable, drawable and unexportable is the shape of
- * [#508](https://github.com/yschimke/compose-preview-server/issues/508), and the reason the record
- * call refuses by name rather than guessing.
- *
- * `22.rsp` is compiled rather than assumed — the value vocabulary probe in the catalog repository
- * that publishes the component holds that claim. What this file adds is the other half: that the
- * emitter writes exactly that, and refuses the sizes the spelling cannot express.
+ * A text size crosses into Remote Compose as `<Int>.rsp`, or not at all: since `fontSize` is an
+ * authorable `number`, the emitter must write it or refuse it by name. `22.rsp` itself is compiled
+ * in the publishing repository's value vocabulary probe.
  */
 class RemoteTextUnitExportTest {
 

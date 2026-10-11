@@ -77,8 +77,8 @@ class DrawPathCanvasRenderTest {
   }
 
   /**
-   * A stroked path is as wide as a line of the same strokeWidthDp: the path is drawn under its
-   * viewport-to-canvas scale, which would otherwise scale its stroke too, several times over.
+   * A stroked path is as wide as a line of the same `strokeWidthDp`: the stroke must not be scaled
+   * by the path's viewport-to-canvas transform.
    */
   @Test
   fun `a stroked path is as wide as a line of the same width`() {

@@ -14,11 +14,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Layout, from the menu that opens on the thing being laid out.
- *
- * The rows are the catalog's answer rather than a fixed list: a component that does not declare
- * `fillMaxSize` is never offered it, because the reducer would refuse the write and a menu row that
- * cannot be pressed twice is a row that lies.
+ * Layout, from the menu that opens on the thing being laid out. Rows come from the catalog: a
+ * component that doesn't declare `fillMaxSize` isn't offered it, since the reducer would refuse it.
  */
 class EditorModifierMenuTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -45,10 +42,8 @@ class EditorModifierMenuTest {
       box.map { it.type },
     )
 
-    // A text declares two of them and not the other two, so its menu is shorter by exactly those:
-    // filling a parent and matching its size are container verbs and are never offered here. The
-    // two that follow are not the text's own: it sits in a column, and a column is what makes an
-    // alignment across the cross axis and a weight along the main one mean anything.
+    // A text declares two of the four (no container verbs); `align` and `weight` come from its
+    // column parent.
     val text =
       reducer.modifierToggles(reducer.initial(document, selectedNodeId = "detail-podcast-title"))
     assertEquals(
@@ -59,9 +54,8 @@ class EditorModifierMenuTest {
 
   @Test
   fun `the scoped modifiers are the parent's answer, not the child's`() {
-    // `Modifier.align` and `Modifier.weight` are receivers a parent supplies. The catalog declares
-    // them on every component because any component can be a child; which one is offered — and
-    // whether any is — comes from what the node is a child of.
+    // `Modifier.align` and `Modifier.weight` are parent-scoped: declared everywhere, but offered by
+    // what the node is a child of.
     fun scoped(nodeId: String) =
       reducer
         .modifierToggles(reducer.initial(document, selectedNodeId = nodeId))

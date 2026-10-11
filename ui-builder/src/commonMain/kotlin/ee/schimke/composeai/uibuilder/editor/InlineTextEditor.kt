@@ -42,12 +42,9 @@ import androidx.compose.ui.unit.dp
 internal data class CanvasInlineTextEdit(val nodeId: String, val text: String)
 
 /**
- * A text field over a node on the canvas, holding the text it shows: double-click a label and type
- * the new one where it is, rather than finding the same words in a panel across the screen.
- *
- * Enter or clicking away keeps the new text; Esc puts the old one back. [onDone] is told once, with
- * the text to commit or null for a cancel, and whether focus went elsewhere — a click away lands on
- * whatever was clicked, and taking focus back from it would cost that click.
+ * A text field over a canvas node holding its text: double-click a label to edit in place. Enter or
+ * clicking away keeps it; Esc restores. [onDone] is called once with the text (null for cancel) and
+ * whether focus moved elsewhere, so a click away is not stolen back.
  */
 @Composable
 internal fun InlineTextEditor(
@@ -122,16 +119,11 @@ internal fun InlineTextEditor(
 
 /**
  * Calls [onDoubleClick] when a second click follows the first in time and place, with what
- * [capture] made of the *first* click at the moment it happened.
+ * [capture] made of the first click at that moment (the first click may open Properties and re-fit
+ * the canvas). Put it on something that stays still.
  *
- * Captured then, not asked at the second click, because the first click selects and the editor may
- * open the Properties panel on it: the canvas re-fits, and the design moves under a pointer that
- * did not. What the first click was over is what the author aimed at; by the second, something else
- * is under the pointer, or nothing. Put this on something that stays still while the design moves.
- *
- * Watched in the initial pass and never consumed: the design drawn under it is made of real
- * components whose own click handling takes the presses first, so a `detectTapGestures` here would
- * never see them — and must not take them either, or a single click would stop selecting.
+ * Observed in the initial pass and never consumed, since the design's own components handle clicks
+ * first and single clicks must still select.
  */
 internal fun <T : Any> Modifier.onDoubleClick(
   key: Any?,

@@ -67,11 +67,8 @@ fun canvasAdapterRegistry(block: CanvasAdapterRegistry.Builder.() -> Unit): Canv
 val LocalCanvasAdapterRegistry = staticCompositionLocalOf { CanvasAdapterRegistry.Empty }
 
 /**
- * Dispatch this resolved tree entry to its catalog adapter.
- *
- * Slot and item recursion stay here in the SDK. [renderChild] only supplies the host operation that
- * draws an already-resolved descendant, which lets the transitional renderer retain its fallback
- * table without teaching a catalog adapter how to walk the document.
+ * Dispatch this resolved tree entry to its catalog adapter. Slot and item recursion stay in the
+ * SDK; [renderChild] only draws an already-resolved descendant.
  *
  * @return whether the registry contained [CanvasRenderNode.adapterId].
  */
@@ -141,9 +138,8 @@ class CanvasNodeScope(
   private val recordText: (TextLayoutResult) -> Unit,
   private val registerScrolling: (((Float) -> Float)?, ((Int) -> Unit)?) -> Unit = { _, _ -> },
   /**
-   * The document asks for horizontal scrollers drawn whole ([UI_BUILDER_UNROLLED_AXIS_KEY]): a
-   * lazy-row adapter lays its items out in a `Row` when this is true, because it is being measured
-   * against an unbounded width. A runtime that honours it declares
+   * The document asks for horizontal scrollers drawn whole ([UI_BUILDER_UNROLLED_AXIS_KEY]), so a
+   * lazy-row adapter uses a `Row`. Runtimes honouring it declare
    * [CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL].
    */
   val unrolledHorizontally: Boolean = false,
@@ -162,12 +158,8 @@ class CanvasNodeScope(
   fun itemCount(name: String): Int = countItems(name)
 
   /**
-   * Render one resolved descendant from [name].
-   *
-   * This is the indexed counterpart to [Items]: a catalog adapter can let a real lazy-layout
-   * receiver decide when to compose each item while traversal, instance paths and inspection remain
-   * in the SDK. An out-of-range index emits nothing so a half-authored document cannot take down
-   * the canvas.
+   * Render one resolved descendant from [name] by index — the counterpart to [Items] that lets a
+   * real lazy layout compose items on demand. An out-of-range index emits nothing.
    */
   @Composable
   fun Item(name: String, index: Int, modifier: Modifier = Modifier) {
@@ -190,14 +182,11 @@ class CanvasNodeScope(
   }
 
   /**
-   * A control's own change callback, two-way bound: write [value] back to the variable [property]
-   * reads, then run [event]'s actions.
-   *
-   * `Checkbox(onCheckedChange = { changeBoundState("checked", it.toString()) })` is the whole
-   * wiring. The write back is skipped when [event]'s actions already write that variable — a hand
-   * authored `toggle` — so a tap changes it once (see [TwoWayStateBinding]). [event] defaults to
-   * the property's change event — `checkedChange` for `checked`, `select` for `selected` — falling
-   * back to a `click` binding a design authored before the names were made consistent.
+   * A control's change callback, two-way bound: write [value] back to the variable [property]
+   * reads, then run [event]'s actions, e.g. `Checkbox(onCheckedChange = {
+   * changeBoundState("checked", it.toString()) })`. The write back is skipped when the actions
+   * already write that variable (see [TwoWayStateBinding]). [event] defaults to the property's
+   * change event, falling back to `click`.
    */
   fun changeBoundState(
     property: String,
@@ -212,9 +201,9 @@ class CanvasNodeScope(
   fun recordTextLayout(result: TextLayoutResult) = recordText(result)
 
   /**
-   * How a lazy container this adapter draws is scrolled from the editor: [scrollBy] answers the
-   * `scrollBy` action, [scrollToItem] the `revealNode` one, which scrolls the editor's selection
-   * into a device frame. Call it with the real list state, every composition; either may be null.
+   * How the editor scrolls a lazy container this adapter draws: [scrollBy] for `scrollBy`,
+   * [scrollToItem] for `revealNode`. Call every composition with the real list state; either may be
+   * null.
    */
   fun registerScrolling(scrollBy: ((Float) -> Float)?, scrollToItem: ((Int) -> Unit)?) =
     registerScrolling.invoke(scrollBy, scrollToItem)

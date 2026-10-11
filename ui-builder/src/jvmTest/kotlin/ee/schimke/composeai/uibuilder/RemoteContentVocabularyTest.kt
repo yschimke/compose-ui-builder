@@ -20,14 +20,9 @@ import kotlinx.serialization.json.jsonObject
 
 /**
  * What a widget body may be written in: every modifier `remote-m3` advertises, and the picture.
- *
- * The gap this closes is not a missing case, it is two lists nobody compared. The catalog offered
- * 28 modifiers on a widget node and the canvas drew all 28; `RemoteContentEmitter` wrote three, and
- * the other 25 — `size`, `background`, `weight`, `align`, which is how anyone builds a coloured
- * button in a corner beside a column of text that truncates — refused *after* the design was drawn
- * (yschimke/compose-preview-server#508). [REMOTE_CONTENT_MODIFIERS] is now the one list, the
- * catalog is narrowed to it in `:ui-builder-runtime`, and this walks every name in it through a
- * real export so the set cannot claim something the emitter refuses.
+ * [REMOTE_CONTENT_MODIFIERS] is the one list (the catalog is narrowed to it in
+ * `:ui-builder-runtime`), and this walks every name through a real export so it can't advertise
+ * what the emitter refuses.
  */
 class RemoteContentVocabularyTest {
   private val pin = JsonObject(emptyMap())
@@ -45,12 +40,9 @@ class RemoteContentVocabularyTest {
   }
 
   /**
-   * The calls, spot-checked against the upstream signatures they are written for.
-   *
-   * A refusal-free export only proves the emitter had a case; these prove the case writes the call
-   * `remote-creation-compose` 1.0.0-alpha18 actually publishes — `size(width, height)` in dp,
-   * `background` taking a colour with the shape it does not have written as the `clip` before it,
-   * and a weight that is a member of the column's scope rather than of `RemoteModifier`.
+   * The calls, spot-checked against the `remote-creation-compose` 1.0.0-alpha18 signatures:
+   * `size(width, height)` in dp, `background` with its shape as a preceding `clip`, and `weight` as
+   * a column-scope member.
    */
   @Test
   fun `the calls match the RemoteModifier surface`() {
@@ -76,10 +68,7 @@ class RemoteContentVocabularyTest {
   }
 
   /**
-   * The four with no counterpart, refused the way the good refusals in this generator read.
-   *
-   * Each names the node, says why, and hands over the route that does work. That is the shape the
-   * `asset/image` catch-all did not have, and it is the floor for anything this cannot write.
+   * The four with no counterpart are refused naming the node, the reason, and the route that works.
    */
   @Test
   fun `a modifier with no counterpart is refused by name with the way round it`() {
@@ -116,13 +105,8 @@ class RemoteContentVocabularyTest {
   }
 
   /**
-   * A weight of zero or less is refused, not emitted.
-   *
-   * The editor's numeric field stores whatever is typed, and `UiBuilderRenderer` drops a
-   * non-positive weight (`takeIf { it > 0f }`) because Compose throws on one — so the canvas draws
-   * the child unweighted and looks fine. Emitting it anyway produced `weight(0f)`, which fails
-   * while the Remote Compose document is being built, long after this export reported success. The
-   * two readers now agree that it is not a weight, and this one says so.
+   * A weight of zero or less is refused: the renderer drops it (Compose throws), but an emitted
+   * `weight(0f)` fails while building the Remote Compose document.
    */
   @Test
   fun `a weight of zero or less is refused rather than generating a document that fails to build`() {
@@ -142,12 +126,9 @@ class RemoteContentVocabularyTest {
   }
 
   /**
-   * A picture in the content slot: the call, and the bitmap the application supplies.
-   *
-   * The key stays in the design and the bytes stay out of the source, which is the whole shape of
-   * the answer — album art is data an application has, not a constant a generator can bake in. So
-   * the content function takes the bitmap, the widget class takes it, and the `@Preview` still
-   * compiles because the class defaults it to a blank one.
+   * A picture in the content slot: the key stays in the design and the bitmap comes from the
+   * application, through the content function and widget class; the `@Preview` compiles with a
+   * blank default.
    */
   @Test
   fun `an image in the content slot is written as a RemoteImage the application feeds`() {
@@ -191,11 +172,8 @@ class RemoteContentVocabularyTest {
   }
 
   /**
-   * A gradient is a widget-frame brush, not body content, and says where it belongs when a
-   * malformed stored document puts it in the body.
-   *
-   * It is not offered in the content palette, but the emitter keeps the diagnosis for an older or
-   * hand-written document rather than silently dropping it.
+   * A gradient is a widget-frame brush, not body content; a malformed stored document that puts it
+   * in the body is diagnosed, not silently dropped.
    */
   @Test
   fun `a content-slot gradient is refused with what to reach for instead`() {
@@ -206,14 +184,7 @@ class RemoteContentVocabularyTest {
     assertTrue("background slot" in gradient.reasons.single(), gradient.reasons.single())
   }
 
-  /**
-   * The widget from the issue, end to end: album art, a weighted text column, a round play button.
-   *
-   * Every part of it used to refuse — the picture through the catch-all, and `size`, `background`,
-   * `weight` and `align` through the modifier `else`. It is here as one artifact because that is
-   * how the gap was found: not by reading the emitter, but by building an ordinary widget and being
-   * told four times that ordinary was unexpressible.
-   */
+  /** An ordinary widget end to end: album art, a weighted text column, a round play button. */
   @Test
   fun `the widget the issue was filed about exports`() {
     val art =
@@ -250,11 +221,9 @@ class RemoteContentVocabularyTest {
   }
 
   /**
-   * `RemoteFitBox` and a shared element, written with their own calls.
-   *
-   * A fit box writes only the edge it was asked for, since it centres by default. A shared element
-   * sits in the branches of a "Show by state" box, which is written as a `RemoteStateLayout`, and
-   * is written as the `animationSpec(Int, Boolean)` overload alpha19 and later both publish.
+   * `RemoteFitBox` and a shared element, written with their own calls. A fit box writes only the
+   * requested edge (it centres by default); a shared element in a "Show by state" box
+   * (`RemoteStateLayout`) uses the `animationSpec(Int, Boolean)` overload.
    */
   @Test
   fun `a fit box and a shared element across a state switch are written`() {
@@ -321,10 +290,9 @@ class RemoteContentVocabularyTest {
   }
 
   /**
-   * A flow row and the collapsibles are written as the calls they are, with the scope members a
-   * child of each may ask for. None is in the Glance Wear widget profile, so the native render of
-   * such a widget fails while the document is captured: each call carries a comment saying so, so
-   * that failure reads as the profile's rather than the design's.
+   * A flow row and the collapsibles are written as their own calls with their scope members. None
+   * is in the Glance Wear widget profile, so each call carries a comment explaining a native-render
+   * failure.
    */
   @Test
   fun `a flow row and the collapsibles are written, marked as outside the widget profile`() {
@@ -413,11 +381,8 @@ class RemoteContentVocabularyTest {
   }
 
   /**
-   * A widget whose content is `frame` (a box) → `stack` (a column) → `line` (a row) → `label`.
-   *
-   * Three nested containers because the scoped modifiers each need a different one above them: an
-   * `align` is a box's, an `alignHorizontal` and a `weight` a column's, an `alignVertical` a row's.
-   * [on] places the modifier under test on the node whose parent makes it legal.
+   * A widget whose content is `frame` (a box) → `stack` (a column) → `line` (a row) → `label`, so
+   * each scoped modifier has a legal parent; [on] places the modifier under test accordingly.
    */
   private fun widgetWith(vararg leaves: UiBuilderNode): UiBuilderDocument = widget(leaves.toList())
 

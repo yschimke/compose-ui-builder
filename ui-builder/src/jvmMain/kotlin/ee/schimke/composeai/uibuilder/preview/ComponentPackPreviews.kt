@@ -25,21 +25,12 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * The two surfaces a component pack adds to the editor, as pictures the next change is diffed on.
- *
- * ## The settings panel
- *
- * [ComponentPacksPanelPreview] is the body of the **Component packs** dialog with two packs the
- * host admitted — one on, one off. It is the same composable the dialog shows, rendered without the
- * dialog's chrome so the rows are the picture rather than the frame.
- *
- * ## The placeholder
- *
- * [PackPlaceholderPreview] is a Material 3 column holding a Confetti `SessionCard` beside the
- * catalog's own text. The canvas cannot link Confetti's classes, so the pack node is drawn as a
- * named, captioned outline, and the picture of the real component comes from the native lane,
- * compiled against the `confetti-mobile` bundle. A row here that started drawing a lookalike of the
- * card would be a regression; one that drew the real card, once the canvas can link it, would not.
+ * The two surfaces a component pack adds to the editor:
+ * - [ComponentPacksPanelPreview]: the **Component packs** dialog body with two admitted packs, one
+ *   on and one off, without the dialog chrome.
+ * - [PackPlaceholderPreview]: a Material 3 column holding a Confetti `SessionCard` drawn as a
+ *   named, captioned outline (the canvas can't link Confetti's classes; the native lane renders the
+ *   real one against `confetti-mobile`). A lookalike here would be a regression.
  */
 @Preview(widthDp = 500, heightDp = 300)
 @Composable

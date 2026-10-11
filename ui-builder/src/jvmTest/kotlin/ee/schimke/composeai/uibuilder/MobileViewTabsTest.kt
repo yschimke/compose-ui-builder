@@ -111,10 +111,8 @@ class MobileViewTabsTest {
     }
 
   /**
-   * Switching device tabs never builds a frame. The tab opened first is built for it, the others
-   * behind it once it has drawn, and from then on a tap shows a frame that is already standing.
-   * Before, every tap built a new frame and composed the whole design into it, even for the tab
-   * visited a moment ago.
+   * Switching device tabs never builds a frame: the first tab's frame is built for it, the others
+   * behind it once it has drawn, and later taps show standing frames.
    */
   @Test
   fun `switching device tabs shows frames already built`() =
@@ -154,9 +152,8 @@ class MobileViewTabsTest {
     }
 
   /**
-   * Every dock the wide rail has is reachable on a phone: Issues is a button of its own, and the
-   * rest are behind More, by the rail's names. Before, Theme, Screen, Issues, Talk and History had
-   * no way in at all on a phone.
+   * Every wide-rail dock is reachable on a phone: Issues is its own button, the rest are under More
+   * with the rail's names.
    */
   @Test
   fun `a phone reaches every inspector panel from the dock`() =
@@ -209,8 +206,8 @@ class MobileViewTabsTest {
     }
 
   /**
-   * A device is named alone, its size and density being on the frame's own label; a widget host's
-   * size is what tells two tabs apart, so it stays.
+   * A device tab shows the device name alone (size and density are on the frame); a widget host's
+   * tab keeps its size, which distinguishes them.
    */
   @Test
   fun `tab labels keep what tells two panes apart`() {

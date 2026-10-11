@@ -13,20 +13,13 @@ import org.jetbrains.kotlin.cli.common.ExitCode
 import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
 
 /**
- * The Google Fonts declarations the m3 code pane and the Wear screen generator write, put through a
- * real Kotlin compiler and then run.
+ * The Google Fonts declarations the code generators write, compiled and run for real: only a
+ * compiler catches the top-level initialisation-order bug (a provider declared below the families
+ * that read it).
  *
- * The text assertions elsewhere (`WearLayoutAndColourExportTest`,
- * `CapabilityComposeCodeExporterTest`) read what the file says; only a compiler can say whether it
- * builds. The families are top-level `private val`s that read `GoogleFontsProvider`, and top-level
- * properties in one file initialise in declaration order — so a provider declared below the
- * families is `Variable 'GoogleFontsProvider' must be initialized` to Kotlin 2, and would be a
- * `null` provider at run time to anything that let it through.
- *
- * `ui-text-google-fonts` is an Android AAR, so the compile runs against stand-ins for the five
- * symbols the file names, with the library's own signatures (`GoogleFont(name, bestEffort)`,
- * `GoogleFont.Provider(providerAuthority, providerPackage, certificates)`, `Font(googleFont,
- * fontProvider, weight)`).
+ * `ui-text-google-fonts` is an Android AAR, so the compile uses stand-ins with the library's own
+ * signatures (`GoogleFont(name, bestEffort)`, `GoogleFont.Provider(providerAuthority,
+ * providerPackage, certificates)`, `Font(googleFont, fontProvider, weight)`).
  */
 class AndroidGoogleFontsCompileTest {
   private val root = Files.createTempDirectory("google-fonts-compile-")

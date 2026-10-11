@@ -57,10 +57,8 @@ class UiBuilderEditorStateTest {
     assertTrue(items.any { it.kind == EditorComponentKind.Scaffold })
     assertTrue(items.any { it.kind == EditorComponentKind.Container })
     assertTrue(items.any { it.kind == EditorComponentKind.Composable })
-    // Four hits, and the containers sort before the leaves — which is `catalogItems`' own rule
-    // (kind, then display name), not a ranking of the query. The Button is in the list because one
-    // of its variants is the *text* button: a variant label is part of what a row is searchable by,
-    // for the same reason its display name is — it is on the row, so it is what somebody types.
+    // Containers sort before leaves (`catalogItems`' order: kind, then display name). The Button
+    // matches because its variant label ("text") is searchable.
     assertEquals(
       listOf("m3/button", "m3/text-field", "m3/text", "m3/variable-font-text"),
       reducer.catalogItems("text").map { it.componentId },
@@ -317,9 +315,8 @@ class UiBuilderEditorStateTest {
     val submission = assertIs<EditorSubmission.Batch>(reducer.acceptedSubmission(initial, themed))
     assertEquals(6, submission.command.operations.size)
     assertTrue(
-      // The theme panel owns the colours, scale and corners. The typefaces and the default text
-      // style stay in the property list as well: a Wear or Remote theme host has no theme panel,
-      // so the property list is where those are set there.
+      // The theme panel owns colours, scale and corners; typefaces and the default text style also
+      // stay in the property list, since Wear and Remote theme hosts have no theme panel.
       reducer.propertyFields(themed.copy(selection = listOf("root-surface"))).none {
         it.name.startsWith("theme") &&
           it.name !in ThemeTypefaces.PROPERTIES &&
@@ -555,10 +552,9 @@ class UiBuilderEditorStateTest {
       )
 
     assertTrue(inserted.lastOutcome is CommandOutcome.Accepted, inserted.lastOutcome.toString())
-    // Four nodes, not two: the required `inputField` fill resolves to a search field, and that
-    // field's starter content brings its placeholder and its magnifier with it.
-    // `StarterContentTest`
-    // owns what is seeded; this asserts only that the whole subtree lands in one accepted command.
+    // The required `inputField` fill brings its starter placeholder and magnifier;
+    // `StarterContentTest` owns what is seeded, this asserts the subtree lands in one accepted
+    // command.
     assertEquals(112, inserted.document.nodes.size)
     val searchBar = inserted.document.nodes.getValue(assertNotNull(inserted.selectedNodeId))
     val inputId = searchBar.slots.getValue("inputField").single()
@@ -624,10 +620,8 @@ class UiBuilderEditorStateTest {
       listOf("main-episode-card", copyId),
       duplicated.document.nodes.getValue("discover-grid").slots.getValue("items").takeLast(2),
     )
-    // Every property is carried across **except** the ones that identify the instance. The card
-    // sits in a lazy grid and the exporter turns `stableKey` into that item's `key(…)`; two
-    // siblings sharing one is a runtime failure in Compose, not a cosmetic clash. The copy takes
-    // its own node id, which is unique by construction.
+    // Every property is copied except `stableKey`: siblings sharing one `key(…)` fail at runtime.
+    // The copy gets its own node id.
     assertEquals(
       document.nodes.getValue("main-episode-card").properties.filterKeys { it != "stableKey" },
       duplicated.document.nodes.getValue(copyId).properties.filterKeys { it != "stableKey" },
@@ -1226,9 +1220,9 @@ class UiBuilderEditorStateTest {
 
   @Test
   fun `a state-bound property refuses a literal rather than corrupting the binding`() {
-    // `search-input.value` is bound to the `searchQuery` variable in the fixture:
-    // {"type": "state", "variable": "searchQuery"}. A commit that reused that encoded type would
-    // emit {"type": "state", "value": "..."} — a state read naming no variable. It refuses instead.
+    // `search-input.value` is bound to `searchQuery` (`{"type": "state", "variable":
+    // "searchQuery"}`); reusing that type for a literal commit would produce a state read naming no
+    // variable, so it is refused.
     val bound = document.nodes.getValue("search-input").properties.getValue("value").jsonObject
     assertEquals("state", bound["type"]?.jsonPrimitive?.content)
 
@@ -1305,10 +1299,8 @@ class UiBuilderEditorStateTest {
 
   @Test
   fun `a search field's query unbinds to text`() {
-    // `m3/search-input-field.value` is declared ["object", "string"]: a state read, or the text the
-    // field shows. It used to be `object` alone, which made a field that only shows a query need a
-    // state variable nothing reads — and made the design unexportable while stateful authoring is
-    // off. Unbinding is now the way to a literal, and the catalog is still what decides that.
+    // `m3/search-input-field.value` is declared ["object", "string"]: a state read or literal text.
+    // Unbinding produces a literal, as the catalog allows.
     val unbound =
       reducer.reduce(
         reducer.initial(document, "search-input"),
@@ -1391,11 +1383,9 @@ class UiBuilderEditorStateTest {
 
   @Test
   fun `a selection spread across two parents cannot be wrapped`() {
-    // The container can only live in one place, so the other nodes would have to move somewhere
-    // the document never put them. Refusing beats picking a parent for the user.
-    //
-    // Leaves, and from two different parents: a node selected alongside its own ancestor is
-    // reduced away by `selectionRoots`, which would leave one node with one parent and wrap fine.
+    // Leaves from two different parents (a node selected with its own ancestor is reduced away by
+    // `selectionRoots`): wrapping would have to move nodes somewhere the document never put them,
+    // so it's refused.
     val rows = reducer.treeRows(document)
     val leaves = rows.filter { row ->
       row.parent != null && rows.none { it.parent?.nodeId == row.nodeId }
@@ -1511,9 +1501,8 @@ class UiBuilderEditorStateTest {
 
   @Test
   fun `a state name that becomes a Kotlin keyword is refused at creation`() {
-    // `identifier()` does not escape, so this would emit `var when: Boolean`. The wire cannot
-    // rename a variable later, so creation is the only moment a design can be stopped from holding
-    // a name it can never generate.
+    // `identifier()` does not escape keywords (`var when: Boolean`), and variables can't be renamed
+    // later, so creation must refuse it.
     val failure =
       assertFailsWith<IllegalArgumentException> {
         blankUiBuilderDocument(
@@ -1551,10 +1540,8 @@ class UiBuilderEditorStateTest {
   }
 
   /**
-   * The document from `/ui-builder/a`, at the door a person uses. With the blank scaffold selected,
-   * a lazy grid used to be offered its `topBar` — a `Container` on its role alone — and every add
-   * after that landed inside the grid. Now the grid goes to the body box, and the top bar is
-   * offered only to what belongs in one.
+   * The document from `/ui-builder/a`: with the blank scaffold selected, a lazy grid goes to the
+   * body box, and the top bar is offered only to what belongs in one.
    */
   @Test
   fun `a grid added with the blank scaffold selected goes into the body and not the top bar`() {

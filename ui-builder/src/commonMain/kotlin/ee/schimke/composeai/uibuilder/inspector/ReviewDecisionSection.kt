@@ -28,16 +28,9 @@ import ee.schimke.composeai.uibuilder.editor.DesignReviewDecision
 import ee.schimke.composeai.uibuilder.editor.DesignReviewVerdict
 
 /**
- * Approve this revision, or ask for changes — at the top of the comments tab.
- *
- * The verdict an agent waits for with `ui_builder_await_decision` (compose-preview-server#1255).
- * Beside the discussion rather than in a toolbar because it is the end of one: somebody reads what
- * was said, looks at the canvas, and decides. It is about the revision on screen, which is why the
- * revision is named on the buttons' line: approving r4 says nothing about r5, and an agent waiting
- * on r5 is not answered by it.
- *
- * Like the comments panel it holds no cache: [review] is whatever the host last said, and a click
- * shows nothing until the host has stored it and answered.
+ * Approve this revision, or ask for changes, at the top of the comments tab: the verdict an agent
+ * waits for with `ui_builder_await_decision` (compose-preview-server#1255). Names the revision on
+ * screen, since approving r4 says nothing about r5. Stateless: [review] is the host's last answer.
  */
 @Composable
 internal fun ReviewDecisionSection(

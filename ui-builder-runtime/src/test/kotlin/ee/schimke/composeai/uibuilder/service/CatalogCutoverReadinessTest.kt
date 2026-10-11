@@ -16,22 +16,16 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Could every catalog be switched to catalog-owned today, and if not, what exactly is missing?
+ * Could every catalog be switched to catalog-owned today ([CatalogOwnership.ALL]), and if not, what
+ * is missing? Asked against fixtures captured from each catalog repository
+ * ([CatalogCutoverFixtures]).
  *
- * Asked against what each catalog repository actually publishes — its `ui-builder.json`, its
- * `components.json`, its seed documents and its renderer runtime, captured from one delivery commit
- * per catalog ([CatalogCutoverFixtures]) — with [CatalogOwnership.ALL], which is the switch nobody
- * has flipped. The answer is in two parts:
+ * - What already holds is asserted outright: served from own files, no Kotlin generator runs,
+ *   legacy designs still open, every published seed validates.
+ * - The gap ledger is asserted exactly, one line per missing item, so it only shrinks on purpose
+ *   and an added line is a catalog regression.
  *
- * - **what already holds**, asserted outright: every catalog is served from its own files, no
- *   Kotlin catalog generator runs, a design created against a synthesised catalog still opens, and
- *   every seed a catalog publishes validates against the catalog it is served as;
- * - **the gap ledger**, asserted exactly: one line per thing a catalog does not publish yet. It is
- *   a list a catalog repository works through, and it is asserted exactly so it can only shrink on
- *   purpose — a re-capture that removes a line fails this test until the line is deleted here, and
- *   one that adds a line is a catalog regression, not a fixture to accept.
- *
- * `docs/design/UI_BUILDER_CATALOG_CUTOVER.md` is the plan this measures.
+ * See `docs/design/UI_BUILDER_CATALOG_CUTOVER.md`.
  */
 class CatalogCutoverReadinessTest {
 
@@ -214,11 +208,8 @@ class CatalogCutoverReadinessTest {
    * `UI_BUILDER_CATALOG_CUTOVER.md` § The gap ledger for the fix each one wants.
    */
   /**
-   * A published `remote-compose` component that states no `modifiers` offers the Remote-only ones
-   * its synthesised twin does. The structural default is a Compose list, so a toggle in an owned
-   * remote-m3 offered no `sharedElement` or `animateEnterExit`, and could not animate a switch
-   * between states. A catalog's own list is still taken at its word: the widget containers state
-   * none.
+   * A published `remote-compose` component that states no `modifiers` still offers the Remote-only
+   * ones (`sharedElement`, `animateEnterExit`); a catalog's own list is taken at its word.
    */
   @Test
   fun `a published remote-compose component offers the remote-only modifiers`() {
@@ -250,10 +241,8 @@ class CatalogCutoverReadinessTest {
   }
 
   /**
-   * The export half of the ledger is one line of policy per catalog, and this proves it: with the
-   * declaration each catalog would add, every seed it publishes exports through the emitter it
-   * reaches today by id. If this fails, the ledger line is not the whole fix. A2UI already
-   * publishes its declaration, so declaring it again here is a no-op for that catalog.
+   * The export half of the ledger is one line of policy per catalog: with that declaration, every
+   * published seed exports through the emitter it reaches today by id.
    */
   @Test
   fun `declaring the export route is all the export half needs`() {

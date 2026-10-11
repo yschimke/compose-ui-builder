@@ -57,17 +57,11 @@ sealed interface DesignOperation {
     DesignOperation
 
   /**
-   * Unset one optional property, so the node takes the component's own default again.
+   * Unset one optional property, so the node takes the component's own default again. Required
+   * properties can't be unset; unsetting an absent one is a no-op.
    *
-   * `setProperty` had no inverse (yschimke/compose-preview-server#480): an author who tried a
-   * property and found it wrong could change its value but not the *shape* of the node, and the
-   * only ways back were to delete and rebuild the node or to guess the default. A required property
-   * cannot be unset — the reducer already refuses a document missing one — and a property the node
-   * does not hold is unset already, which is accepted as the no-op it is.
-   *
-   * On the wire this is `setProperty` with `{"type": "null"}`, which the server reads as an unset
-   * on an optional property; `RemoveNodePropertyMutationV1` is the explicit spelling the published
-   * protocol does not carry yet.
+   * On the wire this is `setProperty` with `{"type": "null"}`; `RemoveNodePropertyMutationV1` is
+   * the explicit spelling the published protocol does not carry yet.
    */
   @Serializable
   @SerialName("removeNodeProperty")
@@ -91,27 +85,17 @@ sealed interface DesignOperation {
   data class SetEnvironment(val field: String, val value: JsonElement) : DesignOperation
 
   /**
-   * Replace every modifier on one node.
-   *
-   * Whole-list rather than per-modifier, matching `SetModifiersMutationV1` on the wire and for the
-   * reason it gives: a modifier chain is order-dependent by definition — padding then size is a
-   * different layout from size then padding — and the list has no per-element identity to address.
-   * Two authors editing a node's chain are editing one thing.
-   *
-   * An empty list clears the chain, which is a value rather than an absence: it is how a node gets
-   * its layout back.
+   * Replace every modifier on one node, matching `SetModifiersMutationV1`: a chain is
+   * order-dependent with no per-element identity. An empty list clears the chain.
    */
   @Serializable
   @SerialName("setModifiers")
   data class SetModifiers(val nodeId: String, val modifiers: JsonArray) : DesignOperation
 
   /**
-   * Declare, or redeclare, one reusable component: `{"name": …, "root": …}` under [componentKey].
-   *
-   * The wire's `DeclareComponentMutationV1`. A body root that is a *second* root of the design when
-   * it is declared stops being one — it is a definition, drawn only where a placement names it.
-   * That is how a subtree becomes a component in one command: move it out of the screen to the root
-   * list, then declare it, and the command ends with the one root it started with.
+   * Declare, or redeclare, one reusable component (`{"name": …, "root": …}` under [componentKey]);
+   * the wire's `DeclareComponentMutationV1`. A body that is an extra root when declared stops being
+   * a root, so "make component" is: move the subtree to the root list, then declare it.
    */
   @Serializable
   @SerialName("declareComponent")
@@ -127,9 +111,9 @@ sealed interface DesignOperation {
   data class RemoveComponent(val componentKey: String) : DesignOperation
 
   /**
-   * Replace what one placement passes to its component's body — the wire's
-   * `SetComponentArgumentsMutationV1`. The placement keeps its id, so the comments, selection and
-   * reviews that name it still find it. Whole-map, so an empty [arguments] passes nothing.
+   * Replace what one placement passes to its component's body (the wire's
+   * `SetComponentArgumentsMutationV1`). The placement keeps its id; whole-map, so an empty
+   * [arguments] passes nothing.
    */
   @Serializable
   @SerialName("setComponentArguments")
@@ -227,14 +211,9 @@ internal fun UiBuilderDocument.withValueAt(
 }
 
 /**
- * Write one component declaration, keeping the root list honest about which subtree is the screen.
- *
- * A body declared while it is an *extra* root leaves the root list: it is a definition now, and a
- * design still has the one screen root it had. A body that loses its declaration and is placed
- * nowhere else returns to the root list, so it is still somewhere — the command that removed the
- * component then deletes it, or the end-of-command root check refuses the result. Both directions
- * are worked out from the document alone, so an undo, which writes the old declaration back, gets
- * the same answer the forward write did.
+ * Write one component declaration, keeping the root list consistent: a body declared as an extra
+ * root leaves it; a body undeclared and placed nowhere returns to it. Derived from the document
+ * alone, so undo gets the same answer.
  */
 internal fun UiBuilderDocument.withComponent(key: String, value: JsonElement?): UiBuilderDocument {
   val before = componentRootOf(components[key])
@@ -308,18 +287,14 @@ data class PropertyChange(
   val address: PropertyAddress,
   val before: JsonElement?,
   /**
-   * The value written, or [JsonNull] for a [DesignOperation.RemoveNodeProperty] — a property is
-   * always a typed object, so the bare null is unambiguous. Read through [afterValue], which is the
-   * absence a removal leaves.
+   * The value written, or [JsonNull] for a [DesignOperation.RemoveNodeProperty] (properties are
+   * always typed objects, so bare null is unambiguous). Read through [afterValue].
    */
   val after: JsonElement,
   /**
-   * The revision that owned [address] before this command wrote it, or null if nothing had.
-   *
-   * Undo is a rewind, so it puts this back rather than stamping its own revision — see
-   * [CollaborationReducer.undo]. Without it a second undo saw the first undo's revision on the
-   * address, compared it against the older command's own `committedRevision`, and refused as
-   * `UNSAFE_COMPENSATION`.
+   * The revision that owned [address] before this command wrote it, or null if nothing had. Undo
+   * restores it rather than stamping its own revision (see [CollaborationReducer.undo]), so a
+   * second undo isn't refused as `UNSAFE_COMPENSATION`.
    */
   val beforeVersion: Int? = null,
 ) {
@@ -338,11 +313,7 @@ data class EnvironmentChange(
 )
 
 /**
- * One node's whole modifier chain, before and after.
- *
- * Node-granular rather than address-granular because the chain is one value: there is no
- * `PropertyAddress` equivalent to hold, and two writes to the same node's modifiers are two writes
- * to the same thing.
+ * One node's whole modifier chain, before and after; node-granular because the chain is one value.
  */
 data class ModifierChange(
   val nodeId: String,
@@ -511,11 +482,9 @@ fun interface CollaborationPropertyValidator {
   ): PropertyWriteIssue?
 
   /**
-   * The write-time rules for a node that arrives whole, asked of every property at once.
-   *
-   * Defaulted to nothing so a reducer-only test's lambda validator is unchanged; the catalog-backed
-   * validator answers with `CapabilityValidator.insertIssue`. The field the issue is about rides in
-   * [PropertyWriteIssue.field] so the rejection is located the way a `setProperty` one is.
+   * The write-time rules for a node that arrives whole, asked of every property at once. Defaults
+   * to nothing for reducer-only tests; the catalog-backed validator uses
+   * `CapabilityValidator.insertIssue`. [PropertyWriteIssue.field] locates the rejection.
    */
   fun validateInsert(document: UiBuilderDocument, node: UiBuilderNode): PropertyWriteIssue? = null
 
@@ -561,9 +530,8 @@ class CapabilityPropertyWriteValidator(private val validator: CapabilityValidato
             (nodeId to
               node.copy(properties = JsonObject(node.properties + (property to encodedValue))))
       )
-    // The wrapper question first, because it is the more specific answer: a `string` on an
-    // `allowedValues` property also type-checks against `jsonType`, so the general pass below has
-    // nothing to say about it. See `CapabilityValidator.writeWrapperIssue`.
+    // The wrapper question first: a `string` on an `allowedValues` property also passes `jsonType`.
+    // See `CapabilityValidator.writeWrapperIssue`.
     validator.writeWrapperIssue(node, property, encodedValue, document.assets.keys)?.let {
       return PropertyWriteIssue(it.message, property)
     }

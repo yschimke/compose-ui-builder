@@ -22,11 +22,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * A component moving between designs, and a parameter renamed after the fact.
- *
- * Copying a placement carries its component — declaration and body — on the clipboard, so pasting
- * it into a design that has never seen `InboxEmail` brings `InboxEmail` with it. The clipboard also
- * goes out as text, which is how another tab, window or IDE reads it back.
+ * A component moving between designs, and a parameter renamed after the fact. A copied placement
+ * carries its component (declaration and body), so pasting brings `InboxEmail` along; the clipboard
+ * also goes out as text for other tabs, windows or IDEs.
  */
 class LocalComponentsClipboardTest {
   private val catalog =

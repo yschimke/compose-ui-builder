@@ -17,12 +17,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The palette's pins, and the catalog defaults behind them.
- *
- * Two halves of one bargain: the catalog knows what its typical app is made of, so it declares the
- * components worth keeping at the top and the slot each component considers its main one; the
- * reader can overrule the pins, and the moment they do, the panel is theirs — including the
- * defaults they take off.
+ * The palette's pins, and the catalog defaults behind them: the catalog declares components to keep
+ * at the top and each component's main slot; once the reader overrules the pins, the panel is
+ * theirs, including removed defaults.
  */
 class PalettePinsTest {
   private val baseCatalog =

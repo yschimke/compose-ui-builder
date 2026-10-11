@@ -48,17 +48,9 @@ fun wearWidgetUiBuilderDocument(
  * A ready-made Wear widget design, reproducing one of the widgets in
  * [android/wear-os-samples' `WearWidget` sample](https://github.com/android/wear-os-samples/pull/1386).
  *
- * The sample writes each widget as `GlanceWearWidget.provideWidgetData` returning a
- * `WearWidgetDocument` of Remote Compose composables. The frame's *geometry* — the content size,
- * the 8dp padding, the 26dp radius — comes from `WearWidgetParams`, while its *colour* is the
- * widget's own background, which the container paints as the round rect. The scaffold models both,
- * so the question these two answer is whether the designer can express the widget half at all, and
- * the answer is yes, from ordinary catalog components.
- *
- * What they are not: a compile of the sample. The builder draws with Compose Material 3 and the
- * widget runs Remote Compose on a watch, so these reproduce the sample's *design* — layout,
- * colours, type sizes, strings — as a design, and the fidelity question belongs to the parity lanes
- * rather than to a template.
+ * The frame's geometry comes from `WearWidgetParams` and its colour is the widget's background,
+ * both modelled by the scaffold. These reproduce the sample's design, not a compile of it; fidelity
+ * belongs to the parity lanes.
  */
 enum class WearWidgetSample(
   val templateId: String,
@@ -67,11 +59,8 @@ enum class WearWidgetSample(
   val supportingText: String,
 ) {
   /**
-   * `HelloWidgetContent`: centred text on the theme's primary, in the Small host.
-   *
-   * Small because that is what the content asks for — one line of 20sp text has nothing to do with
-   * the extra 48dp of the Large canvas, and a template that opens on a mostly empty widget teaches
-   * the wrong default.
+   * `HelloWidgetContent`: centred text on the theme's primary, in the Small host (one line of text
+   * does not need the Large canvas).
    */
   Hello(
     templateId = "hello-widget",
@@ -97,9 +86,7 @@ enum class WearWidgetSample(
     }
 
   public companion object {
-    /**
-     * The sample with this template id, or null — so an unknown template falls through as before.
-     */
+    /** The sample with this template id, or null. */
     public fun forTemplate(templateId: String): WearWidgetSample? = entries.firstOrNull {
       it.templateId == templateId
     }
@@ -109,14 +96,9 @@ enum class WearWidgetSample(
 /**
  * The sample's Hello widget: `RemoteText` centred in a `RemoteBox` on a primary background.
  *
- * The background is the scaffold's, matching `WearWidgetBrush.color(colorScheme.primary)` passed to
- * `WearWidgetDocument` — the container paints it as the round rect, so the whole squircle is
- * primary and the text sits on it inside the padding.
- *
- * Centring is the child's `align` modifier, not the box's: `layout/box` aligns each child by that
- * child's own alignment, and `RemoteBox` takes it as its `contentAlignment`. A modifier rather than
- * the `alignment` property `m3/text` carries, because the published `remote-m3/remote-text`
- * declares no such property and every Remote leaf accepts `align`.
+ * The background is the scaffold's, as `WearWidgetBrush.color(colorScheme.primary)` is in the
+ * sample. Centring uses the child's `align` modifier, since `remote-m3/remote-text` declares no
+ * `alignment` property and every Remote leaf accepts `align`.
  */
 fun helloWidgetUiBuilderDocument(
   designId: String,
@@ -167,15 +149,9 @@ fun helloWidgetUiBuilderDocument(
 /**
  * The sample's Weather widget, in its sunny state: location over the reading, on `ColorSunny`.
  *
- * A literal `#FF2196F3` rather than a theme token, because the sample's colour is chosen by the
- * *weather*, not by the theme — it swaps between four hard-coded colours per condition — and naming
- * it `primary` here would claim a relationship to the theme that the widget does not have. The
- * sunny state is the one the sample's own previews render.
- *
- * Each line is `fillMaxWidth` with `textAlign = center` rather than relying on the column's
- * `horizontalAlignment`, which the catalog declares and the renderer does not read; centring the
- * text inside a full-width line is the same picture through a path that works. The column's own
- * vertical centring is its `alignment` in the parent box, which does.
+ * A literal colour, not a theme token: the sample picks it by weather condition. Each line is
+ * `fillMaxWidth` with `textAlign = center` because the renderer does not read the column's
+ * `horizontalAlignment`.
  */
 fun weatherWidgetUiBuilderDocument(
   designId: String,
@@ -254,10 +230,8 @@ private const val WEATHER_SUNNY_ARGB = "#FF2196F3"
 private const val WEATHER_ON_SUNNY_ARGB = "#FFFFFFFF"
 
 /**
- * A widget host scaffold whose content slot holds a filled surface wrapping [content].
- *
- * The surface is inserted here rather than by each sample because both need it and for the same
- * reason: it is the widget's own background, which the host frame does not draw.
+ * A widget host scaffold whose content slot holds a filled surface wrapping [content]; the surface
+ * is the widget's own background, which the host frame does not draw.
  */
 private fun wearWidgetSampleDocument(
   designId: String,
@@ -276,10 +250,7 @@ private fun wearWidgetSampleDocument(
       UiBuilderNode(
         id = scaffoldId,
         componentId = size.componentId,
-        // On the scaffold, not on a surface inside it. `WearWidgetContainer` paints the widget's
-        // own background as the rounded rect, so the coloured squircle IS the widget; a filled
-        // surface in the content slot would instead draw a coloured rectangle inside a
-        // differently-coloured frame, which is not what any widget looks like.
+        // On the scaffold: `WearWidgetContainer` paints the background as the rounded rect itself.
         properties = JsonObject(mapOf("background" to background)),
         modifiers = JsonArray(emptyList()),
         slots = mapOf("content" to listOf(contentId)),
@@ -306,11 +277,8 @@ private fun colorToken(token: String): JsonObject = literal("colorToken", JsonPr
 private fun modifier(type: String): JsonObject = JsonObject(mapOf("type" to JsonPrimitive(type)))
 
 /**
- * One state variable a new design starts with.
- *
- * Declared at creation when the author already knows the screen's state. State may also be added or
- * edited later through the Screen inspector; both paths produce the same state-variable
- * declarations.
+ * One state variable a new design starts with. State can also be added later through the Screen
+ * inspector; both produce the same declarations.
  */
 data class NewDesignState(
   val name: String,
@@ -338,11 +306,8 @@ enum class NewDesignStateType(val wireType: String, val valueType: String, val l
       }
 
   /**
-   * The typed initial value for what someone typed.
-   *
-   * Every kind has a total answer, because the alternative is a dialog that refuses to create a
-   * design over a typo in a default. A flag reads anything that is not `true` as off, and a number
-   * that is not a number starts at zero.
+   * The typed initial value for what someone typed. Always succeeds: a flag reads anything but
+   * `true` as off, and a non-number starts at zero.
    */
   fun parse(raw: String): JsonPrimitive =
     when (this) {
@@ -353,30 +318,21 @@ enum class NewDesignStateType(val wireType: String, val valueType: String, val l
 }
 
 /**
- * The name a state variable may take.
- *
- * A Kotlin identifier, because that is what it becomes: the Compose exporter declares it as a
- * property and the generator refuses a name it cannot write. Checking it here means the dialog can
- * say so while someone types rather than the export saying so weeks later.
+ * The name a state variable may take: a Kotlin identifier, since the Compose exporter declares it
+ * as one. Checked here so the dialog can say so while typing.
  */
 val NEW_DESIGN_STATE_NAME: Regex = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
 /**
- * The id a new design may take: the shape the create route validates and the shape a
- * `/ui-builder/<designId>` path segment can hold.
- *
- * Stated here because three surfaces ask the same question — the New design form in the browser,
- * the server's create and copy routes, and the Designs page's own `pattern` attribute — and an id
- * one of them accepts and another refuses is a create that fails after the click.
+ * The id a new design may take: what the create route validates and a `/ui-builder/<designId>`
+ * segment can hold. Shared by the browser form, the server's create/copy routes and the Designs
+ * page's `pattern`.
  */
 val NEW_DESIGN_ID: Regex = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
 
 /**
- * State declarations as one string, for a host that has to carry them across a navigation.
- *
- * JSON rather than a separator scheme, because a `Text` variable's initial value is free text and
- * every separator worth choosing can appear inside one. The browser encodes the whole thing as a
- * single query parameter, so the only question left is whether it parses.
+ * State declarations as one string (JSON, since initial text values can contain any separator), for
+ * carrying across a navigation as a single query parameter.
  */
 fun encodeNewDesignStates(state: List<NewDesignState>): String =
   Json.encodeToString(
@@ -395,12 +351,8 @@ fun encodeNewDesignStates(state: List<NewDesignState>): String =
   )
 
 /**
- * The inverse, defensively.
- *
- * The input is a query parameter, so it is whatever the address bar contained. Anything that does
- * not parse, names something that is not an identifier, or claims a kind this build does not have
- * is dropped rather than failing the session: a mistyped URL should open an empty design, not a
- * blank page.
+ * The inverse, defensively: the input comes from the address bar, so anything unparsable, with a
+ * non-identifier name or an unknown kind is dropped rather than failing the session.
  */
 fun decodeNewDesignStates(encoded: String): List<NewDesignState> {
   val parsed =
@@ -421,19 +373,16 @@ fun decodeNewDesignStates(encoded: String): List<NewDesignState> {
 }
 
 /**
- * Refuses [state] a new design could never export: two declarations under one name, or names that
- * collide or become a Kotlin keyword once written as identifiers. Shared by every seed that takes
- * declarations, so a published template is held to the rule the built-in blank one is.
+ * Refuses [state] a new design could never export: duplicate names, or names that collide or become
+ * a Kotlin keyword once written as identifiers. Shared by every seed that takes declarations.
  */
 internal fun requireExportableState(state: List<NewDesignState>) {
   require(state.map(NewDesignState::name).distinct().size == state.size) {
     "state variable names must be unique"
   }
-  // Unique *as the exporter will write them*, and legal there. `identifier()` drops separators, so
-  // `foo-bar` and `foo_bar` both become `fooBar` and declare the same variable twice; and it does
-  // not escape keywords, so `when` becomes `var when: Boolean`. Neither compiles, and neither is
-  // visible until somebody exports. Refusing at creation is the only moment this design can be
-  // stopped from holding a name it can never generate — the wire cannot rename a variable later.
+  // Unique as the exporter writes them: `identifier()` folds `foo-bar` and `foo_bar` together and
+  // does not escape keywords. Creation is the only point to refuse, since the wire cannot rename a
+  // variable later.
   state.forEach { declared ->
     val identifier = exportedStateIdentifier(declared.name)
     require(identifier !in KOTLIN_HARD_KEYWORDS) {
@@ -534,12 +483,8 @@ fun helloUiBuilderDocument(
 }
 
 /**
- * A new A2UI design: an `a2ui/Column` root with one `a2ui/Text` headline in it.
- *
- * The smallest surface that already draws something and already exports: [A2uiDocumentExporter]
- * renames the column `root`, which is the id an A2UI client draws a surface from, and the headline
- * gives the canvas, the Code pane and the JSON export something to show before anything is dragged
- * in.
+ * A new A2UI design: an `a2ui/Column` root with one `a2ui/Text` headline. The smallest surface that
+ * draws and exports; [A2uiDocumentExporter] renames the column `root`.
  */
 fun a2uiUiBuilderDocument(
   designId: String,
@@ -586,10 +531,8 @@ fun a2uiUiBuilderDocument(
 }
 
 /**
- * The wire declaration for one variable.
- *
- * `persistence` is `preview`, the only value a design authored in a browser can honestly claim:
- * anything durable is a promise about a host this document knows nothing about.
+ * The wire declaration for one variable. `persistence` is `preview`, the only value a
+ * browser-authored design can honestly claim.
  */
 internal fun NewDesignState.declaration(): JsonObject =
   JsonObject(
@@ -603,14 +546,9 @@ internal fun NewDesignState.declaration(): JsonObject =
   )
 
 /**
- * An empty Wear screen: the scaffold, its clock and scroll indicator, and a list with nothing in
- * it.
- *
- * The list is part of the template rather than something to add afterwards, because a Wear screen
- * without one is not a starting point anybody wants — `ScreenScaffold` exists to hold a
- * `TransformingLazyColumn`, its `contentPadding` only means anything once something reads it, and
- * the generator refuses a scaffold whose content slot holds anything else at the top level. Opening
- * on the pair is opening on the shape of the thing.
+ * An empty Wear screen: the scaffold, its clock and scroll indicator, and an empty list. The list
+ * is included because `ScreenScaffold` exists to hold a `TransformingLazyColumn`, and the generator
+ * refuses other top-level content.
  */
 fun blankWearScreenUiBuilderDocument(
   designId: String,
@@ -659,12 +597,8 @@ fun blankWearScreenUiBuilderDocument(
 }
 
 /**
- * The frame a Wear design is created on: the small round watch, at its own density, dark.
- *
- * Not the fixture's phone frame. The scaffold reads its diameter from the document, so a Wear
- * design seeded on a 411dp handset would fall back to the smallest watch to draw itself while the
- * Screen inspector said "Pixel" — a disagreement between the picture and the frame menu that nobody
- * could act on. `wearos_small_round`'s own numbers, so the menu opens on the right entry.
+ * The frame a Wear design is created on: `wearos_small_round` at its own density, dark, so the
+ * scaffold's diameter and the Screen inspector's device menu agree.
  */
 fun wearScreenEnvironment(environment: JsonObject): JsonObject =
   JsonObject(
@@ -678,32 +612,14 @@ fun wearScreenEnvironment(environment: JsonObject): JsonObject =
   )
 
 /**
- * The two round watches a Wear screen is checked on: 192dp and 240dp.
- *
- * Wear's layout question is where the list wraps, and it wraps differently at the small and the
- * extra-large round — 48dp is a quarter of the small screen's width, so a row that fits one and not
- * the other is the common case rather than a corner one. The screen opens *at* 192dp, the smaller
- * of the two, because a list that works there works at 240 and not the other way round.
- *
- * Two rather than all four round sizes: 227dp sits between these and has never yet been the size
- * that showed something 192 and 240 did not, and a default that draws four panes for a two-pane
- * question spends the preview strip on nothing.
+ * The two round watches a Wear screen is checked on: 192dp and 240dp, where list wrapping differs
+ * most. The screen opens at 192dp, since what works there works at 240dp.
  */
 private val WEAR_EXPORT_DEVICES = listOf("id:wearos_small_round", "id:wearos_xl_round")
 
 /**
- * [environment] on the frame a new mobile screen opens at: `pixel_6`.
- *
- * A blank design used to inherit the fixture's own 1280x800 at density 1 — the Jetcaster screen's
- * expanded supporting-pane canvas, which is the right frame for *that* design and matches no device
- * in the catalog, so the Screen inspector opened reading "Custom size" on every new screen. A phone
- * is what a screen is drawn for, and a typical one is easier to reason about than a canvas whose
- * width no handset has.
- *
- * `pixel_6` rather than a newer id because its geometry is the one four catalog entries share
- * (`pixel_6`, `pixel_6a`, `pixel_7`, `pixel_7a`), so the frame stays matched — and named — as the
- * catalog grows. The fixture's own template keeps the fixture's frame: re-pinning Jetcaster to a
- * phone would redraw the design the pane was built to show.
+ * [environment] on the frame a new mobile screen opens at: `pixel_6`, whose geometry four catalog
+ * entries share. The fixture's own template keeps the fixture's frame.
  */
 fun mobileScreenEnvironment(environment: JsonObject): JsonObject =
   JsonObject(
@@ -716,25 +632,17 @@ fun mobileScreenEnvironment(environment: JsonObject): JsonObject =
   )
 
 /**
- * The five frames a new mobile screen is checked on, one per width the layout has to survive.
+ * The five frames a new mobile screen is checked on, one per width the layout has to survive:
  *
- * Empty was the old default, which made "does this work on a phone?" a question you had to think to
- * ask. These make it the thing you see. Real devices rather than round numbers, because the point
- * of the strip is a frame somebody ships, and one per size class rather than per handset:
+ * |                    |            | why this one                                                |
+ * |--------------------|------------|-------------------------------------------------------------|
+ * | `pixel_4a`         | 393 × 851  | the narrowest real Pixel in the render catalog              |
+ * | `pixel_9`          | 411 × 923  | the modal phone; four catalog entries share this geometry   |
+ * | `pixel_9_pro_xl`   | 438 × 997  | the widest phone; its 3.0 density catches dp-vs-px mistakes |
+ * | `pixel_9_pro_fold` | 791 × 819  | unfolded: the width where a pane scaffold is still deciding |
+ * | `pixel_tablet`     | 1280 × 800 | expanded, where two panes are the answer                    |
  *
- * |                  |          |why this one                                                                          |
- * |------------------|----------|--------------------------------------------------------------------------------------|
- * |`pixel_4a`        |393 × 851 |the narrowest real Pixel the render catalog knows — where a row runs out of room first|
- * |`pixel_9`         |411 × 923 |the modal phone; four catalog entries share this geometry                             |
- * |`pixel_9_pro_xl`  |438 × 997 |the widest phone, and the one whose 3.0 density catches dp-vs-px mistakes             |
- * |`pixel_9_pro_fold`|791 × 819 |unfolded: the width where a pane scaffold is still deciding                           |
- * |`pixel_tablet`    |1280 × 800|expanded, where two panes are the answer                                              |
- *
- * **What this set cannot cover**, and neither can any other set drawn from this catalog: a
- * foldable's *outer* display. `pixel_9_pro_fold` is the inner screen, and the render catalog has no
- * folded frame at all — so the one transition adaptive layout exists for, a device that is a narrow
- * phone and then a small tablet, cannot be looked at here. Landscape is missing for the same
- * reason: every preset is portrait, so a rotation is a hand-typed frame.
+ * Not covered by any catalog frame: a foldable's outer display, and landscape.
  */
 private val MOBILE_EXPORT_DEVICES =
   listOf(
@@ -761,36 +669,21 @@ private const val WEAR_SMALL_ROUND_DENSITY = 2.0
 private const val WEAR_LIST_SPACING_DP = 4f
 
 /**
- * `10:10`, frozen, exactly as wear-m3-catalog freezes its own.
- *
- * A status strip that moved would churn every render diff; dropping it instead would under-report
- * the top margin the content lays out around, because the list's top content padding is what makes
- * room for it.
+ * `10:10`, frozen as wear-m3-catalog freezes its own: a moving clock churns render diffs, and
+ * dropping the strip would under-report the top content padding.
  */
 private const val WEAR_FROZEN_CLOCK = "10:10"
 
 /**
- * The rows the Wear screen template opens on.
- *
- * Character for character the rows of wear-m3-catalog's own `TransformingLazyColumn` component, so
- * the builder's canvas and that repository's stitched `ScrollMode.LONG` render are the same design
- * drawn by two renderers — which is the only way a difference between them means anything.
+ * The rows the Wear screen template opens on, identical to wear-m3-catalog's
+ * `TransformingLazyColumn` component so both renders show the same design.
  */
 private val WEAR_SCREEN_ROWS = (1..6).map { "Session $it" to "${it * 4} min" }
 
 /**
  * The Wear list screen a `wear-m3` design opens on: a `ScreenScaffold` over a
- * `TransformingLazyColumn` of title cards, under a frozen curved status strip.
- *
- * It reproduces `Template/TimeText` from compose-ai-tools' `samples/design-catalog-wear-m3` — the
- * base Wear screen, and the shape well over half of Wear Material 3's surface area takes — for the
- * same reason the widget templates reproduce the `WearWidget` sample: the question a first template
- * has to answer is whether the designer can express a real screen, and a blank scaffold does not
- * answer it.
- *
- * The clock is frozen at `10:10` rather than live, exactly as that catalog freezes its own: a
- * status strip that moved would churn every render diff, and dropping the strip instead would
- * under-report the top margin the content lays out around.
+ * `TransformingLazyColumn` of title cards, under a frozen curved status strip. Reproduces
+ * `Template/TimeText` from compose-ai-tools' `samples/design-catalog-wear-m3`.
  */
 fun wearScreenUiBuilderDocument(
   designId: String,
@@ -798,12 +691,8 @@ fun wearScreenUiBuilderDocument(
   environment: JsonObject,
   title: String = "Activity",
   /**
-   * Absent by default, so the template *is* wear-m3-catalog's list rather than that plus a control.
-   *
-   * The slot stays available to an author; what it must not do is sit in the design the parity
-   * check compares, because `EdgeButton` hugs the bottom curve on a watch and the canvas draws the
-   * borrowed flat button at the bottom cap. A difference nobody is testing for is a difference that
-   * makes the ones you are testing for harder to see.
+   * Absent by default, so the template matches wear-m3-catalog's list for the parity check (the
+   * canvas draws `EdgeButton` differently from a watch).
    */
   edgeButtonLabel: String? = null,
 ): UiBuilderDocument {
@@ -813,28 +702,16 @@ fun wearScreenUiBuilderDocument(
       UiBuilderNode(
         id = "row-$index",
         componentId = "wear-m3/card",
-        // No `shape`, and the absence is the point. The row carried `shape = "large"` with a
-        // comment saying it "is what reaches the theme's corner radius", which was true while
-        // `wear-m3/card` was drawn as a borrowed mobile card through the canvas's corner-radius
-        // local. Wear's own `TitleCard` takes its shape from `CardDefaults.shape` — one shape,
-        // 26dp,
-        // the reference card's — and neither the canvas nor the exporter reads the property, so it
-        // was a control an author could move that moved nothing. Dropped from the catalog's
-        // declaration in the same change.
+        // No `shape`: Wear's `TitleCard` uses `CardDefaults.shape`, and nothing reads the property.
         properties =
           JsonObject(
             mapOf(
-              // `title`, which is the `TitleCard` this row has always generated. It read
-              // `filled` while the variant list was the borrowed mobile one, where Material's
-              // three are filled / elevated / outlined; Wear's four are the four cards it
-              // publishes, and a filled Wear card is not one of them.
+              // `title`: Wear's four variants are the four cards it publishes.
               "variant" to literal("enum", JsonPrimitive("title"))
             )
           ),
         modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
-        // One column, not two texts. `m3/card` draws its content slot in a `Box`, so two
-        // children would be stacked on top of each other and the card would take the whole
-        // remaining height — which is exactly what the first render of this template did.
+        // One column, not two texts: a card's content slot is a `Box`, so two children would stack.
         slots = mapOf("content" to listOf("row-$index-lines")),
       ),
       UiBuilderNode(
@@ -842,15 +719,8 @@ fun wearScreenUiBuilderDocument(
         componentId = "layout/column",
         properties =
           JsonObject(mapOf("horizontalAlignment" to literal("enum", JsonPrimitive("start")))),
-        // NO padding, and the absence is the point. This column used to carry a measured
-        // 12.2 / 9.7 / 14.7dp to make the row reach the reference card's 64dp, because the canvas
-        // drew `wear-m3/card` as a borrowed mobile Material 3 card, which has none of Wear's
-        // padding. Since the CMP port landed, `wear-m3/card` is the real Wear `TitleCard` and
-        // carries `CardDefaults.ContentPadding` (12dp on every edge) itself — so that compensation
-        // was applied on top of it and the row drew 82dp with its text 24.2dp in from the card
-        // edge, against the reference's 64dp and 12dp. Measured, not reasoned: with the padding
-        // removed the row is exactly 64dp and the title starts exactly 12dp in, which is what the
-        // kit's own render measures and what `WearScreenParityTest` now pins.
+        // No padding: `wear-m3/card` is the real `TitleCard` with `CardDefaults.ContentPadding`,
+        // giving the reference 64dp row with text 12dp in, as `WearScreenParityTest` pins.
         modifiers = JsonArray(listOf(modifier("fillMaxWidth"))),
         slots = mapOf("children" to listOf("row-$index-title", "row-$index-subtitle")),
       ),
@@ -878,9 +748,7 @@ fun wearScreenUiBuilderDocument(
         UiBuilderNode(
           id = "edge-button",
           componentId = "wear-m3/button",
-          // `variant`, not `style`: the borrowed mobile property carried `fab` and `elevated`,
-          // which no watch publishes, so `wear-m3/button` declares Wear's four under the name
-          // every other Wear component uses for the same idea.
+          // `variant`, not `style`: `wear-m3/button` declares Wear's four variants.
           properties = JsonObject(mapOf("variant" to literal("enum", JsonPrimitive("filled")))),
           modifiers = JsonArray(emptyList()),
           slots = mapOf("content" to listOf("edge-button-label")),
@@ -918,9 +786,7 @@ fun wearScreenUiBuilderDocument(
         slots =
           mapOf("items" to listOf("list-header") + WEAR_SCREEN_ROWS.indices.map { "row-$it" }),
       ),
-      // The real `ListHeader` id, which carries its own 48dp. It used to be a padded `m3/text`:
-      // the canvas matched the reference, and the *generated* screen came out 31.5dp shorter,
-      // because a padded Text is not a ListHeader and the generator was right not to pretend.
+      // The real `ListHeader`, which carries its own 48dp.
       UiBuilderNode(
         id = "list-header",
         componentId = "wear-m3/list-header",
@@ -943,50 +809,15 @@ fun wearScreenUiBuilderDocument(
 }
 
 /**
- * Type sizes measured off the reference render's glyph boxes, not read off a token table.
+ * Type sizes measured off the reference render's glyph boxes, not the role sizes.
  *
- * These are not the role sizes — Wear's `titleMedium` is 16sp and its `bodySmall` 12sp — and they
- * are not meant to be: the canvas resolves the role through `wearTextStyle`, which reads Wear's own
- * typography, and then draws it with the font the canvas has. That font is the port's vendored
- * Roboto Flex, which is wider than the Roboto the Robolectric lane rasterises, so a title set at
- * Wear's own 16sp came out 73dp against the reference's 67dp. Pinning the size to the measured 14
- * is what closes that: rendered, the title is 64.5dp wide against the reference's 67.0dp, and the
- * subtitle 35.5 against 36.5.
- *
- * The generated Kotlin deliberately carries neither pin — `WearScreenCodeExporter` writes
- * `Text(text = …)` with no size — because the platform lane has the real font and the real role
- * size and needs no correction. So these numbers are a canvas-side measurement, and they are only
- * live because `wear-m3/text` reads `fontSizeSp`: the branch used to ignore every property but
- * `text`, `color`, `style` and `maxLines`, which made both pins inert and the canvas 6dp wide of
- * the reference.
+ * The canvas draws Wear's roles with the port's Roboto Flex, which is wider than Robolectric's
+ * Roboto, so pinning 14sp makes the canvas match the reference. The generated Kotlin carries no
+ * size: the platform lane has the real font.
  */
 private const val WEAR_CARD_TITLE_SP = 14f
 
 private const val WEAR_CARD_SUBTITLE_SP = 13f
-
-// `WEAR_LIST_HEADER_SP` (14.5f) stood here, and it is deleted rather than left unused.
-//
-// It was the label size for a padded `m3/text` faking `ListHeader`'s 48dp. `wear-m3/list-header` is
-// the real one now and carries its own height and type, so the constant stopped being read — the
-// renderer's copy went with the stand-in it belonged to, and this one stayed behind because nothing
-// fails when a private constant goes quiet. A dead number beside live ones is worse than dead code:
-// the next reader has to work out which of the three still matters.
-
-// The row's own padding constants are GONE, and this note is what stops them coming back.
-//
-// `WEAR_CARD_PADDING_DP` (12.2), `WEAR_CARD_TOP_PADDING_DP` (9.7) and
-// `WEAR_CARD_BOTTOM_PADDING_DP` (14.7) sat on `row-N-lines` to bring a *borrowed* mobile Material 3
-// card up to the reference row's 64dp. `wear-m3/card` is the real Wear `TitleCard` now — it carries
-// `CardDefaults.ContentPadding`, 12dp on every edge, and is 64dp on its own — so the same numbers
-// made the canvas draw an 82dp row with its text 24.2dp in, while the generated Kotlin (which
-// collapses the column into `TitleCard(title = …, subtitle = …)`) drew the right thing. Canvas and
-// native disagreed by 18dp a row, in the direction the canvas was wrong.
-//
-// `WEAR_LIST_HEADER_TOP_DP` / `WEAR_LIST_HEADER_BOTTOM_DP` were the same story one component over:
-// they padded a `Text` faking `ListHeader`, and went unused the day `wear-m3/list-header` became
-// the
-// real one. Dead constants are how a compensation outlives its reason, so they are deleted rather
-// than left for the next reader to wonder about.
 
 private fun wearScreenText(
   id: String,

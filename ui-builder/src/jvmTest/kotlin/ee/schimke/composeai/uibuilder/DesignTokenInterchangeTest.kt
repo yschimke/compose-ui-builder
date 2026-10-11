@@ -21,11 +21,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * Design tokens out as W3C DTCG and in from DTCG or a Material Theme Builder export.
- *
- * The point of a standard format is that what goes out comes back: a design's tokens exported and
- * imported into a fresh design read the same, and a file another tool wrote applies whatever this
- * design system declares and says plainly what it did not.
+ * Design tokens out as W3C DTCG and in from DTCG or a Material Theme Builder export: an export
+ * imported into a fresh design reads the same, and a foreign file applies what this design system
+ * declares and reports what it didn't.
  */
 class DesignTokenInterchangeTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/wear-m3-capabilities-v1.json"))
