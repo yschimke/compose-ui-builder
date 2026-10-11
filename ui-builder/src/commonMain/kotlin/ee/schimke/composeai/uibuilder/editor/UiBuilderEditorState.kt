@@ -1108,8 +1108,9 @@ class UiBuilderEditorReducer(
     if (!filtering && pinned.isNotEmpty()) {
       val pinnedItems = items.filter { it.componentId in pinned }
       if (pinnedItems.isNotEmpty()) {
-        val expanded = "Pinned" !in state.collapsedCatalogGroups
-        rows += EditorCatalogRow.Group("Pinned", pinnedItems.size, expanded)
+        val expanded = PINNED_SHELF_ID !in state.collapsedCatalogGroups
+        rows +=
+          EditorCatalogRow.Group(PINNED_SHELF, pinnedItems.size, expanded, id = PINNED_SHELF_ID)
         if (expanded) {
           pinnedItems.forEach { item ->
             val open =
