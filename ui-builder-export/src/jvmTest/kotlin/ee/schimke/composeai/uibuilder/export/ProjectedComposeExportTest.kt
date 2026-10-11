@@ -318,6 +318,44 @@ class ProjectedComposeExportTest {
   }
 
   @Test
+  fun `a top-level call in the catalog's own package is admitted, one elsewhere is not`() {
+    fun topLevel(callable: String) =
+      ExportProjection(
+        listOf(
+          ExportProjection.Target(
+            "wear/androidx.wear.compose.material3.ButtonKt.Button",
+            emptyMap(),
+            contexts =
+              mapOf(
+                "list-item" to
+                  ExportProjection.Context(
+                    mapOf(
+                      "transformation" to
+                        ExportProjection.Value.Fixed(
+                          ScreenValue.Construct(callable, typeFqn = "$callable.Type")
+                        )
+                    )
+                  )
+              ),
+          )
+        )
+      )
+    // `SurfaceTransformation(spec)` is top level in the package the catalog's buttons live in.
+    val owners =
+      ScreenExportGate.projectedOwners(
+        mapOf(
+          "own" to topLevel("androidx.wear.compose.material3.SurfaceTransformation"),
+          "foreign" to topLevel("java.lang.exit"),
+        ),
+        records,
+      )
+    // The callable itself, never its whole package.
+    assertTrue("androidx.wear.compose.material3.SurfaceTransformation" in owners, owners.toString())
+    assertFalse("androidx.wear.compose.material3" in owners, owners.toString())
+    assertFalse(owners.any { it.startsWith("java.") }, owners.toString())
+  }
+
+  @Test
   fun `a projected slot keeps the receiver its record declares`() {
     // `weight` is `RowScope.weight`: legal only because `label` is a `RowScope` slot.
     val source = emitted(document(button(), mapOf("weight" to DecimalValueV1(1.0))))
