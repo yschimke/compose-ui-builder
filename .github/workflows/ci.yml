@@ -27,8 +27,12 @@ concurrency:
 # traffic on the account's shared runner pool. The heavy jobs below are skipped on those PRs, and
 # `gradle` passes when they were skipped for that reason, so the release PR goes green in the time
 # the cheap gates take. The guard pairs the `release-please--` head branch with the release bot as
-# PR author: the branch name alone is contributor-controlled, the author is not. The same guard
-# compose-ai-tools' CI carries. Pushes to `main` have no `head_ref`, so they always run everything.
+# PR author: the branch name alone is contributor-controlled, the author is not.
+# release.yml's `release-pr-ci` starts this workflow on the release branch by `workflow_dispatch`
+# (the `pull_request` runs a `github.token` push raises sit at action_required), and a dispatch has
+# no `head_ref` and no `pull_request`, so the guard falls back to `ref_name` and `actor`: the
+# dispatching bot is the actor, and a person who dispatches on that branch gets the full run.
+# Pushes to `main` are not on a `release-please--` ref, so they always run everything.
 jobs:
   # `check` minus the two production Wasm executables. Each one is a link plus a Binaryen
   # `wasm-opt` pass that peaks at several GB (see `wasmLinkLane` in the root build file), so the
@@ -37,7 +41,7 @@ jobs:
   # and runs exactly once per workflow: at most one optimize per runner, none of them twice.
   # `gradle` stays as the check the ruleset requires and passes only if all three did.
   gradle-check:
-    if: ${{ !(startsWith(github.head_ref, 'release-please--') && github.event.pull_request.user.login == 'github-actions[bot]') }}
+    if: ${{ !(startsWith(github.head_ref || github.ref_name, 'release-please--') && (github.event.pull_request.user.login || github.actor) == 'github-actions[bot]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -75,7 +79,7 @@ jobs:
   # `:ui-builder:jvmTest` (~3.5 min) and `:ui-builder-runtime:test` (~4.3 min), split out of
   # `gradle-check`, which runs the rest of `check` beside them.
   jvm-tests:
-    if: ${{ !(startsWith(github.head_ref, 'release-please--') && github.event.pull_request.user.login == 'github-actions[bot]') }}
+    if: ${{ !(startsWith(github.head_ref || github.ref_name, 'release-please--') && (github.event.pull_request.user.login || github.actor) == 'github-actions[bot]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -99,7 +103,7 @@ jobs:
   # The publishing lane, the render bundle and the canvas benchmark: ~3 minutes that ran after
   # `check` in `gradle-check` and need nothing it built.
   publishing-lane:
-    if: ${{ !(startsWith(github.head_ref, 'release-please--') && github.event.pull_request.user.login == 'github-actions[bot]') }}
+    if: ${{ !(startsWith(github.head_ref || github.ref_name, 'release-please--') && (github.event.pull_request.user.login || github.actor) == 'github-actions[bot]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -154,7 +158,7 @@ jobs:
   # archive the server unpacks and verified there. The only job that builds it; the result is handed
   # to `ui-builder-web-smoke` so the browser smoke runs against these exact bytes.
   web-archive:
-    if: ${{ !(startsWith(github.head_ref, 'release-please--') && github.event.pull_request.user.login == 'github-actions[bot]') }}
+    if: ${{ !(startsWith(github.head_ref || github.ref_name, 'release-please--') && (github.event.pull_request.user.login || github.actor) == 'github-actions[bot]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -190,7 +194,7 @@ jobs:
   # archived and verified (no editor-only code survived dead-code elimination). The only job that
   # builds it.
   renderer-runtime:
-    if: ${{ !(startsWith(github.head_ref, 'release-please--') && github.event.pull_request.user.login == 'github-actions[bot]') }}
+    if: ${{ !(startsWith(github.head_ref || github.ref_name, 'release-please--') && (github.event.pull_request.user.login || github.actor) == 'github-actions[bot]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -228,7 +232,7 @@ jobs:
       - name: Every split Gradle job succeeded
         if: >-
           ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'skipped') || contains(needs.*.result, 'cancelled'))
-          && !(startsWith(github.head_ref, 'release-please--') && github.event.pull_request.user.login == 'github-actions[bot]') }}
+          && !(startsWith(github.head_ref || github.ref_name, 'release-please--') && (github.event.pull_request.user.login || github.actor) == 'github-actions[bot]') }}
         run: |
           echo "::error::A Gradle job did not succeed: ${NEEDS}"
           exit 1
@@ -236,7 +240,7 @@ jobs:
           NEEDS: ${{ toJSON(needs.*.result) }}
 
   ui-builder-remote-compose:
-    if: ${{ !(startsWith(github.head_ref, 'release-please--') && github.event.pull_request.user.login == 'github-actions[bot]') }}
+    if: ${{ !(startsWith(github.head_ref || github.ref_name, 'release-please--') && (github.event.pull_request.user.login || github.actor) == 'github-actions[bot]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -347,7 +351,7 @@ jobs:
           if-no-files-found: ignore
 
   ui-builder-contract:
-    if: ${{ !(startsWith(github.head_ref, 'release-please--') && github.event.pull_request.user.login == 'github-actions[bot]') }}
+    if: ${{ !(startsWith(github.head_ref || github.ref_name, 'release-please--') && (github.event.pull_request.user.login || github.actor) == 'github-actions[bot]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
