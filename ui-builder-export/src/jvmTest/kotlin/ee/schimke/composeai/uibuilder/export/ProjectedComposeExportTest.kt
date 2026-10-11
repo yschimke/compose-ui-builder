@@ -1,5 +1,6 @@
 package ee.schimke.composeai.uibuilder.export
 
+import ee.schimke.composeai.discovery.ChainLink
 import ee.schimke.composeai.discovery.ComponentCode
 import ee.schimke.composeai.discovery.ComponentOrigin
 import ee.schimke.composeai.discovery.ComponentRecord
@@ -7,6 +8,7 @@ import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.discovery.ComponentSymbol
 import ee.schimke.composeai.discovery.ExportProjection
 import ee.schimke.composeai.discovery.ExportProjectionJson
+import ee.schimke.composeai.discovery.ScreenValue
 import ee.schimke.composeai.discovery.TargetParameter
 import ee.schimke.composeai.uibuilder.protocol.*
 import java.io.File
@@ -486,6 +488,170 @@ class ProjectedComposeExportTest {
       reasons.any { "`content` is written as a `wear-m3/text`" in it },
       reasons.toString(),
     )
+  }
+
+  private val itemScope = "androidx.wear.compose.foundation.lazy.TransformingLazyColumnItemScope"
+  private val spec = "androidx.wear.compose.material3.lazy.TransformationSpec"
+  private val listState = "androidx.wear.compose.foundation.lazy.TransformingLazyColumnState"
+
+  private val transformingList =
+    ComponentRecord.Builder(
+        canonicalId =
+          "wear/androidx.wear.compose.foundation.lazy.TransformingLazyColumnKt.TransformingLazyColumn",
+        symbol =
+          ComponentSymbol.Builder(
+              jvmOwner = "androidx.wear.compose.foundation.lazy.TransformingLazyColumnKt",
+              callable = "androidx.wear.compose.foundation.lazy.TransformingLazyColumn",
+              name = "TransformingLazyColumn",
+              origin = ComponentOrigin.LIBRARY,
+            )
+            .build(),
+      )
+      .also { b ->
+        b.componentIds = listOf("wear-m3/list")
+        b.signatureKnown = true
+        b.parameters =
+          listOf(
+            parameter("modifier", "Modifier", "androidx.compose.ui.Modifier", default = true),
+            parameter("state", "TransformingLazyColumnState", listState, default = true),
+            TargetParameter.Builder(
+                name = "content",
+                type = "TransformingLazyColumnScope.() -> Unit",
+              )
+              .also {
+                it.scopeDslReceiver =
+                  "androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope"
+                it.lambdaReturnTypeFqn = "kotlin.Unit"
+              }
+              .build(),
+          )
+        b.code =
+          ComponentCode.Builder()
+            .also { c ->
+              c.call = "TransformingLazyColumn {}"
+              c.imports = listOf("androidx.wear.compose.foundation.lazy.TransformingLazyColumn")
+            }
+            .build()
+      }
+      .build()
+
+  private val listRecords =
+    ComponentRecordFile.Builder("wear", "release", records.components + transformingList).build()
+
+  /** The list writes its state from the frame's local and wraps each child in `item`. */
+  private val listProjection =
+    ExportProjection(
+      listOf(
+        ExportProjection.Target(
+          transformingList.canonicalId,
+          mapOf(
+            "state" to
+              ExportProjection.Value.Fixed(
+                ScreenValue.LocalRead.Builder("listState", listState).build()
+              )
+          ),
+          items = mapOf("content" to "item"),
+        )
+      )
+    )
+
+  /** The button, adding `transformedHeight(this, spec)` when it is a list item. */
+  private val itemButtonProjection =
+    ExportProjectionJson.decode(buttonProjection).getOrThrow().let { projection ->
+      projection.copy(
+        targets =
+          projection.targets.map { target ->
+            target.copy(
+              contexts =
+                mapOf(
+                  "list-item" to
+                    ExportProjection.Context(
+                      modifier =
+                        listOf(
+                          ChainLink(
+                            "androidx.wear.compose.material3.lazy.transformedHeight",
+                            positional =
+                              listOf(
+                                ScreenValue.ScopeRead.Builder(itemScope).build(),
+                                ScreenValue.LocalRead.Builder("spec", spec).build(),
+                              ),
+                          )
+                        )
+                    )
+                )
+            )
+          }
+      )
+    }
+
+  private val wearStructure =
+    CatalogScreenStructure.from(
+      Json.parseToJsonElement(
+          """
+          { "code": {
+              "imports": [
+                "androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState",
+                "androidx.wear.compose.material3.ScreenScaffold",
+                "androidx.wear.compose.material3.lazy.rememberTransformationSpec" ],
+              "templates": { "screen-root":
+                "val listState = rememberTransformingLazyColumnState()\nval spec = rememberTransformationSpec()\nScreenScaffold(scrollState = listState) { contentPadding ->\n  ${'$'}{content}\n}" },
+              "locals": { "listState": "$listState", "spec": "$spec" },
+              "scopes": { "list-item": "$itemScope" } } }
+          """
+        )
+        .jsonObject
+    )
+
+  private fun listDocument(): DesignDocumentV1 {
+    val base = document(button())
+    val list = DesignNodeV1("list", "wear-m3/list", slots = mapOf("content" to listOf("go")))
+    return base.copy(roots = listOf("list"), nodes = base.nodes + ("list" to list))
+  }
+
+  @Test
+  fun `a projected list writes the frame around it, each child in an item with its role's links`() {
+    val outcome =
+      ScreenExportGate.export(
+        listDocument(),
+        listRecords,
+        projections +
+          mapOf("wear-m3/list" to listProjection, "wear-m3/button" to itemButtonProjection),
+        wearStructure,
+      )
+    val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
+    assertContains(source, "val listState = rememberTransformingLazyColumnState()")
+    assertContains(source, "ScreenScaffold(scrollState = listState) { contentPadding ->")
+    assertContains(source, "TransformingLazyColumn(state = listState) {")
+    assertContains(source, "item {")
+    assertContains(source, "Modifier.transformedHeight(this, spec)")
+    assertContains(source, "import androidx.wear.compose.material3.ScreenScaffold")
+  }
+
+  @Test
+  fun `a button outside a list writes no list-item links`() {
+    val outcome =
+      ScreenExportGate.export(
+        document(button()),
+        listRecords,
+        projections + ("wear-m3/button" to itemButtonProjection),
+        wearStructure,
+      )
+    val source = assertIs<ScreenExportGate.Outcome.Emitted>(outcome, outcome.toString()).source
+    assertFalse("transformedHeight" in source, source)
+  }
+
+  @Test
+  fun `an item scope the catalog does not attest leaves the scope read refused`() {
+    val outcome =
+      ScreenExportGate.export(
+        listDocument(),
+        listRecords,
+        projections +
+          mapOf("wear-m3/list" to listProjection, "wear-m3/button" to itemButtonProjection),
+        wearStructure.copy(scopes = emptyMap()),
+      )
+    val reasons = assertIs<ScreenExportGate.Outcome.Refused>(outcome).reasons
+    assertTrue(reasons.any { itemScope in it }, reasons.toString())
   }
 
   private companion object {

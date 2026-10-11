@@ -130,7 +130,11 @@ maven-publish = "0.37.0"
 # 2.47.0 adds what a projection says beyond one call: a target's role `contexts`, its
 # `slotPatterns` (`assignSlot`) and `synthesize`d children, which the projected export reads.
 # Built on daemon 3.15.2 and contracts 3.30.0.
-composeai-tools = "2.47.0"
+# 2.49.0 writes a catalog's `screen-root` frame around the generated root
+# (`ScreenGenerator.generate(…, frame)`, compose-ai-tools#5861) and names a projection target's DSL
+# item member (`items`, #5864), which the projected export's frame and item wrappers read. Same
+# daemon and contracts as 2.47.0.
+composeai-tools = "2.49.0"
 # The render daemons, the renderers, the preview annotations and data API, and the data extractors,
 # published from yschimke/compose-preview-daemon since its 3.0.0 (compose-ai-tools#5336). Layer 1a
 # in that repository's `docs/design/REPOSITORY_LAYERS.md`: between the contracts and

@@ -43,6 +43,7 @@ import ee.schimke.composeai.uibuilder.detachedComponentRoots
 import ee.schimke.composeai.uibuilder.embeddedComponentRecord
 import ee.schimke.composeai.uibuilder.export.A2uiDocumentExporter
 import ee.schimke.composeai.uibuilder.export.CatalogExportProjections
+import ee.schimke.composeai.uibuilder.export.CatalogScreenStructure
 import ee.schimke.composeai.uibuilder.export.InlineRemoteContentExporter
 import ee.schimke.composeai.uibuilder.export.REMOTE_COMPOSE_INLINE_COMPONENT_ID
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
@@ -134,6 +135,9 @@ class UiBuilderEditorReducer(
 
   /** The catalog's published export projections; see [CatalogExportProjections]. */
   private val exportProjections by lazy { CatalogExportProjections.from(catalog.statusSemantics) }
+
+  /** The structure the catalog's `code` block publishes; see [CatalogScreenStructure]. */
+  private val screenStructure by lazy { CatalogScreenStructure.from(catalog.statusSemantics) }
 
   /**
    * Catalog ids the Compose export can write a call site for, judged by [exportRecord] as
@@ -2166,7 +2170,12 @@ class UiBuilderEditorReducer(
       }
     when (
       val outcome =
-        ScreenExportGate.export(document.toProtocolDocument(), exportRecord, exportProjections)
+        ScreenExportGate.export(
+          document.toProtocolDocument(),
+          exportRecord,
+          exportProjections,
+          screenStructure,
+        )
     ) {
       is ScreenExportGate.Outcome.Emitted -> EditorGeneratedCode.Source(outcome.source)
       is ScreenExportGate.Outcome.Refused -> EditorGeneratedCode.Refused(outcome.reasons)
@@ -2216,6 +2225,7 @@ class UiBuilderEditorReducer(
               document.toProtocolDocument(),
               exportRecord,
               exportProjections,
+              screenStructure,
             ),
         )
     }

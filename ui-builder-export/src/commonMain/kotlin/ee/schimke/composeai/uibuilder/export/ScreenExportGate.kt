@@ -87,6 +87,21 @@ object ScreenExportGate {
     tagNodes: Boolean = false,
     typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
     variableFonts: VariableFontExport = VariableFontExport.None,
+  ): Outcome = export(document, record, exportProjections, null, tagNodes, typefaces, variableFonts)
+
+  /**
+   * [export], with the catalog's [structure]: its `screen-root` frame written around the root, the
+   * locals that frame declares, and the item scope a projection's DSL item member opens. An
+   * overload to keep the published JVM descriptors above.
+   */
+  fun export(
+    document: DesignDocumentV1,
+    record: ComponentRecordFile?,
+    exportProjections: Map<String, ExportProjection>,
+    structure: CatalogScreenStructure?,
+    tagNodes: Boolean = false,
+    typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
+    variableFonts: VariableFontExport = VariableFontExport.None,
   ): Outcome {
     if (record == null) {
       // Named rather than silent: "this host has no record for the catalog" is a different problem
@@ -104,6 +119,8 @@ object ScreenExportGate {
           tagNodes = tagNodes,
           typefaces = typefaces,
           slotReceivers = slotReceivers(exportProjections, record),
+          structure =
+            ProjectedStructure(dslReceivers(exportProjections, record), structure?.itemScope),
         )
     ) {
       // Report both classes of refusal: projection and generator refuse for unrelated reasons, and
@@ -118,6 +135,8 @@ object ScreenExportGate {
               projected.resolvable(resolvable),
               PACKAGE_NAME,
               EXPRESSION_PACKAGES + projectedOwners(exportProjections, record),
+              locals = structure?.locals.orEmpty(),
+              frame = structure?.frame?.let { ScreenGenerator.Frame(it, structure.imports) },
             )
         ) {
           is ScreenGenerator.Result.Refused -> Outcome.Refused(generated.reasons)
@@ -196,6 +215,21 @@ object ScreenExportGate {
       }
   }
 
+  /** The DSL receivers of every record a projection targets, from [record]. */
+  private fun dslReceivers(
+    exportProjections: Map<String, ExportProjection>,
+    record: ComponentRecordFile,
+  ): Map<String, Map<String, String>> {
+    if (exportProjections.isEmpty()) return emptyMap()
+    val targets = exportProjections.values.flatMap { it.targets }.map { it.record }.toSet()
+    return record.components
+      .filter { it.canonicalId in targets }
+      .associate { component ->
+        component.canonicalId to
+          component.parameters.mapNotNull { p -> p.scopeDslReceiver?.let { p.name to it } }.toMap()
+      }
+  }
+
   /**
    * Why the export would refuse [document] with [exportProjections], or empty when it would not.
    */
@@ -203,8 +237,16 @@ object ScreenExportGate {
     document: DesignDocumentV1,
     record: ComponentRecordFile?,
     exportProjections: Map<String, ExportProjection>,
+  ): List<String> = refusals(document, record, exportProjections, null)
+
+  /** [refusals] with the catalog's [structure], as [export] takes it. */
+  fun refusals(
+    document: DesignDocumentV1,
+    record: ComponentRecordFile?,
+    exportProjections: Map<String, ExportProjection>,
+    structure: CatalogScreenStructure?,
   ): List<String> =
-    when (val outcome = export(document, record, exportProjections)) {
+    when (val outcome = export(document, record, exportProjections, structure)) {
       is Outcome.Refused -> outcome.reasons
       is Outcome.Emitted -> emptyList()
     }

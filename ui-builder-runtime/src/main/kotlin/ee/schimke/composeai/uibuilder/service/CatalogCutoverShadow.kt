@@ -5,6 +5,7 @@ import ee.schimke.composeai.discovery.ComponentRecordFile
 import ee.schimke.composeai.uibuilder.export.CatalogExportProjections
 import ee.schimke.composeai.uibuilder.export.CatalogExportRouting
 import ee.schimke.composeai.uibuilder.export.CatalogOwnership
+import ee.schimke.composeai.uibuilder.export.CatalogScreenStructure
 import ee.schimke.composeai.uibuilder.export.CatalogSeedTemplates
 import ee.schimke.composeai.uibuilder.export.RecordFreeExport
 import ee.schimke.composeai.uibuilder.export.ScreenExportGate
@@ -225,6 +226,7 @@ public object CatalogCutoverShadow {
               document,
               exportRecord,
               CatalogExportProjections.from(catalog.statusSemantics),
+              CatalogScreenStructure.from(catalog.statusSemantics),
             )
         ) {
           is ScreenExportGate.Outcome.Emitted -> null
