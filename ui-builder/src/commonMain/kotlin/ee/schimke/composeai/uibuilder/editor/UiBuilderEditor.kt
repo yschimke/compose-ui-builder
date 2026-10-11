@@ -739,8 +739,12 @@ fun UiBuilderEditor(
   var pendingComment by
     remember(document.id) { mutableStateOf<Pair<NodeCaptureRequest, String>?>(null) }
   var commentSequence by remember(document.id) { mutableStateOf(0) }
+  // The node the `/` quick insert search is open beside. Local, like the Comment field: it is a
+  // window onto the palette, not editor state, and it closes when the selection moves on.
+  var quickInsertNodeId by remember(document.id) { mutableStateOf<String?>(null) }
   LaunchedEffect(state.selectedNodeId) {
     if (commentNodeId != state.selectedNodeId) commentNodeId = null
+    if (quickInsertNodeId != state.selectedNodeId) quickInsertNodeId = null
   }
   // Which compact tab is showing: a preview pane's id, or null for the editor. Per design, like the
   // panel, and a pane that goes away — its device unticked — falls back to the editor.
@@ -1686,10 +1690,17 @@ fun UiBuilderEditor(
         selectionMenu = selectionMenu,
         onHoverEditorDismiss = {
           commentNodeId = null
+          if (quickInsertNodeId != null) {
+            quickInsertNodeId = null
+            textInputFocused = false
+          }
           dispatch(UiBuilderEditorEvent.HideQuickEditor)
         },
-        // The Comment field is only for typing, so it takes the keys; the quick editor does not.
-        hoverEditorFocusable = commentNodeId != null && commentNodeId == state.selectedNodeId,
+        // The Comment field and quick insert are only for typing, so they take the keys; the quick
+        // editor does not.
+        hoverEditorFocusable =
+          (commentNodeId != null && commentNodeId == state.selectedNodeId) ||
+            (quickInsertNodeId != null && quickInsertNodeId == state.selectedNodeId),
         // Double-click a label to type over it where it is. Anything without free text of its own
         // keeps what the click already did: select it.
         onNodeDoubleClicked = { nodeId ->
@@ -1712,6 +1723,35 @@ fun UiBuilderEditor(
         onTextInputFocusChanged = { textInputFocused = it },
         hoverEditor =
           if (
+            state.selection.size == 1 &&
+              quickInsertNodeId != null &&
+              quickInsertNodeId == state.selectedNodeId
+          ) {
+            { dragHandle ->
+              QuickInsertCard(
+                label = selectionLabel,
+                search = { query -> reducer.quickInsertItems(state, query) },
+                recentComponents = state.recentComponents,
+                // The palette's Add into the selection, event for event, so the pick lands on the
+                // "Recently used" shelf like any other insert.
+                onInsert = { item ->
+                  quickInsertNodeId = null
+                  focusEditor()
+                  reducer.dropTarget(state, item.componentId)?.let { target ->
+                    dispatch(
+                      UiBuilderEditorEvent.InsertComponent(item.componentId, target, item.variant)
+                    )
+                  }
+                },
+                onDismiss = {
+                  quickInsertNodeId = null
+                  focusEditor()
+                },
+                onTextInputFocusChanged = { textInputFocused = it },
+                dragHandle = dragHandle,
+              )
+            }
+          } else if (
             state.selection.size == 1 &&
               commentNodeId != null &&
               commentNodeId == state.selectedNodeId &&
@@ -2477,9 +2517,25 @@ fun UiBuilderEditor(
                       when {
                         state.selectionRoots().isEmpty() -> say("Select something to wrap first")
                         choices.isEmpty() -> say("This selection cannot go in a Column, Row or Box")
-                        else -> wrapChoices = choices
+                        else -> {
+                          // The wrap replaces the layer the search was beside, so an open quick
+                          // insert would be left pointing at a node that has just moved.
+                          quickInsertNodeId = null
+                          wrapChoices = choices
+                        }
                       }
                     }
+                    EditorViewCommand.QuickInsert ->
+                      if (state.selection.size == 1) {
+                        // One card beside the selection at a time: the search replaces the quick
+                        // editor or a Comment field rather than stacking over it.
+                        commentNodeId = null
+                        wrapChoices = null
+                        dispatch(UiBuilderEditorEvent.HideQuickEditor)
+                        quickInsertNodeId = state.selectedNodeId
+                      } else {
+                        say("Select one layer to insert into")
+                      }
                   }
                 },
               )

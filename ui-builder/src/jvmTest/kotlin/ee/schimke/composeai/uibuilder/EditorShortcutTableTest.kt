@@ -177,12 +177,15 @@ class EditorShortcutTableTest {
   }
 
   @Test
-  fun `question mark opens the shortcuts and a plain slash does not`() {
+  fun `question mark opens the shortcuts and a plain slash opens quick insert`() {
     assertEquals(
       EditorViewCommand.ShowShortcuts,
       resolve(EditorChord(Key.Slash, command = false, shift = true))?.view,
     )
-    assertNull(resolve(EditorChord(Key.Slash, command = false, shift = false)))
+    assertEquals(
+      EditorViewCommand.QuickInsert,
+      resolve(EditorChord(Key.Slash, command = false, shift = false))?.view,
+    )
   }
 
   @Test

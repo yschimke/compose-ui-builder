@@ -1887,6 +1887,8 @@ internal fun editorShortcutFor(
         // compact layout may be showing a preview tab. Taken then, they would rescale a canvas
         // nobody can see from a stale drawn scale, and keep the browser's page zoom from answering.
         it.view is EditorViewCommand.Zoom -> canvasShown
+        // Quick insert opens on the canvas, beside the selection, so it needs one on screen too.
+        it.view == EditorViewCommand.QuickInsert -> canvasShown
         else ->
           editing ||
             it.event is UiBuilderEditorEvent.TogglePane ||
@@ -1945,6 +1947,12 @@ internal sealed interface EditorViewCommand {
    * chooser dispatches that one event, so the wrap stays a single undo step.
    */
   data object ChooseWrap : EditorViewCommand
+
+  /**
+   * Opens the quick insert search beside the selection. A window like the shortcuts dialog: what it
+   * inserts goes through the palette's own insert events, so it needs no reducer of its own.
+   */
+  data object QuickInsert : EditorViewCommand
 }
 
 /**
@@ -2126,6 +2134,17 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
       view = EditorViewCommand.Zoom(CanvasZoomCommand.ActualSize),
       keys = setOf(Key.One, Key.NumPad1),
       command = true,
+      shift = false,
+    ),
+    // Bare `/`, the slash command of every editor that has one. The table is only consulted while
+    // no text field has the caret, so a `/` typed into a property stays a slash. Unshifted, so `?`
+    // below keeps its own chord whichever order the two are in.
+    EditorShortcut(
+      chord = "/",
+      description = "Quick insert a component into the selection",
+      view = EditorViewCommand.QuickInsert,
+      keys = setOf(Key.Slash),
+      command = false,
       shift = false,
     ),
     // Shift+/ is `?` on the layouts this is spelled for. Bare, like E, because the table is only
