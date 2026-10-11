@@ -1175,7 +1175,8 @@ object ScreenDocumentProjection {
       DIRECT_COMPONENTS[node.componentId]?.let {
         return it
       }
-      val property = VARIANT_SELECTORS[node.componentId] ?: return null
+      val selectors = VARIANT_SELECTORS[node.componentId] ?: return null
+      val property = selectors.firstOrNull { it in node.properties } ?: return null
       val choices = COMPONENT_VARIANTS[node.componentId] ?: return null
       val authored =
         when (val value = node.properties[property]) {
@@ -1219,7 +1220,7 @@ object ScreenDocumentProjection {
         if (property in spent) continue
         // Spent on the call site above; emitting it as well would hand the component a parameter
         // it does not declare.
-        if (variant != null && property == VARIANT_SELECTORS[node.componentId]) continue
+        if (variant != null && property in VARIANT_SELECTORS[node.componentId].orEmpty()) continue
         if (property == WEIGHT) {
           weightLink(value, node, scope)?.let { fromProperties += it }
           continue
@@ -3932,16 +3933,18 @@ object ScreenDocumentProjection {
   private val COLUMN_CONTENT = mapOf("content" to COLUMN_SCOPE)
   private val ROW_CONTENT = mapOf("content" to ROW_SCOPE)
 
-  /** The property that selects a component, per catalog id. */
-  private val VARIANT_SELECTORS: Map<String, String> =
+  /** The properties that select a component, per catalog id; the first one a node sets wins. */
+  private val VARIANT_SELECTORS: Map<String, List<String>> =
     mapOf(
-      "m3/card" to "variant",
-      "m3/button" to "style",
-      "m3/icon-button" to "variant",
-      "m3/text-field" to "variant",
-      "m3/progress-indicator" to "variant",
+      // `style` is the collapsed catalog's spelling; `variant` is what designs saved before it
+      // carry. The first one set selects, and both are spent on the call site.
+      "m3/card" to listOf("style", "variant"),
+      "m3/button" to listOf("style"),
+      "m3/icon-button" to listOf("style", "variant"),
+      "m3/text-field" to listOf("variant"),
+      "m3/progress-indicator" to listOf("variant"),
       // `TimePicker` and `TimeInput` share a state and parameter list; the variant picks which.
-      "m3/time-picker" to "mode",
+      "m3/time-picker" to listOf("mode"),
     )
 
   /**
