@@ -16,12 +16,8 @@ enum class EditorAxis {
 }
 
 /**
- * How one axis of a node is sized, in the words a designer uses for it.
- *
- * Three answers and no more, because those are the three a handle, a double-click and a chip can
- * express: shrink to what is inside ([Hug]), take what the parent offers ([Fill]), or a number
- * ([Fixed]). Everything finer — a `widthIn`, an aspect ratio — stays in the modifier chain, where
- * the inspector edits it, and survives a resize untouched.
+ * How one axis of a node is sized: [Hug] its content, [Fill] the parent's offer, or [Fixed]. Finer
+ * constraints (`widthIn`, aspect ratio) stay in the modifier chain and survive a resize.
  */
 sealed interface EditorSizing {
   /** No size modifier on this axis: the node is as big as its content. */
@@ -35,10 +31,8 @@ sealed interface EditorSizing {
 }
 
 /**
- * What one axis of the selected node is, and what it may become.
- *
- * [canFill] and [canFix] are the catalog's answer — a component that does not declare `width` has
- * no handle on that edge, rather than a handle whose drop the reducer would refuse.
+ * One axis of the selected node and what it may become. [canFill]/[canFix] come from the catalog,
+ * so an undeclared modifier means no handle rather than a refused drop.
  */
 data class EditorAxisSizing(
   val axis: EditorAxis,
@@ -90,11 +84,8 @@ private fun EditorAxis.other(): EditorAxis =
   }
 
 /**
- * Whether a `weight` is how this axis fills, which it is on the main axis of a row or a column.
- *
- * `fillMaxWidth` inside a `Row` takes everything left at the moment it is measured and leaves the
- * siblings after it nothing; `weight(1f)` is how Compose says "take the room that is left". A
- * collapsible layout's orientation is not known here, so it keeps the plain fill.
+ * Whether this axis fills by `weight`: the main axis of a row or column, where `fillMaxWidth` would
+ * starve later siblings. Collapsible layouts keep plain fill (orientation unknown here).
  */
 private fun EditorAxis.fillsByWeight(scope: EditorLayoutScope?): Boolean =
   (this == EditorAxis.Width && scope == EditorLayoutScope.Row) ||
@@ -106,10 +97,8 @@ private fun JsonObject.dp(field: String): Float? =
   this[field]?.primitiveOrNull()?.doubleOrNull?.toFloat()
 
 /**
- * How [axis] is sized by [chain], read the way Compose applies it: the **first** size-deciding
- * modifier on the axis wins, because an outer modifier fixes the constraints every inner one is
- * measured against — `fillMaxWidth().width(64.dp)` still fills. A `weight` wins over all of them,
- * since the parent measures a weighted child at its share before the chain is consulted.
+ * How [axis] is sized by [chain], as Compose applies it: the first size-deciding modifier wins
+ * (`fillMaxWidth().width(64.dp)` still fills), and `weight` beats them all.
  */
 internal fun sizingOf(
   chain: List<JsonElement>,
@@ -144,9 +133,8 @@ internal fun sizingOf(
 }
 
 /**
- * How much [chain]'s `scale` modifiers magnify the node as drawn, per axis. The canvas measures a
- * node after its transforms, so a handle's pixels are divided by this before they become dp —
- * otherwise a 2x node resized to 120px would be written as 120dp and drawn at 240.
+ * How much [chain]'s `scale` modifiers magnify the node per axis. Handle pixels are divided by it
+ * before becoming dp, since the canvas measures after transforms.
  */
 internal fun drawnScale(chain: List<JsonElement>, axis: EditorAxis): Float =
   chain.fold(1f) { product, element ->
@@ -160,13 +148,8 @@ internal fun drawnScale(chain: List<JsonElement>, axis: EditorAxis): Float =
   }
 
 /**
- * The padding [chain] puts between a node's box and its content, as physical (left, top, right,
- * bottom) in drawn dp — every `padding` in the chain, because each one shrinks what the children
- * are offered.
- *
- * Drawn, not authored: a `scale` earlier in the chain magnifies every padding after it, and the
- * canvas measures after transforms. Physical, not logical: in a right-to-left document `startDp` is
- * on the right.
+ * The padding [chain] puts between a node's box and content, as physical (left, top, right, bottom)
+ * drawn dp: every `padding`, magnified by any earlier `scale`; in RTL `startDp` is on the right.
  */
 internal fun paddingInsets(chain: List<JsonElement>, rtl: Boolean = false): List<Float> {
   val sums = FloatArray(4)
@@ -192,10 +175,7 @@ internal fun paddingInsets(chain: List<JsonElement>, rtl: Boolean = false): List
   return sums.toList()
 }
 
-/**
- * How much the `scale` modifiers on [nodeId]'s ancestors magnify it, per axis — everything inside a
- * scaled container is drawn scaled, whichever way round that container's own chain is written.
- */
+/** How much ancestors' `scale` modifiers magnify [nodeId], per axis. */
 internal fun UiBuilderDocument.ancestorScale(nodeId: String, axis: EditorAxis): Float {
   var product = 1f
   var current = location(nodeId)?.nodeId
@@ -223,19 +203,12 @@ private fun paddingBefore(chain: List<JsonElement>, index: Int, axis: EditorAxis
     .toFloat()
 
 /**
- * [chain] with [axis] re-sized to [sizing], or null when the catalog gives the component no way to
- * say it.
+ * [chain] with [axis] re-sized to [sizing], or null when the catalog gives no way to express it.
  *
- * Every modifier that decides this axis is taken out and at most one is put back, where the first
- * one was — so a `padding` written before a `width` keeps meaning what it meant — or at the front
- * of the chain when there was none, which is where a size reads naturally in the exported Kotlin
- * and where the outer box the handle was dragged to is the number written.
- *
- * A modifier that decides both axes is split rather than lost: resizing the width of something that
- * fills its parent leaves it filling the height, and a `size` keeps its other half as a `height`.
- *
- * A [EditorSizing.Fixed] is the *outer* box as drawn; padding that precedes the size in the chain
- * is subtracted, so the node lands at the size the handle showed.
+ * Every modifier deciding this axis is removed and at most one put back where the first was (or at
+ * the front), so modifier order keeps its meaning. Two-axis modifiers are split (`size` keeps its
+ * other half as `height`; fill keeps the other axis). [EditorSizing.Fixed] is the drawn outer box,
+ * so preceding padding is subtracted.
  */
 internal fun resizedModifierChain(
   chain: List<JsonElement>,

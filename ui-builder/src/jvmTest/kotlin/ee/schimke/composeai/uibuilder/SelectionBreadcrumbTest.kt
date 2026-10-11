@@ -16,11 +16,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The path above the canvas, driven through the real editor.
- *
- * `selectionPath` is pinned by [CanvasDropPlanTest]; this one asks what only the composed bar can
- * answer: every rung from the root to the leaf is on screen, and pressing one re-roots the
- * selection there — which is what makes the path a way back up and not a caption.
+ * The path above the canvas, driven through the real editor: every rung from root to leaf is shown,
+ * and pressing one re-roots the selection there. `selectionPath` itself is pinned by
+ * [CanvasDropPlanTest].
  */
 @OptIn(ExperimentalTestApi::class)
 class SelectionBreadcrumbTest {

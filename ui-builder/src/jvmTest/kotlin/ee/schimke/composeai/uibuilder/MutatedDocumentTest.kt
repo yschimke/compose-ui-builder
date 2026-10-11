@@ -22,18 +22,12 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 
 /**
- * The other direction from [GeneratedDocumentTest]: every tree the rules forbid is refused, and
- * refused for the stated reason.
+ * The other direction from [GeneratedDocumentTest]: every tree the rules forbid is refused, for the
+ * stated reason.
  *
- * Each case starts from a document the generator built — so the only thing wrong with it is the one
- * thing the mutation did — breaks exactly one rule, and asserts the code that names it. One tier at
- * a time is what makes a failure here readable: a document broken three ways would be refused
- * whatever the validator had actually noticed, and would pass a test that asserted only "refused".
- *
- * The mutations write the document directly, which is deliberate: this asks what the *validator*
- * does with a bad document, however it arrived — a hand-edited file, an agent's `create_design`, a
- * future operation with a bug in it. What the editor's own doors do with the same intent is the
- * second half, at the bottom.
+ * Each case breaks exactly one rule in a generated document and asserts the code naming it.
+ * Mutations write the document directly, to test what the validator does with a bad document
+ * however it arrived; the editor's own doors are tested at the bottom.
  */
 class MutatedDocumentTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -122,13 +116,8 @@ class MutatedDocumentTest {
   }
 
   /**
-   * A child in a slot the component does not declare is refused; an entry with nothing in it is
-   * not.
-   *
-   * The empty half is deliberate and is what lets the catalog withdraw a slot without invalidating
-   * every stored document that never used it — the editor writes a key for every slot declared at
-   * the moment of the insert, so those keys outlive the declaration. `m3/button.leadingIcon` is the
-   * one that has been withdrawn, and `GeneratedDocumentTest` holds that case end to end.
+   * A child in an undeclared slot is refused; an empty entry is not, so a catalog can withdraw a
+   * slot (like `m3/button.leadingIcon`) without invalidating stored documents.
    */
   @Test
   fun `a child in a slot the component does not declare is refused`() {
@@ -245,10 +234,8 @@ class MutatedDocumentTest {
   }
 
   /**
-   * Zero roots and two roots, which only the export gate refuses — no topology check on either the
-   * client or the server bounds the count, so both are states a stored design can be in. That is
-   * yschimke/compose-preview-server#429, and this is the assertion that will still hold once it is
-   * fixed: whatever else starts refusing them, the export always did.
+   * Zero roots and two roots, which the export gate always refuses (see
+   * yschimke/compose-preview-server#429).
    */
   @Test
   fun `a document without exactly one root is refused`() {
@@ -269,10 +256,8 @@ class MutatedDocumentTest {
   }
 
   /**
-   * The same intent at the door a person uses, rather than at the validator.
-   *
-   * Being refused is not enough: a refused operation has to leave the document exactly as it was,
-   * or the editor has committed half of something nobody asked for.
+   * The same intent at the editor's door: a refused operation must leave the document exactly as it
+   * was.
    */
   @Test
   fun `the editor refuses the same intents and changes nothing`() {

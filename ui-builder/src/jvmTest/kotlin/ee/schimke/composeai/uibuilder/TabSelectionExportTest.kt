@@ -21,13 +21,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * A tab row a person can click, exported as one.
- *
- * The document has modelled this the whole time — a variable, a `set` on the tab's click, and a
- * `stateEquals` deciding which tab is selected — and both halves of the export dropped it: the tab
- * was written with `onClick = {}` and the row read `selectedTabIndex` as the literal the design was
- * saved with. The generated screen therefore had a tab row that could not move, which is the one
- * thing a tab row is for.
+ * A tab row a person can click, exported as one: the tab's `set` click is emitted, and
+ * `selectedTabIndex` is read from the variable via `stateEquals`, not the saved literal.
  */
 @OptIn(ExperimentalTestApi::class)
 class TabSelectionExportTest {
@@ -52,10 +47,8 @@ class TabSelectionExportTest {
   }
 
   /**
-   * A variable that cannot be an index is refused rather than coerced.
-   *
-   * `toInt()` on a `String` and `0` on a `Boolean` are both a guess about what the author meant,
-   * and a guess here compiles into a screen that quietly shows the wrong tab.
+   * A variable that can't be an index is refused rather than coerced (`toInt()` on a `String` or
+   * `0` for a `Boolean` would compile into the wrong tab).
    */
   @Test
   fun `an index bound to a variable of another type is a refusal`() {
@@ -75,11 +68,8 @@ class TabSelectionExportTest {
   }
 
   /**
-   * The same document on the canvas, where the click has to land for anyone to author one.
-   *
-   * The export is only half the claim: a preview whose tabs do not move is what a person sees
-   * first, and the row drew its indicator — and each tab its own selection — from the saved
-   * literal, so the press wrote the variable and the canvas ignored it.
+   * The same document on the canvas: the press must move the indicator and the tabs' selection, not
+   * just the variable.
    */
   @Test
   fun `clicking a tab moves the selection on the canvas`() = runComposeUiTest {

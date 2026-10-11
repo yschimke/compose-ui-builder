@@ -29,44 +29,30 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The host bridge: the design belongs to the page that embeds this editor, not to this page.
- *
- * Every other mode owns its document somewhere this page can reach — a server, the browser's
- * storage, a bundled fixture. An IDE that opens a checked-in `.uid` file owns it in the IDE: the
- * file is the source of truth, the IDE's buffer is what is dirty, and saving, undoing, reverting
- * and diffing are the IDE's business. The JVM hosts get that by calling
- * `OfflineUiBuilderSession.projectDocument` in-process. A browser engine hosted by an IDE — a VS
- * Code webview — cannot, so the same two edges cross `postMessage` instead.
+ * The host bridge: the design belongs to the page that embeds this editor (e.g. a VS Code webview
+ * editing a `.uid` file), which owns saving, undo, revert and diff. JVM hosts use
+ * `OfflineUiBuilderSession.projectDocument` in-process; here the same edges cross `postMessage`.
  *
  * The page selects this mode by defining `globalThis.composeUiBuilderHost` before the module loads
  * (see [hostBridgeEnabled]). Then:
- * - **in**, as a window `message` event, `{ type: "compose-ui-builder/open", ... }` — see
- *   [HostOpenMessage]. Every `open` replaces the design: the host sends one when the file opens and
- *   again whenever the file changes under the editor (an external edit, a `git checkout`, the text
- *   editor beside this one). `{ type: "compose-ui-builder/select", nodeId }` selects a layer, for a
- *   host that draws its own layer tree, and `{ type: "compose-ui-builder/invoke", id }` runs one of
- *   the editor's toolbar or rail controls.
- * - **out**, through `composeUiBuilderHost.postMessage`: `ready` once the listener is installed,
- *   `changed` with the whole document after each edit, `chrome` with the toolbar and rail controls
- *   the host draws in place of the editor's own (`UiBuilderHostChrome`; the editor role draws
- *   neither), `selection` with the selected layer's id (empty for none), `generated-code` with the
- *   export Kotlin when the host invokes `dock.code`, `error` when an `open` cannot be read, and
- *   `open-link` for a URL the host should open, since a webview cannot navigate.
+ * - **in**, as a window `message` event: `{ type: "compose-ui-builder/open", ... }` (see
+ *   [HostOpenMessage]) replaces the design, sent on open and whenever the file changes underneath;
+ *   `{ type: "compose-ui-builder/select", nodeId }` selects a layer; `{ type:
+ *   "compose-ui-builder/invoke", id }` runs a toolbar or rail control.
+ * - **out**, through `composeUiBuilderHost.postMessage`: `ready` once listening; `changed` with the
+ *   whole document after each edit; `chrome` with the toolbar and rail controls the host draws
+ *   (`UiBuilderHostChrome`); `selection` with the selected id (empty for none); `generated-code`
+ *   when the host invokes `dock.code`; `error` when an `open` can't be read; `open-link` for URLs,
+ *   since a webview can't navigate.
  *
- * The page may also define `composeUiBuilderHost.readTheme()` and send `{ type:
- * "compose-ui-builder/theme", theme }` when its theme changes, to draw the editor's own UI in the
- * host's colours; see [HostThemeMessage].
+ * The page may define `composeUiBuilderHost.readTheme()` and send `{ type:
+ * "compose-ui-builder/theme", theme }` on theme changes; see [HostThemeMessage].
+ * `composeUiBuilderHost.role` is `editor` (default: canvas and inspector) or `preview`
+ * (devices-and-configurations view, follows `open`s, never publishes); see [HostBridgeRole].
  *
- * `composeUiBuilderHost.role` picks which half of the IntelliJ plugin's split a page is: `editor`
- * (the default) is the canvas and inspector, and `preview` is the devices-and-configurations view,
- * which only follows `open`s and never publishes. See [HostBridgeRole].
- *
- * Nothing here fetches. The catalog arrives with the document, because a webview serves this
- * archive from a resource origin that is not its own, and a relative `fetch` resolves against the
- * page rather than the archive; see `sameOriginRequestUrl`.
- *
- * The document is written with the IntelliJ plugin's JSON options, so the same design saved from
- * either IDE is the same bytes.
+ * Nothing here fetches: the catalog arrives with the document, since relative fetches resolve
+ * against the webview page, not the archive (see `sameOriginRequestUrl`). The document is written
+ * with the IntelliJ plugin's JSON options so both IDEs save identical bytes.
  */
 @Composable
 internal fun HostBridgeApp() {
@@ -76,10 +62,10 @@ internal fun HostBridgeApp() {
   // other's key and keeps an editor whose history was made against another design.
   var generation by remember { mutableStateOf(0) }
   var selectionRequest by remember { mutableStateOf<EditorSelectionRequest?>(null) }
-  // The editor's toolbar and rails, drawn by the host (see UiBuilderHostChrome). One instance for
-  // the page, so an `invoke` that lands between two `open`s still finds the current handlers.
-  // The host's colours for the editor's own UI, read once and then followed as the host's theme
-  // changes; the editor keeps its own where the host sends none (see HostBridgeTheme.kt).
+  // The editor's toolbar and rails, drawn by the host (see UiBuilderHostChrome); one instance per
+  // page so `invoke`s between `open`s find current handlers.
+  // The host's colours for the editor's own UI, followed as the host's theme changes (see
+  // HostBridgeTheme.kt).
   var hostTheme by remember { mutableStateOf(decodeHostTheme(readHostTheme())) }
   LaunchedEffect(Unit) {
     listenForHostTheme { json -> decodeHostTheme(json)?.let { hostTheme = it } }
@@ -143,17 +129,15 @@ internal fun HostBridgeApp() {
           hostChrome = hostChrome,
           onGeneratedCode = ::postHostGeneratedCode,
           theme = theme,
-          // The split the IntelliJ plugin makes: the editor tab is the canvas, and the devices
-          // and configurations are a view of their own beside it (the `preview` role). The layer
-          // tree is the host's too, so it starts closed here; its rail still opens it.
+          // The IntelliJ split: this tab is the canvas; devices and configurations are the
+          // `preview` role. The layer tree is the host's, so it starts closed.
           initialPanes = setOf(EditorPane.Editor),
           availablePanes = setOf(EditorPane.Editor),
           openDefaultPreview = false,
           initialInspectorOpen = true,
         )
-      // The same component with only its Preview pane, as the IntelliJ Preview tool window runs
-      // it. It never publishes: the editor beside it owns the design, and this view follows the
-      // `open`s the host forwards from it.
+      // Preview pane only, as the IntelliJ Preview tool window runs it; it never publishes and
+      // follows the forwarded `open`s.
       HostBridgeRole.Preview ->
         UiBuilderEditor(
           document = design.document,
@@ -179,11 +163,9 @@ private fun hostBridgeRole(): HostBridgeRole =
   if (hostBridgeRoleName() == "preview") HostBridgeRole.Preview else HostBridgeRole.Editor
 
 /**
- * What a host sends to open a design.
- *
- * [capabilities] is the capability JSON of the catalog the design pins — the host reads it from
- * this archive's root, `<systemId>-capabilities-v1.json`. [document] is `DesignDocumentV1` JSON, or
- * empty for a file that has no design yet, in which case [seed] says what to start it as.
+ * What a host sends to open a design. [capabilities] is the pinned catalog's capability JSON
+ * (`<systemId>-capabilities-v1.json` from this archive's root). [document] is `DesignDocumentV1`
+ * JSON, or empty for a new file, in which case [seed] says what to start it as.
  */
 @Serializable
 internal data class HostOpenMessage(
@@ -247,10 +229,8 @@ internal class HostOpenedDesign(
   }
 
   /**
-   * Sends [current] to the host when it differs from what the host already has.
-   *
-   * Called on every state change, most of which are a selection or a panel rather than an edit, so
-   * the identity check comes first: the reducer only builds a new document for an edit.
+   * Sends [current] to the host when it differs from what the host already has. Identity is checked
+   * first, since most state changes aren't edits.
    */
   fun publishIfChanged(current: UiBuilderDocument) {
     if (current === published) return
@@ -313,10 +293,8 @@ private const val UI_BUILDER_GUIDE_URL =
   "https://github.com/yschimke/compose-ui-builder/blob/main/docs/UI_BUILDER_GETTING_STARTED.md"
 
 /**
- * Whether the embedding page declared itself a host by defining `globalThis.composeUiBuilderHost`.
- *
- * An object rather than a query parameter because a VS Code webview owns its document URL: the
- * query is VS Code's, and a host cannot add to it.
+ * Whether the embedding page declared itself a host by defining `globalThis.composeUiBuilderHost`;
+ * an object rather than a query parameter because a VS Code webview owns its URL.
  */
 @JsFun(
   """() => {
@@ -330,13 +308,9 @@ internal external fun hostBridgeEnabled(): Boolean
 private external fun hostBridgeRoleName(): String
 
 /**
- * Hands each `open` to [onOpen] as JSON, so the envelope is decoded once, in Kotlin; each `select`
- * to [onSelect]; and each `invoke` to [onInvoke].
- *
- * Only the embedding host speaks this protocol, so only messages from `window.parent` are read. In
- * a VS Code webview that is the frame VS Code relays `webview.postMessage` through; for a top-level
- * page (a harness, or a host posting to its own window) `window.parent` is the window itself.
- * Anything else, such as a frame the editor itself embeds, is ignored.
+ * Hands each `open` to [onOpen] as JSON, each `select` to [onSelect], and each `invoke` to
+ * [onInvoke]. Only messages from `window.parent` are read (VS Code's relay frame, or the window
+ * itself at top level).
  */
 @JsFun(
   """(onOpen, onSelect, onInvoke) => {
@@ -413,9 +387,8 @@ private fun postHostGeneratedCode(code: EditorGeneratedCode) =
   }
 
 /**
- * [UiBuilderHostAction] as JSON. A wire class here rather than `@Serializable` on the common model:
- * the shape is this bridge's contract, and it should not move because a field was added to the
- * editor's model for another host.
+ * [UiBuilderHostAction] as JSON, defined here so the bridge's contract doesn't move with the common
+ * model.
  */
 private object HostChromeActionsSerializer :
   kotlinx.serialization.KSerializer<List<UiBuilderHostAction>> {

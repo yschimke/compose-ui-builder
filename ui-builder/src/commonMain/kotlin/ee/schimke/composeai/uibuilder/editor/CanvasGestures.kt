@@ -29,11 +29,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * A right-click, and where in this element it landed.
- *
- * Compose has no context-click gesture in common code, so this reads the pointer stream directly.
- * It watches the [PointerEventPass.Initial] pass and consumes the press, so a right-click on a
- * layer row does not also start the drag the same row listens for with the left button.
+ * A right-click and where it landed. Common Compose has no context-click gesture, so this reads the
+ * [PointerEventPass.Initial] pass and consumes the press so it does not also start a left-button
+ * drag.
  */
 internal fun Modifier.onSecondaryClick(key: Any?, onClick: (Offset) -> Unit): Modifier =
   pointerInput(key) {
@@ -50,29 +48,15 @@ internal fun Modifier.onSecondaryClick(key: Any?, onClick: (Offset) -> Unit): Mo
   }
 
 /**
- * The press that becomes a canvas move: hold a node still, then carry it, and land or cancel it on
+ * The press that becomes a canvas move: hold a node still, then carry it, landing or cancelling on
  * release.
  *
- * Moving a layer is the deliberate act, not the default one — the default is to drop components
- * into slots, where the component's own defaults and the container's layout decide what happens. So
- * the drag arms only after the platform's long-press time with the pointer still: a press that
- * moves sooner is a scroll or a tap, and belongs to the gesture underneath. That friction is the
- * point — a canvas that rearranged itself under every hurried swipe would be a canvas nobody trusts
- * — and the ghost appearing after the hold is what says the node is now in hand.
+ * Moving is deliberate, so the drag arms only after the long-press timeout with the pointer still;
+ * earlier movement is a scroll or tap for the gesture underneath. Nothing is consumed until then,
+ * and everything after. [hitTest] is asked about the press position.
  *
- * A tap must stay a tap, so nothing is consumed until the hold lands — the selection tap underneath
- * still answers a still press, and a press on empty ground is left to the workspace's scroll. Once
- * a node is picked up every change is consumed, which is what keeps the scroll from chasing the
- * drag; a gesture somebody else took first (a pin, a menu) is left alone entirely.
- *
- * [hitTest] is asked about the **press** position, not the current one: the node picked up is the
- * node that was under the finger, however far the design has scrolled since.
- *
- * **Except with a mouse, over the selection.** Selecting is already the deliberate act the hold
- * stands in for, and a mouse has a wheel to scroll with, so a mouse press inside the selected node
- * is carried as soon as it moves past the slop — the way every desktop design tool moves the thing
- * you just clicked. A finger still holds first: on a touch screen a swipe over the selection is as
- * likely to be a scroll as anything else.
+ * **Except a mouse over the selection**: selecting was already deliberate and a mouse scrolls with
+ * its wheel, so it carries as soon as it passes the slop. Touch still holds first.
  */
 internal fun Modifier.canvasNodeDrag(
   key: Any?,
@@ -102,13 +86,11 @@ internal fun Modifier.canvasNodeDrag(
         val immediate =
           down.type != PointerType.Touch &&
             currentInsideSelection.value(currentRootPoint.value(down.position))
-        // The hold: wait out the long-press timeout with the pointer still and unconsumed. A press
-        // that is released, taken by somebody else, or moved past the slop before the timeout ends
-        // the gesture here, and whatever is underneath — a tap, the workspace's scroll — gets it.
+        // Wait out the long-press timeout with the pointer still; a release, a claim by another
+        // gesture, or moving past the slop ends it here.
         val armed =
           if (immediate) {
-            // No wait: the press is armed the moment it moves, and a release before that is the
-            // selection tap underneath.
+            // No wait: armed the moment it moves; a release before that is the selection tap.
             awaitTouchSlopOrCancellation(down.id) { change, _ -> change.consume() } != null
           } else
             withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
@@ -173,23 +155,15 @@ internal fun Modifier.canvasNodeDrag(
 }
 
 /**
- * A stroke width that lands as [screenPx] on screen whatever the canvas is zoomed to.
- *
- * Overlays inside the scaled frame are measured in the design's pixels, so a width written in them
- * thins with the zoom — and the marker that says where a drop will land is exactly the affordance a
- * reader needs most when the design is too small to read. Clamped, because a very small scale would
- * otherwise turn a hairline into a band across the design.
+ * A stroke width that lands as [screenPx] on screen at any zoom, clamped so tiny scales do not make
+ * bands.
  */
 internal fun screenStroke(screenPx: Float, drawScale: Float): Float =
   if (drawScale <= 0f) screenPx else (screenPx / drawScale).coerceIn(screenPx, screenPx * 8f)
 
 /**
- * The step this frame's auto-scroll should take for a pointer at [offsetInView], or zero.
- *
- * The band is an edge zone, not a line: the deeper the pointer is into it, the faster the scroll,
- * so reaching for the edge slows into the stop rather than jumping. Direction is the edge's — the
- * start edge scrolls back, the end edge scrolls on — and an edge with nothing left to give scrolls
- * nothing, which is what lets the frame-step loop above stop instead of spinning.
+ * This frame's auto-scroll step for a pointer at [offsetInView], or zero. Faster deeper into the
+ * edge band; an exhausted edge returns zero so the frame loop stops.
  */
 internal fun edgeAutoScrollDelta(
   offsetInView: Float,
@@ -221,8 +195,5 @@ internal fun String.toPresenceColor(): Color {
   return Color(argb.toInt())
 }
 
-/**
- * A short pulse saying a held node is now in hand. A no-op wherever there is no vibration motor to
- * ask, which is every desktop and the browsers (Safari) that do not expose one.
- */
+/** A short pulse saying a held node is in hand; a no-op where there is no vibration motor. */
 internal expect fun pickupHaptic()

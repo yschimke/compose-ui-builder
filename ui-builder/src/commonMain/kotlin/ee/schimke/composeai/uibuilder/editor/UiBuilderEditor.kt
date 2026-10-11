@@ -20,6 +20,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -129,20 +133,18 @@ import ee.schimke.composeai.uibuilder.uploadedAssets
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The inspector's width, named because two places have to agree on it.
- *
- * A default on [PropertyInspector] alone does nothing: the desktop layout passes its own modifier,
- * so widening the default for a fourth tab widened the preview and left every real editor at the
- * three-tab width. The tabs are rail switches now, so a sixth panel — Talk — costs this width
- * nothing.
+ * The inspector's width, shared because the desktop layout passes its own modifier and would ignore
+ * a [PropertyInspector] default.
  */
 internal val INSPECTOR_WIDTH = 320.dp
 
@@ -150,32 +152,17 @@ internal val INSPECTOR_WIDTH = 320.dp
 internal val NAVIGATOR_WIDTH = 280.dp
 
 /**
- * How big a palette row's picture is.
- *
- * 4:3, matching the frame the component is drawn in, so the shrink is uniform and nothing is
- * squashed. Wide enough that a Card reads as a card rather than as a grey rectangle, and small
- * enough that a 280 dp panel still has room for a name, an id, a count and an Add.
+ * A palette row's picture size: 4:3 like the thumbnail frame, so the shrink is uniform, and small
+ * enough for a 280 dp panel.
  */
 internal val COMPONENT_THUMBNAIL_SIZE = DpSize(44.dp, 33.dp)
 
 private val VARIANT_THUMBNAIL_SIZE = DpSize(32.dp, 24.dp)
 
-/**
- * The code dock's width, wider than either side panel.
- *
- * Generated Kotlin is long lines. It used to sit under the canvas for exactly that reason, which
- * cost the canvas its height whenever it was open; docked beside the canvas it costs width, and
- * only while it is open, which is the trade the rail exists to let you make.
- */
+/** The code dock's width, wider than either side panel because generated Kotlin has long lines. */
 private val CODE_DOCK_WIDTH = 520.dp
 
-/**
- * How many pixels a flattened reference gets per dp of frame.
- *
- * Two, so a mark drawn against a 400 dp screen survives being drawn back over one — a flatten at 1×
- * loses a hairline stroke to rounding the first time it is re-fitted, and every round after that
- * loses a little more.
- */
+/** Pixels per dp for a flattened reference: 2× so hairline strokes survive being re-fitted. */
 private const val FLATTEN_SCALE = 2
 
 internal val EditorColors =
@@ -189,28 +176,20 @@ internal val EditorColors =
   )
 
 /**
- * How much of the compact layout's height the Properties and Code sheets take. Half, so the canvas
- * keeps the other half above them: at the 0.72 the Components and Layers sheets use, an 800×600
- * window left about 150px of canvas, and the element whose properties were open was behind the
- * sheet.
+ * Height fraction of the compact layout's Properties and Code sheets: half, so the edited element
+ * stays visible above them.
  */
 private const val MOBILE_EDITING_SHEET_FRACTION = 0.5f
 
-/**
- * How long a phone's first device tab is left to draw before the other device tabs are built behind
- * it, so building them never competes with the tab being looked at.
- */
+/** How long a phone's first device tab draws before the other device tabs are built behind it. */
 private const val MOBILE_PREVIEW_WARM_DELAY_MS = 600L
 
 /** The compact layout's bottom tab bar, above whatever home-indicator inset the window has. */
 internal val MOBILE_DOCK_HEIGHT = 56.dp
 
 /**
- * The compact layout's panels: the wide layout's two rails, folded into one bottom dock.
- *
- * Every inspector mode is a panel of its own, as each is a dock of the wide rail. A phone used to
- * offer only Properties of them, and Theme, Screen, Issues, Talk and History could not be reached
- * at all: the sheet would draw any of them, but nothing on a phone opened one.
+ * The compact layout's panels: the wide layout's two rails folded into one bottom dock, one panel
+ * per inspector mode.
  */
 internal enum class MobileEditorPanel(val inspectorMode: EditorInspectorMode? = null) {
   None,
@@ -238,11 +217,8 @@ fun UiBuilderEditor(
   /** Host chrome. The browser keeps Material; an IDE host may supply native controls. */
   chrome: UiBuilderChrome = MaterialUiBuilderChrome,
   /**
-   * The component record the host serving [catalog] generates its exports from, where it has one.
-   *
-   * See `UiBuilderEditorReducer`'s own parameter. Null — the default, and every caller but the live
-   * browser session — leaves the code pane reading the record embedded at build time, which is what
-   * it always read.
+   * The component record the host serving [catalog] generates exports from, or null to use the
+   * record embedded at build time. See `UiBuilderEditorReducer`.
    */
   catalogRecord: ComponentRecordFile? = null,
   pageDestinations: List<UiBuilderPageDestination> = emptyList(),
@@ -259,15 +235,13 @@ fun UiBuilderEditor(
   operationIdPrefix: String = clientId,
   sessionLabel: String = "Local session",
   /**
-   * The top-level designs the open file holds, drawn as a strip above the canvas; null (the
-   * default) for a file of one design, or a host that is not editing a file. See
-   * [UiBuilderFileDesigns].
+   * The top-level designs of the open file, drawn as a strip above the canvas; null for a
+   * single-design file or a non-file host. See [UiBuilderFileDesigns].
    */
   fileDesigns: UiBuilderFileDesigns? = null,
   /**
-   * Who can open this design, shown in toolbar controls; null hides the visibility control. Null by
-   * default because only the host knows: an IDE bridge or MCP app editing a server design must not
-   * claim it is private to this device.
+   * Who can open this design, shown in the toolbar; null hides the control. Only the host knows (an
+   * IDE or MCP host editing a server design must not claim it is private).
    */
   visibilityLabel: String? = null,
   onManageVisibility: (() -> Unit)? = null,
@@ -275,21 +249,11 @@ fun UiBuilderEditor(
   onSubmission: ((EditorSubmission) -> Unit)? = null,
   authoritativeGeneration: Int = 0,
   /**
-   * The revision a link to one node may name: the last the server accepted, and only if that
-   * revision is one the node was in. Null everywhere else, and null by default.
+   * The revision a link to one node may name, or null for none.
    *
-   * Two questions rather than one, because a layer link gets them both wrong in opposite
-   * directions. `state.document.revision` is not the answer to the first: the reducer raises it the
-   * moment an edit is applied so the canvas can draw it, which is a claim about a submission still
-   * in the queue — a link at that number resolves to nothing, or, once a collaborator's edit
-   * claimed the number first, to a document the person who copied it never saw. But the last
-   * accepted revision is not the answer either for a node that only exists because of a queued
-   * insert, duplicate or paste: pairing it with the new node's id makes a link that is *reliably*
-   * stale, opening on the missing-layer notice.
-   *
-   * So a host answers per node, and a null means the link names no revision and opens the living
-   * design at that layer — which is right in both cases, and arrives at the layer as soon as the
-   * edit that made it lands.
+   * Not `state.document.revision`, which the reducer raises before the server accepts the edit; and
+   * not the last accepted revision for a node created by a still-queued edit. A host answers per
+   * node, and null makes the link open the living design at that layer.
    */
   authoritativeRevisionFor: (String) -> Long? = { null },
   initialSelectedNodeId: String? = null,
@@ -297,219 +261,146 @@ fun UiBuilderEditor(
   initialLayerQuery: String = "",
   initialInspectorMode: EditorInspectorMode = EditorInspectorMode.Properties,
   /**
-   * Changes to make to the design as the editor opens, in order, as though somebody had made them.
-   *
-   * Empty everywhere a person is editing: this is not a way to author a document, and a host that
-   * wants a different design should open a different one. It exists for the same reason
-   * [initialCanvasZoom] pins a scale — a caller that is *picturing* the editor rather than running
-   * it. The History panel is about what this session has done, so a session that has done nothing
-   * draws the one state that says nothing about the panel, and the preview that has to diff it
-   * hands the session the edits it is a picture of.
-   *
-   * Anything the reducer refuses is left out of the state the same way it would be for a person: a
-   * seed that cannot be applied is not a reason to refuse to open the design.
+   * Edits applied as the editor opens, as though somebody made them. Empty when a person is
+   * editing; for callers picturing the editor (e.g. previews of the History panel). Refused edits
+   * are skipped, not fatal.
    */
   initialEdits: List<UiBuilderEditorEvent> = emptyList(),
   initialCodePaneVisible: Boolean = false,
   /**
-   * Whether the strip of revision thumbnails is open when the design opens.
-   *
-   * Off everywhere a person is editing — the strip is a question about the design's history, and
-   * the History rail is where it is asked. It exists for the same caller [initialEdits] does: one
-   * *picturing* the editor, which cannot press the control it wants a picture of.
+   * Whether the revision strip is open initially. Off when a person is editing; for callers
+   * picturing the editor, like [initialEdits].
    */
   initialHistoryBarVisible: Boolean = false,
   /**
-   * The revision the strip is looking at, and the other end of a comparison, when the design opens.
-   *
-   * Applied after [initialEdits], because a peek is a view over a history and the seeded edits are
-   * what the history is. Both null everywhere a person is editing.
+   * The revision the strip is peeking at, and the comparison's other end, on open. Applied after
+   * [initialEdits]; null when a person is editing.
    */
   initialRevisionPeek: Int? = null,
   initialRevisionCompare: Int? = null,
   /**
-   * The component packs switched on when the design opens, by id — what the host remembered from
-   * the last time this catalog's settings were changed. Ids the catalog has no pack for are
-   * ignored, so a remembered pack an operator has since withdrawn does nothing.
+   * Component pack ids switched on at open, as the host remembered them. Unknown ids are ignored.
    */
   initialEnabledPacks: Set<String> = emptySet(),
   /**
-   * The components the reader has pinned to the top of the insert panel, or null while they have
-   * never said — in which case the catalog's own declaration answers. See
+   * Components pinned to the top of the insert panel, or null to use the catalog's declaration. See
    * [UiBuilderEditorState.pinnedComponents].
    */
   initialPinnedComponents: Set<String>? = null,
   /**
-   * Which panels the editor starts with open: the components, the layers, the inspector.
-   *
-   * All three default to closed, because the canvas is what this editor is for and a panel is a
-   * question about it. The rail beside each edge says the panel is there; a host that knows its
-   * operator wants one open — a preview that exists to diff the panel, say — asks for it.
+   * Which panels start open. All default to closed (the canvas is the point); hosts such as panel
+   * previews can ask for one.
    */
   initialComponentsOpen: Boolean = false,
   initialLayersOpen: Boolean = false,
   initialInspectorOpen: Boolean = false,
   /**
-   * The two tool modes a host may want a picture of: whether an Add starts a top-level item, and
-   * which unstored axes the variant strip draws.
-   *
-   * Both are editor state rather than document state, so without these the previews that exist to
-   * diff them would have to click their way into the mode — which a static render cannot do. Every
-   * other host leaves them at their defaults, which are the same off state a person's editor opens
-   * in.
+   * Initial tool modes (Add beside, variant strip axes), so static previews can picture them.
+   * Defaults match a person's editor.
    */
   initialAddBeside: Boolean = false,
   initialVariantAxes: Set<EditorVariantAxis> = emptySet(),
   /**
-   * The scale the canvas opens at, or null to frame the design in the workspace.
-   *
-   * Null everywhere a person is editing: framing is what a design tool does with a window. A host
-   * that is *capturing* the canvas — comparing the editor's pixels against the same design drawn by
-   * the clean harness — pins 1f instead, because a resampled frame is not the same picture.
+   * The canvas's opening scale, or null to frame the design. Hosts capturing canvas pixels pin 1f
+   * to avoid resampling.
    */
   initialCanvasZoom: Float? = null,
   /**
-   * How the canvas frames the design when it opens — see [UiBuilderEditorState.canvasView]. The
-   * extent everywhere a person is editing; a preview picturing the device view asks for it here,
-   * for the reason [initialAddBeside] exists.
+   * How the canvas frames the design on open; see [UiBuilderEditorState.canvasView]. Extent unless
+   * a preview pictures the device view.
    */
   initialCanvasView: EditorCanvasView = EditorCanvasView.Extent,
   /**
-   * Asks the host to compile and render this design with real Compose, or null where it cannot.
-   *
-   * Null on a box with no compile lane, and in every preview and test — so the control is absent
-   * rather than present and failing, which is the same rule the server applies to the route.
+   * Asks the host to compile and render this design with real Compose, or null where it cannot (no
+   * compile lane, previews, tests), hiding the control.
    */
   /**
-   * Compiles this design on the host and draws it, in the host container frame it is handed.
-   *
-   * The shape is a parameter rather than something the host re-derives, because the pane must agree
-   * with the canvas beside it: both are drawing the frame the editor is currently viewing, and a
-   * render that picked its own would be the one disagreement this pane cannot be allowed to invent.
-   * Ignored for every design whose root is not a widget container.
+   * Compiles this design on the host and draws it in the given widget container frame, which the
+   * pane passes so it matches the canvas. Ignored for designs whose root is not a widget container.
    */
   onRequestNativeRender: (suspend (WearWidgetHostShape) -> UiBuilderNativeRender)? = null,
   /** Exports the current design for a catalog-declared document player in Browser Preview. */
   onRequestDocumentPreview: (suspend (UiBuilderDocument) -> UiBuilderDocumentPreview)? = null,
   /**
-   * Opens the live session a native render named, or null where this host cannot stream one.
-   *
-   * The seam is the host's because reaching a session is the host's business — which origin, which
-   * socket, which token — and `:ui-builder` is common Compose with no `WebSocket` in it, the same
-   * rule the comment host and the protocol transport already follow. Absent, the native pane draws
-   * the still it already drew; present, it draws the stream and taps reach the composition.
+   * Opens the live session a native render named, or null where this host cannot stream one
+   * (`:ui-builder` has no `WebSocket`). Without it the native pane draws the still.
    */
   onOpenNativeStream: ((UiBuilderNativeLive) -> UiBuilderNativeStream)? = null,
   /** A render already in hand, for the previews that draw this pane without a host. */
   initialNativeRender: UiBuilderNativeRender? = null,
   /**
-   * Which design panes the workspace opens with.
-   *
-   * The authoring canvas alone, which is what somebody who opened a design editor asked for. A host
-   * that wants another pane in the picture — a preview that exists to diff one — names it here; a
-   * catalog whose canvas is only a stand-in has the native pane added for it below.
+   * Which design panes the workspace opens with: the authoring canvas unless a host (e.g. a
+   * preview) names others.
    */
   initialPanes: Set<EditorPane> = setOf(EditorPane.Editor),
   /**
-   * The panes this host puts inside this Compose workspace.
-   *
-   * IntelliJ keeps the visual editor in an editor tab and puts Preview / Native in a tool window,
-   * so each surface names only the panes it owns. Browser and Desktop hosts keep all three.
+   * The panes this host puts inside this Compose workspace. IntelliJ puts Preview/Native in a tool
+   * window; browser and desktop hosts keep all three.
    */
   availablePanes: Set<EditorPane> = EditorPane.entries.toSet(),
   /** Whether an editor-only initial request gains its usual free browser Preview beside it. */
   openDefaultPreview: Boolean = true,
   collaborators: List<UiBuilderCollaborator> = emptyList(),
   /**
-   * What a read of the project's component library said about the components this design imported.
-   *
-   * Supplied by the host rather than fetched here, for the same reason the device presets are: it
-   * is a request against a design id with the host's own credential, and the reducer has neither.
-   * Empty (the default) is "nobody asked", which shows nothing — a host with no component library
-   * behind it gets the editor it had before this existed.
+   * Component-library drift for components this design imported, supplied by the host (it holds the
+   * credential). Empty shows nothing.
    */
   componentDrift: List<ComponentDriftFinding> = emptyList(),
   /**
    * What the project's shared component library publishes, for the palette's "Project library"
-   * shelf — read by the host, which holds the credentials, like [componentDrift].
+   * shelf; read by the host, like [componentDrift].
    */
   componentLibrary: List<EditorLibraryComponent> = emptyList(),
   /** Fetches one published component's body and digest, or null; null where there is no library. */
   loadLibrarySymbol: (suspend (EditorLibraryComponent) -> EditorLibrarySymbol?)? = null,
   /**
-   * Publishes one of this design's components to the project library; null where there is no
-   * library to publish to, which hides the button. [onLibraryChanged] is told after a publish, so
-   * the host can read the listing again.
+   * Publishes one of this design's components to the project library; null hides the button.
+   * [onLibraryChanged] is told after a publish.
    */
   publishLibraryComponent: (suspend (EditorLibraryPublication) -> EditorLibraryPublishResult)? =
     null,
   onLibraryChanged: () -> Unit = {},
   /**
    * Device frames the Screen inspector offers, supplied by the host because `wasmJs` cannot resolve
-   * the JVM-only render catalog they come from. Empty (the default) simply hides the menu and
-   * leaves the raw fields, so a host that has no catalog to hand still gets a working inspector.
+   * the JVM-only render catalog. Empty hides the menu.
    */
   devicePresets: List<UiBuilderDevicePreset> = emptyList(),
   /**
-   * A reference the host has loaded back from storage, or null while there is none.
-   *
-   * Applied through the reducer's own attach path rather than dropped into the state, so a stored
-   * SVG gets its layout boxes read by the same code a fresh import goes through. Watched by
-   * identity: the host may deliver it late (it arrives over HTTP, after the editor has mounted) and
-   * may replace it, and neither should disturb an alignment the operator is in the middle of.
+   * A reference the host loaded back from storage, or null. Applied through the reducer's attach
+   * path so stored SVGs are read like fresh imports; watched by identity, since it may arrive late
+   * or be replaced.
    */
   restoredReference: RestoredReference? = null,
   /**
-   * Asks the host for a picture, or null where it cannot supply one.
-   *
-   * Everything unportable about importing lives behind this: opening a file picker, reading a
-   * paste, sniffing the bytes, refusing what may not be attached, and minting the identity the
-   * editor caches the decode against. Null in every preview and test, where the panel then offers
-   * no import rather than an action that cannot work.
+   * Asks the host for a picture (file picker, paste, sniffing, refusal, identity), or null where it
+   * cannot, which hides import.
    */
   onPickReference: (suspend () -> ReferenceImportOutcome)? = null,
   /**
-   * Renders the design as it stands and hands the pixels back, or null where the host cannot.
-   *
-   * The first move of the markup loop: snapshot what is there, mark up what is wrong, and build
-   * against the annotated result. A host answers this from its export lane, which is the same
-   * renderer the design's PNG export uses — so the snapshot is the design, not the editor chrome
-   * around it.
+   * Renders the design as it stands via the host's export lane and returns the pixels, or null. The
+   * first step of the markup loop.
    */
   onSnapshotDesign: (suspend () -> ReferenceImportOutcome)? = null,
   /**
-   * Fetches a reference from a link — a Figma frame, or a plain image URL — or null where the host
-   * cannot reach the network on the operator's behalf.
-   *
-   * The host decides what it will fetch and with what credential (see [parseReferenceUrl] for the
-   * shapes the panel recognises); the editor only hands it the text and shows what came back.
+   * Fetches a reference from a link (a Figma frame or image URL), or null where the host cannot
+   * reach the network. See [parseReferenceUrl].
    */
   onImportReferenceUrl: (suspend (String) -> ReferenceImportOutcome)? = null,
   /**
-   * A picture the host caught on the clipboard, or null when none has arrived.
-   *
-   * Pasting is the gesture a design tool leaves you holding — Figma's "copy as PNG" puts a frame or
-   * a component straight onto the clipboard — so it lands without a menu. Where it lands depends on
-   * what is already there: with nothing attached it becomes the reference, and over an existing
-   * reference it becomes a piece to position, which is the only reading of "paste this component"
-   * that does not throw away the mock it was going to be compared against.
+   * A picture the host caught on the clipboard, or null. It becomes the reference if none is
+   * attached, else a piece to position over it.
    */
   pastedReference: ReferenceImage? = null,
   /** A sentence from the host — a refused paste, a store that would not keep it. */
   referenceStatus: String? = null,
   /**
-   * The discussion about this design, as the host last heard it.
-   *
-   * Replaced wholesale rather than merged: the host holds a socket onto the server's comment feed
-   * and hands over what the server said, so the panel cannot show a reply the server has not
-   * stored. See [DesignCommentBoard].
+   * The discussion about this design as the host last heard it, replaced wholesale (never merged)
+   * from the server's feed. See [DesignCommentBoard].
    */
   comments: DesignCommentBoard = DesignCommentBoard(),
   /**
-   * Sends one comment, or null where the host keeps no discussion.
-   *
-   * Null in every preview and test, where the panel then says so rather than offering a Post button
-   * that cannot work — the same rule [onPickReference] follows.
+   * Sends one comment, or null where the host keeps no discussion; the panel then says so instead
+   * of offering Post.
    */
   onPostComment: ((DesignCommentDraft) -> Unit)? = null,
   /** Closes a thread, or reopens it. Null alongside a null [onPostComment]. */
@@ -517,35 +408,29 @@ fun UiBuilderEditor(
   /** A sentence from the host — a refused comment, a feed that dropped. */
   commentStatus: String? = null,
   /**
-   * "Notify me about replies" beside the board: what to draw, decided by the host's
-   * [CommentNotificationsController]. Hidden by default, which is every preview, every test and
-   * every host that is not compose-preview-server's own page.
+   * "Notify me about replies" state from the host's [CommentNotificationsController]. Hidden by
+   * default.
    */
   commentNotifications: CommentNotificationsState = CommentNotificationsState.Hidden,
   /** The switch's click. Null alongside a hidden [commentNotifications]. */
   onToggleCommentNotifications: (() -> Unit)? = null,
   /**
    * Who approved or rejected which revision, as the host last reported it. Shown at the top of the
-   * comments tab, with Approve and Request changes for the revision on screen.
+   * comments tab.
    */
   review: DesignReview = DesignReview(),
-  /**
-   * Records a verdict on the revision on screen, or null where the host keeps no reviews — the
-   * section then only reports what others decided, and in every preview and test says nothing.
-   */
+  /** Records a verdict on the revision on screen, or null where the host keeps no reviews. */
   onDecide: ((DesignReviewVerdict, note: String?) -> Unit)? = null,
   /** A sentence from the host — a refused or failed verdict. */
   reviewStatus: String? = null,
   /**
-   * Edits proposed for this design that nobody has accepted or rejected yet — an agent's, usually —
-   * as the host last reported them. Listed at the top of the comments tab; each can be shown in
-   * place of the canvas beside the design as it is now, with what it changes.
+   * Pending suggested edits (usually an agent's), listed at the top of the comments tab; each can
+   * be previewed beside the current design.
    */
   suggestions: DesignSuggestions = DesignSuggestions(),
   /**
-   * Accepts a suggestion — the host merges it into the design — or null where the host keeps no
-   * suggestions. With this and [onRejectSuggestion] both null and nothing in [suggestions], the
-   * section is not drawn at all: the MCP App and local hosts, every preview and every test.
+   * Accepts a suggestion (the host merges it), or null. With both callbacks null and no
+   * [suggestions], the section is not drawn.
    */
   onAcceptSuggestion: ((suggestionId: String) -> Unit)? = null,
   /** Rejects a suggestion — the host archives it, and the design never sees it. */
@@ -555,61 +440,36 @@ fun UiBuilderEditor(
   /** The suggestion shown in place of the canvas when the editor mounts; for previews. */
   initialShownSuggestionId: String? = null,
   /**
-   * The thread the address bar names — now, not only when the editor mounted.
-   *
-   * Separate from the selection the panel keeps for itself: a link says where to start reading, and
-   * the reader is free to move off it, which is why this is not simply the panel's state. But it is
-   * *not* read once. A fragment-only navigation — a second `#thread=` link followed from inside the
-   * open design, or Back over one — never reloads the page, so a host that reported only the
-   * startup value would leave the panel on the previous conversation while the address bar named
-   * the new one. Each new non-null value is opened and scrolled to exactly once, the way the first
-   * one is.
+   * The thread the address bar currently names. Each new non-null value opens and scrolls to it
+   * once; the reader may move off it. Not read only at mount, since fragment-only navigations do
+   * not reload.
    */
   linkedThreadId: String? = null,
   /**
-   * How many times the browser has changed the fragment, and the only thing that moves this
-   * selection after the first paint.
-   *
-   * [linkedThreadId] answers *what* the address bar names; this answers *whether the address bar
-   * just changed*, and the two come apart. A host keeps that id in step with the URL, which means
-   * clearing it when the reader opens a different thread — the fragment stops naming the old one at
-   * that moment. Keyed on the id alone, this editor would read its own host's bookkeeping as a
-   * navigation and immediately close the thread that caused it.
+   * Count of browser fragment changes; the only thing that moves the thread selection after first
+   * paint. Needed because the host clears [linkedThreadId] when the reader opens another thread,
+   * which must not read as a navigation.
    */
   threadNavigations: Int = 0,
-  /**
-   * Which thread the panel has open now, told to the host on every change.
-   *
-   * The host uses it to keep the address bar honest: a `#thread=` naming a conversation the reader
-   * has since closed is a URL that lies about what is on screen.
-   */
+  /** The thread open in the panel, reported on every change so the host keeps `#thread=` honest. */
   onSelectedThreadChanged: ((String?) -> Unit)? = null,
   /**
-   * The committed revision `?revision=` pinned this editor to, or null for the living design.
-   *
-   * See [DesignRevisionPin] — it carries both the revision the link asked for and whether that is
-   * what the canvas got, because a banner that cannot tell those apart cannot be trusted.
+   * The committed revision `?revision=` pinned this editor to, or null for the living design. See
+   * [DesignRevisionPin].
    */
   revisionPin: DesignRevisionPin? = null,
   /** Leaves a pinned revision for the design as it stands now. Null where the host cannot. */
   onGoToLatest: (() -> Unit)? = null,
   /**
-   * A sentence about the link that opened this editor — a node id this design does not have.
-   *
-   * A notice rather than a refusal, and never an error: a selector that names nothing is a stale
-   * link, and the design behind it still opens.
+   * A notice about the opening link (e.g. a node id this design lacks). Never an error: the design
+   * still opens.
    */
   openingNotice: String? = null,
   /** A button beside [openingNotice]: what the host asks the person to do about it. */
   openingNoticeAction: EditorNoticeAction? = null,
   /**
-   * Copies a link to one place in this design and answers with a sentence, or null where the host
-   * cannot reach a clipboard.
-   *
-   * The editor says *what* the link means — this node, this thread, at this revision — and the host
-   * turns that into an address against its own origin; see [designUrlPath]. Null in every preview
-   * and test, where the affordance is then absent rather than present and failing, which is the
-   * rule [onPickReference] and [exportHost] already follow.
+   * Copies a link to one place in this design and returns a sentence, or null where the host has no
+   * clipboard. The host builds the address from the selectors; see [designUrlPath].
    */
   onCopyDesignLink: (suspend (DesignUrlSelectors) -> String)? = null,
   newDesignCatalogs: List<UiBuilderNewDesignCatalog> = emptyList(),
@@ -624,158 +484,105 @@ fun UiBuilderEditor(
     null,
   onHelp: (() -> Unit)? = null,
   /**
-   * A selection made outside the editor — a host's own layer tree beside this canvas — to apply as
-   * though the layer had been picked here. A new [EditorSelectionRequest] is a new request, so
-   * choosing the same layer twice selects it twice. Null everywhere the editor owns every way in.
+   * A selection made outside the editor (e.g. a host's layer tree). Each new
+   * [EditorSelectionRequest] selects again, even for the same layer.
    */
   selectionRequest: EditorSelectionRequest? = null,
   /**
-   * Draws the editor's toolbar and rails in the host's own chrome instead of in the page. See
-   * [UiBuilderHostChrome]. Null — everywhere but an IDE webview — keeps the editor's own.
+   * Draws the toolbar and rails in the host's own chrome. See [UiBuilderHostChrome]. Null (all but
+   * IDE webviews) keeps the editor's own.
    */
   hostChrome: UiBuilderHostChrome? = null,
   /**
-   * Receives generated Kotlin when a host-owned Code control is invoked.
-   *
-   * A host such as VS Code can open it in a real, unsaved Kotlin editor instead of making a second
-   * editor pane inside a webview. The normal browser and desktop code dock are unchanged when this
-   * is null.
+   * Receives generated Kotlin when a host-owned Code control is invoked (e.g. VS Code opens a real
+   * editor). Null keeps the code dock.
    */
   onGeneratedCode: ((EditorGeneratedCode) -> Unit)? = null,
-  /**
-   * The colours of the editor's own UI. [UiBuilderEditorTheme.Default] everywhere but a host that
-   * themes it to match its own panels.
-   */
+  /** The colours of the editor's own UI; [UiBuilderEditorTheme.Default] unless a host themes it. */
   theme: UiBuilderEditorTheme = UiBuilderEditorTheme.Default,
   /**
-   * Copies a prompt that hands this live design to any MCP-capable agent.
-   *
-   * Null where this editor has no live server or clipboard. The host owns the prompt because it
-   * knows its origin; the editor only makes the workflow discoverable.
+   * Copies a prompt that hands this live design to any MCP-capable agent; null where there is no
+   * live server or clipboard. The host owns the prompt because it knows its origin.
    */
   onCopyAiPrompt: (suspend () -> String)? = null,
   agentHost: UiBuilderAgentHost? = null,
   /**
-   * Leaves the editor for the host's index of every design this account may open, or null where the
-   * host has no such page.
-   *
-   * On the toolbar rather than behind the browser's Back button, because Back is not where a design
-   * goes: the editor is normally arrived at from a link, so "the rest of my designs" was a URL you
-   * had to already know. It sits beside **New design** — the other way out of this design and into
-   * another one.
+   * Leaves the editor for the host's index of designs this account may open, or null where there is
+   * none. On the toolbar beside **New design** because editors are usually reached from a link.
    */
   onBrowseDesigns: (() -> Unit)? = null,
   /**
-   * Starts a new design of the reader's own from this one, as it is now, and opens it — or null
-   * where the host cannot. The way somebody who may only look at a design (a public one, or one
-   * shared read-only) takes it somewhere they can change it, and a quick branch for anyone else.
+   * Starts a new design of the reader's own from this one as it is now and opens it, or null where
+   * the host cannot. How a read-only viewer gets an editable copy.
    */
   onForkDesign: (() -> Unit)? = null,
   /**
-   * Copies this design into the browser's own storage and opens it there, or null where it cannot.
-   *
-   * Null in every mode but a live server session: a design already kept in this browser has nowhere
-   * to be taken, and a host with no local mode has nothing to take it into. What it costs and what
-   * it keeps working is `docs/design/UI_BUILDER_LOCAL_STORAGE.md`; how it comes home again is
+   * Copies this design into browser storage and opens it there, or null outside a live server
+   * session. See `docs/design/UI_BUILDER_LOCAL_STORAGE.md` and
    * `docs/design/UI_BUILDER_DESIGN_PORTABILITY.md`.
    */
   onTakeOffline: (() -> Unit)? = null,
   /**
-   * Replays this browser's stored edits back onto the server the design was taken from.
-   *
-   * Null unless this design has a fork point — a design created here has no server to go home to,
-   * and publishing it is a create rather than a merge.
+   * Replays this browser's stored edits onto the server the design was taken from. Null unless the
+   * design has a fork point.
    */
   onSyncToServer: (() -> Unit)? = null,
   /**
-   * Creates this browser design on the server as a new design, or null where it cannot.
-   *
-   * The counterpart of [onSyncToServer] for a design with no fork point — made here, or copied here
-   * by a caller who could not write the original. Publishing is a create, never a merge, and it
-   * leaves the original untouched. Offered only once the server would take this caller's create.
+   * Creates this browser design on the server as a new design (never a merge), or null where the
+   * server would not take this caller's create. The counterpart of [onSyncToServer] for designs
+   * with no fork point.
    */
   onPublishToServer: (() -> Unit)? = null,
   /**
-   * Copies, links and downloads the rendered design, or null where the host cannot.
-   *
-   * Null in every preview and test, where the toolbar then carries no Export menu rather than one
-   * whose every row fails — see [UiBuilderExportHost].
+   * Copies, links and downloads the rendered design, or null where the host cannot (no Export menu
+   * then). See [UiBuilderExportHost].
    */
   exportHost: UiBuilderExportHost? = null,
   /**
-   * The published Remote Compose documents the pinned catalog offers as content, if any.
-   *
-   * Supplied by the host rather than read off [catalog], because they are the *serving* catalog's
-   * previews rather than the authoring catalog's components — see [RemoteComposeSource]. Empty (the
-   * default) simply leaves the palette out, which is the right answer for a catalog whose previews
-   * are Jetpack Compose.
+   * Published Remote Compose documents the serving catalog offers as content. Host-supplied because
+   * they are the serving catalog's previews, not [catalog]'s components; see [RemoteComposeSource].
+   * Empty hides the palette.
    */
   remoteComposeSources: List<RemoteComposeSource> = emptyList(),
   /**
-   * Fetches one source's document, Base64-encoded, or throws.
-   *
-   * Suspending and host-owned: the bytes arrive over the network and neither the reducer nor this
-   * composable can reach it. Null with a non-empty [remoteComposeSources] would be a palette that
-   * cannot add anything, so the panel requires both.
+   * Fetches one source's document, Base64-encoded, or throws. The panel requires both this and
+   * [remoteComposeSources].
    */
   resolveRemoteComposeDocument: (suspend (RemoteComposeSource) -> String)? = null,
   /**
-   * Fetches the serving catalog's rendered PNG for one Remote Compose source.
-   *
-   * Loaded lazily by the visible palette rows: a catalog may publish hundreds of documents, so
-   * opening the panel must not download its whole sticker sheet. Null keeps the neutral component
-   * glyph, which is still an honest visual affordance in offline previews and tests.
+   * Fetches the serving catalog's rendered PNG for one Remote Compose source, loaded lazily by
+   * visible rows. Null keeps the neutral component glyph.
    */
   resolveRemoteComposeThumbnail: (suspend (RemoteComposeSource) -> ImageBitmap?)? = null,
   /**
    * Fetches the Base64-encoded document at an embedded node's `documentUrl`, or throws.
    *
-   * The other half of [resolveRemoteComposeDocument] and deliberately a separate parameter. That
-   * one is an *authoring* action: an author presses Add, the bytes are copied into the design, and
-   * the design carries them for ever after. This one is a *reference*: the design carries a URL,
-   * and what the canvas draws is whatever that URL serves today. A host that can do one and not the
-   * other is a real configuration — a catalog with a published sticker sheet and no proxy for
-   * arbitrary URLs is exactly it — so the two are asked for separately.
-   *
-   * Null leaves every `documentUrl` node drawing its waiting state, which is the honest answer for
-   * a host that cannot fetch: the node is not broken, it is unresolved.
+   * Separate from [resolveRemoteComposeDocument], which copies bytes into the design on Add; this
+   * resolves a live reference, and a host may support only one. Null leaves `documentUrl` nodes in
+   * their waiting state.
    */
   resolveRemoteComposeUrl: (suspend (String) -> String)? = null,
   /**
-   * Fetches a Lottie animation's JSON from the URL a `remote-m3/lottie` element carries, or throws.
-   *
-   * Host-owned like [resolveRemoteComposeDocument], and for a sharper reason than "the network is
-   * not a reducer's": the browser host resolves every request it makes against the page's own
-   * origin and refuses the rest, so which animations are reachable is that host's rule to state,
-   * not this composable's. Null simply leaves a URL unresolved, which the canvas already draws as
-   * the unfinished thing it is.
+   * Fetches a Lottie animation's JSON from a `remote-m3/lottie` element's URL, or throws.
+   * Host-owned because the host decides which origins are reachable; null leaves the URL
+   * unresolved.
    */
   loadLottieAnimation: (suspend (String) -> String)? = null,
   /**
-   * Fetches the bytes behind one of the design's **uploaded** assets, by asset key, or throws.
-   *
-   * Host-owned for the reason the two above are: the design names a storage key and only the host
-   * that stores it can turn that into pixels, over whatever route and credential it holds. Null
-   * leaves every uploaded picture drawing its placeholder, which is the honest answer for a host
-   * with no asset lane — the node is not broken, its picture is elsewhere.
+   * Fetches the bytes of an uploaded asset by key, or throws. Only the storing host can resolve it;
+   * null leaves uploaded pictures as placeholders.
    */
   resolveDesignAsset: (suspend (String) -> ByteArray)? = null,
   /**
-   * Draws the editable design through its pinned catalog runtime.
-   *
-   * Null keeps the in-process renderer for JVM previews and tests. The browser host supplies an
-   * isolated renderer; all editor overlays remain siblings in [PinnedDesignCanvas].
+   * Draws the editable design through its pinned catalog runtime. Null keeps the in-process
+   * renderer (JVM previews, tests); overlays stay siblings in [PinnedDesignCanvas].
    */
   canvasRenderer: UiBuilderCanvasRenderer? = null,
   /**
-   * Takes a comment about one node to the conversation this editor sits in, or null where there is
-   * none.
-   *
-   * A chat host (the MCP App in ChatGPT or Codex desktop) supplies it, and the node's menu then
-   * offers **Comment**: a small field beside the node, whose text arrives here with the node's id
-   * and, where it could be drawn, a picture of the node. Never called with blank text. Null
-   * everywhere else, where the menu has no such row — the design's own discussion is the Comments
-   * dock's, through [onPostComment].
+   * Sends a comment about one node to the surrounding chat conversation (e.g. the MCP App), or
+   * null. When present the node menu offers **Comment**; the text arrives with the node id and,
+   * where possible, a picture of the node. Never called with blank text. The design's own
+   * discussion uses [onPostComment].
    */
   onCommentOnNode: ((UiBuilderNodeComment) -> Unit)? = null,
 ) {
@@ -806,11 +613,9 @@ fun UiBuilderEditor(
             enabledPacks =
               initialEnabledPacks.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null },
             pinnedComponents = initialPinnedComponents,
-            // Opening a design always gives its editable canvas a free browser preview beside it.
-            // Native compiles a whole design through the host and is therefore explicit-only — a
-            // document opening must not spend a render merely because its catalog's browser canvas
-            // is a stand-in. Widgets use the same policy; their preview additionally fans out over
-            // the launcher host shapes. An explicit [initialPanes] from the host still wins.
+            // Every design gets a free browser preview beside its canvas. Native is explicit-only
+            // because it compiles through the host; widgets fan the preview out over launcher
+            // shapes. An explicit [initialPanes] wins.
             panes =
               (if (
                   openDefaultPreview &&
@@ -824,21 +629,32 @@ fun UiBuilderEditor(
           )
       )
     }
+  // The undo offer after a delete, cut or unwrap. One at a time: the job is the offer, so
+  // cancelling it takes the snackbar down with it, and a newer destructive edit replaces the
+  // pending one rather than queueing behind it the way SnackbarHostState would.
+  //
+  // Both are per design. The coroutine scope that runs the offer is not, so opening another design
+  // in the same editor cancels the old offer explicitly: left up, it would name a node in a design
+  // that is no longer on screen, and its action would undo through the old design's state.
+  val undoSnackbarHost = remember(document.id) { SnackbarHostState() }
+  var undoSnackbarJob by remember(document.id) { mutableStateOf<Job?>(null) }
+  DisposableEffect(document.id) { onDispose { undoSnackbarJob?.cancel() } }
   LaunchedEffect(document.revision, authoritativeGeneration) {
     if (state.document != document) {
+      // A rebuilt state carries none of the commands that built it, so there is nothing left for
+      // the offer's action to undo: a collaborator's edit, a reconnect or an authoritative answer
+      // takes it down like any other change to the document.
+      undoSnackbarJob?.cancel()
       state = reducer.reconciled(state, document, initialSelectedNodeId)
     }
   }
-  // After the reconcile above rather than inside the state it opens with, because that reconcile
-  // fires on the first composition too: a session seeded at construction has a document the
-  // authoritative one does not match, so it was rebuilt from the authoritative one and the seed
-  // was gone before anything drew. Once per design, and never at all in the empty default.
+  // After the reconcile above, which fires on first composition too and would otherwise drop the
+  // seed. Once per design.
   var seeded by remember(document.id) { mutableStateOf(false) }
   LaunchedEffect(document.id) {
     if (!seeded && (initialEdits.isNotEmpty() || initialRevisionPeek != null)) {
       seeded = true
-      // The peek goes on last, and through the same events a press dispatches: an edit ends a peek,
-      // so one applied before the seeded edits would be gone before anything drew.
+      // The peek goes last: an edit ends a peek.
       var seededState = initialEdits.fold(state, reducer::reduce)
       if (initialRevisionPeek != null) {
         seededState =
@@ -854,9 +670,8 @@ fun UiBuilderEditor(
       state = seededState
     }
   }
-  // Applied once, and only over an editor that has nothing of its own: the host delivers this
-  // late (it arrives over HTTP, after the editor has mounted) and may deliver it again, and
-  // neither should overwrite marks the operator has drawn since.
+  // Applied once, and only over an editor with no reference of its own, so a late or repeated
+  // delivery never overwrites the operator's marks.
   var referenceRestored by remember(document.id) { mutableStateOf(false) }
   LaunchedEffect(restoredReference) {
     val restored = restoredReference ?: return@LaunchedEffect
@@ -888,14 +703,11 @@ fun UiBuilderEditor(
   var draggedNodeId by remember { mutableStateOf<String?>(null) }
   var draggedRemoteThumbnail by remember { mutableStateOf<ImageBitmap?>(null) }
   var canvasBounds by remember { mutableStateOf(Rect.Zero) }
-  // The canvas pane's own rectangle — the workspace, not the design. It is what tells an
-  // empty-ground drop apart from a drop on another pane: the pointer over the pane but not over
-  // the design is the beside gesture's ground.
+  // The canvas pane's own rectangle, distinguishing a drop on empty workspace ground (beside
+  // gesture) from a drop on another pane.
   var canvasWorkspaceBounds by remember { mutableStateOf(Rect.Zero) }
-  // The scale the design is pinned at, or null while it is framed to the workspace. Local rather
-  // than in [UiBuilderEditorState] for the same reason the open panels are: how far somebody has
-  // zoomed in is a fact about their window, not about the design, and an authoritative snapshot
-  // that reset it would be worse than one that remembers nothing.
+  // The pinned scale, or null while framed. Local, not in [UiBuilderEditorState]: zoom is a fact
+  // about this window, not the design.
   var canvasZoom by remember(document.id) { mutableStateOf(initialCanvasZoom) }
   // Which control the hover editor should put the caret in, set by an action that just created the
   // value being edited and cleared the moment it lands.
@@ -919,20 +731,16 @@ fun UiBuilderEditor(
   var mobileView by remember(document.id) { mutableStateOf<String?>(null) }
   // The device tabs opened so far, which stay composed so switching back to one is immediate.
   val visitedMobilePreviews = remember(document.id) { mutableStateListOf<String>() }
-  // Opened where the URL asked for a panel, on a narrow viewport as much as a wide one. The
-  // compact layout draws its docks from this rather than from [inspectorOpen], so initialising only
-  // that flag left `?node=` and `#thread=` selecting silently on a phone: the state was right and
-  // nothing was on screen. `Properties` is the compact dock that hosts every inspector mode, Talk
-  // included — the same pairing `onOpenProperties` already makes.
+  // Opened where the URL asked for a panel on compact layouts too, so `?node=` and `#thread=` are
+  // visible on a phone. `Properties` hosts every inspector mode.
   var mobilePanel by
     remember(document.id) {
       mutableStateOf(
         if (initialInspectorOpen) MobileEditorPanel.Properties else MobileEditorPanel.None
       )
     }
-  // Which panels are open. Local rather than in [UiBuilderEditorState] on purpose: what a
-  // collaborator has open is not part of the document, and an editor that reopened someone else's
-  // panels on every reconcile would be worse than one that remembers nothing.
+  // Which panels are open. Local on purpose: collaborators' open panels are not part of the
+  // document.
   var navigatorTab by
     remember(document.id) {
       mutableStateOf(
@@ -951,25 +759,18 @@ fun UiBuilderEditor(
   // control that teaches nothing.
   val onComponentPacks: (() -> Unit)? =
     if (catalog.componentPacks.isEmpty) null else ({ showPacks = true })
-  // The source whose document is being fetched, or null. One at a time on purpose: the palette is a
-  // list of 476 rows on the Remote M3 catalog, and a double-click that started two fetches would
-  // insert the same component twice — the second insert lands against a document the first already
-  // changed, and neither the author nor their collaborators asked for it.
+  // The source being fetched, or null. One at a time so a double-click does not insert twice.
   var pendingRemoteSource by remember(document.id) { mutableStateOf<RemoteComposeSource?>(null) }
-  // A Remote Compose drop captures its pointer-resolved slot before fetching the document bytes.
-  // Null is the ordinary Add path, which resolves against the current selection after the fetch.
+  // A Remote Compose drop's pointer-resolved slot, captured before the fetch; null for the ordinary
+  // Add path.
   var pendingRemoteTarget by remember(document.id) { mutableStateOf<ParentSlot?>(null) }
-  // Only a transport failure. A document that fetched and did not decode is refused by the reducer,
-  // which reports it through the same rejection channel as every other refused edit rather than a
-  // second status line saying a different thing about the same click.
+  // Only transport failures; decode failures are reported by the reducer as rejections.
   var remoteSourceFailure by remember(document.id) { mutableStateOf<String?>(null) }
   val editorFocusRequester = remember { FocusRequester() }
   // Held here rather than inside the flatten, which is not a composable: a text mark has to be set
   // in the same font when it is baked in as when it was drawn.
   val flattenTextMeasurer = rememberTextMeasurer()
-  // The canvas's own layout, kept here as well as handed to the host: promoting a piece asks which
-  // slot is under it, and that question is answered by the layout the renderer actually produced
-  // rather than by anything the document says.
+  // The canvas's own layout: promoting a piece asks which slot is under it in the rendered layout.
   var canvasInspection by
     remember(document.id) { mutableStateOf<UiBuilderInspectionSnapshot?>(null) }
   var captureRequest by remember(document.id) { mutableStateOf<ReferenceCaptureRequest?>(null) }
@@ -1014,9 +815,9 @@ fun UiBuilderEditor(
     selectedThreadId = threadId
     onSelectedThreadChanged?.invoke(threadId)
   }
-  // The canvas's current scroll offset, reported by the canvas so a follow-up can reconcile the
-  // drag hit-test with the scroll — see the auto-scroll: the inspection's boxes and the drawn
-  // pointer do not currently agree once the workspace has scrolled, which predates this change.
+  // The canvas's scroll offset. Known gap: the drag hit-test and the drawn pointer disagree once
+  // the
+  // workspace has scrolled.
   var canvasScroll by remember(document.id) { mutableStateOf(Offset.Zero) }
 
   fun canvasDropPlan(componentId: String, position: Offset): UiBuilderDropPlan? {
@@ -1057,11 +858,8 @@ fun UiBuilderEditor(
   }
   val draggedPlan = draggedCatalogPlan ?: draggedMovePlan
   val canvasDropHovered = draggedPlan != null
-  // The empty recommended slots, from the same inspection the drop plan reads — one region per
-  // slot, computed by the reducer, so the hint drawn and the target hit cannot disagree. Only
-  // while a palette drag or a canvas move is in hand: at rest an empty container is usually meant
-  // to be empty (a swatch, a battery cell, a spacer), and an invitation drawn over it defaced the
-  // design for every viewer, read-only ones included.
+  // Empty recommended slot hints, from the same inspection as the drop plan so hint and target
+  // agree. Only while dragging: at rest an empty container is usually intentional.
   val dragInHand = draggedComponentId != null || draggedNodeId != null
   val slotPlaceholders =
     remember(state.document, canvasInspection, dragInHand) {
@@ -1074,9 +872,8 @@ fun UiBuilderEditor(
         )
       } ?: emptyList()
     }
-  // Over the workspace but not over the design: the beside ground. The status bar names what a
-  // release there would do — the panel's own add-beside, or the reason it would refuse — because
-  // a gesture that acts on release must say so while the pointer is still down.
+  // Over the workspace but not the design: the beside ground. The status bar names what a release
+  // would do while the pointer is still down.
   val draggingOverBesideGround =
     draggedComponentId != null &&
       draggedPlan == null &&
@@ -1092,14 +889,49 @@ fun UiBuilderEditor(
       else -> "No compatible slot"
     }
   /**
+   * Put up, replace or take down the undo offer for an edit that just landed; [undo] is what its
+   * action does.
+   *
+   * Called from [reduceAndSubmit] rather than [dispatch] because that is where every edit lands — a
+   * paste from the system clipboard arrives there asynchronously — so no edit can slip past and
+   * leave an offer up whose action would now undo something else.
+   */
+  fun offerUndo(
+    event: UiBuilderEditorEvent,
+    previous: UiBuilderEditorState,
+    current: UiBuilderEditorState,
+    undo: () -> Unit,
+  ) {
+    val message =
+      undoSnackbarMessage(event, previous, current) { reducer.nodeKindLabel(previous, it) }
+    if (message == null) {
+      // Ctrl/⌘-Z, the toolbar's undo and any other edit all end the offer: what it named has been
+      // undone already, or its action would now undo the newer edit instead.
+      if (undoSnackbarInvalidatedBy(previous, current)) undoSnackbarJob?.cancel()
+      return
+    }
+    undoSnackbarJob?.cancel()
+    undoSnackbarJob = editorScope.launch {
+      // Indefinite inside a timeout rather than SnackbarDuration.Short: Short is 4s and, with an
+      // action, an accessibility service may stretch it without limit, while the offer has to end
+      // before it is likely to be stale.
+      val result =
+        withTimeoutOrNull(UNDO_SNACKBAR_MILLIS) {
+          undoSnackbarHost.showSnackbar(
+            message = message,
+            actionLabel = "Undo",
+            duration = SnackbarDuration.Indefinite,
+          )
+        }
+      if (result == SnackbarResult.ActionPerformed) undo()
+    }
+  }
+  /**
    * One editor event, and the one place a pinned revision stops being editable.
    *
-   * The guard is the operation sequence rather than a list of which events are edits: the reducer
-   * bumps it for every command it forms, accepted or rejected, and for nothing else. So selecting,
-   * filtering, opening a panel, marking up the reference and switching a pack all pass through a
-   * pinned editor untouched, while every change to the *document* is dropped before it can reach
-   * the local state — which matters, because an optimistic edit that never becomes a submission
-   * would leave the canvas showing a revision that exists nowhere.
+   * The guard is the operation sequence, which the reducer bumps for every command (accepted or
+   * rejected) and nothing else. Non-document events pass through; document changes are dropped so
+   * the canvas never shows an optimistic edit that is never submitted.
    */
   fun reduceAndSubmit(event: UiBuilderEditorEvent) {
     val previous = state
@@ -1110,6 +942,8 @@ fun UiBuilderEditor(
     }
     state = current
     reducer.acceptedSubmission(previous, current)?.let { onSubmission?.invoke(it) }
+    // The action undoes through here like a keypress would, pinned-revision guard and all.
+    offerUndo(event, previous, current) { reduceAndSubmit(UiBuilderEditorEvent.Undo) }
   }
   fun dispatch(event: UiBuilderEditorEvent) {
     when (event) {
@@ -1128,9 +962,8 @@ fun UiBuilderEditor(
       else -> Unit
     }
     reduceAndSubmit(event)
-    // Apply writes one lane per event so each command reaches the host, and a configuration that
-    // touched both properties and modifiers has a second lane to write. Once, because there are
-    // only two lanes and one the reducer cannot settle must not spin.
+    // Apply writes one lane per event; dispatch a second time for the other lane, but only once so
+    // an unsettleable lane cannot spin.
     if (
       event == UiBuilderEditorEvent.ApplyTunables &&
         state.lastOutcome is CommandOutcome.Accepted &&
@@ -1162,42 +995,22 @@ fun UiBuilderEditor(
   }
 
   /**
-   * Selection is the beginning of editing, not a separate mode an author has to discover.
-   *
-   * The canvas deliberately starts uncluttered, but leaving its Properties dock closed after an
-   * author chooses a component turns the most common edit into a second hunt through the rail. The
-   * same action is used for a layer-tree selection, so the two ways of choosing a component stay in
-   * agreement.
+   * Selecting a node also opens its Properties dock; used for canvas and layer-tree selection
+   * alike.
    */
   fun selectNodeForEditing(nodeId: String) {
     focusEditor()
     dispatch(UiBuilderEditorEvent.SelectNode(nodeId))
     openProperties()
   }
-  // The host's answer, into the state the Issues panel reads. An effect rather than a value folded
-  // in at composition because the fetch lands after mount, and the reducer's copy has to survive
-  // the document rebuilds that happen between then and the next fetch.
-  //
-  // Re-dispatched whenever the document's component declarations change, and that is not belt and
-  // braces. `stillDescribing` drops a finding the moment its component stops matching, which is
-  // right — but an edit that drops one is very often reversible, and undo restores the exact
-  // source the finding described. Without this the row would stay gone until a reload, because the
-  // host has no reason to fetch again. Re-handing the host's own unfiltered list lets the reducer
-  // decide afresh; anything still invalid is filtered out again, so this cannot resurrect a row
-  // that has stopped being true.
+  // The host's drift findings into the reducer. Re-dispatched when component declarations change:
+  // `stillDescribing` drops findings that stop matching, and undo can make them true again without
+  // the host refetching.
   LaunchedEffect(componentDrift, state.document.components) {
     dispatch(UiBuilderEditorEvent.SetComponentDrift(componentDrift))
   }
-  // Following the address bar after the first paint, for the navigation the browser answers without
-  // reloading: a fragment-only move between two thread links, or Back over one.
-  //
-  // Null is a case and not a no-op. Back out of a `#thread=` URL to the fragment-free design is a
-  // same-document navigation like any other, and leaving the previous conversation selected while
-  // the address bar has stopped naming it is the same disagreement this effect exists to prevent.
-  // Deselecting cannot fight the reader who closed a thread by hand: that path has already set the
-  // selection to null, so this finds nothing to do. The panel is opened for a thread and not shut
-  // again for a null — where the reader ended up is the board, and closing it under them would be
-  // answering a navigation with more than it asked for.
+  // Follows fragment-only address-bar navigations after first paint. Null deselects too (Back to a
+  // fragment-free URL), but never closes the panel.
   LaunchedEffect(threadNavigations) {
     // The value the editor mounted with is already the selection; only a later navigation acts.
     if (threadNavigations == 0) return@LaunchedEffect
@@ -1211,11 +1024,8 @@ fun UiBuilderEditor(
     }
   }
   /**
-   * Bake the reference stack into one picture and make it the base.
-   *
-   * Sized from the *document's* frame rather than from the canvas on screen, at twice its dp, so
-   * the flattened picture does not inherit whatever zoom the window happened to be at — two people
-   * flattening the same stack on different monitors get the same bytes.
+   * Bake the reference stack into one picture and make it the base. Sized from the document's frame
+   * at 2× dp, not the on-screen canvas, so the result is zoom-independent.
    */
   fun flattenCurrentReference() {
     val environment = state.document.screenEnvironmentSettings()
@@ -1251,9 +1061,8 @@ fun UiBuilderEditor(
   LaunchedEffect(canvasDropHovered, draggedPlan, draggingOverBesideGround, dropTargetLabel) {
     onDropTargetChanged(canvasDropHovered || draggingOverBesideGround, dropTargetLabel)
   }
-  // Cached for the same reason as the issues scan further down, at a smaller scale: the filter
-  // lowercases and scans four strings for every node in the document, and the panel recomposes far
-  // more often than either the document or the query changes.
+  // Cached: the filter scans four strings per node and the panel recomposes far more often than its
+  // inputs change.
   val layerRows = remember(reducer, state.document, state.layerQuery) { reducer.layerRows(state) }
   // What the selection bar calls the selection: the layer's own name where the tree has one, its
   // component otherwise, and a count once there is more than one of them.
@@ -1271,12 +1080,8 @@ fun UiBuilderEditor(
       }
     }
   /**
-   * What the insert panel calls the place an Add would land.
-   *
-   * The panel used to answer with an id — "Adds into toolbar-discover-row.children" — which is the
-   * document's name for the place rather than the reader's. The layers panel and the breadcrumbs
-   * both call that node "Row"; this says the same thing and then the slot, so the three places that
-   * name a destination agree.
+   * What the insert panel calls the place an Add would land: the node's layer name plus the slot,
+   * matching the layers panel and breadcrumbs.
    */
   fun insertDestinationLabel(target: ParentSlot): String {
     val name =
@@ -1289,11 +1094,8 @@ fun UiBuilderEditor(
   }
 
   /**
-   * The selection's verbs, as menu rows, for whoever opens a menu under the pointer.
-   *
-   * Built here rather than at each call site because every question it asks — can this be pasted
-   * into, is there anything to unwrap — is the reducer's, and the answers change with every edit.
-   * The lambda takes the dismiss the menu owns, so the rows can close the menu they are in.
+   * The selection's verbs as menu rows. Built here because every answer comes from the reducer; the
+   * lambda takes the menu's dismiss so rows can close it.
    */
   val selectionMenu: (() -> Unit) -> List<UiBuilderMenuEntry> = { close ->
     editorSelectionMenuEntries(
@@ -1350,15 +1152,8 @@ fun UiBuilderEditor(
             commentNodeId = state.selectedNodeId
           }
         } else null,
-      // The link names the *anchor* rather than the whole selection: a URL selects one node, and
-      // the anchor is the node every other single-selection question in this editor is asked of.
-      // Pinned to the revision the host confirmed this layer was in, and offered only where there
-      // is one. A layer that exists solely because of a queued insert, duplicate or paste is in no
-      // revision yet, and neither shape of link to it works: pinned, it names a revision the layer
-      // was not in; unpinned, it opens the living design, where the recipient's own first snapshot
-      // has no such node — so the editor falls back to the root and never reselects when the edit
-      // lands. Nothing here can make that link correct, so the row is withheld for the moment the
-      // queue takes rather than copying an address that is wrong on arrival.
+      // The link names the anchor node, pinned to the host-confirmed revision. Withheld for a layer
+      // created by a still-queued edit, since no link to it would resolve correctly yet.
       onCopyLink =
         onCopyDesignLink?.let { copy ->
           state.selectedNodeId?.let { nodeId ->
@@ -1438,14 +1233,7 @@ fun UiBuilderEditor(
           catalogDragPosition = position
         },
         onCatalogDrop = { componentId, variant, position ->
-          // Where it was dropped, not where the selection happens to be. The palette's own legend
-          // says a drag inserts the component "where it is dropped", and it did not: every drop
-          // landed in the selected node's slot, so dragging onto a card put the component wherever
-          // the last click had been. The renderer already reports each slot's box, and the
-          // reference
-          // overlay already promotes a piece into the slot under it — this asks the same question,
-          // and now the seam as well: the marker the pointer watched is the seam the drop lands at,
-          // not an append after the fact.
+          // Insert where dropped (slot and seam under the pointer), not into the selection.
           canvasDropPlan(componentId, position)?.let { plan ->
             dispatch(
               UiBuilderEditorEvent.InsertComponent(
@@ -1458,12 +1246,8 @@ fun UiBuilderEditor(
             if (closeAfterDrop) mobilePanel = MobileEditorPanel.None
           }
             ?: run {
-              // Empty ground: the pointer is over the workspace but not over the design. That is a
-              // place nothing can be inserted *into*, and the honest answer to a drop there is the
-              // panel's own "add beside" — a top-level item on the board — rather than nothing. A
-              // design that cannot take one (a Wear screen is exported as itself) says so instead
-              // of
-              // swallowing the gesture.
+              // Empty ground (workspace but not design) means "add beside"; a design that cannot
+              // take one says so.
               if (canvasWorkspaceBounds.contains(position) && !canvasBounds.contains(position)) {
                 val refusal = reducer.besideRefusal(state, componentId)
                 if (refusal == null) {
@@ -1487,11 +1271,8 @@ fun UiBuilderEditor(
           if (state.addBeside) reducer.besideRefusal(state, it) == null
           else reducer.dropTarget(state, it) != null
         },
-        // Only in beside mode, and only what is specific to the component. `besideRefusal` falls
-        // through to the document's own answer when the component has nothing to say, so asking it
-        // per row on a non-board Wear design returned the *wrap* refusal for every component in the
-        // catalog — the same sentence on all 41 rows, under a destination line already carrying it.
-        // The document's refusal belongs to the panel; only a component's belongs to a row.
+        // Per row only the component's own refusal; the document-level refusal belongs to the
+        // panel.
         catalogAddRefusal = {
           if (state.addBeside && reducer.besideRefusal(state) == null)
             reducer.besideRefusal(state, it)
@@ -1565,12 +1346,8 @@ fun UiBuilderEditor(
         modifier = modifier,
       )
     }
-  // The ghosts the two drags carry, built once per drag rather than per pointer move: a palette
-  // drag carries the component itself at its own size in the design's own theme, a canvas move
-  // carries the subtree it picked up. The canvas scales and caps them to the slot under the
-  // pointer, so what is in the air is what would land. A Remote Compose drag carries no generated
-  // ghost at all — its published capture is the picture, and a ghost document without its bytes
-  // would render the component's own error diagnostic.
+  // Drag ghosts, built once per drag: the palette component or the moved subtree, which the canvas
+  // scales to the hovered slot. Remote Compose drags use their published capture instead.
   val dragGhostPreview =
     remember(
       draggedComponentId,
@@ -1600,16 +1377,13 @@ fun UiBuilderEditor(
     remember(state.document, state.tunables, state.tunedValues) {
       state.document.tuned(state.tunables, state.tunedValues)
     }
-  // The strip beside the design: the devices it claims, plus whichever unstored axes are switched
-  // on. Computed here rather than in the canvas because it is a question about the *design* — its
-  // stored `exportDevices` and the editor's own axes — and the canvas draws what it is handed.
+  // The strip beside the design: claimed devices plus enabled unstored axes, computed from the
+  // design.
   val variantPanes =
     remember(drawnDocument, devicePresets, state.variantAxes) {
       drawnDocument.variantPanes(devicePresets, state.variantAxes)
     }
-  // A dedicated Preview view has no authoring canvas beside it, so its first frame is the current
-  // design. In the combined workspace that frame would be a duplicate and the pane remains the
-  // comparison-only strip it has always been.
+  // A dedicated Preview view has no canvas beside it, so its first frame is the current design.
   val previewPanes =
     remember(drawnDocument, variantPanes, availablePanes) {
       if (EditorPane.Editor in availablePanes || drawnDocument.widgetPreviewPanes() != null) {
@@ -1618,19 +1392,16 @@ fun UiBuilderEditor(
         listOf(drawnDocument.currentFramePane()) + variantPanes
       }
     }
-  // The read-only pane. The catalog decides whether this is the constrained canvas renderer or an
-  // exported artifact played by a browser adapter. No catalog or platform id is interpreted here:
-  // the typed capability is the whole switch, and an unknown adapter falls back to the canvas.
+  // The read-only pane: the catalog's typed capability picks the canvas renderer or a browser
+  // adapter; unknown adapters fall back to the canvas.
   val documentBackedPreview =
     catalog.browserPreview?.takeIf {
       it.renderer == BrowserPreviewCapabilityV1.REMOTE_COMPOSE_DOCUMENT_RENDERER &&
         it.format == ExportFormatV1.RC &&
         onRequestDocumentPreview != null
     }
-  // The compact layout's preview tabs, one frame each (see [MobileViewTabs]). The design's own
-  // frame comes first: the canvas is a tab away rather than beside it, and a design that names no
-  // devices still has a frame to try. A widget's frames are its host shapes or grid sizes, as in
-  // the Preview pane, with the resizable launcher pane only where the frame is a live composition.
+  // Compact preview tabs, one frame each (see [MobileViewTabs]), the design's own frame first.
+  // Widgets use their host shapes or grid sizes.
   val mobilePreviewPanes =
     remember(drawnDocument, variantPanes, documentBackedPreview) {
       drawnDocument.widgetPreviewPanes(resizable = documentBackedPreview == null)
@@ -1665,9 +1436,8 @@ fun UiBuilderEditor(
   // previews with.
   val mobilePreview: @Composable (UiBuilderVariantPane, Modifier) -> Unit = { pane, modifier ->
     if (documentBackedPreview != null) {
-      // Keyed by the tab: that pane keeps its results by pane id but requests by document, so two
-      // tabs sharing one document — a Wear widget's host shapes — would otherwise never ask again
-      // and the second would wait on a result it was never sent.
+      // Keyed by tab: tabs sharing one document (a widget's host shapes) must each request their
+      // own result.
       key(pane.id) {
         RemoteDocumentDesignPreviewPane(
           document = drawnDocument,
@@ -1692,11 +1462,9 @@ fun UiBuilderEditor(
       )
     }
   }
-  // The editing surface draws a Wear widget in the editing frame, not in the host shape being
-  // viewed: which container a launcher draws around it is a question for the preview pane, which
-  // draws every shape side by side, and for the native render. Reshaping the surface an author is
-  // editing made the frame they place nodes in change under them. The compact layout has neither
-  // pane, so there the canvas is the only surface a chosen shape can be seen on, and it draws it.
+  // The editing surface draws a Wear widget in the editing frame, not the viewed host shape, so it
+  // does not reshape under the author. Only the compact layout, which has no preview pane, draws
+  // the chosen shape on the canvas.
   var canvasIsOnlySurface by remember { mutableStateOf(false) }
   val canvasHostShape =
     if (canvasIsOnlySurface) state.wearWidgetHostShape else WearWidgetHostShape.Default
@@ -1957,9 +1725,7 @@ fun UiBuilderEditor(
                 label = selectionLabel,
                 dragHandle = dragHandle,
                 onDismiss = { dispatch(UiBuilderEditorEvent.HideQuickEditor) },
-                // The same rule the panel opens on: what the node carries, which is what the export
-                // would write. A hovering card is the last place to list what a component *could*
-                // have.
+                // Only what the node carries, i.e. what the export would write.
                 fields =
                   inspectorPropertyFields(reducer.propertyFields(state)).filter { field ->
                     field.written ||
@@ -2025,14 +1791,8 @@ fun UiBuilderEditor(
             }
             ?: nodeId
         },
-        // Only while no other pane is showing the frame. The preview pane draws the design at its
-        // own frame and at every device it claims; the native pane draws it compiled. Either one
-        // is a better answer to "what does someone see on the device?" than a third copy inside
-        // the editing surface.
-        //
-        // And never for a Wear or mobile (m3) design, whose device view is the preview pane's to
-        // draw: the editing surface is the extent, and a phone or round watch beside it is an
-        // extra preview that belongs in the preview pane.
+        // Only when no other pane shows the frame, and never for Wear or m3 designs, whose device
+        // view belongs to the preview pane.
         frameCompanion =
           LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.WEAR.wireValue &&
             LocalUiBuilderCatalogPlatform.current != UiBuilderCatalogPlatform.MOBILE.wireValue &&
@@ -2062,36 +1822,29 @@ fun UiBuilderEditor(
       }
     }
   }
-  // Cached against the document, because it is not cheap and depends on nothing else: it walks
-  // every node and every property against the catalog, traverses the graph and looks for cycles.
-  // Called inline it would run all of that on every recomposition of the inspector — which is
-  // every keystroke in a property field and every frame of a drag.
+  // Cached against the document: it walks every node and property, and the inspector recomposes on
+  // every keystroke and drag frame.
   val assetBitmapsByDigest = remember { mutableStateMapOf<String, ImageBitmap?>() }
-  // The encoded bytes too, for catalog runtimes and for the widget export the code pane and the
-  // problems panel run: they draw in a sandboxed frame that is sent the
-  // document and nothing else, so the picture has to travel inside it (`LocalUiBuilderAssetBytes`).
+  // Encoded bytes too: sandboxed catalog runtimes and the widget export receive only the document,
+  // so pictures travel inside it (`LocalUiBuilderAssetBytes`).
   val assetBytesByDigest = remember { mutableStateMapOf<String, ByteArray>() }
   val documentProblems =
     remember(reducer, state.document, assetBytesByDigest.size) {
       reducer.problems(state.document) { assetBytesByDigest[it] }
     }
-  // Appended rather than folded into `problems`, which is a pure function of the document and stays
-  // one: drift is a fact about another host's library, fetched by whoever is hosting this editor
-  // and handed over as state. Keyed on the findings alone, so the cache above survives a fetch.
+  // Appended rather than folded into the pure `problems`: drift comes from the host. Keyed on the
+  // findings alone so the cache above survives a fetch.
   val driftProblems =
     remember(state.componentDrift) { componentDriftProblems(state.componentDrift) }
   val problems = documentProblems + driftProblems
-  // Keyed on the operation counter rather than on the document: an undo puts the document back to
-  // one the history has already seen, and the entry it moved the marker to is the whole point.
+  // Keyed on the operation counter, not the document: an undo restores an earlier document but
+  // moves the marker.
   val operationHistory =
     remember(reducer, state.operationSequence, state.document.revision) {
       reducer.operationHistory(state)
     }
-  // The same history as a strip of pictures, and only while the strip is open: each row costs a
-  // rebuilt document held in memory and a composed thumbnail on screen, and a session nobody is
-  // reviewing should not pay for either. Keyed exactly as the list above is, for the same reason —
-  // an undo puts the document back to one the strip has already drawn, and the row it moved the
-  // marker to is the point.
+  // The history as pictures, only while the strip is open (each row costs a rebuilt document and a
+  // thumbnail). Keyed like the list above.
   val revisionEntries =
     remember(
       reducer,
@@ -2110,9 +1863,7 @@ fun UiBuilderEditor(
       else revisionDiff(state, catalog, peeked, compared)
     }
   val peekedRevision = revisionEntries.firstOrNull { it.revision == state.revisionPeek }
-  // Suggestions: the rows the comments tab lists and the one the canvas may be showing instead of
-  // the design. Kept out of the reducer on purpose — a suggestion is the host's, not an edit, and
-  // looking at one changes nothing about the document.
+  // Suggestions are the host's, not edits, so the shown one stays out of the reducer.
   var shownSuggestionId by remember { mutableStateOf(initialShownSuggestionId) }
   val suggestionRows =
     remember(suggestions, state.operationSequence, state.document.revision, catalog) {
@@ -2160,17 +1911,13 @@ fun UiBuilderEditor(
     }
   val comparedRevision = revisionEntries.firstOrNull { it.revision == state.revisionCompare }
   /**
-   * The slot a piece would be built into, hit-tested at its own centre.
-   *
-   * Fractions become render pixels here rather than in the reducer, because the conversion needs
-   * the frame and the density — two facts about how this editor is drawing right now, and neither
-   * of them the reducer's business.
+   * The slot a piece would be built into, hit-tested at its centre. Fractions become pixels here
+   * because that needs the frame and density.
    */
   fun promotionTargetFor(piece: ReferencePiece): ParentSlot? {
     val componentId = piece.componentId ?: return null
-    // The canvas's frame: the editing one wherever a pane shows the host shape, the chosen one
-    // where
-    // the canvas is all there is.
+    // The editing frame where a pane shows the host shape, the chosen one where the canvas is
+    // alone.
     val (pointX, pointY) = state.document.referencePieceCentrePx(piece, canvasHostShape)
     return reducer.promotionTarget(
       state = state,
@@ -2180,24 +1927,15 @@ fun UiBuilderEditor(
       pointY = pointY,
     )
   }
-  // Cached the same way and for the same reason, and only while the pane is open: generating is a
-  // projection plus a full generator run, which nobody should pay for on every recomposition — or
-  // at all, with the pane closed.
+  // Only while the pane is open: generating is a projection plus a full generator run.
   var nativeRender by remember(document.id) { mutableStateOf(initialNativeRender) }
-  // Whether the native pane can draw anything at all. A host with neither lane still gets the row
-  // in the menu, disabled and carrying the reason — a control that vanishes teaches nobody that the
-  // pane exists.
+  // Even with no lane the menu row stays, disabled with its reason, so the pane is discoverable.
   val nativeAvailable = onRequestNativeRender != null
-  // Whether the open panes need the host to compile anything. Derived rather than stored: the pane
-  // set is the setting, and a second flag that could disagree with it is a bug waiting. Only the
-  // native pane ever asks — which is the whole reason [EditorPane.Preview] is a separate choice.
+  // Derived from the pane set rather than stored. Only the native pane needs a compile.
   val nativeRequested = onRequestNativeRender != null && EditorPane.Native in state.panes
   var nativePending by remember(document.id) { mutableStateOf(false) }
-  // Keyed on the revision as well as the request, so asking again after an edit re-renders rather
-  // than showing the frame the design used to have — a stale native render beside a live canvas is
-  // the exact disagreement this pane exists to expose.
-  // Keyed on the host shape as well, so switching the frame re-renders rather than leaving the
-  // pane showing the widget in the container that was chosen before.
+  // Re-render on each revision and host-shape change, so the native pane never shows a stale frame
+  // beside the live canvas.
   LaunchedEffect(nativeRequested, state.document.revision, state.wearWidgetHostShape) {
     if (!nativeRequested) return@LaunchedEffect
     nativePending = true
@@ -2211,10 +1949,9 @@ fun UiBuilderEditor(
       }
     nativePending = false
   }
-  // The live session behind the still, where the render named one and this host can open it. Held
-  // against the coordinates rather than against the render, so a re-render that lands on the same
-  // session — the editor asks again on every revision — keeps the socket and its seat instead of
-  // tearing a daemon down and standing an identical one back up.
+  // The live session behind the still, if this host can open it. Keyed on the coordinates so a
+  // re-render
+  // on the same session keeps the socket.
   val nativeLive = nativeRender?.live?.takeIf { onOpenNativeStream != null }
   var nativeStream by remember(document.id) { mutableStateOf<UiBuilderNativeStream?>(null) }
   DisposableEffect(nativeLive, onOpenNativeStream) {
@@ -2227,9 +1964,8 @@ fun UiBuilderEditor(
       if (nativeStream === opened) nativeStream = null
     }
   }
-  // The third pane: the design as the target platform draws it, compiled on the host. Document
-  // playback belongs only to Browser Preview; silently putting it here would make Native claim an
-  // authority it does not have and make opening Preview spend the wrong lane.
+  // The native pane: the design compiled on the host. Document playback belongs only to Browser
+  // Preview.
   val nativePane: @Composable (Modifier) -> Unit = { paneModifier ->
     NativeRenderPane(
       render = nativeRender,
@@ -2261,9 +1997,8 @@ fun UiBuilderEditor(
         pendingRemoteSource = null
         return@LaunchedEffect
       }
-    // A pointer drop promised a particular visible slot before this network round trip began.
-    // Preserve that promise: the reducer validates the captured slot against the current document,
-    // so a collaborator removing it during the fetch is refused instead of silently retargeted.
+    // A pointer drop's captured slot; the reducer revalidates it, so a concurrently removed slot is
+    // refused rather than retargeted.
     pendingRemoteTarget?.let { target ->
       remoteSourceFailure = null
       dispatch(UiBuilderEditorEvent.InsertRemoteComposeDocument(source, encoded, target))
@@ -2271,14 +2006,8 @@ fun UiBuilderEditor(
       pendingRemoteSource = null
       return@LaunchedEffect
     }
-    // Resolved against the selection as it stands NOW, not as it stood when the row was pressed: a
-    // fetch takes a round trip, and the reducer would refuse a target the author has since moved
-    // away from. Asking again is what makes the insert land where the canvas says it will.
-    // Beside the design when that is the mode, resolved here for the same reason the target below
-    // is: both are read as they stand NOW rather than as they stood when the row was pressed, and a
-    // fetch is a round trip. Dispatching the ordinary insert regardless is what made a Remote
-    // Compose row offered under Add beside either refuse after its fetch or land inside the
-    // selection while the panel promised a top-level item.
+    // Resolve the beside mode and target as they stand after the fetch round trip, not when the row
+    // was pressed.
     if (state.addBeside) {
       val refusal = reducer.besideRefusal(state, REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID)
       remoteSourceFailure = refusal?.let { "${source.label}: $it" }
@@ -2299,12 +2028,8 @@ fun UiBuilderEditor(
     pendingRemoteTarget = null
     pendingRemoteSource = null
   }
-  // Every `documentUrl` the design references, and what came back for it.
-  //
-  // Keyed by URL rather than by node, so two nodes pointing at one document are one fetch and one
-  // decode. Held across revisions on purpose: an edit elsewhere in the design must not re-fetch
-  // content that has not changed, and a URL removed from the design costs a map entry rather than a
-  // round trip to discover it is gone.
+  // Every `documentUrl` the design references and its result, keyed by URL so shared documents
+  // fetch once. Held across revisions so unrelated edits do not refetch.
   val remoteDocumentsByUrl = remember { mutableStateMapOf<String, Result<RcDocument>>() }
   val referencedUrls =
     state.document.nodes.values
@@ -2321,9 +2046,8 @@ fun UiBuilderEditor(
   LaunchedEffect(referencedUrls, resolveRemoteComposeUrl) {
     val resolve = resolveRemoteComposeUrl ?: return@LaunchedEffect
     referencedUrls.filterNot(remoteDocumentsByUrl::containsKey).forEach { url ->
-      // Stored per URL as it arrives rather than after the whole list, so one unreachable
-      // document does not hold the others off the canvas. The failure is stored too: a URL that
-      // 404s is answered once and drawn as the error it is, instead of being retried every frame.
+      // Stored per URL as it arrives, failures included, so one bad URL neither blocks others nor
+      // retries every frame.
       remoteDocumentsByUrl[url] =
         try {
           decodeRemoteComposeDocument(resolve(url))
@@ -2334,12 +2058,8 @@ fun UiBuilderEditor(
         }
     }
   }
-  // Every uploaded asset the design names, decoded once per content digest.
-  //
-  // Keyed by digest rather than by asset key, which is what `LocalUiBuilderAssetBitmaps` is keyed
-  // by too: re-pointing a key at a new picture changes the digest and fetches again, while an edit
-  // anywhere else in the design finds its pictures already here. A failed fetch or decode is stored
-  // as null so the placeholder is drawn once rather than the request retried every recomposition.
+  // Every uploaded asset, decoded once per content digest (as `LocalUiBuilderAssetBitmaps` is
+  // keyed). Failures are stored as null so they are not retried every recomposition.
   val uploadedAssets = state.document.uploadedAssets()
   LaunchedEffect(uploadedAssets, resolveDesignAsset) {
     val resolve = resolveDesignAsset ?: return@LaunchedEffect
@@ -2364,13 +2084,8 @@ fun UiBuilderEditor(
         }
       }
   }
-  // The URL half of a Lottie element, resolved into the JSON half exactly once.
-  //
-  // Once, because the two halves are one source: `url` says which animation this is and `json` is
-  // what the export compiles, and re-fetching a resolved element would overwrite an animation an
-  // author may have edited by hand with whatever that URL serves today. A failed fetch is not
-  // retried either — [attemptedLottieUrls] remembers the attempt, so a 404 is one message rather
-  // than a loop hammering the host for as long as the design is open.
+  // Resolve a Lottie element's `url` into its `json` exactly once: re-fetching could overwrite
+  // hand-edited JSON, and [attemptedLottieUrls] keeps a 404 from looping.
   val attemptedLottieUrls = remember(document.id) { mutableSetOf<String>() }
   val unresolvedLottie =
     state.document.nodes.values.firstOrNull { node ->
@@ -2427,16 +2142,12 @@ fun UiBuilderEditor(
         .map { it.name }
         .toSet()
     } ?: emptySet()
-  // `variantsDrawn` is a parameter rather than a captured value because only the layout knows it:
-  // the compact branch has no preview pane at all, while the wide one draws the variants only when
-  // that pane is open. Deciding it up here got the narrow window wrong — the strip was visibly
-  // drawn while the inspector said it was not.
+  // `variantsDrawn` is a parameter because only the layout knows whether the preview pane draws
+  // variants.
   val inspector: @Composable (Modifier, Boolean) -> Unit = { modifier, variantsDrawn ->
     PropertyInspector(
       state = state,
-      // Both layouts' flags. The compact one draws this sheet from [mobilePanel], not from
-      // [inspectorOpen], so clearing only the wide layout's flag left the close button doing
-      // nothing under 840dp — which an editor beside its preview pane easily is.
+      // Clear both layouts' flags: the compact layout draws this sheet from [mobilePanel].
       onClose = {
         inspectorOpen = false
         // Whichever inspector mode the compact sheet is showing: it is one sheet for all of them.
@@ -2577,9 +2288,8 @@ fun UiBuilderEditor(
       revealThreadId = linkedThreadId,
       onPostComment = onPostComment,
       onResolveCommentThread = onResolveCommentThread,
-      // A thread's link carries the thread in the fragment and, where the thread is pinned to a
-      // layer, that layer too: a conversation about a button is worth opening beside the button.
-      // No revision — a discussion is about the living design, not the moment it was linked.
+      // A thread link carries the thread and its pinned layer, but no revision: a discussion is
+      // about the living design.
       onCopyThreadLink =
         onCopyDesignLink?.let { copy ->
           { thread: DesignCommentThread ->
@@ -2631,11 +2341,8 @@ fun UiBuilderEditor(
     // variant pane draw the same widget, and all of them should draw the frame being viewed.
     LocalWearWidgetHostShape provides state.wearWidgetHostShape,
   ) {
-    // Composed but never shown: it photographs a component and hands back the pixels. Mounted
-    // here rather than inside the panel so that a capture survives the inspector switching tabs,
-    // and inside the provider rather than beside it so the specimen is drawn with the same
-    // catalog ids the canvas is: outside it, a component this canvas has no case for was
-    // photographed as the error container while the canvas beside it drew the placeholder.
+    // Composed but never shown: captures a component's pixels. Mounted here so a capture survives
+    // inspector tab switches, and inside the provider so it uses the canvas's catalog ids.
     val pendingCapture = captureRequest
     ReferenceComponentCapture(
       request = pendingCapture,
@@ -2684,13 +2391,11 @@ fun UiBuilderEditor(
         // resized by the person rather than by a phone, so it keeps the desktop layout.
         val compact = !focusedCanvas && maxWidth < 840.dp && hostChrome == null
         SideEffect { canvasIsOnlySurface = compact || focusedCanvas }
-        // A host may put rendered output in its own view (for example IntelliJ's Preview tool
-        // window). That surface owns no editor chrome: toolbars, navigator, inspector and status
-        // stay with the visual editor instead of being duplicated around a read-only render.
+        // A host may show rendered output in its own view (e.g. IntelliJ's Preview tool window);
+        // that surface has no editor chrome.
         val dedicatedOutput = EditorPane.Editor !in availablePanes
-        // The notch, the rounded corners, the home indicator and an overlaid keyboard, on a phone
-        // browser; nothing anywhere else. The background still runs under them; the chrome does
-        // not.
+        // Phone browser insets (notch, corners, home indicator, keyboard). The background runs
+        // under them; chrome does not.
         val viewportInsets = LocalEditorViewportInsets.current
         Column(
           Modifier.fillMaxSize()
@@ -2823,9 +2528,8 @@ fun UiBuilderEditor(
           if (!dedicatedOutput && fileDesigns?.shown == true) {
             EditorDesignStrip(fileDesigns, activeTitle = state.document.title)
           }
-          // Under the toolbar and over everything else, on both layouts: what a link asked for is
-          // the first thing to know about this page, and a strip inside one of the docks would be
-          // behind a panel that starts closed.
+          // Under the toolbar on both layouts, so a link's notice is never hidden behind a closed
+          // dock.
           if (!dedicatedOutput) {
             EditorUrlBanner(
               revisionPin = revisionPin,
@@ -2920,10 +2624,8 @@ fun UiBuilderEditor(
                       selectionMenu = selectionMenu,
                     )
                   }
-                  // An old revision replaces the editing surface rather than being drawn over it:
-                  // a canvas that took a drop at revision 12 of a design that is at revision 40
-                  // would be editing a picture, and not composing the editing surface at all is
-                  // that rule holding itself rather than being enforced by an overlay.
+                  // An old revision replaces the editing surface rather than overlaying it, so
+                  // nothing can edit a picture.
                   if (peekedRevision != null) {
                     RevisionReviewPane(
                       peeked = peekedRevision,
@@ -2954,9 +2656,8 @@ fun UiBuilderEditor(
                     )
                   } else {
                     Row(Modifier.fillMaxWidth().weight(1f)) {
-                      // Whichever panes are on, in the enum's own order and sharing the width
-                      // equally. Each is a whole answer to "what am I looking at" rather than a
-                      // rung of a ladder, so none of them is conditional on another being drawn.
+                      // Enabled panes in enum order, sharing the width equally; none depends on
+                      // another.
                       if (EditorPane.Editor in state.panes) {
                         canvas(
                           Modifier.weight(1f)
@@ -3026,9 +2727,7 @@ fun UiBuilderEditor(
                   else ->
                     inspector(
                       Modifier.width(INSPECTOR_WIDTH).fillMaxHeight(),
-                      // The devices and axes are drawn by the preview pane and nowhere else now, so
-                      // "is the strip on screen" is exactly "is that pane open". The authoring
-                      // canvas holds one frame whatever is switched on beside it.
+                      // Devices and axes are drawn only by the preview pane.
                       EditorPane.Preview in state.panes,
                     )
                 }
@@ -3041,10 +2740,7 @@ fun UiBuilderEditor(
                       label = entry.label,
                       icon = entry.icon(),
                       selected = dock == entry,
-                      // Two docks carry a count, and both answer the same question from the rail:
-                      // how much is waiting behind this icon. Counted rather than dotted, because a
-                      // bare dot makes somebody open the panel to find out whether it is one or
-                      // twenty.
+                      // Counts rather than dots, so the rail says how much is waiting.
                       badge =
                         when (entry) {
                           EditorDock.Issues -> problemBadgeCount(problems)
@@ -3069,9 +2765,7 @@ fun UiBuilderEditor(
                             }
                             inspectorOpen = dock != entry
                             if (inspectorOpen) dispatch(UiBuilderEditorEvent.ShowInspector(mode))
-                            // The panel and the strip are one control. They are the same history
-                            // asked two questions — what was done, and what it looked like — and a
-                            // second switch would only let somebody have half of it.
+                            // The panel and the strip are one control: the same history, two views.
                             if (
                               entry == EditorDock.History &&
                                 inspectorOpen != state.historyBarVisible
@@ -3104,20 +2798,15 @@ fun UiBuilderEditor(
                   )
                 }
                 BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-                  // The sheets that edit the selection leave the canvas above them, refitted to the
-                  // space that is left, so the element being edited is still on screen. The
-                  // Components and Layers sheets do not: they are for carrying something *to* the
-                  // canvas, step aside while it is carried, and a canvas that had shrunk under them
-                  // would be a smaller drop target than the one the drag started over.
+                  // Editing sheets keep the canvas visible above them. Components and Layers sheets
+                  // do not shrink it, since they carry things to the canvas.
                   val editingSheet =
                     mobilePanel.inspectorMode != null ||
                       (mobilePanel == MobileEditorPanel.Code && generatedCode != null)
                   // This box's height rather than the window's: the sheets are a fraction of this
                   // box, and an open keyboard has already been taken out of it.
                   val editingSheetHeight = maxHeight * MOBILE_EDITING_SHEET_FRACTION
-                  // While the keyboard is up the dock is hidden: the sheet being typed into needs
-                  // the room more than the tabs that would close it, and the keyboard covers the
-                  // home indicator the dock would otherwise pad for.
+                  // Hidden while the keyboard is up: the sheet being typed into needs the room.
                   val dockHeight =
                     if (viewportInsets.keyboardOpen) 0.dp
                     else MOBILE_DOCK_HEIGHT + viewportInsets.bottom
@@ -3135,17 +2824,10 @@ fun UiBuilderEditor(
                       Alignment.Center,
                     )
                   }
-                  // Every device tab once opened stays composed, and switching tabs shows one and
-                  // hides the rest rather than building the next. A tab is a scene (or a runtime
-                  // frame) of its own, and building one composes the whole design again; that was
-                  // the wait between tapping a device and seeing it, every time, even for a tab
-                  // visited a moment before. A hidden tab is laid out at no size, which draws
-                  // nothing and takes no pointer — a runtime's page layer shrinks to nothing with
-                  // it — while its scene, sized by the device rather than by the layout, stands.
-                  // A settled scene draws nothing more, so a kept tab costs memory and no frames.
-                  //
-                  // Instead of the canvas, not over it: a catalog runtime draws the canvas in a
-                  // page layer above this one, which no Compose sibling can cover.
+                  // Every device tab once opened stays composed; hidden tabs are laid out at zero
+                  // size, drawing nothing and taking no pointer, so switching back is instant.
+                  // Drawn instead of the canvas, because a catalog runtime's page layer cannot be
+                  // covered by Compose siblings.
                   val keptPreviews = mobilePreviewPanes.filter {
                     it.id in visitedMobilePreviews || it.id == shownPreview?.id
                   }
@@ -3154,11 +2836,8 @@ fun UiBuilderEditor(
                       if (it.id !in visitedMobilePreviews) visitedMobilePreviews += it.id
                     }
                   }
-                  // Somebody who opened one device tab is comparing devices, so once that tab has
-                  // drawn the others are built behind it, one per frame, and the first visit to
-                  // each
-                  // is as immediate as a return. Not before: a phone editing the design never pays
-                  // for frames it is not looking at.
+                  // After the first device tab has drawn, build the others behind it one per frame;
+                  // never before.
                   LaunchedEffect(shownPreview != null) {
                     if (shownPreview == null) return@LaunchedEffect
                     delay(MOBILE_PREVIEW_WARM_DELAY_MS)
@@ -3190,10 +2869,8 @@ fun UiBuilderEditor(
                       else -> null
                     }
                   mobileNavigatorTab?.let { open ->
-                    // Carrying a component, the sheet steps aside: it covers most of the canvas the
-                    // component is being carried to. Faded rather than removed, because the drag
-                    // lives in the tile that started it, and taking the tile out of the composition
-                    // would cancel the gesture in the finger's hand.
+                    // While carrying a component the sheet fades aside; not removed, since the drag
+                    // lives in its tile.
                     val carrying = draggedComponentId != null
                     navigator(
                       Modifier.align(Alignment.BottomCenter)
@@ -3213,9 +2890,7 @@ fun UiBuilderEditor(
                         .fillMaxWidth()
                         .fillMaxHeight(MOBILE_EDITING_SHEET_FRACTION)
                         .padding(bottom = dockHeight),
-                      // Never, here: the compact layout draws the authoring canvas and has no room
-                      // for a preview pane beside it, so nothing on this branch draws a device or
-                      // an axis.
+                      // The compact layout has no preview pane, so no devices or axes are drawn.
                       false,
                     )
                   }
@@ -3230,9 +2905,8 @@ fun UiBuilderEditor(
                     )
                   }
                   if (!viewportInsets.keyboardOpen) {
-                    // The one inspector sheet draws whichever mode the editor is in, and something
-                    // other than the dock can change it (a `#thread=` link opens Talk), so the dock
-                    // names the panel the sheet is showing rather than the one last tapped.
+                    // The dock names the panel the sheet shows, which other things (a `#thread=`
+                    // link) can change.
                     val dockPanel =
                       if (mobilePanel.inspectorMode != null) {
                         MobileEditorPanel.of(state.inspectorMode)
@@ -3263,6 +2937,17 @@ fun UiBuilderEditor(
             }
           }
         }
+        // Over everything rather than in a Scaffold slot: the editor's chrome is its own Column and
+        // a Scaffold around it would own insets it already handles. Lifted clear of the status bar,
+        // and of the dock on a phone, so the offer never covers the control it would compete with.
+        SnackbarHost(
+          undoSnackbarHost,
+          Modifier.align(Alignment.BottomCenter)
+            .padding(horizontal = 12.dp)
+            .padding(
+              bottom = viewportInsets.bottom + if (compact) MOBILE_DOCK_HEIGHT + 8.dp else 40.dp
+            ),
+        )
         if (showPacks) {
           ComponentPacksDialog(
             packs = catalog.componentPacks,

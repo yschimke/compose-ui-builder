@@ -12,23 +12,19 @@ import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorTheme
 import ee.schimke.composeai.uibuilder.editor.UiBuilderHostChrome
 
 /**
- * The editor in the setups its hosts actually run it in, one preview per setup.
+ * The editor in the setups its hosts actually run it in, one preview per setup (the chrome previews
+ * all use one 1600dp dark browser setup):
  *
- * [UiBuilderEditorChromePreview] and its neighbours diff the editor's *panels*, and every one of
- * them draws the same setup: a 1600 dp browser window, the default dark theme, the editor's own
- * toolbar and rails, one person, the living design. Each branch below is a real host or a real
- * state that setup never reaches, so a change that broke one of them passed every render:
- *
- * - the compact layout, which a window under 840 dp gets — a phone, or a narrow browser tab;
- * - the tightest window that still keeps the wide layout, with both docks open;
- * - a host theme, which the VS Code custom editor sends as its workbench colours;
- * - a host that draws the toolbar and rails in its own chrome (the VS Code webview);
- * - collaborators, whose selections the canvas and the layers panel both mark;
- * - a link pinned to a committed revision, which makes the canvas read-only;
+ * - the compact layout (window under 840dp);
+ * - the tightest window that keeps the wide layout, with both docks open;
+ * - a host theme, as the VS Code custom editor sends its workbench colours;
+ * - a host that draws the toolbar and rails itself (the VS Code webview);
+ * - collaborators, whose selections the canvas and layers panel mark;
+ * - a link pinned to a committed revision (read-only canvas);
  * - a link naming a layer the design does not have.
  *
- * Same fixture and catalog as the chrome previews, so a diff here is about the setup and never
- * about the design. Nothing reads a clock, the network or a random source.
+ * Same fixture and catalog as the chrome previews; nothing reads a clock, the network or a random
+ * source.
  */
 @Preview(widthDp = 412, heightDp = 915)
 @Composable
@@ -44,10 +40,8 @@ fun UiBuilderCompactEditorPreview() {
 }
 
 /**
- * The compact layout with its Properties dock open over the canvas.
- *
- * `initialInspectorOpen` is the one initial panel the compact layout honours (a `?node=` link opens
- * it on a phone), and the dock is where every inspector mode lives on a narrow screen.
+ * The compact layout with its Properties dock open over the canvas (`initialInspectorOpen`, as a
+ * `?node=` link opens it on a phone).
  */
 @Preview(widthDp = 412, heightDp = 915)
 @Composable
@@ -62,11 +56,8 @@ fun UiBuilderCompactPropertiesPreview() {
 }
 
 /**
- * A laptop window just wide enough to keep the wide layout, with every dock open.
- *
- * The chrome previews open their docks at 1600 dp, where the canvas keeps most of the width. At
- * 1024 dp the components, layers and inspector panels take over half of it, which is where a panel
- * that grew a few dp starts to crush the canvas or clip its own rows.
+ * A laptop window just wide enough to keep the wide layout, with every dock open, where panels take
+ * over half the width.
  */
 @Preview(widthDp = 1024, heightDp = 768)
 @Composable
@@ -82,11 +73,8 @@ fun UiBuilderLaptopWindowPreview() {
 }
 
 /**
- * The editor in a light host theme, docks open.
- *
- * Every other preview draws [UiBuilderEditorTheme.Default], the dark scheme. A colour written as a
- * literal instead of read from the theme is invisible there and wrong here — a dark panel on a
- * light workbench, or text in the default scheme's pale primary on white.
+ * The editor in a light host theme, docks open, to catch colours written as literals instead of
+ * read from the theme.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -103,11 +91,9 @@ fun UiBuilderLightThemePreview() {
 }
 
 /**
- * A host that draws the toolbar and rails itself, as the VS Code webview does.
- *
- * With a [UiBuilderHostChrome] the editor draws no top toolbar and no rails and keeps the wide
- * layout at any width; what remains is the canvas, its selection bar and zoom controls, and the
- * panels the host opens. The actions it publishes go nowhere, because nothing here is pressed.
+ * A host that draws the toolbar and rails itself, as the VS Code webview does: with a
+ * [UiBuilderHostChrome] the editor keeps the wide layout and draws only the canvas, selection bar,
+ * zoom controls and host-opened panels.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -123,11 +109,8 @@ fun UiBuilderHostChromePreview() {
 }
 
 /**
- * A live session with two other people in it, each with a layer selected.
- *
- * Their selections are marked on the canvas and in the layers panel in their own colours, beside
- * the local selection. One of them shares the local selection, which is the case where the marks
- * have to stack rather than paint over each other.
+ * A live session with two other people, each with a layer selected; one shares the local selection,
+ * so marks must stack.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -158,10 +141,8 @@ fun UiBuilderCollaboratorsPreview() {
 }
 
 /**
- * The editor opened from a `?revision=` link, pinned to a committed revision.
- *
- * A pinned revision is history, so the canvas is read-only and the banner says so and offers the
- * way back to the living design. Nothing else draws that banner or the disabled editing controls.
+ * The editor opened from a `?revision=` link: read-only canvas, with a banner offering the way back
+ * to the living design.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -192,8 +173,8 @@ fun UiBuilderStaleLinkNoticePreview() {
 }
 
 /**
- * A light workbench theme as a host would send it: Material's light scheme, with the palette taken
- * from its roles the way the host bridge fills one in for a host that sends no palette.
+ * A light workbench theme as a host would send it: Material's light scheme, palette taken from its
+ * roles as the host bridge fills one in.
  */
 private val PREVIEW_LIGHT_THEME: UiBuilderEditorTheme =
   lightColorScheme(

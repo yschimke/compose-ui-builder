@@ -46,14 +46,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The device view where production draws it: through the catalog's pinned runtime.
- *
- * Every hosted catalog whose pin names a delivered runtime is drawn by that runtime, in a sandboxed
- * frame, so a device view that only worked in-process was invisible in production. These drive the
- * editor against a stand-in runtime that reports what it was asked to draw and a measured box for
- * each container, and pin what the editor asks of it: the frame at the device's size and under the
- * editor, the selection to reveal, the wheel over a list handed on, and the pop-out as a second,
- * unrolled surface — sideways only for a runtime that says it can.
+ * The device view where production draws it: through the catalog's pinned runtime in a sandboxed
+ * frame. Driven against a stand-in runtime, pinning what the editor asks: the frame at device size
+ * under the editor, the selection to reveal, wheel events handed on, and the pop-out as a second
+ * unrolled surface (sideways only when the runtime supports it).
  */
 @OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
 class CanvasRuntimeDeviceViewTest {
@@ -154,10 +150,9 @@ class CanvasRuntimeDeviceViewTest {
     }
 
   /**
-   * The runtime half, end to end through the SDK a runtime is built on: a `revealNode` naming a row
-   * no list has composed reaches the list through the controller the host installed, and the row is
-   * measured on screen after it. A runtime's own lazy adapters register the same way
-   * (`CanvasNodeScope.registerScrolling`); this checkout's in-process lists stand in for them.
+   * The runtime half, end to end through the SDK: a `revealNode` for an uncomposed row reaches the
+   * list via the host-installed controller, and the row is then measured on screen. Runtime lazy
+   * adapters register the same way (`CanvasNodeScope.registerScrolling`).
    */
   @Test
   fun `a revealNode dispatched to a surface scrolls an uncomposed row into view`() =
@@ -190,9 +185,8 @@ class CanvasRuntimeDeviceViewTest {
     }
 
   /**
-   * The sideways signal travels in the document, because the renderer protocol's surface modes are
-   * a closed set; it has to reach the catalog adapter that draws the lazy row, which is the only
-   * code that can lay its items out whole.
+   * The sideways signal travels in the document (the protocol's surface modes are a closed set) to
+   * the catalog adapter that draws the lazy row.
    */
   @Test
   fun `a document marked sideways tells the catalog adapter drawing it`() {
@@ -212,8 +206,8 @@ class CanvasRuntimeDeviceViewTest {
   }
 
   /**
-   * A runtime stand-in: it records every surface it is asked for, and reports each container's box
-   * as the whole of the surface it drew — enough for the editor to size a pop-out by.
+   * A runtime stand-in: records every surface requested and reports each container's box as the
+   * whole surface, enough to size a pop-out.
    */
   private class FakeRuntime(val capabilities: Set<String> = emptySet()) {
     val drawn = mutableListOf<Pair<UiBuilderDocument, UiBuilderCanvasSurface>>()

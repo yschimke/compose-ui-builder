@@ -4,21 +4,14 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The drawing vocabulary: a `draw/canvas` node whose `ops` slot holds `draw/…` operation nodes.
+ * The drawing vocabulary: a `draw/canvas` node whose `ops` slot holds `draw/…` operation nodes,
+ * mirroring Remote Compose's `RemoteCanvas { }`. Each operation is a node so selection, comments,
+ * MCP edits and the layer tree work per shape, and geometry properties are ordinary properties.
  *
- * Remote Compose draws through `RemoteCanvas { }` — rectangles, circles, arcs, lines, paths, text,
- * transforms — and until this the builder could place none of it: a gauge, a watch hand or a
- * sparkline had no spelling at all. Each operation is a **node** rather than one opaque JSON blob,
- * so selection, comments, MCP edits and the layer tree keep working per shape, and every geometry
- * property is an ordinary property: a literal, a state read or, once the wire carries one, a
- * computed value the player evaluates.
- *
- * Declared once, here, and read by every lane: the runtime builds the catalog declarations from
- * [OPERATIONS], the canvas stand-in and the Remote Kotlin writer read the same property names.
- *
- * Geometry is in dp from the canvas's top-left; an absent box is the whole canvas, and a stroked
- * shape whose geometry is defaulted is inset by half its stroke so the stroke stays inside. Angles
- * are degrees clockwise from three o'clock, as the player draws arcs.
+ * Declared once: the runtime builds catalog declarations from [OPERATIONS], and the canvas and the
+ * Remote Kotlin writer read the same names. Geometry is dp from the canvas's top-left; an absent
+ * box is the whole canvas; a defaulted stroked shape is inset by half its stroke; angles are
+ * degrees clockwise from three o'clock.
  */
 object UiDrawing {
   const val CANVAS: String = "draw/canvas"
@@ -352,9 +345,8 @@ object UiDrawing {
   const val MAX_ITERATIONS: Int = 1_000
 
   /**
-   * The index name a [REPEAT] node binds: `i` when absent, and null when it is authored as anything
-   * but a literal string. The name decides the scope its operations are checked and exported in, so
-   * it cannot be state or a formula: the export would have no name to give the lambda.
+   * The index name a [REPEAT] node binds: `i` when absent, null when not a literal string (the
+   * export needs a name for the lambda).
    */
   fun indexName(node: UiBuilderNode): String? {
     val authored = node.properties["index"] ?: return "i"
@@ -409,10 +401,8 @@ object UiDrawing {
   private val PATH_TOKEN = Regex("""[A-Za-z]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?""")
 
   /**
-   * [from] part way to [to] as SVG path data, or null when the two do not tween: the player's
-   * `drawTweenPath` interpolates the two paths' numbers pairwise, so they must have the same
-   * commands, in order, with the same count of numbers. Commands are kept as written, so a morph
-   * can bend a curve but not turn a line into one.
+   * [from] part way to [to] as SVG path data, or null when they do not tween: like the player's
+   * `drawTweenPath`, they need the same commands in order with the same number count.
    */
   fun tweenPathData(from: String, to: String, progress: Float): String? {
     val a = PATH_TOKEN.findAll(from).map { it.value }.toList()

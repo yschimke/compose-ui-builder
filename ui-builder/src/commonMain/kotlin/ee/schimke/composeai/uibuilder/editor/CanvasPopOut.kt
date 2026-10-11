@@ -66,11 +66,8 @@ import kotlinx.serialization.json.contentOrNull
 internal data class ScrollingContainer(val nodeId: String, val horizontal: Boolean)
 
 /**
- * The innermost scrolling container that is [nodeId] or holds it, or null where nothing between it
- * and the root scrolls.
- *
- * Innermost, because that is the viewport clipping the selection: a chip in a lazy row inside a
- * lazy column is hidden by the row long before the column has anything to say about it.
+ * The innermost scrolling container that is or holds [nodeId], or null. Innermost because that
+ * viewport is the one clipping the selection.
  */
 internal fun UiBuilderDocument.scrollingContainerOf(
   nodeId: String?,
@@ -109,9 +106,9 @@ internal fun UiBuilderDocument.isVerticalScroller(
 }
 
 /**
- * The ids this build knew scroll before catalogs could say so with
- * [ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles.VERTICAL_SCROLLER]. Read beside the
- * catalog's own [CatalogScrollers], never instead of them, until every catalog publishes the role.
+ * Scroller ids known before catalogs declared
+ * [ee.schimke.composeai.uibuilder.export.CatalogBuilderRoles.VERTICAL_SCROLLER]. Read beside
+ * [CatalogScrollers] until every catalog publishes the role.
  */
 private val VERTICAL_SCROLLERS =
   setOf("layout/lazy-column", "layout/lazy-grid", "wear-m3/transforming-lazy-column")
@@ -119,18 +116,12 @@ private val VERTICAL_SCROLLERS =
 private val HORIZONTAL_SCROLLERS = setOf("layout/lazy-row", "layout/horizontal-carousel")
 
 /**
- * One scrolling container of the device frame, drawn beside it unrolled and editable.
+ * One scrolling container of the device frame, drawn beside it unrolled and editable, since rows
+ * past the fold cannot be clicked in the frame. Vertical: frame width, content height; horizontal:
+ * frame height, content width. Same node ids, so clicks select as in the frame.
  *
- * The device view clips a list at the frame the way the device does, which is the point of it and
- * also exactly what makes a long list hard to edit there: the rows past the fold are somewhere
- * nobody can click. So the container the selection is in comes out whole — a vertical one at the
- * width it was measured at in the frame and as tall as its content, a horizontal one at its
- * measured height and as wide as its content — as its own [UiBuilderSurface] rooted at that
- * container. Same node ids, so a click in here selects in the editor exactly as a click in the
- * frame does, and the frame then scrolls to it.
- *
- * Its own `renderSessionId`, for the reason [ConstrainedFramePane] has one: the surface keys its
- * geometry on it, and sharing the frame's would have the two overwrite each other.
+ * Its own `renderSessionId`, as [ConstrainedFramePane] has, so the two surfaces' geometry does not
+ * mix.
  */
 @Composable
 internal fun UnrolledContainerPopOut(
@@ -198,10 +189,8 @@ internal fun UnrolledContainerPopOut(
           LocalUiBuilderDetachedFrom provides document,
           LocalUiBuilderUnrolledHorizontal provides container.horizontal,
         ) {
-          // Keyed by the container as well as by the design. A selection that moves to another list
-          // in the same revision re-roots this surface, and its overlay and inspection are keyed on
-          // the session: shared, the first list's boxes stayed under the second list's rows — an
-          // unrolled surface forgets nothing it drew — and, being smaller, took their clicks.
+          // Keyed by container too, so moving the selection to another list re-roots the surface
+          // and its session-keyed overlay.
           key(container.nodeId) {
             UiBuilderSurface(
               document = detached,
@@ -219,18 +208,14 @@ internal fun UnrolledContainerPopOut(
 }
 
 /**
- * The pop-out on the catalog-runtime path: the same container, drawn by the catalog's own pinned
- * runtime in `AUTHORING_UNROLLED` rather than by this process.
+ * The pop-out drawn by the catalog's pinned runtime in `AUTHORING_UNROLLED`. Unlike
+ * [UnrolledContainerPopOut], the runtime is handed a size: first [RUNTIME_POP_OUT_BUDGET_DP],
+ * trimmed to the content, doubled while content reaches the edge. It sits under the editor, which
+ * hit-tests clicks.
  *
- * Two differences from [UnrolledContainerPopOut], both because a runtime surface is a sandboxed
- * frame rather than a composition. It is handed its size rather than measuring its own, so the
- * length is found from what it drew: a first draw into [RUNTIME_POP_OUT_BUDGET_DP], trimmed to the
- * content's last edge, doubled when the content reaches the edge. And it sits under the editor, as
- * the extent's runtime does, so a click here is hit-tested against its inspection by the editor.
- *
- * A horizontal container reaches this only when the runtime announced
- * [CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL]; the document is then marked with
- * [UI_BUILDER_UNROLLED_AXIS_KEY] so the catalog's lazy row lays its items out whole.
+ * Horizontal containers only when the runtime announced
+ * [CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL]; the document is marked with
+ * [UI_BUILDER_UNROLLED_AXIS_KEY].
  */
 @Composable
 internal fun RuntimeContainerPopOut(
@@ -331,11 +316,8 @@ internal fun RuntimeContainerPopOut(
                 .maxOrNull() ?: return@canvasRenderer
             val drawnDp = edge / designDensity
             val handedDp = if (container.horizontal) widthDp else heightDp
-            // Content that reaches the edge may be cut off by it, so the budget doubles — unless
-            // this is the length the content was already trimmed to. Content trimmed to exactly
-            // its own length reaches that edge by definition, and doubling it again undid the trim
-            // on every draw: the surface flipped between one length and twice it forever, a new
-            // runtime frame each time, and the pop-out never settled into a column of rows.
+            // Double the budget when content reaches the edge, unless this is already the trimmed
+            // length (otherwise it would oscillate forever).
             val reachesEdge = drawnDp >= handedDp - 1f
             onExtentMeasured(
               if (reachesEdge && abs(handedDp - trimmedTo) > 1f) {
@@ -370,12 +352,8 @@ private const val MAX_POP_OUT_DP = 10_000f
 private const val POP_OUT_SESSION = "unrolled-pop-out"
 
 /**
- * The container's clipped box in the frame, and the two lines that carry it out to its pop-out.
- *
- * The same gesture a design tool's zoom callout makes: the eye follows the lines from the few rows
- * the device shows to the whole list beside it, and knows without being told that they are one
- * thing. Drawn over the workspace in root pixels — the space both boxes already report in — and
- * with no pointer input, so every press goes through to what is under it.
+ * The container's clipped box in the frame and two lines leading to its pop-out, like a zoom
+ * callout. Drawn in root pixels with no pointer input.
  */
 @Composable
 internal fun PopOutConnectors(

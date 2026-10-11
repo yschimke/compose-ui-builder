@@ -41,15 +41,10 @@ import ee.schimke.composeai.uibuilder.reference.ReferenceImage
 /**
  * How much of the editor a host shows around the canvas.
  *
- * - [Full]: the desktop editor — toolbar, the component and layer docks, the inspector and its
- *   rails, the status bar, and the panes beside the canvas. Every host had only this until a chat
- *   panel needed less.
- * - [FocusedCanvas]: the canvas and nothing else. A chat host (ChatGPT or Codex desktop, as an MCP
- *   App) opens a design in a side panel beside the conversation, where a big change is better asked
- *   of the agent than built by hand: the panel shows the design, lets the person point at a node
- *   and make one small change. What stays is what that needs — selection, the node's context menu,
- *   the quick editor, inline text editing, undo and the editor's keys. The host draws its own slim
- *   bar above it (name, saved state, a switch back to [Full]).
+ * - [Full]: the desktop editor with toolbar, docks, inspector, rails, status bar and side panes.
+ * - [FocusedCanvas]: the canvas only, for chat hosts (an MCP App beside a conversation) where big
+ *   changes are asked of the agent. Keeps selection, the context menu, the quick editor, inline
+ *   text editing, undo and keys; the host draws its own slim bar.
  */
 enum class UiBuilderWorkspace {
   Full,
@@ -57,12 +52,9 @@ enum class UiBuilderWorkspace {
 }
 
 /**
- * [base]'s controls, around a canvas with no docks: the focused layout as a chrome, so a host
- * chooses it the way IntelliJ chooses its Jewel controls, and [UiBuilderEditor] stays one editor.
- *
- * Switching between this and [base] while the editor is open keeps the editor's state — the
- * selection, the undo history, the zoom — because nothing about the design or the session is keyed
- * on the chrome.
+ * [base]'s controls around a canvas with no docks, so a host picks the focused layout as a chrome
+ * and [UiBuilderEditor] stays one editor. Switching keeps selection, undo and zoom, since nothing
+ * is keyed on the chrome.
  */
 class FocusedCanvasUiBuilderChrome(private val base: UiBuilderChrome = MaterialUiBuilderChrome) :
   UiBuilderChrome by base {
@@ -76,21 +68,14 @@ class FocusedCanvasUiBuilderChrome(private val base: UiBuilderChrome = MaterialU
 }
 
 /**
- * A comment a person wrote about one node, for the host to take to the conversation the editor sits
- * in.
- *
- * [image] is the node drawn on its own, as a PNG, where the platform could capture and encode it;
- * null otherwise, and the comment is sent without it.
+ * A comment about one node for the host to take to its conversation. [image] is the node as a PNG
+ * where it could be captured, else null.
  */
 class UiBuilderNodeComment(val nodeId: String, val text: String, val image: ReferenceImage?)
 
 /**
- * The small field the node menu's **Comment** opens, beside the node it is about.
- *
- * Drawn where the quick editor is drawn, by the same placement, because it answers the same kind of
- * question about the same node. **Send** is offered only once something is written: an empty
- * comment is not a message. Enter sends and Shift+Enter starts a new line, as a chat composer does;
- * Escape closes it.
+ * The small field the node menu's **Comment** opens, placed like the quick editor. **Send** appears
+ * once something is written; Enter sends, Shift+Enter adds a line, Escape closes.
  */
 @Composable
 internal fun NodeCommentCard(

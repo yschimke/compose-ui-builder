@@ -27,8 +27,7 @@ data class UiBuilderNewDesignTemplate(
   /** The exact starting document, rendered as a thumbnail in the chooser. */
   val previewDocument: UiBuilderDocument? = null,
   /**
-   * The heading the chooser lists this under, when a catalog offers more than one kind of thing:
-   * `remote-m3` offers Wear widgets and plain Remote content. Null lists it under no heading.
+   * Chooser heading when a catalog offers more than one kind of thing; null lists it under none.
    */
   val group: String? = null,
 )
@@ -47,63 +46,39 @@ data class UiBuilderNewDesignCatalog(
 )
 
 /**
- * One render of the current design by real Compose on the host, as the editor needs it.
+ * One host-side native Compose render of the current design.
  *
- * An [ImageBitmap] rather than the bytes the route returns: decoding is the host's job, because
- * `wasmJs` and the JVM decode differently and neither belongs in an editor. [refusals] is not an
- * error state — a design the generator cannot express has no native render and the reasons are the
- * actionable half, exactly as in the code pane. [failure] is the transport failing, which is a
- * different sentence: try again versus fix the design.
+ * An [ImageBitmap] because decoding differs between `wasmJs` and the JVM and is the host's job.
+ * [refusals] means the generator cannot express the design (fix the design); [failure] means the
+ * transport failed (try again).
  */
 data class UiBuilderNativeRender(
   val image: ImageBitmap? = null,
   val refusals: List<String> = emptyList(),
   val failure: String? = null,
   /**
-   * Design node id → the box it drew, in [image]'s own pixels.
-   *
-   * What turns the frame from a picture into a surface: the selected node is outlined in it, and a
-   * click resolves to the smallest box containing the point. A node the host reports no box for —
-   * one the render never placed — is simply not selectable there, which is the same answer the
-   * inspection snapshot gives for a lazy slot that never composed.
+   * Design node id → the box it drew, in [image]'s pixels. Nodes without a box are not selectable.
    */
   val nodeBounds: Map<String, UiBuilderNativeNodeBounds> = emptyMap(),
-  /**
-   * Where this render can be *watched* rather than looked at, or null when it cannot.
-   *
-   * The compile lane has always stood a live session up behind the still — the same daemon, the
-   * same classes, the Android one on a catalog whose native backend is Android — and the editor has
-   * always thrown the coordinates away. With this present the native pane streams that session and
-   * forwards taps into it; without it the pane draws [image] and says it is a still.
-   */
+  /** The live session behind this render, or null when the pane can only draw the still [image]. */
   val live: UiBuilderNativeLive? = null,
 )
 
 /**
- * Where a native render's live session is, as the host reported it.
- *
- * Opaque to the editor on purpose: it is the host that knows how to reach a session (which origin,
- * which token, which socket), and the editor's business is only to hand this back to
- * [UiBuilderEditor]'s stream seam and draw what comes out.
+ * Where a native render's live session is. Opaque to the editor: only the host knows how to reach
+ * it.
  */
 data class UiBuilderNativeLive(val sessionId: String, val previewId: String)
 
 /**
- * One frame off a live native session, already decoded by the host.
- *
- * [image]'s own pixels are the coordinate space every [UiBuilderNativeInput] is stated in, which is
- * why the frame carries the picture and nothing else: the pane scales it to fit and inverts that
- * one factor to place a tap, exactly as it already does for a still render's node boxes.
+ * One decoded frame off a live native session; its pixels are the [UiBuilderNativeInput] coordinate
+ * space.
  */
 data class UiBuilderNativeFrame(val image: ImageBitmap, val sequence: Long = 0)
 
 /**
- * One user input to dispatch into a live native composition.
- *
- * The wire spellings are the daemon's (`click`, `pointerDown`, `pointerMove`, `pointerUp`,
- * `scroll`), named here rather than enumerated because this type crosses into a host that speaks
- * that protocol already and an editor that invents no vocabulary of its own. Coordinates are in the
- * frame's own pixels — see [UiBuilderNativeFrame].
+ * One user input for a live native composition. [kind] uses the daemon's wire spellings (`click`,
+ * `pointerDown`, `pointerMove`, `pointerUp`, `scroll`); coordinates are frame pixels.
  */
 data class UiBuilderNativeInput(
   val kind: String,
@@ -114,11 +89,8 @@ data class UiBuilderNativeInput(
 )
 
 /**
- * A live native session, opened by the host and driven by the native pane.
- *
- * Frames arrive as state rather than as a callback so the pane is an ordinary Compose reader of
- * them: the newest frame is the one to draw, an older one that arrives late is not, and a pane that
- * recomposes for another reason redraws what it already had rather than waiting for the next.
+ * A live native session opened by the host. Frames are exposed as state so the pane just draws the
+ * newest one.
  */
 interface UiBuilderNativeStream {
   /** The newest frame, or null until the first one lands. */
@@ -127,9 +99,7 @@ interface UiBuilderNativeStream {
   /** Why there is no frame, or null while the stream is healthy or still connecting. */
   val failure: String?
 
-  /**
-   * Dispatch one input. Dropped silently while the socket is not open, which is the honest no-op.
-   */
+  /** Dispatch one input; dropped silently while the socket is not open. */
   fun send(input: UiBuilderNativeInput)
 
   /** Stop streaming and release the session's seat. Idempotent. */
@@ -160,21 +130,17 @@ data class UiBuilderCanvasSurface(
   /**
    * Whether a [DEVICE][UiBuilderRendererSurfaceModeV2.DEVICE] surface takes the pointer itself.
    *
-   * A device preview pane does: it is a live design, and a press there presses the design's button.
-   * The editing canvas's device view does not. There a click selects, so the runtime is left under
-   * the editor, which hit-tests the press against the runtime's inspection and hands a wheel over a
-   * list to the runtime as a `scrollBy` — see [scroll].
+   * True for a device preview pane (a press presses the design). False on the editing canvas, where
+   * the editor hit-tests clicks to select and forwards list wheels as [scroll].
    */
   val interactive: Boolean = true,
   /**
-   * The node the runtime should scroll its lazy containers to, sent as a `revealNode` action each
-   * time it changes. Only to a runtime whose `initialized` reply lists that capability: an older
-   * one leaves its lists where they are.
+   * Node to reveal via a `revealNode` action when it changes; only sent to runtimes that announce
+   * that capability.
    */
   val revealNodeId: String? = null,
   /**
-   * The latest wheel over a list the editor handed on; sent once per
-   * [UiBuilderCanvasScroll.sequence].
+   * The latest list wheel forwarded to the runtime; sent once per [UiBuilderCanvasScroll.sequence].
    */
   val scroll: UiBuilderCanvasScroll? = null,
 )
@@ -187,8 +153,8 @@ data class UiBuilderCanvasInspection(
   val renderer: UiBuilderInspectionSnapshot,
   val editor: UiBuilderInspectionSnapshot,
   /**
-   * What the runtime announced beyond the base protocol — `revealNode`, `horizontalUnroll`. Empty
-   * for a runtime that predates the list, which is how the editor knows to leave those out.
+   * Capabilities the runtime announced beyond the base protocol (`revealNode`, `horizontalUnroll`);
+   * empty for older runtimes.
    */
   val capabilities: Set<String> = emptySet(),
 )
@@ -204,7 +170,5 @@ typealias UiBuilderCanvasRenderer =
     onInspectionSnapshot: (UiBuilderCanvasInspection) -> Unit,
   ) -> Unit
 
-// Deliberately not a composition local. A catalog's pinned renderer is a sandboxed iframe booting
-// its own Wasm runtime, and a local made it one `.current` away from every surface that draws a
-// design: palette tiles, drag ghosts and device panes each started one. It is handed to the editing
-// canvas as a parameter, and nothing else draws with it.
+// Deliberately not a composition local: the pinned renderer is a sandboxed iframe with its own Wasm
+// runtime, and a local let every design-drawing surface start one. Only the editing canvas gets it.

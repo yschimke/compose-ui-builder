@@ -9,21 +9,11 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 
 /**
- * The refusal that would have caught a real published catalog, written from the real thing.
- *
- * The case: a policy declaring **no** `components`, so every id falls to `derivedId`, whose leaf
- * comes from the record entry's first `componentIds` value — and that taxonomy is `Group/Variant`
- * (`Dialog/Basic`, `TopAppBar/Small`), so the leaf is the VARIANT. One variant word was claimed by
- * 15 components. 63 of 104 collided, and the 41 survivors shared exactly **one** component id with
- * the 41-component catalog this server synthesises.
- *
- * The reason this is a refusal and not a warning is in that last sentence. 41 composed against a
- * frozen 41 — every check comparing counts reports a match, and only the ids disagree. A shelf can
- * be completely wrong and exactly the right size. The catalog is named in
- * `docs/design/UI_BUILDER_CATALOG_CONTRACT.md` § Phase 4; this file may not name one.
- *
- * The fixtures are that shape reduced to what causes it; the real files are not committed because
- * the record is 3.5 MB. `.github/scripts/ui-builder-equivalence.sh --record` is what checks those.
+ * The collision refusal, from the shape of a real published catalog: a policy declaring no
+ * `components`, so ids derive from `Group/Variant` leaves (the variant), and most components
+ * collide. A refusal rather than a warning because the survivors can match the frozen shelf's count
+ * while sharing almost no ids. See `docs/design/UI_BUILDER_CATALOG_CONTRACT.md` § Phase 4; real
+ * files are checked by `.github/scripts/ui-builder-equivalence.sh --record`.
  */
 class PublishedUiBuilderCatalogCollisionTest {
 
@@ -37,12 +27,8 @@ class PublishedUiBuilderCatalogCollisionTest {
       .build()
 
   /**
-   * The canonical id [record] gives the entry at [index].
-   *
-   * Shared so a fixture cannot mis-spell it. A first draft of the exclusion case below wrote these
-   * out by hand, they matched no record entry, every exclusion was silently ignored and the case
-   * composed where it should have refused — passing for the wrong reason is the failure mode this
-   * whole file is about.
+   * The canonical id [record] gives the entry at [index], shared so fixtures cannot mis-spell it
+   * and pass for the wrong reason.
    */
   private fun canonicalIdAt(componentId: String, index: Int): String {
     val group = componentId.substringBefore('/')
@@ -51,11 +37,8 @@ class PublishedUiBuilderCatalogCollisionTest {
   }
 
   /**
-   * A record of `Group/Variant` component ids, the way the real one is shaped.
-   *
-   * Ids written out one by one rather than as a group × variant cross product, because the cross
-   * product hides the thing under test: the derived id is the LEAF, so "four groups, one variant
-   * each" is four components sharing one id, not the clean case it reads as.
+   * A record of `Group/Variant` component ids, written out one by one: the derived id is the leaf,
+   * so a cross product would hide the collisions under test.
    */
   private fun record(vararg componentIds: String): ComponentRecordFile {
     val components = componentIds.mapIndexed { index, id ->
@@ -132,9 +115,8 @@ class PublishedUiBuilderCatalogCollisionTest {
 
   @Test
   fun `a catalog that names its components distinctly is unaffected`() {
-    // Four DISTINCT leaves, so four distinct derived ids and no collisions. This arm keeps the
-    // refusal from being a blanket ban on derived ids — deriving is legitimate, and both
-    // `test-catalog` and the Wear catalog rely on it.
+    // Distinct leaves, no collisions: deriving ids is legitimate (`test-catalog` and Wear rely on
+    // it).
     val result =
       PublishedUiBuilderCatalog.compose(
         published(expected = 4),
@@ -147,10 +129,8 @@ class PublishedUiBuilderCatalogCollisionTest {
 
   @Test
   fun `one stray duplicate is skipped rather than fatal`() {
-    // A single collision is one catalog bug, and the shelf around it is still the right shelf.
-    // Refusing here would withdraw a whole catalog over one mis-named component — the failure mode
-    // the threshold exists to avoid, and why it is a rate with a floor of one rather than
-    // `collisions > 0`.
+    // A single collision is one catalog bug and is skipped, hence a rate with a floor of one rather
+    // than `collisions > 0`.
     val ids = (1..20).map { "Group$it/Variant$it" } + "Extra/Variant1"
     val result =
       PublishedUiBuilderCatalog.compose(
@@ -166,11 +146,8 @@ class PublishedUiBuilderCatalogCollisionTest {
 
   @Test
   fun `an excluded component is out of the denominator, not hiding a colliding shelf`() {
-    // Reported by Codex on #655, and real. Ten entries all deriving `m3/filled`, ninety the policy
-    // excludes. Over the whole record that is 9 collisions against an allowance of 10, which
-    // composes to a ONE-component shelf; over the entries that actually competed it is 9 of 10 and
-    // is refused. An excluded entry never claims an identity, so it cannot be evidence that
-    // identities are being claimed distinctly.
+    // The rate is over entries that competed: excluded entries claim no identity, so they must not
+    // dilute the denominator (9 of 10 competing collide here, and it is refused).
     val ids = (1..10).map { "Button/Filled" } + (1..90).map { "Skip$it/Skip$it" }
     val excluded =
       ids
@@ -197,11 +174,8 @@ class PublishedUiBuilderCatalogCollisionTest {
 
   @Test
   fun `the floor holds on a record too small for the rate to mean anything`() {
-    // Two components, one collision — 50%, which a bare rate would refuse, contradicting
-    // `one stray duplicate is skipped rather than fatal` at a different scale. This is the case
-    // that caught the first version of the threshold: it broke
-    // `PublishedUiBuilderCatalogHostileInputTest`'s two-component collision fixture, which expects
-    // a skip and gets one only because the allowance is `maxOf(1, rate * eligible)`.
+    // Two components, one collision (50%): skipped because the allowance is
+    // `maxOf(1, rate * eligible)`.
     val result =
       PublishedUiBuilderCatalog.compose(
         published(expected = 2),
@@ -240,12 +214,9 @@ class PublishedUiBuilderCatalogCollisionTest {
 
   @Test
   fun `a record entry answering only to the builder's own namespaces is not this catalog's`() {
-    // `layout/column` is `androidx.compose.foundation`'s. The shelf gets it from
-    // `withBuilderVocabulary`, which unions the builder's own components into every published
-    // catalog — so deriving `m3/column` here as well would offer the same component twice under
-    // two ids, and a design saved against the derived one breaks when the record stops carrying
-    // it. `ComponentRecordSource` unions a packaged foundation record onto every catalog's, which
-    // is what puts these entries in front of this loop for catalogs that never had them.
+    // `layout/column` comes from `withBuilderVocabulary`; deriving `m3/column` too would offer the
+    // same component under two ids. `ComponentRecordSource` puts these foundation entries in every
+    // record.
     val result =
       PublishedUiBuilderCatalog.compose(
         published(expected = 3),
@@ -269,10 +240,8 @@ class PublishedUiBuilderCatalogCollisionTest {
 
   @Test
   fun `an entry claiming no id at all is still reached, and still composed`() {
-    // The empty-`componentIds` case the filter must not swallow: `ElevatedCard` and `OutlinedCard`
-    // claim none deliberately — the catalog spells all three cards `m3/card` and picks by
-    // `variant`, and `ScreenDocumentProjection` selects them by canonical id. `all {}` over an
-    // empty list is true, so a filter without the emptiness guard would drop exactly these.
+    // `ElevatedCard` and `OutlinedCard` claim no ids (selected by canonical id via `variant`);
+    // `all {}` over an empty list is true, so the filter needs its emptiness guard.
     val result =
       PublishedUiBuilderCatalog.compose(
         published(expected = 1),
@@ -286,11 +255,8 @@ class PublishedUiBuilderCatalogCollisionTest {
   }
 
   /**
-   * A policy stating a record id for every component, under [prefix].
-   *
-   * The canonical id is built from [canonicalIdAt] so the joining case cannot be mis-spelled, with
-   * only the prefix varied — which is exactly the difference between the two files a deployed host
-   * paired, and the only difference this pair of tests is about.
+   * A policy stating a record id for every component, under [prefix]. Only the prefix varies, which
+   * is the difference between the mismatched pair this tests.
    */
   private fun statingRecords(prefix: String, vararg componentIds: String): String {
     val components =
@@ -314,15 +280,9 @@ class PublishedUiBuilderCatalogCollisionTest {
 
   @Test
   fun `a published file joined to another catalog's record is refused`() {
-    // The pair a deployed `m3-catalog` host composed: the published file joins on
-    // `catalog/androidx.compose.material3.TextKt.Text` and the record staged into the image
-    // canonicalises the same callable under a different module name. Nothing above catches it —
-    // no id collides, an inventory did arrive, and every component composes under the id a saved
-    // design names it by. What is lost is the VOCABULARY: the policy is never found, so each
-    // component is served the properties derived from its call site, and the ones that travel as a
-    // `Color`, a `Dp` or a `TextStyle` are dropped for want of a JSON type. `m3/text` composed to
-    // `text, softWrap, maxLines, minLines`, and every design that set `style` or `color` on one
-    // opened with `property style is not declared by m3/text`.
+    // The published file joins on `catalog/…` while the staged record uses another module name. No
+    // id collides, yet no policy is found, so components get call-site vocabulary and lose `style`,
+    // `color`, etc. Must be refused.
     val result =
       PublishedUiBuilderCatalog.compose(
         statingRecords("catalog/", "Button/Filled", "Card/Elevated", "Dialog/Basic"),
@@ -340,10 +300,8 @@ class PublishedUiBuilderCatalogCollisionTest {
 
   @Test
   fun `the same file joined to its own record keeps the vocabulary the catalog declared`() {
-    // The other half, and the reason the refusal above is worth having: when the join lands, the
-    // property a design was authored against is the one the catalog STATED — `style`, which no
-    // derivation would have produced from a parameter list of none. This arm is what keeps the new
-    // refusal from being a ban on stating records at all.
+    // When the join lands, the stated property (`style`) is served, so the refusal above does not
+    // ban stating records.
     val result =
       PublishedUiBuilderCatalog.compose(
         statingRecords(":m3/", "Button/Filled", "Card/Elevated", "Dialog/Basic"),

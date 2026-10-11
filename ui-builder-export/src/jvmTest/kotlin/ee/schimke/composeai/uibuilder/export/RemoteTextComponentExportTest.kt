@@ -14,17 +14,9 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * The published text component is written by the same hand as the borrowed one.
- *
- * `RemoteContentEmitter` has an authored case for `m3/text` that writes the whole typography a
- * design carries — a type scale as `RemoteMaterialTheme.typography.<role>`, a size, an alignment, a
- * colour as a literal or a theme role. The published `remote-m3/remote-text` is the same
- * `RemoteText` call, and without this it fell to the record fallback, whose vocabulary is six
- * scalar types and none of those: a design moving onto the published catalog arrived with its text
- * and lost the way it was set.
- *
- * The two spellings this writes are compiled rather than assumed, in the value vocabulary probe of
- * the repository that publishes the component.
+ * The published `remote-m3/remote-text` is written by the same authored case as `m3/text` (type
+ * scale, size, alignment, colour), rather than the record fallback. Both spellings are compiled in
+ * the publishing repository's value vocabulary probe.
  */
 class RemoteTextComponentExportTest {
 
@@ -70,12 +62,8 @@ class RemoteTextComponentExportTest {
   }
 
   /**
-   * The borrowed spelling and the published one name the same thing.
-   *
-   * A design authored against `m3/text` says `fontSizeSp`; one against the published component says
-   * what that catalog declares, which is `fontSize` while the properties come from `RemoteText`'s
-   * own signature. One writer serves both, so neither design loses its size waiting for the catalog
-   * to pick a spelling.
+   * `fontSizeSp` (borrowed `m3/text`) and `fontSize` (published component) name the same thing; one
+   * writer serves both.
    */
   @Test
   fun `either spelling of the size is written`() {
@@ -135,11 +123,8 @@ class RemoteTextComponentExportTest {
   }
 
   /**
-   * RemoteText needs no component record: its Kotlin spelling is the fixed Remote Material 3 API.
-   *
-   * Records cover discovered and pack components; catalog-owned Remote components do not flow
-   * through that map to the editor's code pane. Requiring one here therefore made valid saved
-   * remote-m3 documents refuse despite the catalog having offered the component.
+   * RemoteText needs no component record: its Kotlin spelling is the fixed Remote Material 3 API,
+   * and catalog-owned Remote components have no record in the code pane.
    */
   @Test
   fun `the published component writes without an optional component record`() {

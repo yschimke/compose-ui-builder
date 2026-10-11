@@ -43,11 +43,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * Sync against the real hosted service: an offline run overwriting a server edit made after the run
- * started is reported on whichever command does it, not only on the first.
- *
- * `LocalDesignSyncBackTest` holds the base chain to a fake server; this holds the conflict answers
- * to the real reducer, through `UiBuilderProtocolMapper` the way a transport reaches it.
+ * Sync against the real hosted service: an offline run overwriting a server edit made after the
+ * fork is reported on whichever command overwrites it. `LocalDesignSyncBackTest` covers the base
+ * chain against a fake; this goes through `UiBuilderProtocolMapper` to the real reducer.
  */
 class LocalDesignSyncStalenessTest {
   private val executor = CurrentM3UiBuilderCatalogExecutor()
@@ -174,8 +172,8 @@ class LocalDesignSyncStalenessTest {
 
     /**
      * Creates the design, records a browser copy forked at [FORK], then lands a live font-scale
-     * edit on the server the copy never sees. Returns the copy, with an offline run of three
-     * commands: c1 changes the height, c2 and c3 the font scale.
+     * edit the copy never sees. Returns the copy with an offline run: c1 changes the height, c2 and
+     * c3 the font scale.
      */
     suspend fun forkAndEditConcurrently(): LocalDesignRecordV1 {
       assertIs<SnapshotResponseV1>(respond(CreateDesignRequestV1(seed)))

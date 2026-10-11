@@ -10,19 +10,11 @@ import kotlinx.serialization.json.intOrNull
 /**
  * Which Kotlin emitter a catalog's designs export through.
  *
- * Today a host decides that from the catalog's id and platform: `RecordFreeExport` routes a Wear
- * catalog to the Wear screen emitter, a Remote Compose catalog to the widget emitter and an A2UI
- * catalog to the A2UI program emitter, and `CATALOG_SYSTEM_IDS` names the catalogs whose designs
- * export without a record. Under [CatalogOwnership] the catalog states it instead, in the same
- * `composeSourceExport` declaration `compose-material3` already uses, so a catalog published under
- * another id reaches the same emitter and a catalog that declares nothing is offered no export
- * rather than a guessed one.
- *
- * The emitters stay in this repository: a catalog names an interpreter this build ships, never code
- * (see [CatalogComposeSourceExportAdapters]). The record-free ids are kept out of that registry on
- * purpose — adding a `Strategy` member is a source break for every host with an exhaustive `when`
- * over it, and a host that has not shipped one of these ids refuses a catalog that declares it — so
- * a catalog must not declare one until the server it is served by reads it.
+ * Built-in catalogs are routed by id and platform (`RecordFreeExport`). Under [CatalogOwnership]
+ * the catalog states it in its `composeSourceExport` declaration, so any id reaches the right
+ * emitter and a catalog declaring nothing gets no export. Emitters stay in this repository;
+ * catalogs name an interpreter, never code (see [CatalogComposeSourceExportAdapters]). These ids
+ * are kept out of that registry's `Strategy` to avoid a source break for hosts.
  */
 public object CatalogExportRouting {
 
@@ -37,17 +29,14 @@ public object CatalogExportRouting {
 
   /**
    * A phone launcher widget: `LauncherWidgetCodeExporter`'s `RemoteComposeWidget`, rooted on the
-   * catalog's own screen root and previewed at the catalog's own `frame.geometry.sizesDp`. Routing
-   * by this declaration is what lets a launcher widget catalog name its root anything: routed by
-   * component id, only `remote-widgets/launcher-widget` reaches this emitter.
+   * catalog's own screen root and previewed at its `frame.geometry.sizesDp`, whatever the root is
+   * called.
    */
   public const val LAUNCHER_WIDGET: String = "remote-compose-launcher-widget"
 
   /**
-   * The trait a catalog gives the component its launcher widgets are rooted on. Under
-   * [LAUNCHER_WIDGET] a design's root must carry it: the declaration chooses the emitter, and this
-   * says which of the catalog's components that emitter writes as the widget itself, so a design
-   * rooted on a button is refused rather than written as an empty widget.
+   * The trait marking the component a catalog's launcher widgets are rooted on; under
+   * [LAUNCHER_WIDGET] a design rooted on anything else is refused.
    */
   public const val LAUNCHER_HOST_TRAIT: String = "LauncherWidgetHost"
 
@@ -130,9 +119,8 @@ public object CatalogExportRouting {
     }
 
   /**
-   * [catalog]'s `statusSemantics.frame.geometry.sizesDp`, in its order, or empty for a catalog
-   * sized by device. A row this build cannot read is a size it does not offer, never an exception;
-   * the editor's `UiBuilderFrameGeometry.sizes` reads the same block the same way.
+   * [catalog]'s `statusSemantics.frame.geometry.sizesDp`, in order, or empty for a device-sized
+   * catalog. Unreadable rows are skipped, as `UiBuilderFrameGeometry.sizes` does.
    */
   public fun frameSizes(catalog: CatalogCapabilityV1): List<CatalogFrameSize> =
     frameSizes(catalog.statusSemantics)

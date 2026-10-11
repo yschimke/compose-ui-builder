@@ -1,13 +1,7 @@
-// Chromium driven over a bare DevTools Protocol socket, for measurements Playwright would skew.
-//
-// Playwright enables the Network domain on every page it attaches to, and with it DevTools keeps
-// each response body under its per-resource limit in the renderer: ~16 MB of the editor's scripts
-// and `skiko.wasm`, and the whole `uiBuilder.wasm` once it is small enough to qualify. That is
-// memory the editor never holds in a user's browser. This launcher enables only the domains a
-// caller asks for, so nothing is retained on the page's behalf.
-//
-// It launches the same headless shell Playwright would, with Playwright's default switches, so a
-// figure taken here differs from a Playwright one by what DevTools retained, not by the browser.
+// Chromium driven over a bare DevTools Protocol socket, for measurements Playwright would skew:
+// Playwright's Network domain makes the renderer retain response bodies (~16 MB plus
+// `uiBuilder.wasm`). This enables only the domains a caller asks for, and launches the same
+// headless shell with Playwright's default switches.
 
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';

@@ -22,11 +22,8 @@ import kotlinx.serialization.json.put
 
 /**
  * A component pack in the editor: off until switched on, shelved under its own name, and readable
- * by the code pane through the record projected back from its capabilities.
- *
- * The catalog here is the packaged M3 one with a two-component `confetti-mobile` pack merged in the
- * way the runtime merges one, so the test is about what the editor does with the declaration rather
- * than about the merge.
+ * by the code pane through the record projected back from its capabilities. Uses the packaged M3
+ * catalog with a two-component `confetti-mobile` pack merged in as the runtime does.
  */
 class ComponentPackMenuTest {
   private val catalog =

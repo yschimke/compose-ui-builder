@@ -144,16 +144,11 @@ internal data class AcceptedOperationRecordV1(
 )
 
 /**
- * What one accepted operation touched, without what it wrote.
+ * What one accepted operation touched, without what it wrote. Small enough to keep for the whole
+ * acceptance window (pruned against the oldest retained position snapshot), unlike
+ * `acceptedOperations`, whose byte budget made staleness checks miss conflicts.
  *
- * Staleness checks used to scan [PersistedDesignV1.acceptedOperations], which is pruned by a byte
- * budget ([UiBuilderServiceLimits.retainedUndoBytes]) while acceptance is bounded by retained
- * position snapshots. With large records the two windows diverged and stale submissions were
- * silently reported clean. Touch records are small enough to keep for the whole acceptance window,
- * and are pruned against the oldest retained position snapshot.
- *
- * Keys (see `touchKeys`) are `\u0000`-separated because every segment is caller-supplied and a
- * printable separator could be used to make two touches collide.
+ * Keys (see `touchKeys`) are `\u0000`-separated because every segment is caller-supplied.
  */
 @Serializable
 internal data class ConflictTouchRecordV1(

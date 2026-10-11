@@ -13,18 +13,13 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * The canvas and the export must name the same icon for a key.
+ * The canvas and the export must name the same icon for a key. The root generator emits both
+ * modules' views from the shipped core + extended artifacts; [GoogleMaterialIcons] holds real
+ * `ImageVector`s, while `:ui-builder-export` has no Compose dependency (server classpath).
  *
- * The root generator reads the shipped core + extended artifacts once and emits both modules'
- * views. [GoogleMaterialIcons] holds real `ImageVector`s, while `:ui-builder-export` deliberately
- * has no Compose dependency because a server classpath should not carry Compose UI.
- *
- * This is that something. It is the cheap half of the check — that both sides agree which member a
- * key names — and it is the half that catches the mistakes actually available here: a key added to
- * the palette and not to the export, a `genres` that resolves to `Category` in one table and to
- * nothing in the other, an icon moved into `Icons.AutoMirrored` on one side only. What it does not
- * check is that the member exists, which the compiler already does for [GoogleMaterialIcons] on
- * every build of this module.
+ * Checks both sides agree which member a key names (a key missing from one table, `genres`
+ * resolving differently, an `Icons.AutoMirrored` move on one side). Member existence is checked by
+ * the compiler.
  */
 class GoogleMaterialIconExportMappingTest {
 

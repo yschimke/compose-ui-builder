@@ -12,17 +12,11 @@ import kotlinx.coroutines.launch
 /**
  * Brings a design's pushed-update stream back after its socket drops.
  *
- * [onDisconnected] may be called from any thread, any number of times: signals conflate, so a burst
- * of close and error callbacks costs one recovery. Recovery retries [reopen] with [reconnectDelay]
- * backoff until it succeeds, reporting each wait through [onStatus] and clearing it with `null`
- * once the stream is back. A disconnect reported while a recovery is running runs one more after
- * it, so a socket that dies straight after reopening is not left dead.
- *
- * Only an [IOException] — the server could not be reached — is retried. Anything else is the server
- * answering, with a design that is gone, access that was revoked or a catalog it can no longer
- * serve; asking again will not change that, so recovery stops and hands it to [onFailed].
- *
- * Cancelling [scope] — the session closing — stops the retries; nothing outlives it.
+ * [onDisconnected] may be called from any thread, any number of times; signals conflate. Recovery
+ * retries [reopen] with [reconnectDelay] backoff, reporting waits via [onStatus] (`null` once
+ * back); a disconnect during recovery triggers one more. Only an [IOException] is retried; any
+ * other failure is the server's answer and goes to [onFailed]. Cancelling [scope] stops the
+ * retries.
  */
 internal class UpdateStreamReconnector(
   scope: CoroutineScope,

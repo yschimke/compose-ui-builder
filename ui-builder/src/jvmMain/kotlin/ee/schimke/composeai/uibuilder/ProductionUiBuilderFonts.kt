@@ -11,26 +11,21 @@ import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * The system property a host sets, on the daemon that runs [ProductionUiBuilderPreview], to the
- * directory of Google Fonts files it has fetched: `<slug>-<weight>.ttf`, as the server's
- * `/api/fonts/google` cache writes them.
+ * The system property a host sets on the [ProductionUiBuilderPreview] daemon: the directory of
+ * fetched Google Fonts files (`<slug>-<weight>.ttf`, as the server's `/api/fonts/google` cache
+ * writes them).
  */
 const val GOOGLE_FONTS_DIRECTORY_PROPERTY: String = "uiBuilder.googleFontsDir"
 
 /**
- * A production render's typefaces, by the family name a document uses, resolved when first asked.
+ * A production render's typefaces, by the family name a document uses, resolved synchronously when
+ * first asked, so a daemon's single frame is already in the design's faces (the browser's async
+ * [UiBuilderFontRegistry] would miss it). Vendored families come from the classpath
+ * (`assets/rc-fonts`), others from [googleFontsDirectory].
  *
- * The browser's [UiBuilderFontRegistry] loads a family asynchronously and recomposes once it lands,
- * which suits a canvas someone is looking at and not a daemon that draws one frame: the frame was
- * taken first, so every thumbnail and PNG export drew a themed design in the platform face. Here a
- * lookup reads the bytes then and there — the vendored families from the classpath, where the build
- * copies `assets/rc-fonts`, and any other family from [googleFontsDirectory] — so the first frame
- * is already in the design's faces.
- *
- * It is the map [LocalUiBuilderFontFamilies] provides, which is where the canvas and
- * [rememberThemeRoleFamilies] look a family up, and through `RemoteComposeCanvas` what a Remote
- * document's player draws `google:` names in. A family with no file stays on the platform face, as
- * it does in the browser when the font service has nothing for it; nothing is fetched from here.
+ * Provided as [LocalUiBuilderFontFamilies] (read by the canvas, [rememberThemeRoleFamilies] and
+ * `RemoteComposeCanvas`'s player). A family with no file stays on the platform face; nothing is
+ * fetched.
  */
 internal class ProductionFontFamilies(
   private val readResource: (path: String) -> ByteArray?,
@@ -143,8 +138,8 @@ internal class ProductionFontFamilies(
     private val GENERIC_FAMILIES = setOf("serif", "monospace", "sans-serif", "cursive", "fantasy")
 
     /**
-     * The file-name stem the server's cache gives [family]: lowercase, each run of anything but a
-     * letter or digit one `-`, none at the ends (`Exo 2` is `exo-2`).
+     * The file-name stem the server's cache gives [family]: lowercase, each non-alphanumeric run
+     * one `-`, none at the ends (`Exo 2` is `exo-2`).
      */
     fun googleFontSlug(family: String): String =
       family.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')

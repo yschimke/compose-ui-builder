@@ -59,7 +59,6 @@ import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.export.isWearWidget
 import ee.schimke.composeai.uibuilder.exportRecord
 import ee.schimke.composeai.uibuilder.frameGeometry
-import ee.schimke.composeai.uibuilder.packComponentRecords
 import ee.schimke.composeai.uibuilder.packComponentsById
 import ee.schimke.composeai.uibuilder.reference.PLACED_PIECE_WIDTH_FRACTION
 import ee.schimke.composeai.uibuilder.reference.REFERENCE_FONT_SIZE_PROPERTY
@@ -93,13 +92,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 
-/**
- * The ceiling on a markup label.
- *
- * 160 characters: a sentence about what is wrong, not a paragraph. Longer than this and the label
- * stops fitting the box it was dragged out for, which is the point at which the annotation stops
- * pointing at anything.
- */
+/** Max markup label length: a sentence, short enough to fit the box it was dragged out for. */
 internal const val MAX_MARKUP_TEXT: Int = 160
 
 /** A target slot in the shape the acceptance check reads, so one function answers both callers. */
@@ -117,37 +110,29 @@ class UiBuilderEditorReducer(
   private val clientId: String = EDITOR_CLIENT_ID,
   private val operationIdPrefix: String = clientId,
   /**
-   * This catalog's own component record as served by its host, or null to fall back to the embedded
-   * `m3-catalog` record. Lets the code pane and problems panel agree with the server's export for
-   * published catalogs.
+   * This catalog's component record as served by its host, or null for the embedded `m3-catalog`
+   * record.
    */
   private val catalogRecord: ComponentRecordFile? = null,
 ) {
   private val capabilityValidator = CapabilityValidator(catalog)
 
   /**
-   * The record the code pane and problems panel generate from: [catalogRecord] or the embedded one,
-   * plus this catalog's pack components (see [packComponentRecords]). The served record replaces
-   * the embedded one rather than joining it, so the browser never resolves an id the export
+   * The record the code pane and problems panel generate from: [catalogRecord] (which replaces, not
+   * joins, the embedded one) plus pack components, so the browser never resolves an id the export
    * refuses.
    */
   private val exportRecord by lazy {
     catalog.exportRecord(catalogRecord ?: embeddedComponentRecord())
   }
 
-  /**
-   * The pack components a record-free (Wear screen) design may hold, for the same two callers as
-   * [exportRecord]: the code pane and the problems panel. See [packComponentsById].
-   */
+  /** Pack components a record-free (Wear screen) design may hold; see [packComponentsById]. */
   private val packComponents by lazy { catalog.packComponentsById() }
 
   /**
-   * The catalog ids the Compose export can write a call site for, judged by [exportRecord] exactly
-   * as `ScreenGenerator` does; null where this panel cannot say.
-   *
-   * Null for catalogs the embedded record was not authored for (`wear-m3` and `remote-m3` export
-   * through `RecordFreeExport`). A served [catalogRecord] is trusted as this catalog's regardless
-   * of its module names.
+   * Catalog ids the Compose export can write a call site for, judged by [exportRecord] as
+   * `ScreenGenerator` does; null where this cannot be said (e.g. `wear-m3`/`remote-m3`, which
+   * export through `RecordFreeExport`).
    */
   private val composeExportCoverage: Set<String>? by lazy {
     val record = exportRecord ?: return@lazy null
@@ -169,9 +154,8 @@ class UiBuilderEditorReducer(
     )
 
   /**
-   * This editor's state carried onto a new authoritative document. Selection (in order, keeping its
-   * anchor) and clipboard are editing intent and survive, minus nodes the new document no longer
-   * holds.
+   * This editor's state carried onto a new authoritative document. Selection and clipboard survive,
+   * minus nodes the new document no longer holds.
    */
   fun reconciled(
     state: UiBuilderEditorState,
@@ -197,30 +181,23 @@ class UiBuilderEditorReducer(
       // A reader's pins are a fact about their palette, not about the design arriving, so they
       // survive a rebuild for the same reason the pack switches do.
       pinnedComponents = state.pinnedComponents,
-      // Carried, minus the rows this document has already answered. Every edit rebuilds the state,
-      // so dropping them all would lose the panel's drift rows on the next keystroke; keeping them
-      // all would keep saying a design has drifted from a symbol the arriving edit just
-      // re-imported.
+      // Drop only rows this document has answered: every edit rebuilds the state, so dropping all
+      // would lose drift rows, and keeping all would report drift the edit just fixed.
       componentDrift = state.componentDrift.stillDescribing(document),
       layerQuery = state.layerQuery,
       codePaneVisible = state.codePaneVisible,
       // Only while it is still about the same node: a collaborator who deletes the selection moves
       // it to a fallback, and the card must not follow onto a node nobody asked to edit.
       quickEditorOpen = state.quickEditorOpen && rebuilt.selectedNodeId == state.selectedNodeId,
-      // The strip survives an authoritative document; what it was *showing* does not. The rebuilt
-      // collaboration state carries none of the mutations that built the arriving document, so the
-      // revision somebody was looking at is one this editor can no longer picture — the strip
-      // honestly restarts at the new document rather than holding a peek it cannot redraw.
+      // The strip survives, but not its peek: the rebuilt collaboration state cannot redraw the old
+      // revision.
       historyBarVisible = state.historyBarVisible,
       panes = state.panes,
       wearWidgetHostShape = state.wearWidgetHostShape,
       operationSequence = state.operationSequence,
       inspectorMode = state.inspectorMode,
-      // Tool modes, so they survive a document arriving for the same reason the selection and the
-      // clipboard do: every accepted edit and every collaborator delta rebuilds the editor from the
-      // authoritative document, and anything not carried across is lost on the next keystroke
-      // anyone in the session makes. Without these, the strip emptied and Add beside turned itself
-      // off one Add after being switched on.
+      // Tool modes survive like selection and clipboard: every edit and collaborator delta rebuilds
+      // the editor, so anything not carried is lost on the next keystroke.
       addBeside = state.addBeside,
       variantAxes = state.variantAxes,
       canvasView = state.canvasView,
@@ -235,14 +212,12 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The state after [event]. Any event that changes the document also ends a revision peek, so an
-   * edit never lands invisibly behind a picture of an old revision.
+   * The state after [event]. Any document-changing event also ends a revision peek, so edits never
+   * land invisibly behind an old revision.
    */
   fun reduce(state: UiBuilderEditorState, event: UiBuilderEditorEvent): UiBuilderEditorState {
     val reduced = reduceEvent(state, event)
-    // The quick editor is about one node. A new selection — a click elsewhere on the canvas, a
-    // layer row, an arrow key, the node an insert lands — closes it rather than moving it onto a
-    // node nobody asked to edit.
+    // The quick editor is about one node; a new selection closes it rather than moving it.
     val next =
       if (reduced.quickEditorOpen && reduced.selectedNodeId != state.selectedNodeId) {
         reduced.copy(quickEditorOpen = false)
@@ -277,10 +252,8 @@ class UiBuilderEditorReducer(
           enabledPacks =
             event.packIds.filterTo(mutableSetOf()) { catalog.componentPacks[it] != null }
         )
-      // Filtered on the way in, against the document as it stands, by the same rule a rebuilt
-      // state uses. The host hands over what it fetched — it does not track the edits made since —
-      // so a finding whose component has already moved on must not reach the panel and wait for
-      // the next rebuild to be taken back out.
+      // Filtered against the current document on the way in: the host does not track edits since
+      // its fetch.
       is UiBuilderEditorEvent.SetComponentDrift ->
         state.copy(componentDrift = event.findings.stillDescribing(state.document))
       is UiBuilderEditorEvent.ResolveUndeclaredProperty -> resolveUndeclaredProperty(state, event)
@@ -554,7 +527,7 @@ class UiBuilderEditorReducer(
 
   /**
    * Whether the whole selection can go, checked cumulatively per slot (so `min = 1` slots are not
-   * over-deleted halfway) over the selection's top-most nodes.
+   * over-deleted) over its top-most nodes.
    */
   fun canDeleteSelected(state: UiBuilderEditorState): Boolean {
     val targets = state.selectionRoots()
@@ -580,9 +553,8 @@ class UiBuilderEditorReducer(
   fun canRedo(state: UiBuilderEditorState): Boolean = state.redoTargetUndoId(actorId) != null
 
   /**
-   * Everybody's changes to this design, newest first, read from the collaboration state rather than
-   * recorded separately. Undo walks only this editor's commands, so its target is often not the
-   * newest entry.
+   * Everybody's changes to this design, newest first, from the collaboration state. Undo walks only
+   * this editor's commands, so its target is often not the newest entry.
    */
   fun operationHistory(state: UiBuilderEditorState): List<EditorOperationEntry> {
     val collaboration = state.collaboration
@@ -616,11 +588,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The command in one line, from its operations rather than from what it moved.
-   *
-   * The operations are the intent — "set this property", "put this component there" — and the
-   * changes below are what that came to. A batch that did one kind of thing is named after it; one
-   * that did several is counted, because a sentence listing five verbs is not a summary.
+   * The command in one line, from its operations (the intent). One kind of operation is named;
+   * several are counted.
    */
   private fun summarise(state: UiBuilderEditorState, accepted: AcceptedCommand): String {
     val operations = accepted.command.operations
@@ -652,10 +621,7 @@ class UiBuilderEditorReducer(
     return summaries.distinct().singleOrNull() ?: "${operations.size} changes"
   }
 
-  /**
-   * What a person calls this node now (the layers panel's name), or the bare id for a node that no
-   * longer exists.
-   */
+  /** The node's layers-panel name, or the bare id for a node that no longer exists. */
   internal fun nodeLabel(state: UiBuilderEditorState, nodeId: String): String {
     val node = state.document.nodes[nodeId] ?: return nodeId
     node.placementKey()?.let {
@@ -665,15 +631,25 @@ class UiBuilderEditorReducer(
     return node.contentLabel(capability) ?: capability.displayName
   }
 
+  /**
+   * What kind of thing this node is — `Button`, `Card`, or a local component's own name — for a
+   * sentence that names it in passing. Unlike [nodeLabel] it never reads the node's content:
+   * "Deleted Episode 140: Lorem ipsum dolor" is a quote, not a description of what went.
+   */
+  internal fun nodeKindLabel(state: UiBuilderEditorState, nodeId: String): String {
+    val node = state.document.nodes[nodeId] ?: return nodeId
+    node.placementKey()?.let {
+      return componentDeclarationName(state.document.components[it]) ?: it
+    }
+    return componentLabel(node.componentId)
+  }
+
   private fun componentLabel(componentId: String): String =
     catalog.componentsById[componentId]?.displayName ?: componentId
 
   /**
-   * Whether the whole selection can be duplicated.
-   *
-   * Cumulative for the same reason delete is: duplicating two siblings adds two to their slot, and
-   * a slot with one space left can take one of them. Checking each against the original document
-   * says yes twice and the second insert is rejected, leaving half a duplicate.
+   * Whether the whole selection can be duplicated, checked cumulatively per slot like delete so a
+   * nearly full slot does not end up with half a duplicate.
    */
   fun canDuplicateSelected(state: UiBuilderEditorState): Boolean {
     val targets = state.selectionRoots()
@@ -694,28 +670,19 @@ class UiBuilderEditorReducer(
     canCopySelected(state) && canDeleteSelected(state)
 
   /**
-   * Whether [paste] would land somewhere.
-   *
-   * Asked of the *clipboard's* component rather than the selection's, because that is what has to
-   * be accepted: pasting a `m3/text` beside a full `Row` is a different question from duplicating
-   * the `Row`. A false here is why the paste affordance is disabled rather than offered and
-   * refused.
+   * Whether [paste] would land somewhere, judged by the clipboard's component rather than the
+   * selection's.
    */
   fun canPaste(state: UiBuilderEditorState): Boolean = pasteDestination(state) != null
 
   /**
-   * Where the clipboard would land, or null when it would not.
-   *
-   * Every root has to be accepted by one destination, not merely one of them: a paste that placed
-   * two of three copied nodes would leave the user reconstructing which one went missing. Room is
-   * checked against the whole batch for the same reason — a slot with one space left cannot take
-   * three.
+   * Where the clipboard would land, or null. Every root must fit one destination, with room checked
+   * for the whole batch, so a paste never lands partially.
    */
   private fun pasteDestination(state: UiBuilderEditorState): ParentSlot? {
     val clipboard = state.clipboard?.takeIf { it.rootNodeIds.isNotEmpty() } ?: return null
-    // Every copied node, not only the roots: the clipboard outlives the design it was copied from,
-    // and a Column copied out of an m3 screen is a Column remote-m3 has, holding a Button it does
-    // not. The validator refuses that batch — but only after Paste was offered and pressed.
+    // Every copied node, not just roots: the clipboard may come from another catalog, and the
+    // validator would otherwise refuse only after Paste was pressed.
     if (
       clipboard.nodes.values.any {
         it.componentId != COMPONENT_INSTANCE_ID && it.componentId !in catalog.componentsById
@@ -742,25 +709,19 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The state variables this document declares, for a binding picker.
-   *
-   * Only declared ones. A property bound to a name nothing declares reads as null at render time
-   * and generates nothing at export, so offering free text here would let the builder produce a
-   * screen that silently shows blanks.
+   * The state variables this document declares, for a binding picker. Only declared ones: an
+   * undeclared name renders as null and exports nothing.
    */
   fun stateVariableNames(state: UiBuilderEditorState): List<String> =
     state.document.stateVariables.keys.sorted()
 
   /**
-   * Whether a binding on [propertyName] has to be a comparison rather than a bare read.
-   *
-   * A boolean property cannot take the value of a string variable, so the catalog refuses a bare
-   * read there and accepts `stateEquals`. Asking this up front lets the inspector offer the shape
-   * that will be accepted, instead of offering one and relaying the catalog's refusal.
+   * Whether a binding on [propertyName] must be a comparison (`stateEquals`) rather than a bare
+   * read, e.g. a boolean property against a string variable.
    */
   /**
-   * Whether a binding on [propertyName] would be accepted, answered by validating the value the
-   * bind would write so the menu never offers what the reducer refuses.
+   * Whether a binding on [propertyName] would be accepted, by validating the value the bind would
+   * write.
    */
   fun canBindToState(
     state: UiBuilderEditorState,
@@ -785,9 +746,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Whether [propertyName] may hold a computed value: a wire contract that can save one, a Remote
-   * Compose catalog, where the player evaluates it, and a property one of the probe expressions is
-   * accepted on.
+   * Whether [propertyName] may hold a computed value: needs a wire contract that can save one, a
+   * Remote Compose catalog, and a property accepting a probe expression.
    */
   fun canBindToFormula(
     state: UiBuilderEditorState,
@@ -814,20 +774,15 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * A one-component document: what the palette's Add would put on an empty canvas, produced by the
-   * same `InsertComponent` so a thumbnail cannot disagree with Add.
-   *
-   * Null where the component cannot stand alone in the frame (`CatalogThumbnailTest` tracks which).
-   * Cached per component and variant.
+   * A one-component document as the palette's Add would produce it (same `InsertComponent`), or
+   * null where the component cannot stand alone. Cached per component and variant.
    */
   fun previewDocument(
     componentId: String,
     variant: EditorCatalogVariant? = null,
   ): UiBuilderDocument? {
     val key = componentId to variant?.value
-    // `getOrPut` treats a stored null as absent, so a component with no picture — a root-only
-    // scaffold — replayed the whole insert on every recomposition of the list. The miss is cached
-    // as a miss.
+    // `getOrPut` treats a stored null as absent, so misses are cached explicitly.
     if (key in previewDocuments) return previewDocuments[key]
     return previewDocuments.getOrPut(key) {
       val state = initial(previewFrame, selectedNodeId = PREVIEW_FRAME_CELL_ID)
@@ -840,8 +795,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The inserted component centred in the thumbnail frame via the catalog's own `align` modifier,
-   * where the component declares it.
+   * The inserted component centred in the thumbnail frame via the catalog's `align` modifier, where
+   * declared.
    */
   private fun UiBuilderDocument.centeredInFrame(): UiBuilderDocument {
     val cell = nodes[PREVIEW_FRAME_CELL_ID] ?: return this
@@ -871,9 +826,8 @@ class UiBuilderEditorReducer(
   private val previewDocuments = mutableMapOf<Pair<String, String?>, UiBuilderDocument?>()
 
   /**
-   * The container thumbnails and drag ghosts insert into: `layout/box` where the catalog has it,
-   * else the catalog's own first unbounded list container (A2UI has no box), preferring `…/box` or
-   * `…/column`.
+   * The container thumbnails and drag ghosts insert into: `layout/box` if present, else the
+   * catalog's first unbounded list container, preferring `…/box` or `…/column`.
    */
   private val frameComponentId: String by lazy {
     if (FRAME_BOX in catalog.componentsById) return@lazy FRAME_BOX
@@ -893,12 +847,8 @@ class UiBuilderEditorReducer(
   internal fun debugPreviewFrame(): UiBuilderDocument = previewFrame
 
   /**
-   * The empty frame a thumbnail's component is inserted into.
-   *
-   * A bare `layout/box` rather than the `m3/surface` the starter-content preview uses: the menu row
-   * paints its own ground, and a surface inside it would draw a second one a shade off the first.
-   * Sized generously and drawn at that size before being scaled down, which is what makes a
-   * thumbnail a shrunken component rather than a component asked to lay itself out at 44 dp.
+   * The empty frame a thumbnail's component is inserted into. A bare box (the menu row paints its
+   * own ground), sized generously and scaled down so the thumbnail is a shrunken component.
    */
   private val previewFrame: UiBuilderDocument by lazy {
     UiBuilderDocument(
@@ -922,12 +872,8 @@ class UiBuilderEditorReducer(
           mapOf(
             "widthDp" to JsonPrimitive(PREVIEW_FRAME_WIDTH_DP),
             "heightDp" to JsonPrimitive(PREVIEW_FRAME_HEIGHT_DP),
-            // No `density` or `fontScale`, deliberately, where every other fixture pins them. Those
-            // pin a document being *rendered as the whole surface*, where 1.0 makes a dp a pixel.
-            // A thumbnail is a subtree of a panel whose own dp are the platform's, and a frame that
-            // pinned 1.0 laid its component out at a quarter size inside a box measured in real dp
-            // — a Button drawn as a four-pixel dash. `UiBuilderSurface` falls back to
-            // `LocalDensity`, which is the one the box around it was measured with.
+            // No `density`/`fontScale`, deliberately: pinning 1.0 made a thumbnail lay out at a
+            // fraction of size. `UiBuilderSurface` falls back to `LocalDensity`.
             "theme" to JsonPrimitive("dark"),
             "dynamicColor" to JsonPrimitive(false),
             "locale" to JsonPrimitive("en-US"),
@@ -948,14 +894,11 @@ class UiBuilderEditorReducer(
             UiBuilderNode(
               id = PREVIEW_FRAME_CELL_ID,
               componentId = frameComponentId,
-              // No properties: the frame's container declares no alignment of its own, and the
-              // validator refuses a property the catalog does not know — which is the whole insert
-              // refused, and every thumbnail with it.
+              // No properties: the validator refuses unknown properties, which would refuse every
+              // thumbnail.
               properties = JsonObject(emptyMap()),
-              // The fixed size only where the container takes a `size` modifier. A catalog that
-              // lays out without modifiers (A2UI) gets a cell that wraps its component instead;
-              // the environment's width and height still bound the surface, and the tile crops
-              // to what was drawn either way.
+              // Fixed size only where the container takes a `size` modifier; otherwise (A2UI) the
+              // cell wraps its component.
               modifiers =
                 JsonArray(
                   if ("size" !in frameModifiers) emptyList()
@@ -977,9 +920,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The component carried beside a drag, drawn at the size it would land: no fixed cell or
-   * centring, and the design's environment without its density (the canvas scales the ghost). Null
-   * is only a guard; the canvas then shows a named chip.
+   * The component carried beside a drag, at the size it would land: no fixed cell or centring, and
+   * no density (the canvas scales the ghost). Null is only a guard; the canvas then shows a named
+   * chip.
    */
   fun dragGhostDocument(
     state: UiBuilderEditorState,
@@ -996,12 +939,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The ghost re-rooted at the component it carries, the frame cell dropped.
-   *
-   * A `layout/box` cell draws nothing of its own, so it stays. A catalog's own list container does
-   * not: the canvas draws `a2ui/Column` as a named placeholder like every A2UI node, and the ghost
-   * would carry a dashed "Column" around the component that the drop never places. The cell only
-   * had to exist for the insert to validate; once it has, it goes.
+   * The ghost re-rooted at its component, dropping the frame cell unless it is an invisible
+   * `layout/box` (an A2UI list container would draw a placeholder the drop never places).
    */
   private fun UiBuilderDocument.withoutFrameCell(): UiBuilderDocument {
     val childId = nodes[DRAG_GHOST_CELL_ID]?.slots?.get(FRAME_SLOT)?.singleOrNull() ?: return this
@@ -1009,12 +948,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The subtree a canvas move is carrying, as a document the ghost can draw.
-   *
-   * A moved component has no palette row to preview from; the honest preview is the thing itself —
-   * the node and everything under it, in the design's own theme, unconstrained so the canvas can
-   * size it to the slot it is hovering over. Rooted at the node alone: wherever it came from, a
-   * ghost is what will land, not where it will land.
+   * The subtree a canvas move is carrying, rooted at the node, in the design's theme and
+   * unconstrained so the canvas can size it to the hovered slot.
    */
   fun nodeGhostDocument(state: UiBuilderEditorState, nodeId: String): UiBuilderDocument? {
     val document = state.document
@@ -1036,9 +971,8 @@ class UiBuilderEditorReducer(
     JsonObject(document.environment.toMap() - "density")
 
   /**
-   * The unconstrained cell a drag ghost renders its component into, per environment the design's
-   * own would produce. A bare `layout/box` like the thumbnail's frame, minus the fixed size: the
-   * cell wraps its child, so the ghost is the component's size and the canvas's to cap.
+   * The unconstrained `layout/box` cell a drag ghost renders into, wrapping its child so the canvas
+   * can cap the size.
    */
   private fun ghostFrame(state: UiBuilderEditorState): UiBuilderDocument =
     ghostFrames.getOrPut(ghostEnvironment(state.document).toString()) {
@@ -1073,16 +1007,12 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The components the insert panel keeps at the top: the reader's choice, or the catalog's. One
-   * place so the panel, row stars and persistence agree.
+   * The components pinned at the top of the insert panel: the reader's choice, or the catalog's.
    */
   fun pinnedComponents(state: UiBuilderEditorState): Set<String> =
     state.pinnedComponents ?: catalog.pinnedComponents
 
-  /**
-   * Whether [componentId] has nowhere to go in this design: root-only components (Wear widget
-   * containers, screen scaffolds) once the design has a root.
-   */
+  /** Whether [componentId] has nowhere to go: root-only components once the design has a root. */
   fun placeableNowhere(state: UiBuilderEditorState, componentId: String): Boolean =
     componentId in RecordFreeExport.ROOT_ONLY_COMPONENT_IDS && state.document.roots.isNotEmpty()
 
@@ -1091,9 +1021,9 @@ class UiBuilderEditorReducer(
     catalog.paletteComponents.count { !placeableNowhere(state, it.componentId) }
 
   /**
-   * The insert panel's rows: each catalog family (from [ComponentMenu], falling back to kind
-   * headings), its components, and the variants of open components. A non-blank search opens every
-   * surviving group and component without forgetting what was collapsed.
+   * The insert panel's rows: catalog families (from [ComponentMenu], falling back to kind
+   * headings), components, and variants of open components. A search opens every surviving group
+   * without forgetting what was collapsed.
    */
   fun catalogRows(state: UiBuilderEditorState): List<EditorCatalogRow> {
     val needle = state.catalogQuery.trim().lowercase()
@@ -1101,18 +1031,13 @@ class UiBuilderEditorReducer(
     val items =
       catalog.paletteComponents
         .map { it.editorCatalogItem() }
-        // A pack that is off is not on the palette, and not found by search either: the shelf is
-        // the whole point of the switch, and a search that surfaced what the switch hides would
-        // make the switch a lie.
+        // A disabled pack is hidden from search too; otherwise the switch would not hide anything.
         .filter { it.pack == null || it.pack in state.enabledPacks }
         .filter { !placeableNowhere(state, it.componentId) }
         .filter { it.matches(needle) }
         .sortedWith(compareBy({ it.searchRank(needle) }, EditorCatalogItem::displayName))
-    // The declared shelves, then the kind labels an unshelved catalog falls back to — in *kind*
-    // order, so a catalog `ComponentMenu` says nothing about reads Scaffolds, Containers,
-    // Composables exactly as this panel always did, rather than alphabetically.
-    // `distinct` because the two lists overlap: "Scaffolds" is both a declared shelf and a kind
-    // label, and without it the later entry would win and push the shelf to the end of the panel.
+    // Declared shelves, then kind-label fallbacks in kind order. `distinct` because the lists
+    // overlap ("Scaffolds") and the later entry would push the shelf to the end.
     val order =
       (catalog.componentMenu.groupOrder +
           EditorComponentKind.entries.map(EditorComponentKind::label))
@@ -1120,10 +1045,7 @@ class UiBuilderEditorReducer(
         .withIndex()
         .associate { (index, name) -> name to index }
     val rows = mutableListOf<EditorCatalogRow>()
-    // The pins first, and only while browsing: a search is a question about the whole catalog, and
-    // a component it matches already answers from its own shelf — a second copy under "Pinned"
-    // would be the same row twice in the results. A pin whose pack is off is not on the palette,
-    // so it is not at the top of it either.
+    // Pins only while browsing (a search would list them twice), and never from a disabled pack.
     val pinned = pinnedComponents(state)
     if (!filtering && pinned.isNotEmpty()) {
       val pinnedItems = items.filter { it.componentId in pinned }
@@ -1147,9 +1069,7 @@ class UiBuilderEditorReducer(
     items
       .groupBy(EditorCatalogItem::group)
       .entries
-      // Declared order first, then alphabetically — a group the table forgot to order, and the
-      // kind labels a second catalog falls back to, still land somewhere a reader can predict
-      // rather than wherever the map happened to put them.
+      // Declared order first, then alphabetical, so unordered groups land predictably.
       .sortedWith(
         if (filtering) {
           compareBy({ (_, groupItems) -> groupItems.minOf { it.searchRank(needle) } }, { it.key })
@@ -1204,11 +1124,8 @@ class UiBuilderEditorReducer(
     val rows = mutableListOf<EditorTreeRow>()
     val seen = mutableSetOf<String>()
     fun visit(nodeId: String, depth: Int, parent: ParentSlot?) {
-      // A reference to a node that is not there, and a reference to one already on this path, are
-      // both things `validateDocumentForExport` reports — `UNKNOWN_ROOT`, `UNKNOWN_CHILD`,
-      // `GRAPH_CYCLE`. The navigator is built before the inspector, so `getValue` and an unbounded
-      // recursion took the whole editor down before the Issues panel could name any of them: the
-      // one document that most needs the panel was the one that could not show it.
+      // Missing and cyclic references are what the Issues panel reports, so they must not crash the
+      // navigator, which is built before it.
       val node = document.nodes[nodeId] ?: return
       if (!seen.add(nodeId)) return
       val capability = catalog.componentsById[node.componentId]
@@ -1262,13 +1179,9 @@ class UiBuilderEditorReducer(
         nodeId.lowercase().contains(needle) ||
         componentId.lowercase().contains(needle)
     val matched = rows.map { it.matches() }
-    // A row is kept when it matched, or when it is an ancestor of one.
-    //
-    // Ancestors come from parent pointers built in one forward pass: on a pre-order walk the most
-    // recent row at depth d-1 is the parent of a row at depth d. The previous version scanned
-    // *backwards over every preceding row* for each match, which is quadratic — one root with
-    // 9,999 matching children walked some 50 million rows, synchronously in the Wasm UI, on every
-    // keystroke in the filter field. The service permits 10,000-node designs.
+    // Keep matched rows and their ancestors. Parents come from one pre-order pass (the latest row
+    // at depth d-1 parents a row at depth d), keeping this linear for 10,000-node designs on every
+    // filter keystroke.
     val parent = IntArray(rows.size) { -1 }
     val deepest = rows.maxOfOrNull(EditorTreeRow::depth) ?: -1
     val ancestorAtDepth = IntArray(deepest + 1) { -1 }
@@ -1294,9 +1207,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The layers panel's lines: [visibleTreeRows] with slot headings where the slot is information —
-   * the parent has several slots, the slot is empty (a drop target), or the slot is undeclared.
-   * Empty slots are omitted under a filter.
+   * The layers panel's lines: [visibleTreeRows] plus slot headings where informative (several
+   * slots, an empty drop-target slot, or an undeclared one). Empty slots are omitted under a
+   * filter.
    */
   fun layerRows(state: UiBuilderEditorState): List<EditorLayerRow> {
     val rows = visibleTreeRows(state)
@@ -1321,9 +1234,8 @@ class UiBuilderEditorReducer(
           kept.forEach { visit(it, indent + 1) }
           return@forEach
         }
-        // The slot line sits at the depth of the children it heads rather than between them and
-        // their parent. A tree that indented twice per level ran out of width on the fourth
-        // container, and the panel is 300dp wide.
+        // The slot line sits at its children's depth so the 300dp panel is not indented twice per
+        // level.
         if (filtering && kept.isEmpty()) return@forEach
         val slot = capability?.slot(slotName)
         lines +=
@@ -1346,8 +1258,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The free text [nodeId] shows when it can be typed over in place on the canvas, or null for
-   * bound or choice-valued text.
+   * The free text [nodeId] shows when editable in place on the canvas, or null for bound or
+   * choice-valued text.
    */
   fun inlineText(state: UiBuilderEditorState, nodeId: String): String? {
     if (nodeId !in state.document.nodes) return null
@@ -1365,8 +1277,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The inspector's fields for the current selection. For several nodes, only properties every
-   * selected component declares are shown, and disagreeing values are [EditorPropertyField.mixed].
+   * The inspector's fields for the selection. For several nodes, only properties every selected
+   * component declares, with disagreeing values marked [EditorPropertyField.mixed].
    */
   fun propertyFields(state: UiBuilderEditorState): List<EditorPropertyField> {
     val anchor = state.selectedNodeId?.let(state.document.nodes::get)
@@ -1392,12 +1304,8 @@ class UiBuilderEditorReducer(
     val nodes = state.selection.mapNotNull(state.document.nodes::get)
     val node = nodes.lastOrNull() ?: return emptyList()
     val component = catalog.componentsById[node.componentId] ?: return emptyList()
-    // The other selected components, for deciding what the selection genuinely shares. A name in
-    // common is not enough: two components can both declare `style` and allow disjoint values, and
-    // the field is built from the anchor's declaration alone. Offering it would put a dropdown in
-    // front of the user whose every choice `commitProperty` then rejects for the other nodes —
-    // that per-node validation is what keeps the document right, and an unusable control is
-    // exactly what this inspector exists to stop showing.
+    // The other selected components: a shared name is not enough, since disjoint allowed values
+    // would make a control whose every choice `commitProperty` rejects.
     val others = nodes.dropLast(1).mapNotNull { catalog.componentsById[it.componentId] }
     fun sharedByAll(property: PropertyCapability): Boolean = others.all { other ->
       val theirs = other.propertiesByName[property.name] ?: return@all false
@@ -1428,11 +1336,8 @@ class UiBuilderEditorReducer(
             property.allowedValues.isNotEmpty() || declaredControl == PropertyEditorControl.ENUM ->
               EditorPropertyControl.Enum
             declaredControl == PropertyEditorControl.TEXT -> EditorPropertyControl.Text
-            // Membership, not equality, for the same reason `literalDefault` uses membership: a
-            // property declared ["boolean", "string"] is how the catalog spells "a flag or the name
-            // of a state variable". Under equality those fell through to `Unsupported`, so
-            // unbinding `m3/filter-chip.selected` wrote a real boolean the inspector then refused
-            // to edit — two rules in this file disagreeing about the same declaration.
+            // Membership, not equality, like `literalDefault`: ["boolean", "string"] means "a flag
+            // or a state variable name".
             declaredControl == PropertyEditorControl.BOOLEAN || "boolean" in typeNames ->
               EditorPropertyControl.Boolean
             (declaredControl == PropertyEditorControl.NUMBER ||
@@ -1502,11 +1407,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * How the selected node is sized on each axis, and what each axis may become.
-   *
-   * Single selection, like [modifierToggles]: a handle is drawn on one box. Null where nothing is
-   * selected, or where the component declares none of the size modifiers — a node that cannot be
-   * resized gets no handles rather than handles that refuse.
+   * How the selected node is sized on each axis and what each axis may become. Single selection
+   * only; null when nothing is selected or the component declares no size modifiers.
    */
   fun sizing(state: UiBuilderEditorState): EditorNodeSizing? {
     val nodeId = state.selection.singleOrNull() ?: return null
@@ -1520,10 +1422,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Re-size one axis of a node and submit the chain that results.
-   *
-   * Refused with the component's own reason rather than committed where the catalog does not
-   * declare the modifier the sizing needs — the same bargain [toggleModifier] makes.
+   * Re-size one axis of a node and submit the resulting chain, refused with the component's reason
+   * where the needed modifier is undeclared (as [toggleModifier] does).
    */
   private fun resizeNode(
     state: UiBuilderEditorState,
@@ -1651,8 +1551,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The layout modifiers the selection can be given, and whether it has them. Single selection
-   * only, and only modifiers the catalog declares on the component.
+   * The layout modifiers the selection can be given and whether it has them. Single selection only,
+   * catalog-declared modifiers only.
    */
   fun modifierToggles(state: UiBuilderEditorState): List<EditorModifierToggle> {
     val nodeId = state.selection.singleOrNull() ?: return emptyList()
@@ -1665,11 +1565,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Add or remove one modifier and submit the chain that results.
-   *
-   * Refused rather than committed where the catalog does not declare the modifier on that
-   * component: the document validator would reject the batch a moment later, and a rejection that
-   * names the modifier is more use than one that names the document.
+   * Add or remove one modifier and submit the resulting chain. Refused up front where the catalog
+   * does not declare the modifier, so the message names the modifier rather than the document.
    */
   private fun toggleModifier(
     state: UiBuilderEditorState,
@@ -1690,9 +1587,8 @@ class UiBuilderEditorReducer(
         "modifiers",
       )
     }
-    // The catalog says the component can carry it; the parent says whether the modifier means
-    // anything. `weight` outside a row or a column is a chain the renderer has no scope to apply
-    // and the exporter would emit as code that does not compile.
+    // The parent decides whether the modifier means anything: `weight` outside a row or column
+    // cannot render or compile.
     if (!menuModifier.offeredIn(state.document.scopeOf(nodeId))) {
       return state.rejected(
         sequence,
@@ -1713,11 +1609,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The numbers inside the selected node's modifier chain, in the order the chain applies them.
-   *
-   * Single selection, like [modifierToggles] and for the same reason. Only the numeric fields of
-   * modifiers this build knows: a chain entry a newer client wrote is left alone rather than shown
-   * as something this editor could edit and would in fact rewrite away.
+   * The numeric fields of the selected node's modifier chain, in application order. Single
+   * selection; modifiers this build does not know are left out rather than offered for editing and
+   * rewritten away.
    */
   fun modifierFields(state: UiBuilderEditorState): List<EditorModifierField> {
     val nodeId = state.selection.singleOrNull() ?: return emptyList()
@@ -1750,7 +1644,7 @@ class UiBuilderEditorReducer(
 
   /**
    * Write one value into one modifier, refusing drafts the field cannot hold. Field kinds come from
-   * [MODIFIER_FIELDS], the table the inspector draws from.
+   * [MODIFIER_FIELDS].
    */
   private fun setModifierValue(
     state: UiBuilderEditorState,
@@ -1915,12 +1809,11 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Everything the Compose export would refuse for this document, beyond the per-write validation:
-   * unreachable nodes, missing required properties, pin drift, unemittable components.
+   * Everything the Compose export would refuse beyond per-write validation: unreachable nodes,
+   * missing required properties, pin drift, unemittable components.
    *
-   * Read from [CapabilityComposeCodeExporter.diagnose] plus the real export's refusals. Errors
-   * only, since warnings do not block. Nodes that no longer exist are dropped. Takes only the
-   * document so callers can cache on it.
+   * From [CapabilityComposeCodeExporter.diagnose] plus the real export's refusals; errors only,
+   * dropping nodes that no longer exist. Takes only the document so callers can cache on it.
    */
   fun problems(
     document: UiBuilderDocument,
@@ -1928,10 +1821,8 @@ class UiBuilderEditorReducer(
   ): List<EditorProblem> {
     val export = exportOutcome(document, assetBytes)
     return (CapabilityComposeCodeExporter.diagnose(document, catalog)
-        // "No symbol mapping" / "no call emitter" describe `CapabilityComposeCodeExporter` itself,
-        // which does not write the export. Drop them when the generator that actually runs (a
-        // dedicated emitter, or the record path when it generates) has answered; other capability
-        // diagnostics stay.
+        // These codes describe `CapabilityComposeCodeExporter`, which does not write the export;
+        // drop them once the generator that runs has answered.
         .filterNot { it.code in GENERATOR_OWNED_CODES && export?.answersForTheEmitter == true }
         .filter { it.severity == ComposeExportSeverity.ERROR && it.code != "UNKNOWN_PROPERTY" }
         .map { diagnostic ->
@@ -1942,13 +1833,12 @@ class UiBuilderEditorReducer(
             componentId = diagnostic.componentId,
           )
         } +
-        // The refusals the server's export produces, from the same projection and generator.
-        // Appended rather than replacing, since capability diagnostics answer questions the
-        // generator does not ask.
+        // The server export's refusals, appended since capability diagnostics answer different
+        // questions.
         export?.refusals.orEmpty() +
         undeclaredPropertyProblems(document) +
-        // Not a refusal — the export runs — but the one property a whole design is judged by that
-        // commits and changes nothing visible (#485). The same notice the served export attaches.
+        // Not a refusal: the property commits but changes nothing visible (see #485). Same notice
+        // the served export attaches.
         listOfNotNull(
           RootSurfaceGround.diagnose(document)?.let { notice ->
             EditorProblem(
@@ -1956,10 +1846,7 @@ class UiBuilderEditorReducer(
               message = notice.message,
               nodeId = notice.nodeId,
               componentId = "m3/surface",
-              // The comment above already says the export runs. Before the panel split its rows
-              // that was a quiet inaccuracy under a heading claiming everything listed is refused;
-              // once the split exists, leaving it on the default would sort a notice into the
-              // blocking section and colour it as an error — the same untruth, now stated twice.
+              // A notice, not a blocking error.
               blocking = false,
             )
           }
@@ -2049,7 +1936,7 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The Kotlin the Compose export would write for [document], or why it would not. Total, like
+   * The Kotlin the Compose export would write for [document], or why not. Total, like
    * [exportRefusals], so a malformed property cannot take the editor down.
    */
   fun generatedCode(
@@ -2089,9 +1976,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The `@RemoteComposable` bodies of the design's inline remote content joined to [screenCode].
-   * They are appended when the screen generates and replace a refusal when it does not, with the
-   * refusal reasons kept as a header comment.
+   * The `@RemoteComposable` bodies of the design's inline remote content joined to [screenCode]:
+   * appended when the screen generates, replacing a refusal (kept as a header comment) when it does
+   * not.
    */
   private fun EditorGeneratedCode.withRemoteContent(
     document: UiBuilderDocument
@@ -2160,19 +2047,15 @@ class UiBuilderEditorReducer(
 
   /**
    * What the export would refuse and which generator says so, or null when the design cannot be
-   * read. Asked of the generator that actually writes the design, so record-free designs are not
-   * reported as blocked. `nodeId` is null because refusals refer to the projected screen, not
-   * document nodes.
+   * read. Asks the generator that actually writes the design; `nodeId` is null because refusals
+   * refer to the projected screen.
    */
   private fun exportOutcome(
     document: UiBuilderDocument,
     assetBytes: (contentDigest: String) -> ByteArray?,
   ): ExportOutcome? =
-  // Total, because the panel's contract is to *report* rather than throw. A malformed property
-  // makes `toProtocolDocument` fail its decode, and a panel that propagated that would take the
-  // editor down over the one document whose problems a designer most needs listed. The capability
-  // diagnostics above already name that document's real fault — and keep all of them, since null
-  // here says nothing about which generator would have answered.
+  // Total: a malformed property fails `toProtocolDocument`, and the panel must report rather than
+  // throw. The capability diagnostics already name that fault.
   runCatching {
     when (
       val recordFree =
@@ -2185,9 +2068,8 @@ class UiBuilderEditorReducer(
     ) {
       is RecordFreeExport.Generated.Refused ->
         ExportOutcome(dedicated = true, reasons = recordFree.reasons)
-      // It generates. The gate below would still refuse it — that is the whole reason these
-      // designs have their own emitter — so asking it anything here is asking the wrong
-      // question.
+      // It generates; the record gate would still refuse it, which is why these designs have their
+      // own emitter.
       is RecordFreeExport.Generated.Emitted ->
         ExportOutcome(dedicated = true, reasons = emptyList())
       null ->
@@ -2207,8 +2089,8 @@ class UiBuilderEditorReducer(
    */
   private class ExportOutcome(val dedicated: Boolean, val reasons: List<String>) {
     /**
-     * Whether this answer replaces the capability exporter's own "no symbol" / "no emitter" one: a
-     * dedicated emitter's always does, the record path's only when it generates.
+     * Whether this replaces the capability exporter's "no symbol"/"no emitter" answer: always for a
+     * dedicated emitter, for the record path only when it generates.
      */
     val answersForTheEmitter: Boolean
       get() = dedicated || reasons.isEmpty()
@@ -2225,11 +2107,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The theme host the Theme panel edits, or null when the design has none.
-   *
-   * A Material 3 design's theme is its root `m3/surface` ([themeHost]); an `m3/surface` further
-   * down is just a surface. A Wear screen or a Remote widget is its own theme host, so the one that
-   * holds the selection is the one edited, and otherwise the first at the top of the design.
+   * The theme host the Theme panel edits, or null. A Material 3 design's is its root `m3/surface`
+   * ([themeHost]); Wear screens and Remote widgets are their own hosts, preferring the one holding
+   * the selection, else the first.
    */
   fun themePanelHost(state: UiBuilderEditorState): EditorThemeHost? {
     val document = state.document
@@ -2299,10 +2179,7 @@ class UiBuilderEditorReducer(
     )
   }
 
-  /**
-   * The selection's path from a root, root first, walked up through each node's location. Stops at
-   * a cycle or a missing ancestor.
-   */
+  /** The selection's path from a root, root first. Stops at a cycle or a missing ancestor. */
   fun selectionPath(state: UiBuilderEditorState): List<UiBuilderBreadcrumbEntry> {
     val selected = state.selectedNodeId ?: return emptyList()
     val document = state.document
@@ -2369,33 +2246,22 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Why an Add beside cannot happen right now, or null when it can.
-   *
-   * Asked by the insert panel before anything is pressed, for the same reason `dropTarget` is: the
-   * beginner's question about that panel is where the next Add lands, and a refusal is a worse
-   * answer after the press than before it.
+   * Why an Add beside cannot happen right now, or null when it can. Asked before the press so the
+   * insert panel can say where the next Add lands.
    */
   fun besideRefusal(state: UiBuilderEditorState, componentId: String? = null): String? {
     val document = state.document
-    // An empty design first, because nothing below applies to it: `besideDestination` puts the
-    // component at the root, which is exactly where a root-only component's emitter wants it. The
-    // component guard ahead of this refused every Wear scaffold on a design that had nothing to be
-    // beside — a refusal of the one placement that was already correct.
+    // An empty design first: the component simply becomes the root, which suits root-only
+    // components too.
     if (document.roots.isEmpty()) return null
-    // Then the component, because it holds wherever the item would land. The document-level refusal
-    // below is about *wrapping* an existing root; this one is about the thing being added, and a
-    // board that already exists has no wrap left to refuse — which is exactly how a Wear scaffold
-    // could have become one item of a board on a design whose first Add was an ordinary layout.
+    // Then the component: a root-only component must never become one item of a board.
     if (componentId != null && componentId in RecordFreeExport.ROOT_ONLY_COMPONENT_IDS) {
       return "A ${catalog.componentsById[componentId]?.displayName ?: componentId} is exported as " +
         "the whole design, so it cannot be one item of a board"
     }
     if (document.boardRootId != null) return null
-    // Wrapping changes which emitter writes the design: both record-free emitters route on the root
-    // component id, so a wrapped Wear screen would quietly stop being one and be handed to the
-    // record-driven generator instead. Refusing is the honest half of §1 of the design doc — a
-    // board
-    // must not convert a design into something that exports differently without saying so.
+    // Both record-free emitters route on the root component id, so wrapping a Wear design would
+    // silently change how it exports.
     if (document.isWearScreen() || document.isWearWidget()) {
       return "A Wear screen or widget is exported as itself, so it cannot become one item of a board"
     }
@@ -2403,11 +2269,10 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Where an Add beside lands and the prelude it needs, shared by the palette and the Remote
-   * Compose panel
-   * ([`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md)):
-   * append into an existing board, become the root of an empty design, or wrap the current root in
-   * a new board. The prelude and insert are one command, so they undo together.
+   * Where an Add beside lands and its prelude, shared by the palette and the Remote Compose panel (
+   * [`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES
+   * _VARIANTS.md)): append into a board, become the root of an empty design, or wrap the root in a
+   * new board. Prelude and insert are one command, so they undo together.
    */
   private fun besideDestination(state: UiBuilderEditorState, sequence: Int): BesideDestination {
     val document = state.document
@@ -2431,7 +2296,7 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Add a top-level item beside the design as one command (see [besideDestination]). The two roots
+   * Add a top-level item beside the design as one command (see [besideDestination]). Two roots
    * mid-command are legal because `requireSingleRoot` runs per command.
    */
   private fun insertBeside(
@@ -2464,8 +2329,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * [variant] as encoded properties via [asLiteral]. A variant the component no longer declares or
-   * allows encodes to nothing, so a stale row never refuses an insert.
+   * [variant] as encoded properties via [asLiteral]. A variant no longer declared or allowed
+   * encodes to nothing, so a stale row never refuses an insert.
    */
   private fun ComponentCapability.variantProperties(
     variant: EditorCatalogVariant?
@@ -2523,8 +2388,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Insert [component] into [target] regardless of the selection. [insert]'s selection check guards
-   * the catalog-drag route; a promoted reference piece arrives with a hit-tested slot instead.
+   * Insert [component] into [target] regardless of the selection; for a promoted reference piece,
+   * which arrives with a hit-tested slot.
    */
   private fun insertAt(
     state: UiBuilderEditorState,
@@ -2534,11 +2399,8 @@ class UiBuilderEditorReducer(
     /** Encoded values written over the inserted root's own defaults — see [variantProperties]. */
     presetProperties: Map<String, JsonObject> = emptyMap(),
     /**
-     * Where a canvas drop asked to land — after this child of [target], or appended when null.
-     *
-     * Resolved against the slot's children at command time: a neighbour the plan named that a
-     * concurrent edit has since removed falls back to appending, because the drag held up its half
-     * of the bargain and the document moved under it.
+     * Insert after this child of [target], or append when null. A neighbour removed concurrently
+     * falls back to appending.
      */
     requestedAfter: String? = null,
   ): UiBuilderEditorState {
@@ -2571,15 +2433,10 @@ class UiBuilderEditorReducer(
           "This design declares no state variable `${action.variable}`",
         )
       }
-      // Bound on the inserted root to its own change event when it has one — `checkedChange` for a
-      // checkbox, whose callback is `onCheckedChange` — and to `click` otherwise, the one event
-      // this
-      // renderer applies to any node (`actionModifier` makes anything carrying a click binding
-      // clickable).
+      // Bound to the inserted root's own change event when it has one (e.g. `checkedChange`), else
+      // `click`, which `actionModifier` applies to any node.
       val declaration = state.document.stateVariables[action.variable] as? JsonObject
-      // `selectOrClear` writes null when the value is already selected, and the exporter declares
-      // each variable from its own `nullable`. Against a non-nullable one the generated assignment
-      // would not compile, so the design never gets to hold that action.
+      // `selectOrClear` writes null, which would not compile against a non-nullable variable.
       if (action is EditorStateAction.SelectOrClear && !declaredNullable(declaration)) {
         return state.rejected(
           sequence,
@@ -2587,10 +2444,8 @@ class UiBuilderEditorReducer(
           "State variable `${action.variable}` is not nullable, so it cannot be cleared",
         )
       }
-      // `toggle` is `!x`, which needs a boolean. The renderer coerces whatever it finds to a
-      // boolean string and carries on, so the preview looks like it works; the exporter refuses
-      // and emits a `TODO` that throws on the first press. Refusing here keeps the design from
-      // holding an action only one of its two consumers can perform.
+      // `toggle` needs a boolean: the renderer coerces silently but the exporter refuses, so refuse
+      // here to keep preview and export consistent.
       if (
         action is EditorStateAction.Toggle && declaredStateKind(declaration) != StateKind.BOOLEAN
       ) {
@@ -2618,9 +2473,9 @@ class UiBuilderEditorReducer(
 
   /**
    * Insert `remote-compose/document` carrying [documentBase64], decoded first so an undecodable
-   * fetch (an HTML error page, say) is refused instead of becoming a shared design revision.
+   * fetch (e.g. an HTML error page) is refused instead of becoming a shared revision.
    *
-   * @param target the slot to fill, or null for an Add beside — see [besideDestination].
+   * @param target the slot to fill, or null for an Add beside; see [besideDestination].
    */
   private fun insertRemoteComposeDocument(
     state: UiBuilderEditorState,
@@ -2636,10 +2491,8 @@ class UiBuilderEditorReducer(
           RejectionCode.INVALID_LOCATION,
           "This catalog does not offer $REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID",
         )
-    // Beside the design rather than into a slot: the panel offered every Remote Compose row while
-    // Add beside was on — a top-level item needs no compatible slot — and then resolved the drop
-    // target anyway, so the row either refused after its fetch or landed inside the selection while
-    // the panel said otherwise. A played document is exactly the kind of asset a board holds.
+    // Add beside: a top-level item needs no compatible slot, and a played document is the kind of
+    // asset a board holds.
     if (target == null) {
       besideRefusal(state, REMOTE_COMPOSE_DOCUMENT_COMPONENT_ID)?.let {
         return state.rejected(sequence, RejectionCode.INVALID_LOCATION, it)
@@ -2679,9 +2532,7 @@ class UiBuilderEditorReducer(
     if (defaultError != null) {
       return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, defaultError)
     }
-    // By id, not the first insert: a beside insert may be preceded by the board's own `InsertNode`,
-    // and writing the document's bytes onto the board is not a mistake anything downstream would
-    // report — the pane would simply draw nothing.
+    // By id, not the first insert: a beside insert may be preceded by the board's own `InsertNode`.
     val index = operations.indexOfFirst { it is DesignOperation.InsertNode && it.node.id == nodeId }
     val root = operations[index] as DesignOperation.InsertNode
     operations[index] =
@@ -2727,9 +2578,8 @@ class UiBuilderEditorReducer(
     }
     val siblings = state.document.children(event.parent)
     val after = event.afterNodeId?.takeIf { it != event.nodeId }
-    // The drop that changes nothing is the commonest drop of all — a row picked up and released
-    // over itself — and it must not cost an operation, an undo step or a revision every
-    // collaborator has to take.
+    // A row released over itself is the commonest drop; it must not cost an operation, undo step or
+    // revision.
     val settled = siblings.filterNot { it == event.nodeId }
     val landing = if (after == null) 0 else settled.indexOf(after) + 1
     if (state.document.location(event.nodeId) == event.parent) {
@@ -2743,11 +2593,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Why [target] will not take [nodeId], or null when it will.
-   *
-   * The panel asks this while a row is being dragged, so a slot that cannot take what is over it
-   * says so before the release rather than swallowing the gesture; the reducer asks it again on the
-   * release, because the drag is not the only thing that can send a move.
+   * Why [target] will not take [nodeId], or null when it will. Asked while dragging (so the slot
+   * refuses before release) and again by the reducer on release.
    */
   fun moveRefusal(
     state: UiBuilderEditorState,
@@ -2782,10 +2629,8 @@ class UiBuilderEditorReducer(
         "${component.displayName} does not belong in ${target.nodeId}.${target.slot}",
       )
     }
-    // The slot it is leaving has a floor as well as a ceiling. A Scaffold's `content` holds
-    // exactly one child, so dragging that child out empties a slot the document requires — the
-    // document validator refuses it, correctly, and the panel would have shown the drop as
-    // landable right up to the release.
+    // The leaving slot has a floor too: dragging out a Scaffold `content`'s only child would empty
+    // a required slot.
     val origin = state.document.location(nodeId)
     if (origin != null && origin != target) {
       val originSlot =
@@ -2859,9 +2704,8 @@ class UiBuilderEditorReducer(
       )
     }
     val value = (parsed as PropertyDraft.Valid).value
-    // Every selected node that declares this property, so editing six texts' style is one edit.
-    // The edited node is always included even when it is not in the selection, which is what
-    // happens when the inspector is driven by something other than a click.
+    // Every selected node declaring this property, so a multi-selection is one edit. The edited
+    // node is always included, even outside the selection.
     val targets =
       (state.selection.filter { it != nodeId } + nodeId).mapNotNull { id ->
         state.document.nodes[id]?.takeIf {
@@ -2877,9 +2721,8 @@ class UiBuilderEditorReducer(
         property.canonicalWrapper(existingValue?.get("type")?.primitiveOrNull()?.contentOrNull)
       val encoded =
         if (edgeName == null) {
-          // A colour's wrapper follows the value rather than the node's existing spelling: a theme
-          // role is a `colorToken` and a literal is a `color`, which is what the export reads, and
-          // an existing `string` is exactly the spelling this edit exists to leave behind.
+          // A colour's wrapper follows the value: a theme role is `colorToken`, a literal is
+          // `color`, as the export reads them.
           val type =
             if (field.control == EditorPropertyControl.Color) colourWrapper(value)
             else existingType ?: field.defaultEncodedType()
@@ -2898,9 +2741,8 @@ class UiBuilderEditorReducer(
               target.id,
               baseName,
             )
-      // Validated per node rather than once for the anchor: the same value can be legal on one
-      // component and not another, and a rejected edit must reject the whole batch rather than
-      // apply to the nodes that happened to come first.
+      // Validated per node: a value can be legal on one component and not another, and one
+      // rejection rejects the whole batch.
       validator.validate(state.document, target.id, baseName, encoded)?.let { issue ->
         return state.rejected(
           sequence,
@@ -2923,8 +2765,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Attach an import as the base, extracting its boxes once so every route in uses the same reader.
-   * Only the mode and visibility carry over from the previous attachment; alignment does not.
+   * Attach an import as the base, extracting its boxes once so every route uses the same reader.
+   * Only mode and visibility carry over from the previous attachment.
    */
   private fun attached(state: UiBuilderEditorState, image: ReferenceImage): ReferenceOverlayState =
     state.reference.copy(
@@ -2934,9 +2776,7 @@ class UiBuilderEditorReducer(
           mode = state.reference.settings.mode,
           visible = true,
           alwaysShowBoxes = state.reference.settings.alwaysShowBoxes,
-          // The fit is a fact about the picture rather than the operator's habit, so it is the one
-          // setting a new picture chooses for itself: a cropped button lands at its actual size,
-          // a tall capture across the width, and a screen contained as it always was.
+          // The fit is a fact about the picture, so a new picture chooses its own.
           fit = state.referenceFacts(image)?.recommendedFit ?: ReferenceFit.Contain,
         ),
       layoutBoxes = image.svgTextOrNull()?.let(::extractSvgLayoutBoxes).orEmpty(),
@@ -2969,12 +2809,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Drop a piece in the middle of the frame at a size that can be seen and grabbed.
-   *
-   * Centred at a fixed fraction rather than at the picture's natural pixel size, because the
-   * reducer has no frame in pixels to compare it against — and because a component copied out of a
-   * design tool arrives at that tool's resolution, which is rarely this frame's. Its aspect ratio
-   * is honoured where the importer knew it.
+   * Drop a piece centred at a fixed fraction of the frame, keeping its aspect ratio where known.
+   * Not its pixel size: the reducer has no frame in pixels, and imports arrive at another tool's
+   * resolution.
    */
   private fun placePiece(
     state: UiBuilderEditorState,
@@ -3039,11 +2876,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The compatible slot physically under a catalog drag, without a selection fallback.
-   *
-   * A measured slot uses its child-union bounds. An empty (including unmaterialized) declared slot
-   * has no such union, so its parent's bounds are its honest landing region. The smallest matching
-   * region wins, keeping a nested container more specific than the container around it.
+   * The compatible slot physically under a catalog drag, without a selection fallback. Empty or
+   * unmaterialized slots use their parent's bounds; the smallest matching region wins.
    */
   fun catalogDropTarget(
     state: UiBuilderEditorState,
@@ -3055,11 +2889,8 @@ class UiBuilderEditorReducer(
   ): ParentSlot? = catalogDropPlan(state, componentId, slots, nodeBounds, pointX, pointY)?.target
 
   /**
-   * Where a catalog drag hovering at a point would land — the slot and the seam between its
-   * children.
-   *
-   * The slot is the same smallest-containing answer [catalogDropTarget] has always given; the rest
-   * of the plan is what turns a slot tint into a marker at the seam the drop actually lands at.
+   * Where a catalog drag at a point would land: the slot ([catalogDropTarget]) and the seam between
+   * its children.
    */
   fun catalogDropPlan(
     state: UiBuilderEditorState,
@@ -3077,8 +2908,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Where a canvas move of [nodeId] hovering at a point would land, or null while no legal slot is
-   * under the pointer. Legality is [moveRefusal], the same check the layers panel uses.
+   * Where a canvas move of [nodeId] at a point would land, or null while no legal slot is under the
+   * pointer. Legality is [moveRefusal], as in the layers panel.
    */
   fun canvasMovePlan(
     state: UiBuilderEditorState,
@@ -3099,7 +2930,7 @@ class UiBuilderEditorReducer(
 
   /**
    * The smallest slot region containing the point that answers to [legal], or null. Containment is
-   * checked before legality because it is cheaper.
+   * checked first because it is cheaper.
    *
    * A slot's region is the container it fills, except where a parent declares several slots: then
    * child unions distinguish them, and unmaterialized slots fall back to the parent's box.
@@ -3137,10 +2968,8 @@ class UiBuilderEditorReducer(
           // Equal regions are one region nested in the other: the deeper slot is the more
           // specific answer, and which candidate arrives first must not decide.
           { (target, _) -> state.document.slotDepth(target.nodeId) },
-          // And equal regions at the same depth are the slots of one parent, where the catalog's
-          // own recommendation decides: an empty Scaffold's three slots all claim the scaffold,
-          // and a drop into one should land in its content rather than in whichever slot the
-          // document enumerated first.
+          // Same depth: sibling slots of one parent, so the catalog's recommended slot wins (an
+          // empty Scaffold's content).
           { (target, _) -> if (isRecommended(state, target)) 0 else 1 },
         )
       )
@@ -3148,8 +2977,7 @@ class UiBuilderEditorReducer(
 
   /**
    * The hit-test region of each of [parent]'s declared slots: a populated slot's child union, or
-   * for an empty slot the container minus its populated siblings' strips (where the placeholder is
-   * drawn).
+   * for an empty slot the container minus its populated siblings' strips.
    */
   private fun slotRegions(
     parent: UiBuilderNode,
@@ -3194,10 +3022,8 @@ class UiBuilderEditorReducer(
     populated.forEach { strip ->
       val spansWidth = strip.width >= (right - left) * 0.9f
       val spansHeight = strip.height >= (bottom - top) * 0.9f
-      // The edge it hugs is the nearer one, not the one its centre is on: a populated content
-      // that starts just below a top bar and runs to the bottom has its centre below the middle
-      // and still belongs to the top edge, and subtracting it from the bottom would leave the
-      // empty top bar the whole container and the content nothing.
+      // A strip hugs its nearer edge, not the one its centre is on, so tall content below a top bar
+      // still counts as top.
       val topGap = strip.y - top
       val bottomGap = bottom - strip.bottom
       val leftGap = strip.x - left
@@ -3218,8 +3044,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The empty recommended slots, as regions the canvas draws an editor-only placeholder at. One per
-   * component, so a Scaffold does not draw three; the rest stay droppable via [slotRegions].
+   * The empty recommended slots the canvas draws an editor-only placeholder at, one per component;
+   * the rest stay droppable via [slotRegions].
    */
   fun slotPlaceholders(
     state: UiBuilderEditorState,
@@ -3263,11 +3089,8 @@ class UiBuilderEditorReducer(
   private val TIDY_GRID_DP = 4
 
   /**
-   * The literal with its dp value moved onto the grid, or null where there is nothing to move.
-   *
-   * Only a plain number moves: a binding has no value to snap, a colour and an enum are not
-   * lengths, and a value already on the grid is left exactly as it was written — including whether
-   * it was written as a whole number or a decimal, so the validator sees the shape it saw before.
+   * The literal with its dp value snapped to the grid, or null. Only plain numbers move, and
+   * on-grid values are untouched (including int vs decimal spelling).
    */
   private fun JsonObject.snappedDpLiteral(): JsonObject? {
     val snapped = snappedDpNumber(get("value") ?: return null) ?: return null
@@ -3288,11 +3111,10 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The seam of [target] the pointer sits against, as a place in the document. The slot's children
-   * are ordered along the axis the layout measured — pairwise disjoint along one coordinate with
-   * overlap along the other is a row or a column; anything tangled, and a slot with a single child,
-   * falls back to the slot's own shape. The pointer's coordinate along that axis picks the seam:
-   * before the first child whose centre is past it, after the last otherwise.
+   * The seam of [target] the pointer sits against. Children are ordered along the measured axis
+   * (disjoint on one coordinate, overlapping on the other); tangled or single-child slots use the
+   * slot's own shape. Lands before the first child whose centre is past the pointer, else after the
+   * last.
    */
   private fun dropPlan(
     state: UiBuilderEditorState,
@@ -3301,13 +3123,7 @@ class UiBuilderEditorReducer(
     nodeBounds: Map<String, UiBuilderPixelBounds>,
     pointX: Float,
     pointY: Float,
-    /**
-     * A child the plan must not count, which a canvas move passes as the node it picked up.
-     *
-     * The seam a move lands at is a seam between the slot's *remaining* children — the same list
-     * the release is computed against — and counting the dragged node would name it as its own
-     * neighbour, a request the move has to throw away.
-     */
+    /** A child to ignore: the node a canvas move picked up, which must not be its own neighbour. */
     exclude: String? = null,
   ): UiBuilderDropPlan {
     val measured =
@@ -3375,12 +3191,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Whether [target] is a real, compatible slot in [document].
-   *
-   * An Add resolves this target from the selection, while a canvas drop resolves it from pointer
-   * geometry. Validation belongs here rather than requiring both gestures to have the same
-   * selection: otherwise the editor highlights the slot under the pointer and then rejects that
-   * exact slot because an unrelated layer was selected before the drag began.
+   * Whether [target] is a real, compatible slot in [document]. Validated here rather than against
+   * the selection, since a canvas drop resolves its target from pointer geometry.
    */
   private fun acceptsComponent(
     document: UiBuilderDocument,
@@ -3460,17 +3272,13 @@ class UiBuilderEditorReducer(
         "theme" to JsonPrimitive(settings.theme.wireValue),
         "layoutDirection" to JsonPrimitive(settings.layoutDirection.wireValue),
       )
-    // Not in the map above, because the map's "has this field moved?" test is a raw JSON compare
-    // and an absent key is not the same JSON as an empty array — though it is the same *answer*.
-    // Every design written before this field says nothing, so folding it in blindly would have
-    // added an empty `exportDevices` write to every unrelated environment edit, turning a
-    // single-field density change into a two-field one and costing the undo step its meaning.
+    // Only when changed: an absent key and an empty array are different JSON but the same answer,
+    // and writing it would turn single-field edits into two-field ones.
     if (settings.exportDevices != state.document.screenEnvironmentSettings().exportDevices) {
       values["exportDevices"] = JsonArray(settings.exportDevices.map(::JsonPrimitive))
     }
-    // The same only-when-moved rule, for the same reason: a design that never named a family has
-    // no `typeface` key, and folding a null in would turn every frame edit into a typeface reset.
-    // A cleared family is written as JSON null, which the protocol bridge sends as the reset.
+    // Same only-when-changed rule; a cleared family is written as JSON null, which the bridge sends
+    // as the reset.
     val typeface = settings.typeface?.takeIf { it.isNotBlank() }
     if (typeface != state.document.screenEnvironmentSettings().typeface) {
       values["typeface"] = typeface?.let(::JsonPrimitive) ?: JsonNull
@@ -3549,8 +3357,7 @@ class UiBuilderEditorReducer(
 
   /**
    * [roles] onto the theme host's colour properties and the catalog's `color.*` tokens, as one
-   * edit. Tokens first, so where a token and the host name the same property the host's write — the
-   * same value — is the one kept.
+   * edit. Tokens first, so the host's write (same value) is the one kept on overlap.
    */
   private fun applyColorScheme(
     state: UiBuilderEditorState,
@@ -3600,10 +3407,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Where [UiBuilderEditorEvent.Tidy] would move values onto the grid, and how many would move.
-   *
-   * Pure, so the toolbar can count the edits for its sentence before the command is built, and so
-   * the tests can pin the rule without a dispatch.
+   * Where [UiBuilderEditorEvent.Tidy] would move values onto the grid, and how many. Pure, so the
+   * toolbar can count before building the command.
    */
   fun tidyPlan(state: UiBuilderEditorState): UiBuilderTidyPlan {
     val document = state.document
@@ -3616,9 +3421,7 @@ class UiBuilderEditorReducer(
     scope.sorted().forEach { nodeId ->
       val node = document.nodes[nodeId] ?: return@forEach
       val capability = catalog.componentsById[node.componentId]
-      // Properties the catalog declares as a dp number. A value the catalog does not declare is
-      // not the editor's to move, and a value that is not a plain number — a binding, a colour, an
-      // enum — has no place on a grid.
+      // Only catalog-declared dp numbers; bindings, colours and enums have no place on a grid.
       capability
         ?.properties
         ?.filter { it.name.endsWith("Dp") }
@@ -3778,11 +3581,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Reorder the selection among its siblings.
-   *
-   * Reordering was reachable only by dragging a layer row. That leaves anyone who cannot or would
-   * rather not drag — a trackpad, a screen reader, a keyboard — unable to change the one thing
-   * layout is mostly made of, so the same [moveTarget] the drag uses is now on the keyboard too.
+   * Reorder the selection among its siblings via the same [moveTarget] as layer drag, for keyboard
+   * and screen-reader users.
    */
   private fun moveSelected(
     state: UiBuilderEditorState,
@@ -3794,9 +3594,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Link [target] to the tunable named [into], or to a new tunable seeded from what the target
-   * holds: its value becomes the default, and a range around it inside the catalog's own bounds
-   * becomes the slider's. A target is driven by one tunable at a time, so linking it moves it.
+   * Link [target] to the tunable named [into], or to a new tunable seeded from the target's value
+   * with a range inside the catalog's bounds. A target has one tunable at a time, so linking moves
+   * it.
    */
   private fun tuneTarget(
     state: UiBuilderEditorState,
@@ -3890,8 +3690,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Replace the tunable [name] with [edited], keeping where its slider is — moved into the new
-   * range — under its new name. A rename onto another tunable's name is refused rather than merged.
+   * Replace the tunable [name] with [edited], keeping its slider position (clamped) under the new
+   * name. Renaming onto another tunable's name is refused.
    */
   private fun editTunable(
     state: UiBuilderEditorState,
@@ -3917,12 +3717,10 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Write every tunable's current value into the targets it drives, one lane per event: property
-   * writes first, then modifier writes. Undo compensates the two lanes separately and refuses a
-   * batch that mixes them, and a host is sent the one command an event produced — so a
-   * configuration touching both lanes is two `ApplyTunables`, which the editor dispatches together
-   * (one undo each). Once nothing is left to write, the values become the defaults and the sliders
-   * rest on them. A refused command leaves the sliders where they were, so nothing dragged is lost.
+   * Write every tunable's current value into its targets, one lane per event: property writes, then
+   * modifier writes, since undo refuses batches mixing them (the editor dispatches both together).
+   * Once nothing is left, values become defaults. A refused command leaves the sliders as they
+   * were.
    */
   private fun applyTunables(state: UiBuilderEditorState): UiBuilderEditorState {
     val settled = state.tunables.map { it.copy(default = state.tunedValues.valueOf(it)) }
@@ -3958,8 +3756,8 @@ class UiBuilderEditorReducer(
     }
 
   /**
-   * Write [value] into every property the token binds, as one command — every write is a property,
-   * so one undo takes the whole token back. Null resets it; see [DesignToken.writes].
+   * Write [value] into every property the token binds as one command, so one undo reverts it. Null
+   * resets; see [DesignToken.writes].
    */
   private fun applyDesignToken(
     state: UiBuilderEditorState,
@@ -3987,10 +3785,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Apply every imported token value as one command. Each token's writes are computed against the
-   * document as the tokens before it left it, so two tokens binding the same property resolve the
-   * way applying them one by one would: the later one wins. A value a token cannot take refuses the
-   * whole import by name, rather than applying the half that happened to come first.
+   * Apply every imported token value as one command. Each token's writes see the earlier tokens'
+   * effects, so the later one wins on overlap; any invalid value refuses the whole import by name.
    */
   private fun importDesignTokens(
     state: UiBuilderEditorState,
@@ -4039,9 +3835,7 @@ class UiBuilderEditorReducer(
     return state.apply(sequence, last.asReversed(), state.selectedNodeId)
   }
 
-  /**
-   * A tunable over a number token, or the one that already drives it; see [DesignToken.tunable].
-   */
+  /** A tunable over a number token, or the one already driving it; see [DesignToken.tunable]. */
   private fun tuneDesignToken(state: UiBuilderEditorState, tokenId: String): UiBuilderEditorState {
     if (state.tunables.any { it.token == tokenId }) return state
     val sequence = state.operationSequence + 1
@@ -4070,12 +3864,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Point a property at a state variable.
-   *
-   * This rides `SetProperty` rather than needing an operation of its own: `StateValueV1` is a
-   * `UiValueV1`, so `{"type": "state", "variable": …}` is a property value the wire already
-   * carries, the server already validates, and the renderer already resolves. It is how the
-   * fixture's search field is wired.
+   * Point a property at a state variable, via `SetProperty`: `{"type": "state", "variable": …}` is
+   * a `UiValueV1` the wire, server and renderer already handle.
    */
   private fun bindPropertyToState(
     state: UiBuilderEditorState,
@@ -4108,11 +3898,8 @@ class UiBuilderEditorReducer(
     }
     val declaration = state.document.stateVariables[variable] as? JsonObject
     if (equalsValue != null) {
-      // The operand is compared against the variable in the exported Kotlin, so it has to be the
-      // same type the variable is declared as. Encoding it as a string regardless produced
-      // `expanded == "true"` against a `Boolean` and `selectedDay == "1"` against an `Int` —
-      // neither compiles. The fourth place in this file where a declaration and the literal
-      // written against it had to be made to agree.
+      // The operand must have the variable's declared type, or the exported comparison will not
+      // compile.
       EditorStateAction.Set(variable, equalsValue).valueRefusal(declaration)?.let { why ->
         return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, why, nodeId, propertyName)
       }
@@ -4145,11 +3932,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Set a property to a formula the player evaluates: `time.secondOfHour * 6`, `count + 1`.
-   *
-   * The text is parsed against the design's state variables into the `expr` tree the document
-   * stores, then validated like any other write, so a formula whose result the property cannot hold
-   * — a number into a colour — is refused here with the reason rather than at export.
+   * Set a property to a formula the player evaluates (`time.secondOfHour * 6`, `count + 1`). Parsed
+   * against the design's state variables and validated like any write, so a type mismatch is
+   * refused here rather than at export.
    */
   private fun bindPropertyToFormula(
     state: UiBuilderEditorState,
@@ -4203,10 +3988,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Give a bound property a literal again.
-   *
-   * Needed because a bound property refuses a typed literal — `commitProperty` will not rewrite a
-   * state read into a value — so without this a binding is a one-way door.
+   * Give a bound property a literal again; `commitProperty` will not overwrite a binding with a
+   * literal.
    */
   private fun clearProperty(
     state: UiBuilderEditorState,
@@ -4237,9 +4020,7 @@ class UiBuilderEditorReducer(
     val current =
       (node.properties[propertyName] as? JsonObject)?.get("type")?.primitiveOrNull()?.contentOrNull
     if (current !in STATE_VALUE_TYPES && current !in COMPUTED_VALUE_TYPES) return state
-    // Deliberately not `defaultEncodedValue`: for some properties the catalog default *is* a state
-    // binding — a text field's `value` defaults to one — so unbinding to the default would leave
-    // the property bound, which is a no-op for exactly the properties most likely to be bound.
+    // Not `defaultEncodedValue`: some catalog defaults are themselves state bindings.
     val encoded = property.literalDefault()
     validator.validate(state.document, nodeId, propertyName, encoded)?.let { issue ->
       return state.rejected(
@@ -4258,8 +4039,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The catalog containers that could wrap the current selection in place: the parent slot must
-   * accept the container and the container must accept every selected node.
+   * The catalog containers that could wrap the selection in place: the parent slot must accept the
+   * container and the container every selected node.
    */
   fun wrapCandidates(state: UiBuilderEditorState): List<EditorCatalogItem> {
     val targets = state.selectionRoots()
@@ -4369,25 +4150,19 @@ class UiBuilderEditorReducer(
         // than appearing at the end of the slot and reordering the screen.
         afterNodeId = state.document.children(parent).takeWhile { it !in targets }.lastOrNull(),
         operations = operations,
-        // The wrapped nodes are the content. Starter content here would be a subtree inserted and
-        // deleted inside one batch — and the placeholder sweep below only removes the seeded
-        // children of the wrap slot, so anything seeded deeper would be left hanging.
+        // The wrapped nodes are the content; deeper seeded children would be left hanging.
         seedStarterContent = false,
       )
     if (defaultError != null) {
       return state.rejected(sequence, RejectionCode.INVALID_PROPERTY, defaultError)
     }
-    // A container with a required slot arrives holding a placeholder child — wrapping one text in
-    // a Card produced a Card containing `New text` *and* the text, which unwrap could not undo.
-    // The placeholders are removed once the real children are in, never before: the slot has a
-    // minimum, and emptying it first would make the batch invalid halfway through.
+    // Remove a required slot's placeholder child, but only after the real children are in, so the
+    // slot minimum holds mid-batch.
     val placeholders =
       operations.filterIsInstance<DesignOperation.InsertNode>().filter {
         it.parent == ParentSlot(containerId, slot.name)
       }
-    // Tree order, not click order. `selectionRoots` preserves the order nodes were selected in —
-    // shift-clicking D then B stores C, D, B — and moving them in that order writes it into the
-    // container, silently reordering the screen the selection came from.
+    // Tree order, not selection order, so the wrapped content is not reordered.
     val ordered = targets.sortedBy(state.document.treeIndex())
     var after: String? = null
     ordered.forEach { nodeId ->
@@ -4462,8 +4237,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The components insertable already wired to a click action: placeable here, and with an emitter
-   * that takes `onClick`, so the interaction is not lost on export (`UNEMITTED_EVENT`).
+   * Components insertable already wired to a click action: placeable here, with an emitter taking
+   * `onClick` so the interaction survives export (`UNEMITTED_EVENT`).
    */
   fun actionInsertCandidates(state: UiBuilderEditorState): List<EditorCatalogItem> =
     if (state.document.stateVariables.isEmpty()) emptyList()
@@ -4476,9 +4251,8 @@ class UiBuilderEditorReducer(
   private fun copySelected(state: UiBuilderEditorState): UiBuilderEditorState {
     val roots = state.selectionRoots()
     if (roots.isEmpty()) return state
-    // No operation and no sequence bump: copying changes the editor, not the document, so it must
-    // not become an undo step. Undoing a copy would otherwise "undo" whatever real edit preceded
-    // it, which is the kind of surprise that makes people stop trusting undo.
+    // No operation or sequence bump: copying changes the editor, not the document, so it is not an
+    // undo step.
     return state.copy(clipboard = state.document.clip(roots))
   }
 
@@ -4524,15 +4298,11 @@ class UiBuilderEditorReducer(
         )
     val operations = mutableListOf<DesignOperation>()
     val pastedIds = mutableListOf<String>()
-    // Beside the selection when the paste landed in the slot the selection already sits in, and at
-    // the end of the slot when it landed inside the selected container. `findDestination` falls
-    // back to the parent slot for a leaf — copying a card in a list and pasting sent the copy to
-    // the bottom of the list, which is never where you were looking.
+    // Beside the selection when pasting into its own slot, at the end when pasting inside the
+    // selected container.
     val selectedLocation = state.selectedNodeId?.let(state.document::location)
-    // A cut pasted back into the slot it came from returns to its own position, because that is
-    // what makes cut-then-paste a move rather than a send-to-the-bottom. The anchor has to still
-    // be there — the document may have been edited between the two — and `null` is a position in
-    // its own right, meaning the subtree was first in the slot.
+    // A cut pasted back into its origin slot returns to its position (if its anchor still exists),
+    // making cut-then-paste a move. A null anchor means it was first.
     val origin =
       clipboard.origin?.takeIf {
         it.parent == destination &&
@@ -4663,9 +4433,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Why the selection cannot become a component, or null when it can.
-   *
-   * Asked by the menu before anything is pressed, so the entry says why rather than refusing after.
+   * Why the selection cannot become a component, or null; asked before the press so the menu can
+   * say why.
    */
   fun makeComponentRefusal(state: UiBuilderEditorState): String? =
     planComponent(state, name = null, sequence = state.operationSequence + 1).refusal
@@ -4807,8 +4576,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Where a fetched library component would land, or null: the slot its body root can sit in. Asked
-   * after the fetch, because a tile in the palette does not know what its body is made of.
+   * Where a fetched library component would land, or null. Asked after the fetch, since only then
+   * is its body known.
    */
   fun libraryComponentTarget(
     state: UiBuilderEditorState,
@@ -4944,8 +4713,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Replace an imported component with a newer library version in place. Placements keep their
-   * position, layout and still-read arguments; newly read text parameters start as their own name.
+   * Replace an imported component with a newer library version in place. Placements keep position,
+   * layout and still-read arguments; newly read text parameters start as their own name.
    */
   private fun updateLibraryComponent(
     state: UiBuilderEditorState,
@@ -5131,9 +4900,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * What a new placement passes: the arguments of the placement nearest the end of the design, so
-   * the tenth inbox row added reads like the ninth; with none to copy, each text parameter's own
-   * name, so the placement draws something an author can see and overwrite.
+   * A new placement's arguments: those of the last placement in the design, else each text
+   * parameter's own name so it draws something visible.
    */
   private fun starterArguments(document: UiBuilderDocument, componentKey: String): JsonObject {
     document.nodes.values
@@ -5244,8 +5012,7 @@ class UiBuilderEditorReducer(
 
   /**
    * Rewrite the arguments of every placement of [componentKey] that [rewrite] changes (null:
-   * unchanged), in place — each placement keeps its id. Returns what the selection should be
-   * afterwards, which no longer moves.
+   * unchanged), keeping placement ids. Returns the selection afterwards.
    */
   private fun rewritePlacements(
     state: UiBuilderEditorState,
@@ -5264,8 +5031,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The parameter-related verbs for the selection, as the context menu offers them: detach a
-   * placement, or make a body property a parameter, or stop one being one.
+   * The parameter-related context-menu verbs for the selection: detach a placement, or make a body
+   * property a parameter, or stop one being one.
    */
   fun componentActions(state: UiBuilderEditorState): List<EditorComponentAction> {
     val nodeId = state.selection.singleOrNull() ?: return emptyList()
@@ -5299,8 +5066,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Make one literal property of a component's body a parameter: the body reads it by key and every
-   * placement passes the value it showed until now, so nothing on screen changes.
+   * Make one literal body property a parameter: the body reads it by key and every placement passes
+   * its current value, so nothing on screen changes.
    */
   private fun exposeComponentParameter(
     state: UiBuilderEditorState,
@@ -5345,9 +5112,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Stop [parameter] being one: every body property reading it takes back a value of its own — the
-   * one the first placement passes, which is what the design showed first — and placements stop
-   * passing it.
+   * Stop [parameter] being one: body properties reading it take the first placement's value, and
+   * placements stop passing it.
    */
   private fun inlineComponentParameter(
     state: UiBuilderEditorState,
@@ -5384,8 +5150,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Turn a placement back into ordinary layers: a copy of its component's body, in its place,
-   * holding the values the placement passed. The component itself stays, with its other placements.
+   * Turn a placement back into ordinary layers: a copy of the component's body holding the passed
+   * values. The component and its other placements stay.
    */
   private fun detachPlacement(state: UiBuilderEditorState, nodeId: String): UiBuilderEditorState {
     val sequence = state.operationSequence + 1
@@ -5446,8 +5212,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The argument fields of a selected placement, built from the fields of the body properties they
-   * feed, so a colour argument gets a colour picker and a text argument a text box.
+   * A selected placement's argument fields, built from the body properties they feed so each gets
+   * the matching editor.
    */
   private fun placementFields(
     state: UiBuilderEditorState,
@@ -5498,8 +5264,7 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Set one argument of a placement, keeping the placement: its id is what comments, selection and
-   * reviews hold, so the edit rewrites the arguments it passes rather than the node itself.
+   * Set one argument of a placement, keeping its id (which comments, selection and reviews hold).
    */
   private fun setComponentArgument(
     state: UiBuilderEditorState,
@@ -5563,12 +5328,9 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Swap every placement of a design-only component for the catalog component that now ships it.
-   *
-   * The graduation step of
-   * [`UI_BUILDER_REPETITION_AND_COMPONENTS.md`](../../../../../../docs/design/UI_BUILDER_REPETITION_AND_COMPONENTS.md)
-   * §3: once the app's own `InboxEmail` is in its catalog — a component pack projected from its
-   * discovered composables — the design should call that rather than keep a copy of what it drew.
+   * Swap every placement of a design-only component for the catalog component that now ships it:
+   * the graduation step of [`UI_BUILDER_REPETITION_AND_COMPONENTS.md`](../../../../../../docs/desig
+   * n/UI_BUILDER_REPETITION_AND_COMPONENTS.md) §3.
    */
   private fun replaceLocalComponent(
     state: UiBuilderEditorState,
@@ -5663,8 +5425,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * What a clipboard root draws as a capability: its own, or for a placement, its body root's —
-   * looked up in the clipboard first, since that is the definition the paste brings.
+   * What a clipboard root draws as a capability: its own, or for a placement its body root's,
+   * looked up in the clipboard first.
    */
   private fun EditorClipboard.capabilityOf(
     nodeId: String,
@@ -5681,12 +5443,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Bring the clipboard's components into [document], and say which key each one goes by here.
-   *
-   * A component this design already has under the same name is the same component — copying a
-   * placement within a design, or between two designs that share one, places it again rather than
-   * duplicating its definition. Anything else is imported: its body inserted fresh and detached by
-   * its declaration, under its own key where that is free.
+   * Bring the clipboard's components into [document] and return each one's key here. A same-named
+   * component is reused; anything else is imported fresh under its own key where free.
    */
   private fun pasteComponents(
     document: UiBuilderDocument,
@@ -5832,20 +5590,15 @@ class UiBuilderEditorReducer(
   /**
    * Where an insert of [inserted] lands with [selectedNodeId] selected: the first accepting slot
    * with room on the selected node, else the first below it in document order, else the selected
-   * node's own slot. The descent lets a fresh blank scaffold accept content into its inner box.
+   * node's own slot.
    */
   private fun findDestination(
     document: UiBuilderDocument,
     selectedNodeId: String?,
     inserted: ComponentCapability,
   ): ParentSlot? {
-    // A component whose emitter demands the root has no destination in a slot, on any path in.
-    // `besideRefusal` alone was not enough: turning Add beside off and pressing Add, or dragging
-    // the
-    // scaffold onto the board, reached the same placement through here — a column's `children` slot
-    // accepts the `Scaffold` role, so nothing else was going to refuse it. `RecordFreeExport`
-    // routes on the *root* component id, so a nested Wear scaffold silently stops being a Wear
-    // screen whichever way it got there.
+    // Root-only components have no destination in a slot on any path (Add, drag):
+    // `RecordFreeExport` routes on the root component id.
     if (inserted.componentId in RecordFreeExport.ROOT_ONLY_COMPONENT_IDS) return null
     val selected = selectedNodeId?.let(document.nodes::get)
     if (selected != null) {
@@ -5894,8 +5647,8 @@ class UiBuilderEditorReducer(
 }
 
 /**
- * The picture bytes a widget export inlines: embedded bytes from the document, or those the editor
- * fetched for an uploaded picture.
+ * The picture bytes a widget export inlines: embedded bytes, or those the editor fetched for an
+ * uploaded picture.
  */
 internal fun UiBuilderDocument.widgetAssetBytes(
   fetched: (contentDigest: String) -> ByteArray?
@@ -5913,8 +5666,7 @@ internal fun UiBuilderDocument.widgetAssetBytes(
 private val a2uiMessageJson = kotlinx.serialization.json.Json { prettyPrint = true }
 
 /**
- * The capability diagnostics that describe `CapabilityComposeCodeExporter`'s own reach rather than
- * the design: whether *it* has a Kotlin symbol, and whether *it* has a typed call emitter. See
- * [UiBuilderEditorReducer.problems] for when the generator that actually runs answers instead.
+ * Diagnostics about `CapabilityComposeCodeExporter`'s own reach (symbol, call emitter) rather than
+ * the design; see [UiBuilderEditorReducer.problems].
  */
 private val GENERATOR_OWNED_CODES = setOf("MISSING_CODE_CAPABILITY", "UNSUPPORTED_CODE_COMPONENT")

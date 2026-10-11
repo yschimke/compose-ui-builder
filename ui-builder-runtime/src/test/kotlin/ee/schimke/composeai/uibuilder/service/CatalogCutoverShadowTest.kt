@@ -17,10 +17,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * [CatalogCutoverShadow]: the check a deployment runs for a catalog it shadows before flipping it.
- * Its owned half is the readiness probe itself (`CatalogCutoverProbe` delegates to it, so the gap
- * ledger in [CatalogCutoverReadinessTest] is its golden); this pins the catalog comparison and the
- * executor's on-demand synthesis it depends on.
+ * [CatalogCutoverShadow]: the shadow check before a flip. Its owned half is the readiness probe
+ * (golden: the gap ledger in [CatalogCutoverReadinessTest]); this pins the catalog comparison and
+ * the on-demand synthesis.
  */
 class CatalogCutoverShadowTest {
 

@@ -12,12 +12,8 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * The Wear widget sample previews draw their text.
- *
- * The samples write text as `remote-m3/remote-text`, which the canvas draws only through the
- * `wear-m3/text` adapter its catalog names. A preview that renders without that catalog draws every
- * label as "Unsupported component: remote-m3/remote-text", which is what these did when the samples
- * moved off the borrowed `m3/text`.
+ * The Wear widget sample previews draw their text: `remote-m3/remote-text` is drawn only via the
+ * `wear-m3/text` adapter its catalog names, so previews must render with that catalog.
  */
 @OptIn(ExperimentalTestApi::class)
 class WearWidgetSamplePreviewTest {

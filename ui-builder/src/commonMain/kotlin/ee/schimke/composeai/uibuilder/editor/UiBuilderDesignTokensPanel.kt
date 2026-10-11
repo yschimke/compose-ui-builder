@@ -37,9 +37,9 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.contentOrNull
 
 /**
- * The catalog's design tokens, grouped as the theme's and the components'. Each row says what the
- * design holds — the design system's default, a value, or a mix — takes a new one, resets it, and
- * for a number puts a slider on it in the Tune card.
+ * The catalog's design tokens, grouped as theme and component tokens. Each row shows what the
+ * design holds (default, value or mixed), takes a new value, resets, and for numbers adds a Tune
+ * slider.
  */
 @Composable
 internal fun DesignTokensSection(
@@ -74,9 +74,8 @@ internal fun DesignTokensSection(
 }
 
 /**
- * Tokens out as a DTCG file and in from DTCG or a Material Theme Builder export. Text rather than a
- * file picker, because every host — browser, desktop, IDE — has a text field and a clipboard and
- * not every one has a file chooser the editor can open.
+ * Tokens out as DTCG and in from DTCG or a Material Theme Builder export, as text since every host
+ * has a text field and clipboard but not a file chooser.
  */
 @Composable
 private fun DesignTokenExchange(

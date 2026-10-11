@@ -7,12 +7,7 @@ import kotlinx.serialization.json.Json
 /**
  * The `RemoteModifier` calls a `remoteCall` modifier may name, generated from the released
  * `remote-creation-compose` sources by `scripts/remote-vocabulary/generate_remote_modifiers.py`.
- *
- * The released API is authoritative: this is its value-authorable surface, not a hand-written list,
- * so a new alpha is a regeneration rather than a contracts release. Each overload keeps only the
- * parameters a document value can be — a number, a dp, a colour, a boolean, an int or a string —
- * and an overload that needs anything else (a lambda, a transition, scroll state) is not here at
- * all.
+ * Only overloads whose parameters are document values (number, dp, colour, boolean, int, string).
  */
 public object RemoteModifierVocabulary {
   /** The modifier type a document writes for one of these calls. */
@@ -55,10 +50,9 @@ public object RemoteModifierVocabulary {
     listOf("Button", "Checkbox", "Switch", "RadioButton", "Tab", "Image", "DropdownList")
 
   /**
-   * Calls whose released signature takes a receiver lambda, so the generator leaves them out: their
-   * value-carrying parts are declared here, and the emitter writes the lambda around them.
-   * `semantics` sets what a screen reader says — accessibility, not interaction, which stays an
-   * event binding. `clear` writes `clearAndSetSemantics` instead, replacing the children's.
+   * Calls whose released signature takes a receiver lambda, declared by hand; the emitter writes
+   * the lambda. `semantics` is accessibility, not interaction; `clear` writes
+   * `clearAndSetSemantics`.
    */
   private val handDeclared: List<Modifier> =
     listOf(
@@ -85,11 +79,9 @@ public object RemoteModifierVocabulary {
   }
 
   /**
-   * The overload a call naming [arguments] resolves to: every argument is one of its parameters and
-   * every parameter it requires is given. Where several qualify (`width(RemoteDp)`,
-   * `width(RemoteFloat)`, `width(Int)` all take `width`), the fewest parameters wins, then dp over
-   * a bare number — a design's sizes are dp — then a `Remote*` type over a plain one, because only
-   * a remote type can take a state read or a computed value.
+   * The overload a call naming [arguments] resolves to: all arguments are parameters and all
+   * required parameters are given. Ties prefer fewest parameters, then dp over a bare number, then
+   * a `Remote*` type (which can take state or a computed value).
    */
   public fun resolve(name: String, arguments: Set<String>): Overload? =
     modifiers[name]

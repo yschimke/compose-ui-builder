@@ -5,14 +5,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The starting points the `remote-widgets` catalog (Mobile Launcher Widgets in Remote Compose)
- * offers in the New design chooser.
- *
- * Without them a launcher widget design opened on the generic `blank` template: a phone
- * `layout/scaffold`, a root [LauncherWidgetCodeExporter] refuses, in a 411dp frame that is no
- * launcher grid size. A template is the one document nobody authored, so it starts on the catalog's
- * own root, at a grid size, in the catalog's vocabulary: `remote-creation-compose` text with
- * literal colours, since a launcher widget has no Remote Material 3 theme to name a role in.
+ * The starting points the `remote-widgets` catalog offers in the New design chooser: the catalog's
+ * own root at a grid size, with `remote-creation-compose` text and literal colours (no Remote
+ * Material 3 theme), instead of the generic `blank` phone scaffold.
  */
 object LauncherWidgetTemplates {
 
@@ -52,12 +47,8 @@ object LauncherWidgetTemplates {
   }
 
   /**
-   * The hello widget: `RemoteText` centred in a `RemoteBox` that fills the cell, on the accent.
-   *
-   * Centring is the text's `align` modifier, which `layout/box` reads as the box's content
-   * alignment — the same spelling `remote-m3`'s hello widget uses. The background is the launcher
-   * widget root's own property, which the exporter writes as the `background` of the box `Content`
-   * draws, so the whole cell is the accent and the launcher clips it to its radius.
+   * The hello widget: `RemoteText` centred (via its `align` modifier) in a `RemoteBox` that fills
+   * the cell, on the root's background, which the launcher clips to its radius.
    */
   private fun helloLauncherWidgetDocument(
     designId: String,

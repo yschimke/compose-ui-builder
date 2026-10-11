@@ -14,14 +14,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import org.jetbrains.skia.Bitmap
 
 /**
- * No node may fail the frame.
- *
- * An `asset/image` whose key nothing resolved used to be `error("unsupported asset …")` inside the
- * composition, and a text whose colour token the canvas did not know was the same one property over
- * — so one accepted node made every render of the design fail, for every collaborator, until
- * somebody found it (yschimke/compose-preview-server#484). Both reducers refuse such values at
- * commit now; these tests hold the second line, with validation deliberately bypassed: a document
- * that holds one anyway produces a frame with something visible where the node is.
+ * No node may fail the frame. Reducers refuse unresolvable asset keys and colour tokens at commit
+ * (see yschimke/compose-preview-server#484); these tests bypass validation to hold the second line:
+ * a document holding one still renders something visible where the node is.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class UnresolvableNodeRenderingTest {
@@ -37,12 +32,8 @@ class UnresolvableNodeRenderingTest {
         )
       )
 
-    // The property is that something is drawn where the node is, not where each stroke lands: the
-    // placeholder is a neutral ground carrying a picture glyph, and its frame, circle and mountain
-    // move whenever that glyph is redrawn. Reading the whole frame keeps the assertion on the
-    // visibility this test is named for — three fixed samples pinned the *previous* glyph's
-    // corner-to-corner diagonals and went quiet when yschimke/compose-preview-server#503 replaced
-    // it, reporting a flat frame that was never flat.
+    // Asserts something is drawn where the node is (distinct colours across the frame), not
+    // specific glyph strokes, so redrawing the placeholder glyph doesn't silence the test.
     val distinct = buildSet {
       for (y in 0 until SIZE) for (x in 0 until SIZE) add(pixels.getColor(x, y))
     }

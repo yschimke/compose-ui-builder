@@ -38,20 +38,18 @@ val ktfmtCli = configurations.create("ktfmtCli")
 
 dependencies { ktfmtCli(variantOf(libs.ktfmt.cli) { classifier("with-dependencies") }) }
 
-// The frontend JVM lane's floor, read from the catalog rather than written twice. Every task in
-// this file that *runs* this module's classes has to launch on it, because `jvmToolchain` sets the
-// compile and `Test` toolchains but leaves `JavaExec` on the Gradle JVM.
+// The frontend JVM lane's floor, from the catalog. Tasks that run this module's classes must launch
+// on it: `jvmToolchain` doesn't cover `JavaExec`.
 val uiBuilderJava = JavaLanguageVersion.of(libs.versions.java.ui.builder.get().toInt())
 
 val uiBuilderLauncher = javaToolchains.launcherFor { languageVersion.set(uiBuilderJava) }
 
 /**
- * The vendored families for the JVM, under `fonts/` on the classpath: the manifest and every file
- * it names. Roboto Flex is what `ensureBundledWearDeviceFonts` registers with the Wear port as
- * `roboto-flex` — the name the Wear type scale asks for — so a JVM render of a Wear screen (the
- * previews, the tests, the desktop app) is not set in the platform's fallback sans. The rest are
- * what `ProductionFontFamilies` draws a design's named typefaces in for a production render, as the
- * browser does from the bundle's own `fonts/`; about 4.5 MB, in a bundle only the server unpacks.
+ * The vendored font families for the JVM, under `fonts/` on the classpath: the manifest and every
+ * file it names. Roboto Flex is registered with the Wear port as `roboto-flex` (see
+ * `ensureBundledWearDeviceFonts`) so JVM Wear renders don't use the fallback sans; the rest are
+ * what `ProductionFontFamilies` uses for named typefaces. About 4.5 MB, in a bundle only the server
+ * unpacks.
  */
 val stageWearDeviceFonts =
   tasks.register<Sync>("stageWearDeviceFonts") {
@@ -76,10 +74,9 @@ val stageBehaviorCompileFixture =
   }
 
 kotlin {
-  // `java-ui-builder`, above the rest of this build. This module's JVM classes are published to
-  // nobody: they leave the build only inside `:ui-builder-render-bundle`'s polyglot PNG, which
-  // `:ui-builder-runtime` reaches as a coordinate and never as classes on anyone's classpath. The
-  // catalog entry for the two floors has the full argument, including the runtime cost.
+  // `java-ui-builder`, above the rest of this build: these JVM classes only ship inside
+  // `:ui-builder-render-bundle`'s polyglot PNG. The catalog entry for the two floors has the full
+  // argument.
   jvmToolchain(uiBuilderJava.asInt())
 
   jvm()
@@ -101,38 +98,29 @@ kotlin {
       @Suppress("DEPRECATION") implementation(compose.runtime)
       @Suppress("DEPRECATION") implementation(compose.foundation)
       implementation(libs.compose.material3)
-      // The real Material 3 adaptive scaffolds, so the canvas and the preview pane draw
-      // `SupportingPaneScaffold` itself rather than a `BoxWithConstraints` imitating one. See
-      // `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md` for why the preview pane owes real components.
+      // The real Material 3 adaptive scaffolds; see `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md`.
       implementation(libs.compose.material3.adaptive)
       implementation(libs.compose.material3.adaptive.layout)
       // `NavigationSuiteScaffold`, drawn for real for the same reason: whether a design's
       // navigation is a rail or a bar is the library's answer, per frame.
       implementation(libs.compose.material3.navigation.suite)
-      // Wear Compose, for real, on the canvas. See `docs/design/UI_BUILDER_WEAR_SCREEN.md`: this
-      // is the CMP port rather than `androidx.wear.compose`, because that one is an Android AAR
-      // with no `wasmJs` variant to resolve. The port keeps the upstream package names, so a
-      // `TransformingLazyColumn` here is `androidx.wear.compose.material3`'s by import.
+      // Wear Compose on the canvas via the CMP port (the upstream AAR has no `wasmJs` variant); it
+      // keeps the upstream package names. See `docs/design/UI_BUILDER_WEAR_SCREEN.md`.
       implementation(libs.wearcmp.compose.material3)
       implementation(libs.wearcmp.compose.foundation)
       implementation(libs.material.icons.extended)
       @Suppress("DEPRECATION") implementation(compose.ui)
-      // These carry no version of their own; the platforms supply them (see the catalog).
-      // `project.dependencies.platform(...)`, not a bare `platform(...)`: inside a Kotlin
-      // Multiplatform source set the receiver is `KotlinDependencyHandler`, which has no
-      // `platform` function at all.
+      // Versions come from the platforms (see the catalog). `project.dependencies.platform(...)`
+      // because a KMP source set's `KotlinDependencyHandler` has no `platform` function.
       implementation(project.dependencies.platform(libs.composeai.tools.bom))
       implementation(project.dependencies.platform(libs.composeai.contracts.bom))
       implementation(project.dependencies.platform(libs.composeai.rc.players.bom))
       implementation(libs.composeai.ui.builder.protocol)
-      // The real `ScreenGenerator`, compiled for wasmJs as well as the JVM. Before this the editor
-      // had no way to ask the question the server's export answers, so it kept its own emitter.
+      // The real `ScreenGenerator`, compiled for wasmJs as well as the JVM, so the editor asks the
+      // same question the server's export answers.
       implementation(libs.composeai.screen.model)
-      // `api`, not `implementation`: `UiBuilderDocument` lives in this module and appears in
-      // `:ui-builder`'s own public signatures — `UiBuilderSurface(document: UiBuilderDocument)` is
-      // the whole point of the module — so a consumer that calls them has to be able to see it.
-      // `:ui-builder-renderer` is that consumer, and with the dependency hidden its wasmJs compile
-      // fails on "Cannot access class UiBuilderDocument. Check your module classpath".
+      // `api`: `UiBuilderDocument` appears in this module's public signatures (e.g.
+      // `UiBuilderSurface`), so consumers like `:ui-builder-renderer` must see it.
       api(project(":ui-builder-export"))
       // Public protocol and inspection types moved to the catalog renderer SDK. Keep this `api` so
       // existing consumers of :ui-builder see the same signatures transitively.
@@ -149,22 +137,14 @@ kotlin {
     }
     commonTest.dependencies { implementation(kotlin("test")) }
     getByName("jvmTest").dependencies {
-      // The Compose UI-test harness. Until this, everything the editor *draws* was verified by
-      // rendering a `@Preview` to PNG and comparing bytes, which catches a changed picture but
-      // cannot ask a question about it — "is this row's Add disabled", "does this sentence appear
-      // once or forty-one times". Both regressions #619 fixes were of the second kind, and both
-      // reached `main`.
-      //
-      // `compose.desktop.currentOs` supplies the Skiko the test scene renders on; the same software
-      // rendering the preview lane already uses headlessly here.
+      // The Compose UI-test harness, for asserting on what the editor draws rather than only
+      // diffing PNGs. `compose.desktop.currentOs` supplies the Skiko the test scene renders on.
       @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class) @Suppress("DEPRECATION")
       implementation(compose.uiTest)
       implementation(compose.desktop.currentOs)
-      // The hosted service, for `ServiceConformanceTest`: the editor's in-page service and the
-      // runtime's answer the same v1 requests, and only a test that can see both can hold them to
-      // the same answers. Test-only, so the editor's own classpath stays service-free. The render
-      // bundle is excluded because it is built FROM this module's previews, and nothing here
-      // renders through it.
+      // The hosted service, for `ServiceConformanceTest` (the in-page service and the runtime must
+      // answer v1 requests the same). Test-only. The render bundle is excluded: it is built from
+      // this module's previews.
       implementation(project(":ui-builder-runtime")) {
         exclude(group = "ee.schimke.composeai", module = "ui-builder-render-bundle")
       }
@@ -176,17 +156,10 @@ kotlin {
       implementation(compose.desktop.currentOs)
       implementation(libs.kotlinx.coroutines.core)
       implementation(libs.compose.ui.tooling.preview)
-      // Carries no version of its own; the platform supplies it (see the catalog).
-      // `project.dependencies.platform(...)`, not a bare `platform(...)`: inside a Kotlin
-      // Multiplatform source set the receiver is `KotlinDependencyHandler`, which has no
-      // `platform` function at all.
-      //
-      // The daemon platform belongs HERE rather than in `commonMain` because the only daemon
-      // coordinate this module names is JVM-only. The other three platforms are in `commonMain`
-      // with the coordinates they version: a platform declared on `jvmMain` constrains the JVM
-      // compilation alone, so a `commonMain` dependency left to it resolves with no version at
-      // all on wasmJs -- which is `Could not find ee.schimke.composeai:ui-builder-protocol:`,
-      // with the empty version, out of `:ui-builder:wasmJsNpmAggregated`.
+      // Version from the platform; `project.dependencies.platform(...)` as above. The daemon
+      // platform is here, not in `commonMain`, because its only coordinate is JVM-only; the other
+      // platforms stay in `commonMain` since a `jvmMain` platform doesn't constrain wasmJs
+      // resolution.
       implementation(project.dependencies.platform(libs.composeai.daemon.bom))
       implementation(libs.composeai.data.preview.overrides.runtime)
       implementation(libs.composeai.preview.annotations)
@@ -205,39 +178,15 @@ kotlin {
 /**
  * Order preview discovery after this module's wasmJs and Compose-resources tasks.
  *
- * `composePreviewDiscover` reads this module's processed resource and class directories. The plugin
- * declares dependencies for the *desktop* tasks that write them (`DESKTOP_RESOURCE_TASK_CANDIDATES`
- * / `DESKTOP_COMPILE_TASK_CANDIDATES`) — which is the whole story in a JVM-only module. This one
- * also has a wasmJs target and Compose multiplatform resources, and those tasks write into the same
- * directories without being in either list, so Gradle sees an undeclared producer to consumer edge
- * and fails the build during configuration:
+ * `composePreviewDiscover` and `composePreviewBundle` read this module's processed resource and
+ * class directories, but the plugin only declares the desktop producers. The wasmJs and
+ * multiplatform-resource tasks write into the same directories, which Gradle rejects as an
+ * undeclared dependency.
  *
- *     Task ':ui-builder:composePreviewDiscover' uses this output of task
- *     ':ui-builder:compileKotlinWasmJs' without declaring an explicit or implicit dependency
- *
- * `mustRunAfter` rather than `dependsOn` on purpose: the ordering is all Gradle needs to validate,
- * and `dependsOn` would make every `compose-preview list` on the desktop lane build the wasm target
- * first — a cost this module pays for nothing. When the task is asked for alone, none of these are
- * in the graph and this adds no ordering at all.
- *
- * Matched by shape rather than by a fixed list of names, because the set that trips the validation
- * depends on which tasks share the graph: `check` surfaced five, a narrower invocation five
- * different ones. The real fix belongs in the plugin, which should declare what it reads for every
- * target rather than for the desktop one — this keeps the build green until it does.
- *
- * The wasm match is CASE-INSENSITIVE, and that is the whole point of it. The first version of this
- * looked for `WasmJs` — the shape a task name takes when the target is a *suffix*
- * (`compileKotlinWasmJs`). Tasks whose name *starts* with the target spell it `wasmJs…` with a
- * lower-case w, and three of those write into the same directories:
- * `wasmJsCopyHierarchicalMultiplatformResources`, `wasmJsZipMultiplatformResourcesForPublication`
- * and this module's own `wasmFrontendDist`. None of them matched, so the validation the block
- * exists to prevent failed the `visual-harness` job on `main` anyway. A case-sensitive match on a
- * name that appears in both cases is a check that does not check.
- *
- * `composePreviewBundle` is ordered too, not only `composePreviewDiscover`. It reads the same
- * directories, and CI's `check` graph reported it as a second consumer of `wasmJsPublicPackageJson`
- * / `wasmJsTestPublicPackageJson` in the same build the discover pair failed. Ordering one of two
- * consumers of the same outputs fixes the half of the build whose graph you happened to reproduce.
+ * `mustRunAfter` rather than `dependsOn`, so desktop-only invocations don't build wasm. Matched by
+ * shape since the set of tasks varies with the graph, and the wasm match is case-insensitive
+ * (`compileKotlinWasmJs` vs `wasmJsCopyHierarchicalMultiplatformResources`, `wasmFrontendDist`).
+ * The real fix belongs in the plugin.
  */
 tasks
   .matching { it.name == "composePreviewDiscover" || it.name == "composePreviewBundle" }
@@ -288,9 +237,9 @@ tasks.named<Test>("jvmTest") {
   systemProperty("uiBuilderProjectDir", projectDir.absolutePath)
 }
 
-// Canvas frame times over the Jetcaster fixture on the JVM desktop backend, not the Wasm canvas
-// (#193). Reports, does not gate: `jvmTest` skips the benchmark, and this runs it alone and writes
-// the numbers CI keeps as an artifact.
+// Canvas frame times over the Jetcaster fixture on the JVM desktop backend (see #193). Reports,
+// doesn't gate: `jvmTest` skips the benchmark; this runs it alone and writes the numbers CI keeps
+// as an artifact.
 tasks.register<Test>("canvasFrameBenchmark") {
   description = "Measures editor edit-to-canvas time over the Jetcaster fixture."
   group = "verification"
@@ -434,27 +383,18 @@ tasks.register<CheckWindowSidecarVersion>("checkWindowSidecarVersion") {
 
 tasks.named("check") { dependsOn("checkWindowSidecarVersion") }
 
-// The PRODUCTION executable, after Binaryen: dead code eliminated, optimised, no debug names. This
-// is what a browser downloads and compiles before it can draw anything. The development executable
-// it replaced was a 74 MB `uiBuilder.wasm` (13.3 MB gzipped); this one is 28.8 MB (5.9 MB), and
-// every host of this archive — compose-preview-server, the VS Code webview — pays that difference
-// on each cold open. `optimized/`, not the sibling `kotlin/`: that one is the production IR before
-// Binaryen has run, and still 61 MB. The development executable is still what
-// `wasmJsBrowserDevelopmentRun` serves for local work.
+// The PRODUCTION executable from `optimized/` (after Binaryen: DCE, optimised, no debug names),
+// which is what browsers and hosts download; much smaller than the development build or the
+// pre-Binaryen `kotlin/`. `wasmJsBrowserDevelopmentRun` still serves the development executable.
 //
 // `-PuiBuilder.wasmOpt=false` packages `kotlin/` instead; see `ProductionWasm.kt` in build-logic.
 val wasmExecutableDir = productionWasmDir
 
-// Generated lookup tables Binaryen must leave as separate functions. Each entry is called from one
-// place, and Binaryen inlines a one-caller function whatever its size, so it folded all ~100
-// Material 3 locale tables into a 328 KB `getTranslation` and every icon builder into a 686 KB
-// `generatedGoogleMaterialIconImageVector`. A Material 3 design calls `getTranslation` often enough
-// for V8 to tier it up, and TurboFan held 312 MB for the 6 s it spent on that one function: the
-// editor peaked near 500 MB on opening a Material 3 design and only fell back once it finished.
-// Kept apart, a lookup costs one call and only the table a design reaches is ever compiled; the
-// longest TurboFan compile on that screen is 0.3 s and the peak is ~315 MB. A global cap
-// (`--one-caller-inline-max-function-size`) is not a substitute: at 1000 it left the icon lookup
-// whole at 697 KB, and V8 then took 2.2 GB and 12 s to compile it. `wasm-opt` matches `*`.
+// Generated lookup tables Binaryen must leave as separate functions. Binaryen inlines one-caller
+// functions whatever their size, producing huge functions (Material 3 locale tables, icon builders)
+// that V8's TurboFan then spends hundreds of MB and seconds compiling. Kept apart, only the tables
+// a design reaches get compiled. A global `--one-caller-inline-max-function-size` cap doesn't work.
+// `wasm-opt` matches `*`.
 val wasmNoInlinePatterns =
   listOf(
     "androidx.compose.material3.l10n.*",
@@ -464,10 +404,8 @@ val wasmNoInlinePatterns =
     "ee.schimke.composeai.uibuilder.export.generatedMaterialIconMembersChunk*",
   )
 
-// `--no-inline` is a pass, so it has to run before the optimisation passes that inline: appended
-// after them, where `perFileBinaryenArguments` would put it, it changes nothing. The rules go
-// straight after the plugin's own `--no-inline` entries, and a plugin whose defaults no longer
-// have that shape fails here rather than quietly building the 500 MB spike back in.
+// `--no-inline` is a pass and must precede the inlining passes, so the rules go right after the
+// plugin's own `--no-inline` entries; if the plugin's defaults change shape this fails loudly.
 tasks.withType<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenExec>().configureEach {
   val defaults = org.jetbrains.kotlin.gradle.internal.platform.wasm.BinaryenConfig.binaryenArgs
   val insertAt = defaults.indexOfLast { it.startsWith("--no-inline=") } + 1
@@ -506,9 +444,8 @@ tasks.register<Sync>("wasmFrontendDist") {
       "confetti-schedule-operations-v1.json",
       "m3-catalog-capabilities-v1.json",
       "jetcaster-discover-operations-v1.json",
-      // Not fetched by the page: host-bridge hosts read these from the unpacked archive and
-      // hand the one a design pins to the editor with the document (see HostBridgeApp.kt), so a
-      // host can open a design in any of the three offline catalogs, not only Material 3.
+      // Not fetched by the page: host-bridge hosts read these from the unpacked archive and pass
+      // the pinned one to the editor (see HostBridgeApp.kt), so all three offline catalogs work.
       "wear-m3-capabilities-v1.json",
       "remote-m3-capabilities-v1.json",
     )
@@ -523,11 +460,9 @@ tasks.register<Sync>("wasmFrontendDist") {
   }
   val distDir = layout.buildDirectory.dir("wasmDist")
   into(distDir)
-  // The service worker names its cache after the bundle, so a new bundle is a new worker and the
-  // browser retires the old cache — which means the worker's own bytes must change whenever any
-  // other file does. Written after the copy, over the finished tree, so the digest is of exactly
-  // what ships; the file list is what the worker precaches, since a first visit fetches all of it
-  // before the worker controls the page.
+  // The service worker names its cache after the bundle, so its bytes must change whenever any file
+  // does. Written after the copy so the digest covers exactly what ships; the file list is what the
+  // worker precaches.
   doLast {
     val root = distDir.get().asFile
     val worker = root.resolve("ui-builder-sw.js")
@@ -568,29 +503,19 @@ tasks.register<Sync>("wasmFrontendDist") {
   }
 }
 
-// `:server:installDist` stages the development Wasm app while callers may also request the Kotlin
-// browser production distribution. Both Kotlin tasks touch the shared root package directory, so
-// keep their writes ordered when they appear in one task graph.
+// Both tasks touch the shared root package directory, so order their writes when they share a
+// graph.
 tasks.named("wasmJsBrowserProductionWebpack") {
   mustRunAfter("wasmJsDevelopmentExecutableCompileSync")
 }
 
-// The packaged renderer bundle is embedded in :ui-builder-runtime's jar and ships in the server, so
-// it carries the production preview and nothing else. `UiBuilderEditorChromePreview` exists to be
-// diffed, not shipped: leaving it in the bundle took it from 478 KB to 1.6 MB, because the editor
-// chrome drags in the whole authoring UI that the document renderer never touches.
-// Inside `afterEvaluate`, because compose-ai-tools 2.8.0 (its #5380) defers the Desktop lane's task
-// registration to `afterEvaluate` on any module applying the Kotlin Multiplatform plugin without
-// `com.android.kotlin.multiplatform.library` — this one — so that a KMP-Android module applying
-// `org.jetbrains.compose` first can still claim the Robolectric lane. `composePreviewBundle` no
-// longer exists while this script body runs, and naming it here failed configuration outright.
+// The packaged renderer bundle ships in the server, so it carries only the production preview
+// (`UiBuilderEditorChromePreview` would pull in the whole authoring UI).
 //
-// The plugin registers its `afterEvaluate` during the `plugins { }` block, so it runs before this
-// one and the task is there by the time we name it. `withType(...).configureEach` looks like the
-// order-independent answer and is a trap: the plugin's registration action does
-// `previewIds.set(previewIdsProperty.orElse(emptyList()))`, and under deferred registration that
-// action runs *after* a `configureEach` added earlier — silently resetting the selection to empty.
-// The bundle still built, at 70 previews and 4.9 MB instead of 1 and 2.5 MB.
+// Inside `afterEvaluate` because the compose-ai-tools plugin defers the Desktop lane's task
+// registration to `afterEvaluate` for KMP modules without the Android KMP library plugin. Not
+// `withType(...).configureEach`: the plugin's deferred registration resets `previewIds` after it,
+// silently selecting nothing.
 afterEvaluate {
   tasks.named<ee.schimke.composeai.plugin.BundlePreviewTask>("composePreviewBundle") {
     previewIds.set(

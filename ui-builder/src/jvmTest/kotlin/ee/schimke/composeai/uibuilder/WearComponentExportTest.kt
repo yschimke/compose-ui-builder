@@ -15,19 +15,10 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * The Wear components that have no Material 3 counterpart, and what they generate.
- *
- * ## Why these are worth a test file of their own
- *
- * Every one of them is a component the canvas deliberately does not draw
- * (`docs/design/UI_BUILDER_WEAR_SCREEN.md`: *do not fabricate a component in the Wasm canvas to
- * stand in for a library the canvas cannot link*). So the generated source is not a second opinion
- * about how they look — it is the **only** description of them this repository holds, and the
- * Android render lane's input. A branch that emits a `CheckboxButton` with the wrong argument name
- * fails as a compile error on somebody's host, minutes later, with the design named as the culprit.
- *
- * What is asserted is therefore the call shape rather than the whole file: the composable upstream
- * publishes, the arguments it actually declares, and the import that resolves it.
+ * The Wear components that have no Material 3 counterpart, and what they generate. The canvas
+ * doesn't fabricate them (`docs/design/UI_BUILDER_WEAR_SCREEN.md`), so generated source is the only
+ * description here and the Android render lane's input. Asserted: the upstream composable, the
+ * arguments it declares, and its import.
  */
 class WearComponentExportTest {
   private val pin = JsonObject(emptyMap())
@@ -35,10 +26,7 @@ class WearComponentExportTest {
 
   /**
    * A cheap structural check on emitted Kotlin: brackets balance, and none closes before it opens.
-   *
-   * Not a parser, and deliberately not trying to be. It is the assertion that an emitter writing a
-   * stray closer fails, which is the class of bug that reaches "it renders fine and will not
-   * compile" — and string-presence assertions cannot see it by construction.
+   * Not a parser; it catches stray closers that substring assertions can't see.
    */
   private fun assertBalanced(source: String) {
     val pairs = mapOf(')' to '(', '}' to '{', ']' to '[')
@@ -102,11 +90,8 @@ class WearComponentExportTest {
     assertIs<WearScreenCodeExporter.Result.Emitted>(WearScreenCodeExporter.export(document)).source
 
   /**
-   * The three selection controls, which are one labelled row with three different controls in it.
-   *
-   * Also the reason a borrowed `m3/checkbox` was never an option: what upstream publishes is a
-   * full-width row with a `label` slot, not a 20dp square, so there was nothing on the mobile side
-   * to rename.
+   * The three selection controls: one labelled full-width row (with a `label` slot) holding
+   * different controls, not the mobile 20dp square.
    */
   @Test
   fun `a checkbox button generates a labelled CheckboxButton with hoisted state`() {
@@ -134,8 +119,8 @@ class WearComponentExportTest {
   }
 
   /**
-   * Two controls bound to one design flag share the design's own variable: declared once from its
-   * initial value, read by both, and written back by each control's own callback.
+   * Two controls bound to one design flag share its variable: declared once, read by both, written
+   * back by each callback.
    */
   @Test
   fun `checkbox buttons bound to a design flag share it two-way`() {
@@ -188,9 +173,8 @@ class WearComponentExportTest {
   }
 
   /**
-   * An unbound row reached first does not take a design variable's name: node `wifi`'s local would
-   * be `wifiChecked`, which is also the design flag a later row binds, and that row must still get
-   * the design's variable rather than a second local.
+   * An unbound row reached first must not take a design variable's name (`wifiChecked`) that a
+   * later bound row needs.
    */
   @Test
   fun `a node local never takes the name of a design variable`() {
@@ -354,11 +338,8 @@ class WearComponentExportTest {
   }
 
   /**
-   * A picker owns the round display, so it goes in the scaffold's content slot and not in the list.
-   *
-   * The generated body has to be the picker itself rather than an `item { … }`: there is no
-   * `TransformingLazyColumnScope` in `ScreenScaffold`'s content lambda, so the wrapped form never
-   * compiled.
+   * A picker owns the round display, so it goes in the scaffold's content slot, not the list, as
+   * itself rather than `item { … }` (no `TransformingLazyColumnScope` there).
    */
   @Test
   fun `a full-screen picker replaces the list rather than becoming a row of it`() {
@@ -386,10 +367,8 @@ class WearComponentExportTest {
   }
 
   /**
-   * A dialog is a screen state, and lands beside the scaffold rather than inside its content.
-   *
-   * Put in a list item it would be a full-screen dialog inside a scrolling row, which is why the
-   * scaffold grew an `overlays` slot and why the content path refuses one by name.
+   * A dialog is a screen state, emitted in the scaffold's `overlays` slot rather than its content;
+   * the content path refuses one by name.
    */
   @Test
   fun `an alert dialog generates beside the ScreenScaffold, from the overlays slot`() {
@@ -467,20 +446,14 @@ class WearComponentExportTest {
 
     assertTrue("EdgeButton(onClick = {}, buttonSize = EdgeButtonSize.Medium)" in source, source)
     assertTrue("import androidx.wear.compose.material3.EdgeButtonSize" in source, source)
-    // And the result is Kotlin. The three assertions above all passed while the emitter wrote a
-    // second `},` after the `edgeButton` lambda, which closed an argument list that was already
-    // closed — so every Wear screen using this slot generated source that could not compile, and
-    // the only thing looking at it was checking for substrings.
+    // And the result is Kotlin: substring checks alone missed a stray `},` after the `edgeButton`
+    // lambda.
     assertBalanced(source)
   }
 
   /**
-   * Every id the catalog offers as native-only generates something, or the palette is lying.
-   *
-   * The pairing this guards is the one that goes wrong silently: a component is added to the
-   * catalog, an author drops it in, and the export refuses it by name — a palette entry that cannot
-   * be exported. Driven off `NATIVE_ONLY_COMPONENT_IDS` so a new id is in this test the moment it
-   * is in the palette.
+   * Every id the catalog offers as native-only generates something, driven off
+   * `NATIVE_ONLY_COMPONENT_IDS`, so no palette entry is unexportable.
    */
   @Test
   fun `every native-only component the catalog advertises generates a call site`() {
@@ -505,9 +478,8 @@ class WearComponentExportTest {
           componentId = componentId,
           properties = required[componentId] ?: JsonObject(emptyMap()),
         )
-      // Three places a component can legally sit, and which one it is is part of what the
-      // catalog declares: a dialog is an overlay, the edge button hugs the bottom curve, and
-      // everything else is a row of the list.
+      // Where a component may sit is catalog-declared: dialogs are overlays, the edge button hugs
+      // the bottom curve, everything else is a list row.
       val slot =
         when {
           componentId in WearScreenCodeExporter.OVERLAYS -> "overlays"

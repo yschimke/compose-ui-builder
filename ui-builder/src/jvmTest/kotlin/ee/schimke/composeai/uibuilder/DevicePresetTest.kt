@@ -25,9 +25,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The device-preset contract the Screen inspector relies on. The presets themselves are the
- * server's (derived from the render lane's `DeviceDimensions`); what is tested here is what the
- * editor does with one.
+ * The device-preset contract the Screen inspector relies on: presets come from the server (from
+ * `DeviceDimensions`); this tests what the editor does with them.
  */
 class DevicePresetTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -51,9 +50,8 @@ class DevicePresetTest {
   private val everything = listOf(phone, tablet, fold, watch, tv)
 
   /**
-   * The host serves every family it can render, because the geometry comes from the render lane and
-   * the render lane does not care what is being authored. The menus do care, and this is the rule:
-   * a mobile design opens on handhelds, a Wear design on watches.
+   * The host serves every family it can render; menus filter: a mobile design opens on handhelds, a
+   * Wear design on watches.
    */
   @Test
   fun `a mobile design opens on handheld families only`() {
@@ -75,8 +73,8 @@ class DevicePresetTest {
   }
 
   /**
-   * The one thing the filter must never do. A design arriving from MCP can name a device outside
-   * its platform's families, and a tick an author cannot find to clear is worse than a long menu.
+   * A device the design already names stays listed even outside its platform's families, so its
+   * tick can be cleared.
    */
   @Test
   fun `a device the design already names is never filtered away`() {

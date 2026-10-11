@@ -20,13 +20,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import org.jetbrains.skia.Bitmap
 
 /**
- * `shape/linear-gradient` paints on the axis its `direction` names.
- *
- * The renderer drew every linear gradient top-to-bottom while the Compose exporter read `direction`
- * and emitted all four cases — so a `leftToRight` design looked vertical on the canvas and
- * generated horizontal Kotlin, and only one of the two could be right. It matters here because
- * `WearWidgetBrush` distinguishes the same two axes, so a widget background is where an author
- * would first ask for the horizontal one.
+ * `shape/linear-gradient` paints on the axis its `direction` names, on the canvas and in the export
+ * alike (`WearWidgetBrush` distinguishes the same two axes).
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class LinearGradientDirectionTest {
@@ -56,12 +51,8 @@ class LinearGradientDirectionTest {
   }
 
   /**
-   * `horizontal` names the axis without a sense, and it is what the widget templates write.
-   *
-   * The renderer reads it and `CapabilityComposeCodeExporter` did not, so such a design drew across
-   * the canvas and generated Kotlin that painted down it — the same divergence this file was opened
-   * for, in the one direction the earlier fix left out. `direction` is an unrestricted optional
-   * string on a base-catalog component, so a design carrying this is valid rather than malformed.
+   * Axis-only `horizontal` (what widget templates write) is read identically by renderer and
+   * `CapabilityComposeCodeExporter`; it's valid on a base-catalog component.
    */
   @Test
   fun `the exporter reads the horizontal alias the renderer draws`() {

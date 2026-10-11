@@ -51,11 +51,9 @@ sealed interface UiBuilderDocumentHome {
 }
 
 /**
- * A document home reader that preserves known homes and degrades a future kind to unhomed.
- *
- * `ignoreUnknownKeys` handles fields added to a known kind, but kotlinx.serialization's generated
- * sealed serializer rejects an unknown discriminator before it can apply that policy. Homes are
- * provenance, not document content, so an older builder must still open and edit such a document.
+ * A document home reader that degrades a future (unknown) kind to unhomed: the generated sealed
+ * serializer rejects unknown discriminators before `ignoreUnknownKeys` applies, and homes are
+ * provenance, so older builders must still open the document.
  */
 internal object NullableUiBuilderDocumentHomeSerializer : KSerializer<UiBuilderDocumentHome?> {
   override val descriptor: SerialDescriptor = UiBuilderDocumentHome.serializer().nullable.descriptor
@@ -105,37 +103,26 @@ data class UiBuilderDocument(
   val roots: List<String>,
   val nodes: Map<String, UiBuilderNode>,
   /**
-   * The design's asset registry, keyed by the `assetKey` an `asset/image` names: the protocol's
-   * `AssetBindingV1` shape, carried untyped the way `catalogPin` is. Each value has a `mediaType`,
-   * a `contentDigest`, and a `source` whose `type` is `embedded` (with the bytes in `base64`),
-   * `uploaded` (with the `storageKey` a host resolves) or `catalog`. Defaulted so every fixture and
-   * every document written before the registry existed still parses; a renderer that finds a key
-   * here draws it, and one that does not draws a placeholder.
+   * The design's asset registry, keyed by an `asset/image`'s `assetKey`: the protocol's
+   * `AssetBindingV1` shape, untyped like `catalogPin`. Each value has `mediaType`, `contentDigest`,
+   * and a `source` of type `embedded` (`base64`), `uploaded` (`storageKey`) or `catalog`. Unknown
+   * keys draw a placeholder.
    */
   val assets: JsonObject = JsonObject(emptyMap()),
   /**
-   * The components this design defines, keyed the way an instance names them: the protocol's
-   * `DesignComponentV1` shape, carried untyped as `catalogPin` and `assets` are. Each value has a
-   * `name` — what the generated function is called — the `root` node its body starts at, and an
-   * optional `description`.
+   * The components this design defines (the protocol's `DesignComponentV1`, untyped): each has a
+   * `name` (the generated function), a `root` node and an optional `description`.
    *
-   * There is deliberately **no parameter list**. What an instance passes is a dictionary and what
-   * the body reads is a key of it, so a generator derives the signature from those keys rather than
-   * from a second statement of the same fact, free to disagree with the bodies and instances it
-   * describes.
-   *
-   * Never encoded when empty, even by a writer that asks for defaults: the cross-language document
-   * hash is taken over this shape, and a design that defines no component must canonicalize to
-   * exactly what it did before the field existed.
+   * No parameter list: generators derive the signature from the keys instances pass and bodies
+   * read. Never encoded when empty, so the cross-language document hash is unchanged for designs
+   * without components.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val components: JsonObject = JsonObject(emptyMap()),
   /** Starter template identity retained by persisted designs; it does not affect interpretation. */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val template: String? = null,
   /**
-   * Where this design is canonical, when it has one.
-   *
-   * Kept absent for every document written before homes existed: an old document is deliberately
-   * not guessed to belong to the checkout or to whichever server happened to open it.
+   * Where this design is canonical, when it has one. Absent for older documents, which are not
+   * guessed to belong anywhere.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER)
   @Serializable(with = NullableUiBuilderDocumentHomeSerializer::class)
@@ -152,14 +139,9 @@ data class UiBuilderNode(
   val slots: Map<String, List<String>> = emptyMap(),
   val eventBindings: JsonObject = JsonObject(emptyMap()),
   /**
-   * The component this node places, if it places one: `componentKey`, and the `arguments`
-   * dictionary the body reads through `{"type":"binding","value":"<key>"}`.
-   *
-   * Its own field rather than a reserved property key, so a reader that has never heard of
-   * components can still see what the node is and draw a placeholder, instead of reading a
-   * component with properties nobody declared.
-   *
-   * Never encoded when absent, for the reason [UiBuilderDocument.components] is not.
+   * The component this node places, if any: `componentKey` and the `arguments` dictionary the body
+   * reads via `{"type":"binding","value":"<key>"}`. A separate field so older readers draw a
+   * placeholder; never encoded when absent.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val component: JsonObject? = null,
 )
@@ -271,12 +253,8 @@ private fun MutableList<String>.insertAfter(value: String, anchor: String?, labe
 }
 
 /**
- * The candidate wire accessors, public because the document shape now has two readers.
- *
- * They were `internal` while the document, its reducer and everything that read them lived in one
- * module. The templates and the reducer moved here so the server can seed a design the same way the
- * browser does, and the browser's own exporters still parse the same candidate shapes on the other
- * side of the module boundary — one definition, read from both, beats two that can drift.
+ * The candidate wire accessors, public so the browser's exporters and this module share one
+ * definition.
  */
 fun JsonObject.requiredString(name: String): String =
   requireNotNull(this[name]?.jsonPrimitive?.contentOrNull) { "$name must be non-empty text" }

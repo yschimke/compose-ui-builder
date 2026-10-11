@@ -5,17 +5,12 @@ package ee.schimke.composeai.uibuilder
 import kotlin.js.Promise
 
 /**
- * The Web Share half of getting a file out of the editor on a phone.
+ * The Web Share half of getting a file out of the editor on a phone, where downloads are hard to
+ * find and the clipboard can't carry files; the download stays as the fallback.
  *
- * A download on a phone browser lands in a Downloads folder that most people never open, and the
- * clipboard cannot carry a file at all; the share sheet is where a file *goes* on a phone — to
- * Files, to a chat, to Figma's app. So where the browser can share files, the editor offers that,
- * and the download stays behind it as the fallback for everything the sheet refuses.
- *
- * "Can share files" is asked twice. Once up front to decide whether to offer the row at all — and
- * only on a coarse pointer, because desktop Chrome and Safari can share files too, and a desktop
- * keeps exactly the menu it had. Then again on the real file, because browsers allow only some
- * types: Chrome shares an SVG or a PNG but not a `.json`, and that file then simply downloads.
+ * Asked twice: up front (only on a coarse pointer, so desktops keep their menu) to decide whether
+ * to offer the row, then on the real file, since browsers allow only some types (Chrome shares SVG
+ * and PNG, not `.json`).
  */
 internal fun browserCanShareFiles(): Boolean = browserCanShareFile("probe.png", "image/png")
 
@@ -37,12 +32,9 @@ internal fun browserCanShareFiles(): Boolean = browserCanShareFile("probe.png", 
 internal external fun browserCanShareFile(filename: String, type: String): Boolean
 
 /**
- * Shares [text] as a file named [filename], or downloads it where the browser will not share that
- * file. Synchronous up to the share call on purpose: it runs inside the tap, and a share sheet
- * needs that tap's user activation, which an `await` before it could spend.
- *
- * Resolves with a sentence: empty when the sheet took the file, "Share cancelled" when the person
- * closed it, or why it fell back to a download.
+ * Shares [text] as a file named [filename], or downloads it where the browser won't share that
+ * file. Synchronous up to the share call, so it keeps the tap's user activation. Resolves with a
+ * sentence: empty when shared, "Share cancelled" when closed, or why it downloaded instead.
  */
 @JsFun(
   """(filename, text, type) => {

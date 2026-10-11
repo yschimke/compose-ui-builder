@@ -13,11 +13,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * `["boolean", "string"]` is how the catalog spells "a flag, or the name of a state variable".
- *
- * `literalDefault` reads that by membership and unbinds such a property to a real boolean. The
- * inspector read it by equality and called it unsupported, so unbinding a chip's `selected` wrote a
- * value the panel then refused to edit — two rules in one file disagreeing about one declaration.
+ * `["boolean", "string"]` means "a flag, or the name of a state variable". The inspector must read
+ * it by membership, like `literalDefault`, so an unbound flag stays editable.
  */
 class EditorFlagPropertyTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))

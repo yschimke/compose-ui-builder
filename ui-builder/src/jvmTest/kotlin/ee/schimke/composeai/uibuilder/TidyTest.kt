@@ -13,11 +13,9 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The tidy command: every authored dp value in scope moves onto the 4dp grid, as one command.
- *
- * What counts as "authored" is the rule under test — a catalog-declared dp property or a dp field
- * of a layout modifier, holding a plain number. A colour, an enum and a value already on the grid
- * are none of them the command's business, and the shape a number was written in is the shape it
- * keeps.
+ * "Authored" means a catalog-declared dp property or a dp field of a layout modifier holding a
+ * plain number; colours, enums and on-grid values are untouched, and each number keeps its written
+ * shape.
  */
 class TidyTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))

@@ -12,11 +12,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * The modifier chain, as something a client can write.
- *
- * [DesignOperation.SetModifiers] is the reducer half of `SetModifiersMutationV1`: whole-chain,
- * node-granular, and compensable on its own lane. Padding a container used to mean deleting it and
- * building it again, because `SetProperty` reaches `properties` and nothing reached this.
+ * The modifier chain, as something a client can write: [DesignOperation.SetModifiers] is the
+ * reducer half of `SetModifiersMutationV1` (whole-chain, node-granular, compensable on its own
+ * lane).
  */
 class SetModifiersOperationTest {
   @Test

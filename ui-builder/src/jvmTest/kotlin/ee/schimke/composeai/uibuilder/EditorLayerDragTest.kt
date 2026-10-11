@@ -17,13 +17,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The layers panel showed a tree with the slots taken out of it, and could only move a node one
- * step among the children it already sat with.
- *
- * Those two are one bug. A screen whose Scaffold holds an app bar in `topBar` and a Box in
- * `content` draws them as two rows at the same indent — they read as siblings — and every drag
- * between them was a no-op, because they are the only child of their own slot and there is no step
- * to take. Nothing said so, so the panel looked broken rather than strict.
+ * The layers panel shows slots as rows, and drags can move a node between slots, not just among its
+ * siblings. Without slot rows, a Scaffold's `topBar` and `content` children looked like siblings,
+ * and dragging between them silently did nothing.
  */
 class EditorLayerDragTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -51,10 +47,8 @@ class EditorLayerDragTest {
       listOf("topBar", "snackbarHost", "content"),
       slotsOf(rows, "main-scaffold").map { it.parent.slot },
     )
-    // The children keep the depth they had — a tree that indented twice per level runs out of a
-    // 300dp panel by the fourth container — and each group now sits under the line naming its
-    // slot, which is the difference between "siblings" and "the only child of two different slots"
-    // that the panel could not draw before.
+    // Children keep one indent per level (twice would overflow a 300dp panel), grouped under the
+    // row naming their slot.
     assertEquals(nodeRow(rows, "main-scaffold").indent + 1, nodeRow(rows, "search-bar").indent)
     assertEquals(nodeRow(rows, "search-bar").indent, nodeRow(rows, "main-content").indent)
     // Each slot line comes immediately before the children it heads, subtrees and all.
@@ -117,9 +111,8 @@ class EditorLayerDragTest {
 
   @Test
   fun `a node that is the only child of its slot has no step to take, and can still be moved`() {
-    // The regression this fixes: `snackbar-host` is the whole of `main-scaffold.snackbarHost`, so
-    // the in-slot step the panel used to send is null in both directions and the drag did nothing,
-    // however far it was dragged and whatever it was dropped on.
+    // `snackbar-host` is the only child of `main-scaffold.snackbarHost`, so there's no in-slot
+    // step; the drag must use a cross-slot target.
     assertNull(reducer.moveTarget(state, "snackbar-host", EditorMoveDirection.Before))
     assertNull(reducer.moveTarget(state, "snackbar-host", EditorMoveDirection.After))
 
@@ -141,9 +134,8 @@ class EditorLayerDragTest {
 
   @Test
   fun `a slot the document requires cannot be emptied by a drag`() {
-    // A Scaffold holds exactly one `content`, and the document validator refuses a document
-    // without it. The panel asks the same question while the row is in the air, so the drop reads
-    // as refused before the release rather than after it.
+    // A Scaffold needs exactly one `content`, so the panel shows the drop as refused while
+    // dragging.
     val refusal =
       assertNotNull(
         reducer.moveRefusal(state, "main-content", ParentSlot("main-background", "children"))

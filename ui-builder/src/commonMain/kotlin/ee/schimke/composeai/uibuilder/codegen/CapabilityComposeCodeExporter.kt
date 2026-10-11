@@ -78,12 +78,10 @@ data class ComposeExportResult(
 }
 
 /**
- * Capability-gated recursive Compose source projection.
- *
- * The capability catalog decides whether a node has an exportable Kotlin identity and supplies its
- * symbol provenance. The emitter still owns call syntax because the candidate capability format
- * does not yet carry a typed call template. A missing emitter is an error, never a generic painted
- * or bitmap fallback.
+ * Capability-gated recursive Compose source projection. The catalog decides whether a node has an
+ * exportable Kotlin identity and supplies its symbol provenance; the emitter owns call syntax (the
+ * format has no typed call template yet). A missing emitter is an error, never a painted or bitmap
+ * fallback.
  */
 object CapabilityComposeCodeExporter {
   const val EXPORTER_VERSION = "compose-ui-builder-code/v1-spike"
@@ -115,17 +113,9 @@ object CapabilityComposeCodeExporter {
   }
 
   /**
-   * Everything this exporter would refuse the document for, without generating a line of source.
-   *
-   * Split out of [export] so the editor's Issues panel can read the gate that actually refuses
-   * rather than restate it. Document-level validity and the Compose projection are two different
-   * questions: a design can satisfy every structural rule and still hold a component this exporter
-   * has no emitter for, and a panel that reported only the first said "nothing is blocking an
-   * export" right up until the export refused.
-   *
-   * The document-level pass short-circuits the per-node one, as it did inside [export]: a broken
-   * graph makes every node-level answer unreliable, and the structural problems are what to fix
-   * first anyway.
+   * Everything this exporter would refuse the document for, without generating source, so the
+   * Issues panel reads the real gate. The document-level pass short-circuits the per-node one: a
+   * broken graph makes node-level answers unreliable.
    */
   fun diagnose(
     document: UiBuilderDocument,
@@ -159,10 +149,8 @@ object CapabilityComposeCodeExporter {
         )
     }
     val unboundAssetKeys = document.unboundAssetKeys(assetAdapter)
-    // A component's signature is derived before a line is generated, so what the emitter cannot
-    // print as an expression is refused by name here rather than exported as the component's own
-    // default — the difference between a screen that will not build and one that quietly draws the
-    // wrong thing.
+    // Signatures are derived first, so unprintable bindings are refused by name rather than
+    // exported as defaults.
     val (signatures, componentRefusals) = document.componentSignatures()
     val (loops, loopRefusals) =
       document.loopSignatures(
@@ -188,13 +176,9 @@ object CapabilityComposeCodeExporter {
       return diagnostics
     }
 
-    // Which nodes are written in the Remote Compose vocabulary rather than this one. A node inside
-    // remote content is not this exporter's to judge: `layout/column` there becomes `RemoteColumn`,
-    // its modifiers are `RemoteModifier`s, and every question below — is there a typed call
-    // emitter,
-    // does the catalog allow this modifier on this component — is being asked about the wrong
-    // language. The host that opened the scope is reported once, immediately below, and the subtree
-    // it covers is `RemoteContentEmitter`'s to accept or refuse.
+    // Nodes inside remote content are in the Remote Compose vocabulary (`RemoteColumn`,
+    // `RemoteModifier`), so they're `RemoteContentEmitter`'s to judge; the scope host is reported
+    // once below.
     val remoteScopes = RemoteScopes.of(document)
 
     document.nodes.values.sortedBy(UiBuilderNode::id).forEach { node ->
@@ -207,19 +191,13 @@ object CapabilityComposeCodeExporter {
               "STATE_SELECTION_GENERATOR_REQUIRED",
               "Show by state requires the shared state-selection generator",
             )
-        // A placement is a document construct rather than a catalog component: it is not on any
-        // catalog's palette, it has no properties or slots of its own, and where it may sit is the
-        // question of what its component's body root is — the capability the body already has.
-        // Declaring a synthetic entry in the m3 catalog would put a tile on the palette that draws
-        // nothing until a component exists, and would say `design/…` is part of Material 3.
+        // A placement is a document construct, not a catalog component; where it may sit is its
+        // body root's question.
         node.componentId == DESIGN_COMPONENT_INSTANCE_ID -> Unit
         capability == null ->
           diagnostics += node.error("UNKNOWN_COMPONENT", "No catalog capability exists")
-        // Named before the two generic refusals below, because both of them would be true of it and
-        // neither would be useful. "No typed call emitter exists for RemoteDocumentPlayer" tells a
-        // designer that a component is missing an implementation; what is actually true is that
-        // this subtree is a different language, whose delivery — captured at build time, fetched,
-        // played by whichever host the app already has — the design does not decide.
+        // Named before the generic refusals: the subtree is a different language whose delivery the
+        // design doesn't decide.
         node.componentId == REMOTE_COMPOSE_INLINE_COMPONENT_ID ->
           diagnostics +=
             node.error(
@@ -228,9 +206,8 @@ object CapabilityComposeCodeExporter {
                 "@RemoteComposable body separately and play the captured document at a call site " +
                 "whose display info and density behaviour are your application's to choose",
             )
-        // Reachable only by dropping one outside remote content, which the slot rules allow — a
-        // generic container accepts `AnyContent`, and whether a subtree is remote is ancestry
-        // rather than anything a slot can say (see [RemoteScopes]). So it is caught here instead.
+        // Only reachable by dropping one outside remote content (slots can't express ancestry; see
+        // [RemoteScopes]).
         node.componentId == REMOTE_COMPOSE_CUSTOM_COMPONENT_ID ->
           diagnostics +=
             node.error(
@@ -290,10 +267,6 @@ object CapabilityComposeCodeExporter {
       }
       diagnostics += node.fieldCoverageDiagnostics()
       when (node.componentId) {
-        // `layout/supporting-pane-scaffold` used to warn here that a "two-pane helper does not
-        // prove adaptive posture or motion parity". It no longer emits a helper that could fail to:
-        // the generated screen calls the real `SupportingPaneScaffold` through the directive the
-        // window computes, which is the thing the warning was asking for.
         "m3/horizontal-floating-toolbar" ->
           diagnostics +=
             node.warning(
@@ -317,13 +290,9 @@ object CapabilityComposeCodeExporter {
 }
 
 /**
- * The asset keys no adapter binds, which are both a provenance fallback and a warning.
- *
- * The key is read as a primitive *if it is one*. `UiBuilderNode.string` goes through
- * `jsonPrimitive`, which throws on an array or an object — and a malformed `assetKey` is precisely
- * what `INVALID_PROPERTY_TYPE` already reports, so decoding it eagerly turned a diagnostic into a
- * crash. The editor asks for these diagnostics on every document now, which is what made a latent
- * throw in the export path a way to take the whole editor down.
+ * The asset keys no adapter binds: both a provenance fallback and a warning. Read as a primitive
+ * only if it is one, since a malformed `assetKey` is already an `INVALID_PROPERTY_TYPE` diagnostic
+ * and must not crash the editor.
  */
 private fun UiBuilderDocument.unboundAssetKeys(assetAdapter: ComposeAssetAdapter?): List<String> =
   nodes.values

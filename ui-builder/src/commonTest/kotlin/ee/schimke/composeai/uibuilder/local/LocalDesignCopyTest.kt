@@ -7,11 +7,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 /**
- * A server design copied into the browser for a caller who may read it but not write it.
- *
- * The copy is a different design from the moment it is made: a new id, provenance rather than a
- * fork point, and no server home. Anything else would let it look like a checkout that could sync
- * back into a design this caller was never allowed to change.
+ * A server design copied into the browser for a read-only caller: a new id, provenance rather than
+ * a fork point, and no server home, so it can't look like a checkout that syncs back.
  */
 class LocalDesignCopyTest {
   private val source =

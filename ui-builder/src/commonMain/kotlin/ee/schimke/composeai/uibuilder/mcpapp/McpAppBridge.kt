@@ -14,10 +14,8 @@ import kotlinx.serialization.json.putJsonObject
 
 /**
  * The file an MCP App host opened this editor on: the `FileInput` of an OpenAI file-extension
- * entrypoint (`{ file: { name, resourceUri } }`).
- *
- * [resourceUri] is opaque — a `host-resource://` URI the host resolves, never a path — and it is
- * the only URI this editor may write.
+ * entrypoint (`{ file: { name, resourceUri } }`). [resourceUri] is opaque (a `host-resource://`
+ * URI, never a path) and the only URI this editor may write.
  */
 data class McpAppFile(val name: String, val resourceUri: String)
 
@@ -54,10 +52,8 @@ data class McpAppHost(
 
 /**
  * Everything the editor asks of an MCP App host, as the editor needs it rather than as JSON-RPC.
- *
- * [McpAppJsonRpcBridge] is the real one; a test drives the editor's session against a fake, which
- * is the point of the seam: load, save, conflict, read-only and external change are decided in
- * [McpAppDesignSession], and none of it needs a browser to check.
+ * [McpAppJsonRpcBridge] is the real one; tests use a fake, since [McpAppDesignSession] decides
+ * load, save, conflict, read-only and external change.
  */
 interface McpAppBridge {
   suspend fun read(uri: String): McpAppFileContents
@@ -76,10 +72,9 @@ interface McpAppBridge {
 }
 
 /**
- * One JSON-RPC connection to the host: `window.parent.postMessage` in the browser.
- *
- * Requests the host sends the app (`ping`, `ui/resource-teardown`) are answered by the transport
- * itself; notifications arrive at [McpAppJsonRpcBridge.handleNotification].
+ * One JSON-RPC connection to the host (`window.parent.postMessage` in the browser). The transport
+ * answers host requests (`ping`, `ui/resource-teardown`); notifications go to
+ * [McpAppJsonRpcBridge.handleNotification].
  */
 interface McpAppTransport {
   /** Sends a request and returns its `result`, or throws with the `error`'s message. */

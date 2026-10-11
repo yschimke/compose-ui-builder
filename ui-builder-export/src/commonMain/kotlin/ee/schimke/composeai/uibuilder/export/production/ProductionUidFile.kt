@@ -11,11 +11,8 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Build-tool compatibility adapter for the canonical production protocol in
- * compose-preview-contracts.
- *
- * Existing build callers retain these Kotlin types and signatures. ProductionUidFiles checks every
- * declaration against ProductionUidFileV1 before adapting it to the generator's document model. The
- * production wrapper remains distinct from the ordinary design-service document.
+ * compose-preview-contracts: callers keep these types, and every declaration is checked against
+ * `ProductionUidFileV1` before adapting. Distinct from the ordinary design-service document.
  */
 @Serializable
 data class ProductionUidFile(

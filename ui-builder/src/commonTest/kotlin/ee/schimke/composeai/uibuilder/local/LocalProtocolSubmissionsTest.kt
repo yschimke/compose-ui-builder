@@ -16,12 +16,8 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The wire spelling, and back again.
- *
- * The local session's whole claim is that the editor talks to it in exactly the shape it talks to
- * the server, so the operations that come out of the round trip have to be the operations that went
- * in. Anything that survives one direction and not the other would be an edit that behaves
- * differently offline, which is the one thing this mode must not do.
+ * The wire spelling, and back again: operations must survive the round trip, or an edit would
+ * behave differently offline.
  */
 class LocalProtocolSubmissionsTest {
   private fun roundTrip(operations: List<DesignOperation>): List<DesignOperation> {
@@ -71,7 +67,7 @@ class LocalProtocolSubmissionsTest {
           property = "text",
           value = Json.parseToJsonElement("""{"type":"string","value":"Hello"}""").jsonObject,
         ),
-        // #480's explicit removal, which used to be a null `setProperty` on the wire.
+        // The explicit removal mutation (see #480).
         DesignOperation.RemoveNodeProperty("text-1", "style"),
         DesignOperation.SetModifiers(
           nodeId = "text-1",

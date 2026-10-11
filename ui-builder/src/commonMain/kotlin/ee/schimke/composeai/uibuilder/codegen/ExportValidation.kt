@@ -73,19 +73,11 @@ private fun validateCatalogPin(
   document: UiBuilderDocument,
   catalog: CapabilityCatalog,
 ): List<ExportValidationIssue> {
-  // Candidate manifests do not yet expose a separate digest field, so neither writer of a pin has
-  // a digest to write and both write a placeholder — and they do not write the SAME placeholder.
-  // This editor spells it as the catalog's own revision; the server spells it `candidate`
-  // (`CurrentM3UiBuilderCatalogExecutor.CURRENT_CAPABILITY_DIGEST`). On a synthesised catalog the
-  // two agree by accident, because that catalog's revision IS `candidate` — which is why a rule
-  // that only ever matched one of them survived this long. On a published catalog the revision is
-  // a content hash, so every pin the server writes, for a design created five seconds ago as much
-  // as for one re-pinned across a source flip (#818), failed this check and took the Issues panel
-  // and both export lanes with it.
-  //
-  // So the digest is checked against either spelling until there is a real digest to check. The
-  // three fields that name the served catalog are unchanged and are what actually catches a
-  // document pinned to something else.
+  // Manifests have no digest field yet, and the two pin writers use different placeholders: this
+  // editor writes the catalog's revision, the server writes `candidate`
+  // (`CurrentM3UiBuilderCatalogExecutor.CURRENT_CAPABILITY_DIGEST`). On published catalogs these
+  // differ, so accept either until a real digest exists. The three catalog-naming fields still
+  // catch a wrong pin.
   val expected =
     mapOf(
       "systemId" to catalog.benchmark.catalogSystemId,
@@ -118,9 +110,8 @@ private fun validateCatalogPin(
           "catalogPin.$field expected '$expectedValue' but was '${actualValue ?: "<missing>"}'",
       )
   }
-  // `capabilityDigest` is a field of the pin, checked above against either spelling rather than
-  // against one expected value — so it is named here too, or moving it out of [expected] would
-  // have turned every pin that carries it into an "unexpected field".
+  // `capabilityDigest` is checked above, so it must be listed here or it'd be an "unexpected
+  // field".
   val unexpected =
     (actual.keys - expected.keys - "capabilityDigest").sorted().map { field ->
       ExportValidationIssue(
@@ -132,22 +123,15 @@ private fun validateCatalogPin(
 }
 
 /**
- * What a pin's `capabilityDigest` says when there is no digest to say.
- *
- * The server's own spelling of the same placeholder —
- * `CurrentM3UiBuilderCatalogExecutor.CURRENT_CAPABILITY_DIGEST` — repeated rather than imported:
- * `:ui-builder` is reached as a distribution and never links the runtime that serves it
- * (`docs/design/UI_BUILDER_PROJECT_BOUNDARY.md`). Both disappear together the day a catalog
- * manifest carries a real digest.
+ * The server's placeholder `capabilityDigest`, repeated rather than imported since `:ui-builder`
+ * never links the runtime (`docs/design/UI_BUILDER_PROJECT_BOUNDARY.md`). Remove both when
+ * manifests carry a real digest.
  */
 private const val CANDIDATE_CAPABILITY_DIGEST = "candidate"
 
 /**
- * Where each component's body starts, by component key.
- *
- * A body is an ordinary subtree in the ordinary `nodes` map — that is what lets every walk here
- * treat it as one — reached from the component rather than from a slot, so it is named among the
- * graph's entry points beside the document's own root.
+ * Where each component's body starts, by component key: graph entry points beside the document's
+ * root.
  */
 private fun UiBuilderDocument.componentRoots(): Map<String, String> =
   components.entries
@@ -184,19 +168,10 @@ private fun validateGraph(document: UiBuilderDocument): List<ExportValidationIss
       }
   }
   document.roots.forEach { root -> references.getOrPut(root) { mutableListOf() } += "<root>" }
-  // Component roots are deliberately NOT counted here, though they are walked below.
-  //
-  // This map answers one question — is a node placed in the tree more than once — and a component
-  // root is not a placement: the body is drawn wherever the component is placed, and its
-  // declaration naming it is a claim of ownership rather than a second parent. Counting it made
-  // every document that declares a component a duplicate of itself, because a body has to be
-  // somewhere: a published library symbol names its own root in `roots` *and* in `components`, and
-  // a design authoring a component holds the body in a slot, so both collected two references for
-  // one node and neither could export.
-  //
-  // Reachability, the other reason the old comment gave for counting it, is not this map's job:
-  // the walk below visits `componentRoots()` as entry points and `UNREACHABLE_NODE` reads what it
-  // visited. So a body reached only through its declaration is still reachable.
+  // Component roots are walked but not counted here: this map asks whether a node is placed more
+  // than once, and a declaration naming its body isn't a placement (a library symbol names its root
+  // in both `roots` and `components`). Reachability is handled by the walk below, which visits
+  // `componentRoots()` as entry points.
   references.entries
     .sortedBy { it.key }
     .forEach { (nodeId, parents) ->

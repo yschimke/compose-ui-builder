@@ -32,14 +32,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The catalog-published editor policy: role traits, editor ranges and insert content, each read
- * from the catalog's own `statusSemantics` before the Kotlin table it replaces.
- *
- * Two halves. A catalog that publishes none of it — every packaged catalog, and every catalog
- * served today — is edited exactly as before. A catalog that does publish it is honoured, and a
- * declaration this build cannot honour falls back to the table rather than breaking the property or
- * the insert. Together they are what lets a catalog take each table over before the table is
- * deleted.
+ * The catalog-published editor policy (role traits, editor ranges, insert content), each read from
+ * `statusSemantics` before the Kotlin table it replaces. A catalog publishing none of it is edited
+ * as before; one that does is honoured, and an unusable declaration falls back to the table.
  */
 class CatalogPublishedPolicyTest {
 

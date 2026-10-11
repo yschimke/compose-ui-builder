@@ -7,14 +7,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 
 /**
- * How many editor-owned popups — menus and dialogs — are open right now.
- *
- * The editor draws every popup inside its one Compose canvas, but a device preview of a pinned
- * catalog is a DOM iframe **above** that canvas, because it has to take the pointer to be tried
- * out. So a menu that opened over a device frame was painted underneath it, and clicking where the
- * menu should have been clicked the design instead. A host with such a surface reads [anyOpen] and
- * drops the surface beneath the canvas while a popup is up; the canvas's hole keeps the preview
- * visible, and the popup, drawn over the hole, is on top.
+ * How many editor-owned popups (menus, dialogs) are open. A pinned catalog's device preview is a
+ * DOM iframe above the Compose canvas, so a host reads [anyOpen] and drops that surface below the
+ * canvas while a popup is up; the canvas hole keeps the preview visible beneath the popup.
  */
 internal object EditorOverlays {
   private var openCount by mutableIntStateOf(0)

@@ -18,18 +18,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.exp
 
 /**
- * The zoom the canvas asks for, anchored: [scale] is the new zoom, and [focus] is the point in the
- * workspace — pointer or pinch centre, in workspace pixels — that has to stay under the hand.
+ * The zoom the canvas asks for: [scale], and the workspace-pixel [focus] (pointer or pinch centre)
+ * that must stay under the hand.
  */
 internal data class CanvasZoomRequest(val scale: Float, val focus: Offset)
 
 /**
- * The scale one notch of Ctrl/Cmd + wheel moves to, from [from].
- *
- * Exponential in the delta, so a smooth trackpad stream and a clicky wheel reach the same zoom for
- * the same travel, and zooming in then out by the same amount lands back where it started. A
- * browser reports a trackpad pinch as exactly this — a wheel event with Ctrl held — so this one
- * rule serves both.
+ * The scale one notch of Ctrl/Cmd + wheel moves to from [from]. Exponential in the delta, so
+ * trackpad and wheel agree and in-then-out returns to start; browsers report trackpad pinch the
+ * same way.
  */
 internal fun wheelZoom(from: Float, deltaY: Float): Float =
   // Capped per event: platforms disagree about a notch's size — a line on the desktop, a hundred
@@ -40,17 +37,14 @@ internal fun wheelZoom(from: Float, deltaY: Float): Float =
   )
 
 /**
- * A zoom in flight: the [scale] asked for, the root-space [focus] the hand is at, and the
- * [designPoint] that was under it — in design units, the frame-relative offset divided by the scale
- * it was measured at.
+ * A zoom in flight: the requested [scale], the root-space [focus], and the [designPoint] under it
+ * (frame offset divided by the scale it was measured at).
  */
 internal data class ZoomAnchor(val scale: Float, val focus: Offset, val designPoint: Offset)
 
 /**
- * How far to scroll so [designPoint] is under [focus] again, once the frame is at [frameOrigin] and
- * drawn at [scale]: positive when the point has landed right of or below the hand, which a larger
- * scroll offset brings back. The scroll clamps what it cannot give — a design still smaller than
- * the workspace stays centred.
+ * How far to scroll so [designPoint] is under [focus] again at [frameOrigin] and [scale]; positive
+ * when the point landed right of or below the hand. Scroll clamping keeps small designs centred.
  */
 internal fun anchorDrift(
   frameOrigin: Offset,
@@ -60,13 +54,9 @@ internal fun anchorDrift(
 ): Offset = frameOrigin + designPoint * scale - focus
 
 /**
- * Pinch and Ctrl/Cmd + wheel, on the workspace.
- *
- * **Initial pass, and only what is ours.** The workspace's own scroll, a node's long-press move and
- * the selection tap all sit under this, so it looks first and takes only the two things nobody else
- * wants: a wheel with Ctrl or Cmd held (a plain wheel still scrolls), and a gesture with two or
- * more fingers down (one finger still scrolls, taps and holds). Two fingers also pan, because a
- * pinch that moves is how a hand says both at once.
+ * Pinch and Ctrl/Cmd + wheel on the workspace. Reads the initial pass and takes only Ctrl/Cmd
+ * wheels and multi-finger gestures (which also pan), leaving plain wheels, single-finger scrolls,
+ * taps and holds to the gestures underneath.
  */
 internal fun Modifier.canvasZoomGestures(
   scale: Float,

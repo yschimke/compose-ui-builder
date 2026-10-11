@@ -17,9 +17,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
 /**
- * Whether the device previews let time run: off until somebody asks, so a preview opens on the same
- * still frame every render of the design draws, and a click sets the clock hands turning and the
- * animations playing.
+ * Whether device previews let time run: off by default so previews open on the design's still
+ * frame; a click starts clocks and animations.
  */
 @Composable
 internal fun PreviewTimeToggle(
@@ -39,13 +38,9 @@ internal fun PreviewTimeToggle(
 }
 
 /**
- * [content]'s players at [document]'s `fixedTime` unless time runs — the wall clock the canvas
- * renderer draws a design that is not running at.
- *
- * Animation time is left to the player. Holding it with `LocalRcAnimationClock` would freeze it,
- * but a host-driven clock makes the player redraw every frame for any document that declares a
- * float animation — every Remote M3 button carries a press spring — so a frozen preview never
- * idled.
+ * [content]'s players at [document]'s `fixedTime` unless time runs. Animation time is left to the
+ * player: a host-driven clock would redraw every frame for any float animation, so a frozen preview
+ * would never idle.
  */
 @Composable
 internal fun ProvidePreviewPlayerTime(

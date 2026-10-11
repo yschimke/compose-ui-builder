@@ -16,12 +16,9 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 
 /**
- * Reads and writes checked-in design documents — the `.uid` files an agent edits and IntelliJ
- * opens.
- *
- * The same JSON shape the IntelliJ plugin writes: `DesignDocumentV1`, pretty-printed with two-space
- * indent and every default present, so a design saved from the desktop and one saved from the IDE
- * diff cleanly against each other.
+ * Reads and writes checked-in `.uid` design documents in the IntelliJ plugin's shape:
+ * `DesignDocumentV1`, two-space pretty-printed with every default, so desktop and IDE saves diff
+ * cleanly.
  */
 object DesignFiles {
   /** The document declarations the offline editor can load and write back. */
@@ -148,16 +145,9 @@ object DesignFiles {
 }
 
 /**
- * Writes one design file back only while it still holds what this editor last read or wrote.
- *
- * A checked-in `.uid` is also edited by agents, other editors and `git checkout`. Writing the
- * in-memory document over such a change would erase it without a trace, so a write against a file
- * that has moved on is refused instead, and the editor says so; reopening the file picks the change
- * up.
- *
- * The comparison and the replacement are two steps, so a save landing in the instant between them
- * can still be replaced; closing that needs an OS file lock the other writers would have to share.
- * What this does close is everything outside that instant.
+ * Writes one design file back only while it still holds what this editor last read or wrote, so
+ * changes by agents, other editors or `git checkout` are refused rather than erased. The
+ * check-then-replace window remains (closing it would need a shared OS file lock).
  */
 class DesignFileGuard(private val path: Path) {
   private var known: String? = current()

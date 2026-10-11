@@ -2,16 +2,13 @@ package ee.schimke.composeai.uibuilder.local
 
 /**
  * A synchronous [LocalDesignStorage] in front of an asynchronous store: every entry held in memory,
- * every change also handed to [sink] to be written behind.
+ * every change also handed to [sink] to be written behind. This is the async seam between the
+ * reducer (answers in the same call) and IndexedDB: the page reads every entry once ([initial]),
+ * then reads are map lookups and `LocalDesignSession` gets its `Stored`/`Compacted`/`Refused`
+ * synchronously; later sink failures are the sink's to report.
  *
- * This is the whole of the async seam between the reducer, which answers an edit in the same call
- * that made it, and IndexedDB, which answers later. The page reads every entry once before the
- * editor starts ([initial]); from then on a read is a map lookup and a write lands here at once, so
- * `LocalDesignSession` still gets — and reports — its `Stored`, `Compacted` or `Refused` in the
- * same call. What the sink does later (and whether it fails) is the sink's to report.
- *
- * [sink] is called in the order the changes were made, and must apply them in that order; IndexedDB
- * does, because read-write transactions on one store commit in the order they were opened.
+ * [sink] must apply changes in call order (IndexedDB readwrite transactions on one store commit in
+ * the order opened).
  */
 class MirroredLocalDesignStorage(initial: Map<String, String>, private val sink: Sink) :
   LocalDesignStorage {
@@ -39,8 +36,8 @@ class MirroredLocalDesignStorage(initial: Map<String, String>, private val sink:
   override fun keys(): List<String> = memory.keys.toList()
 
   /**
-   * Another tab changed [key] to [value] (null: removed it). Taken into memory without being handed
-   * to the sink — it came *from* the store, and writing it back would only race the other tab.
+   * Another tab changed [key] to [value] (null: removed). Taken into memory without going to the
+   * sink, which would only race the other tab.
    */
   fun applyExternal(key: String, value: String?) {
     if (value == null) memory.remove(key) else memory[key] = value

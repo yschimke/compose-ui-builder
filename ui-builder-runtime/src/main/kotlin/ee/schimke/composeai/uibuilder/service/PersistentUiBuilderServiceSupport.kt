@@ -19,16 +19,9 @@ import kotlinx.serialization.json.encodeToJsonElement
 private const val GITHUB_ACTOR_PREFIX = "github:"
 
 /**
- * A GitHub login is case-insensitive, and the host signs its session over `login.lowercase()`, so
- * the actor that arrives is always lowercase. A grant stored whatever the sharer typed: sharing
- * with `github:AshleyIngram` was accepted, stored, shown back in the access record — and matched
- * nobody, indistinguishable from either end from never having shared at all.
- *
- * Folding on the way in fixes new grants; comparing canonically fixes the ones already stored, so a
- * grant written mis-cased before this starts working rather than staying quietly broken.
- *
- * Only `github:` folds. Case is meaningful in an `agent:<fingerprint>`, and folding one would make
- * two distinct agents equal.
+ * A GitHub login is case-insensitive and the host signs sessions over `login.lowercase()`, so
+ * `github:` actor ids are folded on the way in and compared canonically (fixing mis-cased stored
+ * grants). Only `github:` folds: case is meaningful in `agent:<fingerprint>`.
  */
 internal fun canonicalActorId(actorId: String): String =
   if (actorId.startsWith(GITHUB_ACTOR_PREFIX))
@@ -39,29 +32,17 @@ internal fun sameActor(left: String, right: String): Boolean =
   canonicalActorId(left) == canonicalActorId(right)
 
 /**
- * The grants that actually govern: one per actor, the last one written.
+ * The grants that actually govern: one per actor, the latest by
+ * [DesignActorGrantV1.grantedAtEpochMillis] (position breaks ties).
  *
- * Folding on the way in only fixes grants written since it started working. A record persisted
- * before that can hold `github:Alice` AND `github:alice`, because the replacement it went through
- * compared exact strings — a mixed-case EDITOR share followed by a lowercase VIEWER downgrade left
- * both. Asking `any` of that list is a UNION of the two, so the downgrade did not take away WRITE;
- * and [listItem] answering with `firstOrNull` picked whichever came first, so the role the reader
- * was *shown* could disagree with the one being enforced.
- *
- * Latest wins, read off [DesignActorGrantV1.grantedAtEpochMillis] rather than off list position:
- * the grant carries when it was made, so the rule is a fact about the grants rather than about how
- * they happen to be ordered. Position breaks a tie, because a mutation appends after filtering the
- * actor out and the newest entry is therefore last.
- *
- * Read-time rather than a migration, so a record is correct the first time it is consulted rather
- * than the first time it is rewritten — and the access-mutation path starts from this, so the next
- * grant change on a design also heals what is stored.
+ * Older records can hold both `github:Alice` and `github:alice`; without collapsing, `any` would
+ * union their roles and [listItem] could show a different role from the one enforced. Applied at
+ * read time, and the access-mutation path starts from this, so the next change heals storage.
  */
 internal fun DesignAccessControlV1.effectiveGrants(): List<DesignActorGrantV1> {
   if (actorGrants.size < 2) return actorGrants
-  // Every record written since the fold started working already has one grant per actor, and this
-  // runs on every authorization check — so establish that there is something to collapse before
-  // building a second list. A record with no duplicates is returned as it is.
+  // Runs on every authorization check, so only build a second list when there is something to
+  // collapse.
   val canonical = actorGrants.mapTo(HashSet(actorGrants.size), { canonicalActorId(it.actorId) })
   if (canonical.size == actorGrants.size) return actorGrants
   return actorGrants
@@ -73,9 +54,7 @@ internal fun DesignAccessControlV1.effectiveGrants(): List<DesignActorGrantV1> {
     .toList()
 }
 
-/**
- * [effectiveGrants] applied, for anywhere an access record is read rather than asked a question.
- */
+/** [effectiveGrants] applied, for anywhere an access record is read rather than asked. */
 internal fun DesignAccessControlV1.collapsed(): DesignAccessControlV1 =
   effectiveGrants().let { if (it.size == actorGrants.size) this else copy(actorGrants = it) }
 
@@ -86,10 +65,8 @@ internal fun DesignAccessControlV1.allows(actorId: String, action: DesignAccessA
     }
 
 /**
- * [allows] without the [UiBuilderPublicAccess.ANYONE_ACTOR_ID] grant: the owner, or a grant naming
- * this actor. It is the question "is this design one of *mine*", which is what a listing asks — a
- * public design is readable by everyone, and listing every public design to everyone would turn
- * each person's file manager into the whole server's.
+ * [allows] without the [UiBuilderPublicAccess.ANYONE_ACTOR_ID] grant: "is this design one of mine",
+ * which is what a listing asks (otherwise every public design lists for everyone).
  */
 internal fun DesignAccessControlV1.allowsPersonally(
   actorId: String,
@@ -112,12 +89,9 @@ internal fun PersistedDesignV1.allows(actorId: String, action: DesignAccessActio
   access.allows(actorId, action)
 
 /**
- * The same question asked of a whole identity: an actor may act, or the human it acts for may.
- *
- * This is the one place delegation is honoured, and it is deliberately a *widening of who* rather
- * than a widening of what — a delegate reaches exactly the designs its principal reaches, with
- * exactly the actions the design granted the principal. An actor with no principal
- * ([AuthenticatedUiBuilderActor.onBehalfOfActorId] null) asks precisely the question it always did.
+ * The same question asked of a whole identity: an actor may act, or the human it acts for may. The
+ * one place delegation is honoured — a delegate reaches exactly its principal's designs and
+ * actions.
  */
 internal fun PersistedDesignV1.allows(
   actor: AuthenticatedUiBuilderActor,
@@ -153,11 +127,8 @@ internal fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): Des
   )
 
 /**
- * The list row for a design the store could not read, built from the header its quarantine kept.
- *
- * The same nine fields a served design reports, from the record that describes it — so a
- * quarantined design is listed as what it is, titled and owned, rather than as a bare id an
- * operator has to decode.
+ * The list row for a design the store could not read, built from the header its quarantine kept, so
+ * it is listed titled and owned rather than as a bare id.
  */
 internal fun StoredDesignHeaderV3.quarantinedListItem(
   designId: String,
@@ -176,10 +147,8 @@ internal fun StoredDesignHeaderV3.quarantinedListItem(
   )
 
 /**
- * What the asking actor is told it may do here, reported under the *actor's own* id — the caller
- * asked about itself, and being told about an id it does not use would be an answer to a question
- * nobody asked. What it may do is resolved through its principal when it has one, which is what put
- * the design in front of it.
+ * What the asking actor may do here, reported under the actor's own id but resolved through its
+ * principal when it has one.
  */
 private fun DesignAccessControlV1.requesterAccess(
   actor: AuthenticatedUiBuilderActor
@@ -201,20 +170,13 @@ internal fun PersistedDesignV1.retainedFromSequence(): Long =
   history.firstOrNull()?.outcome?.sequence?.minus(1) ?: lastSequence
 
 /**
- * The oldest sequence a whole revision is still retained for, which is not [retainedFromSequence].
- *
- * That one is the operation log's floor (`retainedCommittedOperations`), and it is the right answer
- * for a delta: it says how far back the *changes* go. A `SNAPSHOT_REQUIRED` raised because a
- * revision's document is gone must answer with the snapshot floor instead. The two used to be
- * within one of each other, so quoting either was harmless; retaining fewer revisions than
- * operations makes the difference real, and a client told a floor 900 sequences below what is
- * actually retained would ask again for a revision that is still missing and loop.
+ * The oldest sequence a whole revision is still retained for, which is not [retainedFromSequence]
+ * (the operation log's floor, right for deltas). A `SNAPSHOT_REQUIRED` must quote this floor, or a
+ * client could loop asking for a missing revision.
  */
 internal fun PersistedDesignV1.retainedSnapshotFromSequence(): Long {
-  // The floor is the start of the unbroken run of revisions ending at the head, not the first
-  // entry:
-  // an open branch's pinned fork point can sit below a gap (`UI_BUILDER_BRANCHES.md`), and quoting
-  // its sequence would tell a client that everything above it is still retained.
+  // The floor is the start of the unbroken run ending at the head: a pinned branch fork point can
+  // sit below a gap (`UI_BUILDER_BRANCHES.md`).
   var index = revisionSnapshots.lastIndex
   if (index < 0) return lastSequence
   while (
@@ -513,14 +475,9 @@ internal fun DesignDocumentV1.rebuildLocation(
 /**
  * Write one component declaration, keeping the root list honest about which subtree is the screen.
  *
- * A body declared while it is an *extra* root leaves the root list: it is a definition now, drawn
- * only where a placement names it, and the design keeps the one screen root it had. That is how a
- * subtree becomes a component in one command — move it out to the root list, declare it — without a
- * mutation the wire does not have. A body that loses its declaration and is placed nowhere else
- * returns to the root list, so the command removing a component must also delete or re-place it, or
- * the root count refuses the result. Both directions read the document alone, so a compensation
- * writing the old declaration back gets the answer the forward write did. The editor's reducer
- * applies the same rule (`UiBuilderDocument.withComponent`).
+ * A body declared while an extra root leaves the root list (it is now a definition); a body that
+ * loses its declaration and is placed nowhere returns to it. Both directions read the document
+ * alone, so compensations agree with forward writes. Mirrors `UiBuilderDocument.withComponent`.
  */
 internal fun DesignDocumentV1.withComponent(
   key: String,
@@ -561,10 +518,8 @@ internal const val COMPONENT_ARGUMENTS_FIELD = "arguments"
 private const val PREDICATE_FIELD = "predicate"
 
 /**
- * How a rejection or a conflict names one event's binding.
- *
- * The wire's `field` is one string and has no separate place for an event, so the binding map and
- * the event are spelled together — the same bargain `modifiers` makes by naming the whole chain.
+ * How a rejection or conflict names one event's binding: the wire's `field` is one string, so the
+ * map and event are spelled together.
  */
 internal fun eventBindingField(event: String): String = "eventBindings.$event"
 
@@ -574,16 +529,9 @@ internal data class StateUsageIssue(val nodeId: String, val field: String, val m
 /**
  * The first place [declarations] would leave a design saying something it cannot mean.
  *
- * One scan for all three state mutations, because they fail the same way from different directions:
- * a removal can strand a reader, a redefinition can narrow one out from under its reader, and a new
- * binding can name a variable nobody declared. Reading the whole document each time rather than the
- * delta is deliberate — the delta is what a caller would have to get right, and getting it wrong is
- * silent.
- *
- * Undeclared is not the only failure. `toggle` is `!x` and `selectOrClear` writes null, so a
- * variable that is not a flag and one that is not nullable are refusals too: the renderer coerces
- * and carries on, the exporter emits a `TODO` that throws on the first press, and a design only one
- * of its two consumers can perform is worse than a rejected command.
+ * One whole-document scan for all three state mutations (removal stranding a reader, redefinition
+ * narrowing one, binding an undeclared name). Also refuses `toggle` on a non-flag and
+ * `selectOrClear` on a non-nullable, which the exporter could not perform.
  */
 internal fun DesignDocumentV1.stateUsageIssue(
   declarations: Map<String, StateVariableV1>
@@ -640,12 +588,8 @@ internal fun DesignDocumentV1.stateUsageIssue(
 }
 
 /**
- * Whether a declaration holds a boolean, and whether it may hold null.
- *
- * Read the way the browser reducer reads them, `initialValue` fallback included: a declaration that
- * names no `valueType` still has a type, and one whose initial value is null is nullable whether or
- * not it says so. Two readings of the same document would mean a design the editor lets an author
- * build and the server then refuses to save.
+ * Whether a declaration holds a boolean, and whether it may hold null — read as the browser reducer
+ * reads them, `initialValue` fallback included, so editor and server agree.
  */
 private fun StateVariableV1.isFlag(): Boolean =
   when (valueType) {
@@ -688,10 +632,8 @@ private fun DesignActionV1.stateWrite(): String? =
   }
 
 /**
- * The conflicts a state write carries when someone else wrote the same variable first.
- *
- * `STALE_PROPERTY_WRITE` because the wire has no state-specific code and the variable's name is the
- * field it names — the same reading the modifier lane takes for a chain.
+ * The conflicts a state write carries when someone else wrote the same variable first, as
+ * `STALE_PROPERTY_WRITE` (the wire has no state-specific code).
  */
 internal fun staleStateWrites(
   original: PersistedDesignV1,
@@ -766,15 +708,8 @@ private fun List<String>.insertAtAnchors(nodeId: String, location: NodeLocationV
 }
 
 internal fun validateTopology(document: DesignDocumentV1): RejectedOutcomeV1? {
-  // At most one root, checked on the way in rather than only on the way out. Export requires
-  // exactly
-  // one — `validateDocumentForExport`'s `ROOT_CARDINALITY`, and `ScreenDocumentProjection` again —
-  // while every placement rule below is satisfied by two disjoint trees under two roots. Without
-  // this a design could be created, persisted, loaded and edited and only refuse when somebody
-  // asked for Kotlin out of it (yschimke/compose-preview-server#429).
-  //
-  // Zero roots stays legal: that is the empty document `create_design` takes and the first
-  // parentless insert fills. Two is the count nothing but deleting a whole subtree can undo.
+  // At most one root, checked on the way in: export requires exactly one, and otherwise a design
+  // would only fail when exported. Zero is legal (the empty document a create starts from).
   if (document.roots.size > 1) {
     return rejected(
       "",
@@ -849,14 +784,8 @@ internal fun validateTopology(document: DesignDocumentV1): RejectedOutcomeV1? {
 }
 
 /**
- * A throwable's message with Java exception class names taken out of it.
- *
- * The render daemon reports a failed composition as `IllegalStateException: unsupported asset
- * 'avatar-lain' on d-m1-photo`, the render host prefixes `render failed: `, and the export lane
- * used to forward the lot to the client under the `internal` code. A design the renderer cannot
- * draw is an ordinary state; a stack-trace class name in a user-facing error is not
- * (yschimke/compose-preview-server#484). The class names are dropped and the sentence the code
- * actually wrote is kept.
+ * A throwable's message with Java exception class names taken out, so a render failure reaches the
+ * client as the sentence the code wrote rather than a stack-trace class name.
  */
 internal fun Throwable.clientMessage(): String {
   val message = message?.takeIf { it.isNotBlank() } ?: return "the exporter threw without a message"
@@ -877,17 +806,12 @@ internal fun CatalogCapabilityV1.supports(format: ExportFormatV1): Boolean =
     ExportFormatV1.COMPOSE -> exportCapabilities.composeCode
     ExportFormatV1.SVG -> exportCapabilities.svg
     ExportFormatV1.PNG -> exportCapabilities.png
-    // Defaults to false in the contract, and no catalog here sets it, so a BUNDLE export is
-    // refused as BAD_REQUEST at the gate above until the server can actually write one
-    // (yschimke/compose-preview-server#528). Remote formats are optional in the staged contracts.
+    // No catalog here sets this, so a BUNDLE export is refused as BAD_REQUEST until the server can
+    // write one. Remote formats are optional in the staged contracts.
     ExportFormatV1.BUNDLE -> exportCapabilities.bundle
-    // Added by compose-preview-contracts 2.17.0, and read the same way: the capability decides,
-    // and no catalog here sets either, so both are refused at this gate until something can write
-    // one. Wired rather than folded into an `else`, so the next format added still fails this
-    // compile instead of silently reading as unsupported — which is what this `when` is for.
-    //
-    // An A2UI catalog's JSON is its A2UI messages rather than Remote Compose, so the Remote
-    // Compose authoring flag does not gate it; the capability alone decides.
+    // The capability decides (none set here). Explicit branches so a new format fails compilation
+    // rather than silently reading as unsupported. A2UI JSON is not gated by the Remote Compose
+    // flag.
     ExportFormatV1.JSON ->
       (UiBuilderBuildFeatures.remoteCompose || platform == A2UI_PLATFORM) &&
         exportCapabilities.remoteJson
@@ -940,9 +864,8 @@ internal fun validateEnvironment(environment: DesignEnvironmentV1): EnvironmentV
           EnvironmentFieldV1.FIXED_TIME,
           "environment.fixedTime must not be blank when set",
         )
-      // A blank family is not "the default" — reset is. Letting one through would store a document
-      // whose typeface is set to nothing, which the renderer cannot distinguish from a family it
-      // failed to resolve.
+      // A blank family is not "the default" (reset is); it would be indistinguishable from an
+      // unresolved one.
       face != null && face.isBlank() ->
         EnvironmentValidationIssue(
           EnvironmentFieldV1.TYPEFACE,
@@ -977,10 +900,8 @@ internal fun DesignEnvironmentV1.applyChange(change: EnvironmentChangeV1): Desig
     ResetBackgroundEnvironmentChangeV1 -> copy(background = null)
     is SetTypefaceEnvironmentChangeV1 -> copy(typeface = change.value)
     ResetTypefaceEnvironmentChangeV1 -> copy(typeface = null)
-    // The whole set per change, which is what the protocol offers: an add and a remove would each
-    // be a mutation a client could interleave, and the set is read as a set by everything that
-    // consumes it. Reset is the empty set rather than a null, because "exports at its own frame
-    // alone" is a real answer and not an absent one.
+    // The whole set per change, so concurrent add/remove cannot interleave. Reset is the empty set,
+    // meaning "export at its own frame alone".
     is SetExportDevicesEnvironmentChangeV1 -> copy(exportDevices = change.value)
     ResetExportDevicesEnvironmentChangeV1 -> copy(exportDevices = emptyList())
     is SetRemoteProfileEnvironmentChangeV1 -> copy(remoteProfile = change.value)
@@ -1057,11 +978,8 @@ internal fun documentHash(document: DesignDocumentV1): String =
   sha256(documentCanonicalBytes(document))
 
 /**
- * The document bytes charged to retained revision snapshots.
- *
- * Unlike [documentCanonicalBytes], this includes [DesignDocumentV1.home]: every retained
- * [RevisionStateV1] stores that provenance, and omitting a large URL or repository path here could
- * multiply the configured retention budget by the snapshot ceiling.
+ * The document bytes charged to retained revision snapshots. Unlike [documentCanonicalBytes],
+ * includes [DesignDocumentV1.home], which every retained snapshot stores.
  */
 internal fun documentRetentionBytes(document: DesignDocumentV1): Int =
   canonicalJson(PersistentUiBuilderServiceJson.json.encodeToJsonElement(document))
@@ -1069,37 +987,17 @@ internal fun documentRetentionBytes(document: DesignDocumentV1): Int =
     .size
 
 /**
- * How many revisions of a document costing [documentBytes] this design may retain.
- *
- * The budget divided by the cost of one, held between the floor and the ceiling. A document large
- * enough to make the division zero still retains the floor, deliberately: see
- * [UiBuilderServiceLimits.minimumRetainedRevisionSnapshots].
- */
-/**
  * The newest entries of [this] that fit in [budgetBytes], keeping at least [minimumEntries], plus
  * whatever those entries [pin].
  *
- * Walks from the newest backwards and stops at the first entry that would exceed the budget, so a
- * commit serializes at most the budget rather than the whole map — the cost is bounded by what is
- * kept, not by what has accumulated. Insertion order is age order for both maps this is used on:
- * `acceptedOperations` and `tombstones` are built by `+`, and re-adding an existing key (an undo
- * marking its target compensated) keeps that key's original position, which is what makes the
- * oldest entries the ones at the front.
+ * Walks newest-first and stops at the first entry over budget, so cost is bounded by what is kept.
+ * Insertion order is age order (re-adding a key keeps its position).
  *
- * **That last property is exactly why [pin] exists.** An undo is a new record at the back; the
- * operation it compensates keeps its ORIGINAL position at the front. So undoing the oldest of eight
- * retained records adds a ninth at the back and pushes its own target out of the window — and
- * `reduceRedo` resolves through `acceptedOperations`, so an immediate redo of a just-accepted undo
- * answered `UNKNOWN_OPERATION`. Losing undo depth at the far end of history is the degradation the
- * budget is willing to pay for; an operation becoming non-redoable the instant it is undone is not.
- * Entries reachable from a kept entry through [pin] are therefore retained regardless of position,
- * to a fixpoint, because a redo record names an undo which names the original.
+ * [pin] exists because an undo is appended while its target keeps its old position: without
+ * pinning, undoing the oldest retained record could evict its own target and make an immediate redo
+ * fail with `UNKNOWN_OPERATION`. Pins are followed to a fixpoint (redo → undo → original).
  *
- * Bytes are measured as the UTF-8 the state file actually receives, key included. `String.length`
- * counted UTF-16 code units, so a design whose text is three-byte characters kept about three times
- * the budget it was told to keep, and the keys — an operation id apiece — were not counted at all.
- *
- * Returns [this] unchanged when everything fits, so the common case allocates nothing.
+ * Bytes are UTF-8 as stored, keys included. Returns [this] unchanged when everything fits.
  */
 internal inline fun <reified V> Map<String, V>.retainNewestWithinBytes(
   budgetBytes: Long,
@@ -1170,31 +1068,21 @@ internal fun touchKey(kind: String, vararg parts: String): String =
   parts.joinToString("\u0000", prefix = "${kind}\u0000")
 
 /**
- * Which earlier commits a command's staleness checks treat as concurrent — edits its author never
- * saw — and so which of them a write reports overwriting (`STALE_*`).
+ * Which earlier commits a command's staleness checks treat as concurrent (`STALE_*`).
  *
  * A write of key `k` is stale when the newest commit that wrote `k` after [since] is at or before
- * [through] and was not made by [run]. For a live edit the window is `(baseRevision, head]`, which
- * is the long-standing rule.
+ * [through] and was not made by [run]. For a live edit the window is `(baseRevision, head]`.
  *
- * Two kinds of replay resolve positions along a base chain (`base(cₖ)` is where `cₖ₋₁` landed),
- * which would hide concurrent edits from every command after the first, so both widen the window
- * back to where the run started:
- * - A branch merge passes `(forkRevision, parentHeadBeforeMerge]` for every command. A key an
- *   earlier replayed command already wrote has its newest write past [through] — a write the author
- *   saw, because it is the branch's own — so it is not reported again.
- * - A Sync replays over the wire, one request per command, so there is no "head before the run" to
- *   pass in. Each command after the first carries `DesignCommandV1.stalenessBaseRevision`, the
- *   revision the run started from; the window is `(stalenessBaseRevision, head]` and [run] names
- *   the run, so a newest write the run itself made is the author's own and is not reported again. A
- *   concurrent write that lands between two of the run's commands is still newer than the run's
- *   own, and is reported.
+ * Replays resolve positions along a base chain, which would hide concurrent edits after the first
+ * command, so they widen the window to where the run started:
+ * - A branch merge passes `(forkRevision, parentHeadBeforeMerge]`; the branch's own writes land
+ *   past [through] and are not re-reported.
+ * - A Sync replays one request per command; later commands carry
+ *   `DesignCommandV1.stalenessBaseRevision`, giving `(stalenessBaseRevision, head]`, and [run]
+ *   excludes the run's own writes. Concurrent writes between its commands are still reported.
  *
- * The touch log this reads is pruned against the oldest retained position snapshot. An open branch
- * pins its fork revision, so `(forkRevision, …]` is always within the window the log keeps. A
- * Sync's start is not pinned: a run long enough to outlive it reads the touches still retained,
- * which always cover `(baseRevision, head]` — never less than the command would have been told
- * without the field.
+ * The touch log is pruned against the oldest retained position snapshot. Branch forks are pinned; a
+ * Sync start is not, but the retained touches always cover at least `(baseRevision, head]`.
  */
 internal data class StalenessWindow(
   val since: Long,
@@ -1212,11 +1100,10 @@ internal data class StalenessWindow(
 }
 
 /**
- * One offline run as the service can recognise it across requests: the commands one actor's client
- * submitted from the same starting revision. Recorded on every batch's [ConflictTouchRecordV1] —
- * the first command of a run carries no staleness base (its base *is* the start), so its start is
- * its [DesignCommandV1.baseRevision] — and matched only for a command that carries
- * `stalenessBaseRevision`, so a live edit is judged exactly as it was before the field existed.
+ * One offline run as the service can recognise it across requests: one actor's commands from the
+ * same starting revision. Recorded on every batch's [ConflictTouchRecordV1] (a run's first command
+ * uses its [DesignCommandV1.baseRevision]); matched only for commands carrying
+ * `stalenessBaseRevision`, so live edits are judged as before.
  */
 internal data class ReplayRunIdentity(
   val actorId: String,
@@ -1230,10 +1117,8 @@ internal data class ReplayRunIdentity(
 }
 
 /**
- * The revision this command's author had seen: [DesignCommandV1.stalenessBaseRevision] when it is
- * an older revision than the base, otherwise the base. A value at or past the base, or below zero,
- * is outside what the field means ("never newer than baseRevision") and is read as absent — the
- * reading a service that predates the field gives it — rather than refused.
+ * The revision this command's author had seen: [DesignCommandV1.stalenessBaseRevision] when older
+ * than the base, otherwise the base. Out-of-range values are read as absent rather than refused.
  */
 internal fun DesignCommandV1.authorSawRevision(): Long =
   stalenessBaseRevision?.takeIf { it in 0 until baseRevision } ?: baseRevision
@@ -1249,9 +1134,8 @@ internal fun DesignCommandV1.stalenessWindow(
 }
 
 /**
- * [this] submission as its idempotency fingerprint reads it. An unset staleness base is left out,
- * so a command sent without one fingerprints to the same bytes it did before the field existed and
- * an operation recorded then still answers a retry as an idempotent replay.
+ * The submission as its idempotency fingerprint reads it. An unset staleness base is omitted, so
+ * older recorded operations still match retries.
  */
 internal fun submissionFingerprint(json: Json, submission: DesignSubmissionV1): String {
   val element = json.encodeToJsonElement(DesignSubmissionV1.serializer(), submission)
@@ -1291,9 +1175,7 @@ internal object PersistentUiBuilderServiceJson {
   val json: Json = Json { encodeDefaults = true }
 }
 
-/**
- * For what an operator reads, not for what is stored: indented, and never used to compute bytes.
- */
+/** For what an operator reads, not what is stored: indented, never used to compute bytes. */
 internal object PersistentUiBuilderServiceAdminJson {
   val json: Json = Json {
     encodeDefaults = true

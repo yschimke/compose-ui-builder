@@ -4,23 +4,18 @@
 //
 //   node scripts/ui-builder-web-smoke/memory.mjs ui-builder/build/wasmDist [out-dir]
 //
-// The page talks to a stand-in host here, not compose-preview-server: identity, catalogs, the
-// design list and `openDesign` snapshots of committed `.uid` designs, which is everything those
-// screens read on startup. Each scenario is a fresh Chromium, so one screen's garbage is never
-// charged to the next. Chromium is driven over a bare DevTools socket (`cdp.mjs`), not Playwright:
-// Playwright's Network domain makes DevTools keep response bodies in the renderer, which added
-// ~16 MB to every screen and, under its size limit, a whole copy of `uiBuilder.wasm`. Environment: MEMORY_RUNS (default 3), MEMORY_SETTLE_MS (default 8000),
-// MEMORY_VIEWPORT (`desktop` or `mobile`, default both), MEMORY_DEBUG (page console, progress),
-// HARNESS_CHROMIUM. Write the output to a file, not a pipe: a pipe holds it until the end.
-// For digging into one result: MEMORY_SCENARIOS (comma-separated ids), MEMORY_INFRA (Chromium's
-// per-allocator memory dump), MEMORY_HEAPSNAPSHOT (a .heapsnapshot per scenario), MEMORY_RESOURCES
-// (Resource Timing sizes), MEMORY_TIMELINE (renderer PSS and JS heap every 250 ms, no forced GC)
-// MEMORY_BLOCK (a URL regex to abort, e.g. `fonts\.gstatic\.com`), MEMORY_FAIL_REQUESTS (service
-// request types the stand-in host answers 503, e.g. `listCatalogs`) and MEMORY_CHROMIUM_ARGS
-// (extra switches, space-separated, e.g. `--js-flags=--no-wasm-tier-up`). MEMORY_CACHE_CONTROL sets
-// the bundle's Cache-Control (default `no-cache`; hosts serve it immutable).
-// MEMORY_MAX_TURBOFAN_ZONE_MB fails the run when one Wasm TurboFan compile holds more than that, and
-// MEMORY_BUDGETS (a `budgets.json`) when a screen settles above its memory budget.
+// A stand-in host serves identity, catalogs, the design list and committed `.uid` snapshots. Each
+// scenario gets a fresh Chromium, driven over a bare DevTools socket (`cdp.mjs`) because
+// Playwright's Network domain retains response bodies and skews the numbers.
+//
+// Environment: MEMORY_RUNS (default 3), MEMORY_SETTLE_MS (default 8000), MEMORY_VIEWPORT (`desktop`
+// or `mobile`, default both), MEMORY_DEBUG, HARNESS_CHROMIUM. Write output to a file, not a pipe.
+// Diagnostics: MEMORY_SCENARIOS (comma-separated ids), MEMORY_INFRA (per-allocator dump),
+// MEMORY_HEAPSNAPSHOT, MEMORY_RESOURCES (Resource Timing), MEMORY_TIMELINE (PSS and JS heap every
+// 250 ms), MEMORY_BLOCK (URL regex to abort), MEMORY_FAIL_REQUESTS (request types answered 503),
+// MEMORY_CHROMIUM_ARGS, MEMORY_CACHE_CONTROL (default `no-cache`). Gates:
+// MEMORY_MAX_TURBOFAN_ZONE_MB (largest single Wasm TurboFan compile) and MEMORY_BUDGETS (a
+// `budgets.json` of per-screen limits).
 
 import { createServer } from 'node:http';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
@@ -339,10 +334,9 @@ async function sample(page, browser) {
 }
 
 let browserVersion = null;
-// MEMORY_MAX_TURBOFAN_ZONE_MB: V8 logs every Wasm function it compiles, with the most memory the
-// compile held. A generated table that Binaryen inlined into one huge function shows up here as a
-// single TurboFan compile holding hundreds of MB; see `wasmNoInlinePatterns` in
-// ui-builder/build.gradle.kts. The log is on the browser's stdout.
+// V8 logs each Wasm compile's peak memory (on browser stdout); a table Binaryen inlined into one
+// huge function shows up as a single large TurboFan compile. See `wasmNoInlinePatterns` in
+// ui-builder/build.gradle.kts.
 const turbofanLimitMb = process.env.MEMORY_MAX_TURBOFAN_ZONE_MB
   ? Number(process.env.MEMORY_MAX_TURBOFAN_ZONE_MB)
   : null;

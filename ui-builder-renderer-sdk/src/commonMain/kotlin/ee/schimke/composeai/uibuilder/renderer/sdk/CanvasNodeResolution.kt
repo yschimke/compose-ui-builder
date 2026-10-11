@@ -33,14 +33,10 @@ fun resolveCanvasNode(
     .forCanvas(mapping)
 
 /**
- * Computed values (`expr`/`system`) evaluated for one frame of the canvas: at the preview state,
- * the row or placement arguments in scope, and the document's fixed time or, where time runs, this
- * frame's wall clock.
- *
- * Each property and each modifier field holding one is replaced by the literal it evaluates to, so
- * adapters never see an expression and draw exactly what they drew for a typed literal. An
- * expression that does not type is left in place, where the adapter ignores it as it ignores any
- * value it cannot read; the reducer has already refused it at commit.
+ * Computed values (`expr`/`system`) evaluated for one canvas frame: preview state, row or placement
+ * arguments in scope, and the fixed time or the frame's wall clock. Each is replaced by its
+ * literal, so adapters never see an expression; one that does not type is left for the adapter to
+ * ignore.
  */
 class CanvasExpressions(
   private val stateKinds: Map<String, UiValueKind>,

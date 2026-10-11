@@ -6,12 +6,8 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
 
 /**
- * An empty body is still a `RemoteBox`, and a file that writes one has to import it.
- *
- * The native lane and the inline lane each wrote the empty box as a literal string rather than
- * through `RemoteContentEmitter.emptyBox`, so the emitter never learned it had used `RemoteBox` or
- * `RemoteModifier`. A freshly created widget — a container with nothing in it yet — then failed to
- * compile for its Native preview with `Unresolved reference 'RemoteBox'`, on the deployed server.
+ * An empty body is still a `RemoteBox`, so the file must import it (and `RemoteModifier`): the
+ * native and inline lanes write it through `RemoteContentEmitter.emptyBox`.
  */
 class EmptyRemoteBodyImportsTest {
   private val required =

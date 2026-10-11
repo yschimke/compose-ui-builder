@@ -11,14 +11,8 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The `remote-m3` palette against the generator's vocabulary, in the repository that owns both.
- *
- * compose-preview-server's `:server` has the same join (`RemoteM3VocabularyParityTest`), and it was
- * the only one: the palette grew the 21 Remote Material 3 components here (#207), the export
- * learned to write them (#202), and `REMOTE_CONTENT_COMPONENT_IDS` — the list the join reads — did
- * not, so the break surfaced as a red `server-against-checkout` on every pull request instead of a
- * red test in the change that caused it. This module sees the catalog and the export, so the check
- * lives here.
+ * The `remote-m3` palette against the generator's vocabulary (`REMOTE_CONTENT_COMPONENT_IDS`),
+ * checked here, where both live, so a break fails in the change that caused it.
  */
 class RemoteM3VocabularyParityTest {
   private val catalog =

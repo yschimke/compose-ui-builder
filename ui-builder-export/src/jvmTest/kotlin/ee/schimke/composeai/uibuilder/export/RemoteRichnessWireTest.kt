@@ -15,9 +15,8 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.doubleOrNull
 
 /**
- * A design that uses the richer Remote vocabulary — formulas, a system clock value, a drawing, a
- * `remoteCall` modifier — survives the wire: it is what `.uid` saves and the service commits
- * (compose-preview-contracts 3.20.0, #141).
+ * A design using the richer Remote vocabulary (formulas, a system clock value, a drawing, a
+ * `remoteCall` modifier) survives the wire: `.uid` saves and service commits.
  */
 class RemoteRichnessWireTest {
   private val document: UiBuilderDocument =

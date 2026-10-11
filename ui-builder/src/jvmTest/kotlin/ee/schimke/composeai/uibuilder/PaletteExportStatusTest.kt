@@ -14,14 +14,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The palette says which components the Compose export can write, from the export's own record.
- *
- * compose-preview-server#477 found the palette teaching a shape the exporter refused: three of the
- * first five components a person reaches for rendered perfectly and exported as comments, and the
- * way to a working design was knowing which third of the palette to avoid. The record the export
- * reads was already embedded in the editor for the problems panel; this is the palette reading the
- * same record, so the two cannot disagree — and so a second, parallel `exportStatus` field in the
- * catalog was never needed.
+ * The palette says which components the Compose export can write, from the export's own embedded
+ * record (as the problems panel reads it), so they can't disagree and no separate `exportStatus`
+ * field is needed (see compose-preview-server#477).
  */
 class PaletteExportStatusTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -36,12 +31,9 @@ class PaletteExportStatusTest {
     )
 
   /**
-   * The capability ids the embedded record can print a call site for — from BOTH of its files.
-   *
-   * The builder's own `layout/`, `shape/` and `asset/` components are a record of their own, and
-   * `:ui-builder:embedComponentRecord` merges the two into the constant this panel reads. A palette
-   * status computed from the m3 file alone would report every layout component as having no call
-   * site while the export writes one.
+   * The capability ids the embedded record can print a call site for, from BOTH files: the
+   * builder's `layout/`, `shape/` and `asset/` record and the m3 one, merged by
+   * `:ui-builder:embedComponentRecord`.
    */
   private val covered: Set<String> =
     listOf("m3-catalog-components-v1.json", "compose-foundation-components-v1.json")
@@ -79,10 +71,8 @@ class PaletteExportStatusTest {
 
   @Test
   fun `the marker names the gap #477 was filed about, and not the components it closed`() {
-    // All five #477 named must read as writable, or the palette would be greying out exactly the
-    // components that were made to export. `asset/image` was the last of them: its `Painter` was
-    // the value nothing expressed until yschimke/compose-preview-server#503 gave a design an asset
-    // registry to name, so the record carries a call site for it now and the row is not marked.
+    // The five components #477 named must read as writable (including `asset/image`, via the asset
+    // registry).
     val byId = items().associateBy { it.componentId }
     for (id in
       listOf(
@@ -94,18 +84,14 @@ class PaletteExportStatusTest {
       )) {
       assertEquals(true, byId.getValue(id).exportsToCompose, id)
     }
-    // And the marker still says no where the record has nothing to print: a row the export cannot
-    // write is what the panel was built to grey out, so the closing of #477 must not have turned
-    // the marker into a constant.
+    // And rows the record can't print are still marked, so the marker isn't a constant.
     assertEquals(false, byId.getValue("m3/date-picker").exportsToCompose)
   }
 
   @Test
   fun `a catalog the record was not authored for gets no marker at all`() {
-    // A Wear or Remote Compose screen generates through its own emitter, so `m3-catalog`'s record
-    // says nothing about it — and a palette greyed against the wrong record would be lying in the
-    // other direction. Null on every row is the panel declining to answer rather than answering
-    // wrongly.
+    // A Wear or Remote Compose catalog exports through its own emitter, so `m3-catalog`'s record
+    // says nothing: every row is null (no answer) rather than wrong.
     val other = catalog.copy(benchmark = catalog.benchmark.copy(catalogSystemId = "wear-m3"))
     val items =
       UiBuilderEditorReducer(other)

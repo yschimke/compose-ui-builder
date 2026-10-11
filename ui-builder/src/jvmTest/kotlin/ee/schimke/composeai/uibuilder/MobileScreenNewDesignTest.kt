@@ -8,14 +8,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The frame a new Material 3 screen opens on.
- *
- * Seeded straight from the fixture's environment, a blank design inherited Jetcaster's 1280x800 at
- * density 1 — the expanded supporting-pane canvas that design is *about*, and a frame no handset
- * has. So every new screen opened on a device menu reading "Custom size", and the first thing an
- * author had to do was pick one. A phone is what a screen is drawn for; `pixel_6` is the typical
- * one, and its geometry is shared by four catalog entries, so the match survives the catalog
- * growing.
+ * The frame a new Material 3 screen opens on: a phone (`pixel_6`, whose geometry four catalog
+ * entries share), not the fixture's 1280x800 at density 1, which no handset has.
  */
 class MobileScreenNewDesignTest {
   private val fixture =
@@ -41,9 +35,8 @@ class MobileScreenNewDesignTest {
   }
 
   /**
-   * A device is a frame, not an environment: the theme, locale, font scale and direction the
-   * fixture carries survive the re-frame, the same way picking a device in the inspector leaves
-   * them alone.
+   * A device is a frame, not an environment: theme, locale, font scale and direction survive the
+   * re-frame.
    */
   @Test
   fun `the rest of the environment survives the frame`() {
@@ -56,10 +49,8 @@ class MobileScreenNewDesignTest {
   }
 
   /**
-   * The Jetcaster template keeps the fixture's own frame.
-   *
-   * It is that design at that size — re-pinning it to a phone would redraw the expanded supporting
-   * pane it exists to show as a compact one, which is a different screen.
+   * The Jetcaster template keeps the fixture's own frame: it exists to show the expanded supporting
+   * pane.
    */
   @Test
   fun `the worked template keeps its own canvas`() {

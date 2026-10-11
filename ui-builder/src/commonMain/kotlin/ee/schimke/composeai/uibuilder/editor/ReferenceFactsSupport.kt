@@ -6,9 +6,8 @@ import ee.schimke.composeai.uibuilder.reference.ReferenceImage
 import ee.schimke.composeai.uibuilder.reference.facts
 
 /**
- * [image] measured against the frame this design is edited in, as the reducer sees it — the default
- * host shape, since the reducer has no canvas. Null never; kept nullable for callers that have no
- * picture.
+ * [image] measured against the frame this design is edited in, using the default host shape since
+ * the reducer has no canvas. Never null; nullable for callers without a picture.
  */
 internal fun UiBuilderEditorState.referenceFacts(image: ReferenceImage): ReferenceFacts? {
   val (widthDp, heightDp) = document.canvasFrameDp(WearWidgetHostShape.Default)

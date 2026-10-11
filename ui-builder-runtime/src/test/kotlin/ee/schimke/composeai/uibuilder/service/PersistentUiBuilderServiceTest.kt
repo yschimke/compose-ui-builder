@@ -1768,11 +1768,8 @@ class PersistentUiBuilderServiceTest {
   }
 
   /**
-   * The write side of "referenced, not copied": a design already open gains a component.
-   *
-   * An import is one batch — the body's nodes, then the declaration naming their root — because a
-   * `DesignCommandV1` is atomic, and a design that briefly held a body no name pointed at would be
-   * a design an export could be asked about mid-import.
+   * A design already open gains a component: one atomic batch (body nodes, then the declaration),
+   * so no export ever sees an unnamed body mid-import.
    */
   @Test
   fun `a component is declared over its body, redeclared, removed and undone`() {
@@ -1853,10 +1850,8 @@ class PersistentUiBuilderServiceTest {
   }
 
   /**
-   * Making a component of a subtree the screen already holds, in the one batch the editor sends: a
-   * placement takes the subtree's place, the subtree moves out to the root list, and the
-   * declaration finds it a second root and makes it a body. The command ends with the one root it
-   * started with, and one undo puts the subtree back where it was.
+   * Making a component of an existing subtree in one batch: a placement takes its place, the
+   * subtree becomes a body, the command ends with one root, and one undo restores it.
    */
   @Test
   fun `a subtree is made a component in one batch and undone in one step`() {
@@ -3552,11 +3547,8 @@ class PersistentUiBuilderServiceTest {
     create(service(storage = storage))
     val stateFile = temporaryDirectory.resolve(FileUiBuilderStateStorage.STATE_FILE)
 
-    // What every deployment's file looked like before `DesignEnvironmentV1.typeface` existed: the
-    // payload is intact and self-consistent, it simply predates a field the model now declares with
-    // a default. Checksumming a re-encode of the DECODED value read this as corruption and took the
-    // whole server down with it (server 3.4.0, compose-ai-contracts 2.8.0); checksumming the stored
-    // tree reads it as what it is.
+    // A state file predating `DesignEnvironmentV1.typeface`: intact but missing a now-defaulted
+    // field. Checksumming the stored tree accepts it; a re-encode checksum would reject it.
     val root = persistenceJson.parseToJsonElement(Files.readString(stateFile)).jsonObject
     val aged = withoutTypeface(root.getValue("payload"))
     assertNotEquals(root.getValue("payload"), aged, "the fixture must actually drop the field")
@@ -3581,10 +3573,7 @@ class PersistentUiBuilderServiceTest {
     create(service(storage = storage))
     val stateFile = temporaryDirectory.resolve(FileUiBuilderStateStorage.STATE_FILE)
 
-    // The other half of the same change: verifying the STORED tree must not become a way of
-    // verifying nothing. This payload is valid JSON that decodes cleanly — the kind of tampering a
-    // re-encode checksum cannot see — and it must still be refused, because its bytes are not the
-    // bytes the checksum was taken over.
+    // Verifying the stored tree must still catch tampering that decodes cleanly.
     val root = persistenceJson.parseToJsonElement(Files.readString(stateFile)).jsonObject
     val payload = root.getValue("payload").jsonObject
     val serviceObject = payload.getValue("service").jsonObject
@@ -4297,10 +4286,9 @@ class PersistentUiBuilderServiceTest {
 
   @Test
   fun `a write is checked against the catalog's value rules where the value is chosen`() {
-    // The catalog decides what a value of a kind looks like
-    // (`UiBuilderCatalogExecutor.validateWrite`);
-    // what the service owes it is to ask on every write — a `setProperty`, and each property of an
-    // `insertNode` — and to refuse with the node, the field and the operation named.
+    // The catalog decides what a valid value looks like (`UiBuilderCatalogExecutor.validateWrite`);
+    // the service must ask on every write (`setProperty` and each `insertNode` property) and name
+    // the node, field and operation.
     val checked = mutableListOf<Pair<String, String>>()
     val catalogs =
       object : UiBuilderCatalogExecutor by TestCatalogs {
@@ -4595,12 +4583,8 @@ class PersistentUiBuilderServiceTest {
 
   @Test
   fun `an operation stays redoable the moment it is undone, at the budget floor`() {
-    // The pruning window is age-ordered and an undo does NOT move its target to the back: the
-    // target keeps its original position while the undo record joins at the front's far end. So
-    // undoing the OLDEST retained operation used to push its own target out of the window on the
-    // same commit, and the redo that follows resolved through `acceptedOperations` and found
-    // nothing. Losing depth at the far end of history is what the budget is for; an operation
-    // becoming non-redoable the instant it is undone is not.
+    // An undo keeps its target at its original (old) position, so undoing the oldest retained
+    // operation must not evict the target and break the immediate redo.
     val service =
       service(
         limits =
@@ -4668,11 +4652,8 @@ class PersistentUiBuilderServiceTest {
 
   @Test
   fun `a stale write is reported even after its record has left the undo budget`() {
-    // Two bounds over the same window. A submission is accepted while its `baseRevision` has a
-    // retained POSITION snapshot — a count — but the staleness checks used to read
-    // `acceptedOperations`, which is bounded by BYTES. On a design with large records the second
-    // window closes long before the first, and every check then answered "nobody wrote this" from
-    // a history that had been thrown away: a silent overwrite, reported as clean.
+    // Acceptance is bounded by retained position snapshots (a count) while `acceptedOperations` is
+    // bounded by bytes; staleness must not read the smaller window and report overwrites as clean.
     val service =
       service(
         limits =
@@ -4754,11 +4735,8 @@ class PersistentUiBuilderServiceTest {
 
   @Test
   fun `the undo budget counts the bytes the file receives, not UTF-16 units`() {
-    // `String.length` counts UTF-16 code units. A design whose text is three-byte characters
-    // therefore kept about three times the budget it was told to keep — the budget did not bound
-    // the bytes it names. Same character count on both sides here, so the only thing that differs
-    // is what a character costs once encoded, and the deeper retention is the bug.
-    // Same character count on both, 200 apiece, so only the encoded cost differs.
+    // Same character count on both sides; only the UTF-8 encoded cost differs, so the budget must
+    // bound bytes, not UTF-16 code units.
     val ascii = retentionDepthForText("a".repeat(200))
     val wide = retentionDepthForText("あ".repeat(200))
 
@@ -4770,11 +4748,9 @@ class PersistentUiBuilderServiceTest {
   }
 
   /**
-   * How far back the undo budget still reaches, as the index of the oldest operation that can still
-   * be undone. Higher means shallower retention.
-   *
-   * A refused undo commits nothing, so probing from the oldest forwards leaves the design untouched
-   * until the first one that succeeds.
+   * How far back the undo budget reaches, as the index of the oldest undoable operation (higher
+   * means shallower). Refused undos commit nothing, so probing forwards leaves the design
+   * untouched.
    */
   private fun retentionDepthForText(text: String): Int {
     val service =
@@ -5161,10 +5137,8 @@ class PersistentUiBuilderServiceTest {
           }
           return@forEach
         }
-        // A placement is a document construct rather than a catalog component — no catalog
-        // declares `design/component-instance` — so this stub exempts it exactly as the real
-        // catalog validation does. Without the exemption a design could declare a component and
-        // never place one.
+        // `design/component-instance` is a document construct no catalog declares; exempt it as the
+        // real validation does.
         if (node.componentId == DESIGN_COMPONENT_INSTANCE_COMPONENT_ID) return@forEach
         if (node.componentId != "m3.Text") {
           return UiBuilderCatalogIssue("UNKNOWN_COMPONENT", "unknown component", node.id)

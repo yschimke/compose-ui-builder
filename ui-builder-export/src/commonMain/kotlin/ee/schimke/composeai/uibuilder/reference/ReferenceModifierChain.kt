@@ -16,16 +16,9 @@ const val REFERENCE_FONT_SIZE_PROPERTY = "fontSizeSp"
 /**
  * [chain] with the node moved [dx], [dy] dp, or null when [declared] allows no way to move it.
  *
- * Padding first, because padding is layout: the node's neighbours make room for where it now is,
- * and the generated Kotlin reads as somebody would have written it. The leading edge grows by the
- * move and the trailing edge gives back as much of it as it has, so a node that had room keeps its
- * size and only moves. A move *against* the leading edge takes padding away until there is none
- * left; whatever remains past that — the node has to go further left than its slot starts — is the
- * one case padding cannot say, and goes on an `offset`, which draws the node elsewhere without
- * moving anything around it. Either modifier alone is used when only it is declared.
- *
- * A new padding goes at the front of the chain, outermost, so it pads the node's box rather than
- * the inside of a fixed size, which would shrink the content instead of moving it.
+ * Padding first (layout: neighbours make room): the leading edge grows by the move and the trailing
+ * edge gives back what it has. A move further than the leading padding allows goes on an `offset`.
+ * Either alone is used when only it is declared. New padding goes at the front, outermost.
  */
 fun movedModifierChain(
   chain: List<JsonElement>,

@@ -5,9 +5,8 @@ package ee.schimke.composeai.uibuilder.editor
 internal actual fun pickupHaptic() = vibrateBriefly()
 
 /**
- * Ten milliseconds: felt rather than heard, and short enough that a device which buzzes on every
- * key press does not make a pickup feel like an error. Guarded, because `navigator.vibrate` is
- * absent on Safari and throws in some embedded frames.
+ * Ten milliseconds: felt rather than heard, and short enough not to feel like an error. Guarded:
+ * `navigator.vibrate` is absent on Safari and throws in some embedded frames.
  */
 @JsFun(
   """() => {

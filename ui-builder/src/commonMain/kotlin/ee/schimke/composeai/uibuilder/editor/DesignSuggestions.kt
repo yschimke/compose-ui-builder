@@ -5,16 +5,12 @@ import ee.schimke.composeai.uibuilder.documentsBackTo
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 
 /**
- * Edits somebody — usually an agent — has proposed for this design and nobody has decided on yet.
+ * Edits someone (usually an agent) has proposed for this design, awaiting a decision.
  *
- * Suggestion mode, in the sense a document editor has one: the proposal is shown on the design, and
- * a person accepts or rejects it. Under the hood a suggestion is a short-lived **branch** of the
- * design (`docs/design/UI_BUILDER_BRANCHES.md` → Suggestions): accepting it is the branch's
- * replay-merge, rejecting it archives the branch. So nothing here is a second merge — the editor
- * only shows what the host reports and forwards the person's decision.
- *
- * Like [DesignReview] it is kept beside the design and never part of it: a suggestion waiting does
- * not move the design's revision, and only an accept does.
+ * Each suggestion is a short-lived branch of the design (`docs/design/UI_BUILDER_BRANCHES.md` →
+ * Suggestions): accepting is the branch's replay-merge, rejecting archives it. The editor only
+ * shows what the host reports and forwards the decision. Kept beside the design like
+ * [DesignReview]; only an accept moves the revision.
  */
 data class DesignSuggestions(
   /** Open suggestions, newest first, as the host keeps them. */
@@ -38,8 +34,8 @@ data class DesignSuggestion(
   /** The proposed commands, in order. What a partial accept names. */
   val operationIds: List<String> = emptyList(),
   /**
-   * The design as the suggestion would leave it — its own head — or null until the host has fetched
-   * it. Without it the row still offers Accept and Reject; it just has no picture and no diff.
+   * The design as the suggestion would leave it, or null until fetched (the row still offers Accept
+   * and Reject).
    */
   val document: UiBuilderDocument? = null,
 ) {
@@ -67,9 +63,8 @@ sealed interface DesignSuggestionOutcome {
     DesignSuggestionOutcome
 
   /**
-   * The accept was refused and **nothing** landed — the merge is all or nothing. [reason] says
-   * which command stopped it and why ("the node it edits was deleted"), so the person can accept
-   * the rest or reject it.
+   * The accept was refused and nothing landed (all or nothing). [reason] names the blocking command
+   * and why.
    */
   data class Refused(
     override val suggestionId: String,
@@ -102,13 +97,9 @@ fun DesignSuggestionOutcome.describe(): String =
   }
 
 /**
- * What [suggestion] changes, as a document diff — or null until its document has arrived.
- *
- * Compared against the design **at the revision the suggestion was made against** when this editor
- * can still rebuild it, so the diff is the suggestion's own change and not "the suggestion, minus
- * everything that happened on the design since". Where that revision is out of reach (a reopened
- * session, a suggestion made before this page loaded and the history since trimmed) it falls back
- * to the design as it is now, which is what accepting would be compared against anyway.
+ * What [suggestion] changes as a document diff, or null until its document arrives. Compared
+ * against the design at the suggestion's base revision when rebuildable, so later design edits are
+ * not counted; otherwise against the current design.
  */
 fun suggestionDiff(
   state: UiBuilderEditorState,
@@ -126,7 +117,7 @@ fun suggestionDiff(
 
 /**
  * True when the design has moved on since [suggestion] was made, so accepting replays it onto a
- * newer design than the one it was drawn on.
+ * newer design.
  */
 fun DesignSuggestion.isBehind(state: UiBuilderEditorState): Boolean =
   forkRevision < state.document.revision

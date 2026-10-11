@@ -23,13 +23,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * `m3/checkbox` and `m3/switch`: the first two of the selection controls the m3-catalog app has and
- * this catalog did not.
- *
- * They are one pair rather than two changes because they are the same component twice — the same
- * `checked`/`enabled` pair, the same `onCheckedChange`, the same binding to a declared state
- * variable — and the interesting risk is that the renderer and the exporter read that binding
- * differently. Both are asserted here against one document.
+ * `m3/checkbox` and `m3/switch`: the same `checked`/`enabled` pair, `onCheckedChange` and state
+ * binding twice, so the risk is renderer and exporter reading the binding differently. Both
+ * asserted against one document.
  */
 class SelectionControlTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -86,11 +82,8 @@ class SelectionControlTest {
   }
 
   /**
-   * The bound case, which is the one that makes a control a control rather than a picture of one.
-   *
-   * The renderer resolves `checked` through the live state and the exporter emits the comparison; a
-   * control whose two projections disagreed about a binding would tick on the canvas and generate a
-   * screen that never changes.
+   * The bound case: renderer and exporter must agree, or the canvas ticks while the generated
+   * screen never changes.
    */
   @Test
   fun `a checkbox bound to a flag toggles it in the export and reads it on the canvas`() {
@@ -111,9 +104,7 @@ class SelectionControlTest {
     val bound =
       reducer.reduce(
         inserted,
-        // A comparison rather than a bare read: the flag is a boolean and `checked` takes one, so
-        // either shape type-checks, and `stateEquals` is the one the renderer and the exporter both
-        // resolve for a control's checked state.
+        // A `stateEquals` comparison, which both renderer and exporter resolve for checked state.
         UiBuilderEditorEvent.BindPropertyToState(nodeId, "checked", "notify", equalsValue = "true"),
       )
     val node = bound.document.nodes.getValue(nodeId)
@@ -132,9 +123,8 @@ class SelectionControlTest {
   }
 
   /**
-   * A bare read is what "Bind to state" writes for a Boolean variable, and it is two-way: the
-   * control's own `onCheckedChange` writes the value back, so no hand-authored `toggle` is needed.
-   * Before this, the exporter wrote `checked = false` for it whatever the variable held.
+   * A bare read (what "Bind to state" writes for a Boolean) is two-way: the control's
+   * `onCheckedChange` writes back, no `toggle` needed.
    */
   @Test
   fun `a checkbox bound whole to a flag is two-way bound in the export`() {

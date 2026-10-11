@@ -16,13 +16,8 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * The host container table, pinned against what `androidx.glance.wear:wear-tooling-preview` ships.
- *
- * These five numbers per shape and size are a transcription, not a policy: the launcher hands them
- * to a widget as `WearWidgetParams`, and nothing in this repository is free to tune them. They are
- * checked here because two surfaces now read the table — the editor canvas draws the frame and the
- * native lane builds the params — and the whole point of one table is that those two cannot drift.
- * A change to any of these is upstream changing its spec, and should be a deliberate edit with the
- * provider re-read, not a number nudged until a render looked right.
+ * A transcription of `WearWidgetParams`, not policy: the editor canvas and the native lane both
+ * read it, so they can't drift. Changes should follow upstream's spec, re-read from the provider.
  */
 class WearWidgetHostShapeTest {
 
@@ -78,11 +73,8 @@ class WearWidgetHostShapeTest {
   }
 
   /**
-   * The rectangular container is a different frame, not the squircle with square corners.
-   *
-   * Worth asserting as its own fact because it is the assumption most likely to be made by someone
-   * adding the third shape: both the content box and the padding move, on both axes and differently
-   * per size.
+   * The rectangular container is a different frame, not the squircle with square corners: content
+   * box and padding both move, per axis and size.
    */
   @Test
   fun `the rectangular spec moves the content box and the padding, not only the radius`() {
@@ -110,13 +102,8 @@ class WearWidgetHostShapeTest {
   }
 
   /**
-   * The round container, at the widest footprint its providers ship.
-   *
-   * Round was left out of the first version of this table on the stated grounds that its spec
-   * varies per screen diameter. It does — and so does the squircle's, which this table has always
-   * resolved by taking the widest entry, exactly as the generated `@Preview` does with `.maxBy {
-   * it.widthDp }`. The exclusion was wrong rather than conservative, and these are the numbers it
-   * was hiding.
+   * The round container, at the widest footprint its providers ship, as the squircle (and the
+   * generated `@Preview`'s `.maxBy { it.widthDp }`) does.
    */
   @Test
   fun `the round spec is the widest footprint its providers ship`() {
@@ -136,12 +123,8 @@ class WearWidgetHostShapeTest {
   }
 
   /**
-   * Round Small shares the squircle's content box and differs by padding and radius.
-   *
-   * Asserted because it is the counter-example to "every shape reserves a different box", which is
-   * what the rectangular case would otherwise suggest: at Small the round host gives a widget the
-   * same 200×60dp and simply pads it wider, so the two frames differ (216×76 against 230×76) while
-   * the room for content does not.
+   * Round Small shares the squircle's 200×60dp content box and differs only by padding and radius
+   * (216×76 vs 230×76).
    */
   @Test
   fun `round small shares the squircle content box but not its frame`() {
@@ -156,12 +139,7 @@ class WearWidgetHostShapeTest {
     assertEquals(230, round.frameWidthDp)
   }
 
-  /**
-   * Round Large is the tightest container any shape offers, which is the case worth looking at.
-   *
-   * A widget that fills the squircle comfortably is the one most likely to clip here: the frame has
-   * to fit inside a circle rather than beside one, so it reserves the least width of the six.
-   */
+  /** Round Large is the tightest container of the six, fitting inside a circle. */
   @Test
   fun `round large reserves the least content width of any container`() {
     val widths =
@@ -199,10 +177,7 @@ class WearWidgetHostShapeTest {
     assertEquals(144, rectangularLarge.frameHeightDp)
   }
 
-  /**
-   * Every shape names a real provider per size, so the generated `@Preview` cannot cite one that
-   * does not exist — the failure mode being source that reads fine and does not compile.
-   */
+  /** Every shape names a real provider per size, so the generated `@Preview` compiles. */
   @Test
   fun `every shape and size names a shipped provider`() {
     val expected =
@@ -230,11 +205,8 @@ class WearWidgetHostShapeTest {
   }
 
   /**
-   * An unknown or absent wire spelling is the default rather than a failure.
-   *
-   * The shape rides in a native-render request body, and a host that cannot parse one should draw
-   * the frame the editor opens on rather than leave the pane empty: it is a view over the design,
-   * and no view at all is the worse answer.
+   * An unknown or absent wire spelling is the default rather than a failure, so the pane still
+   * draws.
    */
   @Test
   fun `an unknown shape id falls back to the rectangular editing host`() {

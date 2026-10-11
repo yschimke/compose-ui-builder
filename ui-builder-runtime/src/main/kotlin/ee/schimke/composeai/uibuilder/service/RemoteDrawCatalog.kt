@@ -11,15 +11,10 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The drawing vocabulary on a Remote Compose palette: `draw/canvas` and the operations its `ops`
- * slot takes, declared from [UiDrawing] so the palette, the canvas stand-in and the Remote emitter
- * read one list.
- *
- * Derived from the packaged Box for the fields a palette entry needs and this file has no opinion
- * on — wasm support, adapter status — and narrowed the way every Remote-only component is: no
- * Compose `code` (the regular exporter has nothing to write), no SVG answer, and a canvas slot that
- * takes draw operations and nothing else, so a button dropped into a canvas is refused at the drop
- * rather than at export.
+ * The drawing vocabulary on a Remote Compose palette: `draw/canvas` and its `ops`, declared from
+ * [UiDrawing]. Derived from the packaged Box, narrowed like every Remote-only component: no Compose
+ * `code`, no SVG answer, and a canvas slot that takes only draw operations (refused at drop, not
+ * export).
  */
 internal fun remoteDrawComponent(
   componentId: String,

@@ -29,13 +29,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The device view of a Wear screen: the real round watch, and its list popped out beside it.
- *
- * The extent draws a Wear screen as a stadium — the list as a Column, the clock over the top cap —
- * which is the only way every row can be reached, and nothing like the watch. The device view is
- * the watch: the port's real `AppScaffold`, `ScreenScaffold` and `TransformingLazyColumn` in a
- * round frame, with the list that the selection is in drawn unrolled beside it. These pin what
- * [CanvasDeviceViewTest] pins for a phone, on the watch.
+ * The device view of a Wear screen: the port's real `AppScaffold`, `ScreenScaffold` and
+ * `TransformingLazyColumn` in a round frame, with the selection's list popped out unrolled beside
+ * it (the extent's stadium is the editing view). Pins what [CanvasDeviceViewTest] pins for a phone.
  */
 @OptIn(ExperimentalTestApi::class)
 class CanvasWearDeviceViewTest {

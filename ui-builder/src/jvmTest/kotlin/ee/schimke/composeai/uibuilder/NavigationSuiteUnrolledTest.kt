@@ -20,12 +20,9 @@ import ee.schimke.composeai.uibuilder.preview.designFixtureDocument
 import kotlin.test.Test
 
 /**
- * The Google tablet samples open in the visual editor.
- *
- * Each is an `m3/navigation-suite-scaffold`, which the editor's canvas draws as the navigation
- * suite's rail in a `Row` beside the content. That canvas measures against an unbounded height, and
- * the rail fills the height it is given: handed `Infinity`, it asked for a 96 x 2147483647 layer
- * and every one of these designs failed to open in the browser.
+ * The Google tablet samples open in the visual editor. Each is an `m3/navigation-suite-scaffold`,
+ * drawn on the canvas as a rail in a `Row`; measured against unbounded height, the rail must not
+ * request an infinite layout.
  */
 @OptIn(ExperimentalTestApi::class)
 class NavigationSuiteUnrolledTest {
@@ -34,9 +31,8 @@ class NavigationSuiteUnrolledTest {
     runDesktopComposeUiTest(width = 1280, height = 800) {
       setContent {
         MaterialTheme {
-          // The editor's frame, as `UiBuilderEditorCanvas` sizes it: the design's width, and at
-          // least — never at most — its height. That open-ended height is what the extent layout
-          // then measures its content against, as `Constraints.Infinity`.
+          // The editor's frame as `UiBuilderEditorCanvas` sizes it: the design's width and at least
+          // its height, so the extent layout measures against `Constraints.Infinity`.
           Box(
             Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)
               .requiredWidth(1280.dp)

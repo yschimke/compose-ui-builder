@@ -1,28 +1,17 @@
 package ee.schimke.composeai.uibuilder.export
 
 /**
- * A text's OpenType settings: the variation axes it sets on a variable font and the layout features
- * it turns on or off, and the property each is authored as.
+ * A text's OpenType settings — variation axes and layout features — and the property each is
+ * authored as, on every design system's text component.
  *
- * Both are a text property on every design system's text component — `m3/text`, `wear-m3/text`,
- * `remote-m3/remote-text` — because both are how a type system is actually specified now: a brand
- * on a variable face names a width or a grade, not just a weight, and a figure set in a clock or a
- * table needs `tnum`. Before these a design could only reach an axis through `fontWeight`'s four
- * named weights, and could not reach a feature at all.
- *
- * Both values are CSS's comma-separated lists with the tags written bare — the spelling every
- * platform's `fontFeatureSettings` parser accepts ([formatFeatures]) — so a value reads the same in
- * a design, in the inspector and in generated code. CSS's quoted tags are read too.
+ * Both are CSS-style comma-separated lists with bare tags ([formatFeatures]); quoted tags are read
+ * too:
  * - [VARIATION_PROPERTY]: `wght 650, wdth 87.5` — `font-variation-settings`.
  * - [FEATURE_PROPERTY]: `tnum, ss01, liga 0` — `font-feature-settings`; a tag alone is on.
  *
- * Which axes and features a text may use is the typeface's, not this object's: any tag is accepted,
- * and the inspector reads the face the text is set in ([familyFor]) to offer the ones it has, with
- * each axis's range. A setting the face does not have is ignored by every text stack, which is what
- * CSS does too, so a design survives a typeface change without becoming invalid.
- *
- * One list, read by the catalogs that declare the properties, the canvas that draws them and the
- * generators that write them, so none of them can disagree about the syntax.
+ * Any tag is accepted; the inspector offers what the face has ([familyFor]). Unsupported settings
+ * are ignored by every text stack, as in CSS. One definition shared by catalogs, canvas and
+ * generators.
  */
 object FontSettings {
   const val VARIATION_PROPERTY: String = "fontVariationSettings"
@@ -100,12 +89,8 @@ object FontSettings {
     axes.joinToString(", ") { "${it.tag} ${number(it.value)}" }
 
   /**
-   * [features] in the canonical spelling: `tnum, liga 0, salt 2`.
-   *
-   * Bare tags, not CSS's quoted ones: Compose Desktop and Web parse `fontFeatureSettings` with
-   * Skia's `FontFeature.parseW3`, which splits on commas and spaces and takes a tag only when it is
-   * exactly four characters, so `'tnum'` is silently dropped there. Android's HarfBuzz parser takes
-   * both spellings, so the bare one is the one every platform draws.
+   * [features] in the canonical spelling: `tnum, liga 0, salt 2`. Bare tags because Skia's
+   * `FontFeature.parseW3` (Desktop/Web) silently drops quoted ones; Android accepts both.
    */
   fun formatFeatures(features: List<Feature>): String =
     features.joinToString(", ") { if (it.value == 1) it.tag else "${it.tag} ${it.value}" }
@@ -120,11 +105,9 @@ object FontSettings {
   /**
    * The family a text is set in, by name, or null for the platform's own face.
    *
-   * [style] is the text's own role, if it names one; otherwise the theme host's [ThemeTextStyle],
-   * and otherwise `bodyLarge`. The role's family is the theme host's typeface for its group
-   * ([ThemeTypefaces]); a role the host leaves unset is in [documentTypeface] on Material 3, and in
-   * Wear's own face ([WEAR_DEFAULT_FAMILY]) on Wear. [readHost] is the theme host's string property
-   * by name.
+   * The role is [style], else the theme host's [ThemeTextStyle], else `bodyLarge`; its family comes
+   * from the host's [ThemeTypefaces], falling back to [documentTypeface] on Material 3 or
+   * [WEAR_DEFAULT_FAMILY] on Wear. [readHost] reads the theme host's string property by name.
    */
   fun familyFor(
     style: String?,
@@ -195,14 +178,11 @@ object FontSettings {
    * What a generated Compose `Text` writes for a node's font settings.
    *
    * - [featureSettings]: the canonical feature string, for `style = <role>.copy(fontFeatureSettings
-   *   = …)` — `Text` has no argument of its own for it.
-   * - [fontFamily]: an expression for a family that carries the axes. Compose sets axes on a
-   *   `Font`, not on a style, so this is `FontFamily(Font(DeviceFontFamilyName(…),
-   *   variationSettings = …))` over the device face the text is set in: Wear's `roboto-flex`, or
-   *   Android's `sans-serif` for a Material 3 text with no typeface of its own.
-   * - [fontWeight]: a text set in a Google Fonts typeface cannot carry axes — the downloadable-font
-   *   provider serves named instances, not the variable file — so its `wght` becomes the
-   *   `FontWeight` the provider fetches, and its other axes are [droppedAxes].
+   *   = …)`.
+   * - [fontFamily]: a family carrying the axes (axes live on a `Font`), e.g.
+   *   `FontFamily(Font(DeviceFontFamilyName(…), variationSettings = …))` over the device face.
+   * - [fontWeight]: Google Fonts typefaces serve named instances, not variable files, so `wght`
+   *   becomes a `FontWeight` and other axes are [droppedAxes].
    */
   data class ComposeArguments(
     val featureSettings: String?,
@@ -212,16 +192,14 @@ object FontSettings {
     /** Fully-qualified imports the expressions need. */
     val imports: Set<String>,
     /**
-     * The node's `wght` decides the weight, so its `fontWeight` must not be written: on the device
-     * face an authored weight would be matched or synthesised over the variable instance, which is
-     * not what the canvas draws.
+     * The node's `wght` decides the weight, so `fontWeight` is not written (it would be matched or
+     * synthesised over the variable instance).
      */
     val overridesWeight: Boolean = false,
   ) {
     /**
-     * What a generated `Text` appends to its style: `.copy(…)` with the features and, for an
-     * instance whose `wght` is the weight, no weight synthesis — a synthesised bold over `wght` 800
-     * would be two bolds. Null when there is nothing to copy.
+     * What a generated `Text` appends to its style: `.copy(…)` with the features and, when `wght`
+     * is the weight, no weight synthesis. Null when there is nothing to copy.
      */
     val styleCopy: String?
       get() {
@@ -345,9 +323,8 @@ object FontSettings {
     )
 
   /**
-   * Features a text stack applies on its own and that an author has no reason to switch: shaping
-   * and positioning, without which a script does not render correctly. The inspector lists them
-   * apart from the ones worth choosing.
+   * Features a text stack applies on its own (shaping and positioning); the inspector lists them
+   * apart from those worth choosing.
    */
   val REQUIRED_FEATURES: Set<String> =
     setOf("ccmp", "locl", "mark", "mkmk", "rvrn", "rlig", "rtlm", "abvm", "blwm", "curs", "dist")

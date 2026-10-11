@@ -17,15 +17,8 @@ import org.jetbrains.skia.Bitmap
 
 /**
  * `verticalArrangement` and `horizontalAlignment` on a Column, and `horizontalArrangement` on a
- * Row.
- *
- * All three were declared by the catalog and read by nobody: the renderer used only the spacing and
- * the Compose exporter emitted only `Arrangement.spacedBy` of it. A design asking for
- * `spaceBetween` got `Top` on the canvas *and* in the generated Kotlin, so the two agreed — by both
- * being wrong.
- *
- * Tested through pixels rather than through the arrangement object, because the object is what the
- * old code also produced; where the children land is the thing that was broken.
+ * Row, honoured by both renderer and exporter. Tested through pixels, since where the children land
+ * is what matters.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class ColumnArrangementTest {
@@ -74,9 +67,7 @@ class ColumnArrangementTest {
     assertTrue(pixels.isMarked(x = SIZE - DOT / 2, y = SIZE / 2), "last child at the end")
   }
 
-  /**
-   * The generated Kotlin has to say what the canvas draws, which is the half that was diverging.
-   */
+  /** The generated Kotlin must say what the canvas draws. */
   @Test
   fun `the exporter emits the same arrangement the renderer resolves`() {
     val catalog =
@@ -115,10 +106,8 @@ class ColumnArrangementTest {
           catalog,
         )
         .requireSource()
-    // The screen, without the compatibility helpers appended after it. This asserts what the
-    // *column emitter* wrote, and every generated file also carries the same helper block whatever
-    // it contains — one of those helpers lays a dialog out and names `horizontalAlignment`, which
-    // an assertion over the whole file would read as the column having emitted one.
+    // The screen without the appended compatibility helpers (one of which names
+    // `horizontalAlignment`), so this asserts only what the column emitter wrote.
     val screen = source.substringBefore("// Compatibility helpers are")
 
     assertTrue("verticalArrangement = Arrangement.spacedBy(0.dp)" in screen, screen)
@@ -202,10 +191,8 @@ class ColumnArrangementTest {
   }
 
   /**
-   * White markers on the surface's own (dark) background, so a bright pixel is a marker.
-   *
-   * Probed rather than measured because the arrangement object is exactly what the broken code also
-   * produced; where the children land is the thing that was wrong.
+   * White markers on the surface's dark background, so a bright pixel is a marker; probed by pixel
+   * since child placement is what's under test.
    */
   private fun Bitmap.isMarked(x: Int, y: Int): Boolean {
     val colour = getColor(x, y)

@@ -24,11 +24,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * A device preview pane draws the design in its theme typefaces, as the canvas beside it does.
- *
- * The pane draws in a scene of its own, which starts with none of the editor's locals, and the
- * fonts were not among those it carried in: every device preview of a themed Wear screen was set in
- * the stock Wear face while the canvas showed the design's.
+ * A device preview pane draws the design in its theme typefaces, as the canvas does: the pane's own
+ * scene starts without the editor's locals, so fonts must be carried in.
  */
 @OptIn(ExperimentalTestApi::class)
 class DevicePaneTypefaceTest {
