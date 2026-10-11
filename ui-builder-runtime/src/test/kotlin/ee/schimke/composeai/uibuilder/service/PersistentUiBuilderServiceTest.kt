@@ -4178,7 +4178,8 @@ class PersistentUiBuilderServiceTest {
     val updates = mutableListOf<UiBuilderServiceUpdate>()
     val subscription =
       service.subscribe(UiBuilderSubscriptionCall(editor, "design", 0), updates::add)
-    // Acting for the owner is not being the owner: a delegate may edit, never delete.
+    // Acting for the owner is not being the owner: a delegate may edit, and deletes only what it
+    // created itself.
     val delegate = AuthenticatedUiBuilderActor("agent:abc", onBehalfOfActorId = "owner")
     assertEquals(
       ServiceErrorCodeV1.FORBIDDEN,

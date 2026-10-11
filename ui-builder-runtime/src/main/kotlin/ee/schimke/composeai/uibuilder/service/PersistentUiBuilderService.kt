@@ -1483,13 +1483,14 @@ public class PersistentUiBuilderService(
 
   /**
    * See [UiBuilderServiceRequest.DeleteDesign]; shares [removeLocked] with [adminDeleteDesign].
-   * Unusable designs are deletable by their owner; an unreadable one is checked against its
+   * Owner only, or the delegate that created the design ([deletableBy]). Unusable designs are
+   * deletable the same way; an unreadable one is checked against its
    * quarantine header, and without one stays the operator's to retire.
    */
   private fun delete(actor: AuthenticatedUiBuilderActor, designId: String): LockedExecution {
     val design = persisted.designs[designId]
     if (design != null) {
-      if (!design.ownedBy(actor)) {
+      if (!design.deletableBy(actor)) {
         return serviceError(forbidden("delete", designId))
       }
       // Closed under the lock, after [removeLocked] has made the removal durable.
@@ -1506,7 +1507,7 @@ public class PersistentUiBuilderService(
               "stored design cannot be read: ${quarantined.reason}",
             )
           )
-      if (!header.access.ownedBy(actor)) {
+      if (!header.access.deletableBy(actor, header.createdByDelegateActorId)) {
         return serviceError(forbidden("delete", designId))
       }
       store.remove(designId)
@@ -1590,6 +1591,9 @@ public class PersistentUiBuilderService(
         positionSnapshots = listOf(PositionStateV1(0, derivePositions(document))),
         createdAtEpochMillis = now,
         updatedAtEpochMillis = now,
+        // Lets that delegate delete what it made; see [deletableBy].
+        createdByDelegateActorId =
+          actor.actorId.takeIf { actor.onBehalfOfActorId != null }?.let(::canonicalActorId),
       )
     commitDesign(document.id, design)
     runtime[document.id] = RuntimeDesign()

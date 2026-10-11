@@ -160,6 +160,8 @@ internal data class StoredDesignHeaderV3(
    * replaced whole, so it lives in the header. Never written for ordinary designs.
    */
   @EncodeDefault(EncodeDefault.Mode.NEVER) val branch: DesignBranchRecordV1? = null,
+  /** [PersistedDesignV1.createdByDelegateActorId]; in the header so a quarantined design keeps it. */
+  @EncodeDefault(EncodeDefault.Mode.NEVER) val createdByDelegateActorId: String? = null,
 )
 
 /** One retained revision: the document at it, the positions at it, or both. */
@@ -442,6 +444,7 @@ internal class FileUiBuilderDesignStore(
             journalBytes = written.bytes,
             journalCompactedBytes = written.compactedBytes,
             branch = next.branch,
+            createdByDelegateActorId = next.createdByDelegateActorId,
           )
         var header = headerFor(journal)
         // The budget is checked before the header lands, since the header makes the generation
@@ -675,6 +678,7 @@ internal class FileUiBuilderDesignStore(
       audit = journal.audit,
       branch = header.branch,
       branchLog = journal.branchLog,
+      createdByDelegateActorId = header.createdByDelegateActorId,
     )
   }
 
@@ -1263,6 +1267,7 @@ internal class FileUiBuilderDesignStore(
         journalBytes = journal.bytes,
         journalCompactedBytes = journal.compactedBytes,
         branch = next.branch,
+        createdByDelegateActorId = next.createdByDelegateActorId,
       )
     // Refuse any file over the per-design read budget, or the next load would quarantine it after
     // the legacy file was already renamed. Per file, not total: an over-budget design still loads

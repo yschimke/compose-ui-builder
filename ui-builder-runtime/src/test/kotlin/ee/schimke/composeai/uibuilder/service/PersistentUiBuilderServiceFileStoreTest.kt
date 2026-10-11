@@ -351,6 +351,51 @@ class PersistentUiBuilderServiceFileStoreTest {
     )
   }
 
+  @Test
+  fun `an agent may delete what it created for its principal, and nothing else, across a restart`() {
+    val root = createTempDirectory("ui-builder-service-store")
+    val first = service(root)
+    val agent = AuthenticatedUiBuilderActor("agent:abc", onBehalfOfActorId = "owner")
+    val otherAgent = AuthenticatedUiBuilderActor("agent:def", onBehalfOfActorId = "owner")
+    assertIs<UiBuilderServiceResponse.Snapshot>(
+      execute(first, agent, UiBuilderServiceRequest.CreateDesign(document("probe")))
+    )
+    create(first, "mine")
+
+    val reopened = service(root)
+    // Owned by the human, as every delegated creation is; the creator rides along.
+    assertEquals(
+      DesignAccessRoleV1.OWNER,
+      assertIs<UiBuilderServiceResponse.Designs>(
+          execute(reopened, owner, UiBuilderServiceRequest.ListDesigns(null, 10))
+        )
+        .designs
+        .single { it.designId == "probe" }
+        .requesterAccess
+        .role,
+    )
+    for ((actor, designId) in
+      listOf(agent to "mine", otherAgent to "probe", outsider to "probe")) {
+      assertEquals(
+        ServiceErrorCodeV1.FORBIDDEN,
+        assertIs<UiBuilderServiceResponse.Error>(
+            execute(reopened, actor, UiBuilderServiceRequest.DeleteDesign(designId))
+          )
+          .error
+          .code,
+        "${actor.actorId} deleting $designId",
+      )
+    }
+    assertEquals(
+      UiBuilderServiceResponse.DesignDeleted("probe"),
+      execute(reopened, agent, UiBuilderServiceRequest.DeleteDesign("probe")),
+    )
+    assertEquals(
+      UiBuilderServiceResponse.DesignDeleted("mine"),
+      execute(reopened, owner, UiBuilderServiceRequest.DeleteDesign("mine")),
+    )
+  }
+
   private fun designDirectory(root: Path, designId: String): Path =
     root.resolve("designs/${FileUiBuilderDesignStore.slug(designId)}")
 
