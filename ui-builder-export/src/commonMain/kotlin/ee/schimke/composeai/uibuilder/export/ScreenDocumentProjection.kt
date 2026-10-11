@@ -203,6 +203,12 @@ object ScreenDocumentProjection {
     screenName: String = screenNameFor(document),
     tagNodes: Boolean = false,
     typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
+    /**
+     * Each projected record's slot receivers (`record canonical id` → `slot parameter` → receiver
+     * type), so a projected child keeps the scope its slot gives it: `Modifier.weight` inside Wear
+     * `Button`'s `RowScope` label. [ScreenExportGate] reads them off the component record.
+     */
+    slotReceivers: Map<String, Map<String, String>> = emptyMap(),
   ): Outcome =
     projectInternal(
       document,
@@ -212,6 +218,7 @@ object ScreenDocumentProjection {
       emptyMap(),
       typefaces = typefaces,
       exportProjections = exportProjections,
+      slotReceivers = slotReceivers,
     )
 
   /**
@@ -246,6 +253,7 @@ object ScreenDocumentProjection {
     callbackArguments: Map<String, Map<String, ScreenValue>> = emptyMap(),
     typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
     exportProjections: Map<String, ExportProjection> = emptyMap(),
+    slotReceivers: Map<String, Map<String, String>> = emptyMap(),
   ): Outcome {
     // No component record parameter: type-checking against the record is `ScreenGenerator`'s job.
     val pass =
@@ -257,6 +265,7 @@ object ScreenDocumentProjection {
         callbackArguments,
         typefaces,
         exportProjections,
+        slotReceivers,
       )
     val roots = document.roots
     if (roots.size != 1) {
@@ -359,6 +368,7 @@ object ScreenDocumentProjection {
     val productionCallbacks: Map<String, Map<String, ScreenValue>> = emptyMap(),
     val typefaces: TypefaceTarget = TypefaceTarget.DEFAULT,
     val exportProjections: Map<String, ExportProjection> = emptyMap(),
+    val slotReceivers: Map<String, Map<String, String>> = emptyMap(),
   ) {
     val reasons = mutableListOf<String>()
     val assetPlaceholders = mutableListOf<AssetPlaceholder>()
@@ -990,6 +1000,9 @@ object ScreenDocumentProjection {
       scope: String?,
     ): ScreenNode? {
       val where = "node `${node.id}`"
+      // Predicates, accessibility, asset and token bindings: the same refusals the table path
+      // makes.
+      unexpressible(node)
       val readable = projection.properties
       val literal = mutableMapOf<String, JsonElement>()
       val bound = mutableMapOf<String, UiValueV1>()
@@ -1063,7 +1076,9 @@ object ScreenDocumentProjection {
           handlers(node).mapKeys { (parameter, _) -> renamedEvent(parameter, lowered.events) },
         slots =
           node.slots.entries.associate { (slot, children) ->
-            (lowered.slots[slot] ?: slot) to children.mapNotNull { child -> node(child, null) }
+            val parameter = lowered.slots[slot] ?: slot
+            val childScope = slotReceivers[lowered.record]?.get(parameter)
+            parameter to children.mapNotNull { child -> node(child, childScope) }
           },
       )
     }

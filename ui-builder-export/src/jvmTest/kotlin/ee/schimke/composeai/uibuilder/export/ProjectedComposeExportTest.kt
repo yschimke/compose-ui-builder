@@ -26,10 +26,12 @@ class ProjectedComposeExportTest {
     default: Boolean = false,
     slot: Boolean = false,
     lambda: Boolean = false,
+    receiver: String? = null,
   ) =
     TargetParameter.Builder(name = name, type = type)
       .also { b ->
         b.typeFqn = typeFqn
+        b.composableSlotReceiver = receiver
         b.hasDefault = default
         b.composableSlot = slot
         if (lambda) b.lambdaReturnTypeFqn = "kotlin.Unit"
@@ -71,7 +73,12 @@ class ProjectedComposeExportTest {
         parameter("modifier", "Modifier", "androidx.compose.ui.Modifier", default = true),
         parameter("enabled", "Boolean", "kotlin.Boolean", default = true),
         parameter("colors", "ButtonColors", BUTTON_COLORS, default = true),
-        parameter("label", "RowScope.() -> Unit", slot = true),
+        parameter(
+          "label",
+          "RowScope.() -> Unit",
+          slot = true,
+          receiver = "androidx.compose.foundation.layout.RowScope",
+        ),
       ),
     )
 
@@ -138,14 +145,21 @@ class ProjectedComposeExportTest {
     generateSequence(File(".").absoluteFile) { it.parentFile }
       .first { File(it, "docs/design/evidence/ui-builder-repetition-export").isDirectory }
 
-  private fun document(button: DesignNodeV1): DesignDocumentV1 {
+  private fun document(
+    button: DesignNodeV1,
+    labelProperties: Map<String, UiValueV1> = emptyMap(),
+  ): DesignDocumentV1 {
     val base =
       Json.decodeFromString<DesignDocumentV1>(
         File(root, "docs/design/evidence/ui-builder-repetition-export/repetition-initial.uid")
           .readText()
       )
     val label =
-      DesignNodeV1("label", "wear-m3/text", properties = mapOf("text" to StringValueV1("Go")))
+      DesignNodeV1(
+        "label",
+        "wear-m3/text",
+        properties = mapOf("text" to StringValueV1("Go")) + labelProperties,
+      )
     return base.copy(
       title = "Projected",
       stateVariables = emptyMap(),
@@ -255,6 +269,13 @@ class ProjectedComposeExportTest {
       ),
       owners,
     )
+  }
+
+  @Test
+  fun `a projected slot keeps the receiver its record declares`() {
+    // `weight` is `RowScope.weight`: legal only because `label` is a `RowScope` slot.
+    val source = emitted(document(button(), mapOf("weight" to DecimalValueV1(1.0))))
+    assertContains(source, ".weight(")
   }
 
   @Test

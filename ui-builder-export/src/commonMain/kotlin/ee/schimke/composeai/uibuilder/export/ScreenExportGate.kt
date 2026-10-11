@@ -103,6 +103,7 @@ object ScreenExportGate {
           exportProjections,
           tagNodes = tagNodes,
           typefaces = typefaces,
+          slotReceivers = slotReceivers(exportProjections, record),
         )
     ) {
       // Report both classes of refusal: projection and generator refuse for unrelated reasons, and
@@ -148,6 +149,36 @@ object ScreenExportGate {
       .filter { owner -> owner.substringBeforeLast('.', "") in packages }
       .toSet()
   }
+
+  /** The composable-slot receivers of every record a projection targets, from [record]. */
+  private fun slotReceivers(
+    exportProjections: Map<String, ExportProjection>,
+    record: ComponentRecordFile,
+  ): Map<String, Map<String, String>> {
+    if (exportProjections.isEmpty()) return emptyMap()
+    val targets = exportProjections.values.flatMap { it.targets }.map { it.record }.toSet()
+    return record.components
+      .filter { it.canonicalId in targets }
+      .associate { component ->
+        component.canonicalId to
+          component.parameters
+            .mapNotNull { p -> p.composableSlotReceiver?.let { p.name to it } }
+            .toMap()
+      }
+  }
+
+  /**
+   * Why the export would refuse [document] with [exportProjections], or empty when it would not.
+   */
+  fun refusals(
+    document: DesignDocumentV1,
+    record: ComponentRecordFile?,
+    exportProjections: Map<String, ExportProjection>,
+  ): List<String> =
+    when (val outcome = export(document, record, exportProjections)) {
+      is Outcome.Refused -> outcome.reasons
+      is Outcome.Emitted -> emptyList()
+    }
 
   /**
    * The components in [document] that no record proves a call site for, in the generator's own

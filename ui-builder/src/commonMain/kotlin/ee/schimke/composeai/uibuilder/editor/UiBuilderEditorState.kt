@@ -2141,7 +2141,12 @@ class UiBuilderEditorReducer(
       null ->
         ExportOutcome(
           dedicated = false,
-          reasons = ScreenExportGate.refusals(document.toProtocolDocument(), exportRecord),
+          reasons =
+            ScreenExportGate.refusals(
+              document.toProtocolDocument(),
+              exportRecord,
+              exportProjections,
+            ),
         )
     }
   }
