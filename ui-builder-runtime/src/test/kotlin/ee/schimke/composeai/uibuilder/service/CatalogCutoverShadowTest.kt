@@ -387,6 +387,116 @@ class CatalogCutoverShadowTest {
   }
 
   @Test
+  fun `an integer property becoming a number loses nothing, the reverse does`() {
+    val integer =
+      wear.with(component.componentId) {
+        it.withProperty(property.name) { jsonType = JsonPrimitive("integer") }
+      }
+    val number =
+      wear.with(component.componentId) {
+        it.withProperty(property.name) { jsonType = JsonPrimitive("number") }
+      }
+    // The runtime's `number` accepts an integral value, so every stored integer still validates.
+    assertFalse(only(integer, number).loss, only(integer, number).text)
+    assertTrue(only(number, integer).loss, only(number, integer).text)
+  }
+
+  @Test
+  fun `a filter added to a slot that accepted anything narrows it`() {
+    val slotted = wear.components.first { it.slots.isNotEmpty() }
+    val slot = slotted.slots.first()
+    fun withRoles(roles: List<String>) =
+      wear.with(slotted.componentId) { c ->
+        c.newBuilder()
+          .also { b ->
+            b.slots =
+              c.slots.map {
+                if (it.name != slot.name) it
+                else it.newBuilder().also { s -> s.acceptedRoles = roles }.build()
+              }
+          }
+          .build()
+      }
+    // An empty list accepts every role (`slotAccepts`), so any filter is a narrowing.
+    assertTrue(only(withRoles(emptyList()), withRoles(listOf("Leaf"))).loss)
+    assertFalse(only(withRoles(listOf("Leaf")), withRoles(emptyList())).loss)
+  }
+
+  private fun rule(
+    componentId: String,
+    properties: Map<String, String> = emptyMap(),
+    modifiers: Map<String, String> = emptyMap(),
+  ): JsonObject =
+    JsonObject(
+      mapOf(
+        "componentId" to JsonPrimitive(componentId),
+        "properties" to JsonObject(properties.mapValues { JsonPrimitive(it.value) }),
+        "modifiers" to JsonObject(modifiers.mapValues { JsonPrimitive(it.value) }),
+      )
+    )
+
+  @Test
+  fun `a property restated as a modifier the upgrade cannot write is lost`() {
+    val withoutProperty =
+      wear.with(component.componentId) { c ->
+        c.newBuilder().also { it.properties = c.properties - property }.build()
+      }
+    fun asModifier(modifier: String) =
+      withoutProperty.superseding(
+        mapOf(
+          component.componentId to
+            rule(component.componentId, modifiers = mapOf(property.name to modifier))
+        )
+      )
+    assertFalse(only(wear, asModifier("background")).loss, "background is written")
+    // `planCatalogUpgrade` refuses this one with UNSUPPORTED_MODIFIER.
+    val blocked = only(wear, asModifier("elevation"))
+    assertTrue(blocked.loss, blocked.text)
+  }
+
+  @Test
+  fun `a property renamed onto a narrower one is a loss`() {
+    val renamed = "${property.name}Renamed"
+    val wide =
+      wear.with(component.componentId) {
+        it.withProperty(property.name) {
+          jsonType = JsonArray(listOf(JsonPrimitive("boolean"), JsonPrimitive("object")))
+          required = false
+          allowedValues = emptyList()
+        }
+      }
+    fun destination(type: JsonArray) =
+      wide
+        .with(component.componentId) { c ->
+          c.newBuilder()
+            .also { b ->
+              b.properties =
+                c.properties.map {
+                  if (it.name != property.name) it
+                  else PropertyCapabilityV1.Builder(renamed, type).build()
+                }
+            }
+            .build()
+        }
+        .superseding(
+          mapOf(
+            component.componentId to
+              rule(component.componentId, properties = mapOf(property.name to renamed))
+          )
+        )
+    val same = destination(JsonArray(listOf(JsonPrimitive("boolean"), JsonPrimitive("object"))))
+    assertTrue(
+      CatalogCutoverShadow.catalogDifferenceDetails(wide, same).none { it.loss },
+      CatalogCutoverShadow.catalogDifferences(wide, same).toString(),
+    )
+    // The upgrade copies the stored value across unchanged, so a state-bound one stops validating.
+    val narrower = destination(JsonArray(listOf(JsonPrimitive("boolean"))))
+    val losses = CatalogCutoverShadow.catalogDifferenceDetails(wide, narrower).filter { it.loss }
+    assertEquals(1, losses.size, losses.map { it.text }.toString())
+    assertContains(losses.single().text, "${property.name} -> $renamed type")
+  }
+
+  @Test
   fun `a changed role is a loss`() {
     val other = if (component.role == "Leaf") "Container" else "Leaf"
     val moved =

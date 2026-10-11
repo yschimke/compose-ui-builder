@@ -368,7 +368,8 @@ internal fun CatalogRuntimeCanvas(
         }
           .getOrNull()
           ?.takeIf { it.documentId == document.id && it.documentRevision == document.revision }
-          ?.let { runtimeSnapshot = it }
+          // Only the nodes the designer placed: see [authoredIn].
+          ?.let { runtimeSnapshot = it.authoredIn(document) }
       }
       delay(100)
     }

@@ -55,6 +55,37 @@ class NewlyRequiredPropertyTest {
   }
 
   @Test
+  fun `a required colour is a drawable theme role, and a required asset key gets nothing`() {
+    for (name in listOf("color", "containerColor")) {
+      val placeholder = requiredPlaceholder(property("string", name = name))
+      // A `string` zero passed validation and was refused at write and export.
+      assertEquals(ColorTokenValueV1("onSurface"), placeholder, name)
+      assertTrue(
+        (placeholder as ColorTokenValueV1).value in
+          CurrentM3UiBuilderCatalogExecutor.CANVAS_COLOR_TOKENS
+      )
+    }
+    assertNull(
+      requiredPlaceholder(property("string", name = "assetKey")),
+      "no key anybody could guess resolves",
+    )
+  }
+
+  @Test
+  fun `a required colour constrained by allowed values takes the first allowed token`() {
+    assertEquals(
+      ColorTokenValueV1("primary"),
+      requiredPlaceholder(
+        property(
+          "string",
+          name = "containerColor",
+          allowed = listOf(JsonPrimitive("primary"), JsonPrimitive("secondary")),
+        )
+      ),
+    )
+  }
+
+  @Test
   fun `a required object or list has no placeholder`() {
     assertNull(requiredPlaceholder(property("object")), "no zero means anything for an object")
     assertNull(requiredPlaceholder(property("array")))
@@ -134,6 +165,14 @@ class NewlyRequiredPropertyTest {
       stored.document.nodes.getValue("row").properties["selectedTabIndex"],
       "written through like a moved pin, so the next start does not do it again",
     )
+    // And the retained snapshot of that revision, which `GetSnapshot` and a default export read:
+    // one revision, one document.
+    val retained =
+      stored.revisionSnapshots.single { it.document.revision == stored.document.revision }
+    assertEquals(
+      IntegerValueV1(0),
+      retained.document.nodes.getValue("row").properties["selectedTabIndex"],
+    )
   }
 
   @Test
@@ -159,11 +198,18 @@ class NewlyRequiredPropertyTest {
 
   // ── harness ───────────────────────────────────────────────────────────────────────────────────
 
-  private fun property(type: String, allowed: List<JsonElement> = emptyList()) =
-    property(JsonPrimitive(type), allowed)
+  private fun property(
+    type: String,
+    allowed: List<JsonElement> = emptyList(),
+    name: String = "p",
+  ) = property(JsonPrimitive(type), allowed, name)
 
-  private fun property(type: JsonElement, allowed: List<JsonElement> = emptyList()) =
-    PropertyCapabilityV1.Builder("p", type)
+  private fun property(
+    type: JsonElement,
+    allowed: List<JsonElement> = emptyList(),
+    name: String = "p",
+  ) =
+    PropertyCapabilityV1.Builder(name, type)
       .also {
         it.required = true
         it.allowedValues = allowed
