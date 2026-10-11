@@ -208,8 +208,16 @@ object ScreenExportGate {
     document: DesignDocumentV1,
     record: ComponentRecordFile?,
     exportProjections: Map<String, ExportProjection>,
+  ): List<String> = refusals(document, record, exportProjections, null)
+
+  /** [refusals] with the catalog's [structure], as [export] takes it. */
+  fun refusals(
+    document: DesignDocumentV1,
+    record: ComponentRecordFile?,
+    exportProjections: Map<String, ExportProjection>,
+    structure: CatalogScreenStructure?,
   ): List<String> =
-    when (val outcome = export(document, record, exportProjections)) {
+    when (val outcome = export(document, record, exportProjections, structure)) {
       is Outcome.Refused -> outcome.reasons
       is Outcome.Emitted -> emptyList()
     }
