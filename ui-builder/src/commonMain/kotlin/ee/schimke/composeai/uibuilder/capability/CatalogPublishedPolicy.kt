@@ -50,6 +50,9 @@ internal object CatalogPublishedPolicy {
         ?.filterIsInstance<JsonObject>()
         ?.firstOrNull { (it["name"] as? JsonPrimitive)?.contentOrNull == property }
         ?.get("editor") as? JsonObject ?: return null
+    // A typed adapter's list or object: its shape is the whole editor, or there is none.
+    if (PropertyValueShapes.isComposite(declared))
+      return PropertyValueShapes.compositeEditor(declared)
     val editor =
       runCatching { json.decodeFromJsonElement<PropertyEditorCapability>(declared) }.getOrNull()
         ?: return null

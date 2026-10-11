@@ -494,15 +494,26 @@ private fun InspectorBody(
     // keeps them for validation.
     val themePanelOwned = ownsThemePanelProperties(fields)
     val listedFields = inspectorPropertyFields(fields)
+    fun shown(field: EditorPropertyField): Boolean =
+      field.written ||
+        field.required ||
+        field.boundVariable != null ||
+        field.error != null ||
+        field.name in revealed
+    // The rows inside a list or object property come and go with its heading: revealing the
+    // property shows them all, and none is offered, or shown, on its own.
+    val shownStructures =
+      listedFields
+        .filter { it.structure?.depth == 0 && shown(it) }
+        .mapNotNull { it.structure?.property }
+        .toSet()
     val shownFields =
       listedFields
         .filter { it.name != SHOW_BY_STATE }
-        .filter {
-          it.written ||
-            it.required ||
-            it.boundVariable != null ||
-            it.error != null ||
-            it.name in revealed
+        .filter { field ->
+          val structure = field.structure
+          if (structure == null || structure.depth == 0) shown(field)
+          else structure.property in shownStructures
         }
     val shownNames = shownFields.map { it.name }.toSet()
     fun matches(field: EditorPropertyField): Boolean =
@@ -513,7 +524,11 @@ private fun InspectorBody(
     // Everything the component allows and this node has not been given. Offered, never listed: a
     // search reaches it in one word, and until then it is thirty controls nobody asked for.
     val addableFields =
-      listedFields.filterNot { it.name in shownNames || it.name == SHOW_BY_STATE }.filter(::matches)
+      listedFields
+        .filterNot {
+          it.name in shownNames || it.name == SHOW_BY_STATE || (it.structure?.depth ?: 0) > 0
+        }
+        .filter(::matches)
     // Open the drawer whenever a search is running, so typing a property's name finds it whether
     // or not the node already has one.
     val addOpen = addingProperty || propertyQuery.isNotBlank()
@@ -555,11 +570,17 @@ private fun InspectorBody(
         val tuneTarget =
           TunableTarget.Property(node.id, field.name).takeIf {
             field.control == EditorPropertyControl.Number &&
+              field.structure == null &&
               field.nodeCount == 1 &&
               field.boundVariable == null &&
               state.document.canTune(it)
           }
-        Row(verticalAlignment = Alignment.Top) {
+        val structure = field.structure
+        Row(
+          // A row inside a list or object sits under the row it belongs to.
+          Modifier.padding(start = (STRUCTURE_INDENT_DP * (structure?.depth ?: 0)).dp),
+          verticalAlignment = Alignment.Top,
+        ) {
           Box(Modifier.weight(1f)) {
             PropertyControl(
               field = field,
@@ -599,11 +620,33 @@ private fun InspectorBody(
               },
               commit = { value ->
                 dispatch(
-                  // A font setting with nothing left in it is no setting: unset, not `""`.
-                  if (value.isBlank() && field.name in FontSettings.PROPERTIES)
-                    UiBuilderEditorEvent.ClearProperty(node.id, field.name)
-                  else UiBuilderEditorEvent.CommitProperty(node.id, field.name, value)
+                  when {
+                    // One scalar inside a list or object: the property is written whole.
+                    structure != null ->
+                      UiBuilderEditorEvent.CommitPropertyPath(
+                        node.id,
+                        structure.property,
+                        structure.path,
+                        value,
+                      )
+                    // A font setting with nothing left in it is no setting: unset, not `""`.
+                    value.isBlank() && field.name in FontSettings.PROPERTIES ->
+                      UiBuilderEditorEvent.ClearProperty(node.id, field.name)
+                    else -> UiBuilderEditorEvent.CommitProperty(node.id, field.name, value)
+                  }
                 )
+              },
+              onListEdit = { edit ->
+                if (structure != null) {
+                  dispatch(
+                    UiBuilderEditorEvent.EditPropertyList(
+                      node.id,
+                      structure.property,
+                      structure.path,
+                      edit,
+                    )
+                  )
+                }
               },
               textTypeface = { FontSettings.textTypeface(state.document, field.nodeId) },
               contrastOf = { scheme ->
@@ -613,6 +656,20 @@ private fun InspectorBody(
             )
           }
           if (tuneTarget != null) TuneFieldButton(tuneTarget, state.tunables, dispatch)
+          val row = structure?.row
+          if (structure != null && row != null && field.nodeCount == 1) {
+            ListRowActions(row, field.label) { edit ->
+              dispatch(
+                UiBuilderEditorEvent.EditPropertyList(
+                  node.id,
+                  structure.property,
+                  // The row's own list: the path without the row's index.
+                  structure.path.dropLast(1),
+                  edit,
+                )
+              )
+            }
+          }
         }
       }
       if (fields.isEmpty()) {
@@ -838,6 +895,8 @@ private fun PropertyControl(
    * The colours last committed to any colour property this session; read only for colour fields.
    */
   recentColours: List<String> = emptyList(),
+  /** A change to the rows of a list property; read only for [EditorPropertyControl.List]. */
+  onListEdit: (EditorListEdit) -> Unit = {},
 ) {
   val bound = field.boundVariable
   val formula = field.boundFormula
@@ -913,9 +972,69 @@ private fun PropertyControl(
             commit,
             showSteppers = false,
           )
+        EditorPropertyControl.List -> ListHeaderControl(field, onListEdit)
+        // The heading of an object's fields, which follow as their own rows.
+        EditorPropertyControl.Object -> LocalUiBuilderChrome.current.InspectorMessage(field.value)
         EditorPropertyControl.Unsupported ->
           LocalUiBuilderChrome.current.InspectorMessage(field.value.ifEmpty { "Not set" })
       }
+    }
+  }
+}
+
+/** How far each level of a list or object property is indented under the row it belongs to. */
+private const val STRUCTURE_INDENT_DP = 12
+
+/**
+ * A list property's heading: how many rows it holds, and the press that adds one seeded from the
+ * element shape (an object's field defaults, or an empty scalar). Its rows follow as their own
+ * fields, each with [ListRowActions].
+ */
+@Composable
+private fun ListHeaderControl(field: EditorPropertyField, onListEdit: (EditorListEdit) -> Unit) {
+  Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Text(
+      field.value,
+      Modifier.weight(1f),
+      style = MaterialTheme.typography.bodySmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    if (!field.mixed) {
+      TextButton(
+        onClick = { onListEdit(EditorListEdit.Insert()) },
+        modifier = Modifier.semantics { contentDescription = "Add an item to ${field.label}" },
+      ) {
+        Text("Add item")
+      }
+    }
+  }
+}
+
+/** Move one list row up or down, or remove it: each one undoable edit of the whole property. */
+@Composable
+private fun ListRowActions(row: EditorListRow, label: String, onEdit: (EditorListEdit) -> Unit) {
+  Row(verticalAlignment = Alignment.CenterVertically) {
+    TextButton(
+      onClick = { onEdit(EditorListEdit.Move(row.index, row.index - 1)) },
+      enabled = row.index > 0,
+      modifier = Modifier.semantics { contentDescription = "Move $label up" },
+    ) {
+      Text("\u2191")
+    }
+    TextButton(
+      onClick = { onEdit(EditorListEdit.Move(row.index, row.index + 1)) },
+      enabled = row.index < row.count - 1,
+      modifier = Modifier.semantics { contentDescription = "Move $label down" },
+    ) {
+      Text("\u2193")
+    }
+    ToolbarIconAction(
+      label = "Remove $label",
+      shortcut = "",
+      icon = UiBuilderChromeIcon.Remove,
+      enabled = true,
+    ) {
+      onEdit(EditorListEdit.Remove(row.index))
     }
   }
 }

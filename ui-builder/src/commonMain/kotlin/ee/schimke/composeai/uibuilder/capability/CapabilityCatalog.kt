@@ -262,6 +262,12 @@ data class PropertyEditorCapability(
    * `number`), so fractional values are refused.
    */
   val integer: Boolean = false,
+  /**
+   * For a [PropertyEditorControl.LIST] or [PropertyEditorControl.OBJECT] property (a typed
+   * adapter's list or object codec), the recursive shape its catalog publishes in the capability's
+   * `editor`; read by [PropertyValueShapes.compositeEditor], never decoded field by field.
+   */
+  @Transient val valueShape: PropertyValueShape? = null,
 )
 
 @Serializable
@@ -271,6 +277,12 @@ enum class PropertyEditorControl {
   @SerialName("number") NUMBER,
   @SerialName("enum") ENUM,
   @SerialName("color") COLOR,
+  /**
+   * A typed adapter's list: rows added, removed and reordered, each edited by its element shape.
+   */
+  @SerialName("list") LIST,
+  /** A typed adapter's object: one row per field, each edited by its own shape. */
+  @SerialName("object") OBJECT,
 }
 
 @Serializable
@@ -315,7 +327,7 @@ object CapabilityCatalogParser {
     json
       .decodeFromJsonElement<CapabilityCatalog>(element)
       .withFontSettings()
-      .withEditorMetadata()
+      .withEditorMetadata(compositeEditors(element))
       .let { catalog ->
         if (UiBuilderBuildFeatures.remoteCompose) catalog
         else
@@ -389,11 +401,37 @@ object CapabilityCatalogParser {
     )
 
   /**
+   * The list and object editors a catalog's own property capabilities publish (a typed adapter's
+   * `editor` hint, beside `jsonType`), keyed by component and property. Read from the raw element
+   * because [PropertyCapability.editor] is builder-side metadata the wire type does not carry.
+   */
+  private fun compositeEditors(
+    element: JsonElement
+  ): Map<Pair<String, String>, PropertyEditorCapability> =
+    ((element as? JsonObject)?.get("components") as? JsonArray)
+      .orEmpty()
+      .flatMap { component ->
+        val declared = component as? JsonObject ?: return@flatMap emptyList()
+        val componentId =
+          (declared["componentId"] as? JsonPrimitive)?.contentOrNull ?: return@flatMap emptyList()
+        (declared["properties"] as? JsonArray).orEmpty().mapNotNull { property ->
+          val capability = property as? JsonObject ?: return@mapNotNull null
+          val name = (capability["name"] as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
+          val editor = capability["editor"] as? JsonObject ?: return@mapNotNull null
+          PropertyValueShapes.compositeEditor(editor)?.let { (componentId to name) to it }
+        }
+      }
+      .toMap()
+
+  /**
    * Adds builder-only presentation metadata without changing the released catalog wire shape. Enum
    * choices stay authoritative; the bounds are the range the renderer and Compose exporter both
-   * round trip.
+   * round trip. A list or object editor the catalog publishes ([compositeEditors]) comes first: it
+   * is the only description of that value's shape.
    */
-  private fun CapabilityCatalog.withEditorMetadata(): CapabilityCatalog =
+  private fun CapabilityCatalog.withEditorMetadata(
+    composite: Map<Pair<String, String>, PropertyEditorCapability>
+  ): CapabilityCatalog =
     copy(
       components =
         components.map { component ->
@@ -407,11 +445,13 @@ object CapabilityCatalogParser {
               component.properties.map { property ->
                 property.copy(
                   editor =
-                    CatalogPublishedPolicy.editorFor(
-                      statusSemantics,
-                      component.componentId,
-                      property.name,
-                    ) ?: editorMetadata(component.componentId, property)
+                    composite[component.componentId to property.name]
+                      ?: CatalogPublishedPolicy.editorFor(
+                        statusSemantics,
+                        component.componentId,
+                        property.name,
+                      )
+                      ?: editorMetadata(component.componentId, property)
                 )
               },
           )

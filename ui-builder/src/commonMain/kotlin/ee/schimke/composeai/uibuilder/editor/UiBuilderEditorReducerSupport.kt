@@ -1046,6 +1046,9 @@ internal fun EditorPropertyField.parseDraft(draft: String): PropertyDraft {
       else
         PropertyDraft.Invalid("$label must be #RRGGBB, #AARRGGBB, or a listed Material color token")
     }
+    EditorPropertyControl.List,
+    EditorPropertyControl.Object ->
+      PropertyDraft.Invalid("$label is edited row by row, not as one value")
     EditorPropertyControl.Unsupported ->
       PropertyDraft.Invalid("$label cannot be safely edited from its catalog metadata")
   }
@@ -1066,6 +1069,8 @@ internal fun EditorPropertyField.defaultEncodedType(): String =
     EditorPropertyControl.Number -> if (numberBounds?.integer == true) "int" else "float"
     EditorPropertyControl.Enum -> if (name == "style") "typographyToken" else "enum"
     EditorPropertyControl.Color -> "color"
+    EditorPropertyControl.List -> "list"
+    EditorPropertyControl.Object -> "object"
     EditorPropertyControl.Unsupported -> "string"
   }
 

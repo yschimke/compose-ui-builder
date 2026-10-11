@@ -750,6 +750,20 @@ internal fun propertyWrapperIssue(type: String, encodedValue: JsonObject): Strin
           else propertyWrapperIssue(nestedType, nested)?.let { "object field $name $it" }
         }
     }
+    // A typed adapter's list property, nesting wrappers like `object`. Which element shape it holds
+    // is the catalog's question (`PropertyValueShapes.issue`, through the property validator).
+    "list" -> {
+      val values = encodedValue["values"] as? JsonArray
+      if (encodedValue.keys != setOf("type", "values") || values == null)
+        "list wrapper must contain exactly type and a values array"
+      else
+        values.withIndex().firstNotNullOfOrNull { (index, value) ->
+          val nested = value as? JsonObject
+          val nestedType = nested?.nonEmptyString("type")
+          if (nested == null || nestedType == null) "list value $index must be a typed value"
+          else propertyWrapperIssue(nestedType, nested)?.let { "list value $index $it" }
+        }
+    }
     in literalPropertyTypes ->
       if (encodedValue.keys == setOf("type", "value")) null
       else "literal wrapper must contain exactly type and value"
@@ -791,9 +805,8 @@ internal fun propertyWrapperIssue(type: String, encodedValue: JsonObject): Strin
     // catalog check, which is where the declarations are.
     UiExpressions.EXPR,
     UiExpressions.SYSTEM -> UiExpressions.shapeIssue(encodedValue)
-    // A subset of `PropertyValueKinds.WRAPPER_TYPES` (`list` arrives on inserts and is checked by
-    // `inspectUiBuilderArgumentBindings`). `WrapperVocabularyTest` holds the union against the
-    // corpus.
+    // A subset of `PropertyValueKinds.WRAPPER_TYPES`. `WrapperVocabularyTest` holds the union
+    // against the corpus.
     else -> "uses unsupported wrapper type $type"
   }
 

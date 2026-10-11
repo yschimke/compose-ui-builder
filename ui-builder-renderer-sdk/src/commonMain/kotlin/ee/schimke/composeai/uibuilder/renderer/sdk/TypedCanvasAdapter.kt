@@ -65,23 +65,28 @@ class TypedCanvasNodeScope<P>(
     require(encoded is JsonObject) {
       "${definition.id}.${property.name}: expected a property wrapper"
     }
-    val raw =
-      requireNotNull(encoded["value"]) { "${definition.id}.${property.name}: unresolved property" }
     val wrapperType = (encoded["type"] as? JsonPrimitive)?.contentOrNull
-    require(
-      wrapperType == property.codec.literalType || (wrapperType == "state" && property.bindable)
-    ) {
+    if (wrapperType != "state") {
+      // A literal is the codec's own wrapper: a scalar's `{type, value}`, or a list's or object's
+      // nested wrappers, which only the codec knows how to read.
+      return try {
+        property.unwrap(encoded)
+      } catch (failure: IllegalArgumentException) {
+        throw IllegalArgumentException(
+          "${definition.id}.${property.name}: ${failure.message ?: "invalid value"}",
+          failure,
+        )
+      }
+    }
+    require(property.bindable) {
       "${definition.id}.${property.name}: unsupported property type $wrapperType"
     }
+    val raw =
+      requireNotNull(encoded["value"]) { "${definition.id}.${property.name}: unresolved property" }
     // Preview state is stored as text by the interpreter. Normalize only state scalars, keeping
     // ordinary string literals strict and avoiding a second binding interpreter in adapters.
     val resolved =
-      if (
-        (encoded["type"] as? JsonPrimitive)?.contentOrNull == "state" &&
-          property.codec.jsonType != "string" &&
-          raw is JsonPrimitive &&
-          raw.isString
-      ) {
+      if (property.codec.jsonType != "string" && raw is JsonPrimitive && raw.isString) {
         Json.parseToJsonElement(raw.content)
       } else raw
     return property.decode(resolved)

@@ -7,6 +7,7 @@ import ee.schimke.composeai.uibuilder.ParentSlot
 import ee.schimke.composeai.uibuilder.RedoCommand
 import ee.schimke.composeai.uibuilder.RemoteComposeSource
 import ee.schimke.composeai.uibuilder.UndoCommand
+import ee.schimke.composeai.uibuilder.capability.PropertyPathSegment
 import ee.schimke.composeai.uibuilder.export.StateSelection
 import ee.schimke.composeai.uibuilder.export.WearWidgetHostShape
 import ee.schimke.composeai.uibuilder.reference.ReferenceImage
@@ -165,6 +166,29 @@ sealed interface UiBuilderEditorEvent {
 
   data class CommitProperty(val nodeId: String, val property: String, val draft: String) :
     UiBuilderEditorEvent
+
+  /**
+   * Set one scalar inside a typed adapter's list or object [property], at [path] (`contacts`,
+   * `[0]`, `.name`), from [draft] as its row's control types it. The property is written whole, as
+   * one undoable edit.
+   */
+  data class CommitPropertyPath(
+    val nodeId: String,
+    val property: String,
+    val path: List<PropertyPathSegment>,
+    val draft: String,
+  ) : UiBuilderEditorEvent
+
+  /**
+   * Add, remove or move a row of the list at [path] inside a typed adapter's list or object
+   * [property] (an empty path is the property itself). Written whole, as one undoable edit.
+   */
+  data class EditPropertyList(
+    val nodeId: String,
+    val property: String,
+    val path: List<PropertyPathSegment>,
+    val edit: EditorListEdit,
+  ) : UiBuilderEditorEvent
 
   /**
    * Remove an optional property, so the node falls back to whatever its runtime defaults — a theme
