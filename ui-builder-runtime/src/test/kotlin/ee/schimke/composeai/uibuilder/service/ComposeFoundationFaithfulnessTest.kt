@@ -164,6 +164,20 @@ class ComposeFoundationFaithfulnessTest {
     }
   }
 
+  /**
+   * An A2UI catalog borrows none of the builder's vocabulary: no A2UI exporter writes a `layout/`,
+   * `shape/` or `asset/` component, so offering one is a palette entry that fails at export.
+   */
+  @Test
+  fun `the a2ui foundation donates nothing`() {
+    val base = synthesised(DEFAULT_CATALOG_SYSTEM_ID)
+
+    assertEquals(
+      emptyList(),
+      composeFoundationCatalog(base, "a2ui", packagedSeams(base)).components,
+    )
+  }
+
   /** An unknown platform gets the mobile vocabulary, which is where the fallback always pointed. */
   @Test
   fun `a platform the foundation has never heard of falls back to mobile`() {
