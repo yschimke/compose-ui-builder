@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -44,8 +45,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -65,6 +71,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
@@ -599,6 +606,9 @@ private fun InspectorBody(
                 )
               },
               textTypeface = { FontSettings.textTypeface(state.document, field.nodeId) },
+              contrastOf = { scheme ->
+                contrastReading(state.document, field.nodeId, field.name, field.value, scheme)
+              },
             )
           }
           if (tuneTarget != null) TuneFieldButton(tuneTarget, state.tunables, dispatch)
@@ -821,6 +831,8 @@ private fun PropertyControl(
   commit: (String) -> Unit,
   /** The face a text field's font settings apply to; read only for those two properties. */
   textTypeface: () -> FontSettings.TextTypeface? = { null },
+  /** How a colour property contrasts with what it is drawn over; read only for colour fields. */
+  contrastOf: (ColorScheme) -> ContrastReading? = { null },
 ) {
   val bound = field.boundVariable
   val formula = field.boundFormula
@@ -877,7 +889,7 @@ private fun PropertyControl(
             showSteppers = true,
           )
         EditorPropertyControl.Color ->
-          ColorPropertyControl(field, commit) {
+          ColorPropertyControl(field, commit, contrastOf) {
             DraftPropertyControl(
               field,
               onTextInputFocusChanged,
@@ -2061,9 +2073,13 @@ private fun EnumOptionLabel(property: String, option: String) {
 private fun ColorPropertyControl(
   field: EditorPropertyField,
   commit: (String) -> Unit,
+  contrastOf: (ColorScheme) -> ContrastReading?,
   textField: @Composable () -> Unit,
 ) {
   val scheme = LocalInspectorColorScheme.current ?: MaterialTheme.colorScheme
+  // Only for one node with one value: a multi-selection's colours sit over different backgrounds,
+  // and a single ratio for them all would be true of at most one.
+  val contrast = if (field.nodeCount == 1 && !field.mixed) contrastOf(scheme) else null
   Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       ColorSwatch(
@@ -2075,6 +2091,7 @@ private fun ColorPropertyControl(
       Spacer(Modifier.width(8.dp))
       Box(Modifier.weight(1f)) { textField() }
     }
+    if (contrast != null) ContrastChip(contrast)
     val tokens = field.choices.filter { swatchColor(it, scheme) != null }
     if (tokens.isNotEmpty()) {
       Text(
@@ -2090,6 +2107,33 @@ private fun ColorPropertyControl(
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     SwatchRow(INSPECTOR_PRESET_COLORS, field, scheme, commit)
+  }
+}
+
+/**
+ * A text or icon colour's WCAG contrast against what it is drawn over ("4.8:1 AA"), loud only when
+ * it fails; the tooltip names the background and the grade needed.
+ */
+@Composable
+private fun ContrastChip(reading: ContrastReading) {
+  val low = reading.grade == WcagGrade.Low
+  val colors = MaterialTheme.colorScheme
+  val container = if (low) colors.errorContainer else colors.surfaceContainerHighest
+  val content = if (low) colors.onErrorContainer else colors.onSurfaceVariant
+  TooltipBox(
+    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+    tooltip = { PlainTooltip { Text(reading.explanation) } },
+    state = rememberTooltipState(),
+  ) {
+    Text(
+      reading.label,
+      Modifier.background(container, RoundedCornerShape(6.dp))
+        .padding(horizontal = 6.dp, vertical = 2.dp)
+        .clearAndSetSemantics { contentDescription = reading.explanation },
+      color = content,
+      style = MaterialTheme.typography.labelSmall,
+      fontWeight = if (low) FontWeight.Bold else null,
+    )
   }
 }
 
