@@ -2179,6 +2179,7 @@ internal val EDITOR_GESTURES: List<Pair<String, String>> =
     "Drag a catalog component" to "Insert it where it is dropped",
     "Hold a node, then drag" to "Move it into the slot and seam it is dropped at",
     "Click a rung above the canvas" to "Select that layer — the path is a way back up",
+    "Alt/Option + hover a node" to "Measure its distance in dp from the selection",
   )
 
 /**

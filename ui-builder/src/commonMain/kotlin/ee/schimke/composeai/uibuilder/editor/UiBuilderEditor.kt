@@ -2499,6 +2499,8 @@ fun UiBuilderEditor(
             .focusRequester(editorFocusRequester)
             .focusable()
             .onPreviewKeyEvent { event ->
+              // Alt held is the canvas's measure mode; it watches, never consumes.
+              onMeasureKey(event)
               editorShortcut(
                 event,
                 enabled = !textInputFocused,

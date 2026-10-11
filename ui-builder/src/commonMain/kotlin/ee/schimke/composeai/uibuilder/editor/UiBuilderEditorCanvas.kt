@@ -400,6 +400,8 @@ internal fun PinnedDesignCanvas(
     // The frame's unclipped top-left in root space. `frameBounds` is clipped to the viewport;
     // frame-local conversions need the unclipped `positionInRoot`, which is current after a scroll.
     var frameOrigin by remember(document.id) { mutableStateOf(Offset.Zero) }
+    // The mouse over the frame, for the Alt measure overlay; never written by a touch.
+    val measureHover = remember(document.id) { MeasureHoverState() }
     // The workspace's own rectangle, so a node's root-space box can be turned into an offset in
     // this box — which is where the hover editor is placed.
     var workspaceBounds by remember(document.id) { mutableStateOf(Rect.Zero) }
@@ -625,6 +627,7 @@ internal fun PinnedDesignCanvas(
             ) {
               CanvasExtentLayout(
                 Modifier.fillMaxSize()
+                  .measureHover(measureHover)
                   .canvasNodeDrag(
                     key = document.id,
                     enabled = moveDragEnabled && showSelectionOverlay,
@@ -869,6 +872,20 @@ internal fun PinnedDesignCanvas(
                 RemotePresenceOverlay(collaborators, inspection, frameOrigin, drawScale)
                 // Over the design and collaborators, under the comment pins.
                 GuidelineFindingsOverlay(inspection, frameOrigin, drawScale, onNodeSelected)
+                // Alt-hover redlines: over the design and its markers, under the pins. Not while a
+                // drag is in hand — Alt there means nothing, and the drop marker is what to read.
+                if (showSelectionOverlay && dragPosition == null) {
+                  SpacingMeasureOverlay(
+                    inspection = inspection,
+                    selectedNodeId = selectedNodeId,
+                    parentNodeId = selectedNodeId?.let { document.location(it)?.nodeId },
+                    hover = measureHover,
+                    frameOrigin = frameOrigin,
+                    drawScale = drawScale,
+                    // Root pixels per design dp, as the resize handles count them.
+                    pxPerDp = density.density * scale,
+                  )
+                }
                 // Above everything: pins are the clickable non-design element and must not hide
                 // under a mock or a selection outline.
                 CommentPinOverlay(

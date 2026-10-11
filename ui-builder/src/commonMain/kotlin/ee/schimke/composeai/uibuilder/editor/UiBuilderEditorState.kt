@@ -183,6 +183,8 @@ class UiBuilderEditorReducer(
       pinnedComponents = state.pinnedComponents,
       // Carried: an insert is answered by an authoritative document that would otherwise empty it.
       recentComponents = state.recentComponents,
+      // Carried for the same reason: every colour edit is answered by a rebuild.
+      recentColours = state.recentColours,
       // Drop only rows this document has answered: every edit rebuilds the state, so dropping all
       // would lose drift rows, and keeping all would report drift the edit just fixed.
       componentDrift = state.componentDrift.stillDescribing(document),
@@ -2855,6 +2857,29 @@ class UiBuilderEditorReducer(
       .let { edited ->
         if (targets.size > 1) edited.copy(selection = targets.map(UiBuilderNode::id)) else edited
       }
+      .withCommittedColour(state, field, value)
+  }
+
+  /**
+   * This state with [value] at the front of [UiBuilderEditorState.recentColours] when [field] is a
+   * colour and the commit made from [before] was accepted. Shared by a node's own property and a
+   * component placement's argument, which draw the same colour control, so a colour picked on
+   * either is recent on both. Only a colour the document took: a refused one is not on the canvas,
+   * and the sequence check keeps a stale Accepted from an earlier command from counting.
+   */
+  private fun UiBuilderEditorState.withCommittedColour(
+    before: UiBuilderEditorState,
+    field: EditorPropertyField,
+    value: JsonElement,
+  ): UiBuilderEditorState {
+    val colour = (value as? JsonPrimitive)?.contentOrNull
+    val accepted =
+      operationSequence != before.operationSequence && lastOutcome is CommandOutcome.Accepted
+    return if (field.control == EditorPropertyControl.Color && colour != null && accepted) {
+      copy(recentColours = recentColours.withRecentColour(colour))
+    } else {
+      this
+    }
   }
 
   /**
@@ -5418,6 +5443,7 @@ class UiBuilderEditorReducer(
           )
         else edited
       }
+      .withCommittedColour(state, field, value)
   }
 
   /**
