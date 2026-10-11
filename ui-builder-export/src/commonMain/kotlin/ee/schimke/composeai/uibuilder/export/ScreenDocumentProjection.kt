@@ -402,10 +402,11 @@ object ScreenDocumentProjection {
     val reasons = mutableListOf<String>()
 
     /**
-     * The nodes about to be visited as the direct child of the `list-item` role: each wrapped in a
-     * projection's item member, so its target's `list-item` context applies. One level deep.
+     * The nodes about to be visited as the direct child of a structural role, by node: each wrapped
+     * in a projection's item member that opens the role (`itemRoles`), so its target's context for
+     * the role applies. One level deep.
      */
-    private val listItems = mutableSetOf<String>()
+    private val itemRoles = mutableMapOf<String, String>()
     val assetPlaceholders = mutableListOf<AssetPlaceholder>()
     /** The families written as `SystemFont` lookups; see [Outcome.Projected.systemFontFamilies]. */
     val systemFontFamilies = linkedSetOf<String>()
@@ -1071,7 +1072,7 @@ object ScreenDocumentProjection {
           refused = true
         }
       // Only the direct child of an item wrapper is in the role, and only once.
-      val role = if (listItems.remove(node.id)) LIST_ITEM_ROLE else null
+      val role = itemRoles.remove(node.id)
       val lowered =
         when (val outcome = projection.lower(literal, role)) {
           is ExportProjection.Lowered.Refused -> {
@@ -1144,12 +1145,15 @@ object ScreenDocumentProjection {
                     refused = true
                     continue
                   }
+                  // The role the member opens, if any: Wear's `transformation = none` list wraps
+                  // its
+                  // rows in `item` without one. Only `list-item` has a scope the catalog attests.
+                  val role = lowered.itemRoles[parameter]
+                  val bodyScope = structure.itemScope.takeIf { role == LIST_ITEM_ROLE }
                   slotItems[parameter] =
-                    SlotItem.Builder(member, receiver)
-                      .also { it.bodyScopeFqn = structure.itemScope }
-                      .build()
-                  listItems += assignedChildren
-                  structure.itemScope
+                    SlotItem.Builder(member, receiver).also { it.bodyScopeFqn = bodyScope }.build()
+                  if (role != null) assignedChildren.forEach { itemRoles[it] = role }
+                  bodyScope
                 }
               slots[parameter] =
                 slots[parameter].orEmpty() +
