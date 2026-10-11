@@ -211,6 +211,70 @@
                         "kind": "boolean",
                         "optional": true
                     },
+                    "overloads": {
+                        "kind": "objectList",
+                        "members": {
+                            "descriptor": {
+                                "kind": "string",
+                                "optional": true,
+                                "nullable": true
+                            },
+                            "parameters": {
+                                "kind": "objectList",
+                                "members": {
+                                    "composableSlot": {
+                                        "kind": "boolean",
+                                        "optional": true
+                                    },
+                                    "composableSlotReceiver": {
+                                        "kind": "string",
+                                        "optional": true,
+                                        "nullable": true
+                                    },
+                                    "hasDefault": {
+                                        "kind": "boolean",
+                                        "optional": true
+                                    },
+                                    "lambdaReturnTypeFqn": {
+                                        "kind": "string",
+                                        "optional": true,
+                                        "nullable": true
+                                    },
+                                    "name": {
+                                        "kind": "string"
+                                    },
+                                    "noArgConstructible": {
+                                        "kind": "boolean",
+                                        "optional": true
+                                    },
+                                    "noArgFactory": {
+                                        "kind": "string",
+                                        "optional": true,
+                                        "nullable": true
+                                    },
+                                    "nullable": {
+                                        "kind": "boolean",
+                                        "optional": true
+                                    },
+                                    "scopeDslReceiver": {
+                                        "kind": "string",
+                                        "optional": true,
+                                        "nullable": true
+                                    },
+                                    "type": {
+                                        "kind": "string"
+                                    },
+                                    "typeFqn": {
+                                        "kind": "string",
+                                        "optional": true,
+                                        "nullable": true
+                                    }
+                                },
+                                "optional": true
+                            }
+                        },
+                        "optional": true
+                    },
                     "overloadsCollided": {
                         "kind": "boolean",
                         "optional": true
