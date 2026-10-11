@@ -609,6 +609,7 @@ private fun InspectorBody(
               contrastOf = { scheme ->
                 contrastReading(state.document, field.nodeId, field.name, field.value, scheme)
               },
+              recentColours = state.recentColours,
             )
           }
           if (tuneTarget != null) TuneFieldButton(tuneTarget, state.tunables, dispatch)
@@ -833,6 +834,10 @@ private fun PropertyControl(
   textTypeface: () -> FontSettings.TextTypeface? = { null },
   /** How a colour property contrasts with what it is drawn over; read only for colour fields. */
   contrastOf: (ColorScheme) -> ContrastReading? = { null },
+  /**
+   * The colours last committed to any colour property this session; read only for colour fields.
+   */
+  recentColours: List<String> = emptyList(),
 ) {
   val bound = field.boundVariable
   val formula = field.boundFormula
@@ -889,7 +894,7 @@ private fun PropertyControl(
             showSteppers = true,
           )
         EditorPropertyControl.Color ->
-          ColorPropertyControl(field, commit, contrastOf) {
+          ColorPropertyControl(field, commit, contrastOf, recentColours) {
             DraftPropertyControl(
               field,
               onTextInputFocusChanged,
@@ -2074,6 +2079,7 @@ private fun ColorPropertyControl(
   field: EditorPropertyField,
   commit: (String) -> Unit,
   contrastOf: (ColorScheme) -> ContrastReading?,
+  recentColours: List<String>,
   textField: @Composable () -> Unit,
 ) {
   val scheme = LocalInspectorColorScheme.current ?: MaterialTheme.colorScheme
@@ -2092,6 +2098,19 @@ private fun ColorPropertyControl(
       Box(Modifier.weight(1f)) { textField() }
     }
     if (contrast != null) ContrastChip(contrast)
+    // A role this field does not list (another catalog's, or one only a different property takes)
+    // would be refused, so it is not offered; a literal is drawable on any colour property.
+    val recent = recentColours.filter {
+      (it.startsWith("#") || it in field.choices) && swatchColor(it, scheme) != null
+    }
+    if (recent.isNotEmpty()) {
+      Text(
+        "Recent colours",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      RecentColourRow(recent, field, scheme, commit)
+    }
     val tokens = field.choices.filter { swatchColor(it, scheme) != null }
     if (tokens.isNotEmpty()) {
       Text(
@@ -2167,6 +2186,44 @@ private fun ThemeRoleChips(
               contentDescription = "Use $role for ${field.label.lowercase()}"
               this.selected = selected
             },
+        )
+      }
+    }
+  }
+}
+
+/**
+ * The colours last committed, as swatches like the presets: matching a colour used elsewhere is one
+ * press, not retyping a hex. A role has no name on a bare swatch, so each one names its value in a
+ * tooltip and to a screen reader; the labels say "recent" so they stay distinct from the preset or
+ * role offering the same value further down.
+ */
+@Composable
+private fun RecentColourRow(
+  values: List<String>,
+  field: EditorPropertyField,
+  scheme: androidx.compose.material3.ColorScheme,
+  commit: (String) -> Unit,
+) {
+  Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    values.forEach { value ->
+      val selected = value.equals(field.value, ignoreCase = true)
+      TooltipBox(
+        positionProvider =
+          TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+        tooltip = { PlainTooltip { Text(value) } },
+        state = rememberTooltipState(),
+      ) {
+        ColorSwatch(
+          swatchColor(value, scheme),
+          size = 22.dp,
+          selected = selected,
+          modifier =
+            Modifier.clickable { commit(value) }
+              .semantics {
+                contentDescription = "Use recent $value for ${field.label.lowercase()}"
+                this.selected = selected
+              },
         )
       }
     }

@@ -273,7 +273,9 @@ server:
 
 - `supersedes` maps an old component id to its successor, plus property, slot and modifier renames.
   A family that used a synthetic variant property may additionally name that property and map each
-  value to a concrete successor component. Upgrade preview reports the exact edits; apply performs
+  value to a concrete successor component, or go the other way with `setProperties`: fixed values
+  the old id implied, written onto the successor, so `m3/outlined-card` can become `m3/card` with
+  `style = outlined`. Upgrade preview reports the exact edits; apply performs
   only the previewed migration, and an older producer or catalog simply publishes no map.
 - A builtin may set `implementation` to the canonical id of a wrapper in the catalog's own
   `components.json`. The server aliases that record under the builtin id for generic native export

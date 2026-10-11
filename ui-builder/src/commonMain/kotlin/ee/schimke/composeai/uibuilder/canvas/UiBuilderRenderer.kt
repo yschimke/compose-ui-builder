@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -54,6 +55,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
@@ -64,6 +66,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryScrollableTabRow
@@ -114,6 +117,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -1626,14 +1630,12 @@ private fun RenderNode(
           slot("content").forEach { child(it, Modifier) }
         }
       "m3/card" ->
-        Card(
-          measured,
+        BuilderCard(
+          style = node.cardStyle(),
+          modifier = measured,
           shape = node.shape(themeCornerRadius),
-          elevation = CardDefaults.cardElevation(defaultElevation = node.float("elevationDp").dp),
-          colors =
-            CardDefaults.cardColors(
-              node.color("containerColor", MaterialTheme.colorScheme.surfaceContainer)
-            ),
+          elevationDp = node.float("elevationDp").takeIf { "elevationDp" in node.properties },
+          containerColor = { default -> node.color("containerColor", default) },
         ) {
           // Filled only along the axes the card was given a size on; see [cardContentFill].
           val fill = node.cardContentFill()
@@ -1817,7 +1819,7 @@ private fun RenderNode(
       "m3/time-picker" -> BuilderTimePicker(node, measured, document.timePickerLayoutType())
       "m3/icon-button" ->
         BuilderIconButton(
-          variant = node.string("variant"),
+          variant = node.iconButtonStyle(),
           onClick = activate,
           modifier =
             measured
@@ -2422,6 +2424,16 @@ private fun UiBuilderNode.valueScalar(name: String): JsonPrimitive? =
 
 internal fun UiBuilderNode.string(name: String): String = valueScalar(name)?.contentOrNull.orEmpty()
 
+/**
+ * A card's style — `filled`, `elevated` or `outlined` — as the catalog's `style` states it, or as a
+ * design saved before that spelled it, a `variant`. Shared with [ComposeEmitter] so the canvas and
+ * the generated code pick the same composable.
+ */
+internal fun UiBuilderNode.cardStyle(): String = string("style").ifEmpty { string("variant") }
+
+/** An icon button's style — `standard`, `filled`, `tonal` or `outlined` — read as [cardStyle]. */
+internal fun UiBuilderNode.iconButtonStyle(): String = string("style").ifEmpty { string("variant") }
+
 internal fun UiBuilderNode.float(name: String, fallback: Float = 0f): Float =
   valueScalar(name)?.floatOrNull ?: fallback
 
@@ -3019,8 +3031,57 @@ internal fun isoDateToEpochMillis(value: String): Long? {
 }
 
 /**
- * The Material 3 icon button the design's `variant` names: `IconButton`, `FilledIconButton`,
- * `FilledTonalIconButton` or `OutlinedIconButton` (four functions, not a style argument).
+ * A card in the style it was given: `filled` (the default), `elevated` or `outlined`, each Material
+ * 3's own composable so the canvas draws what [ComposeEmitter] writes. [elevationDp] is null when
+ * the design left it to the style's default.
+ */
+@Composable
+private fun BuilderCard(
+  style: String,
+  modifier: Modifier,
+  shape: Shape,
+  elevationDp: Float?,
+  containerColor: @Composable (Color) -> Color,
+  content: @Composable ColumnScope.() -> Unit,
+) {
+  when (style) {
+    "elevated" ->
+      ElevatedCard(
+        modifier,
+        shape = shape,
+        colors =
+          CardDefaults.elevatedCardColors(
+            containerColor(MaterialTheme.colorScheme.surfaceContainerLow)
+          ),
+        elevation =
+          elevationDp?.let { CardDefaults.elevatedCardElevation(defaultElevation = it.dp) }
+            ?: CardDefaults.elevatedCardElevation(),
+        content = content,
+      )
+    "outlined" ->
+      OutlinedCard(
+        modifier,
+        shape = shape,
+        colors = CardDefaults.outlinedCardColors(containerColor(MaterialTheme.colorScheme.surface)),
+        elevation = CardDefaults.outlinedCardElevation(defaultElevation = (elevationDp ?: 0f).dp),
+        content = content,
+      )
+    else ->
+      Card(
+        modifier,
+        shape = shape,
+        elevation = CardDefaults.cardElevation(defaultElevation = (elevationDp ?: 0f).dp),
+        colors =
+          CardDefaults.cardColors(containerColor(MaterialTheme.colorScheme.surfaceContainer)),
+        content = content,
+      )
+  }
+}
+
+/**
+ * The Material 3 icon button the design's style names ([iconButtonStyle]): `IconButton`,
+ * `FilledIconButton`, `FilledTonalIconButton` or `OutlinedIconButton` (four functions, not a style
+ * argument).
  */
 @Composable
 private fun BuilderIconButton(

@@ -24,7 +24,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class CapabilityComposeCodeExporterTest {
   private val document by lazy {
@@ -322,6 +324,81 @@ class CapabilityComposeCodeExporterTest {
     val source = assertNotNull(result.source, result.diagnostics.toString())
     assertTrue(source.contains("NavigationSuiteItem("), source)
     assertTrue(source.contains("label = null,"), source)
+  }
+
+  @Test
+  fun `a card and an icon button write the composable their style names`() {
+    // `style` is the catalog's spelling; `variant` is what designs saved before it carry. Both pick
+    // Material 3's own function, so an outlined card is never drawn as a filled one.
+    fun node(
+      id: String,
+      componentId: String,
+      vararg properties: Pair<String, JsonObject>,
+      slots: Map<String, List<String>> = emptyMap(),
+    ) = UiBuilderNode(id, componentId, JsonObject(mapOf(*properties)), slots = slots)
+    fun enum(value: String) = property("enum", JsonPrimitive(value))
+    fun text(id: String) = node(id, "m3/text", "text" to property("string", JsonPrimitive(id)))
+    val styled =
+      document.copy(
+        roots = listOf("column"),
+        nodes =
+          mapOf(
+            "column" to
+              node(
+                "column",
+                "layout/column",
+                slots =
+                  mapOf("children" to listOf("outlined", "elevated", "legacy", "plain", "tonal")),
+              ),
+            "outlined" to
+              node(
+                "outlined",
+                "m3/card",
+                "style" to enum("outlined"),
+                slots = mapOf("content" to listOf("a")),
+              ),
+            "elevated" to
+              node(
+                "elevated",
+                "m3/card",
+                "style" to enum("elevated"),
+                slots = mapOf("content" to listOf("b")),
+              ),
+            "legacy" to
+              node(
+                "legacy",
+                "m3/card",
+                "variant" to enum("outlined"),
+                slots = mapOf("content" to listOf("c")),
+              ),
+            "plain" to node("plain", "m3/card", slots = mapOf("content" to listOf("d"))),
+            "tonal" to
+              node(
+                "tonal",
+                "m3/icon-button",
+                "style" to enum("tonal"),
+                slots = mapOf("content" to listOf("glyph")),
+              ),
+            "glyph" to node("glyph", "m3/icon", "iconKey" to enum("filled/home")),
+            "a" to text("a"),
+            "b" to text("b"),
+            "c" to text("c"),
+            "d" to text("d"),
+          ),
+      )
+    // The frozen fixture predates `style`; a catalog that declares it alongside `variant` is what
+    // an
+    // m3-catalog release carrying the collapse publishes.
+    val result = CapabilityComposeCodeExporter.export(styled, styledCatalog())
+    val source = assertNotNull(result.source, result.diagnostics.toString())
+    assertEquals(2, Regex("""\bOutlinedCard\(""").findAll(source).count(), source)
+    assertTrue(Regex("""\bElevatedCard\(""").containsMatchIn(source), source)
+    assertTrue(Regex("""(?<![A-Za-z])Card\(""").containsMatchIn(source), "the plain one stays Card")
+    assertTrue(
+      "CardDefaults.elevatedCardElevation()" in source,
+      "an unset elevation is the style's",
+    )
+    assertTrue("FilledTonalIconButton(" in source, source)
   }
 
   @Test
@@ -984,6 +1061,29 @@ class CapabilityComposeCodeExporterTest {
     assertFalse(quoted, "unterminated generated string")
     assertTrue(stack.isEmpty(), "unclosed generated delimiter(s): $stack")
   }
+
+  /** The frozen catalog with `style` declared beside `variant` on the card and icon button. */
+  private fun styledCatalog() =
+    CapabilityCatalogParser.parse(
+      Json.encodeToString(
+        JsonObject.serializer(),
+        resourceJson("/m3-catalog-capabilities-v1.json").let { root ->
+          val components =
+            root.getValue("components").jsonArray.map { component ->
+              val entry = component.jsonObject
+              val id = entry["componentId"]?.jsonPrimitive?.content
+              if (id != "m3/card" && id != "m3/icon-button") return@map entry
+              val properties = entry.getValue("properties").jsonArray
+              val variant = properties.first {
+                it.jsonObject["name"]?.jsonPrimitive?.content == "variant"
+              }
+              val style = JsonObject(variant.jsonObject + ("name" to JsonPrimitive("style")))
+              JsonObject(entry + ("properties" to JsonArray(properties + style)))
+            }
+          JsonObject(root + ("components" to JsonArray(components)))
+        },
+      )
+    )
 
   private fun resource(path: String): String =
     checkNotNull(javaClass.getResource(path)) { "missing resource $path" }.readText()

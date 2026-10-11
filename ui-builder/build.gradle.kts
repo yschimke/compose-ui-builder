@@ -101,6 +101,9 @@ kotlin {
       // The real Material 3 adaptive scaffolds; see `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md`.
       implementation(libs.compose.material3.adaptive)
       implementation(libs.compose.material3.adaptive.layout)
+      // Above the adaptive artifacts' own floor, for the Large width-class constant; the server's
+      // renderer sidecar pins the same ref (see `androidx-window` in the catalog).
+      implementation(libs.androidx.window.core)
       // `NavigationSuiteScaffold`, drawn for real for the same reason: whether a design's
       // navigation is a rail or a bar is the library's answer, per frame.
       implementation(libs.compose.material3.navigation.suite)

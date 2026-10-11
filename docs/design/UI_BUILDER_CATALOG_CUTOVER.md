@@ -239,6 +239,33 @@ server half has shipped:
 2. Re-capture, re-run `CatalogCutoverReadinessTest`, and delete the closed ledger lines.
 3. When all five are owned for a release with no reversal, set the default to `all`.
 
+## No copies
+
+The point of the cutover is that **this repository carries no catalog definitions**. A catalog owns
+its `ui-builder.json`, record and template documents and publishes them on its
+`design-artifacts/<system>` branch; everything here reads what it published. Replacing the Kotlin
+catalogs with checked-in snapshots of those published files would move the duplication rather than
+remove it, and a snapshot is stale the first time its catalog republishes.
+
+What that means for each consumer:
+
+- **A preview server** composes each catalog from its delivery branch (`PublishedUiBuilderCatalog`)
+  and serves it; the browser editor gets catalogs from the server it runs against.
+- **The offline hosts** (desktop, the IntelliJ host) read each catalog from its delivery branch at
+  runtime (`PublishedCatalogStore`): fetched on first open, composed in process and served through
+  the same executor a server uses, and cached under `$XDG_CACHE_HOME/compose-ui-builder/catalogs`
+  so a catalog opened once opens again without a network. A catalog never fetched and unreachable is
+  refused with that reason — never answered from a copy packaged into this build. What the hosts
+  hold is a delivery coordinate per catalog id (`PublishedCatalogLocation.DEFAULTS`), not the
+  catalog. Their own tests read the cutover captures through the same store
+  (`compose.uiBuilder.catalogDir`), never the network.
+- **Behaviour tests** assert what the builder does, so they belong on small catalogs built in the
+  test, not on a real catalog's content. Tests that still read a synthesised golden move to
+  synthetic catalogs as that golden is deleted (step 5 below).
+- **The `catalog-cutover/` captures** exist only to compare a catalog's published file with the
+  Kotlin catalog it replaces. They are deleted with the shadow machinery, not refreshed into a
+  permanent fixture.
+
 ## Moving the code
 
 The code moves in **two directions**, and most of it is deleted rather than moved. A fact a catalog
@@ -263,8 +290,23 @@ readiness test is green with that catalog owned, and `ledger empty for it` is th
 | `LauncherWidgetTemplates` and its `UiBuilderNewDesignSeed` branches | ~145 | remote-m3-catalog's `widget-catalog/ui-builder/designs/*.json` | `remote-widgets` owned; move `hello-widget` into that directory first if it should stay on offer |
 | `isLauncherWidget()`'s root-id test, in `RecordFreeExport` and in the editor model's minimum frame size, and `LauncherWidgetGrid`'s cell table | ~60 | `remote-widgets`' `composeSourceExport` declaration and `frame.geometry.sizesDp` | `remote-widgets` owned; the editor's minimum then reads "this catalog declares sizes" from the frame block it already parses |
 
-`blankUiBuilderDocument`, `ComposeFoundationCatalog` and the packaged `m3-catalog` capability stay:
-they are the builder's floor, not knowledge of somebody else's catalog.
+| `m3-catalog-capabilities-v1.json` | — | m3-catalog's published `ui-builder.json` | the offline hosts no longer read it; remaining readers are the host-bridge web archive (with the wear/remote goldens above) and `DesktopExportHostTest` |
+| `CatalogCutoverShadow`, `CatalogCutoverShadowTableTest`, `CatalogCutoverReadinessTest`, `ui-builder-runtime/src/test/resources/catalog-cutover/`, `scripts/capture-catalog-cutover-fixtures.sh` | — | — | every catalog owned for a release with no withheld-catalog errors; the offline hosts' tests move to synthetic catalogs first |
+
+`blankUiBuilderDocument` and `ComposeFoundationCatalog` stay: they are the builder's own vocabulary,
+not knowledge of somebody else's catalog. The packaged `m3-catalog` capability no longer counts as
+that floor — it is a copy of a catalog, and goes with the other goldens.
+
+**Gaps that block those deletions**, found by reading what the catalogs publish instead of the
+Kotlin catalogs:
+
+- wear-m3 and remote-m3 publish no design tokens or theme schemes, so an owned catalog loses the
+  Theme panel's tokens.
+- No published catalog declares a per-component SVG capability, so the desktop's in-process SVG
+  export (`DesktopExportHost`) refuses a catalog read from where it publishes.
+- The host-bridge web archive ships the wear-m3 and remote-m3 goldens for IDE hosts that read them
+  from the unpacked archive; those hosts have to take catalogs from their own runtime source
+  (`PublishedCatalogStore`) before the goldens can go.
 
 ### What stays here, by design
 

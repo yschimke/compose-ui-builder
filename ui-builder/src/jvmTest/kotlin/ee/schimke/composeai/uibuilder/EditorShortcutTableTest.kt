@@ -8,9 +8,11 @@ import ee.schimke.composeai.uibuilder.editor.EditorChord
 import ee.schimke.composeai.uibuilder.editor.EditorMoveDirection
 import ee.schimke.composeai.uibuilder.editor.EditorPane
 import ee.schimke.composeai.uibuilder.editor.EditorSelectionMove
+import ee.schimke.composeai.uibuilder.editor.EditorShortcutGroup
 import ee.schimke.composeai.uibuilder.editor.EditorViewCommand
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditorEvent
 import ee.schimke.composeai.uibuilder.editor.editorShortcutFor
+import ee.schimke.composeai.uibuilder.editor.editorShortcutSections
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -30,7 +32,8 @@ class EditorShortcutTableTest {
     // fire, and the panel would still advertise it. This is the test that stops that happening.
     EDITOR_SHORTCUTS.forEachIndexed { index, shortcut ->
       shortcut.keys.forEach { key ->
-        val chord = EditorChord(key, shortcut.command, shortcut.shift ?: false)
+        val chord =
+          EditorChord(key, shortcut.command, shortcut.shift ?: false, shortcut.alt ?: false)
         assertEquals(
           index,
           EDITOR_SHORTCUTS.indexOfFirst { it.matches(chord) },
@@ -92,6 +95,24 @@ class EditorShortcutTableTest {
     assertEquals(chords.distinct(), chords, "two rows would advertise the same chord")
     assertTrue(EDITOR_SHORTCUTS.all { it.chord.isNotBlank() && it.description.isNotBlank() })
     assertTrue(EDITOR_GESTURES.all { it.first.isNotBlank() && it.second.isNotBlank() })
+  }
+
+  @Test
+  fun `the panel lists every chord once, under its section`() {
+    val sections = editorShortcutSections()
+    assertEquals(EditorShortcutGroup.entries, sections.map { it.first }, "an empty section")
+    // Merged rows join their chords, so every chord must still appear in exactly one row.
+    val listed = sections.flatMap { (_, rows) -> rows.map { it.first } }
+    EDITOR_SHORTCUTS.forEach { shortcut ->
+      assertEquals(
+        1,
+        listed.count { row -> row == shortcut.chord || shortcut.chord in row.split(" / ") },
+        "${shortcut.chord} should be listed once",
+      )
+    }
+    // The two redo chords are one action, so one row.
+    val history = sections.single { it.first == EditorShortcutGroup.History }.second
+    assertEquals(listOf("Redo", "Undo"), history.map { it.second })
   }
 
   @Test
@@ -176,12 +197,15 @@ class EditorShortcutTableTest {
   }
 
   @Test
-  fun `question mark opens the shortcuts and a plain slash does not`() {
+  fun `question mark opens the shortcuts and a plain slash opens quick insert`() {
     assertEquals(
       EditorViewCommand.ShowShortcuts,
       resolve(EditorChord(Key.Slash, command = false, shift = true))?.view,
     )
-    assertNull(resolve(EditorChord(Key.Slash, command = false, shift = false)))
+    assertEquals(
+      EditorViewCommand.QuickInsert,
+      resolve(EditorChord(Key.Slash, command = false, shift = false))?.view,
+    )
   }
 
   @Test
@@ -237,6 +261,38 @@ class EditorShortcutTableTest {
           canvasShown = true,
         )
         ?.view,
+    )
+  }
+
+  @Test
+  fun `the wrap chord opens the chooser and only with both modifiers`() {
+    assertEquals(
+      EditorViewCommand.ChooseWrap,
+      resolve(EditorChord(Key.G, command = true, shift = false, alt = true))?.view,
+    )
+    // Ctrl/Cmd+G alone is the browser's find-next, and a bare or Alt-only G is typing (Option+G is
+    // a character on a Mac): none of them is ours.
+    assertNull(resolve(EditorChord(Key.G, command = true, shift = false)))
+    assertNull(resolve(EditorChord(Key.G, command = false, shift = false, alt = true)))
+    assertNull(resolve(EditorChord(Key.G, command = false, shift = false)))
+  }
+
+  @Test
+  fun `the wrap chord edits, so a closed canvas leaves it inert`() {
+    assertNull(
+      editorShortcutFor(
+        EditorChord(Key.G, command = true, shift = false, alt = true),
+        editing = false,
+      )
+    )
+  }
+
+  @Test
+  fun `holding Alt does not change what the older chords do`() {
+    // They were written before Alt meant anything to the table, and `alt = null` keeps them so.
+    assertEquals(
+      UiBuilderEditorEvent.Undo,
+      resolve(EditorChord(Key.Z, command = true, shift = false, alt = true))?.event,
     )
   }
 }

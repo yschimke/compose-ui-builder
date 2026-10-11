@@ -717,6 +717,9 @@ fun UiBuilderEditor(
   // The shortcuts dialog the `?` key opens. The toolbars keep their own for their menu entry; this
   // one exists because a key has no toolbar to belong to, and the focused layout has none at all.
   var showShortcutsDialog by remember { mutableStateOf(false) }
+  // The Column / Row / Box chooser the wrap chord opens, holding the choices worked out when the
+  // chord was pressed; null while closed.
+  var wrapChoices by remember { mutableStateOf<List<QuickWrapChoice>?>(null) }
   // How many design canvases are composed right now — in practice none or one. Counted from the
   // canvas's own composition rather than inferred from the panes, because the open editor pane does
   // not mean the canvas is drawn: a revision or suggestion review replaces it, and the compact
@@ -736,8 +739,12 @@ fun UiBuilderEditor(
   var pendingComment by
     remember(document.id) { mutableStateOf<Pair<NodeCaptureRequest, String>?>(null) }
   var commentSequence by remember(document.id) { mutableStateOf(0) }
+  // The node the `/` quick insert search is open beside. Local, like the Comment field: it is a
+  // window onto the palette, not editor state, and it closes when the selection moves on.
+  var quickInsertNodeId by remember(document.id) { mutableStateOf<String?>(null) }
   LaunchedEffect(state.selectedNodeId) {
     if (commentNodeId != state.selectedNodeId) commentNodeId = null
+    if (quickInsertNodeId != state.selectedNodeId) quickInsertNodeId = null
   }
   // Which compact tab is showing: a preview pane's id, or null for the editor. Per design, like the
   // panel, and a pane that goes away — its device unticked — falls back to the editor.
@@ -1106,6 +1113,10 @@ fun UiBuilderEditor(
     return "$name › ${target.slot}"
   }
 
+  // Encoded bytes too: sandboxed catalog runtimes and the widget export receive only the document,
+  // so pictures travel inside it (`LocalUiBuilderAssetBytes`). Declared before the selection menu,
+  // whose "Copy as Compose code" hands them to the export as the code pane does.
+  val assetBytesByDigest = remember { mutableStateMapOf<String, ByteArray>() }
   /**
    * The selection's verbs as menu rows. Built here because every answer comes from the reducer; the
    * lambda takes the menu's dismiss so rows can close it.
@@ -1184,6 +1195,32 @@ fun UiBuilderEditor(
             }
           }
         },
+      // The export the code pane runs, on the design re-rooted at the layer. Asked at the press
+      // rather than per menu build: the menu is rebuilt on every recomposition and generating is
+      // not free.
+      onCopyCode =
+        state.selectedNodeId
+          ?.takeIf { state.selection.size == 1 }
+          ?.let { nodeId ->
+            {
+              val code = reducer.subtreeCode(state.document, nodeId) { assetBytesByDigest[it] }
+              val layer =
+                layerRows
+                  .filterIsInstance<EditorLayerRow.Node>()
+                  .firstOrNull { it.nodeId == nodeId }
+                  ?.row
+                  ?.label ?: state.document.nodes[nodeId]?.componentId ?: nodeId
+              if (code != null) {
+                editorScope.launch {
+                  say(
+                    copyCodeSentence(code, layer) {
+                      systemClipboard.setClipEntry(plainTextClipEntry(it))
+                    }
+                  )
+                }
+              }
+            }
+          },
       onDismiss = close,
       dispatch = ::dispatch,
     )
@@ -1683,10 +1720,17 @@ fun UiBuilderEditor(
         selectionMenu = selectionMenu,
         onHoverEditorDismiss = {
           commentNodeId = null
+          if (quickInsertNodeId != null) {
+            quickInsertNodeId = null
+            textInputFocused = false
+          }
           dispatch(UiBuilderEditorEvent.HideQuickEditor)
         },
-        // The Comment field is only for typing, so it takes the keys; the quick editor does not.
-        hoverEditorFocusable = commentNodeId != null && commentNodeId == state.selectedNodeId,
+        // The Comment field and quick insert are only for typing, so they take the keys; the quick
+        // editor does not.
+        hoverEditorFocusable =
+          (commentNodeId != null && commentNodeId == state.selectedNodeId) ||
+            (quickInsertNodeId != null && quickInsertNodeId == state.selectedNodeId),
         // Double-click a label to type over it where it is. Anything without free text of its own
         // keeps what the click already did: select it.
         onNodeDoubleClicked = { nodeId ->
@@ -1709,6 +1753,35 @@ fun UiBuilderEditor(
         onTextInputFocusChanged = { textInputFocused = it },
         hoverEditor =
           if (
+            state.selection.size == 1 &&
+              quickInsertNodeId != null &&
+              quickInsertNodeId == state.selectedNodeId
+          ) {
+            { dragHandle ->
+              QuickInsertCard(
+                label = selectionLabel,
+                search = { query -> reducer.quickInsertItems(state, query) },
+                recentComponents = state.recentComponents,
+                // The palette's Add into the selection, event for event, so the pick lands on the
+                // "Recently used" shelf like any other insert.
+                onInsert = { item ->
+                  quickInsertNodeId = null
+                  focusEditor()
+                  reducer.dropTarget(state, item.componentId)?.let { target ->
+                    dispatch(
+                      UiBuilderEditorEvent.InsertComponent(item.componentId, target, item.variant)
+                    )
+                  }
+                },
+                onDismiss = {
+                  quickInsertNodeId = null
+                  focusEditor()
+                },
+                onTextInputFocusChanged = { textInputFocused = it },
+                dragHandle = dragHandle,
+              )
+            }
+          } else if (
             state.selection.size == 1 &&
               commentNodeId != null &&
               commentNodeId == state.selectedNodeId &&
@@ -1843,9 +1916,6 @@ fun UiBuilderEditor(
   // Cached against the document: it walks every node and property, and the inspector recomposes on
   // every keystroke and drag frame.
   val assetBitmapsByDigest = remember { mutableStateMapOf<String, ImageBitmap?>() }
-  // Encoded bytes too: sandboxed catalog runtimes and the widget export receive only the document,
-  // so pictures travel inside it (`LocalUiBuilderAssetBytes`).
-  val assetBytesByDigest = remember { mutableStateMapOf<String, ByteArray>() }
   val documentProblems =
     remember(reducer, state.document, assetBytesByDigest.size) {
       reducer.problems(state.document) { assetBytesByDigest[it] }
@@ -2412,6 +2482,20 @@ fun UiBuilderEditor(
           }
         )
       }
+      wrapChoices?.let { choices ->
+        WrapChooserDialog(
+          choices = choices,
+          onPick = { choice ->
+            wrapChoices = null
+            focusEditor()
+            dispatch(UiBuilderEditorEvent.WrapSelection(choice.item.componentId))
+          },
+          onDismiss = {
+            wrapChoices = null
+            focusEditor()
+          },
+        )
+      }
       BoxWithConstraints(Modifier.fillMaxSize()) {
         // A host drawing the toolbar and rails has taken the width they cost, and its panes are
         // resized by the person rather than by a phone, so it keeps the desktop layout.
@@ -2442,6 +2526,8 @@ fun UiBuilderEditor(
             .focusRequester(editorFocusRequester)
             .focusable()
             .onPreviewKeyEvent { event ->
+              // Alt held is the canvas's measure mode; it watches, never consumes.
+              onMeasureKey(event)
               editorShortcut(
                 event,
                 enabled = !textInputFocused,
@@ -2453,6 +2539,32 @@ fun UiBuilderEditor(
                     is EditorViewCommand.Zoom ->
                       canvasZoom = canvasZoomAfter(command.zoom, canvasZoom ?: canvasDrawnScale)
                     EditorViewCommand.ShowShortcuts -> showShortcutsDialog = true
+                    EditorViewCommand.ChooseWrap -> {
+                      // Said rather than shown empty: a chooser with no rows is a dead end, and
+                      // the reason is usually the selection, which a sentence can name.
+                      val choices = quickWrapChoices(reducer.wrapCandidates(state))
+                      when {
+                        state.selectionRoots().isEmpty() -> say("Select something to wrap first")
+                        choices.isEmpty() -> say("This selection cannot go in a Column, Row or Box")
+                        else -> {
+                          // The wrap replaces the layer the search was beside, so an open quick
+                          // insert would be left pointing at a node that has just moved.
+                          quickInsertNodeId = null
+                          wrapChoices = choices
+                        }
+                      }
+                    }
+                    EditorViewCommand.QuickInsert ->
+                      if (state.selection.size == 1) {
+                        // One card beside the selection at a time: the search replaces the quick
+                        // editor or a Comment field rather than stacking over it.
+                        commentNodeId = null
+                        wrapChoices = null
+                        dispatch(UiBuilderEditorEvent.HideQuickEditor)
+                        quickInsertNodeId = state.selectedNodeId
+                      } else {
+                        say("Select one layer to insert into")
+                      }
                   }
                 },
               )

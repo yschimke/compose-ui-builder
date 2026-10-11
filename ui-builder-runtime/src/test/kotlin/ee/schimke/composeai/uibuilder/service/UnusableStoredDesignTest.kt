@@ -211,11 +211,11 @@ class UnusableStoredDesignTest {
     // The owner: ownership is answered from the access record the design loaded with, so the
     // delete button the file manager offers actually works.
     assertEquals(
-      UiBuilderServiceResponse.DesignDeleted("orphaned"),
+      UiBuilderServiceResponse.DesignDeleted("orphaned", RESTORABLE_UNTIL),
       execute(reopened, OWNER, UiBuilderServiceRequest.DeleteDesign("orphaned")),
     )
     assertEquals(
-      UiBuilderServiceResponse.DesignDeleted("overgrown"),
+      UiBuilderServiceResponse.DesignDeleted("overgrown", RESTORABLE_UNTIL),
       execute(reopened, OWNER, UiBuilderServiceRequest.DeleteDesign("overgrown")),
     )
 

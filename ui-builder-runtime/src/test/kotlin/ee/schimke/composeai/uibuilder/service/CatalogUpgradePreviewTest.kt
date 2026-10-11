@@ -147,6 +147,63 @@ class CatalogUpgradePreviewTest {
   }
 
   @Test
+  fun `a split id collapses back onto one component with the style it implied`() {
+    // `m3/outlined-card` said "outlined" only by its id; the collapsed `m3/card` says it with
+    // `style`. A rename alone would lose it, and the required-property placeholder would then make
+    // every card filled.
+    val document =
+      document("d")
+        .withNode(node("card", "m3/outlined-card", mapOf("containerColor" to "#FFFFFF")))
+        .withProperty("card", "style", EnumValueV1("elevated"))
+
+    val outcome = planCatalogUpgrade(document, collapsedCards(), COLLAPSED_TARGET)
+
+    val moved = outcome.candidate.nodes.getValue("card")
+    assertEquals("m3/card", moved.componentId)
+    assertEquals(EnumValueV1("outlined"), moved.properties["style"], "the id's style wins")
+    assertEquals(StringValueV1("#FFFFFF"), moved.properties["containerColor"])
+    assertTrue(
+      outcome.issues.none { it.severity == CatalogUpgradeIssueSeverityV1.ERROR },
+      outcome.issues.toString(),
+    )
+    assertNotNull(outcome.issues.singleOrNull { it.code == "COMPONENT_BECOMES_VARIANT" })
+    assertTrue(
+      outcome.changes.any {
+        it is ReplaceCatalogUpgradeChangeV1 && it.path == "/nodes/card/properties/style"
+      },
+      outcome.changes.toString(),
+    )
+  }
+
+  @Test
+  fun `a component placement passes through, and its body is upgraded like any node`() {
+    // Design-local components: `body` is the declared body, `card` places it. A placement is a
+    // document construct the target catalog never declares, so it must not read as an unknown
+    // component and block the move (yschimke/compose-ui-builder: the Google tablet samples).
+    val document =
+      document("d")
+        .withNode(node("body", "m3/text", mapOf("text" to "Discover Weekly")))
+        .withNode(
+          DesignNodeV1(
+            "card",
+            DESIGN_COMPONENT_INSTANCE_COMPONENT_ID,
+            component = DesignComponentInstanceV1("summary", emptyMap()),
+          )
+        )
+        .copy(components = mapOf("summary" to DesignComponentV1("Summary", "body")))
+
+    val outcome = planCatalogUpgrade(document, remoteM3(), TARGET)
+
+    assertTrue(
+      outcome.issues.none { it.severity == CatalogUpgradeIssueSeverityV1.ERROR },
+      outcome.issues.toString(),
+    )
+    assertEquals(document.nodes.getValue("card"), outcome.candidate.nodes.getValue("card"))
+    assertEquals("remote-m3/remote-text", outcome.candidate.nodes.getValue("body").componentId)
+    assertTrue(outcome.changes.none { it.path.startsWith("/nodes/card") }, "nothing to report")
+  }
+
+  @Test
   fun `a component with no successor is an error, and the node is left alone`() {
     val document = document("d").withNode(node("chip", "m3/assist-chip", mapOf("label" to "hi")))
 
@@ -494,6 +551,44 @@ class CatalogUpgradePreviewTest {
       }
       .build()
 
+  /** A catalog that collapses `m3/outlined-card` onto `m3/card` with `style = outlined`. */
+  private fun collapsedCards(): CatalogCapabilityV1 =
+    CatalogCapabilityV1.Builder(
+        "compose-catalog-capabilities/v1",
+        CatalogBenchmarkV1.Builder("m3-catalog", "source", "m3-catalog", "published", "m3-runtime")
+          .build(),
+        listOf(component("m3/card", listOf("style", "containerColor"))),
+      )
+      .also {
+        it.statusSemantics =
+          JsonObject(
+            mapOf(
+              "supersedes" to
+                JsonObject(
+                  mapOf(
+                    "m3/outlined-card" to
+                      JsonObject(
+                        mapOf(
+                          "componentId" to JsonPrimitive("m3/card"),
+                          "setProperties" to
+                            JsonObject(mapOf("style" to JsonPrimitive("outlined"))),
+                        )
+                      )
+                  )
+                )
+            )
+          )
+        it.exportCapabilities =
+          ExportCapabilitiesV1.Builder()
+            .also {
+              it.composeCode = true
+              it.svg = true
+              it.png = true
+            }
+            .build()
+      }
+      .build()
+
   private fun component(id: String, properties: List<String>) =
     ComponentCapabilityV1.Builder(
         id,
@@ -711,5 +806,7 @@ class CatalogUpgradePreviewTest {
 
     private val SOURCE = CatalogReferenceV1("remote-m3", "candidate", "candidate", "remote-runtime")
     private val TARGET = CatalogReferenceV1("remote-m3", "published", "published", "remote-runtime")
+    private val COLLAPSED_TARGET =
+      CatalogReferenceV1("m3-catalog", "published", "published", "m3-runtime")
   }
 }

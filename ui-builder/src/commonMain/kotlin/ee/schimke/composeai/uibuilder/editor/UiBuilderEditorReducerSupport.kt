@@ -200,12 +200,23 @@ internal fun ComponentCapability.slot(name: String): SlotCapability? =
  * and variant labels are all matchable.
  */
 internal fun EditorCatalogItem.matches(needle: String): Boolean =
+  matchesOwnName(needle) || variants.any { it.matches(needle) }
+
+/**
+ * Whether [needle] finds the component itself — name, catalog id, kind or family — rather than only
+ * one of its variants. Quick insert lists a component row only then; a variant-only match is a
+ * variant row, so Enter inserts the variant that was typed.
+ */
+internal fun EditorCatalogItem.matchesOwnName(needle: String): Boolean =
   needle.isEmpty() ||
     displayName.lowercase().contains(needle) ||
     componentId.lowercase().contains(needle) ||
     kind.label.lowercase().contains(needle) ||
-    group.lowercase().contains(needle) ||
-    variants.any { it.label.lowercase().contains(needle) || it.value.lowercase().contains(needle) }
+    group.lowercase().contains(needle)
+
+/** Whether a search for [needle] finds this variant by its label or its catalog value. */
+internal fun EditorCatalogVariant.matches(needle: String): Boolean =
+  label.lowercase().contains(needle) || value.lowercase().contains(needle)
 
 /** Exact names lead search results; matches found only through a shelf or variant follow them. */
 internal fun EditorCatalogItem.searchRank(needle: String): Int =
@@ -214,9 +225,7 @@ internal fun EditorCatalogItem.searchRank(needle: String): Int =
     displayName.lowercase().startsWith(needle) -> 1
     componentId.lowercase() == needle -> 2
     componentId.lowercase().contains(needle) -> 3
-    variants.any {
-      it.label.lowercase().contains(needle) || it.value.lowercase().contains(needle)
-    } -> 4
+    variants.any { it.matches(needle) } -> 4
     kind.label.lowercase().contains(needle) -> 5
     else -> 6
   }
@@ -268,6 +277,26 @@ internal fun List<String>.withRecentComponent(
   componentId: String,
   limit: Int = RECENT_COMPONENT_LIMIT,
 ): List<String> = (listOf(componentId) + filter { it != componentId }).take(limit)
+
+/**
+ * How many colours the inspector's "Recent colours" row keeps: one row of swatches beside the
+ * inspector's narrow width, and about as many as a screen's palette has distinct accents.
+ */
+internal const val RECENT_COLOUR_LIMIT = 6
+
+/**
+ * [colour] moved to the front of the recently committed colours, each at most once, trimmed to
+ * [limit]. A literal is compared without case, so `#ff1a73e8` typed into the field and `#FF1A73E8`
+ * pressed on a swatch are one colour, kept as last spelled. A blank value is the component's
+ * default, not a colour anyone chose, so it leaves the list as it was.
+ */
+internal fun List<String>.withRecentColour(
+  colour: String,
+  limit: Int = RECENT_COLOUR_LIMIT,
+): List<String> {
+  if (colour.isBlank()) return this
+  return (listOf(colour) + filterNot { it.equals(colour, ignoreCase = true) }).take(limit)
+}
 
 /** The frame a catalog thumbnail's component is inserted into, and drawn at before scaling. */
 internal const val PREVIEW_FRAME_WIDTH_DP = 176
@@ -1098,6 +1127,54 @@ internal fun UiBuilderDocument.subtreeOf(nodeId: String): Set<String> {
     nodes[next]?.slots?.values?.forEach(pending::addAll)
   }
   return collected
+}
+
+/**
+ * This design re-rooted at [nodeId]: the node's subtree as the whole screen, or null when there is
+ * no such node. What an export of one layer is run on.
+ *
+ * Everything else the subtree reads comes with it unchanged — environment, state variables, assets
+ * and the title, so the function keeps the design's name — plus the bodies of the local components
+ * it places, transitively, since a placement exports as a call to its component's function. Other
+ * components are dropped so their functions are not written beside a layer that never calls them. A
+ * theme on the design's surface is not carried into a layer inside it: it belongs to that surface,
+ * and a copied layer is pasted inside a theme of the reader's own. Copying the theme-hosting
+ * surface itself is copying the screen, so its theme comes with it, as in the full export.
+ *
+ * The one change to the layer itself: its [PARENT_SCOPED_MODIFIERS] go. A `weight` or `align` is
+ * addressed to the parent the layer is being copied out of, and at the root there is no row or box
+ * to supply it, so keeping them refused every weighted list item. The reader's own parent decides.
+ */
+internal fun UiBuilderDocument.subtreeDocument(nodeId: String): UiBuilderDocument? {
+  if (nodeId !in nodes) return null
+  val kept = subtreeOf(nodeId).toMutableSet()
+  val placed = mutableSetOf<String>()
+  val pending = ArrayDeque(kept.mapNotNull { nodes[it]?.placementKey() })
+  while (pending.isNotEmpty()) {
+    val key = pending.removeFirst()
+    if (!placed.add(key)) continue
+    // A body can place another component; those come along too.
+    componentBody(key).forEach { bodyNodeId ->
+      if (kept.add(bodyNodeId)) nodes[bodyNodeId]?.placementKey()?.let(pending::addLast)
+    }
+  }
+  val root = nodes.getValue(nodeId)
+  val unscoped =
+    root.copy(
+      modifiers =
+        JsonArray(
+          root.modifiers.filterNot {
+            (it as? JsonObject)?.get("type")?.primitiveOrNull()?.contentOrNull in
+              PARENT_SCOPED_MODIFIERS
+          }
+        )
+    )
+  return copy(
+    roots = listOf(nodeId),
+    // Document order rather than traversal order, so the projection walks what it always walks.
+    nodes = nodes.filterKeys { it in kept } + (nodeId to unscoped),
+    components = JsonObject(components.filterKeys { it in placed }),
+  )
 }
 
 internal fun UiBuilderDocument.children(parent: ParentSlot?): List<String> =

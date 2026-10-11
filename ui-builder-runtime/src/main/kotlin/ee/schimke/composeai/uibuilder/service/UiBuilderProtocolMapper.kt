@@ -138,6 +138,8 @@ public object UiBuilderProtocolMapper {
       is UiBuilderServiceRequest.GetDesignActions,
       is UiBuilderServiceRequest.PreviewCurrentCatalogUpgrade,
       is UiBuilderServiceRequest.DeleteDesign,
+      is UiBuilderServiceRequest.RestoreDesign,
+      is UiBuilderServiceRequest.ListTrash,
       is UiBuilderServiceRequest.ListRevisions,
       is UiBuilderServiceRequest.RestoreRevision,
       is UiBuilderServiceRequest.MoveDesignHome,
@@ -168,7 +170,9 @@ public object UiBuilderProtocolMapper {
       is UiBuilderServiceResponse.DesignRenamed,
       is UiBuilderServiceResponse.DesignActions,
       is UiBuilderServiceResponse.Revisions,
-      is UiBuilderServiceResponse.DesignDeleted ->
+      is UiBuilderServiceResponse.DesignDeleted,
+      is UiBuilderServiceResponse.DesignRestored,
+      is UiBuilderServiceResponse.Trash ->
         ErrorResponseV1(
           ServiceErrorV1(
             ServiceErrorCodeV1.INTERNAL,

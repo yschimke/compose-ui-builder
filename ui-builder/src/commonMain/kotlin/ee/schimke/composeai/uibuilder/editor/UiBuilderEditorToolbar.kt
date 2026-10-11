@@ -49,6 +49,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,6 +65,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
@@ -81,6 +83,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.window.core.layout.WindowSizeClass
 import ee.schimke.composeai.uibuilder.CommandOutcome
 import ee.schimke.composeai.uibuilder.DesignRevisionPin
 import ee.schimke.composeai.uibuilder.DesignUrlSelectors
@@ -558,6 +561,15 @@ internal fun EditorToolbar(
   var showShortcuts by remember { mutableStateOf(false) }
   var overflowOpen by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
+  // The row does not wrap, so up to the Expanded width class the session actions (New, Fork,
+  // Sharing) and the viewer list move into More rather than pushing the agent control and More
+  // itself off the end; from Large up they are on the toolbar. Below 840dp the editor shows
+  // MobileEditorToolbar instead.
+  val foldToMore =
+    !currentWindowAdaptiveInfo(supportLargeAndXLargeWidth = true)
+      .windowSizeClass
+      .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_LARGE_LOWER_BOUND)
+  val showPresence = collaborators.isNotEmpty() || agentHost != null
   if (showShortcuts) {
     EditorShortcutsDialog(onDismiss = { showShortcuts = false })
   }
@@ -608,18 +620,20 @@ internal fun EditorToolbar(
           WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
         }
       }
-      if (collaborators.isNotEmpty() || agentHost != null) {
+      if (showPresence && !foldToMore) {
         Spacer(Modifier.width(6.dp))
         PresenceRow(collaborators)
         Spacer(Modifier.width(6.dp))
       }
-      if (onNewDesign != null) {
-        ToolbarIconAction("New design", "", UiBuilderChromeIcon.New, true, onNewDesign)
+      if (!foldToMore) {
+        if (onNewDesign != null) {
+          ToolbarIconAction("New design", "", UiBuilderChromeIcon.New, true, onNewDesign)
+        }
+        if (onForkDesign != null) {
+          ToolbarIconAction("Fork this design", "", UiBuilderChromeIcon.Copy, true, onForkDesign)
+        }
+        if (visibilityLabel != null) VisibilityToolbarAction(visibilityLabel, onManageVisibility)
       }
-      if (onForkDesign != null) {
-        ToolbarIconAction("Fork this design", "", UiBuilderChromeIcon.Copy, true, onForkDesign)
-      }
-      if (visibilityLabel != null) VisibilityToolbarAction(visibilityLabel, onManageVisibility)
       if (agentHost != null) {
         AgentToolbarAction(agentHost, onOpenAgentPrompt)
       } else if (onCopyAiPrompt != null) {
@@ -632,6 +646,42 @@ internal fun EditorToolbar(
           overflowOpen = true
         }
         val menuEntries = buildList {
+          if (foldToMore) {
+            if (showPresence) {
+              add(UiBuilderMenuEntry.Heading(presenceLabel(collaborators)))
+              presenceRows(collaborators).forEach { row ->
+                add(UiBuilderMenuEntry.Action(row) { overflowOpen = false })
+              }
+              add(UiBuilderMenuEntry.Divider)
+            }
+            if (visibilityLabel != null) {
+              add(UiBuilderMenuEntry.Heading(visibilityLabel))
+              if (onManageVisibility != null)
+                add(
+                  UiBuilderMenuEntry.Action("Sharing") {
+                    overflowOpen = false
+                    onManageVisibility()
+                  }
+                )
+              add(UiBuilderMenuEntry.Divider)
+            }
+            if (onNewDesign != null) {
+              add(
+                UiBuilderMenuEntry.Action("New design") {
+                  overflowOpen = false
+                  onNewDesign()
+                }
+              )
+            }
+            if (onForkDesign != null) {
+              add(
+                UiBuilderMenuEntry.Action("Fork this design") {
+                  overflowOpen = false
+                  onForkDesign()
+                }
+              )
+            }
+          }
           if (onBrowseDesigns != null) {
             add(
               UiBuilderMenuEntry.Action("My designs", icon = UiBuilderMenuIcon.Folder) {
@@ -1055,29 +1105,34 @@ private fun WorkspacePanesMenu(
 private fun PresenceRow(collaborators: List<UiBuilderCollaborator>) {
   var expanded by remember { mutableStateOf(false) }
   Box {
-    TextButton(onClick = { expanded = true }) { Text("Viewers · ${collaborators.size + 1}") }
+    TextButton(onClick = { expanded = true }) { Text(presenceLabel(collaborators)) }
     androidx.compose.material3.DropdownMenu(
       expanded = expanded,
       onDismissRequest = { expanded = false },
     ) {
-      DropdownMenuItem(text = { Text("You · browser") }, onClick = { expanded = false })
-      collaborators.forEach { collaborator ->
-        DropdownMenuItem(
-          text = {
-            Text(
-              "${collaborator.displayName} · ${when (collaborator.kind) {
-          UiBuilderParticipantKind.Browser -> "browser"
-          UiBuilderParticipantKind.Agent -> "agent"
-          UiBuilderParticipantKind.Unknown -> "participant"
-        }}${collaborator.modelName?.let { " · $it (reported)" }.orEmpty()}"
-            )
-          },
-          onClick = { expanded = false },
-        )
+      presenceRows(collaborators).forEach { row ->
+        DropdownMenuItem(text = { Text(row) }, onClick = { expanded = false })
       }
     }
   }
 }
+
+private fun presenceLabel(collaborators: List<UiBuilderCollaborator>) =
+  "Viewers · ${collaborators.size + 1}"
+
+/** One line per viewer, this browser first: the presence menu's rows, wherever it is shown. */
+private fun presenceRows(collaborators: List<UiBuilderCollaborator>): List<String> =
+  listOf("You · browser") +
+    collaborators.map { collaborator ->
+      val kind =
+        when (collaborator.kind) {
+          UiBuilderParticipantKind.Browser -> "browser"
+          UiBuilderParticipantKind.Agent -> "agent"
+          UiBuilderParticipantKind.Unknown -> "participant"
+        }
+      "${collaborator.displayName} · $kind" +
+        collaborator.modelName?.let { " · $it (reported)" }.orEmpty()
+    }
 
 /**
  * Everything that can be done to the selection, as menu rows: used by the layers tree context menu,
@@ -1110,6 +1165,11 @@ internal fun editorSelectionMenuEntries(
   onComment: (() -> Unit)? = null,
   /** Copies a link that opens this design on this layer, or null where nothing is selected. */
   onCopyLink: (() -> Unit)? = null,
+  /**
+   * Copies the Kotlin the code pane's export writes for just this layer, or null where there is no
+   * single selection to export.
+   */
+  onCopyCode: (() -> Unit)? = null,
   onDismiss: () -> Unit,
   dispatch: (UiBuilderEditorEvent) -> Unit,
 ): List<UiBuilderMenuEntry> = buildList {
@@ -1165,7 +1225,28 @@ internal fun editorSelectionMenuEntries(
       )
     )
   }
-  if (onOpenProperties != null || onQuickEdit != null || onComment != null || onCopyLink != null) {
+  // Beside Copy link for the same reason: it is about this layer, where the code pane and the
+  // Export menu are about the whole design.
+  if (onCopyCode != null) {
+    add(
+      UiBuilderMenuEntry.Action(
+        label = "Copy as Compose code",
+        icon = UiBuilderMenuIcon.Code,
+        contentDescription = "Copy this layer as Compose code",
+        onClick = {
+          onDismiss()
+          onCopyCode()
+        },
+      )
+    )
+  }
+  if (
+    onOpenProperties != null ||
+      onQuickEdit != null ||
+      onComment != null ||
+      onCopyLink != null ||
+      onCopyCode != null
+  ) {
     add(UiBuilderMenuEntry.Divider)
   }
   add(
@@ -1288,6 +1369,36 @@ internal fun editorSelectionMenuEntries(
     add(UiBuilderMenuEntry.Action("Unwrap") { act(UiBuilderEditorEvent.UnwrapSelection) })
   }
 }
+
+/**
+ * Runs one "Copy as Compose code" for the layer called [layer] and returns the sentence to show,
+ * like [copyLinkSentence]. A refusal copies nothing — a clipboard of half a screen is worse than an
+ * unchanged one — and says why in the code pane's words; [write] failing is a sentence too.
+ */
+internal suspend fun copyCodeSentence(
+  code: EditorGeneratedCode,
+  layer: String,
+  write: suspend (String) -> Unit,
+): String =
+  when (code) {
+    is EditorGeneratedCode.Source ->
+      try {
+        write(code.kotlin)
+        "Copied $layer as Compose code"
+      } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+        throw cancelled
+      } catch (failure: Exception) {
+        "Could not copy: ${failure.message ?: "unknown error"}"
+      }
+    is EditorGeneratedCode.Refused -> {
+      // The first reason in full, since a notice has room for a sentence, not the pane's list; the
+      // count says there is more. Not "in the code pane": that lists the whole design's reasons.
+      val more = code.reasons.size - 1
+      "No Compose source · the export would refuse $layer" +
+        (code.reasons.firstOrNull()?.let { ": $it" } ?: "") +
+        (if (more > 0) " (and $more more)" else "")
+    }
+  }
 
 /**
  * Runs one Copy link against the host and returns the sentence to show; failures are sentences too,
@@ -1791,14 +1902,18 @@ internal fun EditorShortcutsDialog(onDismiss: () -> Unit) {
 }
 
 /**
- * The shortcut table, rendered from [EDITOR_SHORTCUTS] and [EDITOR_GESTURES] so help cannot drift
- * from the handler. Separate from the dialog so it can be previewed.
+ * The shortcut table, rendered from [EDITOR_SHORTCUTS] (by [editorShortcutSections]) and
+ * [EDITOR_GESTURES] so help cannot drift from the handler. Separate from the dialog so it can be
+ * previewed.
  */
 @Composable
 internal fun EditorShortcutsPanel(modifier: Modifier = Modifier) {
   Column(modifier.width(460.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-    Text("Keys", style = MaterialTheme.typography.labelLarge)
-    EDITOR_SHORTCUTS.forEach { shortcut -> EditorShortcutRow(shortcut.chord, shortcut.description) }
+    editorShortcutSections().forEachIndexed { index, (group, rows) ->
+      if (index > 0) Spacer(Modifier.height(10.dp))
+      Text(group.title, style = MaterialTheme.typography.labelLarge)
+      rows.forEach { (chord, description) -> EditorShortcutRow(chord, description) }
+    }
     Spacer(Modifier.height(10.dp))
     Text("Pointer", style = MaterialTheme.typography.labelLarge)
     EDITOR_GESTURES.forEach { (gesture, description) -> EditorShortcutRow(gesture, description) }
@@ -1856,6 +1971,7 @@ internal fun editorShortcut(
       key = event.key,
       command = event.isCtrlPressed || event.isMetaPressed,
       shift = event.isShiftPressed,
+      alt = event.isAltPressed,
     )
   val match = editorShortcutFor(chord, editing, canvasShown) ?: return false
   match.event?.let(dispatch)
@@ -1885,6 +2001,8 @@ internal fun editorShortcutFor(
         // compact layout may be showing a preview tab. Taken then, they would rescale a canvas
         // nobody can see from a stale drawn scale, and keep the browser's page zoom from answering.
         it.view is EditorViewCommand.Zoom -> canvasShown
+        // Quick insert opens on the canvas, beside the selection, so it needs one on screen too.
+        it.view == EditorViewCommand.QuickInsert -> canvasShown
         else ->
           editing ||
             it.event is UiBuilderEditorEvent.TogglePane ||
@@ -1893,19 +2011,28 @@ internal fun editorShortcutFor(
     }
 
 /** The part of a key press a shortcut is allowed to look at. */
-internal data class EditorChord(val key: Key, val command: Boolean, val shift: Boolean)
+internal data class EditorChord(
+  val key: Key,
+  val command: Boolean,
+  val shift: Boolean,
+  val alt: Boolean = false,
+)
 
 /**
  * One chord the editor answers to. [shift] null means "does not care": `Ctrl/⌘+Z` reaches undo only
- * because redo claims the shifted spelling first.
+ * because redo claims the shifted spelling first. [alt] null is the same for Alt/Option, and is
+ * every chord's default so the table answered alike before Alt meant anything to it.
  */
 internal data class EditorShortcut(
   val chord: String,
   val description: String,
+  /** Where the panel lists it. Display only: matching follows [EDITOR_SHORTCUTS]'s order. */
+  val group: EditorShortcutGroup,
   val event: UiBuilderEditorEvent? = null,
   val keys: Set<Key>,
   val command: Boolean,
   val shift: Boolean? = null,
+  val alt: Boolean? = null,
   /** What the chord does to the editor's window instead, for a chord that is not an [event]. */
   val view: EditorViewCommand? = null,
 ) {
@@ -1914,7 +2041,10 @@ internal data class EditorShortcut(
   }
 
   fun matches(pressed: EditorChord): Boolean =
-    pressed.command == command && (shift == null || shift == pressed.shift) && pressed.key in keys
+    pressed.command == command &&
+      (shift == null || shift == pressed.shift) &&
+      (alt == null || alt == pressed.alt) &&
+      pressed.key in keys
 }
 
 /**
@@ -1926,7 +2056,45 @@ internal sealed interface EditorViewCommand {
 
   /** Opens the panel these rows are drawn in. */
   data object ShowShortcuts : EditorViewCommand
+
+  /**
+   * Opens the Column / Row / Box chooser for the selection. A view command rather than a
+   * [UiBuilderEditorEvent.WrapSelection] because the chord has not yet said which container: the
+   * chooser dispatches that one event, so the wrap stays a single undo step.
+   */
+  data object ChooseWrap : EditorViewCommand
+
+  /**
+   * Opens the quick insert search beside the selection. A window like the shortcuts dialog: what it
+   * inserts goes through the palette's own insert events, so it needs no reducer of its own.
+   */
+  data object QuickInsert : EditorViewCommand
 }
+
+/**
+ * The panel's sections, in the order it shows them. Separate from the table's order, which is
+ * precedence (redo before undo, reordering before navigation) and reads badly as help.
+ */
+internal enum class EditorShortcutGroup(val title: String) {
+  Selection("Select"),
+  Editing("Edit the selection"),
+  History("Undo and redo"),
+  Zoom("Zoom"),
+  Panels("Panels and help"),
+}
+
+/**
+ * The panel's rows by section, each action once: chords that do the same thing (`Ctrl/Cmd+Shift+Z`
+ * and `Ctrl/Cmd+Y`) share a row. Within a section, rows keep [EDITOR_SHORTCUTS]'s order.
+ */
+internal fun editorShortcutSections(): List<Pair<EditorShortcutGroup, List<Pair<String, String>>>> =
+  EditorShortcutGroup.entries.mapNotNull { group ->
+    val rows =
+      EDITOR_SHORTCUTS.filter { it.group == group }
+        .groupBy { it.description }
+        .map { (description, same) -> same.joinToString(" / ") { it.chord } to description }
+    rows.takeIf { it.isNotEmpty() }?.let { group to it }
+  }
 
 /**
  * Every key chord in match order, also rendered by the shortcuts panel so help stays accurate.
@@ -1939,6 +2107,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+Shift+Z",
       description = "Redo",
+      group = EditorShortcutGroup.History,
       event = UiBuilderEditorEvent.Redo,
       keys = setOf(Key.Z),
       command = true,
@@ -1947,6 +2116,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+Y",
       description = "Redo",
+      group = EditorShortcutGroup.History,
       event = UiBuilderEditorEvent.Redo,
       keys = setOf(Key.Y),
       command = true,
@@ -1954,6 +2124,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+Z",
       description = "Undo",
+      group = EditorShortcutGroup.History,
       event = UiBuilderEditorEvent.Undo,
       keys = setOf(Key.Z),
       command = true,
@@ -1963,6 +2134,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+Shift+Enter",
       description = "Show or hide the visual editor",
+      group = EditorShortcutGroup.Panels,
       event = UiBuilderEditorEvent.TogglePane(EditorPane.Editor),
       keys = setOf(Key.Enter, Key.NumPadEnter),
       command = true,
@@ -1972,6 +2144,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+Enter",
       description = "Show or hide the preview beside the design",
+      group = EditorShortcutGroup.Panels,
       event = UiBuilderEditorEvent.TogglePane(EditorPane.Preview),
       keys = setOf(Key.Enter, Key.NumPadEnter),
       command = true,
@@ -1982,6 +2155,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "E",
       description = "Open or close the selection's quick editor",
+      group = EditorShortcutGroup.Panels,
       event = UiBuilderEditorEvent.ToggleQuickEditor,
       keys = setOf(Key.E),
       command = false,
@@ -1990,13 +2164,39 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "Esc",
       description = "Close the quick editor",
+      group = EditorShortcutGroup.Panels,
       event = UiBuilderEditorEvent.HideQuickEditor,
       keys = setOf(Key.Escape),
       command = false,
     ),
+    // Bare `/`, the slash command of every editor that has one. The table is only consulted while
+    // no text field has the caret, so a `/` typed into a property stays a slash. Unshifted, so `?`
+    // below keeps its own chord whichever order the two are in.
+    EditorShortcut(
+      chord = "/",
+      description = "Quick insert a component into the selection",
+      group = EditorShortcutGroup.Editing,
+      view = EditorViewCommand.QuickInsert,
+      keys = setOf(Key.Slash),
+      command = false,
+      shift = false,
+    ),
+    // The chord Figma and Sketch use to wrap a selection in a frame. Alt because Ctrl/Cmd+G alone
+    // is the browser's find-next. Opens a chooser rather than wrapping outright: which of the three
+    // containers is the whole question, and a second key answers it.
+    EditorShortcut(
+      chord = "$COMMAND_MODIFIER+Alt+G",
+      description = "Wrap the selection in a Column, Row or Box",
+      group = EditorShortcutGroup.Editing,
+      view = EditorViewCommand.ChooseWrap,
+      keys = setOf(Key.G),
+      command = true,
+      alt = true,
+    ),
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+D",
       description = "Duplicate the selection in place",
+      group = EditorShortcutGroup.Editing,
       event = UiBuilderEditorEvent.DuplicateSelected,
       keys = setOf(Key.D),
       command = true,
@@ -2005,6 +2205,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+\u2191",
       description = "Move the selection earlier in its slot",
+      group = EditorShortcutGroup.Editing,
       event = UiBuilderEditorEvent.MoveSelected(EditorMoveDirection.Before),
       keys = setOf(Key.DirectionUp),
       command = true,
@@ -2012,6 +2213,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+\u2193",
       description = "Move the selection later in its slot",
+      group = EditorShortcutGroup.Editing,
       event = UiBuilderEditorEvent.MoveSelected(EditorMoveDirection.After),
       keys = setOf(Key.DirectionDown),
       command = true,
@@ -2019,6 +2221,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "\u2193",
       description = "Select the next layer",
+      group = EditorShortcutGroup.Selection,
       event = UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Next),
       keys = setOf(Key.DirectionDown),
       command = false,
@@ -2026,6 +2229,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "\u2191",
       description = "Select the previous layer",
+      group = EditorShortcutGroup.Selection,
       event = UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Previous),
       keys = setOf(Key.DirectionUp),
       command = false,
@@ -2033,6 +2237,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "\u2190",
       description = "Select the parent",
+      group = EditorShortcutGroup.Selection,
       event = UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.Parent),
       keys = setOf(Key.DirectionLeft),
       command = false,
@@ -2040,6 +2245,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "\u2192",
       description = "Select the first child",
+      group = EditorShortcutGroup.Selection,
       event = UiBuilderEditorEvent.SelectRelative(EditorSelectionMove.FirstChild),
       keys = setOf(Key.DirectionRight),
       command = false,
@@ -2047,6 +2253,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+C",
       description = "Copy the selection",
+      group = EditorShortcutGroup.Editing,
       event = UiBuilderEditorEvent.CopySelected,
       keys = setOf(Key.C),
       command = true,
@@ -2054,6 +2261,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+X",
       description = "Cut the selection",
+      group = EditorShortcutGroup.Editing,
       event = UiBuilderEditorEvent.CutSelected,
       keys = setOf(Key.X),
       command = true,
@@ -2061,6 +2269,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+V",
       description = "Paste into the selected container",
+      group = EditorShortcutGroup.Editing,
       event = UiBuilderEditorEvent.Paste,
       keys = setOf(Key.V),
       command = true,
@@ -2071,6 +2280,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+= / +",
       description = "Zoom in",
+      group = EditorShortcutGroup.Zoom,
       view = EditorViewCommand.Zoom(CanvasZoomCommand.In),
       keys = setOf(Key.Equals, Key.Plus, Key.NumPadAdd),
       command = true,
@@ -2078,6 +2288,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+-",
       description = "Zoom out",
+      group = EditorShortcutGroup.Zoom,
       view = EditorViewCommand.Zoom(CanvasZoomCommand.Out),
       keys = setOf(Key.Minus, Key.NumPadSubtract),
       command = true,
@@ -2085,6 +2296,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+0",
       description = "Zoom to fit the design in the window",
+      group = EditorShortcutGroup.Zoom,
       view = EditorViewCommand.Zoom(CanvasZoomCommand.Fit),
       keys = setOf(Key.Zero, Key.NumPad0),
       command = true,
@@ -2093,6 +2305,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "$COMMAND_MODIFIER+1",
       description = "Zoom to actual size (100%)",
+      group = EditorShortcutGroup.Zoom,
       view = EditorViewCommand.Zoom(CanvasZoomCommand.ActualSize),
       keys = setOf(Key.One, Key.NumPad1),
       command = true,
@@ -2104,6 +2317,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "?",
       description = "Show these shortcuts",
+      group = EditorShortcutGroup.Panels,
       view = EditorViewCommand.ShowShortcuts,
       keys = setOf(Key.Slash),
       command = false,
@@ -2112,6 +2326,7 @@ internal val EDITOR_SHORTCUTS: List<EditorShortcut> =
     EditorShortcut(
       chord = "Delete / Backspace",
       description = "Delete the selection",
+      group = EditorShortcutGroup.Editing,
       event = UiBuilderEditorEvent.DeleteSelected,
       keys = setOf(Key.Delete, Key.Backspace),
       command = false,
@@ -2130,6 +2345,7 @@ internal val EDITOR_GESTURES: List<Pair<String, String>> =
     "Drag a catalog component" to "Insert it where it is dropped",
     "Hold a node, then drag" to "Move it into the slot and seam it is dropped at",
     "Click a rung above the canvas" to "Select that layer — the path is a way back up",
+    "Alt/Option + hover a node" to "Measure its distance in dp from the selection",
   )
 
 /**

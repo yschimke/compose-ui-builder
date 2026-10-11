@@ -68,3 +68,12 @@ compose.desktop {
     }
   }
 }
+
+// The hosts read catalogs from where they publish; their tests must not reach the network, so
+// they read the cutover captures (one delivery commit per catalog) through the same store.
+tasks.withType<Test>().configureEach {
+  systemProperty(
+    "compose.uiBuilder.catalogDir",
+    rootProject.file("ui-builder-runtime/src/test/resources/catalog-cutover").absolutePath,
+  )
+}
