@@ -1157,14 +1157,17 @@ object ScreenDocumentProjection {
     private fun plainColumn(id: String): List<String>? {
       val column = document.nodes[id] ?: return null
       if (column.componentId != LAYOUT_COLUMN || column.modifiers.isNotEmpty()) return null
-      fun word(property: String) =
+      // Absent, or a literal word that keeps the lines where the slots put them. A bound value or
+      // an unknown word is not provably the default, so the column stays and is written.
+      fun isDefault(property: String, default: String) =
         when (val value = column.properties[property]) {
-          is EnumValueV1 -> value.value
-          is StringValueV1 -> value.value
-          else -> null
+          null -> true
+          is EnumValueV1 -> value.value == default
+          is StringValueV1 -> value.value == default
+          else -> false
         }
-      if (word("verticalArrangement") in ARRANGED_COLUMN) return null
-      if (word("horizontalAlignment") in setOf("center", "end")) return null
+      if (!isDefault("verticalArrangement", "top")) return null
+      if (!isDefault("horizontalAlignment", "start")) return null
       return column.slots["children"]?.takeIf { it.isNotEmpty() }
     }
 
@@ -3408,10 +3411,6 @@ object ScreenDocumentProjection {
   private const val MODIFIER = "androidx.compose.ui.Modifier"
 
   private const val LAYOUT_COLUMN = "layout/column"
-
-  /** The `verticalArrangement` words that move a column's children off the top. */
-  private val ARRANGED_COLUMN =
-    setOf("center", "bottom", "spaceBetween", "spaceAround", "spaceEvenly")
 
   /**
    * The two packages most authored modifiers come from: `foundation.layout` and `ui.draw`.
