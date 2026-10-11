@@ -387,6 +387,54 @@ class TypedListObjectPropertyTest {
     )
   }
 
+  @Test
+  fun `a structured row edits the anchor alone, so it never claims the whole selection`() {
+    val single = document("contacts" to TWO_CONTACTS)
+    val both =
+      single.copy(
+        roots = listOf("inbox", "other"),
+        nodes = single.nodes + ("other" to single.nodes.getValue("inbox").copy(id = "other")),
+      )
+    val selected =
+      reducer.initial(both, selectedNodeId = "inbox").copy(selection = listOf("other", "inbox"))
+    val rows = reducer.propertyFields(selected).filter { it.structure?.property == "contacts" }
+    assertTrue(rows.isNotEmpty())
+    assertEquals(listOf(1), rows.map { it.nodeCount }.distinct())
+    assertEquals(listOf("inbox"), rows.map { it.nodeId }.distinct())
+
+    val edited =
+      reducer.reduce(
+        selected,
+        UiBuilderEditorEvent.CommitPropertyPath(
+          "inbox",
+          "contacts",
+          listOf(Index(1), Field("unread")),
+          "9",
+        ),
+      )
+    assertIs<CommandOutcome.Accepted>(edited.lastOutcome)
+    assertEquals(
+      json(TWO_CONTACTS),
+      edited.document.nodes.getValue("other").properties["contacts"],
+    )
+  }
+
+  @Test
+  fun `a list or object editor that does not parse leaves the property uneditable`() {
+    val broken =
+      catalog.componentsById.getValue("acme/inbox").propertiesByName.getValue("broken").editor
+    assertEquals(PropertyEditorControl.LIST, broken?.control)
+    assertNull(broken?.valueShape)
+
+    val initial = state()
+    val row = reducer.propertyFields(initial).first { it.name == "broken" }
+    assertEquals(EditorPropertyControl.Unsupported, row.control)
+    val refused =
+      reducer.reduce(initial, UiBuilderEditorEvent.CommitProperty("inbox", "broken", "Ada"))
+    assertIs<CommandOutcome.Rejected>(refused.lastOutcome)
+    assertNull(refused.document.nodes.getValue("inbox").properties["broken"])
+  }
+
   private fun shape(property: String) =
     assertNotNull(
       catalog.componentsById
@@ -435,7 +483,9 @@ class TypedListObjectPropertyTest {
             {"name": "contacts", "jsonType": "array", "required": false,
              "editor": {"control": "list", "element": $CONTACT_SHAPE}},
             {"name": "pinned", "jsonType": "object", "required": false,
-             "editor": $CONTACT_EDITOR}],
+             "editor": $CONTACT_EDITOR},
+            {"name": "broken", "jsonType": "string", "required": false,
+             "editor": {"control": "list"}}],
           "wasm": {"platformSupported": true, "adapterStatus": "supported"}}]}"""
   }
 }

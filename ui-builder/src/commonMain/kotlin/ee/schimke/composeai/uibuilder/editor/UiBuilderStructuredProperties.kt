@@ -58,7 +58,8 @@ internal object StructuredProperties {
       val located = PropertyValueShapes.read(shape, stored, path) ?: return
       val field =
         EditorPropertyField(
-          nodeCount = nodes.size,
+          // A structured edit writes the anchor alone, so its rows never claim the selection.
+          nodeCount = 1,
           nodeId = anchor.id,
           name = PropertyValueShapes.spell(property.name, path),
           label = label,

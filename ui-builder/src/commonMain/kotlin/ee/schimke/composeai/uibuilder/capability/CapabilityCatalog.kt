@@ -418,7 +418,7 @@ object CapabilityCatalogParser {
           val capability = property as? JsonObject ?: return@mapNotNull null
           val name = (capability["name"] as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
           val editor = capability["editor"] as? JsonObject ?: return@mapNotNull null
-          PropertyValueShapes.compositeEditor(editor)?.let { (componentId to name) to it }
+          PropertyValueShapes.declaredCompositeEditor(editor)?.let { (componentId to name) to it }
         }
       }
       .toMap()

@@ -77,8 +77,20 @@ object PropertyValueShapes {
 
   private val SEGMENT = Regex("""^(?:\.([A-Za-z_][A-Za-z0-9_]*)|\[(\d+)])""")
 
-  /** Whether a published `editor` object names a list or object control. */
-  fun isComposite(editor: JsonObject): Boolean = editor.string("control") in setOf(LIST, OBJECT)
+  /**
+   * The editor for a published list or object `editor` hint, or null when it is not one. A hint
+   * that names a list or object but does not parse (malformed, or a newer shape) is held as that
+   * control with no [PropertyEditorCapability.valueShape]: the property stays uneditable, and no
+   * later policy or built-in override gives it an editor for some other value.
+   */
+  fun declaredCompositeEditor(editor: JsonObject): PropertyEditorCapability? =
+    when (editor.string("control")) {
+      LIST ->
+        compositeEditor(editor) ?: PropertyEditorCapability(control = PropertyEditorControl.LIST)
+      OBJECT ->
+        compositeEditor(editor) ?: PropertyEditorCapability(control = PropertyEditorControl.OBJECT)
+      else -> null
+    }
 
   /**
    * The editor capability for a published list or object `editor` hint, or null when it is not one
