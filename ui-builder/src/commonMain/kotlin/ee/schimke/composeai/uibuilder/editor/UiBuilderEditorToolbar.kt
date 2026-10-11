@@ -568,6 +568,9 @@ internal fun EditorToolbar(
       // (New, Fork, Sharing) move into More rather than pushing the agent control and More itself
       // off the end.
       val foldSessionActions = maxWidth < TOOLBAR_SESSION_ACTIONS_MIN_WIDTH
+      // Just above the compact breakpoint that is still not enough, so the viewer list folds too.
+      val foldPresence = maxWidth < TOOLBAR_PRESENCE_MIN_WIDTH
+      val showPresence = collaborators.isNotEmpty() || agentHost != null
       Row(
         Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -614,7 +617,7 @@ internal fun EditorToolbar(
             WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
           }
         }
-        if (collaborators.isNotEmpty() || agentHost != null) {
+        if (showPresence && !foldPresence) {
           Spacer(Modifier.width(6.dp))
           PresenceRow(collaborators)
           Spacer(Modifier.width(6.dp))
@@ -640,6 +643,13 @@ internal fun EditorToolbar(
             overflowOpen = true
           }
           val menuEntries = buildList {
+            if (showPresence && foldPresence) {
+              add(UiBuilderMenuEntry.Heading(presenceLabel(collaborators)))
+              presenceRows(collaborators).forEach { row ->
+                add(UiBuilderMenuEntry.Action(row) { overflowOpen = false })
+              }
+              add(UiBuilderMenuEntry.Divider)
+            }
             if (foldSessionActions) {
               if (visibilityLabel != null) {
                 add(UiBuilderMenuEntry.Heading(visibilityLabel))
@@ -765,6 +775,12 @@ internal fun EditorToolbar(
  * More stay on screen when a hosted design supplies every action at once.
  */
 internal val TOOLBAR_SESSION_ACTIONS_MIN_WIDTH = 1200.dp
+
+/**
+ * Below this width [EditorToolbar] also folds the viewer list into More: between the 840dp compact
+ * breakpoint and here, folding the session actions alone still squeezes More to a sliver.
+ */
+internal val TOOLBAR_PRESENCE_MIN_WIDTH = 1000.dp
 
 /**
  * The Export menu: the design as a picture, into Figma, a link or a file. Rows are
@@ -1099,29 +1115,34 @@ private fun WorkspacePanesMenu(
 private fun PresenceRow(collaborators: List<UiBuilderCollaborator>) {
   var expanded by remember { mutableStateOf(false) }
   Box {
-    TextButton(onClick = { expanded = true }) { Text("Viewers · ${collaborators.size + 1}") }
+    TextButton(onClick = { expanded = true }) { Text(presenceLabel(collaborators)) }
     androidx.compose.material3.DropdownMenu(
       expanded = expanded,
       onDismissRequest = { expanded = false },
     ) {
-      DropdownMenuItem(text = { Text("You · browser") }, onClick = { expanded = false })
-      collaborators.forEach { collaborator ->
-        DropdownMenuItem(
-          text = {
-            Text(
-              "${collaborator.displayName} · ${when (collaborator.kind) {
-          UiBuilderParticipantKind.Browser -> "browser"
-          UiBuilderParticipantKind.Agent -> "agent"
-          UiBuilderParticipantKind.Unknown -> "participant"
-        }}${collaborator.modelName?.let { " · $it (reported)" }.orEmpty()}"
-            )
-          },
-          onClick = { expanded = false },
-        )
+      presenceRows(collaborators).forEach { row ->
+        DropdownMenuItem(text = { Text(row) }, onClick = { expanded = false })
       }
     }
   }
 }
+
+private fun presenceLabel(collaborators: List<UiBuilderCollaborator>) =
+  "Viewers · ${collaborators.size + 1}"
+
+/** One line per viewer, this browser first: the presence menu's rows, wherever it is shown. */
+private fun presenceRows(collaborators: List<UiBuilderCollaborator>): List<String> =
+  listOf("You · browser") +
+    collaborators.map { collaborator ->
+      val kind =
+        when (collaborator.kind) {
+          UiBuilderParticipantKind.Browser -> "browser"
+          UiBuilderParticipantKind.Agent -> "agent"
+          UiBuilderParticipantKind.Unknown -> "participant"
+        }
+      "${collaborator.displayName} · $kind" +
+        collaborator.modelName?.let { " · $it (reported)" }.orEmpty()
+    }
 
 /**
  * Everything that can be done to the selection, as menu rows: used by the layers tree context menu,

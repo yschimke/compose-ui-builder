@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderBoard
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -282,36 +283,58 @@ class AgentToolbarTest {
         }
       }
       val output = File("build/toolbar-overflow").apply { mkdirs() }
-      waitForIdle()
-      ImageIO.write(
-        onNodeWithTag("toolbar-overflow-layout").captureToImage().toAwtImage(),
-        "png",
-        File(output, "intermediate-960.png"),
-      )
-      // The agent control and More are the trailing controls the row used to clip.
-      onNodeWithText("Connect agent").assertIsDisplayed()
-      onNodeWithContentDescription("More editor actions").assertIsDisplayed()
-      onNodeWithContentDescription("New design").assertDoesNotExist()
-      onNodeWithContentDescription("Fork this design").assertDoesNotExist()
-      onNodeWithContentDescription("Sharing · Private · invited collaborators only")
-        .assertDoesNotExist()
-      onNodeWithContentDescription("More editor actions").performSemanticsAction(
-        SemanticsActions.OnClick
-      ) {
-        it()
+      // Whole and full size, not merely intersecting the window: a control squeezed to a sliver or
+      // half pushed off the end still counts as displayed.
+      fun assertFullyOnToolbar(matcher: SemanticsMatcher, minWidth: Dp) {
+        val node =
+          onNode(matcher).assertIsDisplayed().assertWidthIsAtLeast(minWidth).fetchSemanticsNode()
+        val layout = onNodeWithTag("toolbar-overflow-layout").fetchSemanticsNode().boundsInRoot
+        assertTrue(
+          node.boundsInRoot.right <= layout.right,
+          "${matcher.description} ends at ${node.boundsInRoot.right}",
+        )
       }
-      onNodeWithText("New design").assertIsDisplayed()
-      onNodeWithText("Fork this design").assertIsDisplayed()
-      onNodeWithText("Private · invited collaborators only").assertIsDisplayed()
-      onNodeWithText("Fork this design").performSemanticsAction(SemanticsActions.OnClick) { it() }
-      assertEquals(1, forked)
-      onNodeWithContentDescription("More editor actions").performSemanticsAction(
-        SemanticsActions.OnClick
-      ) {
-        it()
+      // 960dp is in the session-action fold; 848dp is just above the compact breakpoint, where
+      // presence folds as well.
+      for (size in listOf(960, 848)) {
+        runOnIdle { width = size }
+        waitForIdle()
+        ImageIO.write(
+          onNodeWithTag("toolbar-overflow-layout").captureToImage().toAwtImage(),
+          "png",
+          File(output, "intermediate-$size.png"),
+        )
+        // The agent control and More are the trailing controls the row used to clip.
+        assertFullyOnToolbar(hasText("Connect agent"), 100.dp)
+        assertFullyOnToolbar(hasContentDescription("More editor actions"), 40.dp)
+        onNodeWithContentDescription("New design").assertDoesNotExist()
+        onNodeWithContentDescription("Fork this design").assertDoesNotExist()
+        onNodeWithContentDescription("Sharing · Private · invited collaborators only")
+          .assertDoesNotExist()
+        val presenceFolded = size < 1000
+        if (presenceFolded) onNodeWithText("Viewers · 2").assertDoesNotExist()
+        onNodeWithContentDescription("More editor actions").performSemanticsAction(
+          SemanticsActions.OnClick
+        ) {
+          it()
+        }
+        onNodeWithText("New design").assertIsDisplayed()
+        onNodeWithText("Fork this design").assertIsDisplayed()
+        onNodeWithText("Private · invited collaborators only").assertIsDisplayed()
+        if (presenceFolded) {
+          onNodeWithText("Viewers · 2").assertIsDisplayed()
+          onNodeWithText("Ada · browser").assertIsDisplayed()
+        }
+        onNodeWithText("Fork this design").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        onNodeWithContentDescription("More editor actions").performSemanticsAction(
+          SemanticsActions.OnClick
+        ) {
+          it()
+        }
+        onNodeWithText("Sharing").performSemanticsAction(SemanticsActions.OnClick) { it() }
       }
-      onNodeWithText("Sharing").performSemanticsAction(SemanticsActions.OnClick) { it() }
-      assertEquals(1, sharingOpened)
+      assertEquals(2, forked)
+      assertEquals(2, sharingOpened)
 
       // Wide enough for every action: they stay on the toolbar itself.
       runOnIdle { width = 1440 }
