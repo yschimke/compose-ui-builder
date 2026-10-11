@@ -93,8 +93,8 @@ private fun outsideWidgetProfile(operation: String): String =
  * The layouts `remote-creation-compose` publishes that the packaged foundation does not declare,
  * each derived from a foundation sibling (same slot and arrangement vocabulary).
  *
- * - `layout/fit-box`: `RemoteFitBox`, which shows the first (largest-first) child that fits. In
- *   the Glance Wear widget profile (`LAYOUT_FIT_BOX`).
+ * - `layout/fit-box`: `RemoteFitBox`, which shows the first (largest-first) child that fits. In the
+ *   Glance Wear widget profile (`LAYOUT_FIT_BOX`).
  * - `layout/collapsible-column` / `layout/collapsible-row`: hide whole children, lowest
  *   `collapsiblePriority` first. Outside the widget profile — see [outsideWidgetProfile].
  */

@@ -10,8 +10,7 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A catalog's own design guidance (`ui-builder.guidelines.json`, beside its policy): the rules a
- * design is checked against and the pictures the model is shown. No file means no guidelines
- * check.
+ * design is checked against and the pictures the model is shown. No file means no guidelines check.
  */
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable

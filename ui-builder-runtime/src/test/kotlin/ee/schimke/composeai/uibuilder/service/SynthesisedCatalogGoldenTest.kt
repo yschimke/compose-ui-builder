@@ -17,8 +17,8 @@ import kotlinx.serialization.json.buildJsonObject
  * giving catalog repositories a readable description and the equivalence gate a left-hand side. The
  * runtime still constructs these catalogs.
  *
- * A failure means `wearM3Catalog`/`remoteM3Catalog` or the packaged Material 3 catalog changed.
- * Run `scripts/regenerate-goldens.sh` (which passes `-PuiBuilderGoldens=write`; a Gradle property
+ * A failure means `wearM3Catalog`/`remoteM3Catalog` or the packaged Material 3 catalog changed. Run
+ * `scripts/regenerate-goldens.sh` (which passes `-PuiBuilderGoldens=write`; a Gradle property
  * because `-D` does not reach the forked test JVM) and read the diff.
  */
 class SynthesisedCatalogGoldenTest {

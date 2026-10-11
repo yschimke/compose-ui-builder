@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import ee.schimke.composeai.uibuilder.ProductionUiBuilderPreview
 import ee.schimke.composeai.uibuilder.RemoteComposeSource
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderBoard
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderDevicePreset

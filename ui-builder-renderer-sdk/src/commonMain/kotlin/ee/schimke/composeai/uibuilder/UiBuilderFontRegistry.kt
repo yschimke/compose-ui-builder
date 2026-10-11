@@ -60,13 +60,13 @@ fun parseVendoredFontManifest(text: String): VendoredFontManifest =
  * [loaded] is snapshot state, so readers recompose when a family arrives. Nothing, not even the
  * manifest, loads until the first [request] or [loadFamilies].
  *
- * A family that fails to load is not retried, so a missing file cannot become a request loop.
- * Names outside the manifest go to [readRemoteFont] when the host has a font service.
+ * A family that fails to load is not retried, so a missing file cannot become a request loop. Names
+ * outside the manifest go to [readRemoteFont] when the host has a font service.
  *
  * @param readManifest the manifest's text; failures leave the registry with no families.
  * @param readFont a manifest file's bytes, by the name the manifest gives it.
- * @param readRemoteFont a family's file at one weight, by family name; null for a host with no
- *   such service.
+ * @param readRemoteFont a family's file at one weight, by family name; null for a host with no such
+ *   service.
  */
 class UiBuilderFontRegistry(
   private val scope: CoroutineScope,
@@ -305,8 +305,8 @@ fun ProvideUiBuilderFonts(registry: UiBuilderFontRegistry?, content: @Composable
 /**
  * Families the host has already loaded, keyed by the family name a document's `typeface` names.
  *
- * The renderer resolves, it does not fetch: loading is asynchronous and host-specific (and only
- * the host knows whether the document's `networkAccess` permits a download), while this module is
+ * The renderer resolves, it does not fetch: loading is asynchronous and host-specific (and only the
+ * host knows whether the document's `networkAccess` permits a download), while this module is
  * I/O-free `commonMain`. Empty by default, so everything renders in the platform face.
  */
 val LocalUiBuilderFontFamilies = staticCompositionLocalOf<Map<String, FontFamily>> { emptyMap() }

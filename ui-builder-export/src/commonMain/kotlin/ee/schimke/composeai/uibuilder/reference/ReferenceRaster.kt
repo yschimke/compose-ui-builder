@@ -158,8 +158,8 @@ data class ReferenceDiffReport(
 /**
  * Compare two frame-aligned rasters of the same size, only inside [coverage]. Transparent pixels
  * compare as white. A pixel differs when any channel is more than [tolerance] apart (forgiving
- * anti-aliasing and colour drift). Regions are found on a [cellPx] grid so one shifted glyph is
- * one region.
+ * anti-aliasing and colour drift). Regions are found on a [cellPx] grid so one shifted glyph is one
+ * region.
  */
 fun diffRasters(
   design: ReferenceRaster,
@@ -251,8 +251,8 @@ fun diffRasters(
 }
 
 /**
- * The bounding box of whatever is drawn inside [window], or null. "Drawn" means differing from
- * the most common edge colour. Reducing both sides to ink lets text be compared with text.
+ * The bounding box of whatever is drawn inside [window], or null. "Drawn" means differing from the
+ * most common edge colour. Reducing both sides to ink lets text be compared with text.
  */
 fun inkBox(raster: ReferenceRaster, window: RasterRect, tolerance: Int = 48): RasterRect? {
   val w = window.clampedTo(raster.width, raster.height)
@@ -298,8 +298,8 @@ private fun quantised(p: Int): Int = (p and 0xF0F0F0F0.toInt()) or 0x08080808
  * Where the patch [rect] of [design] best lines up in [reference], and at what scale.
  *
  * A bounded template search over offsets within [searchPx] and [scales], scored by mean absolute
- * luminance difference, coarse then refined; the patch is subsampled so it stays fast in a
- * browser. Null when the patch has no texture to match. See [RasterMatch.confident].
+ * luminance difference, coarse then refined; the patch is subsampled so it stays fast in a browser.
+ * Null when the patch has no texture to match. See [RasterMatch.confident].
  */
 fun matchPatch(
   design: ReferenceRaster,

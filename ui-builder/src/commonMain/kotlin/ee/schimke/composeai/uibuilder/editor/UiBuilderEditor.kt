@@ -229,8 +229,8 @@ fun UiBuilderEditor(
   operationIdPrefix: String = clientId,
   sessionLabel: String = "Local session",
   /**
-   * The top-level designs of the open file, drawn as a strip above the canvas; null for a single-design
-   * file or a non-file host. See [UiBuilderFileDesigns].
+   * The top-level designs of the open file, drawn as a strip above the canvas; null for a
+   * single-design file or a non-file host. See [UiBuilderFileDesigns].
    */
   fileDesigns: UiBuilderFileDesigns? = null,
   /**
@@ -316,8 +316,8 @@ fun UiBuilderEditor(
   /** Exports the current design for a catalog-declared document player in Browser Preview. */
   onRequestDocumentPreview: (suspend (UiBuilderDocument) -> UiBuilderDocumentPreview)? = null,
   /**
-   * Opens the live session a native render named, or null where this host cannot stream one (`:ui-builder`
-   * has no `WebSocket`). Without it the native pane draws the still.
+   * Opens the live session a native render named, or null where this host cannot stream one
+   * (`:ui-builder` has no `WebSocket`). Without it the native pane draws the still.
    */
   onOpenNativeStream: ((UiBuilderNativeLive) -> UiBuilderNativeStream)? = null,
   /** A render already in hand, for the previews that draw this pane without a host. */
@@ -557,8 +557,9 @@ fun UiBuilderEditor(
    */
   resolveRemoteComposeUrl: (suspend (String) -> String)? = null,
   /**
-   * Fetches a Lottie animation's JSON from a `remote-m3/lottie` element's URL, or throws. Host-owned
-   * because the host decides which origins are reachable; null leaves the URL unresolved.
+   * Fetches a Lottie animation's JSON from a `remote-m3/lottie` element's URL, or throws.
+   * Host-owned because the host decides which origins are reachable; null leaves the URL
+   * unresolved.
    */
   loadLottieAnimation: (suspend (String) -> String)? = null,
   /**
@@ -794,7 +795,8 @@ fun UiBuilderEditor(
     selectedThreadId = threadId
     onSelectedThreadChanged?.invoke(threadId)
   }
-  // The canvas's scroll offset. Known gap: the drag hit-test and the drawn pointer disagree once the
+  // The canvas's scroll offset. Known gap: the drag hit-test and the drawn pointer disagree once
+  // the
   // workspace has scrolled.
   var canvasScroll by remember(document.id) { mutableStateOf(Offset.Zero) }
 
@@ -1887,7 +1889,8 @@ fun UiBuilderEditor(
       }
     nativePending = false
   }
-  // The live session behind the still, if this host can open it. Keyed on the coordinates so a re-render
+  // The live session behind the still, if this host can open it. Keyed on the coordinates so a
+  // re-render
   // on the same session keeps the socket.
   val nativeLive = nativeRender?.live?.takeIf { onOpenNativeStream != null }
   var nativeStream by remember(document.id) { mutableStateOf<UiBuilderNativeStream?>(null) }

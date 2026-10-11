@@ -449,8 +449,8 @@ object WearWidgetCodeExporter {
 }
 
 /**
- * The shapes a generated widget file previews itself in, in order: the default squircle first
- * (what the canvas opens on), then the rectangular frame the widget picker editor shows.
+ * The shapes a generated widget file previews itself in, in order: the default squircle first (what
+ * the canvas opens on), then the rectangular frame the widget picker editor shows.
  *
  * Every [WearWidgetHostShape], so editor and export cannot drift. Providers are size-specific,
  * since a design is authored at one container size. The widget is unchanged between shapes; the

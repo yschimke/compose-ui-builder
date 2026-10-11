@@ -11,9 +11,9 @@ import kotlinx.serialization.json.Json
 /**
  * The collision refusal, from the shape of a real published catalog: a policy declaring no
  * `components`, so ids derive from `Group/Variant` leaves (the variant), and most components
- * collide. A refusal rather than a warning because the survivors can match the frozen shelf's
- * count while sharing almost no ids. See `docs/design/UI_BUILDER_CATALOG_CONTRACT.md` § Phase 4;
- * real files are checked by `.github/scripts/ui-builder-equivalence.sh --record`.
+ * collide. A refusal rather than a warning because the survivors can match the frozen shelf's count
+ * while sharing almost no ids. See `docs/design/UI_BUILDER_CATALOG_CONTRACT.md` § Phase 4; real
+ * files are checked by `.github/scripts/ui-builder-equivalence.sh --record`.
  */
 class PublishedUiBuilderCatalogCollisionTest {
 

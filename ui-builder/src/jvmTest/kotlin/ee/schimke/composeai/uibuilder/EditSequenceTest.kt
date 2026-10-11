@@ -23,9 +23,9 @@ import kotlinx.serialization.json.jsonObject
  *
  * Two invariants after every event:
  * 1. **The document only changes through an accepted command** (a refused operation must leave
- * nothing behind).
+ *    nothing behind).
  * 2. **Every document the editor passes through is valid**, against the catalog and the export
- * graph rules.
+ *    graph rules.
  *
  * Events ignore the `can…` guards on purpose: those govern what the toolbar offers, but the reducer
  * must hold when asked anyway (stale panels, shortcuts, racing collaborators).

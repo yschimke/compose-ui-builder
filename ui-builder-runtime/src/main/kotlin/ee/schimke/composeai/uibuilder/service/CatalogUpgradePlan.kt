@@ -34,6 +34,7 @@ import kotlinx.serialization.json.contentOrNull
  *   }
  * }
  * ```
+ *
  * The catalog owns this knowledge (`docs/design/UI_BUILDER_CATALOG_CONTRACT.md`); no module here
  * names a catalog. Rules never list drops: undeclared properties fall out with a `WARNING`. The
  * candidate is a proposal, and the stored document keeps dropped values.
@@ -72,8 +73,8 @@ private val MODIFIER_WRITERS: Map<String, (UiValueV1) -> DesignModifierV1> =
 private const val SUPERSEDES_KEY = "supersedes"
 
 /**
- * The successors [catalog] declares, ignoring malformed entries (a published file must not break
- * a design's only repair path).
+ * The successors [catalog] declares, ignoring malformed entries (a published file must not break a
+ * design's only repair path).
  */
 internal fun successors(catalog: CatalogCapabilityV1): Map<String, ComponentSuccessor> {
   val declared = catalog.statusSemantics[SUPERSEDES_KEY] as? JsonObject ?: return emptyMap()
@@ -98,8 +99,8 @@ internal fun successors(catalog: CatalogCapabilityV1): Map<String, ComponentSucc
 }
 
 /**
- * The move from [document]'s current pin to [targetPin], judged against [target]. Pure: the
- * caller validates [CatalogUpgradeOutcome.candidate] with the same validator as every write.
+ * The move from [document]'s current pin to [targetPin], judged against [target]. Pure: the caller
+ * validates [CatalogUpgradeOutcome.candidate] with the same validator as every write.
  */
 internal fun planCatalogUpgrade(
   document: DesignDocumentV1,
@@ -291,8 +292,6 @@ private fun DesignModifierV1.encoded(): JsonElement =
 
 private fun List<String>.encoded(): JsonElement = JsonArray(map { JsonPrimitive(it) })
 
-/**
- * The whole reference: source and target usually differ only in revision.
- */
+/** The whole reference: source and target usually differ only in revision. */
 private fun CatalogReferenceV1.encoded(): JsonElement =
   json.encodeToJsonElement(CatalogReferenceV1.serializer(), this)

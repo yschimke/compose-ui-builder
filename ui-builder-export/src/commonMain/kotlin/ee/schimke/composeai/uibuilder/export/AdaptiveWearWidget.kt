@@ -116,9 +116,7 @@ object AdaptiveWearWidget {
   /** Between the text and the action, on whichever axis the size stacks them. */
   const val ACTION_SPACING_DP: Int = 8
 
-  /**
-   * A new adaptive widget with filled slots (a meeting reminder) so both sizes show something.
-   */
+  /** A new adaptive widget with filled slots (a meeting reminder) so both sizes show something. */
   fun newDocument(
     designId: String,
     catalogPin: JsonObject,

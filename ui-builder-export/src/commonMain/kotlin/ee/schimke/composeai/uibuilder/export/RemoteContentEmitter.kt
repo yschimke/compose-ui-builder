@@ -18,8 +18,8 @@ import kotlinx.serialization.json.jsonPrimitive
  * component may advertise.
  *
  * Absent: `matchParentSize`, `aspectRatio`, `shadow` and `testTag` (no `RemoteModifier`
- * counterpart, refused by name). The `align*` modifiers become arguments of the enclosing
- * row, column or box.
+ * counterpart, refused by name). The `align*` modifiers become arguments of the enclosing row,
+ * column or box.
  */
 public val REMOTE_CONTENT_MODIFIERS: Set<String> =
   setOf(
@@ -113,8 +113,8 @@ internal class RemoteContentEmitter(
   private val refusals: MutableList<String>,
   private val assets: WidgetAssetBytes = WidgetAssetBytes { null },
   /**
-   * Whether content pictures carry their bytes rather than becoming parameters. Only for the
-   * native preview lane, which cannot pass arguments.
+   * Whether content pictures carry their bytes rather than becoming parameters. Only for the native
+   * preview lane, which cannot pass arguments.
    */
   private val inlineContentImages: Boolean = false,
   /**
@@ -196,8 +196,8 @@ internal class RemoteContentEmitter(
     }
 
   /**
-   * [body] under the role [themeTextStyle] read, as `ProvideRemoteTextStyle(…typography.<role>) {
-   * … }`; unchanged when there is none. Replaces `RemoteMaterialTheme`'s `bodyLarge` default. The
+   * [body] under the role [themeTextStyle] read, as `ProvideRemoteTextStyle(…typography.<role>) { …
+   * }`; unchanged when there is none. Replaces `RemoteMaterialTheme`'s `bodyLarge` default. The
    * call is `@RestrictTo`, covered by the file's `@file:Suppress("RestrictedApi")`.
    */
   fun provideTextStyle(body: List<String>, depth: Int): List<String> {
@@ -1011,8 +1011,8 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * What a design's event binding becomes, or `lambdaAction {}` when it binds nothing. Every
-   * action is a state write, so all become one `valueChange` (verified by wear-m3-catalog's
+   * What a design's event binding becomes, or `lambdaAction {}` when it binds nothing. Every action
+   * is a state write, so all become one `valueChange` (verified by wear-m3-catalog's
    * `RemoteActionVocabularyProbe`). The event key is the parameter without `on`.
    *
    * Refused: `selectOrClear` (assigns null), undeclared variables, and `toggle` on a non-boolean.
@@ -1467,8 +1467,8 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * A design's value as an expression of the parameter's declared type, or null when there is
-   * none. Matched on the qualified type, since simple names can collide.
+   * A design's value as an expression of the parameter's declared type, or null when there is none.
+   * Matched on the qualified type, since simple names can collide.
    */
   private fun scopedArgument(
     node: UiBuilderNode,
@@ -1524,8 +1524,8 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * A computed value as the Remote expression the player evaluates, or null with a located
-   * refusal. [UiExpressions.check] types the tree first; state reads go through [remoteState].
+   * A computed value as the Remote expression the player evaluates, or null with a located refusal.
+   * [UiExpressions.check] types the tree first; state reads go through [remoteState].
    */
   private fun computed(value: JsonElement, expected: UiValueKind, where: String): String? {
     val documentScope = UiExpressions.Scope.of(document)
@@ -1716,8 +1716,8 @@ internal class RemoteContentEmitter(
     }
 
   /**
-   * A page indicator, building the `RemotePageIndicatorState` from `pageCount` and a
-   * `selectedPage` that may read Int state.
+   * A page indicator, building the `RemotePageIndicatorState` from `pageCount` and a `selectedPage`
+   * that may read Int state.
    */
   private fun pageIndicator(node: UiBuilderNode, pad: String): List<String> {
     val symbol =
@@ -2541,8 +2541,7 @@ internal class RemoteContentEmitter(
   private var usesCollapsibleRow = false
 
   /**
-   * [scope] as the axis it lays children out on; the collapsible scopes behave like the eager
-   * ones.
+   * [scope] as the axis it lays children out on; the collapsible scopes behave like the eager ones.
    */
   private val axisScope: String?
     get() =
@@ -2585,9 +2584,9 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * A collapsible column's or row's arguments: the main-axis arrangement and the agreed or
-   * declared cross-axis alignment. A row writes centre explicitly since `RemoteCollapsibleRow`
-   * defaults to `Top`.
+   * A collapsible column's or row's arguments: the main-axis arrangement and the agreed or declared
+   * cross-axis alignment. A row writes centre explicitly since `RemoteCollapsibleRow` defaults to
+   * `Top`.
    */
   private fun collapsibleArguments(
     node: UiBuilderNode,
@@ -3160,8 +3159,8 @@ internal class RemoteContentEmitter(
     }
 
   /**
-   * The parameter name an asset key becomes, allocated once per key (nodes sharing an asset share
-   * a parameter). Identifier collisions are suffixed.
+   * The parameter name an asset key becomes, allocated once per key (nodes sharing an asset share a
+   * parameter). Identifier collisions are suffixed.
    */
   private fun imageParameter(key: String): String {
     imageAssets[key]?.let {
@@ -3186,8 +3185,8 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * The identifier a widget background picture is drawn through, or null when there is none:
-   * an inlined file-level `val`, or a bundle local that opens the archived file.
+   * The identifier a widget background picture is drawn through, or null when there is none: an
+   * inlined file-level `val`, or a bundle local that opens the archived file.
    */
   private fun backgroundBitmap(key: String): String? {
     if (key.isEmpty()) return null
@@ -3282,8 +3281,8 @@ internal class RemoteContentEmitter(
   private val imageAssets = linkedMapOf<String, String>()
 
   /**
-   * The bitmaps this body was written against, in first-drawn order. The exporters turn these
-   * into parameters, each with its own default policy.
+   * The bitmaps this body was written against, in first-drawn order. The exporters turn these into
+   * parameters, each with its own default policy.
    */
   val imageParameters: List<ImageParameter>
     get() = imageAssets.map { (key, identifier) ->
@@ -3301,8 +3300,8 @@ internal class RemoteContentEmitter(
   )
 
   /**
-   * Top-level declarations the body refers to, in emission order; the exporter places them at
-   * file level after the preview.
+   * Top-level declarations the body refers to, in emission order; the exporter places them at file
+   * level after the preview.
    */
   val declarations: List<String>
     get() = functions.values.map { it.declaration() } + lottieDeclarations.toList()
@@ -3515,9 +3514,9 @@ internal class RemoteContentEmitter(
   }
 
   /**
-   * One authored modifier as zero, one or two calls. Two is `background(colour, shape)`, written
-   * as `clip(shape).background(colour)` since `RemoteModifier` has no shape overload. A modifier
-   * with no counterpart is refused by name with the reason, never dropped.
+   * One authored modifier as zero, one or two calls. Two is `background(colour, shape)`, written as
+   * `clip(shape).background(colour)` since `RemoteModifier` has no shape overload. A modifier with
+   * no counterpart is refused by name with the reason, never dropped.
    */
   private fun UiBuilderNode.modifierCalls(element: JsonElement): List<String> {
     val modifier = element as? JsonObject ?: return emptyList()
@@ -4035,17 +4034,15 @@ internal class RemoteContentEmitter(
 }
 
 /**
- * The design id as one path segment. Server ids are already safe; anything else is folded into
- * the segment alphabet. Asset keys keep archive paths distinct regardless.
+ * The design id as one path segment. Server ids are already safe; anything else is folded into the
+ * segment alphabet. Asset keys keep archive paths distinct regardless.
  */
 private fun String.bundleSegment(): String {
   val folded = map { if (it.isLetterOrDigit() || it == '.' || it == '_' || it == '-') it else '-' }
   return folded.joinToString("").trimStart('-').ifEmpty { "design" }
 }
 
-/**
- * The file extension for a picture's media type. Cosmetic: `BitmapFactory` sniffs the bytes.
- */
+/** The file extension for a picture's media type. Cosmetic: `BitmapFactory` sniffs the bytes. */
 private fun String.pictureExtension(): String =
   when (substringBefore(';').trim().lowercase()) {
     "image/png" -> "png"
@@ -4101,9 +4098,7 @@ internal fun String.argbLiteral(): String {
 
 private val SIX_DIGIT_HEX = Regex("[0-9A-F]{6}")
 
-/**
- * Escaped for a Kotlin `"…"` literal. `$` matters for Lottie JSON, which is arbitrary text.
- */
+/** Escaped for a Kotlin `"…"` literal. `$` matters for Lottie JSON, which is arbitrary text. */
 private fun String.escaped(): String =
   replace("\\", "\\\\")
     .replace("\"", "\\\"")
@@ -4152,8 +4147,8 @@ internal val LAYOUT_EVENTS: List<String> = listOf("click", "longClick", "doubleC
 private val INT_LITERAL = Regex("""\b\d+\.ri\b""")
 private const val REMOTE_COLOR_FQN = "androidx.compose.remote.creation.compose.state.RemoteColor"
 /**
- * The published Remote Compose text component, served by the same writer as the borrowed
- * `m3/text`, so a design moving between the ids keeps its text properties.
+ * The published Remote Compose text component, served by the same writer as the borrowed `m3/text`,
+ * so a design moving between the ids keeps its text properties.
  */
 public const val REMOTE_TEXT_COMPONENT_ID: String = "remote-m3/remote-text"
 

@@ -9,9 +9,9 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The single-file state the per-design store replaced, still readable for the one-shot migration
- * in [FileUiBuilderDesignStore] and for [LegacyStateStorageDesignStore] (in-memory/test hosts). No
- * new deployment writes this format.
+ * The single-file state the per-design store replaced, still readable for the one-shot migration in
+ * [FileUiBuilderDesignStore] and for [LegacyStateStorageDesignStore] (in-memory/test hosts). No new
+ * deployment writes this format.
  */
 internal object LegacyUiBuilderState {
   enum class Format(val wire: String) {

@@ -6,8 +6,8 @@ package ee.schimke.composeai.uibuilder.export
  * [WearWidgetNativePreviewExporter] (content pictures, since nothing can pass an argument).
  *
  * Chunked literals joined at runtime, because a JVM string constant is capped at 65535 bytes of
- * modified UTF-8 (and `+` of literals is folded into one constant). One decoder per file;
- * `NO_WRAP` because the encoder emits no line breaks.
+ * modified UTF-8 (and `+` of literals is folded into one constant). One decoder per file; `NO_WRAP`
+ * because the encoder emits no line breaks.
  */
 internal fun inlineBitmapDeclarations(
   assets: List<RemoteContentEmitter.InlineAsset>

@@ -5,9 +5,9 @@ import ee.schimke.composeai.discovery.ScreenGenerator
 import ee.schimke.composeai.uibuilder.protocol.DesignDocumentV1
 
 /**
- * The one answer to "would the Compose export refuse this design, and why?", shared by the
- * server's export and the editor's problems panel (possible since `screen-model` 1.77.0 is
- * multiplatform), so the panel cannot miss a refusal.
+ * The one answer to "would the Compose export refuse this design, and why?", shared by the server's
+ * export and the editor's problems panel (possible since `screen-model` 1.77.0 is multiplatform),
+ * so the panel cannot miss a refusal.
  *
  * [EXPRESSION_PACKAGES] is a security guard: the generator refuses references outside it. Keeping
  * it (and [PACKAGE_NAME]) here means no second caller can widen it without review.

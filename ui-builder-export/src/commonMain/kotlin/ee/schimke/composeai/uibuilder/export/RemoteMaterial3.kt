@@ -12,8 +12,8 @@ import kotlinx.serialization.json.JsonPrimitive
  * The Remote Material 3 components a widget body can hold
  * (`androidx.wear.compose.remote.material3`), under the ids `yschimke/wear-m3-catalog` publishes.
  * One table read by the built-in `remote-m3` catalog (palette), the canvas (via
- * [Component.canvasMapping]) and the export ([records], read by
- * `RemoteContentEmitter`'s record fallback).
+ * [Component.canvasMapping]) and the export ([records], read by `RemoteContentEmitter`'s record
+ * fallback).
  *
  * Rows match wear-m3-catalog's `remote-catalog/ui-builder.policy.json`, so designs open against
  * either catalog. Hand-written cases: the page indicators (`RemotePageIndicatorState` built from

@@ -622,7 +622,8 @@ internal fun PinnedDesignCanvas(
                   .canvasNodeDrag(
                     key = document.id,
                     enabled = moveDragEnabled && showSelectionOverlay,
-                    // Presses arrive in frame space; convert like the secondary click and drop hit-test.
+                    // Presses arrive in frame space; convert like the secondary click and drop
+                    // hit-test.
                     rootPoint = { position ->
                       Offset(
                         frameOrigin.x + position.x * drawScale,

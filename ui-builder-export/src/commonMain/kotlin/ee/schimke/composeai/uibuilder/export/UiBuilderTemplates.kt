@@ -49,8 +49,8 @@ fun wearWidgetUiBuilderDocument(
  * [android/wear-os-samples' `WearWidget` sample](https://github.com/android/wear-os-samples/pull/1386).
  *
  * The frame's geometry comes from `WearWidgetParams` and its colour is the widget's background,
- * both modelled by the scaffold. These reproduce the sample's design, not a compile of it;
- * fidelity belongs to the parity lanes.
+ * both modelled by the scaffold. These reproduce the sample's design, not a compile of it; fidelity
+ * belongs to the parity lanes.
  */
 enum class WearWidgetSample(
   val templateId: String,
@@ -230,8 +230,8 @@ private const val WEATHER_SUNNY_ARGB = "#FF2196F3"
 private const val WEATHER_ON_SUNNY_ARGB = "#FFFFFFFF"
 
 /**
- * A widget host scaffold whose content slot holds a filled surface wrapping [content]; the
- * surface is the widget's own background, which the host frame does not draw.
+ * A widget host scaffold whose content slot holds a filled surface wrapping [content]; the surface
+ * is the widget's own background, which the host frame does not draw.
  */
 private fun wearWidgetSampleDocument(
   designId: String,
@@ -318,8 +318,8 @@ enum class NewDesignStateType(val wireType: String, val valueType: String, val l
 }
 
 /**
- * The name a state variable may take: a Kotlin identifier, since the Compose exporter declares
- * it as one. Checked here so the dialog can say so while typing.
+ * The name a state variable may take: a Kotlin identifier, since the Compose exporter declares it
+ * as one. Checked here so the dialog can say so while typing.
  */
 val NEW_DESIGN_STATE_NAME: Regex = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
@@ -331,8 +331,8 @@ val NEW_DESIGN_STATE_NAME: Regex = Regex("[A-Za-z_][A-Za-z0-9_]*")
 val NEW_DESIGN_ID: Regex = Regex("[A-Za-z0-9][A-Za-z0-9._-]*")
 
 /**
- * State declarations as one string (JSON, since initial text values can contain any separator),
- * for carrying across a navigation as a single query parameter.
+ * State declarations as one string (JSON, since initial text values can contain any separator), for
+ * carrying across a navigation as a single query parameter.
  */
 fun encodeNewDesignStates(state: List<NewDesignState>): String =
   Json.encodeToString(
@@ -351,8 +351,8 @@ fun encodeNewDesignStates(state: List<NewDesignState>): String =
   )
 
 /**
- * The inverse, defensively: the input comes from the address bar, so anything unparsable, with
- * a non-identifier name or an unknown kind is dropped rather than failing the session.
+ * The inverse, defensively: the input comes from the address bar, so anything unparsable, with a
+ * non-identifier name or an unknown kind is dropped rather than failing the session.
  */
 fun decodeNewDesignStates(encoded: String): List<NewDesignState> {
   val parsed =
@@ -373,9 +373,8 @@ fun decodeNewDesignStates(encoded: String): List<NewDesignState> {
 }
 
 /**
- * Refuses [state] a new design could never export: duplicate names, or names that collide or
- * become a Kotlin keyword once written as identifiers. Shared by every seed that takes
- * declarations.
+ * Refuses [state] a new design could never export: duplicate names, or names that collide or become
+ * a Kotlin keyword once written as identifiers. Shared by every seed that takes declarations.
  */
 internal fun requireExportableState(state: List<NewDesignState>) {
   require(state.map(NewDesignState::name).distinct().size == state.size) {
@@ -484,8 +483,8 @@ fun helloUiBuilderDocument(
 }
 
 /**
- * A new A2UI design: an `a2ui/Column` root with one `a2ui/Text` headline. The smallest surface
- * that draws and exports; [A2uiDocumentExporter] renames the column `root`.
+ * A new A2UI design: an `a2ui/Column` root with one `a2ui/Text` headline. The smallest surface that
+ * draws and exports; [A2uiDocumentExporter] renames the column `root`.
  */
 fun a2uiUiBuilderDocument(
   designId: String,
@@ -548,8 +547,8 @@ internal fun NewDesignState.declaration(): JsonObject =
 
 /**
  * An empty Wear screen: the scaffold, its clock and scroll indicator, and an empty list. The list
- * is included because `ScreenScaffold` exists to hold a `TransformingLazyColumn`, and the
- * generator refuses other top-level content.
+ * is included because `ScreenScaffold` exists to hold a `TransformingLazyColumn`, and the generator
+ * refuses other top-level content.
  */
 fun blankWearScreenUiBuilderDocument(
   designId: String,
@@ -613,8 +612,8 @@ fun wearScreenEnvironment(environment: JsonObject): JsonObject =
   )
 
 /**
- * The two round watches a Wear screen is checked on: 192dp and 240dp, where list wrapping
- * differs most. The screen opens at 192dp, since what works there works at 240dp.
+ * The two round watches a Wear screen is checked on: 192dp and 240dp, where list wrapping differs
+ * most. The screen opens at 192dp, since what works there works at 240dp.
  */
 private val WEAR_EXPORT_DEVICES = listOf("id:wearos_small_round", "id:wearos_xl_round")
 
@@ -635,13 +634,13 @@ fun mobileScreenEnvironment(environment: JsonObject): JsonObject =
 /**
  * The five frames a new mobile screen is checked on, one per width the layout has to survive:
  *
- * |                  |          |why this one                                                     |
- * |------------------|----------|-----------------------------------------------------------------|
- * |`pixel_4a`        |393 × 851 |the narrowest real Pixel in the render catalog                   |
- * |`pixel_9`         |411 × 923 |the modal phone; four catalog entries share this geometry        |
- * |`pixel_9_pro_xl`  |438 × 997 |the widest phone; its 3.0 density catches dp-vs-px mistakes      |
- * |`pixel_9_pro_fold`|791 × 819 |unfolded: the width where a pane scaffold is still deciding      |
- * |`pixel_tablet`    |1280 × 800|expanded, where two panes are the answer                         |
+ * |                    |            | why this one                                                |
+ * |--------------------|------------|-------------------------------------------------------------|
+ * | `pixel_4a`         | 393 × 851  | the narrowest real Pixel in the render catalog              |
+ * | `pixel_9`          | 411 × 923  | the modal phone; four catalog entries share this geometry   |
+ * | `pixel_9_pro_xl`   | 438 × 997  | the widest phone; its 3.0 density catches dp-vs-px mistakes |
+ * | `pixel_9_pro_fold` | 791 × 819  | unfolded: the width where a pane scaffold is still deciding |
+ * | `pixel_tablet`     | 1280 × 800 | expanded, where two panes are the answer                    |
  *
  * Not covered by any catalog frame: a foldable's outer display, and landscape.
  */

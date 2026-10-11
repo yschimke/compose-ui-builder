@@ -81,8 +81,7 @@ public object RemoteModifierVocabulary {
   /**
    * The overload a call naming [arguments] resolves to: all arguments are parameters and all
    * required parameters are given. Ties prefer fewest parameters, then dp over a bare number, then
-   * a
-   * `Remote*` type (which can take state or a computed value).
+   * a `Remote*` type (which can take state or a computed value).
    */
   public fun resolve(name: String, arguments: Set<String>): Overload? =
     modifiers[name]

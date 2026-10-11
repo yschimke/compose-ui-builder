@@ -12,7 +12,6 @@ import kotlinx.serialization.json.putJsonObject
 
 /**
  * The three-scope tree from the design docs, asserted node by node:
- *
  * ```
  * Column → Text → Remote Compose → RemoteColumn → Text
  *                                              → Custom("field") → Text

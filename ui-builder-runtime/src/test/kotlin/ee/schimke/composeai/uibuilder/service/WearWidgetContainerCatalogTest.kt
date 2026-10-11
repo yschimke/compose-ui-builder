@@ -67,8 +67,7 @@ class WearWidgetContainerCatalogTest {
   /**
    * The background slot's two traits must be carried by catalog components: `shape/linear-gradient`
    * (a `WearWidgetBrush` chain) and `asset/image` (`WearWidgetBrush.image`, supplied by asset key
-   * in
-   * `provideWidgetData`).
+   * in `provideWidgetData`).
    */
   @Test
   fun `the brushes the background slot names are in the catalog`() {

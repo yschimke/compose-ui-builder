@@ -182,8 +182,8 @@ fun googleMaterialIconImageVector(key: String): ImageVector? =
   googleMaterialIcon(key)?.let { GoogleMaterialIconVectors.cached(it.key) }
 
 /**
- * The vector for [key], or null while the browser is still fetching it (callers draw nothing at
- * the icon's size). Immediate on the JVM. Failed fetches retry with backoff up to
+ * The vector for [key], or null while the browser is still fetching it (callers draw nothing at the
+ * icon's size). Immediate on the JVM. Failed fetches retry with backoff up to
  * [ICON_RETRY_MAX_MILLIS] while the icon stays on screen.
  */
 @Composable

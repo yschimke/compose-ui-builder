@@ -269,8 +269,8 @@ internal data class PreviewFrameSize(val widthDp: Int, val heightDp: Int) {
 }
 
 /**
- * This thumbnail document with its frame resized: both the environment window (read by screen-size-aware
- * components) and the frame cell's `size` modifier.
+ * This thumbnail document with its frame resized: both the environment window (read by
+ * screen-size-aware components) and the frame cell's `size` modifier.
  */
 internal fun UiBuilderDocument.inPreviewFrame(frame: PreviewFrameSize): UiBuilderDocument {
   val cell = nodes[PREVIEW_FRAME_CELL_ID] ?: return this

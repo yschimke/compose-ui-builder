@@ -1,7 +1,6 @@
 package ee.schimke.composeai.uibuilder.editor
 
 import ee.schimke.composeai.uibuilder.reference.ReferenceMark
-import ee.schimke.composeai.uibuilder.reference.RestoredReference
 
 /**
  * The discussion about a design, as the editor sees it.

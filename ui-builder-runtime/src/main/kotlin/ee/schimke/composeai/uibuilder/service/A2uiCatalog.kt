@@ -22,15 +22,15 @@ import kotlinx.serialization.json.putJsonObject
  * packs. It exports as A2UI JSON and as the Kotlin an app uses to send it, via one lowering.
  *
  * Transcribed from `a2ui-basic-catalog.schema.json` (as yschimke/a2ui-catalog's policy publishes):
- * - Properties are the schema's, with enums, `required` and descriptions; composed types take
- *   their first typed branch.
+ * - Properties are the schema's, with enums, `required` and descriptions; composed types take their
+ *   first typed branch.
  * - Dynamic values also accept an object, so they can bind to state (`{"path": "/<variable>"}`).
  * - Arrays also accept an object (the builder's `list` wrapper).
  * - `ComponentId` properties are single-child slots; `ChildList` is a slot of any size. Tabs'
  *   `tabs` stays a list property of records.
  *
- * No modifiers: A2UI lays out through its own components. The AAR cannot run in Wasm, so the
- * canvas draws named placeholders and `previewSurfaces` points to the native lane.
+ * No modifiers: A2UI lays out through its own components. The AAR cannot run in Wasm, so the canvas
+ * draws named placeholders and `previewSurfaces` points to the native lane.
  */
 internal fun a2uiCatalog(base: CatalogCapabilityV1): CatalogCapabilityV1 {
   val components = base.components.associateBy { it.componentId }

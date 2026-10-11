@@ -6,8 +6,8 @@ import ee.schimke.composeai.uibuilder.protocol.CommandOutcomeV1
 import ee.schimke.composeai.uibuilder.protocol.RejectedOutcomeV1
 
 /**
- * The one replay in this system: a command log brought back onto the design it forked from. Used
- * by the browser's Sync (`LocalDesignSyncBack`, one request per command) and the service's branch
+ * The one replay in this system: a command log brought back onto the design it forked from. Used by
+ * the browser's Sync (`LocalDesignSyncBack`, one request per command) and the service's branch
  * merge (`PersistentUiBuilderService`, inside the lock), so the two cannot drift:
  *
  * - The base chain: `base(c₁)` is the fork point and `base(cₖ)` is where `cₖ₋₁` landed — neither

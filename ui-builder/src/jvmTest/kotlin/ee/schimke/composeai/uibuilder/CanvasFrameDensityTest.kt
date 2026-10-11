@@ -23,8 +23,8 @@ import kotlinx.serialization.json.jsonObject
 
 /**
  * The canvas gives the design the frame its environment names, whatever density the host is at. A
- * design at 2.0 in a 1.0 host must get its full dp frame, not one shrunk by the density ratio (see
- * #521).
+ * design at 2.0 in a 1.0 host must get its full dp frame, not one shrunk by the density ratio
+ * (see #521).
  *
  * The widget is measured in the **squircle**, stated explicitly since the host frame is a view
  * choice (`WearWidgetHostShape`), not a document property. Measured through [PinnedDesignCanvas]

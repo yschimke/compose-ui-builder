@@ -14,9 +14,7 @@ enum class WearWidgetHostShape(val id: String, val label: String) {
   /** The broadest rectangular host is the editing frame; previews show every shipped shape. */
   Rectangular("rectangular", "Rectangular"),
 
-  /**
-   * Square corners and a wider, shorter content box; the recommended widget-picker render.
-   */
+  /** Square corners and a wider, shorter content box; the recommended widget-picker render. */
   Squircle("squircle", "Squircle"),
 
   /**

@@ -5,10 +5,10 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Which kind of screen a builder catalog authors for, declared by the catalog (e.g. a phone
- * screen, a round watch screen, a Remote Compose widget body). It decides compatibility: the New
- * design chooser groups by it, and [UiBuilderComponentPacks] merges packs only into catalogs of the
- * same platform.
+ * Which kind of screen a builder catalog authors for, declared by the catalog (e.g. a phone screen,
+ * a round watch screen, a Remote Compose widget body). It decides compatibility: the New design
+ * chooser groups by it, and [UiBuilderComponentPacks] merges packs only into catalogs of the same
+ * platform.
  *
  * Stored in `statusSemantics` under [KEY], as [UiBuilderPreviewSurfaces] explains. A catalog that
  * says nothing is [MOBILE].

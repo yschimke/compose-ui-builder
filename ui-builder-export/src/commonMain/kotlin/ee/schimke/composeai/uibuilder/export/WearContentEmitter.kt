@@ -178,8 +178,8 @@ internal class WearContentEmitter(
   /**
    * One node as Wear Compose source.
    *
-   * [transformed] carries the row treatment down exactly one level, to the item body's
-   * composable: `transformedHeight` measures against the list's own scroll.
+   * [transformed] carries the row treatment down exactly one level, to the item body's composable:
+   * `transformedHeight` measures against the list's own scroll.
    */
   fun emit(nodeId: String, depth: Int, transformed: Boolean = false): List<String> {
     val node = document.nodes[nodeId] ?: return refused("node `$nodeId` is missing")
@@ -586,8 +586,8 @@ internal class WearContentEmitter(
    * - a literal (`String`, `Boolean`, `Int`, `Long`, `Float`, `Double`): the design's value;
    * - a `Modifier`: the node's chain (tag, row treatment), omitted when empty;
    * - a `SurfaceTransformation`: the row treatment;
-   * - anything else unset: omitted when defaulted, else the call site's placeholder read back
-   *   from `code.call`. A required parameter with no placeholder refuses by name.
+   * - anything else unset: omitted when defaulted, else the call site's placeholder read back from
+   *   `code.call`. A required parameter with no placeholder refuses by name.
    *
    * Imports are the call site's own (`code.imports`).
    */
@@ -679,9 +679,9 @@ internal class WearContentEmitter(
   }
 
   /**
-   * The placeholder the proven call site wrote for each parameter, by name. `code.call` is
-   * `Name(a = x, b = y)` as `ComponentSnippets` prints it, and no placeholder contains
-   * `, <name> = `, so each value runs to the next parameter's marker.
+   * The placeholder the proven call site wrote for each parameter, by name. `code.call` is `Name(a
+   * = x, b = y)` as `ComponentSnippets` prints it, and no placeholder contains `, <name> = `, so
+   * each value runs to the next parameter's marker.
    */
   private fun placeholderArguments(record: ComponentRecord): Map<String, String> {
     val call = record.code?.call ?: return emptyMap()
@@ -847,8 +847,8 @@ internal class WearContentEmitter(
    * How a `Row`, `Column` or `Box` lays its children out, read exactly as the canvas
    * (`UiBuilderRenderer`) reads it:
    *
-   * - A spacing composes with aligned arrangements via `spacedBy(space, alignment)` and is spent
-   *   on the `space*` ones.
+   * - A spacing composes with aligned arrangements via `spacedBy(space, alignment)` and is spent on
+   *   the `space*` ones.
    * - A row centres vertically by default (the canvas's default, not Compose's `Top`).
    * - Anything at Compose's default is omitted.
    */
@@ -1845,8 +1845,8 @@ internal class WearContentEmitter(
   }
 
   /**
-   * A colour property as Wear Compose source: a theme role is `MaterialTheme.colorScheme.<role>`;
-   * a `#RRGGBB` / `#AARRGGBB` literal is a `Color(0x…)`.
+   * A colour property as Wear Compose source: a theme role is `MaterialTheme.colorScheme.<role>`; a
+   * `#RRGGBB` / `#AARRGGBB` literal is a `Color(0x…)`.
    */
   private fun colorExpression(node: UiBuilderNode, name: String): String? {
     val property = node.properties[name] as? JsonObject ?: return null
@@ -2001,8 +2001,7 @@ internal class WearContentEmitter(
 
 /**
  * A node id as the Kotlin name of the state it holds: `error-dialog` + `Visible` →
- * `errorDialogVisible`. The id is unique and traceable; the role suffix avoids keyword
- * collisions.
+ * `errorDialogVisible`. The id is unique and traceable; the role suffix avoids keyword collisions.
  */
 private fun String.stateIdentifier(role: String): String {
   val words = split(Regex("[^A-Za-z0-9]+")).filter(String::isNotEmpty)

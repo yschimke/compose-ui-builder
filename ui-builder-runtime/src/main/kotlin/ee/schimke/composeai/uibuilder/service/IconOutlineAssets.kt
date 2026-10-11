@@ -56,9 +56,9 @@ public fun interface IconOutlineResolver {
 }
 
 /**
- * Resolved icon outlines, stored in the design beside its images, so export, offline daemon
- * renders and the canvas agree and upstream refreshes cannot silently redraw old designs.
- * Replacing one is an explicit, recorded edit. See
+ * Resolved icon outlines, stored in the design beside its images, so export, offline daemon renders
+ * and the canvas agree and upstream refreshes cannot silently redraw old designs. Replacing one is
+ * an explicit, recorded edit. See
  * [`UI_BUILDER_MATERIAL_SYMBOLS.md`](../../../../../../../../../docs/design/UI_BUILDER_MATERIAL_SYMBOLS.md).
  */
 public object IconOutlineAssets {

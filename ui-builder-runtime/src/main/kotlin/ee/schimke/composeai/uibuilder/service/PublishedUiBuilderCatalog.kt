@@ -36,8 +36,8 @@ import kotlinx.serialization.json.decodeFromJsonElement
  * into the capability catalog the builder serves, joined on [UiBuilderComponentPolicy.record]'s
  * `canonicalId`. See `docs/design/UI_BUILDER_CATALOG_CONTRACT.md`.
  *
- * It invents nothing: a component with no policy gets the record's defaults. The equivalence
- * script and frozen goldens prove the result equals what the server synthesises.
+ * It invents nothing: a component with no policy gets the record's defaults. The equivalence script
+ * and frozen goldens prove the result equals what the server synthesises.
  */
 public object PublishedUiBuilderCatalog {
 
@@ -306,8 +306,8 @@ public object PublishedUiBuilderCatalog {
   }
 
   /**
-   * The namespaces the builder owns rather than any catalog. Must agree with
-   * `ui-builder-runtime`'s internal `BUILDER_NAMESPACES`.
+   * The namespaces the builder owns rather than any catalog. Must agree with `ui-builder-runtime`'s
+   * internal `BUILDER_NAMESPACES`.
    */
   private val BUILDER_VOCABULARY_NAMESPACES = listOf("layout/", "shape/", "asset/")
 
@@ -319,8 +319,8 @@ public object PublishedUiBuilderCatalog {
   /**
    * The builder id of a record component the published file says nothing about.
    *
-   * Reproduces the generator's derivation (the catalog id leaf where there is one); the
-   * equivalence gate proves the two still match.
+   * Reproduces the generator's derivation (the catalog id leaf where there is one); the equivalence
+   * gate proves the two still match.
    */
   private fun derivedId(prefix: String, component: ComponentRecord): String {
     val leaf =
@@ -497,8 +497,8 @@ public object PublishedUiBuilderCatalog {
   /**
    * The shelf role of a builtin: `Scaffold`, `Container` or `Leaf`.
    *
-   * Not the builtin's structural `role` (the template engine's set), except that `screen-root`
-   * maps to `Scaffold`. A stated `shelfRole` wins; otherwise derived from slots, which cannot tell
+   * Not the builtin's structural `role` (the template engine's set), except that `screen-root` maps
+   * to `Scaffold`. A stated `shelfRole` wins; otherwise derived from slots, which cannot tell
    * `layout/box` from `layout/scaffold`.
    */
   private fun shelfRole(builtin: UiBuilderBuiltin): String =
@@ -619,8 +619,8 @@ public object PublishedUiBuilderCatalog {
     mapOf("none" to SvgFallbackV1.NONE, "embedded-raster" to SvgFallbackV1.EMBEDDED_RASTER)
 
   /**
-   * The derived canvas-lane block with the catalog's stated fields laid over it, field by field,
-   * so stating one field is not a claim about the others.
+   * The derived canvas-lane block with the catalog's stated fields laid over it, field by field, so
+   * stating one field is not a claim about the others.
    */
   private fun WasmCapabilityV1.overriddenBy(stated: UiBuilderBuiltinWasm?): WasmCapabilityV1 {
     if (stated == null) return this
@@ -699,8 +699,8 @@ public object PublishedUiBuilderCatalog {
   }
 
   /**
-   * The revision this catalog is pinned by: a digest of the published bytes, so hosts fetching
-   * the same file agree on the pin without coordinating.
+   * The revision this catalog is pinned by: a digest of the published bytes, so hosts fetching the
+   * same file agree on the pin without coordinating.
    */
   private fun revisionOf(published: String): String {
     val digest = MessageDigest.getInstance("SHA-256").digest(published.toByteArray())
@@ -817,9 +817,9 @@ public object PublishedUiBuilderCatalog {
   )
 
   /**
-   * The layout the editing canvas draws for a component while an author is inside it, so
-   * children of a scrollable container past the frame edge stay editable. Constrained surfaces
-   * (preview, frames, exports) never see it. Unknown `layout` names are carried, not refused.
+   * The layout the editing canvas draws for a component while an author is inside it, so children
+   * of a scrollable container past the frame edge stay editable. Constrained surfaces (preview,
+   * frames, exports) never see it. Unknown `layout` names are carried, not refused.
    */
   @Serializable
   internal data class UiBuilderUnrolledMock(
@@ -891,16 +891,16 @@ public object PublishedUiBuilderCatalog {
      */
     val slotCapabilities: List<UiBuilderSlotPolicy>? = null,
     /**
-     * The modifiers this component accepts, or null for the structural default. The runtime
-     * rejects undeclared modifiers, and the right list is editorial, not inferable.
+     * The modifiers this component accepts, or null for the structural default. The runtime rejects
+     * undeclared modifiers, and the right list is editorial, not inferable.
      */
     val modifierCapabilities: List<String>? = null,
   )
 
   /**
-   * One slot a catalog states, mirroring `SlotCapabilityV1`. Policy lists are named
-   * `…Capabilities` because the generator's `UiBuilderComponentPolicy` already uses
-   * `slots`/`properties` for other types.
+   * One slot a catalog states, mirroring `SlotCapabilityV1`. Policy lists are named `…Capabilities`
+   * because the generator's `UiBuilderComponentPolicy` already uses `slots`/`properties` for other
+   * types.
    */
   @Serializable
   internal data class UiBuilderSlotPolicy(

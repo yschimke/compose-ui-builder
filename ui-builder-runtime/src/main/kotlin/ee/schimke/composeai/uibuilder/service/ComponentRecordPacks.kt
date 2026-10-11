@@ -20,8 +20,8 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A served catalog's component record, projected onto a component pack the builder can merge: an
- * application's own composables offered as extra components, using only rules that need no
- * authored policy (see `docs/design/UI_BUILDER_ON_THE_COMPONENT_RECORD.md`):
+ * application's own composables offered as extra components, using only rules that need no authored
+ * policy (see `docs/design/UI_BUILDER_ON_THE_COMPONENT_RECORD.md`):
  *
  * - Only the project's own symbols ([ComponentOrigin.PROJECT]), not the library composables its
  *   previews call.
@@ -281,9 +281,7 @@ internal object ComponentRecordPacks {
     )
 
   /** What `layout/column` may carry: the leaf set plus what a container that fills does. */
-  /**
-   * The container/leaf split, shared with `PublishedUiBuilderCatalog` so both fallbacks agree.
-   */
+  /** The container/leaf split, shared with `PublishedUiBuilderCatalog` so both fallbacks agree. */
   internal fun structuralModifiers(container: Boolean): List<String> =
     if (container) CONTAINER_MODIFIERS else LEAF_MODIFIERS
 

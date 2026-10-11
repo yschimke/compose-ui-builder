@@ -35,9 +35,9 @@ internal data class StoredDesigns(
 )
 
 /**
- * Where the UI builder's designs are kept. Unlike [UiBuilderStateStorage]'s whole-state seam,
- * this names the design an edit touched and gets the before/after values so it writes only what
- * differs. See `docs/design/UI_BUILDER_STATE_STORAGE.md`.
+ * Where the UI builder's designs are kept. Unlike [UiBuilderStateStorage]'s whole-state seam, this
+ * names the design an edit touched and gets the before/after values so it writes only what differs.
+ * See `docs/design/UI_BUILDER_STATE_STORAGE.md`.
  */
 internal interface UiBuilderDesignStore {
   /** Every stored design. Called once, at construction. */
@@ -74,8 +74,8 @@ internal interface UiBuilderDesignStore {
 }
 
 /**
- * The v3 per-design store on disk, as a host constructs it. Opaque because the persistence model
- * is not published.
+ * The v3 per-design store on disk, as a host constructs it. Opaque because the persistence model is
+ * not published.
  */
 public class UiBuilderDesignStateStore
 internal constructor(internal val store: UiBuilderDesignStore) {
@@ -177,8 +177,8 @@ internal data class StoredPositionsV3(val positions: Map<String, StableNodePosit
 
 /**
  * One commit's changes to the collections that grow by an entry per edit (`history`, `audit`,
- * `operationOutcomes`, `acceptedOperations`, `tombstones`), so an edit does not rewrite them
- * whole. Every field is null when that collection did not change.
+ * `operationOutcomes`, `acceptedOperations`, `tombstones`), so an edit does not rewrite them whole.
+ * Every field is null when that collection did not change.
  */
 @Serializable
 internal data class JournalEntryV3(
@@ -195,8 +195,8 @@ internal data class JournalEntryV3(
   val tombstonesPut: Map<String, NodeTreeSnapshotV1>? = null,
   val tombstonesRemoved: List<String>? = null,
   /**
-   * Conflict touches, journalled like `history`. Absent in older entries, which replay to an
-   * empty list.
+   * Conflict touches, journalled like `history`. Absent in older entries, which replay to an empty
+   * list.
    */
   val conflictTouchesAppend: List<ConflictTouchRecordV1>? = null,
   val conflictTouchesKeep: Int? = null,
@@ -210,8 +210,8 @@ internal data class JournalEntryV3(
 )
 
 /**
- * One journal line: a record and a checksum of it as stored. `journalBytes` says which records
- * are committed; the checksum catches bit flips that still parse. Per record, so an append never
+ * One journal line: a record and a checksum of it as stored. `journalBytes` says which records are
+ * committed; the checksum catches bit flips that still parse. Per record, so an append never
  * re-hashes the whole journal.
  */
 @Serializable internal data class JournalLineV3(val checksumSha256: String, val entry: JsonElement)
@@ -219,9 +219,9 @@ internal data class JournalEntryV3(
 /**
  * Why one design could not be read, written beside it rather than thrown.
  *
- * [designId] is recorded so the id an operator retires it by is stable across restarts.
- * [header] is the header as it did parse (when a later part failed), carrying access, title and
- * pin so the owner can still see and retire it. Absent when the header itself was unreadable.
+ * [designId] is recorded so the id an operator retires it by is stable across restarts. [header] is
+ * the header as it did parse (when a later part failed), carrying access, title and pin so the
+ * owner can still see and retire it. Absent when the header itself was unreadable.
  */
 @Serializable
 internal data class StoredQuarantineV3(
@@ -235,17 +235,17 @@ internal data class StoredQuarantineV3(
 internal data class StoreMarkerV3(val format: String, val migratedFrom: String? = null)
 
 /**
- * One design's parts as they are on disk, so the next commit knows what it may reuse; also
- * carries the journal's live size.
+ * One design's parts as they are on disk, so the next commit knows what it may reuse; also carries
+ * the journal's live size.
  */
 private data class DesignFiles(val header: StoredDesignHeaderV3, val bytes: Long)
 
 /**
  * One directory per design, one file per part, and a header that names them.
  *
- * Parts are named by content digest, so a commit becomes visible only when the `design.json`
- * rename lands. A crash before leaves the previous generation complete; a crash after leaves
- * unreferenced files the next open unlinks. See `docs/design/UI_BUILDER_STATE_STORAGE.md`.
+ * Parts are named by content digest, so a commit becomes visible only when the `design.json` rename
+ * lands. A crash before leaves the previous generation complete; a crash after leaves unreferenced
+ * files the next open unlinks. See `docs/design/UI_BUILDER_STATE_STORAGE.md`.
  */
 internal class FileUiBuilderDesignStore(
   root: Path,
@@ -496,8 +496,8 @@ internal class FileUiBuilderDesignStore(
 
   /**
    * Undoes a commit that never became the design. For an existing design, its new parts are
-   * unreferenced and go. For a first commit, the whole directory goes: a headerless directory
-   * would be quarantined on next open as a phantom sharing the real design's directory.
+   * unreferenced and go. For a first commit, the whole directory goes: a headerless directory would
+   * be quarantined on next open as a phantom sharing the real design's directory.
    */
   private fun discardUncommitted(
     designDirectory: Path,
@@ -872,8 +872,8 @@ internal class FileUiBuilderDesignStore(
 
   /**
    * The delta this commit adds to the journal, or null when none of those collections changed.
-   * Appended lists record the tail and the length to keep, so front trims replay exactly;
-   * replaced lists (an asset write clears `history`) record themselves whole.
+   * Appended lists record the tail and the length to keep, so front trims replay exactly; replaced
+   * lists (an asset write clears `history`) record themselves whole.
    */
   private fun journalEntry(
     previous: PersistedDesignV1?,
@@ -1114,8 +1114,8 @@ internal class FileUiBuilderDesignStore(
   }
 
   /**
-   * The quarantine occupying [designDirectory], if any: the id it is reported under and the
-   * record. Older records are enriched from the header here when it parses.
+   * The quarantine occupying [designDirectory], if any: the id it is reported under and the record.
+   * Older records are enriched from the header here when it parses.
    */
   private fun readQuarantine(designDirectory: Path): Pair<String, StoredQuarantineV3>? {
     val path = designDirectory.resolve(QUARANTINE_FILE)
@@ -1299,8 +1299,8 @@ internal class FileUiBuilderDesignStore(
   // ---------------------------------------------------------------- files
 
   /**
-   * The whole of one part, refused before allocation when larger than a design may be, so a
-   * corrupt file costs one quarantined design rather than the host.
+   * The whole of one part, refused before allocation when larger than a design may be, so a corrupt
+   * file costs one quarantined design rather than the host.
    */
   private fun readBounded(path: Path, description: String): ByteArray {
     val size = Files.size(path)

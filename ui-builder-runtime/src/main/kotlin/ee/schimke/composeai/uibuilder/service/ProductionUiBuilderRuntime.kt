@@ -90,10 +90,9 @@ private fun defaultExportCapabilities(): ExportCapabilitiesV1 =
 /**
  * The explicitly enabled production catalogs admitted by the v1 service.
  *
- * Resolution is exact across all four pin fields; the packaged catalog is parsed strictly and
- * its invariants checked, with no "closest" revision or permissive fallback. Export capabilities
- * come from the renderer adapter at startup, so a host without the daemon lane advertises Compose
- * only.
+ * Resolution is exact across all four pin fields; the packaged catalog is parsed strictly and its
+ * invariants checked, with no "closest" revision or permissive fallback. Export capabilities come
+ * from the renderer adapter at startup, so a host without the daemon lane advertises Compose only.
  */
 public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration: Configuration) :
   UiBuilderCatalogExecutor {
@@ -450,9 +449,9 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
   private val references = catalogs.mapValues { (_, catalog) -> referenceOf(catalog) }
 
   /**
-   * Every reference a stored design may be pinned to for a served catalog: both the synthesised
-   * and published sources', so flipping `--ui-builder-published-catalogs` does not strand designs.
-   * One direction only (asserted by `CatalogSourceFlipTest`); pins naming neither are refused.
+   * Every reference a stored design may be pinned to for a served catalog: both the synthesised and
+   * published sources', so flipping `--ui-builder-published-catalogs` does not strand designs. One
+   * direction only (asserted by `CatalogSourceFlipTest`); pins naming neither are refused.
    */
   private val acceptedReferences: Map<String, Set<CatalogReferenceV1>> =
     catalogs.mapValues { (systemId, catalog) ->
@@ -940,8 +939,8 @@ public class CurrentM3UiBuilderCatalogExecutor private constructor(configuration
  * A component pack as the host admits it: another catalog's finished capabilities, built by
  * `:server` (reading records is outside this module's boundary).
  *
- * @property id the pack's id: the served catalog it came from and the prefix of every component
- *   id (`confetti-mobile/session-card`). Checked like a catalog id.
+ * @property id the pack's id: the served catalog it came from and the prefix of every component id
+ *   (`confetti-mobile/session-card`). Checked like a catalog id.
  * @property label what the editor calls the pack.
  * @property platform the platform word (`mobile`, `wear`, `remote-compose`) naming which enabled
  *   catalogs receive it; a catalog declaring none is
@@ -1015,9 +1014,9 @@ internal val REMOTE_COMPOSE_BORROWED_AS_THEMSELVES =
   )
 
 /**
- * The note a shared foundation component carries on a Wear palette, shared by `wearM3Catalog`
- * and [composeFoundationCatalog] (compared by `ComposeFoundationFaithfulnessTest`). Lives here
- * because `ui-builder-catalog-literals.sh` restricts which files may name a catalog.
+ * The note a shared foundation component carries on a Wear palette, shared by `wearM3Catalog` and
+ * [composeFoundationCatalog] (compared by `ComposeFoundationFaithfulnessTest`). Lives here because
+ * `ui-builder-catalog-literals.sh` restricts which files may name a catalog.
  */
 internal const val WEAR_FOUNDATION_NOTE: String =
   "Foundation, shared by Compose on both platforms — `androidx.compose.foundation` " +
@@ -1613,8 +1612,8 @@ private fun placedCapability(
 }
 
 /**
- * The modifier rule for one node against the capability that decides it, shared so placements
- * and ordinary nodes are held to one implementation.
+ * The modifier rule for one node against the capability that decides it, shared so placements and
+ * ordinary nodes are held to one implementation.
  */
 private fun JsonObject.modifierIssue(
   nodeId: String,

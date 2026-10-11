@@ -21,7 +21,6 @@ public const val REMOTE_COMPOSE_CUSTOM_COMPONENT_ID: String = "remote-compose/cu
  * `RemoteColumn` inside a [REMOTE_COMPOSE_INLINE_COMPONENT_ID], so ancestry decides. Scope turns on
  * at a remote host (an inline node or a `remote-m3` widget container) and off inside a custom
  * component's `content` slot, so scopes nest:
- *
  * ```
  * Scaffold → Column → Remote Compose → RemoteColumn → Custom("field") → BasicTextField
  * ```

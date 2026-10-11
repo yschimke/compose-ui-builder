@@ -13,9 +13,9 @@ import kotlinx.serialization.json.contentOrNull
  * `SwitchButton`) whose value property is a bare `{"type": "state", "variable": …}` read writes the
  * reported value back, then runs the event's actions — like `onValueChange = { x = it }`.
  *
- * Explicit actions win: when they already write the bound variable (a `toggle` or `set`), the
- * write back is skipped. `stateEquals` reads are never written back. One rule for the canvas SDK
- * and the Compose, Wear and Remote exporters.
+ * Explicit actions win: when they already write the bound variable (a `toggle` or `set`), the write
+ * back is skipped. `stateEquals` reads are never written back. One rule for the canvas SDK and the
+ * Compose, Wear and Remote exporters.
  */
 object TwoWayStateBinding {
   /** The action kinds that write the variable they name. */

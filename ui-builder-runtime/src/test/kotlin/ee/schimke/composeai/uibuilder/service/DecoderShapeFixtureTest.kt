@@ -19,9 +19,9 @@ import kotlinx.serialization.serializer
 
 /**
  * The shape table `ui-builder-equivalence.sh` validates against, generated from the real decoders
- * (the gate runs without a JVM, and a hand-maintained mirror drifted from the published
- * artifacts). Committed for the node job to read; fails when the dependency's shape changes, naming
- * the field. The server generates the `record` half itself.
+ * (the gate runs without a JVM, and a hand-maintained mirror drifted from the published artifacts).
+ * Committed for the node job to read; fails when the dependency's shape changes, naming the field.
+ * The server generates the `record` half itself.
  *
  * Regenerate with `UPDATE_DECODER_SHAPES=1 ./gradlew :ui-builder-runtime:test --tests
  * '*DecoderShapeFixtureTest*'`.

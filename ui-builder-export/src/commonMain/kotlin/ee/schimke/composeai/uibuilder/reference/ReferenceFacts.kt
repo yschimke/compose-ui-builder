@@ -4,8 +4,8 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * What an attached picture is, measured against the frame it is compared with, answered once so
- * the panel, fitting and matcher agree:
+ * What an attached picture is, measured against the frame it is compared with, answered once so the
+ * panel, fitting and matcher agree:
  *
  * 1. At what density was it drawn? Declared by the picture where possible (`@2x`, a Figma export
  *    scale), otherwise inferred from the frame.

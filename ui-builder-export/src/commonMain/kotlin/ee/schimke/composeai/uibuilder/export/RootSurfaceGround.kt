@@ -42,9 +42,7 @@ object RootSurfaceGround {
       .orEmpty()
       .isNotEmpty()
 
-  /**
-   * Whether the modifiers ask for the whole frame; explicit dp sizes do not count.
-   */
+  /** Whether the modifiers ask for the whole frame; explicit dp sizes do not count. */
   private fun UiBuilderNode.fillsFrame(): Boolean {
     val types = modifiers.mapNotNull {
       (it as? JsonObject)?.get("type")?.jsonPrimitive?.contentOrNull

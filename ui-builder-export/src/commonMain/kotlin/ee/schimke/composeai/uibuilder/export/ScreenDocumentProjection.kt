@@ -124,10 +124,10 @@ private fun parameterForSlot(componentId: String, slot: String): String =
 /**
  * Projects a saved [DesignDocumentV1] onto the [ScreenDocument] `ScreenGenerator` consumes.
  *
- * The generator only emits call sites the component record proves, so this projection must
- * express each piece of content or refuse it by name — never guess. Design tokens resolve
- * through Material 3 accessor tables; enum values through authored tables ([ENUM_MEMBERS],
- * [ICON_MEMBERS], [VARIANT_PROPERTIES]).
+ * The generator only emits call sites the component record proves, so this projection must express
+ * each piece of content or refuse it by name — never guess. Design tokens resolve through Material
+ * 3 accessor tables; enum values through authored tables ([ENUM_MEMBERS], [ICON_MEMBERS],
+ * [VARIANT_PROPERTIES]).
  */
 object ScreenDocumentProjection {
 
@@ -874,7 +874,7 @@ object ScreenDocumentProjection {
 
     /**
      * @param scope the receiver of the slot this node sits in, or null at the root. Threaded down
-     * because `weight` and `matchParentSize` legality depends on placement.
+     *   because `weight` and `matchParentSize` legality depends on placement.
      */
     fun node(id: String, scope: String? = null): ScreenNode? {
       nodeOverrides[id]?.let {
@@ -1168,8 +1168,8 @@ object ScreenDocumentProjection {
       }
 
     /**
-     * The component a node's variant property selects, or null when it has none or it is unset
-     * (the catalog id's own record). An unknown variant refuses rather than guessing.
+     * The component a node's variant property selects, or null when it has none or it is unset (the
+     * catalog id's own record). An unknown variant refuses rather than guessing.
      */
     private fun variantOf(node: DesignNodeV1): ComponentVariant? {
       DIRECT_COMPONENTS[node.componentId]?.let {
@@ -1871,8 +1871,8 @@ object ScreenDocumentProjection {
     }
 
     /**
-     * `BoxScope.align(…)` for the `alignment` property, or null having said where the node is.
-     * The same route as the authored `align` modifier: legal only inside a `layout/box` slot.
+     * `BoxScope.align(…)` for the `alignment` property, or null having said where the node is. The
+     * same route as the authored `align` modifier: legal only inside a `layout/box` slot.
      */
     private fun boxAlignmentLink(
       value: UiValueV1,
@@ -3561,9 +3561,7 @@ object ScreenDocumentProjection {
   private val BOX_ALIGNMENT_MEMBERS =
     members(ALIGNMENT, ALIGNMENT, *ALIGNMENT_MEMBERS.toList().toTypedArray())
 
-  /**
-   * The six row and six column arrangements, named once: `layout/flow-row` reads both.
-   */
+  /** The six row and six column arrangements, named once: `layout/flow-row` reads both. */
   private val ROW_ARRANGEMENT_MEMBERS =
     members(
       ARRANGEMENT_HORIZONTAL,
@@ -3710,9 +3708,7 @@ object ScreenDocumentProjection {
       aligned = mapOf("top" to "Top", "center" to "CenterVertically", "bottom" to "Bottom"),
     )
 
-  /**
-   * The axes each container arranges on. A list because `layout/flow-row` has both.
-   */
+  /** The axes each container arranges on. A list because `layout/flow-row` has both. */
   private val ARRANGEMENTS: Map<String, List<ArrangementAxis>> =
     mapOf(
       "layout/row" to listOf(ROW_AXIS),
@@ -3746,8 +3742,7 @@ object ScreenDocumentProjection {
     )
 
   /**
-   * Colour roles that fill one `…Colors` bundle, read together rather than overwriting each
-   * other.
+   * Colour roles that fill one `…Colors` bundle, read together rather than overwriting each other.
    *
    * @property roles the catalog properties, also the factory's parameter names unless
    *   [factoryNames] says otherwise.
@@ -3833,8 +3828,8 @@ object ScreenDocumentProjection {
     )
 
   /**
-   * Components whose `alignment` property means "how a parent Box aligns this" node, routed
-   * through `alignLink` like the authored modifier.
+   * Components whose `alignment` property means "how a parent Box aligns this" node, routed through
+   * `alignLink` like the authored modifier.
    */
   private val BOX_ALIGNED: Set<String> = setOf("m3/text", "layout/column")
 
@@ -4054,8 +4049,8 @@ object ScreenDocumentProjection {
     "androidx.compose.material3.ProgressIndicatorKt.CircularProgressIndicator"
 
   /**
-   * Builder bookkeeping properties, spent rather than refused. `scrollStateKey` is required on
-   * lazy containers and changes no pixel. `span` is not here — see `unplaceable`.
+   * Builder bookkeeping properties, spent rather than refused. `scrollStateKey` is required on lazy
+   * containers and changes no pixel. `span` is not here — see `unplaceable`.
    */
   private val IDENTITY_PROPERTIES: Set<String> = setOf("scrollStateKey", "stableKey")
 
@@ -4085,8 +4080,8 @@ object ScreenDocumentProjection {
 
   /**
    * The receiver member each of a DSL slot's children is wrapped in (`LazyColumn` children use
-   * `item { … }`), checked against `TargetParameter.scopeDslReceiver`. A [SlotItem] wraps the
-   * whole slot, so there is no per-child `key`. Public for `M3CatalogSlotScopeTest`.
+   * `item { … }`), checked against `TargetParameter.scopeDslReceiver`. A [SlotItem] wraps the whole
+   * slot, so there is no per-child `key`. Public for `M3CatalogSlotScopeTest`.
    */
   val SLOT_ITEMS: Map<String, Map<String, SlotItem>> =
     mapOf(
@@ -4164,8 +4159,8 @@ object ScreenDocumentProjection {
   val ICON_MEMBERS: Map<String, String> = GeneratedMaterialIconMembers
 
   /**
-   * Properties whose values name no member of anything, each with its own refusal reason.
-   * Each value completes "…`$entry`, which …".
+   * Properties whose values name no member of anything, each with its own refusal reason. Each
+   * value completes "…`$entry`, which …".
    */
   private val VARIANT_PROPERTIES: Map<Pair<String, String>, String> =
     mapOf(

@@ -60,8 +60,8 @@ public interface UiBuilderCatalogExecutor {
   public fun reference(catalog: CatalogCapabilityV1): CatalogReferenceV1? = null
 
   /**
-   * Whether one property write carries a value of the kind the catalog means — the semantic half
-   * of [validate]. Asked only where a value is chosen (`setProperty`, `insertNode`), never
+   * Whether one property write carries a value of the kind the catalog means — the semantic half of
+   * [validate]. Asked only where a value is chosen (`setProperty`, `insertNode`), never
    * document-wide, so older designs stay editable. Refusals are `INVALID_PROPERTY`.
    */
   public fun validateWrite(
@@ -178,8 +178,8 @@ public data class UiBuilderServiceLimits(
   val maximumEmbeddedAssetBytes: Int = 6 * 1_024 * 1_024,
   val presenceTtlMillis: Long = 30_000,
   /**
-   * Ceiling on one uploaded asset ([UiBuilderAssetPort.putAsset]). Every render lane carries
-   * assets inline on each export, so this bounds requests too.
+   * Ceiling on one uploaded asset ([UiBuilderAssetPort.putAsset]). Every render lane carries assets
+   * inline on each export, so this bounds requests too.
    */
   val maximumAssetBytes: Int = 1_024 * 1_024,
   /** How many keys one design's `assets` map may hold. */
@@ -252,8 +252,8 @@ public class PersistentUiBuilderService(
   UiBuilderBranchPort {
 
   /**
-   * The constructor published before icon outlines existed; defaults live here to keep exactly
-   * the two JVM descriptors 3.24 published.
+   * The constructor published before icon outlines existed; defaults live here to keep exactly the
+   * two JVM descriptors 3.24 published.
    */
   public constructor(
     designStore: UiBuilderDesignStateStore,
@@ -276,8 +276,8 @@ public class PersistentUiBuilderService(
   )
 
   /**
-   * The single-file storage this service was built on, for hosts without a state directory and
-   * for `migratePersistenceToLatest`. Hosts with a directory use [UiBuilderDesignStateStore].
+   * The single-file storage this service was built on, for hosts without a state directory and for
+   * `migratePersistenceToLatest`. Hosts with a directory use [UiBuilderDesignStateStore].
    */
   public constructor(
     storage: UiBuilderStateStorage,
@@ -497,8 +497,8 @@ public class PersistentUiBuilderService(
   /**
    * The same design pinned to the catalog reference this deployment serves, since
    * `--ui-builder-published-catalogs` changes references and the browser compares pins. In memory
-   * only — see [persistRePins]. Safe because the pin must resolve to a served catalog with the
-   * same `systemId` and the document must validate against it.
+   * only — see [persistRePins]. Safe because the pin must resolve to a served catalog with the same
+   * `systemId` and the document must validate against it.
    */
   private fun PersistedDesignV1.rePinned(): PersistedDesignV1 {
     val pin = document.catalogPin
@@ -537,9 +537,9 @@ public class PersistentUiBuilderService(
   private data class RePinOutcome(val designs: Int = 0, val failure: String? = null)
 
   /**
-   * Writes re-pinned designs through to the store once at startup so stored pins converge even
-   * for designs nobody edits. Not fatal: failures surface via [diagnostics]. The count is what
-   * was attempted.
+   * Writes re-pinned designs through to the store once at startup so stored pins converge even for
+   * designs nobody edits. Not fatal: failures surface via [diagnostics]. The count is what was
+   * attempted.
    */
   private fun persistRePins(): RePinOutcome {
     // Identity, not equality: `rePinned` returns the receiver untouched when it changes nothing, so
@@ -596,8 +596,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * The design a request is about, or null. Listing is in the null group so unusable designs
-   * still appear to operators.
+   * The design a request is about, or null. Listing is in the null group so unusable designs still
+   * appear to operators.
    */
   private fun UiBuilderServiceRequest.designId(): String? =
     when (this) {
@@ -671,8 +671,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * An asset write is a commit without an operation: `history` is cut and subscribers get a
-   * whole snapshot. Not undoable.
+   * An asset write is a commit without an operation: `history` is cut and subscribers get a whole
+   * snapshot. Not undoable.
    */
   private fun putAssetLocked(write: UiBuilderAssetWrite): LockedExecution {
     val store =
@@ -970,8 +970,8 @@ public class PersistentUiBuilderService(
   }
 
   /**
-   * See [UiBuilderServiceRequest.RestoreRevision]. Built as a wire operation and handed to
-   * [apply], so it gets the same checks, idempotency, limits, history and broadcast.
+   * See [UiBuilderServiceRequest.RestoreRevision]. Built as a wire operation and handed to [apply],
+   * so it gets the same checks, idempotency, limits, history and broadcast.
    */
   private fun restore(
     actor: AuthenticatedUiBuilderActor,
@@ -2396,8 +2396,8 @@ public class PersistentUiBuilderService(
 
   /**
    * See [UiBuilderBranchRequest.MergeBranch]. Replays via [replayCommandLog] through
-   * [reduceAndRecord] over a working copy of the parent; nothing commits until the whole log
-   * lands, so a refusal (or a dry run) changes nothing.
+   * [reduceAndRecord] over a working copy of the parent; nothing commits until the whole log lands,
+   * so a refusal (or a dry run) changes nothing.
    */
   private fun mergeBranch(
     actor: AuthenticatedUiBuilderActor,

@@ -7,8 +7,8 @@ import ee.schimke.composeai.uibuilder.protocol.UiValueV1
 /**
  * The properties a stored design carries that its catalog no longer declares.
  *
- * Catalogs change; an undeclared property must not make a whole design unusable. The value stays
- * in the stored document (no migration), so a catalog that declares it again simply resumes.
+ * Catalogs change; an undeclared property must not make a whole design unusable. The value stays in
+ * the stored document (no migration), so a catalog that declares it again simply resumes.
  *
  * [withoutProperties] builds a probe without these properties, which is validated instead: if only
  * undeclared properties were wrong it validates clean and the design is served as itself; anything
@@ -36,8 +36,8 @@ internal fun undeclaredProperties(
 }
 
 /**
- * The document with [drop] removed, as a probe. A property is dropped only where it still holds
- * the tolerated value. Returns the receiver unchanged when there is nothing to drop.
+ * The document with [drop] removed, as a probe. A property is dropped only where it still holds the
+ * tolerated value. Returns the receiver unchanged when there is nothing to drop.
  */
 internal fun DesignDocumentV1.withoutProperties(
   drop: Map<String, Map<String, UiValueV1>>

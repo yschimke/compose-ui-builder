@@ -28,8 +28,8 @@ import kotlinx.serialization.json.put
  * What `remote-m3` gains and loses if `--ui-builder-published-catalogs` names it, using a pair
  * captured verbatim from `:remote-catalog:composePreviewDiscover`.
  *
- * - It offers Remote Compose components the synthesised shelf never had; most now export, and
- *   those that cannot are pinned below with the reason.
+ * - It offers Remote Compose components the synthesised shelf never had; most now export, and those
+ *   that cannot are pinned below with the reason.
  * - The two widget containers are restored as builtins (a Glance Wear host frame has no record),
  *   which matters because `RecordFreeExport` routes on the root component id.
  * - `m3/text` is not lost: it is `remote-m3/remote-text`. `remote-m3/lottie` is server-built from
@@ -71,8 +71,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
     get() = result.catalog
 
   /**
-   * The record behind each published component, under its builder id — the composition's own
-   * join, the same map `ServeRunner` hands the export executor.
+   * The record behind each published component, under its builder id — the composition's own join,
+   * the same map `ServeRunner` hands the export executor.
    */
   private val composedRecords: Map<String, ComponentRecord>
     get() = result.records
@@ -277,8 +277,8 @@ class PublishedRemoteM3CatalogEquivalenceTest {
 
   /**
    * Which published components `RemoteContentEmitter` has hand-written cases for, versus the record
-   * fallback. Kept separate from the export test because the two mechanisms fail differently, and
-   * a new case should be deliberate.
+   * fallback. Kept separate from the export test because the two mechanisms fail differently, and a
+   * new case should be deliberate.
    *
    * Asserted as the exact current set. The exclusion of `RemoteMaterial3` components is taken only
    * when the vocabulary names all of them (the pinned 3.44.0 has the record but not the

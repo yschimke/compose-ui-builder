@@ -146,8 +146,8 @@ internal fun wearDesignTokens(): JsonObject {
 /**
  * How the builder's insert panel shelves `wear-m3`, and which property carries a component's
  * variants. Wear's own families lead (screen, list); `wear-m3/edge-button`'s `size` is a variant.
- * Absent as variants: lazy column `transformation`, slider `segmented`, `iconKey` and text
- * `style`, which are properties rather than kinds of component.
+ * Absent as variants: lazy column `transformation`, slider `segmented`, `iconKey` and text `style`,
+ * which are properties rather than kinds of component.
  */
 internal fun wearComponentMenu(): JsonObject {
   val shelves =
@@ -299,9 +299,7 @@ private fun wearNumber(name: String, notes: String? = null): PropertyCapabilityV
     .build()
 
 /** A number a state variable can drive, which arrives as a wrapper object. */
-/**
- * The action a click runs: an object or null (a binding), as the mobile catalog declares it.
- */
+/** The action a click runs: an object or null (a binding), as the mobile catalog declares it. */
 private fun wearClickAction(): PropertyCapabilityV1 =
   PropertyCapabilityV1.Builder(
       "onClickAction",
@@ -430,8 +428,8 @@ private val WEAR_MODIFIERS =
   )
 
 /**
- * What a button that can sit in a `ButtonGroup` takes: `weight` (`ButtonGroupScope.weight`) and
- * the few modifiers that size or tag it.
+ * What a button that can sit in a `ButtonGroup` takes: `weight` (`ButtonGroupScope.weight`) and the
+ * few modifiers that size or tag it.
  */
 private val WEAR_BUTTON_GROUP_CHILD_MODIFIERS =
   listOf("weight", "size", "width", "padding", "testTag")
@@ -502,8 +500,8 @@ private val WEAR_TYPE_ROLES =
   )
 
 /**
- * The label a header draws, and its truncation: the `Text` inside upstream's content lambda,
- * shared by `ListHeader` and `ListSubHeader`.
+ * The label a header draws, and its truncation: the `Text` inside upstream's content lambda, shared
+ * by `ListHeader` and `ListSubHeader`.
  */
 private fun wearLabelProperties(): List<PropertyCapabilityV1> =
   listOf(
@@ -534,8 +532,8 @@ private fun wearTransformingLazyColumnProperties(): List<PropertyCapabilityV1> =
   )
 
 /**
- * The Wear Material 3 components with no Material 3 counterpart at all (labelled full-width
- * rows, segmented slider, pickers).
+ * The Wear Material 3 components with no Material 3 counterpart at all (labelled full-width rows,
+ * segmented slider, pickers).
  *
  * Nothing here is a lookalike: `ee.schimke.wearcmp:*` is Wear Compose compiled for Compose
  * Multiplatform, so the canvas calls the same composables the generated screen names. See
@@ -998,11 +996,10 @@ private fun wearOnlyComponents(
 /**
  * `wear-m3`: the Wear Compose Material 3 screen, as an authoring surface.
  *
- * Components are drawn by `ee.schimke.wearcmp:*` (Wear Compose compiled for Compose
- * Multiplatform); the generated screen and native render use the real AAR. The canvas still draws
- * three things itself, each noted in its `wasm` note: the screen scaffold (no viewport), the
- * unrolled list (long captures disable the transformation), and `wear-m3/text` (the mobile type
- * scale).
+ * Components are drawn by `ee.schimke.wearcmp:*` (Wear Compose compiled for Compose Multiplatform);
+ * the generated screen and native render use the real AAR. The canvas still draws three things
+ * itself, each noted in its `wasm` note: the screen scaffold (no viewport), the unrolled list (long
+ * captures disable the transformation), and `wear-m3/text` (the mobile type scale).
  *
  * The scaffold is drawn as a stadium — the long-screenshot convention, showing the whole extent.
  * Straight sides overstate row width near the curve; the frame pane shows the real layout. See

@@ -7,9 +7,9 @@ package ee.schimke.composeai.uibuilder.renderer.sdk
  * [NOTO_FALLBACK_ROUTE]`/<path>` instead of `fonts.gstatic.com`, which the pages' CSP blocks. A
  * host without the route answers 404 and the fetch falls through to gstatic.
  *
- * Idempotent; called by both font registries before the first text layout. Other requests go to
- * the native `fetch` untouched (preserving Chromium's compiled-Wasm cache); the native function is
- * kept as `uiBuilderNativeFetch` for the web smoke test.
+ * Idempotent; called by both font registries before the first text layout. Other requests go to the
+ * native `fetch` untouched (preserving Chromium's compiled-Wasm cache); the native function is kept
+ * as `uiBuilderNativeFetch` for the web smoke test.
  */
 fun routeFallbackFontsThroughHost() {
   installFallbackFontRoute(GSTATIC_FALLBACK_BASE, "$NOTO_FALLBACK_ROUTE/")

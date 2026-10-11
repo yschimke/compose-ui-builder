@@ -10,8 +10,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * What a new design starts as — one answer shared by the browser bootstrap and the server's
- * create routes ([POST][.document], or a `PUT` of a new design), so templates cannot drift.
+ * What a new design starts as — one answer shared by the browser bootstrap and the server's create
+ * routes ([POST][.document], or a `PUT` of a new design), so templates cannot drift.
  */
 object UiBuilderNewDesignSeed {
 
@@ -274,8 +274,8 @@ private val seedJson = Json {
 }
 
 /**
- * The candidate document as the released v1 service document, via a serialize/parse round trip
- * (the shapes are identical, so a hand mapping could only diverge).
+ * The candidate document as the released v1 service document, via a serialize/parse round trip (the
+ * shapes are identical, so a hand mapping could only diverge).
  */
 fun UiBuilderDocument.toDesignDocumentV1(): DesignDocumentV1 =
   seedJson

@@ -3,8 +3,8 @@ package ee.schimke.composeai.uibuilder.export
 import kotlinx.serialization.json.*
 
 /**
- * Whether a state reference produces a value admitted by a catalog property; null means it is not
- * a state reference and literal validation applies.
+ * Whether a state reference produces a value admitted by a catalog property; null means it is not a
+ * state reference and literal validation applies.
  *
  * Properties admitting objects keep their binding vocabulary. Scalar-only properties may read
  * matching scalar state, nullable only if they admit null. Allowed-values properties cannot take
@@ -73,9 +73,9 @@ fun stateBindingMatchesCatalog(
 }
 
 /**
- * Whether a computed value (`expr`/`system`) may fill a property of [jsonType]: number into
- * number, Boolean into flag, anything printable into text, colour only into colour. An expression
- * that does not type against declared state never matches.
+ * Whether a computed value (`expr`/`system`) may fill a property of [jsonType]: number into number,
+ * Boolean into flag, anything printable into text, colour only into colour. An expression that does
+ * not type against declared state never matches.
  */
 private fun computedMatchesCatalog(
   value: JsonObject,

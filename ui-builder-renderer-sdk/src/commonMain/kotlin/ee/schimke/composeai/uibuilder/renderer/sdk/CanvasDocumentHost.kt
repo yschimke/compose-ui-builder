@@ -289,8 +289,8 @@ fun CanvasDocumentHost(
  *
  * Measured as `CanvasExtentLayout` does: once with unbounded height for the natural size, then
  * placed at the taller of that and the surface, so filling content still grows past the frame and
- * `fillMaxHeight` still fills. Only the second measurement is placed. Overhanging rows' bounds
- * tell the editor to grow.
+ * `fillMaxHeight` still fills. Only the second measurement is placed. Overhanging rows' bounds tell
+ * the editor to grow.
  */
 @Suppress("DEPRECATION")
 @Composable
@@ -341,18 +341,16 @@ private fun LayoutCoordinates.overlayBoundsOf(node: LayoutCoordinates): Rect =
     node.boundsInWindow().translate(-positionInWindow())
   }
 
-/**
- * Applies the forgets queued since the last frame, in its own scope so only this recomposes.
- */
+/** Applies the forgets queued since the last frame, in its own scope so only this recomposes. */
 @Composable
 private fun FlushForgottenBounds(requests: IntState, flush: () -> Unit) {
   if (requests.intValue > 0) SideEffect(flush)
 }
 
 /**
- * The document environment key asking for horizontal scrollers drawn whole (a `LazyRow` as a
- * `Row`, carousel items side by side), set only on the pop-out of a single horizontal container.
- * An environment key because renderer protocol modes are closed; see
+ * The document environment key asking for horizontal scrollers drawn whole (a `LazyRow` as a `Row`,
+ * carousel items side by side), set only on the pop-out of a single horizontal container. An
+ * environment key because renderer protocol modes are closed; see
  * [CATALOG_RUNTIME_CAPABILITY_HORIZONTAL_UNROLL].
  */
 const val UI_BUILDER_UNROLLED_AXIS_KEY = "uiBuilderUnrolledAxis"

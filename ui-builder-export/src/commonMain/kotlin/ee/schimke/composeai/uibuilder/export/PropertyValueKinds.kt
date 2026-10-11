@@ -5,8 +5,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * What kind of value a catalog property holds, decided by its name: `jsonType` only gives the
- * JSON scalar, not the meaning.
+ * What kind of value a catalog property holds, decided by its name: `jsonType` only gives the JSON
+ * scalar, not the meaning.
  *
  * `color`/`…Color` hold a colour; `assetKey` a key into the catalog's asset registry; a property
  * with `allowedValues` is an enumeration. Both reducers (the editor's `CapabilityValidator` and the
@@ -96,9 +96,9 @@ object PropertyValueKinds {
     )
 
   /**
-   * The `statusSemantics` entry listing the asset keys a catalog's canvas can draw, as
-   * `{"keys": […]}` (`CatalogCapabilityV1` cannot grow a field from here). No registry means the
-   * asset-key rule does not fire.
+   * The `statusSemantics` entry listing the asset keys a catalog's canvas can draw, as `{"keys":
+   * […]}` (`CatalogCapabilityV1` cannot grow a field from here). No registry means the asset-key
+   * rule does not fire.
    */
   const val ASSET_REGISTRY_KEY: String = "assetRegistry"
 

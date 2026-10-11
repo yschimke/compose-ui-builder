@@ -12,8 +12,8 @@ import kotlinx.serialization.json.putJsonObject
 /**
  * Everything a guidelines model is asked about one design revision, before a model is chosen: the
  * text, pictures, rules and their sources. Readable by people and agents: the editor shows it under
- * Prompt, compose-preview-server returns it from `ui_builder_guidelines_prompt` and
- * `GET …/designs/{id}/guidelines/prompt`, and an agent can use its own model.
+ * Prompt, compose-preview-server returns it from `ui_builder_guidelines_prompt` and `GET
+ * …/designs/{id}/guidelines/prompt`, and an agent can use its own model.
  * [DesignGuidelinePrompt.body] turns it into the request.
  */
 @OptIn(ExperimentalSerializationApi::class)

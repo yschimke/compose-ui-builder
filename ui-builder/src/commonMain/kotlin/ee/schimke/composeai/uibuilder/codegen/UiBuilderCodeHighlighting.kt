@@ -15,7 +15,6 @@ import dev.snipme.highlights.model.ColorHighlight
 import dev.snipme.highlights.model.SyntaxLanguage
 import dev.snipme.highlights.model.SyntaxTheme
 import dev.snipme.highlights.model.SyntaxThemes
-import ee.schimke.composeai.uibuilder.editor.EditorGeneratedCode
 
 /**
  * Kotlin syntax highlighting for the Code pane, as an [AnnotatedString].

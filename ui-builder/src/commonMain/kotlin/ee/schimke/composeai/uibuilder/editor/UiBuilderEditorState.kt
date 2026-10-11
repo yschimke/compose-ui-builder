@@ -59,7 +59,6 @@ import ee.schimke.composeai.uibuilder.export.isWearScreen
 import ee.schimke.composeai.uibuilder.export.isWearWidget
 import ee.schimke.composeai.uibuilder.exportRecord
 import ee.schimke.composeai.uibuilder.frameGeometry
-import ee.schimke.composeai.uibuilder.packComponentRecords
 import ee.schimke.composeai.uibuilder.packComponentsById
 import ee.schimke.composeai.uibuilder.reference.PLACED_PIECE_WIDTH_FRACTION
 import ee.schimke.composeai.uibuilder.reference.REFERENCE_FONT_SIZE_PROPERTY
@@ -1246,8 +1245,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * The free text [nodeId] shows when editable in place on the canvas, or null for bound or choice-valued
-   * text.
+   * The free text [nodeId] shows when editable in place on the canvas, or null for bound or
+   * choice-valued text.
    */
   fun inlineText(state: UiBuilderEditorState, nodeId: String): String? {
     if (nodeId !in state.document.nodes) return null
@@ -2072,8 +2071,8 @@ class UiBuilderEditorReducer(
   /**
    * Which generator writes a design, and what it refused.
    *
-   * @param dedicated whether a `RecordFreeExport` emitter owns the design rather than the record-driven
-   * `ScreenGenerator`.
+   * @param dedicated whether a `RecordFreeExport` emitter owns the design rather than the
+   *   record-driven `ScreenGenerator`.
    */
   private class ExportOutcome(val dedicated: Boolean, val reasons: List<String>) {
     /**
@@ -2284,8 +2283,8 @@ class UiBuilderEditorReducer(
   }
 
   /**
-   * Add a top-level item beside the design as one command (see [besideDestination]). Two roots mid-command
-   * are legal because `requireSingleRoot` runs per command.
+   * Add a top-level item beside the design as one command (see [besideDestination]). Two roots
+   * mid-command are legal because `requireSingleRoot` runs per command.
    */
   private fun insertBeside(
     state: UiBuilderEditorState,
@@ -3077,8 +3076,8 @@ class UiBuilderEditorReducer(
   private val TIDY_GRID_DP = 4
 
   /**
-   * The literal with its dp value snapped to the grid, or null. Only plain numbers move, and on-grid
-   * values are untouched (including int vs decimal spelling).
+   * The literal with its dp value snapped to the grid, or null. Only plain numbers move, and
+   * on-grid values are untouched (including int vs decimal spelling).
    */
   private fun JsonObject.snappedDpLiteral(): JsonObject? {
     val snapped = snappedDpNumber(get("value") ?: return null) ?: return null

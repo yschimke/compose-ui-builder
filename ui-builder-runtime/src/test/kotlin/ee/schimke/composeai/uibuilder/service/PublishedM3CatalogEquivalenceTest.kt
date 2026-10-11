@@ -23,8 +23,8 @@ import kotlinx.serialization.json.contentOrNull
  * [PublishedGeneratedM3CatalogEquivalenceTest], against a real `composePreviewDiscover` capture.
  * Even together they are a floor, not a proof.
  *
- * Do not edit a generated file to keep a test green: the frozen and published component sets
- * differ deliberately (`UI_BUILDER_CATALOG_CONTRACT.md`). Composer refusal tests live in
+ * Do not edit a generated file to keep a test green: the frozen and published component sets differ
+ * deliberately (`UI_BUILDER_CATALOG_CONTRACT.md`). Composer refusal tests live in
  * `PublishedUiBuilderCatalogHostileInputTest`.
  */
 class PublishedM3CatalogEquivalenceTest {
@@ -312,9 +312,7 @@ class PublishedM3CatalogEquivalenceTest {
     )
   }
 
-  /**
-   * An injected component arrives on the shelf it was written for, not a generic role heading.
-   */
+  /** An injected component arrives on the shelf it was written for, not a generic role heading. */
   @Test
   fun `the donor's menu entries travel with the injected components`() {
     val served =

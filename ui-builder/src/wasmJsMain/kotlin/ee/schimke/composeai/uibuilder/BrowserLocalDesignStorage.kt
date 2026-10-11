@@ -22,11 +22,11 @@ import kotlinx.serialization.json.contentOrNull
  *
  * IndexedDB is async while [LocalDesignStorage] is synchronous, so the seam sits at two edges:
  * * **Open.** [BrowserLocalStorageBackend.hydrate] runs before the editor composes: opens the
- * database, migrates `localStorage` once, and loads every `ui-builder.local.*` entry into memory,
- * so reads are map lookups.
+ *   database, migrates `localStorage` once, and loads every `ui-builder.local.*` entry into memory,
+ *   so reads are map lookups.
  * * **Write.** Writes land in memory immediately (so `Stored` / `Compacted` / `Refused` still
- * answer synchronously) and are written behind to IndexedDB in order. Later refusals (quota, full
- * disk) go to [BrowserLocalStorageBackend.onWriteFailure].
+ *   answer synchronously) and are written behind to IndexedDB in order. Later refusals (quota, full
+ *   disk) go to [BrowserLocalStorageBackend.onWriteFailure].
  *
  * Schema: database `ui-builder-local` v1, store `entries` (out-of-line keys; same keys and text
  * values `localStorage` held) and store `meta`, whose `migratedFromLocalStorage` records the

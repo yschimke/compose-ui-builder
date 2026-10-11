@@ -17,10 +17,10 @@ import kotlin.test.assertIs
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * A design stored against one catalog source opens pinned to the one being served, so the
- * editor's `ExportValidation.validateCatalogPin` does not refuse it after a source flip. Mirrors
- * `CatalogSourceFlipTest` in `:server`. The stub holds two accepted references with one served,
- * as the production runtime does after a flip.
+ * A design stored against one catalog source opens pinned to the one being served, so the editor's
+ * `ExportValidation.validateCatalogPin` does not refuse it after a source flip. Mirrors
+ * `CatalogSourceFlipTest` in `:server`. The stub holds two accepted references with one served, as
+ * the production runtime does after a flip.
  */
 class CatalogSourceRePinTest {
 

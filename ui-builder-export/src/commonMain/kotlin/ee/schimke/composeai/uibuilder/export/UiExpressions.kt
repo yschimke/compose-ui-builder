@@ -19,8 +19,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 
 /**
- * Computed property values: `{"type":"expr","op":…,"args":[…]}` and `{"type":"system","value":…}`
- * — values the player evaluates (clocks, progress-driven gauges, counters).
+ * Computed property values: `{"type":"expr","op":…,"args":[…]}` and `{"type":"system","value":…}` —
+ * values the player evaluates (clocks, progress-driven gauges, counters).
  *
  * A typed tree rather than a string, so every writer produces one validated shape and errors name
  * their operand. Operands are ordinary property wrappers plus `system` (host values like the clock)

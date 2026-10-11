@@ -6,8 +6,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * What a path claims, as the cases that would break a consumer. Most important: with no
- * repetition, a path is spelled exactly like its node id, so existing keys are unchanged.
+ * What a path claims, as the cases that would break a consumer. Most important: with no repetition,
+ * a path is spelled exactly like its node id, so existing keys are unchanged.
  */
 class UiBuilderInstancePathTest {
   @Test

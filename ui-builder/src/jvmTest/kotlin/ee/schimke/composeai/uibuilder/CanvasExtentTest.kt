@@ -86,7 +86,7 @@ class CanvasExtentTest {
   /**
    * A Wear screen's `TransformingLazyColumn` reports infinite height against infinity (`Size(w x
    * 2147483647) is out of range`, a blank editor), so the extent draws it as a Column; this
-   * measures that the Column wraps.
+   *             measures that the Column wraps.
    */
   @Test
   fun `an unrolled wear transforming list grows past the frame`() {

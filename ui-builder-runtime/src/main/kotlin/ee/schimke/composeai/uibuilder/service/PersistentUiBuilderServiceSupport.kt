@@ -65,8 +65,8 @@ internal fun DesignAccessControlV1.allows(actorId: String, action: DesignAccessA
     }
 
 /**
- * [allows] without the [UiBuilderPublicAccess.ANYONE_ACTOR_ID] grant: "is this design one of
- * mine", which is what a listing asks (otherwise every public design lists for everyone).
+ * [allows] without the [UiBuilderPublicAccess.ANYONE_ACTOR_ID] grant: "is this design one of mine",
+ * which is what a listing asks (otherwise every public design lists for everyone).
  */
 internal fun DesignAccessControlV1.allowsPersonally(
   actorId: String,
@@ -89,8 +89,8 @@ internal fun PersistedDesignV1.allows(actorId: String, action: DesignAccessActio
   access.allows(actorId, action)
 
 /**
- * The same question asked of a whole identity: an actor may act, or the human it acts for may.
- * The one place delegation is honoured — a delegate reaches exactly its principal's designs and
+ * The same question asked of a whole identity: an actor may act, or the human it acts for may. The
+ * one place delegation is honoured — a delegate reaches exactly its principal's designs and
  * actions.
  */
 internal fun PersistedDesignV1.allows(
@@ -127,8 +127,8 @@ internal fun PersistedDesignV1.listItem(actor: AuthenticatedUiBuilderActor): Des
   )
 
 /**
- * The list row for a design the store could not read, built from the header its quarantine kept,
- * so it is listed titled and owned rather than as a bare id.
+ * The list row for a design the store could not read, built from the header its quarantine kept, so
+ * it is listed titled and owned rather than as a bare id.
  */
 internal fun StoredDesignHeaderV3.quarantinedListItem(
   designId: String,
@@ -171,8 +171,8 @@ internal fun PersistedDesignV1.retainedFromSequence(): Long =
 
 /**
  * The oldest sequence a whole revision is still retained for, which is not [retainedFromSequence]
- * (the operation log's floor, right for deltas). A `SNAPSHOT_REQUIRED` must quote this floor, or
- * a client could loop asking for a missing revision.
+ * (the operation log's floor, right for deltas). A `SNAPSHOT_REQUIRED` must quote this floor, or a
+ * client could loop asking for a missing revision.
  */
 internal fun PersistedDesignV1.retainedSnapshotFromSequence(): Long {
   // The floor is the start of the unbroken run ending at the head: a pinned branch fork point can
@@ -473,8 +473,7 @@ internal fun DesignDocumentV1.rebuildLocation(
 }
 
 /**
- * Write one component declaration, keeping the root list honest about which subtree is the
- * screen.
+ * Write one component declaration, keeping the root list honest about which subtree is the screen.
  *
  * A body declared while an extra root leaves the root list (it is now a definition); a body that
  * loses its declaration and is placed nowhere returns to it. Both directions read the document
@@ -530,9 +529,9 @@ internal data class StateUsageIssue(val nodeId: String, val field: String, val m
 /**
  * The first place [declarations] would leave a design saying something it cannot mean.
  *
- * One whole-document scan for all three state mutations (removal stranding a reader,
- * redefinition narrowing one, binding an undeclared name). Also refuses `toggle` on a non-flag
- * and `selectOrClear` on a non-nullable, which the exporter could not perform.
+ * One whole-document scan for all three state mutations (removal stranding a reader, redefinition
+ * narrowing one, binding an undeclared name). Also refuses `toggle` on a non-flag and
+ * `selectOrClear` on a non-nullable, which the exporter could not perform.
  */
 internal fun DesignDocumentV1.stateUsageIssue(
   declarations: Map<String, StateVariableV1>
@@ -589,8 +588,8 @@ internal fun DesignDocumentV1.stateUsageIssue(
 }
 
 /**
- * Whether a declaration holds a boolean, and whether it may hold null — read as the browser
- * reducer reads them, `initialValue` fallback included, so editor and server agree.
+ * Whether a declaration holds a boolean, and whether it may hold null — read as the browser reducer
+ * reads them, `initialValue` fallback included, so editor and server agree.
  */
 private fun StateVariableV1.isFlag(): Boolean =
   when (valueType) {
@@ -785,8 +784,8 @@ internal fun validateTopology(document: DesignDocumentV1): RejectedOutcomeV1? {
 }
 
 /**
- * A throwable's message with Java exception class names taken out, so a render failure reaches
- * the client as the sentence the code wrote rather than a stack-trace class name.
+ * A throwable's message with Java exception class names taken out, so a render failure reaches the
+ * client as the sentence the code wrote rather than a stack-trace class name.
  */
 internal fun Throwable.clientMessage(): String {
   val message = message?.takeIf { it.isNotBlank() } ?: return "the exporter threw without a message"
@@ -991,12 +990,12 @@ internal fun documentRetentionBytes(document: DesignDocumentV1): Int =
  * The newest entries of [this] that fit in [budgetBytes], keeping at least [minimumEntries], plus
  * whatever those entries [pin].
  *
- * Walks newest-first and stops at the first entry over budget, so cost is bounded by what is
- * kept. Insertion order is age order (re-adding a key keeps its position).
+ * Walks newest-first and stops at the first entry over budget, so cost is bounded by what is kept.
+ * Insertion order is age order (re-adding a key keeps its position).
  *
  * [pin] exists because an undo is appended while its target keeps its old position: without
- * pinning, undoing the oldest retained record could evict its own target and make an immediate
- * redo fail with `UNKNOWN_OPERATION`. Pins are followed to a fixpoint (redo → undo → original).
+ * pinning, undoing the oldest retained record could evict its own target and make an immediate redo
+ * fail with `UNKNOWN_OPERATION`. Pins are followed to a fixpoint (redo → undo → original).
  *
  * Bytes are UTF-8 as stored, keys included. Returns [this] unchanged when everything fits.
  */
@@ -1082,8 +1081,8 @@ internal fun touchKey(kind: String, vararg parts: String): String =
  *   `DesignCommandV1.stalenessBaseRevision`, giving `(stalenessBaseRevision, head]`, and [run]
  *   excludes the run's own writes. Concurrent writes between its commands are still reported.
  *
- * The touch log is pruned against the oldest retained position snapshot. Branch forks are pinned;
- * a Sync start is not, but the retained touches always cover at least `(baseRevision, head]`.
+ * The touch log is pruned against the oldest retained position snapshot. Branch forks are pinned; a
+ * Sync start is not, but the retained touches always cover at least `(baseRevision, head]`.
  */
 internal data class StalenessWindow(
   val since: Long,
