@@ -129,6 +129,7 @@ Auto-generated from `main`. Browse inline or compare against PR branches.
 | `UiBuilderShortcutsPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderShortcutsPreview-707f5f98.png" width="150" /> |
 | `UiBuilderSuggestionOnCanvasPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderSuggestionOnCanvasPreview-ce194913.png" width="150" /> |
 | `UiBuilderSuggestionsPanelPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderSuggestionsPanelPreview-920b910e.png" width="150" /> |
+| `UiBuilderWrapChooserPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/UiBuilderWrapChooserPreview-646b794e.png" width="150" /> |
 | `CatalogUnadvertisedComponentsPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/CatalogUnadvertisedComponentsPreview-f3ed924a.png" width="150" /> |
 | `WearComponentPalettePreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/WearComponentPalettePreview-77fc48d4.png" width="150" /> |
 | `JetcasterWearEpisodeLargeExtentPreview` | <img src="https://raw.githubusercontent.com/yschimke/compose-ui-builder/compose-preview/main/renders/ui-builder/JetcasterWearEpisodeLargeExtentPreview-1c3277b1.png" width="150" /> |

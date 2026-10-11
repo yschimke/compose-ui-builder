@@ -1020,7 +1020,7 @@
     "functionName": "UiBuilderShortcutsPreview",
     "module": "ui-builder",
     "renderBasename": "UiBuilderShortcutsPreview-707f5f98.png",
-    "sha256": "6e1b09454c90b6ff0486f124268dbcc68285da6e5fc74e9d9414200d48af6aaa",
+    "sha256": "20bd70623e5f342299ca2599eee0954e4940f5ff1a1f9624f00e74aa5e3936d8",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderShortcutsPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderSuggestionsPreviewKt.UiBuilderSuggestionOnCanvasPreview": {
@@ -1038,6 +1038,14 @@
     "renderBasename": "UiBuilderSuggestionsPanelPreview-920b910e.png",
     "sha256": "d7877f069ad82c341ab632de8c28c848ef651be099d21e9d0490b57563bc8e71",
     "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderSuggestionsPreview.kt"
+  },
+  "ui-builder/ee.schimke.composeai.uibuilder.preview.UiBuilderWrapChooserPreviewKt.UiBuilderWrapChooserPreview": {
+    "captureLabel": "",
+    "functionName": "UiBuilderWrapChooserPreview",
+    "module": "ui-builder",
+    "renderBasename": "UiBuilderWrapChooserPreview-646b794e.png",
+    "sha256": "1ae57bef85c7c5f0a6d23bc8eaf1edc3c92222a7f830a8d40dabe2fb8449d896",
+    "sourceFile": "src/jvmMain/kotlin/ee/schimke/composeai/uibuilder/preview/UiBuilderWrapChooserPreview.kt"
   },
   "ui-builder/ee.schimke.composeai.uibuilder.preview.UnadvertisedComponentPreviewKt.CatalogUnadvertisedComponentsPreview": {
     "captureLabel": "",
