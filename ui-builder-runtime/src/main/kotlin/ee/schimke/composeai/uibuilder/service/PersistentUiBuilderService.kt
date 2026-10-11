@@ -184,9 +184,15 @@ public data class UiBuilderServiceLimits(
   val maximumAssetBytes: Int = 1_024 * 1_024,
   /** How many keys one design's `assets` map may hold. */
   val maximumAssetsPerDesign: Int = 64,
+  /**
+   * How long a deleted design stays in the trash, restorable, before
+   * [UiBuilderAdminPort.purgeExpiredTrash] removes it for good. See `UI_BUILDER_TRASH.md`.
+   */
+  val trashRetentionMillis: Long = 24L * 60 * 60 * 1_000,
 ) {
   init {
     require(maximumDesigns > 0)
+    require(trashRetentionMillis > 0)
     require(maximumAssetBytes > 0)
     require(maximumAssetsPerDesign > 0)
     require(maximumNodesPerDesign > 0)
@@ -381,13 +387,23 @@ public class PersistentUiBuilderService(
   private val loadedPersistence = store.load()
   private var persisted: PersistedServiceV1 =
     PersistedServiceV1(
-      loadedPersistence.designs.mapValues { (_, design) ->
-        // Filled first: `rePinned` validates before it moves a pin, and a newly required property
-        // the design lacks is exactly what would make it refuse.
-        design.withNewlyRequiredFilled().rePinned()
-      }
+      loadedPersistence.designs
+        .filterValues { it.trashedAtEpochMillis == null }
+        .mapValues { (_, design) ->
+          // Filled first: `rePinned` validates before it moves a pin, and a newly required property
+          // the design lacks is exactly what would make it refuse.
+          design.withNewlyRequiredFilled().rePinned()
+        }
     )
   private val rePin: RePinOutcome = persistRePins()
+
+  /**
+   * Deleted designs awaiting restore or purge, by id. Kept apart from [persisted] so every other
+   * path sees a trashed design exactly as it saw a deleted one: not found. Written under [lock]
+   * only.
+   */
+  private val trash: MutableMap<String, PersistedDesignV1> =
+    loadedPersistence.designs.filterValues { it.trashedAtEpochMillis != null }.toMutableMap()
   private val runtime = linkedMapOf<String, RuntimeDesign>()
   private var nextSubscriberId = 1L
   private val exportPermits = Semaphore(limits.maximumConcurrentExports)
@@ -614,6 +630,7 @@ public class PersistentUiBuilderService(
       is UiBuilderServiceRequest.ExportDesign -> designId
       is UiBuilderServiceRequest.RenameDesign -> designId
       is UiBuilderServiceRequest.DeleteDesign -> designId
+      is UiBuilderServiceRequest.RestoreDesign -> designId
       is UiBuilderServiceRequest.ListRevisions -> designId
       is UiBuilderServiceRequest.RestoreRevision -> designId
       is UiBuilderServiceRequest.MoveDesignHome -> designId
@@ -621,6 +638,7 @@ public class PersistentUiBuilderService(
       UiBuilderServiceRequest.ListCatalogs,
       is UiBuilderServiceRequest.ExportDocument,
       is UiBuilderServiceRequest.CreateDesign,
+      is UiBuilderServiceRequest.ListTrash,
       is UiBuilderServiceRequest.ListDesigns -> null
     }
 
@@ -932,6 +950,8 @@ public class PersistentUiBuilderService(
         error("export is executed outside the service lock")
       is UiBuilderServiceRequest.RenameDesign -> rename(call.actor, request)
       is UiBuilderServiceRequest.DeleteDesign -> delete(call.actor, request.designId)
+      is UiBuilderServiceRequest.RestoreDesign -> restoreFromTrash(call.actor, request.designId)
+      is UiBuilderServiceRequest.ListTrash -> listTrash(call.actor)
       is UiBuilderServiceRequest.ListRevisions -> revisions(call.actor, request.designId)
       is UiBuilderServiceRequest.RestoreRevision -> restore(call.actor, request)
       is UiBuilderServiceRequest.MoveDesignHome -> moveHome(call.actor, request)
@@ -1493,9 +1513,19 @@ public class PersistentUiBuilderService(
       if (!design.deletableBy(actor)) {
         return serviceError(forbidden("delete", designId))
       }
-      // Closed under the lock, after [removeLocked] has made the removal durable.
-      removeLocked(designId).forEach(SubscriberMailbox::close)
-      return LockedExecution(UiBuilderServiceResponse.DesignDeleted(designId))
+      val trashed =
+        design.copy(
+          trashedAtEpochMillis = clock.millis(),
+          trashedByActorId = canonicalActorId(actor.actorId),
+        )
+      // Closed under the lock, after [trashLocked] has made the move durable.
+      trashLocked(designId, design, trashed).forEach(SubscriberMailbox::close)
+      return LockedExecution(
+        UiBuilderServiceResponse.DesignDeleted(
+          designId,
+          restorableUntilEpochMillis = trashed.trashedAtEpochMillis!! + limits.trashRetentionMillis,
+        )
+      )
     }
     val quarantined = quarantinedDesigns[designId]
     if (quarantined != null) {
@@ -1524,11 +1554,18 @@ public class PersistentUiBuilderService(
     actor: AuthenticatedUiBuilderActor,
     requested: DesignDocumentV1,
   ): LockedExecution {
-    if (persisted.designs.size >= limits.maximumDesigns) {
+    if (persisted.designs.size + trash.size >= limits.maximumDesigns) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "design limit reached")
     }
     if (requested.id.isBlank() || requested.id in persisted.designs) {
       return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "design id is blank or already exists")
+    }
+    trash[requested.id]?.let {
+      // Creating over it would overwrite the trashed design's files and lose the restore.
+      return serviceError(
+        ServiceErrorCodeV1.BAD_REQUEST,
+        "design ${requested.id} is in the trash; restore it, or pick another id",
+      )
     }
     // A quarantined design occupies this id's directory on disk; creating over it would corrupt
     // both. Asked of the store by place, since a quarantine may be reported under a different
@@ -2326,7 +2363,11 @@ public class PersistentUiBuilderService(
     while (true) {
       val candidate =
         "$parentDesignId-branch-" + java.util.UUID.randomUUID().toString().replace("-", "").take(12)
-      if (candidate !in persisted.designs && store.quarantineHolding(candidate) == null) {
+      if (
+        candidate !in persisted.designs &&
+          candidate !in trash &&
+          store.quarantineHolding(candidate) == null
+      ) {
         return candidate
       }
     }
@@ -4631,6 +4672,11 @@ public class PersistentUiBuilderService(
 
   override fun adminDeleteDesign(designId: String): Boolean {
     val closed: List<SubscriberMailbox> = lock.withLock {
+      // The operator's delete is permanent, so it also empties a design out of the trash.
+      if (trash.remove(designId) != null) {
+        store.remove(designId)
+        return@withLock emptyList()
+      }
       // An unreadable design is not in the map but is still on disk; retiring it must keep working.
       if (designId !in persisted.designs) {
         if (unusableDesigns[designId]?.storeQuarantine != true) return false
@@ -4662,6 +4708,89 @@ public class PersistentUiBuilderService(
     val removed = runtime.remove(designId)
     mutationBuckets.keys.removeIf { (_, bucketDesignId) -> bucketDesignId == designId }
     return removed?.subscribers?.values?.map { it.mailbox }.orEmpty()
+  }
+
+  /**
+   * Move a live design into the trash under the lock: durable first, as [removeLocked], then gone
+   * from every live path. Hands back the streams that were open on it.
+   */
+  private fun trashLocked(
+    designId: String,
+    design: PersistedDesignV1,
+    trashed: PersistedDesignV1,
+  ): List<SubscriberMailbox> {
+    store.commit(designId, design, trashed)
+    persisted = persisted.copy(designs = persisted.designs - designId)
+    trash[designId] = trashed
+    unusableDesigns.remove(designId)
+    quarantinedDesigns.remove(designId)
+    val removed = runtime.remove(designId)
+    mutationBuckets.keys.removeIf { (_, bucketDesignId) -> bucketDesignId == designId }
+    return removed?.subscribers?.values?.map { it.mailbox }.orEmpty()
+  }
+
+  /** See [UiBuilderServiceRequest.RestoreDesign]: whoever could delete it may bring it back. */
+  private fun restoreFromTrash(
+    actor: AuthenticatedUiBuilderActor,
+    designId: String,
+  ): LockedExecution {
+    val trashed = trash[designId] ?: return serviceError(notFound(designId))
+    if (!trashed.deletableBy(actor)) return serviceError(forbidden("restore", designId))
+    if (designId in persisted.designs) {
+      return serviceError(ServiceErrorCodeV1.BAD_REQUEST, "design $designId already exists")
+    }
+    val restored = trashed.copy(trashedAtEpochMillis = null, trashedByActorId = null)
+    store.commit(designId, trashed, restored)
+    trash.remove(designId)
+    persisted = persisted.copy(designs = persisted.designs + (designId to restored))
+    runtime[designId] = RuntimeDesign()
+    // The catalog may have moved while it was in the trash; it comes back refused as it would
+    // have loaded, and stays deletable and repairable.
+    unusableReason(designId, restored)?.let { unusableDesigns[designId] = it }
+    return LockedExecution(UiBuilderServiceResponse.DesignRestored(restored.listItem(actor)))
+  }
+
+  /** See [UiBuilderServiceRequest.ListTrash]: the trashed designs this actor may restore. */
+  private fun listTrash(actor: AuthenticatedUiBuilderActor): LockedExecution =
+    LockedExecution(
+      UiBuilderServiceResponse.Trash(
+        trash.values.filter { it.deletableBy(actor) }.map(::trashedDesignOf).sortedTrash()
+      )
+    )
+
+  private fun trashedDesignOf(design: PersistedDesignV1): UiBuilderTrashedDesign {
+    val trashedAt = design.trashedAtEpochMillis ?: 0L
+    return UiBuilderTrashedDesign(
+      designId = design.document.id,
+      title = design.document.title,
+      ownerActorId = design.access.ownerActorId,
+      trashedAtEpochMillis = trashedAt,
+      trashedByActorId = design.trashedByActorId.orEmpty(),
+      restorableUntilEpochMillis = trashedAt + limits.trashRetentionMillis,
+    )
+  }
+
+  private fun List<UiBuilderTrashedDesign>.sortedTrash(): List<UiBuilderTrashedDesign> =
+    sortedWith(
+      compareByDescending<UiBuilderTrashedDesign> { it.trashedAtEpochMillis }.thenBy { it.designId }
+    )
+
+  override fun adminListTrash(): List<UiBuilderTrashedDesign> = lock.withLock {
+    trash.values.map(::trashedDesignOf).sortedTrash()
+  }
+
+  override fun purgeExpiredTrash(): List<String> = lock.withLock {
+    val now = clock.millis()
+    val expired =
+      trash.values
+        .filter { (it.trashedAtEpochMillis ?: 0L) + limits.trashRetentionMillis <= now }
+        .map { it.document.id }
+        .sorted()
+    expired.forEach { designId ->
+      store.remove(designId)
+      trash.remove(designId)
+    }
+    expired
   }
 
   /**

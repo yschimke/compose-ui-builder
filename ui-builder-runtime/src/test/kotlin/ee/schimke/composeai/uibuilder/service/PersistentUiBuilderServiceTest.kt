@@ -4186,7 +4186,7 @@ class PersistentUiBuilderServiceTest {
       error(execute(service, delegate, UiBuilderServiceRequest.DeleteDesign("design"))).code,
     )
     assertEquals(
-      UiBuilderServiceResponse.DesignDeleted("design"),
+      UiBuilderServiceResponse.DesignDeleted("design", RESTORABLE_UNTIL),
       execute(service, owner, UiBuilderServiceRequest.DeleteDesign("design")),
     )
     subscription.close()
@@ -4207,7 +4207,7 @@ class PersistentUiBuilderServiceTest {
     val first = service(storage)
     create(first)
     assertEquals(
-      UiBuilderServiceResponse.DesignDeleted("design"),
+      UiBuilderServiceResponse.DesignDeleted("design", RESTORABLE_UNTIL),
       execute(first, owner, UiBuilderServiceRequest.DeleteDesign("design")),
     )
     val second = service(storage)
@@ -4215,7 +4215,13 @@ class PersistentUiBuilderServiceTest {
       ServiceErrorCodeV1.NOT_FOUND,
       error(execute(second, owner, UiBuilderServiceRequest.OpenDesign("design"))).code,
     )
-    // And the id is free again for the next design.
+    // The trash holds the id until the design is restored or purged; the operator's delete empties
+    // it, and then the id is free again for the next design.
+    assertEquals(
+      ServiceErrorCodeV1.BAD_REQUEST,
+      error(execute(second, owner, UiBuilderServiceRequest.CreateDesign(document()))).code,
+    )
+    assertTrue(second.adminDeleteDesign("design"))
     create(second)
   }
 
