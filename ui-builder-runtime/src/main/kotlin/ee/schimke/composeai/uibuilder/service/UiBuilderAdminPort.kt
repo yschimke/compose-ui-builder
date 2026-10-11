@@ -37,10 +37,21 @@ public interface UiBuilderAdminPort {
     adminListDesigns().firstOrNull { it.designId == designId }
 
   /**
-   * Remove a design and everything held for it (history, snapshots, presence, subscribers). Durable
+   * Remove a design and everything held for it (history, snapshots, presence, subscribers), at once
+   * and for good, bypassing the trash; a design already in the trash is emptied out of it. Durable
    * before it returns; false when no such design exists.
    */
   public fun adminDeleteDesign(designId: String): Boolean
+
+  /** Every design in the trash, whoever deleted it, most recently deleted first. */
+  public fun adminListTrash(): List<UiBuilderTrashedDesign> = emptyList()
+
+  /**
+   * Permanently remove every trashed design whose retention has passed, returning their ids so the
+   * host can drop what it keeps beside each design (comments, links, overlays). The runtime runs no
+   * timer: a host calls this on a schedule. See `UI_BUILDER_TRASH.md`.
+   */
+  public fun purgeExpiredTrash(): List<String> = emptyList()
 
   /**
    * Stored designs this build cannot serve, by id, with the reason — so an operator can repair the
