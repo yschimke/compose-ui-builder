@@ -13,11 +13,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A root-only component is listed only where it can land.
- *
- * A Wear widget container is exported as the whole design, so once a design has a root both kinds
- * of Add refuse it. A widget design's list opened on three more widget containers it could never
- * take; an empty design is where one is the right first pick, and there it stays.
+ * A root-only component (e.g. a Wear widget container, exported as the whole design) is listed only
+ * where it can land: on an empty design, not once a root exists.
  */
 class RootOnlyPaletteTest {
   private fun resource(path: String) = checkNotNull(javaClass.getResource(path)).readText()

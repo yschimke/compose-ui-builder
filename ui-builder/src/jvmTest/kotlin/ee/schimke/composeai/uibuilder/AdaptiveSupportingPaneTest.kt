@@ -18,14 +18,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Where the adaptive scaffold is allowed to collapse, and where it is not.
- *
- * `layout/supporting-pane-scaffold` is `androidx.compose.material3.adaptive`'s own
- * `SupportingPaneScaffold` in every **bounded** frame, so a design authored for a tablet loses its
- * supporting pane on a phone exactly as it would in the app. The authoring canvas is the deliberate
- * exception and draws both panes at any width — a collapsed pane there is a subtree that cannot be
- * selected, dropped into or edited, and the width that would collapse it is the canvas's own rather
- * than any device's. `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md` is the rule; this is the pin.
+ * Where the adaptive scaffold may collapse, and where not. In every bounded frame
+ * `layout/supporting-pane-scaffold` is the real `SupportingPaneScaffold`, so a tablet design loses
+ * its supporting pane on a phone. The authoring canvas always draws both panes, so neither is
+ * unreachable. Rule: `docs/design/UI_BUILDER_PREVIEW_FIDELITY.md`.
  */
 @OptIn(ExperimentalTestApi::class)
 class AdaptiveSupportingPaneTest {
@@ -114,12 +110,9 @@ class AdaptiveSupportingPaneTest {
     runDesktopComposeUiTest(width = 411, height = 914) {
       setContent { MaterialTheme { UiBuilderSurface(document()) } }
       onNodeWithText("MainPaneWord").assertIsDisplayed()
-      // Not this repository's threshold: `expandedTwoPane` asks for two panes and a 411 dp window
-      // is compact, so `calculateThreePaneScaffoldValue` hides the supporting one.
-      //
-      // *Not displayed* rather than *absent*: the scaffold keeps a hidden pane in the composition
-      // and measures it to nothing, so its content is still reachable by `onNodeWithText` at zero
-      // size. Asserting existence here would pass against a scaffold that had collapsed nothing.
+      // `expandedTwoPane` in a compact 411dp window: `calculateThreePaneScaffoldValue` hides the
+      // supporting pane. Asserted as *not displayed* since the hidden pane stays composed at zero
+      // size.
       onNodeWithText("SupportPaneWord").assertIsNotDisplayed()
     }
 
@@ -144,17 +137,15 @@ class AdaptiveSupportingPaneTest {
     runDesktopComposeUiTest(width = 411, height = 914) {
       setContent {
         MaterialTheme {
-          // `unrolled = true` inside `CanvasExtentLayout` is the editor's canvas, exactly as
-          // `UiBuilderEditor` composes it — the flag alone would not reproduce the unbounded
-          // measurement the real component cannot survive.
+          // `unrolled = true` inside `CanvasExtentLayout`, as `UiBuilderEditor` composes the
+          // canvas, to reproduce the unbounded measurement.
           CanvasExtentLayout(Modifier.fillMaxSize()) {
             UiBuilderSurface(document(), unrolled = true)
           }
         }
       }
-      // The same document and the same width as the first test, which loses the supporting pane.
-      // This is the rung-1 licence, not a disagreement to reconcile: an author editing the
-      // supporting pane's subtree must be able to see and reach it.
+      // The same document and width as the first test: the editing canvas keeps the supporting pane
+      // reachable.
       onNodeWithText("MainPaneWord").assertIsDisplayed()
       onNodeWithText("SupportPaneWord").assertIsDisplayed()
     }
@@ -169,9 +160,7 @@ class AdaptiveSupportingPaneTest {
           }
         }
       }
-      // `layoutMode` is not consulted on this surface at all. It is the constrained frame's
-      // directive now, and a pane hidden here would be a subtree with no way to reach it — which
-      // is a worse outcome than showing an author a pane their phone will not.
+      // `layoutMode` isn't consulted on this surface; a hidden pane here would be unreachable.
       onNodeWithText("MainPaneWord").assertIsDisplayed()
       onNodeWithText("SupportPaneWord").assertIsDisplayed()
     }
@@ -180,9 +169,7 @@ class AdaptiveSupportingPaneTest {
   fun `a supporting pane that is the only pane is the pane that is shown`() =
     runDesktopComposeUiTest(width = 411, height = 914) {
       setContent { MaterialTheme { UiBuilderSurface(document(mainPaneVisible = false)) } }
-      // One partition goes to the primary pane, so masking the primary afterwards would leave a
-      // value with everything hidden and a blank frame. A design whose only pane is the supporting
-      // one is valid, and it is the pane the frame owes.
+      // With only a supporting pane, it gets the partition rather than leaving the frame blank.
       onNodeWithText("SupportPaneWord").assertIsDisplayed()
       onNodeWithText("MainPaneWord").assertIsNotDisplayed()
     }
@@ -200,11 +187,8 @@ class AdaptiveSupportingPaneTest {
     }
 
   /**
-   * Where the supporting pane starts, at a tablet width, for an authored pair of pane widths.
-   *
-   * The left edge rather than a measured pane box, because the panes are the scaffold's own
-   * partitions and nothing in the design wraps them: the supporting pane's content cannot begin
-   * before the main pane's partition ends, so where its text starts IS where the split fell.
+   * Where the supporting pane starts, at a tablet width, for an authored pair of pane widths. Its
+   * text's left edge is where the split fell, since nothing wraps the scaffold's partitions.
    */
   private fun supportingPaneLeft(mainWidthDp: Int, supportingWidthDp: Int): Float {
     var left = 0f
@@ -222,17 +206,9 @@ class AdaptiveSupportingPaneTest {
   }
 
   /**
-   * The three widths the catalog declares reach the real scaffold.
-   *
-   * `docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md`, gap 2: *"`mainPanePreferredWidthDp`,
-   * `supportingPanePreferredWidthDp` and `paneSpacingDp` are declared by the catalog, stored in the
-   * document, carried through the wire, echoed into the generated source's provenance comment — and
-   * never read. Gmail asks for a 400 dp list beside a 760 dp conversation and gets roughly 810/360,
-   * which is close to the opposite. There is no diagnostic."*
-   *
-   * So this asserts the direction, which is the part that was wrong. A narrow main pane must put
-   * the split early and a wide one must put it late; the bug drew both the same, and drew the pair
-   * Gmail asked for backwards.
+   * The three declared widths (`mainPanePreferredWidthDp`, `supportingPanePreferredWidthDp`,
+   * `paneSpacingDp`) reach the real scaffold (`docs/design/UI_BUILDER_GOOGLE_APP_SAMPLES.md`, gap
+   * 2). Asserts direction: a narrow main pane splits early, a wide one late.
    */
   @Test
   fun `an authored pane width moves the split, in the direction it was authored`() {

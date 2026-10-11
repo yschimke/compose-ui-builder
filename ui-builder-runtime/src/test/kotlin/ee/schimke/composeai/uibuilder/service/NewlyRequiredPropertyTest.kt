@@ -20,14 +20,8 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * A catalog that starts REQUIRING a property does not strand the designs written before it did.
- *
- * On preview.coo.ee the record-built `m3/primary-tab-row` made `selectedTabIndex` required
- * (Compose's `PrimaryTabRow` has no default for it). Five Google1P tablet designs drawn against the
- * Kotlin catalog that left it optional became unopenable: one as `invalid stored design
- * google-play-tablet: required property selectedTabIndex is missing`, and four as `catalog
- * unavailable` -- their pins had moved on, and the automatic catalog recovery left them alone
- * because every upgrade preview came back BLOCKED on the same missing property.
+ * A catalog that starts requiring a property (e.g. `m3/primary-tab-row`'s `selectedTabIndex`) does
+ * not strand older designs, whether their pin still resolves or they need a catalog upgrade.
  */
 class NewlyRequiredPropertyTest {
 

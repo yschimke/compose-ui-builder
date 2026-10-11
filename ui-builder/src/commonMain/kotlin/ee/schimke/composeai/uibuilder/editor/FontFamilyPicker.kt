@@ -36,10 +36,9 @@ import ee.schimke.composeai.uibuilder.VendoredFontFamily
 import ee.schimke.composeai.uibuilder.canonicalFamilyName
 
 /**
- * What [FontFamilyPicker] offers for [query]: the vendored families first, then the font service's,
- * each list filtered by a case-insensitive substring match and the second capped at [limit] so a
- * two-letter query does not draw two thousand rows. A vendored family is not offered again from the
- * service's list.
+ * What [FontFamilyPicker] offers for [query]: vendored families first, then the font service's,
+ * each filtered by case-insensitive substring, the latter capped at [limit]. Vendored families are
+ * not repeated.
  */
 internal data class FontFamilyChoices(
   val vendored: List<VendoredFontFamily>,
@@ -73,13 +72,9 @@ internal fun fontFamilyChoices(
 }
 
 /**
- * A family name, chosen from a searchable menu whose every option is drawn in the family it names.
- *
- * The vendored families come first; then, on a host with a font service, the whole Google Fonts
- * catalogue, searched as you type. Faces load as they are shown — the vendored ones as soon as the
- * menu opens, the service's only for the first few results of a query, because each is a download
- * and the catalogue is two thousand of them. A name the lists do not hold can still be typed and
- * used: the canvas draws it if the font service has it, and the platform face otherwise.
+ * A family name chosen from a searchable menu whose options are drawn in their own family: vendored
+ * families, then (with a font service) the Google Fonts catalogue. Vendored faces load when the
+ * menu opens; service faces only for the first few results. Unlisted names can still be typed.
  *
  * Commits on pick. [onPick] gets null for "Default", which unsets the property.
  */

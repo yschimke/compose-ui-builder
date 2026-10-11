@@ -5,19 +5,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 
 /**
- * The editor's toolbar and rails, handed to a host that draws them in its own chrome.
+ * The editor's toolbar and rails, handed to a host that draws them in its own chrome (e.g. a VS
+ * Code webview's title bar and overflow menu). Unlike [UiBuilderChrome], which restyles in-editor
+ * controls, the editor then draws no top toolbar or rails; it publishes [UiBuilderHostAction]s and
+ * the host invokes them by [UiBuilderHostAction.id].
  *
- * [UiBuilderChrome] restyles the editor's controls but still draws them inside the editor: the
- * IntelliJ plugin gets Jewel buttons in a Compose toolbar. A host whose controls live outside the
- * page cannot take that route. A VS Code webview is one: its editor tab has a title bar with
- * actions and an overflow menu, and a second toolbar drawn inside the tab under it reads as a web
- * page pretending to be an editor. So with one of these, the editor draws no top toolbar and no
- * rails. It publishes what they would have held as [UiBuilderHostAction]s instead, and the host
- * invokes them back by [UiBuilderHostAction.id].
- *
- * What stays inside is what belongs to the canvas: the selection bar that appears with a selection,
- * the zoom controls, and the panels themselves, which a host opens and closes through the
- * `navigator.*` and `dock.*` actions.
+ * Canvas-bound parts stay inside: the selection bar, zoom controls and the panels, which the host
+ * toggles through `navigator.*` and `dock.*` actions.
  */
 class UiBuilderHostChrome(private val onActionsChanged: (List<UiBuilderHostAction>) -> Unit) {
   private val sections = linkedMapOf<String, List<HostChromeEntry>>()
@@ -46,12 +40,10 @@ class UiBuilderHostChrome(private val onActionsChanged: (List<UiBuilderHostActio
 /**
  * One control the editor would have drawn itself.
  *
- * [id] is stable across releases: `undo`, `redo`, `code`, `reference`, `navigator.<tab>`,
- * `dock.<panel>`, and the `overflow.*` menu rows. A host keys its native controls on it. [group] is
- * where the editor would have put it: `toolbar`, `navigator` (the left rail), `dock` (the right
- * rail) or `overflow` (the ⋮ menu). [icon] is the [UiBuilderChromeIcon] name, for a host that maps
- * icons to its own set. [checked] is null for a plain action, and whether the panel or mode is on
- * for a switch.
+ * [id] is stable across releases (`undo`, `redo`, `code`, `reference`, `navigator.<tab>`,
+ * `dock.<panel>`, `overflow.*`). [group] is where it would have gone: `toolbar`, `navigator`,
+ * `dock` or `overflow`. [icon] names a [UiBuilderChromeIcon]. [checked] is null for a plain action,
+ * else the switch state.
  */
 data class UiBuilderHostAction(
   val id: String,

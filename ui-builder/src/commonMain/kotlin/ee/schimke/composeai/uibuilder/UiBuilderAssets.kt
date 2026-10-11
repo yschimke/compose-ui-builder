@@ -5,7 +5,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.ImageBitmap
 import ee.schimke.composeai.uibuilder.artwork.ANDROID_DEVELOPERS_BACKSTAGE_ARTWORK_KEY
 import ee.schimke.composeai.uibuilder.artwork.GOOGLE_DEVELOPERS_PODCAST_ARTWORK_KEY
-import ee.schimke.composeai.uibuilder.canvas.LocalRemoteComposeDocuments
 import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import ee.schimke.composeai.uibuilder.reference.decodeReferenceBitmap
 import kotlin.io.encoding.Base64
@@ -15,15 +14,9 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * What an `asset/image` node's `assetKey` resolves to, decided once and read by every lane that
- * draws or exports one — the canvas, the daemon render, the SVG recorder and its readiness gate.
- *
- * One resolution rather than a `when` per lane, because the lanes used to disagree: the canvas knew
- * two Jetcaster keys and a gradient and threw on anything else, the SVG recorder knew only the
- * Jetcaster keys and threw on the gradient, and the daemon render knew nothing the canvas did not.
- * A key nothing resolves is [Missing], which every lane draws as a visible placeholder and none of
- * them fails on — a design holding a picture the host cannot show is an ordinary state, not a
- * broken frame.
+ * What an `asset/image` node's `assetKey` resolves to, decided once for every lane (canvas, daemon
+ * render, SVG recorder and its readiness gate) so they can't disagree. An unresolved key is
+ * [Missing], drawn as a visible placeholder, never a failure.
  */
 internal sealed interface ResolvedUiBuilderAsset {
   /** Bytes carried in the document itself, as the registry's `embedded` source. */
@@ -94,17 +87,10 @@ internal fun ResolvedUiBuilderAsset.hasRasterBytesOffline(): Boolean =
   this is ResolvedUiBuilderAsset.Embedded || this is ResolvedUiBuilderAsset.ProjectOwned
 
 /**
- * Pixels for an uploaded asset, by **content digest**, answered by whatever host is drawing.
- *
- * A composition local for the reason [LocalRemoteComposeDocuments] is one: the canvas, the
- * thumbnails and the previews all draw a document, and none of them should have to thread a fetcher
- * through. A lookup rather than a fetch, for the same reason too — loading bytes is suspending,
- * size-limited and cancellable, and the host owns all three. Keyed by digest rather than by asset
- * key so re-pointing a key at a new picture invalidates the old one for free, and two keys naming
- * one picture decode it once.
- *
- * `null` is *not available here*: not fetched yet, failed to decode, or a host with no resolver at
- * all. The node draws its placeholder for it and nothing else happens.
+ * Pixels for an uploaded asset, by **content digest**, answered by whatever host is drawing. A
+ * lookup, not a fetch: the host owns loading. Keyed by digest so re-pointing a key invalidates
+ * naturally and shared pictures decode once. `null` means not available (yet); the node draws its
+ * placeholder.
  */
 public val LocalUiBuilderAssetBitmaps: ProvidableCompositionLocal<(String) -> ImageBitmap?> =
   staticCompositionLocalOf {
@@ -112,13 +98,9 @@ public val LocalUiBuilderAssetBitmaps: ProvidableCompositionLocal<(String) -> Im
   }
 
 /**
- * The encoded bytes of an uploaded asset, by **content digest**, for hosts that hand a design to a
- * renderer they cannot share pixels with.
- *
- * A catalog runtime draws in a sandboxed, opaque-origin frame: it cannot fetch the design's assets
- * and must not be given a credential to try. What it can be given is the document, so the host
- * inlines these bytes into the copy it posts ([withInlinedUploadedAssets]) and the runtime resolves
- * them as `embedded`. `null` is not available (yet) here, exactly as for
+ * The encoded bytes of an uploaded asset, by **content digest**, for hosts handing a design to a
+ * renderer they can't share pixels with. A sandboxed catalog runtime can't fetch assets, so the
+ * host inlines these bytes into its copy ([withInlinedUploadedAssets]) as `embedded`. `null` as for
  * [LocalUiBuilderAssetBitmaps].
  */
 public val LocalUiBuilderAssetBytes: ProvidableCompositionLocal<(String) -> ByteArray?> =
@@ -128,10 +110,7 @@ public val LocalUiBuilderAssetBytes: ProvidableCompositionLocal<(String) -> Byte
 
 /**
  * This document with every uploaded asset whose bytes [bytesByDigest] has re-sourced as `embedded`.
- *
- * Only the `source` changes: the key, digest and media type stay what the design stored, so a
- * runtime resolves the same asset it would have asked the host for. Assets whose bytes are not
- * available yet are left as they are, and a document with none is returned unchanged.
+ * Only `source` changes; assets without bytes yet are left alone.
  */
 internal fun UiBuilderDocument.withInlinedUploadedAssets(
   bytesByDigest: (String) -> ByteArray?
@@ -157,8 +136,7 @@ internal fun UiBuilderDocument.withInlinedUploadedAssets(
 }
 
 /**
- * Bytes to pixels for a design asset. Null rather than throwing, because a picture that does not
- * decode must leave the design drawing, with a placeholder in its frame, rather than fail it.
+ * Bytes to pixels for a design asset; null rather than throwing, so the design draws a placeholder.
  */
 internal fun decodeUiBuilderAssetBitmap(bytes: ByteArray): ImageBitmap? =
   decodeReferenceBitmap(bytes, vector = false, targetWidthPx = 0, targetHeightPx = 0)

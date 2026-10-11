@@ -14,17 +14,13 @@ import ee.schimke.composeai.uibuilder.editor.EditorViewportInsets
 import ee.schimke.composeai.uibuilder.editor.LocalEditorViewportInsets
 
 /**
- * The window's safe area and on-screen keyboard, measured by the page and handed to the editor.
- *
- * Compose for web leaves `WindowInsets` empty, so the two browser sources are read directly:
- * * **Safe area** — `env(safe-area-inset-*)`, which only a page that asked for `viewport-fit=cover`
- *   sees as anything but zero. A custom property holding `env()` is not resolved by
- *   `getComputedStyle`, so a fixed, invisible probe is padded by it and its computed padding read
- *   back in pixels.
- * * **Keyboard** — what `visualViewport` no longer covers at the bottom of the layout viewport.
- *   Safari overlays its keyboard, and this is how much of the page it hides; Chrome with
- *   `interactive-widget=resizes-content` resizes the page instead, and this is then zero, which is
- *   right: nothing is behind it.
+ * The window's safe area and on-screen keyboard, measured by the page and handed to the editor
+ * (Compose for web leaves `WindowInsets` empty):
+ * * **Safe area**: `env(safe-area-inset-*)`, non-zero only with `viewport-fit=cover`.
+ *   `getComputedStyle` doesn't resolve `env()` in a custom property, so an invisible probe is
+ *   padded by it and its padding read back.
+ * * **Keyboard**: what `visualViewport` no longer covers at the bottom. Safari overlays the
+ *   keyboard; Chrome with `interactive-widget=resizes-content` resizes the page, making this zero.
  *
  * Re-measured on every viewport resize, scroll and orientation change.
  */

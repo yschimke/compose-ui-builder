@@ -1,11 +1,8 @@
 package ee.schimke.composeai.uibuilder.reference
 
 /**
- * What a link pasted into the reference panel points at.
- *
- * Parsed here, once, so every host recognises the same links and refuses the same ones with the
- * same words; *fetching* stays with the host, because whether this editor may reach the network —
- * and with whose credential — is the host's decision and not a fact about the link.
+ * What a link pasted into the reference panel points at. Parsed once so every host accepts and
+ * refuses the same links; fetching (and credentials) stays with the host.
  */
 sealed interface ReferenceUrl {
   val url: String
@@ -29,12 +26,8 @@ sealed interface ReferenceUrl {
 }
 
 /**
- * [text] as a [ReferenceUrl].
- *
- * Figma links come in several shapes — `/file/`, `/design/`, `/proto/`, `/board/` and branch links
- * (`/design/<key>/branch/<branchKey>/…`, where the branch key is the file to ask for) — and every
- * one names its frame in a `node-id` query parameter. Only https is accepted for an image: the
- * editor runs inside an https page, and a plain-http fetch is one the browser refuses anyway.
+ * [text] as a [ReferenceUrl]. Figma `/file/`, `/design/`, `/proto/`, `/board/` and branch links
+ * (the branch key is the file) all name the frame in `node-id`. Images must be https.
  */
 fun parseReferenceUrl(text: String): ReferenceUrl {
   val url = text.trim()

@@ -14,13 +14,9 @@ class AdaptiveWearWidgetTest {
     AdaptiveWearWidget.newDocument("meeting", JsonObject(emptyMap()), JsonObject(emptyMap()))
 
   /**
-   * The seed is created against the PUBLISHED `remote-m3` catalog, which spells text
-   * `remote-m3/remote-text` and has no `m3/text`. A seed that borrowed the Material 3 id was
-   * refused on creation as `UNKNOWN_COMPONENT: child adaptive-action-label has an unknown
-   * component`.
-   *
-   * The container itself is left out: it is a builtin the catalog declares in its policy, and the
-   * builder's own layout ids are donated back to every published catalog by the runtime.
+   * The seed is created against the published `remote-m3` catalog, which has
+   * `remote-m3/remote-text` and no `m3/text`. The container is a policy builtin and layout ids are
+   * donated by the runtime, so both are left out.
    */
   @Test
   fun `the seed names only components the published catalog declares`() {

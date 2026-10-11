@@ -195,15 +195,11 @@ abstract class GenerateMaterialIconInventory : DefaultTask() {
 /**
  * The renderer SDK's icon sources, in two directories.
  *
- * [outputDirectory] is every platform's: every icon key, packed into a few strings in the catalog's
- * order, and the labels and targets of the original compatibility keys. A canonical icon's label
- * and `Icons` expression follow from its key (`GoogleMaterialIconCatalog.kt`), so an editor tab
- * holds one packed list rather than ~11,000 objects and ~34,000 strings until something asks for
- * the whole catalog; `MaterialIconCatalogTest` holds the derivation to this inventory, and the
- * browser's icon files follow the same order. [vectorOutputDirectory] is the
- * JVM's alone: the `when` tables that name each icon's `ImageVector` and so pull its builder into
- * the binary. The browser build reads the same vectors as data (`MaterialIconData`) instead, so
- * ~11,000 icon builders are not compiled into every editor tab.
+ * [outputDirectory] (every platform): every icon key packed into a few strings in catalog order,
+ * plus the compatibility keys' labels and targets; canonical labels and `Icons` expressions derive
+ * from the key (`GoogleMaterialIconCatalog.kt`, checked by `MaterialIconCatalogTest`).
+ * [vectorOutputDirectory] (JVM only): the `when` tables naming each icon's `ImageVector`. The
+ * browser reads vectors as data (`MaterialIconData`) so the builders are not compiled into it.
  */
 abstract class GenerateMaterialIconUiSources : DefaultTask() {
   @get:InputFile

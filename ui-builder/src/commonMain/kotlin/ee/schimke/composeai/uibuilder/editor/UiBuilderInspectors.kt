@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -44,8 +45,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -65,6 +71,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
@@ -149,9 +156,7 @@ internal fun PropertyInspector(
   operationHistory: List<EditorOperationEntry>,
   themeSettings: EditorThemeSettings,
   devicePresets: List<UiBuilderDevicePreset>,
-  /**
-   * Whether the builder's own canvas — the surface the variant strip is drawn on — is on screen.
-   */
+  /** Whether the builder's own canvas (where the variant strip is drawn) is on screen. */
   variantsDrawn: Boolean,
   onPickReference: (suspend () -> ReferenceImportOutcome)?,
   onSnapshotDesign: (suspend () -> ReferenceImportOutcome)?,
@@ -209,9 +214,7 @@ internal fun PropertyInspector(
   }
   LocalUiBuilderChrome.current.InspectorSurface(modifier) {
     Column {
-      // The four inspectors used to share a row of tabs inside this panel, which is why it had to
-      // be 360 dp wide: the tabs, not the controls, set the floor. They are switches for a panel
-      // rather than controls in one, so they moved to the rail, and the panel narrowed.
+      // The inspector modes are rail switches, not tabs, so the panel can stay narrow.
       DockHeading(
         title =
           when (state.inspectorMode) {
@@ -307,9 +310,7 @@ private fun InspectorBody(
   operationHistory: List<EditorOperationEntry>,
   themeSettings: EditorThemeSettings,
   devicePresets: List<UiBuilderDevicePreset>,
-  /**
-   * Whether the builder's own canvas — the surface the variant strip is drawn on — is on screen.
-   */
+  /** Whether the builder's own canvas (where the variant strip is drawn) is on screen. */
   variantsDrawn: Boolean,
   onPickReference: (suspend () -> ReferenceImportOutcome)?,
   onSnapshotDesign: (suspend () -> ReferenceImportOutcome)?,
@@ -368,18 +369,12 @@ private fun InspectorBody(
       return@Column
     }
     if (state.inspectorMode == EditorInspectorMode.Comments) {
-      // Scrolled for the same reason the Screen panel is: a design with a dozen threads on it
-      // fills the dock, and a panel that silently clips its last thread is worse than one that
-      // scrolls.
-      // The scroll state is held here rather than inside the panel because the panel has to be
-      // able to move it: a `#thread=` link opens a design and then has to bring one conversation
-      // out of a dozen into view.
+      // Scrolled so many threads are not clipped. The state is hoisted so a `#thread=` link can
+      // scroll one thread into view.
       val commentScroll = rememberScrollState()
       Column(Modifier.verticalScroll(commentScroll)) {
-        // Only where there is something to say: a host that keeps no reviews and a design nobody
-        // has decided on would otherwise get a heading over nothing.
-        // Above the verdict: a proposal is decided before the revision it would make is reviewed.
-        // Null on a host that keeps no suggestions, so there is no heading over nothing.
+        // Suggestions above the verdict: a proposal is decided before its revision is reviewed.
+        // Null when the host keeps no suggestions.
         suggestionPanel?.let { panel ->
           SuggestionsSection(
             rows = panel.rows,
@@ -432,9 +427,7 @@ private fun InspectorBody(
       return@Column
     }
     if (state.inspectorMode == EditorInspectorMode.Screen) {
-      // Scrolled, because the frame controls already filled the panel before the reference
-      // section joined them below. A tab that silently clips its last control is worse than one
-      // that scrolls.
+      // Scrolled, so the last control is never clipped.
       Column(Modifier.verticalScroll(rememberScrollState())) {
         if (UiBuilderBuildFeatures.remoteCompose) {
           StateVariablesInspector(state.document, onTextInputFocusChanged, dispatch)
@@ -491,19 +484,14 @@ private fun InspectorBody(
     } else {
       LocalUiBuilderChrome.current.InspectorNodeIdentity(node.componentId, node.id)
     }
-    // Which properties this node has been given since it was selected. Local and per node: adding
-    // one here means "show me the control", not "write a value" — nothing reaches the document
-    // until the control is used, so a property revealed and left alone changes neither the design
-    // nor the exported Kotlin.
+    // Properties revealed for this node since selection. Local: revealing shows a control and
+    // writes nothing until it is used.
     var revealed by remember(node.id) { mutableStateOf(emptySet<String>()) }
     var propertyQuery by remember(node.id) { mutableStateOf("") }
     var addingProperty by remember(node.id) { mutableStateOf(false) }
-    // What the export would write, plus what it would refuse without: the panel opens on the node
-    // as the code has it. A bound property counts as written, and so does one being complained
-    // about, because hiding the field an error names is how an error becomes unfixable.
-    // A theme host's typefaces and default text style are the Theme panel's: listed there once,
-    // with its pickers, rather than here as well. `fields` itself keeps them, so an agent's
-    // CommitProperty on the host is validated as before.
+    // Opens on what the export would write, plus bound properties and any a problem names. A theme
+    // host's typefaces and default text style are shown in the Theme panel instead; `fields` still
+    // keeps them for validation.
     val themePanelOwned = ownsThemePanelProperties(fields)
     val listedFields = inspectorPropertyFields(fields)
     val shownFields =
@@ -618,6 +606,9 @@ private fun InspectorBody(
                 )
               },
               textTypeface = { FontSettings.textTypeface(state.document, field.nodeId) },
+              contrastOf = { scheme ->
+                contrastReading(state.document, field.nodeId, field.name, field.value, scheme)
+              },
             )
           }
           if (tuneTarget != null) TuneFieldButton(tuneTarget, state.tunables, dispatch)
@@ -792,8 +783,8 @@ private fun InspectorBody(
 }
 
 /**
- * What a theme host's property list says in place of its typefaces and default text style: one line
- * and the way to the panel that sets them.
+ * What a theme host's property list shows instead of its typefaces and default text style: one line
+ * and the way to the Theme panel.
  */
 @Composable
 private fun ThemePanelPointer(onOpenTheme: () -> Unit) {
@@ -840,6 +831,8 @@ private fun PropertyControl(
   commit: (String) -> Unit,
   /** The face a text field's font settings apply to; read only for those two properties. */
   textTypeface: () -> FontSettings.TextTypeface? = { null },
+  /** How a colour property contrasts with what it is drawn over; read only for colour fields. */
+  contrastOf: (ColorScheme) -> ContrastReading? = { null },
 ) {
   val bound = field.boundVariable
   val formula = field.boundFormula
@@ -860,10 +853,8 @@ private fun PropertyControl(
     if (formula != null) {
       FormulaEditor(field, formula, onTextInputFocusChanged, onFormula, onUnbind)
     } else if (bound != null) {
-      // The literal control is not drawn for a bound property, because it does not work: an edit
-      // is refused with "cannot be safely edited from its catalog metadata", which is a true
-      // message and a poor answer to a control that looks editable. What a bound property needs is
-      // to say what it is bound to and offer the way back.
+      // No literal control for a bound property (edits would be refused); show the binding and how
+      // to unbind.
       StateBindingRow(bound, onUnbind)
     } else {
       if (stateVariables.isNotEmpty() && field.control != EditorPropertyControl.Unsupported) {
@@ -872,9 +863,8 @@ private fun PropertyControl(
       if (field.formulaAllowed) {
         FormulaEditor(field, null, onTextInputFocusChanged, onFormula, onUnbind = null)
       }
-      // A text's axes and features are the face's, so they are offered from the face, with the
-      // property's own text field below for a value typed or pasted whole. (A theme host's
-      // typefaces are not listed here at all; the Theme panel has their pickers.)
+      // A text's axes and features are offered from the face, with the property's text field below
+      // for a whole value.
       if (field.name in FontSettings.PROPERTIES && !field.mixed) {
         FontSettingsEditor(field.name, field.value, textTypeface(), commit)
       }
@@ -899,7 +889,7 @@ private fun PropertyControl(
             showSteppers = true,
           )
         EditorPropertyControl.Color ->
-          ColorPropertyControl(field, commit) {
+          ColorPropertyControl(field, commit, contrastOf) {
             DraftPropertyControl(
               field,
               onTextInputFocusChanged,
@@ -926,11 +916,8 @@ private fun PropertyControl(
 }
 
 /**
- * What a bound property says instead of a control it cannot honour.
- *
- * The reducer refuses a literal edit on a state-bound property — the value is the binding, and
- * overwriting it silently would be the wrong answer — so the inspector drew a control that always
- * failed. This says what it is bound to and offers the one edit that does work.
+ * What a bound property shows instead of a literal control (which the reducer would refuse): what
+ * it is bound to, and the unbind action.
  */
 @Composable
 private fun StateBindingRow(variable: String, onUnbind: () -> Unit) {
@@ -938,12 +925,9 @@ private fun StateBindingRow(variable: String, onUnbind: () -> Unit) {
 }
 
 /**
- * A property computed by a formula, or the way to give it one.
- *
- * Shown as the formula an author would type — `time.secondOfHour * 6`, `concat(count, " left")` —
- * and edited the same way: the reducer parses the text into the document's expression tree and
- * refuses, with the column, what does not parse or does not type. The player evaluates it; the
- * canvas shows its value at the preview state and the design's fixed time.
+ * A property computed by a formula, or the way to give it one. Shown and edited as typed text
+ * (`time.secondOfHour * 6`); the reducer parses and type-checks it, reporting the column on
+ * failure. The canvas shows its value at the preview state and fixed time.
  */
 @Composable
 private fun FormulaEditor(
@@ -998,12 +982,9 @@ private fun FormulaEditor(
 }
 
 /**
- * Binding a property to a declared state variable.
- *
- * Two shapes, and the catalog decides which: a bare read yields the variable's value and suits a
- * property typed like it, while a boolean property cannot take a string variable's value and needs
- * `stateEquals` — a comparison, which needs a value to compare against. Asking for that value only
- * once a variable is chosen keeps the common case one click.
+ * Binding a property to a declared state variable: a bare read, or `stateEquals` where the
+ * property's type cannot take the variable's value (asking for the comparison value only after a
+ * variable is chosen).
  */
 @Composable
 private fun StateBindMenu(
@@ -1112,10 +1093,7 @@ private fun DraftPropertyControl(
       else onDraftChange(draft.copy(status = InspectorPropertyDraftStatus.REJECTED))
     }
   }
-  // The field and its Apply on one line, and the Apply only once the value has actually been
-  // edited. A full-width filled button under every property is what made this panel need 360 dp
-  // and five scrolls to reach a font size: on a text leaf it drew six of them, all identical, none
-  // of them doing anything until something above it changed.
+  // Field and Apply on one line, with Apply only once the value has been edited.
   Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     LocalUiBuilderChrome.current.InspectorTextField(
       UiBuilderInspectorTextFieldModel(
@@ -1480,18 +1458,12 @@ private fun ProblemGroupRow(
 }
 
 /**
- * What has been done to this design, newest first, and which of it undo would take back.
+ * What has been done to this design, newest first, marking the entries undo and redo would act on.
+ * Other people's changes sit between them unmarked, so the reader can see what undo will really
+ * take back.
  *
- * The panel exists for one sentence in the toolbar that was never written: undo takes something
- * back without saying what, and on a design being edited by more than one person the something is
- * very often not what you last did. So the entry undo is aimed at is marked, the entry redo would
- * return is marked, and everybody else's changes sit in the list between them — unmarked, because
- * they are not yours to take back, and named, because they are usually the answer.
- *
- * Read-only on purpose. Walking the history from a row is a different feature with a much harder
- * question behind it — what happens to the changes somebody else made in between — and a panel that
- * only tells the truth about the buttons that already exist is worth having before that is
- * answered.
+ * Read-only on purpose: jumping to a row raises the harder question of what happens to others'
+ * later changes.
  */
 @Composable
 private fun OperationHistoryInspector(
@@ -1527,8 +1499,7 @@ private fun OperationHistoryRow(entry: EditorOperationEntry, onSelectNode: (Stri
   val marked =
     entry.standing == EditorOperationStanding.NextUndo ||
       entry.standing == EditorOperationStanding.NextRedo
-  // Undone entries are drawn back rather than removed: what redo would put back is as much a part
-  // of "where am I in this history" as what undo would take away.
+  // Undone entries are drawn faded, not removed: they are what redo would restore.
   val faded = entry.standing == EditorOperationStanding.Undone
   Column(
     Modifier.fillMaxWidth()
@@ -1580,12 +1551,8 @@ private fun OperationHistoryRow(entry: EditorOperationEntry, onSelectNode: (Stri
 }
 
 /**
- * One change as a line: what the value is now, and what it was.
- *
- * No arrow, and that is not a style preference: the browser build has no glyph for one, and the
- * first render of this panel drew a box between every before and after. An absent end is said with
- * a missing half rather than a dash, for the same reason — "text was Hello" says the property is
- * gone, in characters the font is known to have.
+ * One change as a line: the value now and what it was. No arrow glyph (the browser build has none);
+ * a missing end is said in words rather than a dash.
  */
 internal fun EditorOperationChange.readable(): String =
   when {
@@ -1615,12 +1582,8 @@ private fun ScreenEnvironmentInspector(
   /** The unstored axes the strip is drawing — see [UiBuilderEditorState.variantAxes]. */
   variantAxes: Set<EditorVariantAxis>,
   /**
-   * Whether the surface that draws the strip is the one on screen.
-   *
-   * False on the host's renderer, which draws one render of one frame and has no strip to put a
-   * variant in. The controls then say so instead of accepting a choice nothing acts on — the
-   * devices still reach the export, which is why the picker stays live and only the comparison
-   * chips go quiet.
+   * Whether the surface drawing the variant strip is on screen. False on the host's renderer, where
+   * the comparison chips go quiet but the device picker stays live (it still feeds the export).
    */
   variantsDrawn: Boolean,
   onTextInputFocusChanged: (Boolean) -> Unit,
@@ -1636,12 +1599,9 @@ private fun ScreenEnvironmentInspector(
   var layoutDirection by remember(document.id, current) { mutableStateOf(current.layoutDirection) }
   var validationError by remember(document.id, current) { mutableStateOf<String?>(null) }
 
-  // "Frame" rather than "Screen environment", and the two are not the same claim. What these fields
-  // describe is a measuring surface — a width, a density, a theme — and a device is one way to fill
-  // it in, not what it is. Presenting the two as one thing was wrong in both directions: a
-  // hand-typed 1400 x 1000 frame sat under a heading that claimed a device, and a design of loose
-  // assets on a board appeared to be a phone
-  // ([`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md)).
+  // "Frame", not "Screen environment": a measuring surface (width, density, theme), which a device
+  // is only one way to fill. See
+  // [`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md).
   Text("Frame", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
   Text(
     "What the design is measured in. Applies to the complete render, never an individual component.",
@@ -1649,10 +1609,8 @@ private fun ScreenEnvironmentInspector(
     style = MaterialTheme.typography.bodySmall,
   )
   HorizontalDivider(Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline)
-  // Said on a board, and nothing is hidden because of it. The frame still applies — the items are
-  // laid out down the middle of that width, at that density, under that theme — so removing the
-  // width, the density or the presets would take away controls the picture still obeys. What
-  // changes is only the claim.
+  // On a board the frame still applies (items are laid out at that width, density and theme); only
+  // the heading's claim changes.
   if (document.isBoard) {
     Text(
       "A board of ${document.boardItemCount} items",
@@ -1671,10 +1629,8 @@ private fun ScreenEnvironmentInspector(
   val framePresets =
     UiBuilderFrameGeometry(sizes = catalogFrameSizes).sizePresets(current.density) + devicePresets
   if (framePresets.isNotEmpty()) {
-    // The dock holds three controls that all name devices, and until now nothing said how they
-    // differ: one frame the design is measured in, a set of others to look at it on, and three
-    // ways of looking that are not devices at all. Three sibling headings and no sentence between
-    // them, so the only way to learn the split was to change something and watch what moved.
+    // Explains the three device-related controls: the one frame, other devices to view it on, and
+    // non-device ways of looking.
     Text(
       "One frame to build in, any number to check against.",
       color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1686,10 +1642,8 @@ private fun ScreenEnvironmentInspector(
       selected = current.matchingDevicePreset(framePresets),
       platform = platform,
       onPick = { preset ->
-        // Width, height and density move together, in one dispatch, so the frame is one undoable
-        // step — `updateEnvironment` folds the three `SetEnvironment` operations into a single
-        // `DesignCommand`, and undo targets a command. Applying them as three edits would make
-        // checking a phone, then a tablet, then undoing leave a phone-width tablet on the canvas.
+        // Width, height and density in one dispatch, so `updateEnvironment` makes them one undoable
+        // command.
         val applied = current.withDevicePreset(preset)
         width = applied.widthDp.toString()
         height = applied.heightDp.toString()
@@ -1793,9 +1747,8 @@ private fun ScreenEnvironmentInspector(
       filled = true,
       modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
       onClick = {
-        // `current.withScreenFields`, never a fresh `ScreenEnvironmentSettings`: this button owns
-        // seven fields and the dock's object has more, so building one from scratch here resets
-        // whatever the other writers own. That is #903 — every Apply cleared `exportDevices`.
+        // `current.withScreenFields`, never a fresh `ScreenEnvironmentSettings`, so fields owned by
+        // other writers (e.g. `exportDevices`) are not reset.
         val parsed =
           current.withScreenFields(
             widthDp = width.toIntOrNull() ?: Int.MIN_VALUE,
@@ -1811,9 +1764,7 @@ private fun ScreenEnvironmentInspector(
       },
     )
   )
-  // Which is the other half of the confusion: the two device menus commit as you pick them and
-  // these fields do not, so a button sitting under all three looked like it applied all three —
-  // and picking a device, typing a width, then pressing it read as one action that was two.
+  // Clarifies that Apply covers only these fields; the device menus commit as you pick.
   Text(
     "Applies the fields above. The device menus commit as you pick them.",
     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1831,14 +1782,9 @@ private fun ScreenEnvironmentInspector(
 }
 
 /**
- * The design's typeface, as a menu whose every option is drawn in the family it names.
- *
- * Commits on pick, like the device menus beside it: a typeface is one choice, and the thing to do
- * after making it is to look at the canvas, not to press Apply. The families are the ones the host
- * vendors ([LocalUiBuilderFontRegistry]); opening the menu asks for all of them, and each option
- * switches from the default face to its own as its family arrives. A family the document names that
- * the host does not ship is still listed, so the menu never claims the design says something it
- * does not; it is drawn in its face when the host could fetch it by name, and says so when not.
+ * The design's typeface, as a menu whose options are drawn in their own family. Commits on pick.
+ * Families come from the host ([LocalUiBuilderFontRegistry]); a family the document names but the
+ * host does not ship is still listed, drawn in its face if fetchable by name, else marked.
  */
 @Composable
 private fun TypefacePicker(
@@ -1867,14 +1813,9 @@ private fun TypefacePicker(
 }
 
 /**
- * The frame menu — grouped by device family, each entry carrying the geometry the render lane
- * resolves for it.
- *
- * Still backed by every device the catalog knows rather than a curated handful: a curated handful
- * is the hand-maintained list this feature exists to avoid, and the one that goes stale the first
- * time the render catalog learns a device. What is curated is only which families **open** — the
- * design's own platform — with the rest one row away. Nothing is removed from the menu; the long
- * tail is just no longer the first thing between you and a phone.
+ * The frame menu, grouped by device family, each entry with the render lane's geometry. Backed by
+ * every device the catalog knows; only the design's own platform families open by default, the rest
+ * one row away.
  */
 @Composable
 private fun DevicePresetPicker(
@@ -1886,9 +1827,8 @@ private fun DevicePresetPicker(
 ) {
   var showAll by remember { mutableStateOf(false) }
   var expanded by remember { mutableStateOf(false) }
-  // "Set frame from" rather than "Device": picking one writes the width, the height and the density
-  // and then stops mattering. The design does not become that device, which is why a frame that
-  // matches no preset reads as "Custom size" below rather than as the nearest phone.
+  // "Set frame from": a pick only writes width, height and density; the design does not become that
+  // device, so non-matching frames read "Custom size".
   Text("Set frame from", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
   val shown = if (showAll) presets else presets.forPlatform(platform, listOfNotNull(selected?.id))
   Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp)) {
@@ -1909,11 +1849,8 @@ private fun DevicePresetPicker(
       onDismissRequest = { expanded = false },
       entries =
         buildList {
-          // The host serves every family it can render — 40-odd presets across phones, foldables,
-          // tablets, watches, desktops, TVs, cars and headsets — because the geometry comes from
-          // the render lane and the render lane does not care what you are authoring. The menus do:
-          // the design's own platform decides what opens, and Show all devices reveals the rest.
-          // The frame already in use is never hidden, even when it is off-platform.
+          // The host serves every renderable family; the design's platform decides what opens, Show
+          // all devices reveals the rest, and the frame in use is never hidden.
           shown.groupBy(UiBuilderDevicePreset::group).forEach { (group, devices) ->
             add(UiBuilderMenuEntry.Heading(group))
             devices.forEach { preset ->
@@ -1935,7 +1872,7 @@ private fun DevicePresetPicker(
             add(UiBuilderMenuEntry.Divider)
             add(
               UiBuilderMenuEntry.Action("Show all devices (${presets.size - shown.size} more)") {
-                // Stays open: revealing the rest is what happens just before making the choice.
+                // Stays open: revealing the rest precedes a choice.
                 showAll = true
               }
             )
@@ -1946,26 +1883,13 @@ private fun DevicePresetPicker(
 }
 
 /**
- * The devices a design is exported as, beside the one it is drawn at.
- *
- * A multi-select rather than a second single choice, because the answer is genuinely a set: a
- * screen claims to work on a phone *and* a foldable *and* a tablet, and picking them one at a time
- * would make "which does this cover?" a question you answer by remembering. The frame above stays
- * single — it is the canvas somebody approved — and this says where else the export has to hold up.
- *
- * Checked state is the set's membership, so the menu is also the report: open it and the ticks are
- * the answer. Nothing here is the frame device, which is why picking none is a legitimate state and
- * reads as "exports at its own frame alone" rather than as an empty selection nobody finished.
+ * The devices a design is exported as, beside its frame device. A multi-select because a screen
+ * claims several devices. Ticks report the set; none is valid ("exports at its own frame alone").
  */
 /**
- * The unstored axes the variant strip draws, as chips.
- *
- * Chips rather than another dropdown, and beside the export devices rather than under them, because
- * they are the other half of the same question — what am I looking at this design as? — while being
- * a different kind of answer. The devices above are the design's own claim and travel with it into
- * the export; these three are a way of looking, held in editor state, off again when the design is
- * reopened. Wording says so: "Also shown and exported as" against "Also compare"
- * ([`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md)).
+ * The unstored axes the variant strip draws, as chips beside the export devices. Unlike those
+ * devices (stored, exported), these are editor state that resets on reopen; see
+ * [`UI_BUILDER_CANVAS_FRAMES_VARIANTS.md`](../../../../../../docs/design/UI_BUILDER_CANVAS_FRAMES_VARIANTS.md).
  */
 @Composable
 private fun VariantAxisPicker(
@@ -2006,26 +1930,11 @@ private fun ExportDevicePicker(
 ) {
   var expanded by remember { mutableStateOf(false) }
   var showAll by remember { mutableStateOf(false) }
-  // The list says what it does in both directions: it is still the set the export writes as
-  // `@Preview(device = …)`, and it is also the set the workspace draws beside the design. Before
-  // the
-  // variant strip existed a design could claim three devices and show its author one, and the two
-  // decisions were made in different places with neither showing the other.
-  //
-  // Which is exactly why the heading drops "shown" where the strip is not drawn. The picker stays
-  // live — these devices still reach the export, and that is worth choosing on any surface — but a
-  // heading promising a picture the host's renderer never draws is the same disagreement in the
-  // other direction.
-  // An id this host has no preset for is exported but never drawn: the strip skips it rather than
-  // inventing a frame for it (see `variantPanes`), and a preset carries the only geometry there is.
-  // So the heading must not count it among the shown — a design that arrived from MCP naming a
-  // device this deployment does not offer would otherwise tell its author every exported target had
-  // been looked at.
+  // The set is both what the export writes as `@Preview(device = …)` and what the workspace draws
+  // beside the design. An id with no preset here is exported but not drawn (see `variantPanes`), so
+  // it is not counted as shown.
   val undrawable = selected.count { id -> presets.none { it.id == id } }
-  // One heading, always the same words. It used to gain and lose "shown" depending on whether the
-  // strip was drawn, which is a real difference said in a way you can only notice by comparison —
-  // nobody reads a heading twice. The difference is a sentence now, and the sentence is always
-  // there, so the control explains itself on the surface you are actually looking at.
+  // One fixed heading; whether the strip is drawn is said in a sentence below it.
   Text(
     "Also previewed at",
     style = MaterialTheme.typography.labelMedium,
@@ -2104,9 +2013,9 @@ private fun ExportDevicePicker(
 }
 
 /**
- * An enum property as a dropdown whose options show what they mean: a typography token in its own
- * style, a weight in its weight, an alignment or arrangement as a small picture of itself. The
- * current value is ticked, and the button shows it the same way.
+ * An enum property as a dropdown whose options preview their meaning (typography in its style, a
+ * weight in its weight, alignments as pictures). The current value is ticked and shown the same
+ * way.
  */
 @Composable
 private fun EnumPropertyControl(field: EditorPropertyField, commit: (String) -> Unit) {
@@ -2157,18 +2066,20 @@ private fun EnumOptionLabel(property: String, option: String) {
 }
 
 /**
- * A colour property: a swatch of the current value beside the hex/token field [field] keeps, then
- * the design's theme roles and a row of literal colours, each one press to apply. The field stays —
- * it is how an exact colour is typed — and a theme role written here stays a role, so the design
- * follows its theme.
+ * A colour property: a swatch beside the hex/token [field], then the theme roles and literal
+ * colours, each one press to apply. Roles stay roles so the design follows its theme.
  */
 @Composable
 private fun ColorPropertyControl(
   field: EditorPropertyField,
   commit: (String) -> Unit,
+  contrastOf: (ColorScheme) -> ContrastReading?,
   textField: @Composable () -> Unit,
 ) {
   val scheme = LocalInspectorColorScheme.current ?: MaterialTheme.colorScheme
+  // Only for one node with one value: a multi-selection's colours sit over different backgrounds,
+  // and a single ratio for them all would be true of at most one.
+  val contrast = if (field.nodeCount == 1 && !field.mixed) contrastOf(scheme) else null
   Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       ColorSwatch(
@@ -2180,6 +2091,7 @@ private fun ColorPropertyControl(
       Spacer(Modifier.width(8.dp))
       Box(Modifier.weight(1f)) { textField() }
     }
+    if (contrast != null) ContrastChip(contrast)
     val tokens = field.choices.filter { swatchColor(it, scheme) != null }
     if (tokens.isNotEmpty()) {
       Text(
@@ -2199,11 +2111,35 @@ private fun ColorPropertyControl(
 }
 
 /**
- * The design's theme roles by name, each with a small swatch of what it resolves to.
- *
- * Names first, because a role is picked for what it means — `onSurfaceVariant` is "quiet text on a
- * surface" whatever colour this theme happens to give it — and a row of bare dots made that choice
- * by hue alone, where half the roles of a light theme are near-white and indistinguishable.
+ * A text or icon colour's WCAG contrast against what it is drawn over ("4.8:1 AA"), loud only when
+ * it fails; the tooltip names the background and the grade needed.
+ */
+@Composable
+private fun ContrastChip(reading: ContrastReading) {
+  val low = reading.grade == WcagGrade.Low
+  val colors = MaterialTheme.colorScheme
+  val container = if (low) colors.errorContainer else colors.surfaceContainerHighest
+  val content = if (low) colors.onErrorContainer else colors.onSurfaceVariant
+  TooltipBox(
+    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+    tooltip = { PlainTooltip { Text(reading.explanation) } },
+    state = rememberTooltipState(),
+  ) {
+    Text(
+      reading.label,
+      Modifier.background(container, RoundedCornerShape(6.dp))
+        .padding(horizontal = 6.dp, vertical = 2.dp)
+        .clearAndSetSemantics { contentDescription = reading.explanation },
+      color = content,
+      style = MaterialTheme.typography.labelSmall,
+      fontWeight = if (low) FontWeight.Bold else null,
+    )
+  }
+}
+
+/**
+ * The design's theme roles by name with a small swatch: roles are picked for meaning, and many
+ * light-theme roles look alike.
  */
 @Composable
 private fun ThemeRoleChips(
@@ -2266,10 +2202,9 @@ private fun SwatchRow(
 }
 
 /**
- * The properties whose values are Material icon keys, and so get the searchable picker rather than
- * a dropdown: `iconKey` on `m3/icon` and `wear-m3/icon`, and `imageVector` on
- * `remote-m3/remote-icon`, which keeps `RemoteIcon`'s own parameter name. Either list is eleven
- * thousand keys long, and an [EnumPropertyControl] builds a menu item for every one of them.
+ * Properties holding Material icon keys, which get the searchable picker instead of a dropdown
+ * (eleven thousand keys): `iconKey` on `m3/icon`/`wear-m3/icon`, and `imageVector` on
+ * `remote-m3/remote-icon`.
  */
 internal val ICON_KEY_PROPERTIES: Set<String> = setOf("iconKey", "imageVector")
 
@@ -2316,9 +2251,7 @@ internal fun GoogleIconPropertyControl(
         Modifier.width(280.dp)
           .padding(10.dp)
           .semantics { contentDescription = "Google icon search" }
-          // The one text field in the editor that never reported focus. Every editor chord is
-          // gated on `textInputFocused`, so while someone typed an icon name here Backspace still
-          // meant delete-the-selection and Ctrl/⌘+V still meant paste-a-subtree.
+          // Report focus so editor chords (gated on `textInputFocused`) do not fire while typing.
           .onFocusChanged { onTextInputFocusChanged(it.isFocused) }
           .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
           .padding(10.dp),
@@ -2377,20 +2310,16 @@ private fun EnvironmentTextField(
 }
 
 /**
- * One string property's literal, or empty.
- *
- * A third copy of a two-line read, and deliberately not a shared one: `UiBuilderRenderer` and
- * `UiBuilderEditorState` each keep their own because the alternative — an internal helper on the
- * node type — is a vocabulary every caller in this module then reaches for, and a property is not
- * always a literal. This one is used only where the answer being empty is itself the signal: a
- * Lottie element that has a URL and no animation yet.
+ * One string property's literal, or empty. Deliberately a local copy rather than a shared helper on
+ * the node type, since a property is not always a literal; used where emptiness is the signal (a
+ * Lottie element with a URL and no animation yet).
  */
 internal fun UiBuilderNode.propertyText(name: String): String =
   (properties[name] as? JsonObject)?.get("value")?.jsonPrimitive?.contentOrNull.orEmpty()
 
 /**
- * What a selected placement is: the component it places, renamable in place, and — once the app's
- * catalog ships a component of the same name — the swap to it.
+ * What a selected placement is: the component it places, renamable in place, and the swap to an app
+ * catalog component of the same name once one ships.
  */
 @Composable
 private fun LocalComponentHeader(

@@ -11,28 +11,17 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The wrapper vocabulary is one set, and every lane asks the same question of it.
- *
- * `{"type":"fixedGrid","columns":7}` was kept by replay, reported clean by `CapabilityValidator`,
- * exported as Compose, drawn by the renderer and asserted green by `DesignFixturesTest` — then
- * refused by the server at commit with a kotlinx-serialization message naming a sealed base class
- * (#901). The vocabulary was closed the whole time; only `propertyWrapperIssue` knew it, and
- * nothing outside `CollaborationReducer` asked.
- *
- * So the names live in [PropertyValueKinds.WRAPPER_TYPES] and this pins the two together in
- * **both** directions. A name in one and not the other is the drift that made the bug, and it fails
- * here rather than at somebody's commit.
+ * The wrapper vocabulary is one set ([PropertyValueKinds.WRAPPER_TYPES]), and every lane asks the
+ * same question of it. Pinned against the reducer and the fixture corpus so an invented wrapper
+ * (like `{"type":"fixedGrid","columns":7}`, see #901) fails here rather than at the server's
+ * deserializer.
  */
 class WrapperVocabularyTest {
 
   /**
-   * Every wrapper the reducer has a branch for is named in the shared set.
-   *
-   * One direction only: the set is deliberately **wider** than this function. `list` and `binding`
-   * arrive on inserts, which `propertyWrapperIssue` never sees, and are checked by
-   * `inspectUiBuilderArgumentBindings` instead — so the reverse assertion would be wrong, and
-   * asserting it is how this test was first written and how it passed while the set was missing
-   * both of them.
+   * Every wrapper the reducer has a branch for is named in the shared set. One direction only: the
+   * set is wider, since `list` and `binding` arrive on inserts and are checked by
+   * `inspectUiBuilderArgumentBindings`.
    */
   @Test
   fun `every wrapper the reducer accepts is named in the shared set`() {
@@ -44,12 +33,8 @@ class WrapperVocabularyTest {
   }
 
   /**
-   * And the corpus is covered: no committed fixture carries a wrapper the set does not name.
-   *
-   * This is the direction that matters, and the one nothing asked before. A fixture is
-   * hand-authored and replayed rather than written through a reducer, which is exactly how
-   * `fixedGrid` got as far as a green build (#901). Reading the fixtures rather than a hand-kept
-   * list means a wrapper introduced by a future fixture has to be named here too.
+   * No committed fixture carries a wrapper the set doesn't name. Fixtures are hand-authored and
+   * replayed rather than written through a reducer, so they're read directly.
    */
   @Test
   fun `every wrapper in a committed fixture is named in the shared set`() {
@@ -107,10 +92,8 @@ class WrapperVocabularyTest {
   }
 
   /**
-   * The original case, end to end: a document that replays cleanly and does not validate.
-   *
-   * This is the assertion that would have failed the build before the fix — `DesignFixturesTest`
-   * runs exactly this validator over exactly this path, and reported no issue.
+   * The original case, end to end: a document that replays cleanly and does not validate (the path
+   * `DesignFixturesTest` runs).
    */
   @Test
   fun `a replayed document carrying an invented wrapper is reported by the validator`() {
@@ -161,9 +144,8 @@ class WrapperVocabularyTest {
   }
 
   /**
-   * Whether [type] is refused *because the name is unknown*, as opposed to because this probe's
-   * value has the wrong shape for it — which is the reducer's other job and not what is pinned
-   * here.
+   * Whether [type] is refused because the name is unknown, rather than because the probe's value
+   * has the wrong shape.
    */
   private fun rejectsOutright(type: String): Boolean =
     propertyWrapperIssue(type, wrapper(type))?.startsWith("uses unsupported wrapper type") == true

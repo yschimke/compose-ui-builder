@@ -17,14 +17,10 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * A committed document is one the canvas can draw, and the author is told at the door.
- *
- * The reducer's refusals were shape — is the property declared, is the scalar the right JSON type,
- * is the value in `allowedValues` — and every expensive failure passed them: a colour written as
- * `string` committed and was refused one export later with a sentence about `Text` (#476); an
- * `asset/image` whose key nothing resolved committed and then failed every render of the design
- * (#484). The decision that closes the pattern (#487) is in [PropertyValueKinds]; these tests hold
- * the behaviour at the editor's reducer, against the real m3 catalog.
+ * A committed document is one the canvas can draw, and the author is told at the door: beyond shape
+ * checks, value kinds are enforced on write (e.g. a colour written as `string` (see #476), an
+ * unresolvable `asset/image` key (see #484)). The rule is in [PropertyValueKinds]; these hold the
+ * behaviour at the editor's reducer against the real m3 catalog.
  */
 class ValueKindWriteRulesTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -52,8 +48,7 @@ class ValueKindWriteRulesTest {
 
   @Test
   fun `a theme role the canvas does not draw is refused rather than committed to throw`() {
-    // The export's table has `primaryContainer`; the canvas's does not, and the renderer used to
-    // throw on the difference, taking the frame with it.
+    // The export's table has `primaryContainer` but the canvas's doesn't, so it is refused.
     val rejected = rejected(set("text", "color", typed("colorToken", "primaryContainer")))
 
     assertEquals("color", rejected.field)
@@ -102,9 +97,8 @@ class ValueKindWriteRulesTest {
 
   @Test
   fun `the catalog tells a reader the same roles and keys the validators refuse against`() {
-    // `statusSemantics.colorTokens` and `statusSemantics.assetRegistry` exist so an agent reading
-    // the capability document can get a value right the first time; they are pinned to the code's
-    // own lists so the document cannot promise what the canvas will not draw.
+    // `statusSemantics.colorTokens` and `statusSemantics.assetRegistry` are pinned to the code's
+    // own lists, so the capability document can't promise what the canvas won't draw.
     assertEquals(
       PropertyValueKinds.CANVAS_COLOR_TOKENS,
       assertNotNull(PropertyValueKinds.declaredColorTokens(catalog.statusSemantics)),

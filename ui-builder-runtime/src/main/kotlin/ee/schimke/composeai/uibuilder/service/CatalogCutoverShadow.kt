@@ -21,28 +21,20 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * What would change for one catalog if it were catalog-owned, measured against what it publishes
- * right now: the check a deployment runs in **shadow** for a catalog it is considering flipping,
- * and the one `CatalogCutoverReadinessTest` runs against captured fixtures. One answer for both, so
- * a box's shadow report and the readiness ledger cannot disagree about what "ready" means.
+ * now: the shadow check a deployment runs before flipping, and what `CatalogCutoverReadinessTest`
+ * runs on fixtures, so both agree on "ready".
  *
- * Nothing here changes what is served. [ownedFindings] builds a private executor that owns just
- * this catalog and asks it the questions the flag would make real; [catalogDifferences] compares
- * the Kotlin catalog this build would otherwise synthesise with the published one, which is what
- * deleting that Kotlin would lose. Each returns one line per finding, `<catalog>[/<template>]:
- * <finding>`, and an empty list is the clean answer.
+ * Nothing here changes what is served. [ownedFindings] asks a private executor owning just this
+ * catalog; [catalogDifferences] compares the synthesised Kotlin catalog with the published one.
+ * Each returns `<catalog>[/<template>]: <finding>` lines; empty is clean.
  */
 public object CatalogCutoverShadow {
 
   /**
-   * The whole shadow answer for [catalogId]: [ownedFindings], and what an editor would see change
-   * if the catalog were owned and the Kotlin catalog deleted.
-   *
-   * The comparison is between the two catalogs an editor is actually *served*: the Kotlin catalog
-   * as this build serves it today (with the builder vocabulary and font settings it adds), and the
-   * published one as served owned. Comparing the raw published file instead would report the
-   * builder's own layout components as lost, which no flip loses. [Report.differences] is null for
-   * a catalog this build synthesises nothing for, which has nothing to lose, and for one that
-   * cannot be owned at all because it declares no platform.
+   * The whole shadow answer for [catalogId]: [ownedFindings], and what an editor would see change.
+   * Compares the two catalogs as actually served (builder vocabulary and font settings included),
+   * so builder-owned components are not reported lost. [Report.differences] is null when nothing is
+   * synthesised or the catalog declares no platform.
    */
   public fun report(
     catalogId: String,
@@ -82,13 +74,8 @@ public object CatalogCutoverShadow {
   }
 
   /**
-   * [report]'s answer. [ready] when there are no [findings] AND no [losses]: owning the catalog
-   * must neither refuse something it serves now nor take away something an editor can do today. A
-   * difference that only adds — a component, trait, modifier or property the published catalog has
-   * and the Kotlin one does not, or a constraint it relaxes — does not block it.
-   *
-   * [losses] is the subset of [differences] that takes something away; null exactly when
-   * [differences] is.
+   * [report]'s answer. [ready] when there are no [findings] and no [losses]; purely additive or
+   * relaxing differences do not block. [losses] is null exactly when [differences] is.
    */
   public class Report
   internal constructor(
@@ -104,11 +91,9 @@ public object CatalogCutoverShadow {
   /**
    * One line of [catalogDifferences], with whether it takes something away from an editor.
    *
-   * A loss is: a component only the Kotlin catalog has; a changed role; a trait, modifier, property
-   * or slot (or a slot's accepted role or trait) the published catalog drops; a property type that
-   * drops an alternative (`["boolean","object"] -> "boolean"` loses binding to state); a property
-   * that becomes required; allowed values that narrow; a slot cardinality that narrows. A line that
-   * both loses and gains is a loss.
+   * Losses: a Kotlin-only component; a changed role; a dropped trait, modifier, property, slot, or
+   * accepted slot role/trait; a property type losing an alternative; a newly required property;
+   * narrowed allowed values or cardinality. A line that both loses and gains is a loss.
    */
   public class Difference internal constructor(public val text: String, public val loss: Boolean) {
     override fun toString(): String = (if (loss) "loss: " else "") + text
@@ -134,15 +119,13 @@ public object CatalogCutoverShadow {
   /**
    * Everything that is not clean about serving [catalogId] owned, from [published] alone.
    *
-   * - **Seeds:** the templates it publishes ([templates]; null or empty is a finding), each of
-   *   which must validate against the catalog it is served as.
-   * - **Export:** its declared `composeSourceExport` route, which must be one this build ships, and
-   *   every seed must export through it: a launcher widget through the launcher emitter at the
-   *   catalog's own sizes, a record-free platform through its emitter, anything else through the
-   *   generic record export against [exportRecord].
+   * - Seeds: its published [templates] (none is a finding), each validating against the catalog.
+   * - Export: its declared `composeSourceExport` route must ship in this build, and every seed must
+   *   export through it (launcher emitter, record-free emitter, or record export against
+   *   [exportRecord]).
    *
-   * [fixture] is the operations fixture the deployment seeds new designs from; [packComponents] are
-   * the composed catalog's records, which the record-free emitters resolve call sites from.
+   * [fixture] is the operations fixture new designs seed from; [packComponents] are the composed
+   * catalog's records for the record-free emitters.
    */
   public fun ownedFindings(
     catalogId: String,
@@ -243,20 +226,13 @@ public object CatalogCutoverShadow {
   }
 
   /**
-   * What the published catalog does not say that the Kotlin catalog this build synthesises does,
-   * and the reverse: the cost of deleting the Kotlin, component by component.
+   * The differences between the synthesised Kotlin catalog and the published one: the cost of
+   * deleting the Kotlin, component by component.
    *
-   * Compared are the components each offers, and for a component both offer, its role, traits,
-   * properties (name, JSON type, required, allowed values) and slots (name, cardinality, accepted
-   * roles and traits). Display names, notes and canvas adapters are presentation and are left out:
-   * they differ by design and a report full of them would hide the ones that matter.
-   *
-   * What the published catalog's `statusSemantics.supersedes` carries across is not lost: a saved
-   * design is moved through it ([planCatalogUpgrade]) rather than stranded. A Kotlin-only component
-   * it supersedes, every successor of which the published catalog offers, is reported as superseded
-   * and not as a loss; and a property it migrates — the `variants.property` that chooses the
-   * successor, a property renamed onto one the successor declares, or one restated as a modifier —
-   * is reported as migrated rather than lost.
+   * Compares components, roles, traits, properties (name, JSON type, required, allowed values) and
+   * slots (name, cardinality, accepted roles/traits); presentation fields are ignored. What the
+   * published `statusSemantics.supersedes` carries across ([planCatalogUpgrade]) is reported as
+   * superseded or migrated, not lost.
    */
   public fun catalogDifferences(
     synthesised: CatalogCapabilityV1,

@@ -19,11 +19,8 @@ data class GoogleMaterialIcon(
 )
 
 /**
- * Every style-qualified icon supplied by material-icons-extended, plus the original 46 aliases, in
- * the catalog's order: canonical icons first, then by label and key.
- *
- * Built on first use. Looking one icon up ([googleMaterialIcon]) does not build it: an editor tab
- * that only draws icons never holds ~11,000 of these.
+ * Every style-qualified icon in material-icons-extended plus the original 46 aliases, canonical
+ * first, then by label and key. Built lazily; [googleMaterialIcon] lookups do not build it.
  */
 val GoogleMaterialIcons: List<GoogleMaterialIcon> by lazy {
   List(GoogleMaterialIconKeys.size) { position ->
@@ -41,13 +38,9 @@ val SelectableGoogleMaterialIconCount: Int
   get() = GoogleMaterialIconKeys.canonicalCount
 
 /**
- * The first [limit] picker icons matching [query], in the catalog's order, built only for the
- * results: a search never holds the whole catalog.
- *
- * Every word of [query] (split at spaces and dashes) must appear in the key, case-insensitively and
- * in any order. Every word a label shows is in its key, though not in the label's order
- * (`outlined/arrowBack` is "Arrow Back — Outlined"), so this finds whatever the label would,
- * including a label pasted whole. A blank query is the catalog's first page.
+ * The first [limit] picker icons matching [query], in catalog order, built only for the results.
+ * Every word of [query] (split at spaces and dashes) must appear in the key, case-insensitively, in
+ * any order, so a pasted label also matches. A blank query is the first page.
  */
 fun searchGoogleMaterialIcons(query: String, limit: Int): List<GoogleMaterialIcon> {
   val words = query.split(' ', '-', '—').filter(String::isNotEmpty)
@@ -65,10 +58,8 @@ fun googleMaterialIcon(key: String): GoogleMaterialIcon? =
   if (GoogleMaterialIconKeys.positionOf(key) < 0) null else googleMaterialIconFor(key)
 
 /**
- * The catalog's keys as the build packs them (`GeneratedGoogleMaterialIconKeys`), and an index into
- * them: an icon's position in [GoogleMaterialIcons] without a map of ~11,000 strings. The index is
- * two `IntArray`s, the start of each key in the packed text and an open-addressed table of
- * positions by hash, so a lookup compares characters in place and allocates nothing.
+ * The catalog's packed keys (`GeneratedGoogleMaterialIconKeys`) and an allocation-free index: two
+ * `IntArray`s (key starts and an open-addressed hash table), avoiding a map of ~11,000 strings.
  */
 internal object GoogleMaterialIconKeys {
   private val packed: String = GeneratedGoogleMaterialIconKeys.joinToString(separator = "")
@@ -137,12 +128,11 @@ internal object GoogleMaterialIconKeys {
 }
 
 /**
- * The catalog entry for [key], built from the key alone. A canonical key names its icon:
- * `outlined/arrowBack` is `Icons.Outlined.ArrowBack`, labelled "Arrow Back — Outlined";
- * `autoMirrored/filled/send` is `Icons.AutoMirrored.Filled.Send`; a name starting with a digit
- * keeps Kotlin's leading underscore (`filled/10k` is `Icons.Filled._10k`). The original
- * compatibility keys have no style and carry their own label and target. The build generates the
- * key list; `MaterialIconCatalogTest` holds every derived entry equal to its inventory.
+ * The catalog entry for [key], built from the key alone: `outlined/arrowBack` is
+ * `Icons.Outlined.ArrowBack` ("Arrow Back — Outlined"), `autoMirrored/filled/send` is
+ * `Icons.AutoMirrored.Filled.Send`, and digit-leading names keep Kotlin's underscore (`_10k`).
+ * Compatibility keys carry their own label and target. `MaterialIconCatalogTest` checks every
+ * derived entry.
  */
 private fun googleMaterialIconFor(key: String): GoogleMaterialIcon? {
   generatedGoogleMaterialIconAlias(key)?.let { (label, expression) ->
@@ -175,12 +165,9 @@ private fun googleMaterialIconFor(key: String): GoogleMaterialIcon? {
 }
 
 /**
- * Where an icon's `ImageVector` comes from.
- *
- * On the JVM, the compiled `material-icons-extended` builders: [cached] answers every key at once.
- * In the browser, [MaterialIconData] shards fetched beside the bundle: [cached] answers only what
- * has been loaded, and [load] fetches the rest. Keys are the catalog's, aliases included; an
- * unknown key is null on both.
+ * Where an icon's `ImageVector` comes from: compiled builders on the JVM ([cached] answers all),
+ * [MaterialIconData] shards in the browser ([cached] answers loaded ones, [load] fetches the rest).
+ * Unknown keys are null on both.
  */
 expect object GoogleMaterialIconVectors {
   /** The vector for [key] if it can be drawn right now, without waiting. */
@@ -195,15 +182,9 @@ fun googleMaterialIconImageVector(key: String): ImageVector? =
   googleMaterialIcon(key)?.let { GoogleMaterialIconVectors.cached(it.key) }
 
 /**
- * The vector for [key], or null while the browser is still fetching it.
- *
- * Answers in the first composition when the vector is already at hand — always on the JVM, so
- * renders and snapshots there are unchanged — and otherwise recomposes once it arrives. A caller
- * draws nothing, at the icon's size, for the null frames.
- *
- * A failed fetch is retried while the icon stays on screen, backing off from one second to
- * [ICON_RETRY_MAX_MILLIS]: one attempt would leave an icon blank for good after a dropped request,
- * since nothing else re-runs the effect until the icon leaves composition and comes back.
+ * The vector for [key], or null while the browser is still fetching it (callers draw nothing at the
+ * icon's size). Immediate on the JVM. Failed fetches retry with backoff up to
+ * [ICON_RETRY_MAX_MILLIS] while the icon stays on screen.
  */
 @Composable
 fun rememberGoogleMaterialIconVector(key: String): ImageVector? {

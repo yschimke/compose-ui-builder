@@ -6,15 +6,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
 /**
- * The editor's clipboard as text, so a copy in one tab, window or IDE can be pasted in another.
- *
- * What is copied is a fragment of a design: the copied subtrees, and the definitions of every
- * component they place, with those components' bodies. A design opened elsewhere reads it back and
- * pastes it the way it pastes its own clipboard — a component it does not define arrives with the
- * placement ([UiBuilderEditorReducer] `pasteComponents`).
- *
- * Marked with [FORMAT] and decoded strictly on that marker, so any other text on the system
- * clipboard — a sentence, a Kotlin file, a design's whole JSON — is simply not a clipboard here.
+ * The editor's clipboard as text, so a copy in one tab, window or IDE can be pasted in another: the
+ * copied subtrees plus definitions of every component they place ([UiBuilderEditorReducer]
+ * `pasteComponents`). Marked with [FORMAT] and decoded strictly, so other clipboard text is
+ * ignored.
  */
 @Serializable
 internal data class EditorClipboardTextV1(
@@ -68,17 +63,14 @@ internal fun EditorClipboard?.sameFragmentAs(other: EditorClipboard?): Boolean =
     this?.components == other?.components
 
 /**
- * The system clipboard's text, or null when there is none or it cannot be read.
- *
- * A host may refuse — a headless JVM has no clipboard, a browser asks the person first — and every
- * refusal is null: the paste then uses the editor's own clipboard, which is what it did before
- * there was a system clipboard to consult.
+ * The system clipboard's text, or null when absent or refused (headless JVM, browser permission);
+ * the paste then uses the editor's own clipboard.
  */
 internal expect suspend fun readSystemClipboardText(): String?
 
 /**
- * Whether a paste consults the system clipboard even while this editor holds a clipboard of its
- * own. True on the desktop and in an IDE, where reading it is free; false in a browser, where it
- * asks the person each time, so a tab consults it only when it has nothing of its own to paste.
+ * Whether every paste consults the system clipboard: true on desktop and IDEs where reading is
+ * free, false in browsers (which prompt), where it is read only when the editor has nothing of its
+ * own.
  */
 internal expect val readsSystemClipboardOnEveryPaste: Boolean

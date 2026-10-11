@@ -292,9 +292,8 @@ internal fun templateLabel(template: String): String =
   template.replace('-', ' ').replaceFirstChar { it.uppercaseChar() }
 
 /**
- * The menu's name for a template, saying which ones are empty scaffolds. "Wear screen" and "Wear
- * widget adaptive" are a clock over an empty list and three bare slots, and read as showcases that
- * had forgotten their content until the menu said they were starting points (#359).
+ * The menu's name for a template, marking which are empty scaffolds (e.g. "Wear screen", "Wear
+ * widget adaptive") so they are not mistaken for showcases.
  */
 internal fun templateMenuLabel(template: String): String =
   if (template in BLANK_STARTER_TEMPLATES) "${templateLabel(template)} (blank starter)"

@@ -9,21 +9,13 @@ import ee.schimke.composeai.uibuilder.export.UiBuilderDocument
 import kotlin.random.Random
 
 /**
- * A seeded generator of documents the editor could have produced.
+ * A seeded generator of documents the editor could have produced, built by select, pick a
+ * component, press Add, so every document is reachable.
  *
- * It builds trees the only way a person can — select a node, pick a component, press Add — so what
- * comes out is not a hand-assembled JSON blob but a document with an authoring history. That is the
- * point: a generator that wrote nodes directly could produce shapes no sequence of editor
- * operations reaches, and every failure it found would need triaging for whether the document was
- * reachable at all before it meant anything.
- *
- * The catalog is the grammar — components are the nonterminals, slots the productions — so a
- * component or slot added to the catalog is generated the day it is declared, with nothing to
- * update here. Where the child *lands* is not this generator's decision either: it asks
- * [UiBuilderEditorReducer.dropTarget], which is the same call the palette's Add makes, and inserts
- * at exactly what comes back. Anything else would be testing a door the product does not have —
- * `InsertComponent` refuses a target the current selection does not resolve to, which is what keeps
- * a stale panel from writing into a slot that has since moved.
+ * The catalog is the grammar (components are nonterminals, slots productions), so new components
+ * are generated automatically. Placement uses [UiBuilderEditorReducer.dropTarget], the palette's
+ * own call, and inserts exactly there (`InsertComponent` refuses a target the selection doesn't
+ * resolve to).
  */
 class UiBuilderTreeGenerator(
   private val catalog: CapabilityCatalog,
@@ -48,12 +40,9 @@ class UiBuilderTreeGenerator(
   }
 
   /**
-   * [inserts] rounds of "select a node at random, pick a component at random, press Add".
-   *
-   * A round where the palette offers nothing for that pair is not an insert and not a failure — it
-   * is the ordinary case of a component that does not belong under the selection. A round the
-   * reducer *refuses* is recorded, and the walk carries on from the state before it, so one refusal
-   * does not truncate the tree and the caller can assert there were none.
+   * [inserts] rounds of "select a node at random, pick a component at random, press Add". A round
+   * with nothing offered is skipped; a refused round is recorded and the walk continues from the
+   * prior state.
    */
   fun generate(seed: Long, inserts: Int, start: UiBuilderDocument): Generated {
     val random = Random(seed)
@@ -73,17 +62,9 @@ class UiBuilderTreeGenerator(
   }
 
   /**
-   * The slots of [parentComponentId] that still have room after every component in the catalog has
-   * been offered to it, and that nothing was ever routed into.
-   *
-   * The parent is inserted the ordinary way — so it arrives holding its starter content and
-   * whatever its required slots were filled with — and then each component is offered to it
-   * [rounds] times over. Repeating matters: a bounded slot fills and hands the next component to
-   * the slot behind it, which is how a text field's label, placeholder and supporting text are
-   * reached in turn.
-   *
-   * A slot that ends full is not reported: it holds what it can hold, however it got there. What is
-   * left is a slot with space in it that no amount of pressing Add can put anything into.
+   * The slots of [parentComponentId] that still have room after every catalog component has been
+   * offered [rounds] times, and that nothing was routed into. Repeating lets bounded slots fill and
+   * hand on to the next. Full slots aren't reported.
    */
   fun slotsAddCannotReach(
     parentComponentId: String,

@@ -21,10 +21,6 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The `wear-m3` authoring surface: what it admits, and what it says when asked for something else.
- *
- * The catalog is synthesised from the packaged M3 one rather than shipped as its own resource, the
- * way `remote-m3`'s widget scaffolds are. That is a statement about how much of it is real: two
- * components are Wear's and every other component in it is Material 3 borrowed for the canvas.
  */
 class WearM3ScreenCatalogTest {
   private val executor =
@@ -43,9 +39,8 @@ class WearM3ScreenCatalogTest {
 
   @Test
   fun `the wear catalog shelves its own components for the builder's menu`() {
-    // The declaration replaces the base catalog's rather than merging with it. A merge would leave
-    // every wear component unshelved — the m3 entries are keyed by `m3/…` ids this catalog does
-    // not have — while carrying thirty-nine entries for components that are gone.
+    // The declaration replaces the base catalog's rather than merging (the m3 entries are keyed by
+    // ids this catalog does not have).
     val menu = wear.statusSemantics["componentMenu"]?.jsonObject
     val shelved = menu?.get("components")?.jsonObject?.keys.orEmpty()
 
@@ -63,9 +58,8 @@ class WearM3ScreenCatalogTest {
       ),
       menu?.get("groupOrder")?.jsonArray?.map { it.jsonPrimitive.content },
     )
-    // Every variant property it names is an enum on the component naming it — the same check
-    // `CatalogMenuTest` runs against the M3 declaration, run here because this one is authored in
-    // Kotlin beside a component list that #407 grew from six entries to twenty-eight.
+    // Every variant property it names is an enum on its component, as `CatalogMenuTest` checks for
+    // M3.
     val components = wear.components.associateBy { it.componentId }
     menu?.get("components")?.jsonObject?.forEach { (componentId, entry) ->
       val property = entry.jsonObject["variantProperty"]?.jsonPrimitive?.content ?: return@forEach
@@ -92,11 +86,8 @@ class WearM3ScreenCatalogTest {
   }
 
   /**
-   * The scaffold carries the screen's furniture and NOT its size.
-   *
-   * The diameter is the document's frame — the Screen inspector's Wear OS presets — and a scaffold
-   * property for it would be a second answer to the same question. This is the assertion that
-   * notices if somebody adds one.
+   * The scaffold carries the screen's furniture, not its size: the diameter is the document's
+   * frame.
    */
   @Test
   fun `the screen scaffold takes no size property`() {
@@ -111,21 +102,14 @@ class WearM3ScreenCatalogTest {
         ThemeTextStyle.PROPERTY,
       scaffold.properties.map { it.name },
     )
-    // `overlays` is the third and it is not a content slot: Wear's dialogs take a `visible` flag
-    // and draw over the whole display, so the generator writes them as siblings of the
-    // `ScreenScaffold` rather than as rows of its list. A slot in `content` would have made a
-    // full-screen dialog into a scrolling item.
+    // `overlays` holds dialogs, which are written as siblings of `ScreenScaffold`, not list rows.
     assertEquals(listOf("content", "edgeButton", "overlays"), scaffold.slots.map { it.name })
     assertEquals("Scaffold", scaffold.role)
   }
 
   /**
-   * Every component says, in its own capability note, that the canvas is not Wear Compose.
-   *
-   * `androidx.wear.compose:compose-material3` is an Android AAR and the canvas is Compose
-   * Multiplatform for Wasm, so nothing in this catalog draws the real component. A note is how an
-   * adapter states that rather than implying parity, and an unannotated component would be a claim
-   * nobody made on purpose.
+   * Every component's capability note states how the canvas draws it, rather than implying parity
+   * with the real AAR.
    */
   @Test
   fun `no component claims to draw the real Wear component`() {
@@ -136,25 +120,17 @@ class WearM3ScreenCatalogTest {
   }
 
   /**
-   * The rule this catalog exists under: **Material 3 and Wear Material 3 are not used together.**
-   *
-   * A Wear screen built from `m3/card` and `m3/text` claimed to hold mobile Material components,
-   * and `WearScreenCodeExporter` then wrote them out as `TitleCard` and Wear's `Text` — the export
-   * was right and the palette was lying. What may be borrowed from `m3-catalog` is foundation:
-   * `Box`, `Column`, `Row` and `Image` are one declaration shared by both platforms, so borrowing
-   * one claims nothing about Material at all.
-   *
-   * Asserted as a set rather than a predicate so that adding a borrow is a decision somebody writes
-   * down here, not something that drifts in behind a convenient `m3/` id.
+   * Material 3 and Wear Material 3 are not used together: only foundation (`Box`, `Column`, `Row`,
+   * `Image`) is borrowed from `m3-catalog`. Asserted as a set so a new borrow is a written-down
+   * decision.
    */
   @Test
   fun `the wear catalog borrows foundation and no Material component`() {
     val borrowed = wear.components.map { it.componentId }.filterNot { it.startsWith("wear-m3/") }
 
     assertEquals(
-      // Four, and every one of them exports. The three Remote Compose seams stood here and did
-      // not: the whole-screen generator has no case for any of them, so they were palette entries
-      // that refused at export. Withdrawn until that has an answer.
+      // All four export; the Remote Compose seams are withdrawn because the screen generator cannot
+      // write them.
       listOf("layout/box", "layout/column", "layout/row", "asset/image"),
       borrowed,
     )
@@ -186,9 +162,7 @@ class WearM3ScreenCatalogTest {
       }
 
     assertTrue("wear-m3-catalog" in failure.message.orEmpty(), failure.message.orEmpty())
-    // "neither published nor synthesised", not "no packaged adapter": since the catalog contract's
-    // loader, a servable catalog can also arrive as a published `ui-builder.json`, so the refusal
-    // has to name both routes or it sends an operator looking for the wrong fix.
+    // Names both routes (published and synthesised), so an operator looks for the right fix.
     assertTrue(
       "neither published nor synthesised" in failure.message.orEmpty(),
       failure.message.orEmpty(),
@@ -197,9 +171,8 @@ class WearM3ScreenCatalogTest {
 
   @Test
   fun `a published catalog is served under an id nothing here synthesises`() {
-    // The contract's own test, at this seam: `test-catalog` has no synthesiser, no enum value and
-    // no `when` branch, and is servable because it was handed in. Composing the published file is
-    // `:server`'s job; what this pins is that the executor's set of possible catalogs is open.
+    // `test-catalog` has no synthesiser and is servable only because it was handed in: the set of
+    // possible catalogs is open. Composing the published file is `:server`'s job.
     val published =
       CurrentM3UiBuilderCatalogExecutor(
           catalogSystemIds = setOf("test-catalog"),
@@ -231,9 +204,7 @@ class WearM3ScreenCatalogTest {
       listOf("test-catalog/only"),
       wear.components.map { it.componentId }.filterNot { it in builderVocabulary },
     )
-    // Plus the builder's own vocabulary, which is not the catalog's to publish and so not the
-    // catalog's to lose. A published shelf with no `layout/box` on it would be a shelf no existing
-    // design opens.
+    // Plus the builder's own vocabulary, which a published shelf must not lose.
     assertEquals(
       builderVocabulary,
       wear.components.map { it.componentId }.filter { it in builderVocabulary }.toSortedSet(),
@@ -241,13 +212,8 @@ class WearM3ScreenCatalogTest {
   }
 
   /**
-   * The ids a published `wear-m3` is handed — the SYNTHESISED Wear catalog's builder vocabulary,
-   * not the mobile one.
-   *
-   * Computed from the Wear catalog rather than written down, because the point is that the two
-   * differ: Wear borrows `layout/box`, `layout/column`, `layout/row` and `asset/image` and none of
-   * the lazy layouts, scaffolds or shapes, since `WearScreenCodeExporter` refuses those. A literal
-   * list here would pass while the donor logic pointed anywhere.
+   * The ids a published `wear-m3` is handed — the synthesised Wear catalog's builder vocabulary,
+   * computed rather than literal so the test fails if the donor logic picks the mobile set.
    */
   private val builderVocabulary =
     PublishedCatalogFixtures.executor(
@@ -292,18 +258,10 @@ class WearM3ScreenCatalogTest {
       .build()
 
   /**
-   * Every Wear component the generator writes is a component the palette offers.
-   *
-   * The list is literal rather than derived, and it has to be: `:ui-builder-runtime` may not depend
-   * on `:ui-builder-export` (`checkUiBuilderRuntimeBoundary` allows the protocol and nothing else),
-   * so the two halves of this pairing live in modules that cannot see each other. What holds them
-   * together is this set and `WearScreenCodeExporter.NATIVE_ONLY_COMPONENT_IDS` being edited in the
-   * same change — and `WearComponentExportTest`, over in `:ui-builder`, asserting the other
-   * direction: that every id in that set generates a call site.
-   *
-   * A component in one and not the other is the failure worth catching. In the palette and not the
-   * generator is a drop that exports as a refusal; in the generator and not the palette is dead
-   * code nobody can reach.
+   * Every Wear component the generator writes is a component the palette offers. Literal because
+   * `:ui-builder-runtime` cannot see `:ui-builder-export`; edited together with
+   * `WearScreenCodeExporter.NATIVE_ONLY_COMPONENT_IDS`, and `WearComponentExportTest` checks the
+   * other direction.
    */
   @Test
   fun `the palette offers every Wear component the generator can write`() {
@@ -347,14 +305,8 @@ class WearM3ScreenCatalogTest {
   }
 
   /**
-   * The catalog says which renderer may claim to be showing you a Wear design, and it is not this
-   * browser.
-   *
-   * Read by `UiBuilderPreviewSurfaces`, which the editor uses to open a Wear design on the host's
-   * renderer and to refuse the Preview mode where there is no host renderer, and by `:server` to
-   * send the compile to the Robolectric daemon. All three of those used to be a guess made
-   * separately — the editor's Preview mode showed a canvas of Material 3 lookalikes and called it a
-   * preview, which is the specific false claim this declaration exists to retire.
+   * The catalog says which renderer may claim to show a Wear design (not this browser). Read by
+   * `UiBuilderPreviewSurfaces` in the editor and by `:server` to route the compile to Robolectric.
    */
   @Test
   fun `the catalog declares its canvas approximate and its native render authoritative`() {

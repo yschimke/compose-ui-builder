@@ -18,12 +18,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * Building a placed piece into the component it is a picture of.
- *
- * This is the one crossing from the reference half back into the design, so these cases care about
- * two things in equal measure: that a piece with provenance produces exactly the node a catalog
- * insertion would, and that a piece without provenance produces nothing at all. The second is what
- * keeps "build this for real" from being a guess.
+ * Building a placed piece into the component it pictures: a piece with provenance produces exactly
+ * the node a catalog insertion would, and one without provenance produces nothing.
  */
 class ReferencePiecePromotionTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))

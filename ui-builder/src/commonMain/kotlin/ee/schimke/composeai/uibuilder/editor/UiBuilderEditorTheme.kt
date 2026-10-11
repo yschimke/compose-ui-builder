@@ -8,13 +8,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * The colours the editor's own UI is drawn in: its panels, rails, menus and inspector — never the
- * design, which the catalog's renderer draws in the design's theme.
- *
- * The browser keeps [Default], the dark scheme this editor has always had. A host that embeds the
- * editor among its own panels passes one derived from its theme, so the editor reads as part of the
- * host rather than as a dark page inside it: the VS Code custom editor builds one from the
- * workbench's `--vscode-*` colours and rebuilds it when the person switches theme.
+ * The colours of the editor's own UI (panels, rails, menus, inspector), never the design's. The
+ * browser uses [Default]; an embedding host passes one derived from its theme (VS Code builds it
+ * from `--vscode-*` colours and rebuilds on theme switch).
  */
 data class UiBuilderEditorTheme(
   val colorScheme: ColorScheme,
@@ -26,9 +22,8 @@ data class UiBuilderEditorTheme(
 }
 
 /**
- * The editor colours that are not a Material role: the backdrop the design sits on, the layer
- * tree's highlights and the session badge. They were literals, which is why a host theme could not
- * reach them.
+ * Editor colours that are not Material roles: the design backdrop, layer highlights and session
+ * badge.
  */
 data class UiBuilderEditorPalette(
   /** Behind the design on the canvas, and behind the revision strip. */

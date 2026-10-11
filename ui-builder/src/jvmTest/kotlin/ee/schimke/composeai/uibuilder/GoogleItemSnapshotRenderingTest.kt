@@ -50,12 +50,10 @@ class GoogleItemSnapshotRenderingTest {
   }
 
   /**
-   * The designs page's thumbnails, as the server draws them: the projected document decoded and
-   * drawn by the packaged daemon's own entry point, with its pinned catalog's canvas vocabulary.
-   *
-   * The comparison above cannot catch a placement that both paths lose — two identical pictures of
-   * "Unsupported component: design/component-instance → (none)" are still identical, which is what
-   * every card on preview.coo.ee's designs page showed for these items — so this asks the tree.
+   * The designs page's thumbnails, as the server draws them: the projected document drawn by the
+   * packaged daemon's own entry point with its pinned catalog's canvas vocabulary. Asserts on the
+   * tree, since the pixel comparison above can't catch a placement both paths lose (e.g.
+   * "Unsupported component: design/component-instance").
    */
   @Test
   fun `reusable Google items draw their bodies through the production render entry point`() {

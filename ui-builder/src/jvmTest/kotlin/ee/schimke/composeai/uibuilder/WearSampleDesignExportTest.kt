@@ -13,13 +13,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The upstream Wear sample designs through the Wear screen generator, written out for reading.
- *
- * `DesignFixturesTest` already requires every fixture to export; this is the Wear samples' own
- * check, and the one that leaves the Kotlin somewhere a person can open it
- * (`build/wear-sample-designs/`). What the output does and does not say against the Wear Material 3
- * guidance is written up in `docs/design/UI_BUILDER_WEAR_SAMPLES.md`; the assertions here are the
- * parts of that write-up that are fixed and must stay fixed.
+ * The upstream Wear sample designs through the Wear screen generator, written to
+ * `build/wear-sample-designs/` for reading. The findings against Wear Material 3 guidance are in
+ * `docs/design/UI_BUILDER_WEAR_SAMPLES.md`; the fixed parts are asserted here.
  */
 class WearSampleDesignExportTest {
   private val samples =
@@ -32,9 +28,8 @@ class WearSampleDesignExportTest {
     )
 
   /**
-   * `AppCard`'s `content` has no default. google-home-wear's camera cards are an app name and a
-   * title with no body, and ending those calls at `)` matched no overload, so the design render
-   * refused the whole screen.
+   * `AppCard`'s `content` has no default, so body-less cards (google-home-wear's camera cards) must
+   * still pass a content lambda.
    */
   @Test
   fun `a two-line app card still passes its content lambda`() {
@@ -85,8 +80,8 @@ class WearSampleDesignExportTest {
   }
 
   /**
-   * A design from before `wear-m3/edge-button` put an ordinary button in the edge slot, and that
-   * button can carry colours the canvas draws. The generated `EdgeButton` keeps them.
+   * An older design with an ordinary button in the edge slot keeps its colours on the generated
+   * `EdgeButton`.
    */
   @Test
   fun `a legacy button in the edge slot keeps its colours`() {
@@ -141,8 +136,8 @@ class WearSampleDesignExportTest {
   }
 
   /**
-   * The findings of `UI_BUILDER_WEAR_SAMPLES.md`, each pinned against the sample that showed it.
-   * Every one is what the upstream sample itself writes.
+   * The findings of `UI_BUILDER_WEAR_SAMPLES.md`, each pinned against the sample that showed it,
+   * all matching what the upstream sample writes.
    */
   @Test
   fun `the samples generate what the upstream screens call`() {

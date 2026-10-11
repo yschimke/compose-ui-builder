@@ -25,10 +25,8 @@ import kotlinx.serialization.json.buildJsonObject
 class UiBuilderLiveSessionApiTest {
   @Test
   fun `opening a design never creates one, however many times the page is loaded`() = runImmediate {
-    // The browser used to seed and create a design whose open came back `notFound`, which made
-    // loading a URL a mutation. Creating is a `POST` to the New design form's route or a `PUT` of
-    // the design resource now; what the page does is open. A missing design is reported as
-    // missing, and nothing on this path can write.
+    // Opening a missing design reports it missing and never writes: creation is a `POST` to the New
+    // design route or a `PUT` of the design resource.
     val requests = mutableListOf<UiBuilderRequestV1>()
     var exists = false
     val transport = UiBuilderHttpTransport { request ->

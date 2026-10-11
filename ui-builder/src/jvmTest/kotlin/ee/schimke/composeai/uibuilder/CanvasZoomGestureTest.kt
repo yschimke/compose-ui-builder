@@ -115,10 +115,9 @@ class CanvasZoomGestureTest {
     runDesktopComposeUiTest(width = 900, height = 700) {
       var snapshot: UiBuilderInspectionSnapshot? = null
       // 640px tall in a 700px workspace: centred with a 30px margin, which one notch (2.25x, 720px)
-      // takes away while opening 20px of scroll. The point under y can be kept there only while the
-      // scroll it needs, 0.125y - 33.75, fits in that 20px — y from 270 to 430. At 350 it needs
-      // 10px;
-      // reading the point as `scroll + y` forgets the margin and asks for 43.75, clamped to 20.
+      // removes while opening 20px of scroll. The point under y stays put only while the needed
+      // scroll (0.125y - 33.75) fits in 20px, i.e. y from 270 to 430; at 350 it needs 10px. Reading
+      // the point as `scroll + y` would ignore the margin.
       setContent {
         MaterialTheme {
           // Centred, as both editor layouts draw it.
@@ -157,9 +156,9 @@ class CanvasZoomGestureTest {
       waitForIdle()
       fun frame() =
         assertNotNull(snapshot?.nodes?.firstOrNull { it.nodeId == "plan-scaffold" }?.bounds)
-      // Fingers 200px apart around (400, 300), spreading to 300px apart around (400, 200): a 1.5x
-      // zoom to 3x while the pinch rises 100px. The design point under the start must end under
-      // the end — the pan is part of the gesture, not something the zoom's scroll overwrites.
+      // Fingers 200px apart around (400, 300), spreading to 300px apart around (400, 200): 1.5x
+      // zoom to 3x while rising 100px. The design point under the start must end under the end; the
+      // pan is part of the gesture.
       val start = frame()
       val fraction = (300f - start.y) / start.height
       onRoot().performTouchInput {

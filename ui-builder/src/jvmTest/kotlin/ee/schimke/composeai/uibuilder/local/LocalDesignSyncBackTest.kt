@@ -28,12 +28,9 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 
 /**
- * Bringing an offline session home.
- *
- * The rule under test is the base chain: the first command claims the fork point and every command
- * after it claims the revision its predecessor landed at. That is what keeps a concurrent edit
- * *reportable* rather than silently overwritten, what keeps a command's anchors resolvable, and
- * what makes an interrupted sync resumable by re-running it
+ * Bringing an offline session home. Under test is the base chain: the first command claims the fork
+ * point, each later one the revision its predecessor landed at, so concurrent edits are reportable,
+ * anchors resolvable, and an interrupted sync resumable
  * ([`UI_BUILDER_DESIGN_PORTABILITY.md`](../../docs/design/UI_BUILDER_DESIGN_PORTABILITY.md)).
  */
 class LocalDesignSyncBackTest {
@@ -221,11 +218,8 @@ class LocalDesignSyncBackTest {
       .sync(record)
 
   /**
-   * A server that answers the fork-point question and then commits, refuses or dies.
-   *
-   * Deliberately not the real service: what is under test is which base each command claims and
-   * what the report says, and a real reducer would make those answers depend on the fixture's
-   * content.
+   * A server that answers the fork-point question and then commits, refuses or dies. Not the real
+   * service, so answers don't depend on fixture content.
    */
   private class FakeServer(
     forkDocument: ee.schimke.composeai.uibuilder.export.UiBuilderDocument,

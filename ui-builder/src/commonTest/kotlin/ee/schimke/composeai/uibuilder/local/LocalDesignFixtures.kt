@@ -10,11 +10,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 /**
- * The smallest design the reducer will accept edits to, plus the commands the tests make of it.
- *
- * Deliberately not the Jetcaster fixture: these tests are about storage, replay and compaction, and
- * a fixture large enough to be realistic would make the compaction thresholds they assert on
- * arbitrary rather than legible.
+ * The smallest design the reducer accepts edits to, plus the tests' commands. Small, so compaction
+ * thresholds stay legible.
  */
 internal object LocalDesignFixtures {
   const val DESIGN_ID: String = "local-fixture"

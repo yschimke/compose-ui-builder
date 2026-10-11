@@ -9,19 +9,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * The half of the editor's URL building that is a pure function, and the half that was wrong.
- *
- * [catalogAssetPath] shipped for months emitting `${'$'}{…}` — a literal `$` in an ordinary Kotlin
- * string, not an interpolation — so the browser requested the path
- * `/$%7BencodeUriComponent(catalogSystemId)%7D$path$query` and took a 404. Nothing caught it
- * because its only caller loads the Remote Compose palette and treats any failure as "this box
- * serves no such catalog", so the symptom was an always-empty panel rather than an error.
- *
- * These run on wasmJs rather than in `commonTest` because the function encodes through the
- * browser's own `encodeURIComponent`; a JVM stand-in would be testing a different implementation
- * than the one that ships. The performance harness asserts [sameOriginRequestUrl]'s effect end to
- * end, by failing on any 401 the editor provokes against its own server; the tests here that read
- * `window.location` only pin down that the page's `?token=` is never copied onto a request.
+ * The pure half of the editor's URL building. On wasmJs rather than `commonTest` because
+ * [catalogAssetPath] encodes through the browser's `encodeURIComponent`. The performance harness
+ * covers [sameOriginRequestUrl] end to end (failing on any 401); tests here reading
+ * `window.location` pin that the page's `?token=` is never copied onto a request.
  */
 class BrowserRequestUrlTest {
 

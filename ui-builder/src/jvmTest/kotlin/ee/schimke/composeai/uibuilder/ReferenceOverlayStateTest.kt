@@ -21,9 +21,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The reference overlay is editor state, and this is the test that says so: every case here also
- * asserts that the document did not move. A reference that reached the document would be exported,
- * replayed and pushed to every collaborator, which is the one thing it must never be.
+ * The reference overlay is editor state: every case also asserts the document did not move, since a
+ * reference in the document would be exported, replayed and pushed to collaborators.
  */
 class ReferenceOverlayStateTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))

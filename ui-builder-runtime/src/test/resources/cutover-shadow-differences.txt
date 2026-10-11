@@ -10,25 +10,6 @@ a2ui/list-of: only the published catalog has it
 a2ui/stretched-row: only the published catalog has it
 a2ui/text-field-of: only the published catalog has it
 a2ui/text-of: only the published catalog has it
-a2ui-catalog/asset/image: only the published catalog has it
-a2ui-catalog/layout/box: only the published catalog has it
-a2ui-catalog/layout/column: only the published catalog has it
-a2ui-catalog/layout/flow-row: only the published catalog has it
-a2ui-catalog/layout/for-each: only the published catalog has it
-a2ui-catalog/layout/horizontal-carousel: only the published catalog has it
-a2ui-catalog/layout/lazy-column: only the published catalog has it
-a2ui-catalog/layout/lazy-grid: only the published catalog has it
-a2ui-catalog/layout/lazy-row: only the published catalog has it
-a2ui-catalog/layout/list-detail-pane-scaffold: only the published catalog has it
-a2ui-catalog/layout/row: only the published catalog has it
-a2ui-catalog/layout/scaffold: only the published catalog has it
-a2ui-catalog/layout/supporting-pane-scaffold: only the published catalog has it
-a2ui-catalog/remote-compose/custom: only the published catalog has it
-a2ui-catalog/remote-compose/document: only the published catalog has it
-a2ui-catalog/remote-compose/inline: only the published catalog has it
-a2ui-catalog/shape/colour-dot: only the published catalog has it
-a2ui-catalog/shape/linear-gradient: only the published catalog has it
-a2ui-catalog/shape/radial-gradient: only the published catalog has it
 a2ui/AudioPlayer: modifiers: gains align, alignHorizontal, alignVertical, alpha, aspectRatio, fillMaxWidth, height, heightIn, offset, padding, rotate, scale, size, testTag, weight, width, widthIn, zIndex
 a2ui/Button: modifiers: gains align, alignHorizontal, alignVertical, alpha, aspectRatio, background, border, fillMaxHeight, fillMaxSize, fillMaxWidth, height, heightIn, offset, padding, rotate, scale, shadow, size, testTag, verticalScroll, weight, width, widthIn, wrapContentSize, zIndex
 a2ui/Card: modifiers: gains align, alignHorizontal, alignVertical, alpha, aspectRatio, background, border, fillMaxHeight, fillMaxSize, fillMaxWidth, height, heightIn, offset, padding, rotate, scale, shadow, size, testTag, verticalScroll, weight, width, widthIn, wrapContentSize, zIndex

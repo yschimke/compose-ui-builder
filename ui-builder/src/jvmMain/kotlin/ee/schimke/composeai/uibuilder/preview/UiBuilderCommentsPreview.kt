@@ -14,16 +14,12 @@ import ee.schimke.composeai.uibuilder.editor.EditorInspectorMode
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 
 /**
- * The discussion on a design: the Talk panel, and the pins that put each thread on the frame.
+ * The discussion on a design: the Talk panel, and the pins that put each thread on the frame. Diffs
+ * the anchor chips, the agent badge, a resolved thread's greyed pin, an expanded thread's reply
+ * field, and a pin sitting on its mark.
  *
- * A new visual surface is wired into the preview workflow so the next change to it is diffed
- * without anyone remembering to — the reason [UiBuilderReferenceOverlayPreview] exists. What this
- * one has to keep honest is the half no state test can see: the anchor chips, the agent badge, a
- * resolved thread's greyed pin, an expanded thread's reply field, and — the point of the feature —
- * a pin sitting on the mark its thread is about.
- *
- * Everything is fixed. The board is built here, the reference is the same SVG the overlay previews
- * use, and nothing reads a clock, the network or a random source.
+ * Fully fixed: the board is built here, the reference is the overlay previews' SVG, and nothing
+ * reads a clock, the network or randomness.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -46,8 +42,8 @@ fun UiBuilderCommentsPanelPreview() {
 }
 
 /**
- * A verdict from an agent on the revision before this one, with its note, so the review section's
- * "nothing on this revision yet, but…" line is drawn rather than assumed.
+ * An agent's verdict on the previous revision, so the review section's "nothing on this revision
+ * yet, but…" line is drawn.
  */
 private val reviewPreview =
   DesignReview(
@@ -65,16 +61,11 @@ private val reviewPreview =
   )
 
 /**
- * The same discussion with the markup panel open instead.
- *
- * A second preview rather than a second state on the first, because this is the render that proves
- * the two features are actually joined: the pins are on the canvas beside the strokes they belong
- * to while the Screen tab's Markup section — with its Discuss button — is the thing on screen.
+ * The same discussion with the markup panel open, proving the features join: pins beside their
+ * strokes while the Screen tab's Markup section (with its Discuss button) is shown.
  */
-// Taller than its sibling on purpose, for the reason `UiBuilderReferenceComponentPiecePreview`
-// is: the control this render exists to diff — the Markup section's Discuss button — sits below
-// the frame controls in a panel that scrolls, and a 900 dp render would prove only that the Screen
-// tab still has a heading.
+// Taller than its sibling (as `UiBuilderReferenceComponentPiecePreview` is) so the Markup section's
+// Discuss button, below the frame controls, is in the render.
 @Preview(widthDp = 1600, heightDp = 2000)
 @Composable
 fun UiBuilderCommentPinsOverMarkupPreview() {
@@ -95,12 +86,9 @@ fun UiBuilderCommentPinsOverMarkupPreview() {
 }
 
 /**
- * Four threads, chosen to cover the four things a thread can be about and the two who can say it.
- *
- * One on a mark (the arrow), one on a node, one on a bare point, and one resolved — plus a reply
- * from an agent, so the badge that tells a person from an agent is drawn rather than assumed. The
- * ids are the host's real shapes, so each name is drawn with its account beside it, and Sam's —
- * whose name is their login — collapses to the handle alone.
+ * Four threads covering the four anchor kinds (a mark, a node, a bare point, and one resolved) plus
+ * an agent reply. Ids use the host's real shapes, so account names render; Sam's name equals their
+ * login, so it collapses to the handle.
  */
 private val commentsPreviewBoard =
   DesignCommentBoard(

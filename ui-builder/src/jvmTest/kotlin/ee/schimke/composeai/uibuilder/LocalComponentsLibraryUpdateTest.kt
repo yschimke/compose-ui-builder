@@ -23,11 +23,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Taking the library's newer version of a component this design imported.
- *
- * Drift is reported and never redrawn on its own; this is the decision the report leaves to the
- * design's owner. The body is replaced, the recorded digest moves, and every placement stays where
- * it was with the content it was given — minus what the new body no longer reads.
+ * Taking the library's newer version of an imported component (drift is reported, never applied
+ * automatically): the body is replaced, the recorded digest moves, and placements keep their
+ * content minus what the new body no longer reads.
  */
 class LocalComponentsLibraryUpdateTest {
   private val catalog =

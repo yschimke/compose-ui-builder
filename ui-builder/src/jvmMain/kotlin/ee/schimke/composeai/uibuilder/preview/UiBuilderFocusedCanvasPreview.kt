@@ -15,11 +15,9 @@ import ee.schimke.composeai.uibuilder.editor.NodeCommentCard
 import ee.schimke.composeai.uibuilder.editor.UiBuilderEditor
 
 /**
- * The focused canvas the MCP App opens a design in (compose-ui-builder#374): the editor with its
- * toolbar, docks, rails and status bar taken away, at the size of a chat host's side panel.
- *
- * The file bar above it belongs to the MCP App host rather than to the editor, so it is not in this
- * picture; the browser evidence in `docs/design/evidence/ui-builder-mcp-app-host/` has both.
+ * The focused canvas the MCP App opens a design in (compose-ui-builder#374): the editor without
+ * toolbar, docks, rails and status bar, at a chat side panel's size. The MCP App host's file bar
+ * isn't part of the editor; see `docs/design/evidence/ui-builder-mcp-app-host/` for both.
  */
 @Preview(widthDp = 720, heightDp = 900)
 @Composable

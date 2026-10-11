@@ -81,40 +81,15 @@ import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
 /**
  * Wear components drawn by Wear Compose, on the Wasm canvas.
  *
- * ## What changed, and why this file exists
- *
- * For most of this module's life the canvas drew a Wear design with Material 3 lookalikes: a Wear
- * card was literally a mobile Material card, a `ListHeader` was a `Box` with a `Text` centred in
- * 48dp, and a `TransformingLazyColumn` was a plain `Column`. The reason given — in
- * [wearScreenStandIn]'s KDoc, in `WearCanvasStandInTest` and in
- * `docs/design/UI_BUILDER_WEAR_SCREEN.md` — was that `androidx.wear.compose:compose-material3` is
- * an Android AAR that Compose Multiplatform for Wasm cannot link, so a Wear component was either
- * drawn as something else or not drawn at all.
- *
- * The first half of that is still true and checkable: that artifact's Gradle module metadata
- * carries exactly two variants, `releaseVariantReleaseApiPublication` and its runtime twin, and one
- * artifact, an `.aar`. It is not a multiplatform publication and there is no `wasmJs` variant to
- * resolve.
- *
- * The conclusion did not follow. The canvas does not have to link *that* artifact. The Wear kit
- * repository maintains a Compose Multiplatform port of the same source — `ee.schimke.wearcmp:*` —
- * which keeps the `androidx.wear.compose.material3` package names and publishes `jvm` and `wasmJs`
- * variants. Those are exactly this module's two targets, and it already renders its whole kit
- * through that port on a desktop lane. `settings.gradle.kts` names where the port is published and
+ * `androidx.wear.compose:compose-material3` is an Android-only AAR, but the Wear kit's Compose
+ * Multiplatform port (`ee.schimke.wearcmp:*`) keeps the `androidx.wear.compose.material3` package
+ * names and publishes `jvm` and `wasmJs` variants. So every import above is the real component,
+ * measured and drawn by its own code. `settings.gradle.kts` names where the port is published and
  * `gradle/libs.versions.toml` pins the version.
  *
- * So every import above is the real component. `SwitchButton` here is Wear's `SwitchButton`,
- * measured and drawn by its own code, not an impression of it assembled from Material 3 pieces at
- * sizes read off a screenshot. That was the specific thing the old rule existed to prevent, and it
- * is no longer the price of drawing a Wear screen.
- *
- * ## What this is still not
- *
- * The port is not the kit rendition. The published Wear renders — and the device-preview lane —
- * draw with the genuine AndroidX library under Robolectric through that platform's own native
- * bundle, and that stays the thing this repository measures against the kit. This canvas is the
- * editing surface and the first-line preview; the two lanes disagreeing about a component is a
- * finding about the port, not about the design.
+ * The port is not the kit rendition: published Wear renders and the device-preview lane use the
+ * genuine AndroidX library under Robolectric, and remain the reference. Disagreement between the
+ * lanes is a finding about the port, not the design.
  */
 @Composable
 internal fun WearCanvasListHeader(
@@ -123,10 +98,8 @@ internal fun WearCanvasListHeader(
   maxLines: Int = Int.MAX_VALUE,
   overflow: TextOverflow = TextOverflow.Clip,
 ) {
-  // `maxLines` and `overflow` are the label's rather than the header's: upstream's `ListHeader`
-  // takes a content lambda, so the string is this `Text` and the truncation is its argument. Both
-  // were declared on the component and read by nobody, which meant a header a design had clipped to
-  // one line drew as many as it wrapped to.
+  // `maxLines` and `overflow` go on the label `Text`, since upstream's `ListHeader` takes a content
+  // lambda.
   val transformation = wearRowTransformation()
   OutsideWearRow {
     ListHeader(modifier = modifier, transformation = transformation) {
@@ -152,11 +125,8 @@ internal fun WearCanvasListSubHeader(
 }
 
 /**
- * Wear's `SwitchButton` — a component with no Material 3 counterpart, and therefore one the canvas
- * previously could not draw at any fidelity. `google-home-wear` uses eleven of them.
- *
- * [onCheckedChange] is the renderer's two-way binding: a `checked` read from a design flag is
- * written back when the row is tapped, as `m3/switch` does; an authored `checked` stays put.
+ * Wear's `SwitchButton`. [onCheckedChange] is the renderer's two-way binding: a `checked` read from
+ * a design flag is written back on tap, as `m3/switch` does; an authored `checked` stays put.
  */
 @Composable
 internal fun WearCanvasSwitchButton(
@@ -182,11 +152,8 @@ internal fun WearCanvasSwitchButton(
 }
 
 /**
- * Wear's `Slider`. Also previously undrawable, and also in `google-home-wear` three times.
- *
- * `valueRange` is the authored `valueFrom..valueTo` rather than a range derived from `steps`,
- * because the document carries both and the two can legitimately differ — a brightness row running
- * 0..100 in 10 steps is not the same component as one running 0..11.
+ * Wear's `Slider`. `valueRange` is the authored `valueFrom..valueTo` rather than derived from
+ * `steps`; the two can legitimately differ.
  */
 @Composable
 internal fun WearCanvasSlider(
@@ -205,26 +172,18 @@ internal fun WearCanvasSlider(
     enabled = enabled,
     // `steps` is the count BETWEEN the ends, so it cannot be negative however the document reads.
     steps = steps.coerceAtLeast(0),
-    // Guarded rather than trusted: `Slider` requires a non-empty range and the canvas must not
-    // crash on a half-authored document — a canvas that throws cannot draw the Issues panel that
-    // would explain why.
+    // Guarded: `Slider` requires a non-empty range, and a half-authored document must not crash the
+    // canvas.
     valueRange = if (valueTo > valueFrom) valueFrom..valueTo else 0f..1f,
     segmented = segmented,
   )
 }
 
 /**
- * The real `TransformingLazyColumn`, with the transformation the canvas used to leave out.
+ * The real `TransformingLazyColumn`, scaling and fading rows via the library's
+ * `SurfaceTransformation` and `transformedHeight`.
  *
- * The old branch was a `Column`, and its comment argued the case honestly: `TransformingLazyColumn`
- * scales and fades its rows against the round display through `SurfaceTransformation` and
- * `Modifier.transformedHeight`, "neither of which exists off Android", so approximating the curve
- * by hand would draw a different wrong picture and imply it was right. Both now exist here —
- * `androidx.wear.compose.material3.lazy.transformedHeight` is imported above — so the rows scale
- * and fade because the library does it, which is the only version of this worth drawing.
- *
- * Items are passed as a count plus an index lambda rather than a list of composables so the lazy
- * column stays lazy: `TransformingLazyColumnScope.items` composes what is on screen.
+ * Items are passed as a count plus an index lambda so the column stays lazy.
  */
 @Composable
 internal fun WearCanvasTransformingLazyColumn(
@@ -232,18 +191,14 @@ internal fun WearCanvasTransformingLazyColumn(
   verticalSpacingDp: Float,
   modifier: Modifier = Modifier,
   /**
-   * Whether each row carries `transformedHeight` and `SurfaceTransformation`.
-   *
-   * The design's `transformation` property, which the exporter has always honoured and the canvas
-   * never read — so a design that asked for no transformation still got one on the canvas, and the
-   * generated screen did not. `none` is a real choice rather than a corner: it is what a list drawn
-   * for a comparison against a stitched capture wants, since `ScrollMode.LONG` turns the
-   * transformation off in order to stitch.
+   * Whether each row carries `transformedHeight` and `SurfaceTransformation`: the design's
+   * `transformation` property. `none` matches a stitched `ScrollMode.LONG` capture, which turns the
+   * transformation off.
    */
   transformation: Boolean = true,
   /**
-   * The node id of each row, for scrolling the one holding the selection into view — see
-   * [RevealSelectedItem]. Empty where nothing asks.
+   * The node id of each row, for scrolling the selected one into view (see [RevealSelectedItem]).
+   * Empty where nothing asks.
    */
   itemIds: List<String> = emptyList(),
   item: @Composable (Int, Modifier) -> Unit,
@@ -258,36 +213,28 @@ internal fun WearCanvasTransformingLazyColumn(
   val spec = rememberTransformationSpec()
   TransformingLazyColumn(
     state = state,
-    // `ScreenScaffold` gives this to its list; it is content padding, not padding around a shorter
-    // viewport. That distinction is visible at either end of a round screen: a lazy list needs the
-    // room in its scroll range so its first and last rows can settle clear of the bezel.
+    // Content padding (as `ScreenScaffold` gives its list), not a shorter viewport, so first and
+    // last rows can scroll clear of the bezel.
     contentPadding = LocalWearScreenContentPadding.current,
     modifier = modifier.fillMaxSize(),
     verticalArrangement = Arrangement.spacedBy(verticalSpacingDp.dp),
   ) {
     items(itemCount) { index ->
       if (!transformation) {
-        // The design asked for none, which is a real choice: a stitched `ScrollMode.LONG` capture
-        // turns the transformation off in order to stitch, so a list drawn against one wants the
-        // same. Both halves are off — the layout half and the drawing half below.
+        // The design asked for no transformation; both the layout and drawing halves are off.
         item(
           index,
           Modifier.fillMaxWidth()
             .minimumVerticalContentPadding(CardDefaults.minimumVerticalListContentPadding),
         )
       } else {
-        // **Both halves of the transformation.** `transformedHeight` is the layout half — the row
-        // gets shorter as it approaches the bezel — and `SurfaceTransformation` is the drawing
-        // half: the scale and the fade, which the component applies to itself. Passing only the
-        // first is what made the canvas's Wear list look like a plain column of full-size rows
-        // while the generated screen beside it scaled and faded. The library's own components take
-        // the second as a parameter, so it travels to them by a local rather than by rewriting
-        // every call.
+        // **Both halves of the transformation.** `transformedHeight` is the layout half (rows
+        // shorten near the bezel) and `SurfaceTransformation` the drawing half (scale and fade),
+        // which library components take as a parameter; it travels to them by a local.
         //
-        // A row whose component takes no transformation — a `Text`, an `IconButton`, a slider —
-        // still gets the layout half, so the list transforms it here as a whole, the way
-        // `ButtonGroup` transforms itself. Left out, such a row got shorter near the bezel while
-        // drawing at full size, spilling over its neighbours.
+        // A row whose component takes no transformation (a `Text`, `IconButton`, slider) is
+        // transformed here as a whole, as `ButtonGroup` transforms itself; otherwise it would
+        // shorten but draw full size.
         val row = remember(this, spec) { WearRowTransformation(SurfaceTransformation(spec)) }
         CompositionLocalProvider(LocalWearRowTransformation provides row) {
           item(
@@ -306,12 +253,8 @@ internal fun WearCanvasTransformingLazyColumn(
 }
 
 /**
- * The list state the enclosing Wear screen scaffold owns, or null outside one.
- *
- * `ScreenScaffold` exists to hold one list, and the parts of a Wear screen that are *about* that
- * list — the clock scrolling away, the scroll indicator — read its state. The canvas draws the
- * scaffold as a stand-in, so the stand-in owns the state and shares it here rather than letting the
- * list remember one of its own that nothing else can see.
+ * The list state the enclosing Wear screen scaffold owns, or null outside one. The clock and scroll
+ * indicator read it, so the scaffold stand-in owns it and shares it here.
  */
 internal val LocalWearScreenListState =
   staticCompositionLocalOf<androidx.wear.compose.foundation.lazy.TransformingLazyColumnState?> {
@@ -323,12 +266,8 @@ internal val LocalWearScreenContentPadding = staticCompositionLocalOf { PaddingV
 
 /**
  * The row transformation the enclosing Wear list is applying, and whether anything in the row has
- * applied it.
- *
- * The canvas dispatches a component by id, so a component cannot be handed the transformation its
- * parent would pass it in generated code. This is that argument, carried the way a
- * `CompositionLocal` carries anything else the tree knows and the call site does not — see
- * [wearRowTransformation] for taking it.
+ * applied it. The canvas dispatches by id, so this carries the argument a parent would pass in
+ * generated code; see [wearRowTransformation].
  */
 internal class WearRowTransformation(val surface: SurfaceTransformation) {
   /** How many components in the row are applying [surface] themselves; the list does, at none. */
@@ -351,10 +290,8 @@ internal val LocalWearRowTransformation = staticCompositionLocalOf<WearRowTransf
  * The row's transformation, for a component that takes one as its `transformation` argument, or
  * null outside a transforming list.
  *
- * Taking it tells the list the row draws its own, so the list does not transform it a second time.
- * The component must then draw inside [OutsideWearRow]: the library transforms a surface together
- * with everything on it, and a button inside a card, or in a `ButtonGroup`, that took the same
- * transformation again would be scaled twice, each about its own centre.
+ * Taking it tells the list not to transform the row again. The component must then draw inside
+ * [OutsideWearRow], so nested buttons aren't scaled a second time about their own centres.
  */
 @Composable
 internal fun wearRowTransformation(): SurfaceTransformation? {
@@ -372,17 +309,12 @@ internal fun OutsideWearRow(content: @Composable () -> Unit) {
   CompositionLocalProvider(LocalWearRowTransformation provides null, content = content)
 }
 
-// ── The rest of the catalog
-// ───────────────────────────────────────────────────────────────────────
+// The rest of the catalog: each is the component the generated screen names, drawn by its own
+// library, with parameters read from the catalog's declared properties.
 //
-// Everything below was a dashed placeholder until the port arrived. None of it is a lookalike: each
-// is the component the generated screen names, drawn by the library that defines it. The parameters
-// are read off the catalog's own declared properties, so a component drawing here and a component
-// exporting there are answering from the same contract.
-//
-// Callbacks are empty unless the renderer passes one. The selection rows take the renderer's
-// two-way binding, so a row bound to a design flag ticks on the canvas as its export does; a row
-// with an authored literal shows it and nothing moves when it is clicked.
+// Callbacks are empty unless the renderer passes one. Selection rows take the renderer's two-way
+// binding, so a row bound to a design flag ticks on the canvas; one with an authored literal does
+// not move.
 
 /** Wear's `CheckboxButton`: a full-width labelled row, not the mobile 20dp square. */
 @Composable
@@ -433,10 +365,8 @@ internal fun WearCanvasRadioButton(
 }
 
 /**
- * Wear's `Stepper`, which is a slider's discrete sibling: two buttons around a content slot.
- *
- * The range is guarded the way [WearCanvasSlider]'s is, and for the same reason — a half-authored
- * document must not take the canvas down with it.
+ * Wear's `Stepper`: two buttons around a content slot. The range is guarded like
+ * [WearCanvasSlider]'s.
  */
 @Composable
 internal fun WearCanvasStepper(
@@ -464,10 +394,8 @@ internal fun WearCanvasStepper(
 }
 
 /**
- * The four progress indicators the catalog declares, chosen by the `variant` property.
- *
- * `progress` is a lambda in Wear's API rather than a value — it is read during draw so an animation
- * does not recompose the caller. The canvas has a fixed authored number, so the lambda is constant.
+ * The four progress indicators the catalog declares, chosen by the `variant` property. `progress`
+ * is a lambda in Wear's API; here it returns the fixed authored number.
  */
 @Composable
 internal fun WearCanvasProgressIndicator(
@@ -502,10 +430,8 @@ internal fun WearCanvasProgressIndicator(
         enabled = enabled,
         colors = colors,
       )
-    // `ArcProgressIndicator` takes start and end angles rather than a progress fraction, so the
-    // authored `progress` has nowhere to go and this draws the library's indeterminate arc. Called
-    // out rather than faked: sweeping the end angle by `clamped` myself would be a replica of a
-    // determinate arc that upstream does not offer at this call site.
+    // `ArcProgressIndicator` takes angles, not a progress fraction, so this draws the library's
+    // indeterminate arc rather than faking a determinate one.
     "arc" -> ArcProgressIndicator(modifier = modifier, colors = colors)
     // `circular` and anything unrecognised. A default rather than a refusal: an unknown enum is a
     // document the validator should be complaining about, not a reason for the canvas to go blank.
@@ -520,11 +446,9 @@ internal fun WearCanvasProgressIndicator(
 }
 
 /**
- * Wear's real page indicators at a deterministic default page.
- *
- * Remote Compose carries the pager as a `RemotePageIndicatorState`, which is target state rather
- * than a scalar an editing canvas can reproduce. The authoritative Browser Preview plays that state
- * from the exported document; this canvas counterpart deliberately shows page one of four.
+ * Wear's real page indicators at a deterministic default page (one of four). Remote Compose's
+ * `RemotePageIndicatorState` is target state the canvas cannot reproduce; the Browser Preview plays
+ * it from the exported document.
  */
 @Composable
 internal fun WearCanvasPageIndicator(
@@ -564,12 +488,8 @@ internal fun WearCanvasPageIndicator(
 }
 
 /**
- * `EdgeButton`, drawn with its own shape.
- *
- * `UI_BUILDER_WEAR_SCREEN.md` recorded this one as "placed, not shaped": the slot generated a real
- * `EdgeButton` while the canvas drew a borrowed flat button at the bottom cap, because the shape
- * comes from the screen and the canvas had no way to ask for it. It does now — the button's hugging
- * curve is the library's, at the `EdgeButtonSize` the document names.
+ * `EdgeButton`, drawn with the library's own hugging curve at the `EdgeButtonSize` the document
+ * names.
  */
 @Composable
 internal fun WearCanvasEdgeButton(
@@ -598,11 +518,8 @@ internal fun WearCanvasEdgeButton(
 }
 
 /**
- * `ButtonGroup`: a row that shares its spacing, and that swells the pressed child.
- *
- * Only the spacing shows here. The expansion is `ButtonGroupScope.animateWidth`, which needs an
- * interaction source per child to have anything to react to, and a canvas that is never pressed has
- * none — so this draws the group's resting state, which is the state a design describes.
+ * `ButtonGroup`: a row that shares its spacing and swells the pressed child. Only the resting state
+ * is drawn, since `animateWidth` needs per-child interaction sources.
  */
 @Composable
 internal fun WearCanvasButtonGroup(
@@ -610,23 +527,19 @@ internal fun WearCanvasButtonGroup(
   modifier: Modifier = Modifier,
   child: @Composable (index: Int, modifier: Modifier) -> Unit,
 ) {
-  // The catalog lets a group be empty (`children` has a minimum of zero), and the library's measure
-  // takes the tallest child with `maxOf`, which throws on none: one emptied group took the whole
-  // canvas down. An empty group has nothing to draw, so it draws nothing, at the group's width.
+  // The catalog allows an empty group, but the library's measure throws on no children; draw
+  // nothing at the group's width.
   if (weights.isEmpty()) {
     Box(modifier.fillMaxWidth())
     return
   }
-  // The group takes the row's transformation as a whole, and its buttons none: upstream's own
-  // warning is that a transformation on both is applied twice, and each button scaled about its own
-  // centre is what made a list's last row — a group of buttons — draw wrong on the canvas.
+  // The group takes the row's transformation as a whole and its buttons none; upstream warns that
+  // both would apply it twice.
   val transformation = wearRowTransformation()
   OutsideWearRow {
     ButtonGroup(modifier = modifier.fillMaxWidth(), transformation = transformation) {
-      // Each child's `weight` is `ButtonGroupScope.weight`, which only this scope can write, so the
-      // group applies it rather than the child's own chain — the way `Row` and `Column` read
-      // `layoutWeight` for theirs. Without it Jetcaster's 0.7 / 0.3 play and queue buttons drew
-      // as equals on the canvas while the generated screen weighted them.
+      // `ButtonGroupScope.weight` can only be written in this scope, so the group applies each
+      // child's `weight` (as `Row`/`Column` read `layoutWeight`).
       weights.forEachIndexed { index, weight ->
         child(index, if (weight != null) Modifier.weight(weight) else Modifier)
       }
@@ -696,13 +609,11 @@ internal fun WearCanvasIconButton(
 }
 
 /**
- * A theme role, resolved against **Wear's** colour scheme — the one the Wear components draw with,
- * and the one `MaterialTheme.colorScheme.<role>` names in the generated screen. Not the canvas's
- * mobile scheme, whose `secondary` is Material 3's rather than the watch's.
+ * A theme role, resolved against **Wear's** colour scheme (what `MaterialTheme.colorScheme.<role>`
+ * names in the generated screen), not the canvas's mobile scheme.
  *
- * `surface` and `surfaceContainerHighest` are the shared vocabulary's and Wear has neither; they
- * map to the role the Wear export writes for them. Anything else unknown is `Unspecified`, which a
- * Wear colours function reads as the component's own default.
+ * `surface` and `surfaceContainerHighest` don't exist in Wear; they map to the role the Wear export
+ * writes for them. Anything else unknown is `Unspecified` (the component's own default).
  */
 @Composable
 internal fun wearThemeColor(role: String): Color =
@@ -735,9 +646,7 @@ internal fun WearCanvasTextButton(
   modifier: Modifier = Modifier,
   content: @Composable () -> Unit,
 ) {
-  // One composable, four palettes. Unlike `IconButton`, Wear does not publish a `TextButton` per
-  // variant — the variant IS the colors, which is why this reads differently from the function
-  // above despite the two sharing a vocabulary in the catalog.
+  // Wear has one `TextButton` with per-variant colors, unlike its per-variant `IconButton`s.
   TextButton(
     onClick = {},
     modifier = modifier,
@@ -756,20 +665,12 @@ internal fun WearCanvasTextButton(
 }
 
 /**
- * Wear's dialogs, drawn in place.
+ * Wear's dialogs, drawn in place. The top-level `AlertDialog` etc. are windows that scrim the whole
+ * editor (see `UiBuilderRenderer`'s Material 3 dialog note), so this draws Wear's published
+ * `*DialogContent`: the library's own surface, spacing, icon box and button row.
  *
- * The catalog is right that these are "a screen *state*, not a place in the layout" — the top-level
- * `AlertDialog` and friends take a `visible` flag and draw over the whole display. A canvas cannot
- * use those: `UiBuilderRenderer`'s own note on the Material 3 dialog explains why a real `Dialog`
- * is unusable here, and it applies unchanged — it is a window, it leaves the composition's layout
- * and scrims everything behind it, including the editor.
- *
- * Wear publishes the inside of each dialog separately, as `*DialogContent`, and that is what draws
- * here. It is the library's own surface, spacing, icon box and button row — not a replica assembled
- * to look like one. The kit's own stickers are captured the same way for the same reason.
- *
- * The consequence is that a dialog draws where its node sits rather than over the screen, and that
- * `visible` selects whether it is drawn at all rather than animating it in.
+ * A dialog draws where its node sits, and `visible` selects whether it is drawn rather than
+ * animating it in.
  */
 @Composable
 internal fun WearCanvasAlertDialog(
@@ -781,12 +682,9 @@ internal fun WearCanvasAlertDialog(
 ) {
   val titleSlot: @Composable () -> Unit = { Text(title) }
   val textSlot: (@Composable () -> Unit)? = text.takeIf { it.isNotEmpty() }?.let { { Text(it) } }
-  // Two overloads, not one call with nullable buttons: Wear's two-button alert is a distinct shape
-  // from its button-less one and its parameters are non-null, so which dialog is drawn is decided
-  // here rather than by passing null. A confirm is what selects the two-button shape: that overload
-  // defaults `dismissButton` to `AlertDialogDefaults.DismissButton`, so a design with a confirm and
-  // no dismiss still shows both on a watch, and the canvas draws what the watch does. A dismiss
-  // alone has no overload to be; the export refuses it.
+  // Two overloads, since Wear's two-button alert is a distinct shape with non-null parameters. A
+  // confirm selects the two-button shape, which defaults `dismissButton`, so the canvas matches the
+  // watch. A dismiss alone has no overload; the export refuses it.
   if (hasConfirm) {
     AlertDialogContent(
       confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = {}) },
@@ -840,18 +738,11 @@ internal fun WearCanvasOpenOnPhoneDialog(text: String, modifier: Modifier = Modi
 }
 
 /**
- * The two pickers, declared here and drawn per target.
+ * The two pickers, declared here and drawn per target: the port uses `kotlinx.datetime` on `wasmJs`
+ * and `java.time` on the JVM.
  *
- * `DatePicker` takes a `LocalDate` and `TimePicker` a `LocalTime`, and the port spells those
- * differently on each target: `kotlinx.datetime` for `wasmJs`, `java.time` for the JVM. That is the
- * port's own `expect`/`actual` showing through rather than a difference this module invented, and
- * it is why these two are the only Wear components here that cannot be written once.
- *
- * Both actuals parse the authored string and fall back to a FIXED date and time on anything
- * unparseable — never to "now". A picker showing the current moment would give this design a
- * different render every minute, which is the same reason the Wear screen scaffold freezes its
- * clock text. An unparseable value is a validator's complaint; a canvas that threw on one could not
- * draw the Issues panel that would explain it.
+ * Both actuals parse the authored string and fall back to a FIXED date and time (never "now") so
+ * renders are deterministic and an unparseable value doesn't crash the canvas.
  */
 @Composable
 internal expect fun WearCanvasDatePicker(initialDate: String, type: String, modifier: Modifier)
@@ -859,17 +750,8 @@ internal expect fun WearCanvasDatePicker(initialDate: String, type: String, modi
 @Composable
 internal expect fun WearCanvasTimePicker(initialTime: String, type: String, modifier: Modifier)
 
-// ── The type scale
-// ────────────────────────────────────────────────────────────────────────
-//
-// Wear's text, card and button are their own components here, drawn by Wear Compose through the
-// port. What the canvas still does for them is resolve a type ROLE, because a design names one
-// (`titleMedium`) and the library needs a `TextStyle`.
-//
-// Material 3 and Wear publish the same fifteen role names and different scales behind them, so a
-// `titleMedium` resolved against the wrong theme draws *a* title and not *this* title — a silently
-// wrong size, in the surface an author reads sizes off. Below it resolves against Wear's own
-// typography.
+// Type roles: a design names a role (`titleMedium`) and the library needs a `TextStyle`. Material 3
+// and Wear share role names but not scales, so roles resolve against Wear's own typography.
 
 /** Wear's type scale, by the same fifteen role names Material 3 uses. */
 @Composable
@@ -917,18 +799,14 @@ internal fun WearCanvasCard(
   val colors =
     if (variant == "outlined") CardDefaults.outlinedCardColors(contentColor = contentColor)
     else CardDefaults.cardColors(containerColor = containerColor, contentColor = contentColor)
-  // **Both halves of the row transformation.** Outside a `TransformingLazyColumn` there is none and
-  // the library's own default applies — it is internal, so the honest way to leave it in place is
-  // not to pass the argument. Inside one, the list provides the real thing and it is passed here,
-  // which is what makes a card scale and fade as it approaches the bezel instead of only getting
-  // shorter.
+  // **Both halves of the row transformation.** Outside a `TransformingLazyColumn` the argument is
+  // omitted so the library's internal default applies; inside one the list's real transformation is
+  // passed.
   val transformation = wearRowTransformation()
   // What is on the card is not the row: the card's transformation already carries it.
   val body: @Composable () -> Unit = { OutsideWearRow(content) }
   when (variant) {
-    // The authored content is the card's TITLE, and the body slot is left empty. A `TitleCard` has
-    // both and the catalog declares one, so this puts it in the slot that is the card's primary
-    // line rather than under an empty heading.
+    // The authored content is the `TitleCard`'s title; the body slot is left empty.
     "title" ->
       if (transformation == null) {
         TitleCard(onClick = {}, title = { body() }, modifier = modifier, colors = colors) {}

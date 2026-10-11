@@ -129,12 +129,9 @@ public sealed interface UiBuilderServiceRequest {
   /**
    * Remove a design, its history and its access list, closing every open stream on it.
    *
-   * Owner only: not a grantee and not a delegate acting on the owner's behalf
-   * (`AGENT_ACCESS_GRANTS.md`); [UiBuilderAdminPort.adminDeleteDesign] covers designs whose owner
-   * is gone. Ownership is checked against the loaded or quarantined access record, so an unservable
-   * design can still be deleted.
-   *
-   * Has no `ui-builder-protocol` request shape yet; see
+   * Owner only, never a grantee, and never a delegate except on a design that delegate created for
+   * the owner (`AGENT_ACCESS_GRANTS.md`); [UiBuilderAdminPort.adminDeleteDesign] covers designs
+   * whose owner is gone. Unservable designs can still be deleted. No protocol shape yet; see
    * [UiBuilderProtocolMapper.toProtocolRequest].
    */
   public data class DeleteDesign(val designId: String) : UiBuilderServiceRequest
@@ -174,12 +171,9 @@ public sealed interface UiBuilderServiceRequest {
   ) : UiBuilderServiceRequest
 
   /**
-   * Authoritatively replace one stored design from a complete document copy.
-   *
-   * The supplied document must name the stored design and its current home. The service owns the
-   * committed id, home, revision and timestamps; validates the complete candidate; and retains the
-   * previous revision before broadcasting the replacement as a whole snapshot. This is the seam a
-   * host uses to save a temporary copy back or re-import an existing canonical document.
+   * Authoritatively replace one stored design from a complete document copy that names it and its
+   * current home. The service owns id, home, revision and timestamps, validates the candidate, and
+   * retains the previous revision. Used to save a temporary copy back or re-import a document.
    */
   public data class ReplaceDesignDocument(
     val designId: String,
@@ -411,7 +405,7 @@ public data class UiBuilderServiceDiagnostics(
   val rePinPersistenceFailure: String? = null,
   /**
    * Bytes the durable state occupies and the ceiling writes are refused at; both 0 where unbounded
-   * or unmeasurable (yschimke/compose-preview-server#568).
+   * or unmeasurable.
    */
   val storageBytes: Long = 0,
   val storageMaximumBytes: Long = 0,

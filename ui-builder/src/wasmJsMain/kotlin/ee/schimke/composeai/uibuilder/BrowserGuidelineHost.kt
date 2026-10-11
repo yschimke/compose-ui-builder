@@ -18,16 +18,13 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * The browser half of the guidelines check: the person's own OpenRouter key in this tab's
- * `sessionStorage` (in `localStorage` only when they tick "Remember on this device" — the origin
- * also serves other apps, which can read `localStorage`), OpenRouter's PKCE sign-in to get one
- * without copying it by hand, and the request itself — sent from this page straight to
- * openrouter.ai (the editor page's `connect-src` admits it), so the key never reaches the design
- * host.
+ * The browser half of the guidelines check: the person's OpenRouter key in `sessionStorage` (in
+ * `localStorage` only on "Remember on this device", since the origin serves other apps),
+ * OpenRouter's PKCE sign-in, and the request sent straight to openrouter.ai (allowed by
+ * `connect-src`), so the key never reaches the design host.
  *
- * [designId] and [hostedByServer] are for the picture the visual rules need: on
- * compose-preview-server the design's thumbnail is a same-origin read; anywhere else there is none
- * and only the rules judged from the design tree run.
+ * [designId] and [hostedByServer] supply the picture visual rules need: a same-origin thumbnail on
+ * compose-preview-server; elsewhere only tree-based rules run.
  */
 internal class BrowserGuidelineHost(
   private val designId: String,
@@ -71,9 +68,8 @@ internal class BrowserGuidelineHost(
   }
 
   /**
-   * The sign-in [finishOpenRouterSignInAtBoot] finished when the page loaded, if any, and otherwise
-   * one finished now. Startup is where it is really done: the key is saved before the editor
-   * composes, so it does not depend on this panel ever being asked.
+   * The sign-in [finishOpenRouterSignInAtBoot] finished at page load, if any, otherwise one
+   * finished now. The key is saved at startup, independent of this panel.
    */
   override suspend fun completeSignIn(): DesignGuidelineHost.SignInResult {
     val started = bootSignIn ?: return exchangeOpenRouterSignIn()
@@ -107,8 +103,7 @@ internal class BrowserGuidelineHost(
 
   /**
    * The Compose source this revision exports to, from compose-preview-server's live export. Null
-   * off that host, for a reader without the export grant, and for a design the export gate refuses
-   * (the route answers 422 with the reasons rather than code).
+   * off that host, without the export grant, or when the gate refuses (422).
    */
   override suspend fun source(document: UiBuilderDocument): String? {
     if (!hostedByServer) return null
@@ -134,10 +129,9 @@ internal class BrowserGuidelineHost(
   }
 
   /**
-   * The request compose-preview-server builds for this revision — native device and unrolled
-   * pictures, the exported source — so the Prompt view shows exactly what an agent gets from
-   * `ui_builder_guidelines_prompt`. Null off that host, and from a server without the route; the
-   * editor then builds its own.
+   * The request compose-preview-server builds for this revision (native and unrolled pictures,
+   * exported source), so the Prompt view matches `ui_builder_guidelines_prompt`. Null elsewhere;
+   * the editor then builds its own.
    */
   override suspend fun hostedRequest(document: UiBuilderDocument): DesignGuidelineRequest? =
     serverGet("/guidelines/prompt?revision=${document.revision}&rendered=true")?.let {
@@ -150,9 +144,8 @@ internal class BrowserGuidelineHost(
     }
 
   /**
-   * Posts a run on this person's key to the design's shared record. The server stamps who ran it
-   * and when from the session, and refuses a reader without write access; either way the person
-   * keeps their own result on screen.
+   * Posts a run on this person's key to the design's shared record; the server stamps who and when,
+   * and refuses readers without write access. The person keeps their own result either way.
    */
   override suspend fun recordResult(record: DesignGuidelineRecord): DesignGuidelineRecord? {
     val url = designUrl("/guidelines") ?: return null
@@ -183,8 +176,8 @@ internal class BrowserGuidelineHost(
     }
 
   /**
-   * Runs the check on compose-preview-server's own key (`POST …/guidelines/check`), which answers
-   * with the design's guidelines — the record it just wrote — or a sentence saying why not.
+   * Runs the check on compose-preview-server's own key (`POST …/guidelines/check`), answering with
+   * the record it wrote or a reason.
    */
   override suspend fun runServerCheck(
     document: UiBuilderDocument
@@ -282,8 +275,8 @@ internal class BrowserGuidelineHost(
 }
 
 /**
- * The sign-in started at startup, held until the guidelines panel asks for it. A [Deferred] rather
- * than a result: the exchange runs beside the editor's startup instead of in front of it.
+ * The sign-in started at startup, held until the guidelines panel asks; deferred so it runs beside
+ * startup, not in front of it.
  */
 private var bootSignIn: Deferred<DesignGuidelineHost.SignInResult>? = null
 
@@ -305,11 +298,8 @@ private val browserKeyStore =
   )
 
 /**
- * Called from `main` at startup: when this page is OpenRouter's sign-in coming back, starts trading
- * the code for a key in [scope] and saves the key when it arrives. It does not hold the editor up —
- * a stalled exchange would otherwise leave the person on the boot screen, without the editor or the
- * paste-a-key fallback. Each step is logged, so a sign-in that does not take says why in the
- * console.
+ * Called from `main` at startup: if this page is OpenRouter's sign-in returning, trades the code
+ * for a key in [scope] and saves it, without blocking the editor. Each step is logged.
  */
 internal fun startOpenRouterSignInAtBoot(scope: CoroutineScope) {
   bootSignIn = scope.async {
@@ -410,8 +400,8 @@ private external fun writeSessionSetting(key: String, value: String)
 
 /**
  * OpenRouter's PKCE sign-in, step one: a random verifier kept in `sessionStorage`, its SHA-256
- * challenge sent along, and the page handed to openrouter.ai, which returns to this same address
- * with `?code=` and the `openrouter-callback` marker [finishOpenRouterSignIn] looks for.
+ * challenge sent along, and the page handed to openrouter.ai, which returns here with `?code=` and
+ * the `openrouter-callback` marker [finishOpenRouterSignIn] looks for.
  */
 @JsFun(
   """(storageKey, callbackMarker) => {
@@ -476,8 +466,8 @@ internal external fun beginOpenRouterSignIn(
 internal external fun restoreOpenRouterPageAtBoot()
 
 /**
- * Step two, on the page OpenRouter returned to: take the code off the address (so a reload or a
- * shared link never carries it), and trade it with the stored verifier for a key.
+ * Step two, on the returned page: strip the code from the address (so reloads and shared links
+ * never carry it) and trade it with the stored verifier for a key.
  */
 @JsFun(
   """(storageKey, callbackMarker) => {

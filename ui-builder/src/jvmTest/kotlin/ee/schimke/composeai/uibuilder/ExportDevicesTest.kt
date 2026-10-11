@@ -22,11 +22,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The set of devices a design says it also exports as.
- *
- * The frame stays a single choice — the canvas somebody approved — and this is the set beside it,
- * so "which devices does this screen claim to work on?" is answered by the document rather than
- * guessed by whichever exporter is running.
+ * The set of devices a design says it also exports as, beside the single approved frame, so the
+ * document answers which devices it claims.
  */
 class ExportDevicesTest {
   private val catalog = CapabilityCatalogParser.parse(resource("/m3-catalog-capabilities-v1.json"))
@@ -62,10 +59,8 @@ class ExportDevicesTest {
   }
 
   /**
-   * The regression `DevicePresetTest` caught first: an absent key and an empty array are the same
-   * *answer* but not the same JSON, so folding the field into the environment write unconditionally
-   * added an empty `exportDevices` to every unrelated edit — and a one-field density change that
-   * silently carries a second field is an undo step that no longer means what it says.
+   * An absent key and an empty array mean the same but differ as JSON; unrelated environment edits
+   * must not add an empty `exportDevices` (or the undo step carries a second field).
    */
   @Test
   fun `an unrelated environment edit does not write the field at all`() {
@@ -86,13 +81,8 @@ class ExportDevicesTest {
   }
 
   /**
-   * #903: the Apply button used to build a fresh `ScreenEnvironmentSettings` from the seven fields
-   * it owns, so the empty default of every field it does not own was written over the document.
-   * `exportDevices` was the one that hurt — pick two devices, change the density, press Apply, and
-   * the devices were gone with no rejection and no undo step naming them.
-   *
-   * The assertion is on the helper the dock now goes through rather than on the dock, because the
-   * bug was never in the reducer: it faithfully wrote the empty list it was handed.
+   * Apply must not overwrite fields it doesn't own (see #903): asserted on the `withScreenFields`
+   * helper the dock goes through, since the reducer faithfully wrote what it was handed.
    */
   @Test
   fun `applying the screen fields keeps the devices the picker chose`() {
@@ -169,9 +159,8 @@ class ExportDevicesTest {
   }
 
   /**
-   * Clearing the picker resets rather than setting an empty list. The protocol distinguishes the
-   * two, and the document's own default is the empty set — so a design someone cleared should read
-   * exactly like one written before the field existed, not like one carrying an empty answer.
+   * Clearing the picker resets the field (the protocol distinguishes reset from empty), so the
+   * design reads like one that never set it.
    */
   @Test
   fun `clearing the set reaches the wire as a Reset`() {

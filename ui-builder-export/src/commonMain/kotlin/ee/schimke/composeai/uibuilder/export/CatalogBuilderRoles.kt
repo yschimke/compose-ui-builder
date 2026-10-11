@@ -1,27 +1,16 @@
 package ee.schimke.composeai.uibuilder.export
 
 /**
- * The traits a catalog gives a component so the builder can recognise what the component IS, rather
- * than recognising its id.
- *
- * A catalog's traits are otherwise its own: slot acceptance is a relation inside one catalog, and
- * no reader compares `TextContent` across two of them. These few are the exception — a small,
- * closed vocabulary the builder reads across every catalog — and each replaces an id the builder
- * used to know (`FontSettings.TEXT_COMPONENTS`, `CanvasPopOut`'s scroller sets, the reducer's
- * `a2ui/Text`). The `UiBuilder` prefix is what keeps them from colliding with a catalog's own trait
- * of the same meaning.
- *
- * Every reader takes a trait **in addition to** the id it knew, never instead, so a catalog that
- * publishes none of these is drawn and edited exactly as before. When every catalog publishes them,
- * the ids go; `UI_BUILDER_CATALOG_CONTRACT.md` § Builder roles lists which.
+ * The traits a catalog gives a component so the builder can recognise what it is rather than its
+ * id: a small closed vocabulary read across catalogs, `UiBuilder`-prefixed to avoid collisions.
+ * Readers accept a trait in addition to the id they knew, so catalogs that publish none behave as
+ * before. `UI_BUILDER_CATALOG_CONTRACT.md` § Builder roles lists the ids to retire.
  */
 public object CatalogBuilderRoles {
 
   /**
-   * The component draws a run of text.
-   *
-   * The builder gives it the [FontSettings] properties, and fills a slot that accepts text with it
-   * when the catalog seeds nothing there — preferring the one in the slot owner's own namespace.
+   * The component draws a run of text: it gets the [FontSettings] properties, and fills an unseeded
+   * text-accepting slot (preferring the slot owner's namespace).
    */
   public const val TEXT: String = "UiBuilderText"
 

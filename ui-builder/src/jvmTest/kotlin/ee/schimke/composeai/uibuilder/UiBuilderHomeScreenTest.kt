@@ -44,12 +44,9 @@ import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 
 /**
- * The builder's home page: the screen `/ui-builder/` draws when no design is named.
- *
- * It used to be the New design dialog on an empty background, so the only thing a person could do
- * from the product's front door was make something new. What is pinned here is that the two other
- * beginnings are now reachable from it — open one that exists, or start a new design *from* one —
- * and that the panel offering them is absent rather than empty where the host cannot do either.
+ * The builder's home page, drawn at `/ui-builder/` when no design is named: besides New design, a
+ * person can open an existing design or start a new one from it; the panel offering those is absent
+ * (not empty) where the host can't.
  */
 @OptIn(ExperimentalTestApi::class)
 class UiBuilderHomeScreenTest {
@@ -99,8 +96,7 @@ class UiBuilderHomeScreenTest {
   }
 
   /**
-   * A preview hands the form a fixed name so its render is the same every time; the app passes
-   * nothing and a person gets a generated one.
+   * A preview passes a fixed name so its render is stable; the app passes none and generates one.
    */
   @Test
   fun `a given design name is pre-filled, and the app's default is a generated one`() =
@@ -220,10 +216,7 @@ class UiBuilderHomeScreenTest {
   }
 
   /**
-   * Creating still works, and still says what it was asked for.
-   *
-   * The form is shared with the dialog the editor opens now, so this is the assertion that the
-   * extraction did not quietly change what **Create** submits.
+   * Creating still works and submits what was asked; the form is shared with the editor's dialog.
    */
   @Test
   fun `creating reports the catalog, the template and the generated id`() = runComposeUiTest {

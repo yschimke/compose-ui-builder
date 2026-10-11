@@ -6,53 +6,34 @@ enum class SnapshotDisposition {
   DISPLAY,
 
   /**
-   * Hold it: the operator has edits this snapshot cannot know about yet.
-   *
-   * Displaying it would rebuild the editor from a document that is missing them, which is the
-   * canvas visibly dropping work that was accepted a moment later. It is released by
-   * [UiBuilderLiveSessionSync.releaseDeferredSnapshot] once the queue has drained.
+   * Hold it: the operator has edits this snapshot cannot know about yet. Showing it would drop
+   * accepted work from the canvas; [UiBuilderLiveSessionSync.releaseDeferredSnapshot] releases it
+   * once the queue drains.
    */
   DEFER,
 
-  /**
-   * Drop it: a newer snapshot has already been seen.
-   *
-   * Several snapshot fetches can be in flight at once and they do not answer in order, so an older
-   * answer overtaking a newer one is ordinary rather than exceptional. Applying it would roll the
-   * canvas backwards.
-   */
+  /** Drop it: a newer snapshot has already been seen (concurrent fetches answer out of order). */
   STALE,
 }
 
 /**
  * The ordering rules a live UI-builder session applies to its own edits and the server's answers.
  *
- * Two facts about the browser session make this necessary. Edits are applied locally the moment
- * they are made but committed by a round trip, so a burst of them — twenty list items added as fast
- * as they can be clicked — leaves many uncommitted at once; and each of those round trips is an
- * independent `fetch`, so their answers arrive in whatever order the network settles on.
+ * Edits apply locally at once but commit by round trip, so bursts leave many uncommitted, and their
+ * answers arrive in any order. Without this, a command would claim a stale base (its insertion
+ * anchor not yet existing there) and be refused, and an older snapshot could overwrite a newer one.
  *
- * Left alone, both go wrong. A command carrying the revision it was *dispatched* at names a base
- * the server has already moved past, and the insertion anchor it points at — the node the previous
- * edit added — does not exist at that base, so the server refuses it. And a snapshot answering an
- * early edit, landing after one answering a later edit, rebuilds the canvas from the older
- * document. Both look the same from the operator's chair: items appear, then most of them vanish.
- *
- * So this holds the two pieces of state that fix it: [baseRevision], which is the newest revision
- * the server has actually confirmed rather than whatever was on screen when a button was pressed,
- * and the count of submissions still waiting, which decides whether an arriving snapshot may be
- * shown yet. It owns no document and performs no I/O; the session hands it sequences and revisions
- * and does what it says.
+ * Holds [baseRevision] (the newest revision the server confirmed) and the count of pending
+ * submissions, which decides whether an arriving snapshot may be shown. No document, no I/O.
  */
 class UiBuilderLiveSessionSync {
   private var highestSequence: Long = -1
   private var deferredSnapshot = false
 
   /**
-   * The revision every submission should claim as its base, or null before the first snapshot.
-   *
-   * Read when the request is built rather than when the edit was made, which is the whole point:
-   * the second of two quick edits has to name the revision the first one produced.
+   * The revision every submission should claim as its base, or null before the first snapshot. Read
+   * when the request is built, so the second of two quick edits names the revision the first
+   * produced.
    */
   var baseRevision: Int? = null
     private set
@@ -73,11 +54,8 @@ class UiBuilderLiveSessionSync {
   }
 
   /**
-   * Records a snapshot the server sent and says what to do with it.
-   *
-   * A snapshot that is not [SnapshotDisposition.STALE] advances [baseRevision] whether or not it is
-   * displayed, because what the server has committed and what the canvas is showing are different
-   * questions during a burst — the next command needs the former.
+   * Records a snapshot the server sent and says what to do with it. Any
+   * non-[SnapshotDisposition.STALE] snapshot advances [baseRevision], displayed or not.
    */
   fun receiveSnapshot(sequence: Long, revision: Int): SnapshotDisposition {
     if (sequence < highestSequence) return SnapshotDisposition.STALE
@@ -93,23 +71,16 @@ class UiBuilderLiveSessionSync {
 
   /**
    * The revision an edit carried across a fork should claim, or null while [designId] has not
-   * opened yet.
-   *
-   * A browser copy re-enters the same session composable, so the document it still holds is the
-   * *server's* until the copy's first snapshot lands; [openedDesignId] is the id of the document
-   * actually on screen, and the carried edit waits for it to be the copy's. Asking only whether a
-   * document is present answered "yes" at once, found no base yet, and never asked again
-   * (yschimke/compose-ui-builder#343).
+   * opened yet. [openedDesignId] is the on-screen document's id: the copy re-enters the session
+   * still showing the server's document until its own first snapshot.
    */
   fun carriedEditBase(designId: String, openedDesignId: String?): Int? = baseRevision?.takeIf {
     openedDesignId == designId
   }
 
   /**
-   * True when a snapshot was held back and should be displayed now.
-   *
-   * Called once the queue has drained. Answers false when nothing was held, so the caller does not
-   * rebuild the canvas from a document it is already showing.
+   * True when a snapshot was held back and should be displayed now. Called once the queue drains;
+   * false when nothing was held.
    */
   fun releaseDeferredSnapshot(): Boolean {
     if (pendingSubmissions > 0) return false

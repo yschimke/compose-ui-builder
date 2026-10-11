@@ -25,12 +25,8 @@ import kotlinx.serialization.json.jsonObject
 
 /**
  * The Wear list screen as the builder's canvas draws it: a long-screenshot stadium at the small
- * round width, with the first screenful outlined over the top cap.
- *
- * Rendered through [UiBuilderSurface] — the renderer the editor canvas and the production export
- * use — so this is the design as an author sees it, not a mock of one. `editorOverlay = false`
- * because the question is what a Wear screen looks like in the builder, not what the builder looks
- * like around it.
+ * round width, with the first screenful outlined over the top cap. Rendered through
+ * [UiBuilderSurface] with `editorOverlay = false`.
  */
 @Preview(widthDp = 170, heightDp = 410)
 @Composable
@@ -49,14 +45,9 @@ fun WearScreenSamplePreview() {
 }
 
 /**
- * The same design at all three round sizes, which is the comparison the stadium exists to make
- * cheap.
- *
- * A Wear screen's hard question is where the list wraps, and it wraps differently at 192, 227 and
- * 240dp. On a keyhole canvas that is three scroll positions to check by hand; on the extent it is
- * three columns side by side. The screen width comes from the document's own frame — the Screen
- * inspector's Wear OS presets — rather than from a scaffold property, so switching size is
- * switching device.
+ * The same design at all three round sizes (192, 227 and 240dp), side by side, since the list wraps
+ * differently at each. The width comes from the document's frame (the Screen inspector's Wear OS
+ * presets).
  */
 @Preview(widthDp = 580, heightDp = 410)
 @Composable
@@ -87,12 +78,8 @@ fun WearScreenBreakpointsPreview() {
 }
 
 /**
- * The Code pane on the Wear screen: the Kotlin the design generates.
- *
- * The Kotlin is what ships. The canvas draws the same `TransformingLazyColumn` rows with
- * `Modifier.transformedHeight(this, spec)` and `SurfaceTransformation(spec)` in a device frame;
- * only the unrolled extent lays the rows out as a plain column, at the width a row has at the
- * centre of the screen, because it has no viewport to transform them against.
+ * The Code pane on the Wear screen: the Kotlin is what ships. The canvas draws the same transformed
+ * rows in a device frame; only the unrolled extent lays them out as a plain column.
  */
 @Preview(widthDp = 1600, heightDp = 900)
 @Composable
@@ -111,14 +98,8 @@ fun WearScreenCodePanePreview() {
 }
 
 /**
- * The catalog the Wear screen previews author against: the Wear one, from the golden this
- * repository already keeps beside the renderer's fixtures.
- *
- * It used to be the packaged M3 catalog, on the reasoning that these designs only need content
- * components and the Wear containers are synthesised in `:ui-builder-runtime`, which this module
- * may not depend on. That was wrong twice over: the Wear golden carries every component these
- * designs use, and it carries the *frame* — the geometry the scaffold stand-in draws with, which
- * the renderer now reads from the catalog rather than holding itself.
+ * The catalog the Wear screen previews author against: the Wear golden kept beside the renderer's
+ * fixtures, which carries every component used and the frame geometry the renderer reads.
  */
 private val wearScreenPreviewCatalog by lazy {
   ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser.parse(
@@ -127,11 +108,8 @@ private val wearScreenPreviewCatalog by lazy {
 }
 
 /**
- * The frame and adapter the catalog declares, provided for a preview that composes the surface
- * directly.
- *
- * The editor provides this for every surface it draws (see `UiBuilderEditor`); a preview that calls
- * `UiBuilderSurface` itself is the host, so it provides the same catalog facts the editor does.
+ * The frame and adapter the catalog declares, provided as the editor does for every surface (see
+ * `UiBuilderEditor`), since this preview hosts `UiBuilderSurface` itself.
  */
 @Composable
 private fun WearScreenPreviewFrame(content: @Composable () -> Unit) {
@@ -157,10 +135,8 @@ private val wearScreenSampleCatalogPin: JsonObject =
     .jsonObject
 
 /**
- * Dark at the watch's own 2.0 density, because Wear Material 3 is dark-first and the scaffold
- * paints the screen black whatever the editor theme is. The `widthDp` is the watch: the scaffold
- * reads its diameter from the frame, which is what makes the Screen inspector's Wear OS presets the
- * size control.
+ * Dark at the watch's 2.0 density (Wear Material 3 is dark-first). The `widthDp` is the watch
+ * diameter the scaffold reads.
  */
 private fun wearScreenSampleEnvironment(widthDp: Int): JsonObject =
   Json.parseToJsonElement(

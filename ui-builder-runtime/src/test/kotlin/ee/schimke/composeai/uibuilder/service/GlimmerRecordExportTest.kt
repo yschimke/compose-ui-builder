@@ -10,12 +10,8 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
- * Glimmer's published seeds export as Glimmer Kotlin through the record-driven gate — what its
- * `composeSourceExport` declaration selects once glimmer-catalog publishes one.
- *
- * Every seed draws `glimmer/icon`, whose record refuses `Icon(imageVector = ???)` on its own. The
- * node's `iconKey` names the icon, as `m3/icon`'s does; the projection used to recognise that only
- * for `m3/icon`, so all three seeds refused with "`ImageVector` has no literal".
+ * Glimmer's published seeds export as Glimmer Kotlin through the record-driven gate. Every seed
+ * draws `glimmer/icon`, whose `iconKey` must be recognised like `m3/icon`'s.
  */
 class GlimmerRecordExportTest {
 

@@ -16,11 +16,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * A remote-m3 design takes nothing from another catalog, by either of the ways one could arrive.
- *
- * The clipboard outlives the design it was copied from, and a host chooses which catalog a design
- * is opened with. Either could put m3 components — which remote-m3's runtime cannot draw and its
- * export cannot write — into a remote-m3 widget.
+ * A remote-m3 design takes nothing from another catalog, whether via a clipboard that outlived its
+ * design or a host opening it with the wrong catalog: m3 components can't be drawn by remote-m3's
+ * runtime or written by its export.
  */
 class CrossCatalogPasteTest {
   private fun resource(path: String) = checkNotNull(javaClass.getResource(path)).readText()

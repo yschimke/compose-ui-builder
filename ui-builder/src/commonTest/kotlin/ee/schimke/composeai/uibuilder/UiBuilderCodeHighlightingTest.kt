@@ -10,13 +10,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * The Code pane's highlighter, at the seam that has no Compose UI in it.
- *
- * What is worth asserting here is not "the tokenizer found the keywords" — that is the library's
- * own test, and pinning this repository to which spans it produces would break on a bump that
- * improved them. What is worth asserting is the contract the pane depends on: the text is
- * untouched, the colours are drawn rather than transparent, and nothing the highlighter can say
- * takes the pane down.
+ * The Code pane's highlighter contract, not the tokenizer's spans (the library's concern): the text
+ * is untouched, colours are opaque, and nothing the highlighter does can take the pane down.
  */
 class UiBuilderCodeHighlightingTest {
 
@@ -52,9 +47,8 @@ class UiBuilderCodeHighlightingTest {
 
   @Test
   fun `every colour is opaque`() {
-    // The regression this exists for: `Highlights` reports 0xRRGGBB and `Color(Int)` reads ARGB, so
-    // passing one straight through yields alpha 0 — every styled run invisible, which reads as a
-    // pane that lost its text rather than as a colour bug.
+    // `Highlights` reports 0xRRGGBB and `Color(Int)` reads ARGB, so colours must get an alpha or
+    // text renders invisible.
     val colors = highlightKotlin(kotlin, theme).spanStyles.mapNotNull { it.item.color }
 
     assertTrue(colors.isNotEmpty(), "no coloured spans to check")

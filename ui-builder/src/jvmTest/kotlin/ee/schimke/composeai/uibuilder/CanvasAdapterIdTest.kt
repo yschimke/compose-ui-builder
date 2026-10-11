@@ -15,29 +15,12 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The canvas dispatch is keyed on the adapter id the catalog names, not on the component id.
+ * The canvas dispatch is keyed on the adapter id the catalog names, not on the component id
+ * (`UI_BUILDER_CATALOG_CONTRACT.md` item 17), so a catalog can point a new component at a drawing
+ * this build already has; an unknown adapter draws a placeholder.
  *
- * ## What this buys, and why it was the coupling worth breaking
- *
- * `UI_BUILDER_CATALOG_CONTRACT.md` item 17: *"The adapter registry is the existing `when`, keyed by
- * adapter id instead of component id, and an adapter this build lacks draws a placeholder and
- * logs."*
- *
- * Keyed on the component id, every id this canvas could draw had to be written into this repository
- * — which is why it held a hand-written copy of a catalog's inventory at all, and why adding a
- * component here meant a release of a repository that has never compiled that component. Keyed on
- * an adapter id, a catalog can point a new component at a drawing this build already has, and this
- * repository needs to know nothing about it.
- *
- * ## Why this reads as a no-op today
- *
- * No catalog populates `components[].wasm.canvas` yet — the published Wear catalog carries the
- * field and leaves it null on all 78 — so the map is empty, every component keys on its own id, and
- * nothing about the current picture changes. That is deliberate: the consumer half lands first, and
- * these tests are what prove it works before there is anything to read.
- *
- * So the map is supplied directly here rather than through a catalog. The point under test is the
- * dispatch, not the plumbing that fills it.
+ * No catalog populates `components[].wasm.canvas` yet, so the map is supplied directly here; the
+ * dispatch is what's under test.
  */
 @OptIn(ExperimentalTestApi::class)
 class CanvasAdapterIdTest {
@@ -163,9 +146,8 @@ class CanvasAdapterIdTest {
   @Test
   fun `an adapter this build lacks draws the placeholder, not the error`() =
     runDesktopComposeUiTest(width = 400, height = 400) {
-      // The case item 17 calls out. The catalog offers the component and names an adapter this
-      // build does not ship — a newer catalog against an older server, which is the normal state
-      // of affairs once catalogs ship independently.
+      // The catalog offers the component and names an adapter this build doesn't ship (a newer
+      // catalog against an older server).
       setContent {
         UiBuilderSurface(
           document("acme/headline", "Routed"),
@@ -182,10 +164,8 @@ class CanvasAdapterIdTest {
           .isNotEmpty(),
         "expected the named placeholder for a component whose adapter this build lacks",
       )
-      // This is the regression the `else` was restructured to prevent. Keyed on the adapter id,
-      // the membership test would compare `adapter/…` against a set of COMPONENT ids, miss, and
-      // draw the error container — telling the author their component is unsupported when it is
-      // on the palette and exports perfectly well.
+      // The membership test must use component ids, not adapter ids, or an offered, exportable
+      // component would draw as an error.
       assertTrue(
         onAllNodesWithText("Unsupported component", substring = true, useUnmergedTree = true)
           .fetchSemanticsNodes()

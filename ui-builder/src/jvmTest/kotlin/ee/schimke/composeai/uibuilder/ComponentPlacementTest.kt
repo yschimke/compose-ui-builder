@@ -22,17 +22,10 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 /**
- * One body, placed four times, drawn four ways.
- *
- * The document could only say a repeated thing by repeating its nodes, so four cells were four
- * subtrees and a change to what a cell *is* had to be made four times. A component is the other
- * half: the body lives once in the ordinary `nodes` map — every reducer, validator and renderer
- * path below the placement is the one a design's own nodes take — and what each placement adds is a
- * scope. The arguments it passes are the dictionary the body reads by key, and the path segment it
- * opens is what makes the same body under two instances two boxes rather than one.
- *
- * Asserted in pixels rather than in structure, because the claim is about what a person sees: four
- * cells, four colours, from one authored cell.
+ * One body, placed four times, drawn four ways. The body lives once in `nodes`; each placement adds
+ * a scope: its arguments are the dictionary the body reads by key, and its path segment makes the
+ * same body under two instances two boxes. Asserted in pixels: four cells, four colours, from one
+ * authored cell.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 class ComponentPlacementTest {
@@ -50,11 +43,7 @@ class ComponentPlacementTest {
     assertEquals(shades, drawn)
   }
 
-  /**
-   * A component that places itself draws nothing rather than taking the composition down — the rule
-   * every other reference in this renderer follows, because a canvas that crashes cannot draw the
-   * Issues panel that would explain why.
-   */
+  /** A component that places itself draws nothing rather than crashing the canvas. */
   @Test
   fun `a component that places itself is refused rather than fatal`() {
     val recursive =
@@ -84,12 +73,8 @@ class ComponentPlacementTest {
   }
 
   /**
-   * The point of a component: one function, called once per placement.
-   *
-   * The body's bound property becomes a parameter — the key each placement passes — so the
-   * generated file says what the design says: one cell, four shades. Parameter order is the sorted
-   * key order rather than the document's, because a re-export of an unchanged design has to be
-   * byte-identical.
+   * One function, called once per placement. The body's bound property becomes a parameter, in
+   * sorted key order so re-exports are byte-identical.
    */
   @Test
   fun `a placed component is exported as a function and four calls`() {
@@ -113,9 +98,8 @@ class ComponentPlacementTest {
   }
 
   /**
-   * A binding this exporter cannot print as an expression is refused by name, before a line is
-   * generated — never exported as the component's own default, which would build and draw the wrong
-   * thing.
+   * A binding this exporter cannot print as an expression is refused by name, never exported as the
+   * component's default.
    */
   @Test
   fun `a binding no emitter can write is refused by name`() {
@@ -182,12 +166,8 @@ class ComponentPlacementTest {
   }
 
   /**
-   * Everything the export refuses, and why each would otherwise ship.
-   *
-   * All of these produce a document the canvas draws and the gate used to pass. What they generate
-   * is source that does not compile, or worse, source that compiles and draws the wrong thing —
-   * which is why each is named before a line is written rather than discovered by whoever pasted
-   * the file into a project.
+   * Everything the export refuses: each would otherwise ship source that doesn't compile or draws
+   * the wrong thing.
    */
   @Test
   fun `the export refuses what it cannot generate faithfully`() {
@@ -291,13 +271,7 @@ class ComponentPlacementTest {
     )
   }
 
-  /**
-   * A placement sits where its body would sit.
-   *
-   * It has no capability of its own — no catalog declares one — so a slot that would refuse the
-   * body has to refuse the placement, or a design draws a surface in a slot that accepts only tabs
-   * and exports source that does not typecheck.
-   */
+  /** A placement sits where its body would sit: slots that refuse the body refuse the placement. */
   @Test
   fun `a placement is refused by a slot that would refuse its body`() {
     val inATabRow =
@@ -327,10 +301,7 @@ class ComponentPlacementTest {
     )
   }
 
-  /**
-   * A key that generates a parameter name the wrapper already has would shadow it, so the body's
-   * own `modifier` would silently be the placement's.
-   */
+  /** A key generating a parameter name the wrapper already has (`modifier`) would shadow it. */
   @Test
   fun `a key that collides with the modifier parameter is refused`() {
     val shadowed = withBody { body ->
@@ -374,13 +345,8 @@ class ComponentPlacementTest {
     )
 
   /**
-   * A body has to live somewhere, and both places it can live were counted as a second parent.
-   *
-   * `validateGraph` collected a reference for every `components[*].root` alongside the slot and
-   * root references, then refused any node referenced twice. A design authoring a component holds
-   * the body in a slot; a published library symbol names its own root in `roots` *and* in
-   * `components`. Both collected two references for one node, so neither could export — a component
-   * was unexportable in either shape it can take.
+   * A body held in a slot, or a library symbol named in both `roots` and `components`, must not
+   * count as having two parents in `validateGraph`.
    */
   @Test
   fun `a component root is not a second parent of its own body`() {

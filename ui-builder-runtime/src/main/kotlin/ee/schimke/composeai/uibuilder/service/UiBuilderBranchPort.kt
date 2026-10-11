@@ -6,13 +6,9 @@ import ee.schimke.composeai.uibuilder.protocol.CommandConflictV1
  * Design branches: a design forked at a revision, edited on its own, and replayed onto its parent
  * through the reducer. See `docs/design/UI_BUILDER_BRANCHES.md`.
  *
- * A separate port rather than new [UiBuilderServiceRequest] variants, because hosts match that
- * sealed hierarchy exhaustively and a new variant would break them.
- *
- * A branch is itself a design with its own id ([UiBuilderBranch.branchId]); it is opened, edited
- * ([UiBuilderServiceRequest.ApplyOperation]) and exported like any other. A suggestion is a branch
- * of [UiBuilderBranchKind.SUGGESTION], accepted with [UiBuilderBranchRequest.MergeBranch] and
- * rejected with [UiBuilderBranchRequest.ArchiveBranch].
+ * A separate port so hosts matching [UiBuilderServiceRequest] exhaustively do not break. A branch
+ * is itself a design ([UiBuilderBranch.branchId]); a suggestion is a
+ * [UiBuilderBranchKind.SUGGESTION] branch, accepted by merging and rejected by archiving.
  */
 public interface UiBuilderBranchPort {
   public suspend fun executeBranch(call: UiBuilderBranchCall): UiBuilderBranchResponse

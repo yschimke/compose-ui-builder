@@ -140,12 +140,9 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.skia.Image
 
 /**
- * Resolves the server's view of this caller before the session starts.
- *
- * The page cannot name its own actor: the server derives it from the operator token, the GitHub
- * session or a presented agent grant, and rejects any request whose declared actor differs. So the
- * editor asks first, and only falls back to the historical guess when the endpoint is unreachable
- * (an older server, or a static host with no live session behind it).
+ * Resolves the server's view of this caller before the session starts. The server derives the actor
+ * (operator token, GitHub session or agent grant) and rejects mismatches; the default guess is used
+ * only when the endpoint is unreachable.
  */
 @Composable
 internal fun LiveSessionApp(startupIdentity: Deferred<ServerIdentity>) {
@@ -170,9 +167,7 @@ internal fun LiveSessionApp(startupIdentity: Deferred<ServerIdentity>) {
     } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
       throw cancelled
     } catch (thrown: Throwable) {
-      // A failure here used to be a blank page: `config` stays null and nothing below draws. The
-      // one that found this was `crypto.randomUUID` missing on an insecure origin; the next one
-      // should be a sentence on the page rather than an empty tab.
+      // Show the failure on the page instead of leaving it blank.
       failure = thrown.message ?: thrown.toString()
     }
   }
@@ -204,9 +199,8 @@ internal fun LiveSessionApp(startupIdentity: Deferred<ServerIdentity>) {
     }
     return
   }
-  // The local mode is the one that can open a design without a navigation: it has just written the
-  // design to this browser, so re-entering the editor with a new config is the whole of "open it".
-  // A server design still goes through the New design form, whose `303` is the navigation.
+  // Only local mode opens a design without navigating: it re-enters the editor with a new config. A
+  // server design goes through the New design form's `303`.
   config?.let { current -> LiveSessionApp(current) { config = it } }
 }
 
@@ -216,9 +210,8 @@ private fun LiveSessionApp(
   onOpenDesign: (LiveSessionConfig) -> Unit = {},
 ) {
   val scope = rememberCoroutineScope()
-  // The store, the catalogs it falls back on, and the service that answers this page's own
-  // requests from them. Null in the ordinary server-backed session, where all three are the
-  // server's.
+  // The store, the catalogs it falls back on, and the service answering this page's requests. Null
+  // in a server-backed session.
   val localSession =
     remember(config) { if (config.localStorage) BrowserLocalSession(config) else null }
   val http =
@@ -234,9 +227,8 @@ private fun LiveSessionApp(
     }
   var document by remember { mutableStateOf<UiBuilderDocument?>(null) }
   var authoritativeDocument by remember { mutableStateOf<DesignDocumentV1?>(null) }
-  // The durable cursor the server last answered with, which is half of a fork point: a design taken
-  // offline has to record *which* revision of *which* history it forked from, and the sequence is
-  // what says where in that history it was.
+  // The durable cursor the server last answered with; recorded as part of a fork point when a
+  // design is taken offline.
   var authoritativeSequence by remember { mutableStateOf(0L) }
   var catalog by remember { mutableStateOf<CapabilityCatalog?>(null) }
   val initialDesignLayout = remember(config) { CompletableDeferred<Unit>() }
@@ -270,11 +262,9 @@ private fun LiveSessionApp(
       }
     }
   }
-  // Why the design could not be opened, or null while it still might. Distinct from [sessionStatus]
-  // because that string is only ever read from inside the editor, which is exactly the branch a
-  // refused open never reaches — so the reason needs somewhere to live that the failure path can
-  // draw. Null is "not settled yet" and must stay that way: it is what keeps the first moments of
-  // a normal load from rendering as a failure.
+  // Why the design could not be opened, or null while it still might. Separate from
+  // [sessionStatus], which only the editor (never reached on failure) reads. Null must mean "not
+  // settled yet".
   var openFailure by remember { mutableStateOf<ServiceErrorV1?>(null) }
   var catalogRecovery by
     remember(config.designId) { mutableStateOf<CatalogUpgradePreviewV1?>(null) }
@@ -321,26 +311,18 @@ private fun LiveSessionApp(
   // What `?revision=` did, once the answer is known: null until the design has been asked for, and
   // afterwards both the revision the link named and whether it could be shown.
   var revisionPin by remember(config.designId) { mutableStateOf<DesignRevisionPin?>(null) }
-  // Which panel is showing and which conversation is open in it. Held here only so the page can
-  // publish what the URL's selectors actually did — the editor owns both, and neither is
-  // authoritative state this host reads back.
+  // Which panel is showing and which conversation is open. Held here only to publish what the URL's
+  // selectors did; the editor owns both.
   var inspectorMode by remember(config.designId) { mutableStateOf(EditorInspectorMode.Properties) }
   var openThreadId by remember(config.designId) { mutableStateOf(config.selectors.threadId) }
-  // The thread the *address bar* names right now, which is not the same as the one parsed at
-  // startup: a fragment-only navigation never re-enters this app. Held as state so the editor can
-  // follow it, and re-read from `location` on every change rather than from the event, so Back and
-  // Forward are answered by the same path as a link press.
+  // The thread the address bar names right now (fragment-only navigations don't re-enter the app).
+  // Re-read from `location` on each change so Back/Forward and link presses share one path.
   var linkedThreadId by remember(config.designId) { mutableStateOf(config.selectors.threadId) }
-  // How many times the *browser* has changed the fragment, which is a different question from what
-  // the fragment now says. This host clears [linkedThreadId] itself when the reader opens another
-  // thread — the address bar has to stop naming the old one — and the editor must not read that
-  // housekeeping as a navigation and undo the selection that caused it. Only the loop below counts,
-  // and `replaceState` fires no `hashchange`, so nothing this host does can reach it.
+  // How many times the browser changed the fragment. Distinct from [linkedThreadId], which this
+  // host also clears itself; only the `hashchange` loop counts, and `replaceState` fires none.
   var threadNavigations by remember(config.designId) { mutableStateOf(0) }
-  // What this account may open, asked once and read by two very different things: the page
-  // destinations a design's own navigation offers (this catalog only — a page cannot navigate to a
-  // watch face) and the home screen's list of everything, which is not catalog-scoped because the
-  // question there is "what was I working on", not "what can this screen link to".
+  // What this account may open, asked once. Used for the design's page destinations (this catalog
+  // only) and the home screen's list (all catalogs).
   var homeDesigns by remember { mutableStateOf(emptyList<UiBuilderHomeDesign>()) }
   // A live host owns shared folders beside its design state. Browser storage remains the fallback
   // for an older host and for offline/local work; neither form changes a document revision.
@@ -391,9 +373,8 @@ private fun LiveSessionApp(
   // document state: the same design opened by a collaborator shows their palette, not yours.
   var enabledPacks by
     remember(config.catalogSystemId) { mutableStateOf(readEnabledPacks(config.catalogSystemId)) }
-  // Which components the reader pinned to the top of the palette, remembered per catalog in this
-  // browser, like the pack switches. Null is "never said", which is what lets the catalog's own
-  // defaults keep reaching a reader who has not customised anything.
+  // Components the reader pinned to the top of the palette, per catalog in this browser. Null means
+  // "never said", so the catalog defaults apply.
   var pinnedComponents by
     remember(config.catalogSystemId) {
       mutableStateOf(readPinnedComponents(config.catalogSystemId))
@@ -426,9 +407,8 @@ private fun LiveSessionApp(
     }
   }
   var socketState by remember { mutableStateOf(BrowserUiBuilderSocketState.CONNECTING) }
-  // Which snapshot may be shown, and which revision the next command claims as its base. See
-  // [UiBuilderLiveSessionSync]: without it a burst of edits raced its own round trips and the
-  // canvas dropped most of them.
+  // Which snapshot may be shown and which revision the next command claims as its base; see
+  // [UiBuilderLiveSessionSync].
   val sync = remember(config.designId) { UiBuilderLiveSessionSync() }
   // The newest snapshot held back while the operator's own edits are still queued, displayed once
   // the queue drains.
@@ -436,9 +416,8 @@ private fun LiveSessionApp(
   // Edits wait here rather than each opening its own request. Unbounded because dropping one would
   // lose an edit the canvas is already showing; a burst is twenty, not twenty thousand.
   val submissions = remember(config.designId) { Channel<EditorSubmission>(Channel.UNLIMITED) }
-  // An edit the server refused for who sent it rather than for what it was: a session that expired
-  // mid-edit, or write access taken away. It is kept, as the first edit of a browser copy — the
-  // fork below picks it up — rather than reconciled away with the server's refusal.
+  // An edit refused for who sent it (expired session, revoked access) rather than its content. Kept
+  // as the first edit of a browser copy, which the fork below picks up.
   var refusedForAccess by remember(config.designId) { mutableStateOf<RefusedEdit?>(null) }
   DisposableEffect(submissions) { onDispose { submissions.close() } }
 
@@ -496,11 +475,8 @@ private fun LiveSessionApp(
   }
 
   /**
-   * Drains the edit queue one submission at a time.
-   *
-   * Serialized on purpose. Each command claims the revision the *previous* one produced, which is
-   * what keeps its insertion anchor — the node that command added — resolvable at the base it
-   * names; and one request at a time cannot be overtaken by the next.
+   * Drains the edit queue one submission at a time. Serialized so each command claims the revision
+   * the previous one produced, keeping insertion anchors resolvable.
    */
   LaunchedEffect(config.designId, http) {
     for (submission in submissions) {
@@ -566,11 +542,9 @@ private fun LiveSessionApp(
     }
   }
 
-  // The edit that made this copy, applied once the copy has opened — so the change that triggered
-  // the fork is not lost to it. Once per session: `carriedCommand` lives in memory, not the URL.
-  // Keyed on the id of the document on screen, not on whether there is one: the fork re-enters
-  // this composable with the server's document still held, and only the copy's own first snapshot
-  // gives the carried edit a base to claim.
+  // The edit that made this copy, applied once the copy has opened. Once per session
+  // (`carriedCommand` is in memory). Keyed on the on-screen document id, since only the copy's own
+  // first snapshot gives it a base.
   var carriedApplied by remember(config.designId) { mutableStateOf(false) }
   val openedDesignId = authoritativeDocument?.id
   LaunchedEffect(config.designId, openedDesignId) {
@@ -590,20 +564,15 @@ private fun LiveSessionApp(
     }
   }
 
-  // Remembered in the browser in local mode, so the Screen inspector still offers device frames on
-  // a reload with nothing behind it. The presets are a static file the server derives from a
-  // JVM-only catalog, which is why they cross the wire at all.
+  // Cached in local mode so device frames survive an offline reload.
   LaunchedEffect(localSession) { devicePresets = loadDevicePresets(localSession?.text) }
 
-  // Asked once per design rather than per revision: the answer is about another host's library,
-  // not about this document, and re-asking on every keystroke would put an HTTP round trip behind
-  // the editing loop for a fact that changes when somebody merges to the project — not when
-  // somebody types. The findings that a later edit invalidates are dropped by the reducer.
+  // Asked once per design: the answer is about another host's library, which changes on merges, not
+  // keystrokes. The reducer drops findings later edits invalidate.
   var componentDrift by
     remember(config.designId) { mutableStateOf(emptyList<ComponentDriftFinding>()) }
-  // Re-asked when the revision on screen changes, because the answer is about the components *that*
-  // revision imported. Not re-asked per edit: the library moves when somebody merges to the
-  // project, not when somebody types, and a round trip behind every keystroke would buy nothing.
+  // Re-asked when the revision on screen changes, since the answer concerns that revision's
+  // imports.
   val pinnedRevision = revisionPin?.takeIf { it.pinned }?.requested
   // Moved on by a publish from this editor: the library it lists and the drift it reports both
   // changed, and nothing else would tell this page to read them again.
@@ -618,13 +587,11 @@ private fun LiveSessionApp(
     componentLibrary = if (localSession == null) loadComponentLibrary() else emptyList()
   }
 
-  // The reference overlay's browser half: the file picker, the paste listener, the snapshot and
-  // the store behind them all. Rebuilt only when the design changes, because it is addressed to
-  // one design.
+  // The reference overlay's browser half (file picker, paste listener, snapshot, store), rebuilt
+  // per design.
   val references = remember(config.designId) { BrowserReferenceHost(config.designId, http) }
-  // Built once the catalog is known, because what the menu offers is what the catalog's renderer
-  // can draw; null until then, which is a toolbar without an Export button rather than one that
-  // promises formats it has not checked.
+  // Built once the catalog is known, since the menu offers what the catalog's renderer can draw;
+  // null means no Export button yet.
   var latestEditorDocument by remember(config.designId) { mutableStateOf<UiBuilderDocument?>(null) }
   var documentPreviewAvailable by remember(config.designId) { mutableStateOf(false) }
   var exportHost by remember(config.designId) { mutableStateOf<UiBuilderExportHost?>(null) }
@@ -635,14 +602,12 @@ private fun LiveSessionApp(
   var pendingReference by remember(config.designId) { mutableStateOf<ReferenceOverlayState?>(null) }
   var pastedReference by remember(config.designId) { mutableStateOf<ReferenceImage?>(null) }
 
-  // Nothing is persisted until this has finished. Without the gate, the editor's own empty
-  // starting state reaches `onStateChanged` before the stored one arrives and is written over it —
-  // which would delete a design's reference by opening the design.
+  // Nothing is persisted until this has finished; otherwise the editor's empty initial state would
+  // overwrite the stored reference.
   var referenceLoaded by remember(config.designId) { mutableStateOf(false) }
   LaunchedEffect(config.designId, config.localStorage) {
-    // A reference picture is a design asset the server stores, and a local design has no server to
-    // store one with. Pictures are also the one thing that would not fit: `localStorage` holds a
-    // few megabytes for this whole origin, and a pasted screenshot is most of that on its own.
+    // Local designs have no server to store reference pictures, and `localStorage` is too small for
+    // them.
     if (config.localStorage) {
       referenceStatus = LOCAL_REFERENCE_UNAVAILABLE
       return@LaunchedEffect
@@ -668,15 +633,13 @@ private fun LiveSessionApp(
   // when the design changes, because a discussion is addressed to one design.
   val commentHost = remember(config.designId) { BrowserCommentHost(config.designId) }
   var commentBoard by remember(config.designId) { mutableStateOf(DesignCommentBoard()) }
-  // Whether the discussion has been delivered at all, which is not the same question as whether it
-  // has anything in it. A design nobody has commented on answers with an empty board, so an empty
-  // board cannot be read as "the thread this link names is gone" until something has arrived.
+  // Whether the discussion has been delivered at all; an empty board can't mean "thread gone" until
+  // something has arrived.
   var commentBoardLoaded by remember(config.designId) { mutableStateOf(false) }
   var commentStatus by remember(config.designId) { mutableStateOf<String?>(null) }
 
-  // One socket for the life of the design. It sends the current board on connect, so there is no
-  // fetch beside it to reconcile against — the load below is only the fallback for a host that
-  // refuses the upgrade, where the panel is then a snapshot rather than a feed.
+  // One socket for the life of the design; it sends the current board on connect. The load below is
+  // only the fallback for hosts that refuse the upgrade (a snapshot, not a feed).
   DisposableEffect(config.designId, config.localStorage) {
     // A discussion is a thing several people have, and a design only this browser holds has nobody
     // to have it with. The panel stays, empty, saying so.
@@ -707,9 +670,8 @@ private fun LiveSessionApp(
     }
   }
 
-  // "Notify me about replies" beside the board. Per page rather than per design: a push
-  // subscription belongs to this origin, and what it is for is the person's choice on the server.
-  // Loading only asks the server; the permission prompt is the switch's click and nothing else.
+  // "Notify me about replies". Per page, since a push subscription belongs to the origin. Loading
+  // only asks the server; the permission prompt comes only from the switch's click.
   val commentNotifications =
     remember(config.localStorage) {
       CommentNotificationsController(
@@ -736,10 +698,8 @@ private fun LiveSessionApp(
     )
   }
 
-  // The review section's browser half: who approved which revision, and this person's verdict
-  // (compose-preview-server#1255). Reloaded when the revision on screen moves, because the section
-  // is about that revision; a host without the review routes answers nothing and the section stays
-  // hidden rather than offering buttons that would be refused.
+  // The review section's browser half: approvals and this person's verdict for the revision on
+  // screen. Hidden on hosts without the review routes.
   val reviewHost = remember(config.designId) { BrowserReviewHost(config.designId) }
   var review by remember(config.designId) { mutableStateOf(DesignReview()) }
   var reviewAvailable by remember(config.designId) { mutableStateOf(false) }
@@ -753,13 +713,10 @@ private fun LiveSessionApp(
     }
   }
 
-  // Suggestion mode's browser half: edits an agent proposed for this design, each a short-lived
-  // branch the person accepts (merge) or rejects (archive) — `UI_BUILDER_BRANCHES.md` →
-  // Suggestions.
-  // Polled, because a suggestion arriving does not move the design and so sends nothing down the
-  // socket; reloaded at once when the revision moves or a decision lands. A host without the
-  // suggestion routes answers the first list with something that is not one, and the loop stops
-  // there with the section hidden — the MCP App and local hosts never reach this at all.
+  // Suggestion mode's browser half: agent-proposed branches the person accepts (merge) or rejects
+  // (archive); see `UI_BUILDER_BRANCHES.md` → Suggestions. Polled, since a suggestion doesn't move
+  // the design; reloaded when the revision moves or a decision lands. Stops (hidden) on hosts
+  // without the routes.
   val suggestionHost =
     remember(config.designId, http) { BrowserSuggestionHost(config.designId, http) }
   var suggestions by remember(config.designId) { mutableStateOf(DesignSuggestions()) }
@@ -791,9 +748,8 @@ private fun LiveSessionApp(
     }
   }
 
-  // One paste listener for the life of the design, re-armed after every catch. Pasting is the
-  // gesture Figma's own "copy as PNG" leaves you holding, so it goes straight to the base picture
-  // rather than behind a menu.
+  // One paste listener for the life of the design, re-armed after every catch; a paste (e.g.
+  // Figma's "copy as PNG") goes straight to the base picture.
   LaunchedEffect(config.designId, config.localStorage) {
     if (config.localStorage) return@LaunchedEffect
     while (true) {
@@ -808,9 +764,8 @@ private fun LiveSessionApp(
     }
   }
 
-  // Debounced, because the overlay's settings change once per pointer sample while a slider is
-  // dragged and each of those would otherwise be a request. The picture itself is only re-sent
-  // when it actually changed; see `BrowserReferenceHost.save`.
+  // Debounced, since slider drags change settings per pointer sample. The picture is only re-sent
+  // when it changed; see `BrowserReferenceHost.save`.
   LaunchedEffect(pendingReference) {
     if (config.localStorage) return@LaunchedEffect
     val candidate = pendingReference ?: return@LaunchedEffect
@@ -849,11 +804,9 @@ private fun LiveSessionApp(
       newDesignCatalogs =
         orderedNewDesignCatalogs(
             availableCatalogs,
-            // Only the server seeds a catalog-owned template: it holds the published documents.
-            // A design created in this browser — a local session, or a server that would refuse
-            // this caller's create — is seeded by `createLocalDesign` from the built-in templates,
-            // so it must be offered the built-in cards, or a card would name a template it
-            // cannot honour.
+            // Only the server seeds catalog-owned templates (it holds the published documents).
+            // Browser-created designs use `createLocalDesign`'s built-in templates, so they get the
+            // built-in cards.
             if (localSession == null && config.canWrite) catalogOwnership()
             else CatalogOwnership.NONE,
             NEW_DESIGN_CATALOG_ORDER,
@@ -864,11 +817,9 @@ private fun LiveSessionApp(
               it.benchmark.catalogSystemId == choice.systemId
             }
             run {
-              // The previews are decoration on the chooser. One catalog whose record fails the
-              // parser's validation keeps its plain entry rather than taking the whole list —
-              // and, beside an open, the design being opened — down with it. A catalog-owned card
-              // has none: its seeds are the catalog's documents, which the server holds and this
-              // page does not, and a thumbnail drawn from a built-in seed would show the wrong one.
+              // Previews are decoration: a catalog whose record fails validation keeps its plain
+              // entry instead of breaking the list. Catalog-owned cards have none, since their
+              // seeds live on the server.
               if (fixture == null || choice.catalogOwned) choice
               else
                 runCatching {
@@ -889,10 +840,8 @@ private fun LiveSessionApp(
           }
     }
     if (config.localStorage || config.startWithNewDesign) {
-      // A local session can be asked for a catalog this browser has never seen — the first visit
-      // to an origin with the network already gone. That is a sentence, not a crash: the live
-      // session has a server behind it and can let the failure take the page down, and a local one
-      // has to explain itself because there is nothing else left to ask.
+      // A local session may be asked for a catalog never cached (first offline visit); explain that
+      // rather than crash.
       val availableCatalogs =
         if (!config.localStorage) loadLiveCatalogs(http)
         else
@@ -939,13 +888,8 @@ private fun LiveSessionApp(
         RemoteDocumentExportSupport.documentFormat?.let {
           RemoteDocumentExportSupport.supports(capability.exportCapabilities, it)
         } == true
-      // PNG and Remote document exports can submit current drafts without saving. SVG still
-      // requires a saved design.
-      //
-      // And where there is one, it is pinned to the same revision the canvas is drawing, because
-      // the export routes render on request: without it the Export menu would answer a question
-      // about history with the picture of the head, which is the one thing the banner promises it
-      // is not showing.
+      // PNG and Remote document exports can submit current drafts without saving; SVG requires a
+      // saved design. When pinned, exports use the canvas's revision rather than the head.
       val browserExportHost =
         BrowserExportHost(
           designId = config.designId,
@@ -988,11 +932,9 @@ private fun LiveSessionApp(
         if (config.canWrite) browserExportHost
         else browserExportHost.refusing(serverOnlyRefusal(config))
     }
-    // `?revision=` first, because a design pinned to a committed revision is a different opening:
-    // one snapshot, no socket, no presence. A revision the service will not answer for — trimmed
-    // out of the retained window, or one this design never reached — is *not* a failure to open.
-    // The link is stale, the design is not, so the editor falls through to the live design and the
-    // banner says which of the two happened. See [DesignRevisionPin].
+    // `?revision=` first: a pinned revision opens one snapshot, no socket, no presence. A revision
+    // the service won't answer for (trimmed or never reached) falls through to the live design, and
+    // the banner says which happened. See [DesignRevisionPin].
     config.selectors.revision?.let { requested ->
       val pinned =
         (http.execute(GetSnapshotRequestV1(designId = config.designId, revision = requested))
@@ -1000,14 +942,9 @@ private fun LiveSessionApp(
           ?.response as? SnapshotResponseV1
       revisionPin = DesignRevisionPin(requested = requested, pinned = pinned != null)
       if (pinned != null) {
-        // The catalog the *pinned* document was resolved against, not the one the catalog list
-        // offers today. A design whose catalog pin moved between revisions is validated and drawn
-        // with the capabilities it actually had, which is the whole claim a historical view makes.
+        // Use the catalog the pinned document was resolved against, not today's.
         installCatalog(pinned.snapshot.catalog, requested)
-        // Presence belongs to the living design. This page holds no socket and never will, so the
-        // avatars and selection outlines the snapshot happens to carry are other people editing a
-        // document this canvas is not showing — drawn over history for as long as they take to
-        // expire, and pointing at node ids from the head revision.
+        // Presence belongs to the live design; drop it from a pinned snapshot.
         acceptSnapshot(pinned.copy(snapshot = pinned.snapshot.copy(presence = emptyList())))
         canonicalizeUiBuilderUrl(config.designId, config.selectors)
         sessionStatus = "Revision $requested · read-only"
@@ -1020,10 +957,8 @@ private fun LiveSessionApp(
       is UiBuilderHttpResult.Response -> {
         val response = result.response as? SnapshotResponseV1
         if (response == null) {
-          // Same dead end as a refused open, and it used to end on the same white page: the
-          // service answered with something that is not a snapshot, so there is no document to
-          // draw and no service error to quote either. Synthesised as INTERNAL because that is
-          // what it is — this host's fault, not the caller's.
+          // The service answered with something that isn't a snapshot; synthesised as INTERNAL
+          // since it is this host's fault.
           sessionStatus = "Live error · unexpected open response"
           openFailure =
             ServiceErrorV1(ServiceErrorCodeV1.INTERNAL, "the design could not be opened")
@@ -1032,14 +967,10 @@ private fun LiveSessionApp(
         bootPhase("Drawing the design")
         installCatalog(response.snapshot.catalog, null)
         acceptSnapshot(response)
-        // Without the revision: the page opened at head, whatever the link asked for, and an
-        // address bar still naming an unavailable revision would be the one lie the banner is
-        // there to prevent.
+        // Drop the revision from the URL: the page opened at head.
         canonicalizeUiBuilderUrl(config.designId, config.selectors.copy(revision = null))
-        // A local design has no updates to subscribe to: the only writer is this page, and it has
-        // already seen everything it wrote. Reported as connected because that is what it is —
-        // the service is one call away — rather than leaving the editor offering a reconnect for a
-        // socket that was never going to exist.
+        // A local design has nothing to subscribe to (this page is the only writer); report it as
+        // connected so no reconnect is offered.
         if (config.localStorage) {
           socketState = BrowserUiBuilderSocketState.CONNECTED
           return@LaunchedEffect
@@ -1083,10 +1014,9 @@ private fun LiveSessionApp(
                   sequence = update.update.delta.throughSequence,
                 )
                 val projectionStartedAt = monotonicNow()
-                // Not while the operator's own edits are still queued: projecting a collaborator's
-                // property write onto the displayed document would rebuild the editor from a
-                // document those edits are not in yet. The fetch below answers with a snapshot,
-                // which the deferral holds until the queue drains.
+                // Not while the operator's own edits are queued: projecting a collaborator's write
+                // would rebuild from a document missing them. The snapshot fetch below is held by
+                // the deferral until the queue drains.
                 val candidate =
                   if (sync.pendingSubmissions > 0) null
                   else
@@ -1119,9 +1049,8 @@ private fun LiveSessionApp(
                   startedAtMs = projectionStartedAt,
                   completedAtMs = monotonicNow(),
                 )
-                // The projected document is only displayed when the session agrees it is the
-                // newest thing seen — a snapshot fetch racing this delta can already have carried
-                // the design past it, and drawing the delta then would be a rollback.
+                // Display the projection only if the session agrees it is newest; a racing snapshot
+                // may already be past it.
                 val disposition = projected?.let {
                   sync.receiveSnapshot(
                     sequence = update.update.delta.throughSequence,
@@ -1140,9 +1069,8 @@ private fun LiveSessionApp(
                   sessionStatus =
                     "Live · ${config.actorId} · seq ${update.update.delta.throughSequence}"
                 } else {
-                  // Unverified, held back behind the operator's own queue, or already overtaken:
-                  // ask for a snapshot rather than guessing, and let the deferral decide when it
-                  // may be shown.
+                  // Unverified, deferred or overtaken: fetch a snapshot and let the deferral decide
+                  // when to show it.
                   refreshSnapshot("Syncing remote edits…")
                 }
               }
@@ -1231,9 +1159,8 @@ private fun LiveSessionApp(
 
   val loadedDocument = document
   val loadedCatalog = catalog
-  // Asked once the authoring catalog is known, because the answer depends on it: a catalog that
-  // does not offer `remote-compose/document` has nowhere to put a published document, and asking
-  // its serving catalog for one would be a request whose answer could not be used.
+  // Asked once the authoring catalog is known; a catalog without `remote-compose/document` couldn't
+  // use the answer.
   var remoteComposeSources by remember { mutableStateOf(emptyList<RemoteComposeSource>()) }
   LaunchedEffect(loadedCatalog) {
     remoteComposeSources =
@@ -1242,13 +1169,9 @@ private fun LiveSessionApp(
       else emptyList()
   }
   /**
-   * Making a design, by whichever of the two routes this session has.
-   *
-   * A server design is created by the New design form, whose `303` the browser follows, so the
-   * design's permalink is what ends up in history. A local design has nowhere to POST: the page
-   * seeds the document itself from the same shared [UiBuilderNewDesignSeed] the server uses, writes
-   * it to this browser, rewrites the URL and re-enters the editor. One seed, two places to put the
-   * result.
+   * Making a design, by whichever of the two routes this session has. A server design is created by
+   * the New design form (its `303` puts the permalink in history). A local design is seeded in-page
+   * from the same [UiBuilderNewDesignSeed], written to this browser, and the URL rewritten.
    */
   val createPublicDesign: ((String, String, String, List<NewDesignState>) -> Unit)? =
     if (localSession == null && config.canWrite && config.designVisibilitySupported) {
@@ -1297,11 +1220,8 @@ private fun LiveSessionApp(
       }
     }
 
-  // Taking the design into this browser, and bringing it home again.
-  //
-  // Two halves of one act, and each is offered only where it means something: a design already kept
-  // here has nowhere to be taken, and a design created here has no server to go home to. The rules
-  // both follow — the fork point, the base chain, what a refusal means — are
+  // Taking the design into this browser, and bringing it home again, each offered only where it
+  // applies. Rules (fork point, base chain, refusals):
   // `docs/design/UI_BUILDER_DESIGN_PORTABILITY.md`.
   val storedRecord =
     remember(config.designId, config.localStorage, localSession) {
@@ -1390,9 +1310,9 @@ private fun LiveSessionApp(
       }
     }
 
-  // A design made in this browser, or copied into it, going to the server as a new design: a create
-  // under its own id, never a merge. Only once the server would take this caller's create, and not
-  // for a checkout, whose way home is [syncToServer].
+  // A browser-made or copied design going to the server as a new design (a create under its own id,
+  // never a merge). Only when the server would accept this caller's create; checkouts use
+  // [syncToServer].
   val publishToServer: (() -> Unit)? =
     if (localSession == null || !config.canWrite || storedRecord?.origin != null) null
     else
@@ -1440,8 +1360,8 @@ private fun LiveSessionApp(
       // copy: the home screen then shows the create panel alone, which is what it always was.
       designs = if (localSession == null) homeDesigns else emptyList(),
       onOpenDesign = if (localSession == null) ::navigateToDesign else null,
-      // Hidden for a caller the server would refuse: copying a design from this list into the
-      // browser needs its snapshot first (#342). Opening it and editing makes that copy today.
+      // Hidden for callers the server would refuse: copying needs the design's snapshot first (see
+      // #342).
       onCopyDesign =
         if (localSession == null && config.canWrite) {
           { source -> navigateToCopyDesign(source, NewDesignNames.random()) }
@@ -1526,19 +1446,13 @@ private fun LiveSessionApp(
     return
   }
   if (loadedDocument != null && loadedCatalog != null) {
-    // A `#thread=` naming no conversation on this board, once the board is in a position to say so.
-    // Answered the way `?node=` answers an unknown layer — a sentence rather than a failure — but
-    // it needs the wait: the discussion arrives over its own socket well after the design does, so
-    // asking earlier would call every thread link stale for the first moments of every page.
+    // A `#thread=` naming no conversation on this board, decided only once the board has loaded (it
+    // arrives on its own socket after the design).
     val staleThreadId = linkedThreadId?.takeIf {
       commentBoardLoaded && commentBoard.threads.none { thread -> thread.id == it }
     }
-    // The address bar stops naming it, and so does the state this page publishes for the harness
-    // and the extension. A fragment pointing at a conversation that is not there is the same lie
-    // an unavailable `?revision=` is not allowed to tell.
-    // Deliberately not clearing [linkedThreadId] here, unlike the close path below: the notice is
-    // derived from it, and a link naming a thread that does not exist has no card to keep on screen
-    // anyway — the exemption that path is protecting against needs a card to exempt.
+    // Clear the stale thread from the address bar and the published state. [linkedThreadId] is
+    // deliberately kept: the notice derives from it, and there is no card to exempt.
     LaunchedEffect(staleThreadId) {
       if (staleThreadId != null) {
         dropDesignUrlFragment()
@@ -1552,14 +1466,10 @@ private fun LiveSessionApp(
         Json.encodeToString(collaborators.map(UiBuilderCollaborator::selectedNodeIds)),
       )
     }
-    // The record this host generates this catalog's exports from, for the code pane and the
-    // problems panel. Without it they judge every catalog by the record embedded in this build —
-    // `m3-catalog`'s authored one — and a published catalog's components are not in it, so the
-    // pane reported "no component" for what the export writes. See `UiBuilderEditorReducer`.
-    //
-    // Fetched separately rather than carried on the capability document, and after the design is
-    // on screen rather than before: it is the largest thing this page reads and nothing draws with
-    // it. A host that serves none, and a fetch that fails, leave the editor exactly where it was.
+    // The record this host generates this catalog's exports from, for the code pane and problems
+    // panel; without it they judge by the embedded `m3-catalog` record. Fetched after the design is
+    // on screen since it's large and nothing draws with it; failure leaves the editor as is. See
+    // `UiBuilderEditorReducer`.
     var catalogRecord by remember(loadedCatalog) { mutableStateOf<ComponentRecordFile?>(null) }
     LaunchedEffect(loadedCatalog) {
       catalogRecord = fetchCatalogRecord(loadedCatalog.benchmark.catalogSystemId)
@@ -1626,10 +1536,9 @@ private fun LiveSessionApp(
           agentHost.prompt(false, ""),
         )
     }
-    // The Issues panel's guidelines check, on the person's own OpenRouter key: requests go from
-    // this
-    // page to openrouter.ai, never through the design host. A page OpenRouter's sign-in returned to
-    // carries the code to trade for that key, so it is finished before anything else asks.
+    // The Issues panel's guidelines check, using the person's own OpenRouter key: requests go
+    // straight to openrouter.ai, never via the design host. A sign-in return code is exchanged
+    // first.
     val guidelines =
       remember(config.designId, config.localStorage) {
         DesignGuidelineController(
@@ -1637,9 +1546,8 @@ private fun LiveSessionApp(
         )
       }
     LaunchedEffect(guidelines) { guidelines.completeSignIn() }
-    // The design's recorded result and this account's access, read when the design opens rather
-    // than when the Issues panel first does, so the canvas overlay shows a recorded finding at
-    // once.
+    // Read when the design opens (not when the Issues panel does) so the canvas overlay shows a
+    // recorded finding at once.
     LaunchedEffect(guidelines) {
       guidelines.loadAccess()
       guidelines.loadShared()
@@ -1668,12 +1576,8 @@ private fun LiveSessionApp(
         onManageVisibility =
           if (designVisibility?.canManage == true) ({ openDesignSharing(config.designId) })
           else null,
-        // No Reconnect while a revision is pinned. There is no session to reconnect: the pinned
-        // page
-        // opened one snapshot and holds no socket, and the button's own handler would fetch the
-        // head
-        // and replace the document under a banner still naming the revision — the exact lie the
-        // banner exists to prevent.
+        // No Reconnect while a revision is pinned: there is no socket, and reconnecting would
+        // replace the document with the head under the revision banner.
         onReconnect =
           if (revisionPin?.pinned == true) null
           else {
@@ -1708,10 +1612,7 @@ private fun LiveSessionApp(
           authoritativeDocument?.takeIf { it.nodes.containsKey(nodeId) }?.revision
         },
         initialSelectedNodeId = selectedNodeId,
-        // `#thread=` wins the panel where a link names both: one dock is open at a time, and a link
-        // that names a conversation is a link to read it. `?node=` still selects the layer, which
-        // is
-        // what makes "the thread about this button, beside the button" one URL.
+        // `#thread=` wins the panel where a link names both; `?node=` still selects the layer.
         initialInspectorMode =
           if (config.selectors.threadId != null) EditorInspectorMode.Comments
           else EditorInspectorMode.Properties,
@@ -1720,22 +1621,16 @@ private fun LiveSessionApp(
         threadNavigations = threadNavigations,
         onSelectedThreadChanged = {
           openThreadId = it
-          // The fragment stops naming a thread as soon as the reader closes it or opens another,
-          // and
-          // the state that mirrors it has to go with it. `replaceState` fires no `hashchange`, so
-          // nothing else would clear this — and a stale value here keeps feeding the panel a
-          // `revealThreadId`, which is what exempts a resolved card from being hidden. The card
-          // would
-          // then stay on screen for the rest of the session, after the URL had stopped naming it.
+          // Clear the mirrored thread when the reader closes or switches threads: `replaceState`
+          // fires no `hashchange`, and a stale value would keep a resolved card visible via
+          // `revealThreadId`.
           if (it != linkedThreadId) {
             dropDesignUrlFragment()
             linkedThreadId = null
           }
         },
         revisionPin = revisionPin,
-        // Only where there is somewhere to go. A revision that could not be shown left the page on
-        // the latest design already, and a button offering to take you where you are is a button
-        // that teaches the banner cannot be trusted.
+        // Only when the page is actually pinned somewhere other than latest.
         onGoToLatest = revisionPin?.takeIf { it.pinned }?.let { { goToLatestRevision() } },
         openingNotice =
           listOfNotNull(
@@ -1768,10 +1663,8 @@ private fun LiveSessionApp(
             ?: config.signInUrl
               ?.takeIf { localSession == null && !config.canWrite }
               ?.let { url -> EditorNoticeAction("Sign in") { navigateTo(url) } },
-        // Withheld for a design the path form cannot name. The service stores any id that is not
-        // blank, while this editor refuses to start on a design named in the path unless the id is
-        // path-safe, so such a design is reachable only through the legacy query form — and a link
-        // to it would hand its recipient a page that will not open. See [isDesignUrlPathSafe].
+        // Withheld for a design id that isn't path-safe: the link would not open. See
+        // [isDesignUrlPathSafe].
         onCopyDesignLink =
           if (!isDesignUrlPathSafe(config.designId)) null
           else
@@ -1855,10 +1748,8 @@ private fun LiveSessionApp(
             },
         restoredReference = restoredReference,
         onPickReference = { references.pickFile() },
-        // The third lane that renders on request, and the one easiest to miss: this one *keeps*
-        // what
-        // it renders, as the reference the canvas is traced against. Snapshotting a pinned page
-        // without the revision would lay the head over history and then persist it.
+        // This lane keeps what it renders (the reference the canvas is traced against), so it must
+        // use the pinned revision.
         onSnapshotDesign = {
           references.snapshotDesign(revisionPin?.takeIf { it.pinned }?.requested)
         },
@@ -1943,9 +1834,7 @@ private fun LiveSessionApp(
             },
         onStateChanged = {
           latestEditorDocument = it.document
-          // The address bar stops naming a node the moment the selection moves off it, so a URL
-          // copied later — or restored by the browser tomorrow — cannot point at a layer nobody has
-          // been looking at.
+          // Drop the node from the address bar once the selection moves off it.
           if (config.selectors.nodeId != null && it.selectedNodeId != config.selectors.nodeId) {
             dropDesignUrlQuery(DESIGN_URL_NODE_KEY)
           }
@@ -1968,9 +1857,9 @@ private fun LiveSessionApp(
         onCanvasMetrics = ::publishEditorCanvasMetrics,
         onCanvasBoundsChanged = ::publishEditorCanvasBounds,
         onDropTargetChanged = ::publishEditorDropTarget,
-        // `candidate` predates catalog-delivered runtimes. Keep its in-process canvas until every
-        // deployed catalog has been verified through the hosted editor and native-export lanes; it
-        // names no immutable archive, so asking the runtime route for it can only return 404.
+        // `candidate` predates catalog-delivered runtimes and names no immutable archive; keep its
+        // in-process canvas until every deployed catalog is verified through the hosted editor and
+        // native-export lanes.
         canvasRenderer =
           if (
             loadedDocument.catalogPin["nativeRuntimeId"]?.jsonPrimitive?.contentOrNull ==
@@ -1997,23 +1886,12 @@ private fun LiveSessionApp(
           inspectionPublisher.offer(collector, loadedDocument.revision)
           initialDesignLayout.complete(Unit)
         },
-        // The native render is a real Compose render the server performs from the stored design, so
-        // it is the one pane a design this server has never seen cannot fill.
-        //
-        // Where it can, it is pinned like the export lane rather than withheld, which is what it
-        // has
-        // to be on a catalog whose Wasm canvas is only a stand-in. Withholding it left `wear-m3`
-        // drawing Material 3 lookalikes under a banner naming a revision — not a rough picture of
-        // the
-        // right document but a faithful picture of the wrong component library, which is the one
-        // thing a historical view must not be. The route takes a revision for exactly this.
-        //
-        // The host container shape rides along for the same reason the revision does: the pane has
-        // to
-        // draw the frame the canvas beside it is drawing, and a render that picked its own would be
-        // the one disagreement this pane must not invent.
-        // The live half of the same lane. One instance per session: the editor opens it when a
-        // render names a session and closes it when that session changes or the pane goes away.
+        // `onRequestNativeRender` (below): a server-side Compose render of the stored design,
+        // pinned to the viewed revision and host shape so it matches the canvas (on `wear-m3` the
+        // Wasm canvas is only a stand-in).
+        // `onOpenNativeStream`: the live half of the same lane, one instance per session; the
+        // editor opens it when a render names a session and closes it when that session changes or
+        // the pane goes away.
         onOpenNativeStream = { live -> BrowserNativeStream(live) },
         onRequestNativeRender = { hostShape ->
           if (config.localStorage) UiBuilderNativeRender(failure = LOCAL_NATIVE_RENDER_UNAVAILABLE)
@@ -2034,37 +1912,29 @@ private fun LiveSessionApp(
             fetchBase64(catalogAssetPath(activeCatalogSystemId, "/render/${source.id}.png"))
           Image.makeFromEncoded(Base64.decode(encoded)).toComposeImageBitmap()
         },
-        // The same fetch, for a URL the *design* names rather than one the palette built. A design
-        // is someone else's data fetched as this viewer, so the URL is held to the routes that
-        // serve
-        // Remote Compose documents ([designReferenceUrl]) before [sameOriginRequestUrl] adds the
-        // token. Another host, or any other route on this one, draws that refusal as the node's own
+        // For URLs the design names: held to Remote Compose document routes ([designReferenceUrl])
+        // before [sameOriginRequestUrl] adds the token; anything else is drawn as the node's
         // diagnostic.
         resolveRemoteComposeUrl = { url ->
           fetchBase64(designReferenceUrl(url, DesignReferenceKind.RemoteComposeDocument))
         },
-        // The design's own uploaded pictures, from the route beside the design API that stores
-        // them. Same-origin like everything else here, and read as this page's actor, so a design
-        // one may not open has no pictures one may fetch.
+        // The design's own uploaded pictures, same-origin and read as this page's actor.
         resolveDesignAsset = { assetKey ->
           Base64.decode(
             fetchBase64("/api/ui-builder/v1/designs/${config.designId}/assets/$assetKey")
           )
         },
-        // Same-origin, and only from the ingested-document route ([designReferenceUrl]): a builder
-        // that made an exception for animation URLs would be a page fetching arbitrary JSON into a
-        // design as this viewer. An animation served from elsewhere is pasted into the element's
-        // `json` instead, which is the same bytes by a route the host can see.
+        // Same-origin, ingested-document route only ([designReferenceUrl]), so a design can't fetch
+        // arbitrary JSON as this viewer; external animations are pasted into the element's `json`
+        // instead.
         loadLottieAnimation = { url ->
           fetchText(designReferenceUrl(url, DesignReferenceKind.LottieAnimation))
         },
       )
     }
     LaunchedEffect(loadedDocument.revision) { markReady() }
-    // What the URL's selectors resolved to, for the harness and for anybody debugging a link that
-    // did not do what its author expected. Published rather than inferred from pixels: "the node
-    // is selected" and "the node is drawn with an outline" are different claims, and only the
-    // first one is what a selector promises.
+    // Publish what the URL's selectors resolved to, for the harness and link debugging; "selected"
+    // is a different claim from "drawn with an outline".
     LaunchedEffect(revisionPin, selectedNodeId, openThreadId, inspectorMode) {
       publishDesignSelectors(
         revision = revisionPin?.requested?.toString().orEmpty(),
@@ -2075,10 +1945,7 @@ private fun LiveSessionApp(
       )
     }
   } else {
-    // The branch that did not exist. Without it a refused open emitted nothing at all: the guard
-    // above is the only thing this composable draws, so a null document was a white page for as
-    // long as the tab stayed open, with the service's own explanation sitting unread in
-    // `sessionStatus`. Nothing about the failure was hidden — it was simply never rendered.
+    // A refused open: draw the service's explanation instead of a blank page.
     val failure = openFailure
     if (failure != null) {
       UiBuilderUnavailableScreen(
@@ -2139,11 +2006,9 @@ private fun LiveSessionApp(
             (failure.code == ServiceErrorCodeV1.CATALOG_UNAVAILABLE && !catalogRecoveryAttempted),
         recoveryError = catalogRecoveryError,
       )
-      // Ready means settled, not successful. The harness waits on this attribute for 60 seconds
-      // before failing, so leaving it unset on a design that will never open turns a precise
-      // "catalog unavailable" into a timeout that says nothing. Only on a settled failure: while
-      // `openFailure` is null the open may still succeed, and marking ready then would let the
-      // harness assert against a page that had not finished loading.
+      // Ready means settled, not successful: mark it on a settled failure so the harness reports
+      // the reason instead of timing out. Not while `openFailure` is null, since the open may still
+      // succeed.
       LaunchedEffect(failure, catalogRecoveryAttempted) {
         if (
           failure.code != ServiceErrorCodeV1.CATALOG_UNAVAILABLE ||
@@ -2187,11 +2052,7 @@ internal fun readOnlyNotice(config: LiveSessionConfig): String? =
       )
       .joinToString(" ")
 
-/**
- * How often an open editor asks whether anything new has been suggested. A suggestion arriving does
- * not move the design, so nothing comes down the socket for it; a quarter of a minute is soon
- * enough for "the agent says it has proposed something" and rare enough to cost nothing.
- */
+/** How often an open editor polls for new suggestions (they don't arrive over the socket). */
 private const val SUGGESTION_POLL_INTERVAL_MILLIS = 15_000L
 
 @kotlinx.serialization.Serializable

@@ -5,18 +5,15 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * The shadow report every captured catalog gives today: exactly what compose-preview-server logs
- * for it at startup (`serve: UI-builder catalog <id> shadow: …`), computed by the same
- * [CatalogCutoverShadow.report] against the same published files ([CatalogCutoverFixtures]).
- *
- * Committed so the answer to "could this catalog be owned now?" is a reviewable fact rather than a
- * box log: a re-capture that changes any row fails here and shows the change as a diff. A row that
- * gains a finding or a loss is a regression in that catalog's repository, not a table to update.
+ * The shadow report each captured catalog gives today (what compose-preview-server logs at
+ * startup), computed by [CatalogCutoverShadow.report] against [CatalogCutoverFixtures] and
+ * committed so changes show as a diff. A row gaining a finding or loss is a catalog regression, not
+ * a table to update.
  *
  * - [Row.ready]: owning it would refuse nothing it serves now and take nothing away.
  * - [Row.findings]: what owning it would refuse — the gap ledger's lines for that catalog.
- * - [Row.losses]: what owning it would take away from an editor, against its Kotlin catalog. `null`
- *   when the builder synthesises nothing for the catalog, so there is nothing to compare.
+ * - [Row.losses]: what owning it would take away, against its Kotlin catalog; `null` when nothing
+ *   is synthesised for it.
  */
 class CatalogCutoverShadowTableTest {
 

@@ -27,12 +27,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The press that becomes a canvas move, driven through the real gesture on the real canvas.
- *
- * The plan and the land are pinned by [CanvasDropPlanTest] against hand-built geometry; this one
- * asks the two things only a live pointer stream can answer: does a press-and-carry past the slop
- * pick up the node under the press, and does a still press stay a tap that selects. Where the nodes
- * actually drew is read from the inspection the canvas itself published, not assumed.
+ * The press that becomes a canvas move, driven through the real gesture on the real canvas: does
+ * press-and-carry past the slop pick up the node, and does a still press stay a selecting tap? Plan
+ * and drop are pinned by [CanvasDropPlanTest]; node positions come from the canvas's own
+ * inspection.
  */
 @OptIn(ExperimentalTestApi::class)
 class CanvasMoveDragTest {
@@ -149,10 +147,7 @@ class CanvasMoveDragTest {
       assertTrue(!dragStarted, "a click is not a pick-up")
     }
 
-  /**
-   * The friction the slot-first model asks for: a hurried press-and-move is a scroll or a swipe,
-   * not a rearrangement. Nothing is picked up and nothing lands.
-   */
+  /** A hurried press-and-move is a scroll or swipe, not a rearrangement: nothing is picked up. */
   @Test
   fun `a quick press and move picks nothing up`() =
     runDesktopComposeUiTest(width = 900, height = 700) {
@@ -186,8 +181,8 @@ class CanvasMoveDragTest {
     }
 
   /**
-   * Selecting was the deliberate act, and a mouse has a wheel to scroll with: a mouse press on the
-   * selected node moves as soon as it passes the slop, with no hold.
+   * A mouse press on the selected node moves once past the slop, with no hold (selection was the
+   * deliberate act).
    */
   @Test
   fun `a mouse drag on the selection carries it without a hold`() =
@@ -255,10 +250,7 @@ class CanvasMoveDragTest {
       assertTrue(!dragStarted, "a touch move without the hold is not a pick-up")
     }
 
-  /**
-   * Inside a selected container, a drag carries the container — not the text under the pointer,
-   * which used to make a card impossible to move by anything but its padding.
-   */
+  /** Inside a selected container, a drag carries the container, not the text under the pointer. */
   @Test
   fun `a drag inside a selected container carries the container`() =
     runDesktopComposeUiTest(width = 900, height = 700) {

@@ -23,11 +23,8 @@ fun interface ApprovalPresenter {
 }
 
 /**
- * Opens the approval page in the system browser.
- *
- * `Desktop.isDesktopSupported()` alone is not enough: a Linux desktop without a registered browser
- * handler supports `Desktop` but not `BROWSE`, and `browse` then throws. Where the page cannot be
- * opened the URL goes to stderr, which is where a desktop launched from a terminal is looked at.
+ * Opens the approval page in the system browser, or prints the URL to stderr where `BROWSE` is
+ * unsupported (e.g. Linux without a registered browser handler).
  */
 object SystemBrowserApprovalPresenter : ApprovalPresenter {
   override fun present(approvalUrl: URI): Boolean {
@@ -43,12 +40,9 @@ object SystemBrowserApprovalPresenter : ApprovalPresenter {
 }
 
 /**
- * The server's device-grant flow, shared by every JVM host that signs in to a preview server.
- *
- * Asks for a grant labelled [label] with [capabilities], shows the approval page through
- * [presenter], then polls until the person approves, the server declines, or [timeout] passes. Both
- * the approval page and the poll target must be on [origin]: a server answer cannot send this
- * process, or the person's browser, anywhere else.
+ * The server's device-grant flow, shared by every JVM host that signs in to a preview server: asks
+ * for a grant labelled [label] with [capabilities], shows approval through [presenter], then polls
+ * until approved, declined or [timeout]. The approval page and poll target must be on [origin].
  *
  * [post] sends an unauthenticated JSON POST; the caller owns the HTTP client and its timeouts.
  */

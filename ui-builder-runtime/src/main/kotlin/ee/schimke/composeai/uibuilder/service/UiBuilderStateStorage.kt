@@ -19,11 +19,8 @@ public data class UiBuilderPersistenceMigrationResult(
 )
 
 /**
- * How much of a bounded storage is spent, so an operator learns before a save is refused.
- *
- * [FileUiBuilderStateStorage] bounds every write at `maximumBytes` and there has never been a way
- * to see how close the file is to it: the first sign was a refused save, on a store that had been
- * at 73% for weeks. `bytes` is what is stored now, `maximumBytes` the ceiling that would refuse it.
+ * How much of a bounded storage is spent, so an operator learns before a save is refused. `bytes`
+ * is what is stored; `maximumBytes` the ceiling.
  */
 public data class UiBuilderStorageUsage(val bytes: Long, val maximumBytes: Long) {
   init {
@@ -44,11 +41,8 @@ public interface UiBuilderStateStorage {
   public fun replace(value: ByteArray)
 
   /**
-   * What this storage is holding against its ceiling, or null when it has neither.
-   *
-   * Defaulted because an in-memory or test storage bounds nothing and has nothing to report, and
-   * because a new method on a published interface must not break the implementations outside this
-   * repository.
+   * What this storage holds against its ceiling, or null when it has neither. Defaulted so external
+   * implementations and in-memory storages need not change.
    */
   public fun usage(): UiBuilderStorageUsage? = null
 }
@@ -67,25 +61,16 @@ public interface RecoverableUiBuilderMigrationStorage : UiBuilderStateStorage {
 /**
  * Single-process file-backed storage with a cross-process advisory lock and atomic replacement.
  *
- * The service payload carries its own version and checksum. This class bounds bytes before reading
- * or writing, forces the new file before rename, and ignores orphaned temporary files from a crash.
- * Before replacing an existing state it atomically preserves that state as [BACKUP_FILE]. Operators
- * may explicitly restore that one-generation backup after diagnosing a failed startup; corrupt
- * primary state is never silently hidden. It does not provide multi-replica compare-and-set
- * semantics; deployments requiring concurrent writers must supply a transactional
+ * Bounds bytes before reading or writing, forces the new file before rename, ignores orphaned temp
+ * files, and preserves the prior state as [BACKUP_FILE] for explicit restore; corrupt primary state
+ * is never hidden. No multi-replica compare-and-set: concurrent writers need a transactional
  * [UiBuilderStateStorage].
  */
 public class FileUiBuilderStateStorage(
   root: Path,
   /**
-   * The ceiling a write is refused at, raised from 32 MiB.
-   *
-   * 32 MiB was chosen when a design was small and there were few of them; the live store reached
-   * 73% of it with 36 designs and no single thing wrong. Raising it buys room rather than fixing
-   * anything — every accepted edit still rewrites the whole file, so a larger ceiling makes each
-   * edit more expensive, not less, and the per-design store in
-   * `docs/design/UI_BUILDER_STATE_STORAGE.md` is what removes that. What the headroom is for is not
-   * having saves start failing while that work happens.
+   * The ceiling a write is refused at. Every edit rewrites the whole file, so this is headroom
+   * only; the per-design store (`docs/design/UI_BUILDER_STATE_STORAGE.md`) is the real fix.
    */
   private val maximumBytes: Long = 128L * 1024L * 1024L,
 ) : RecoverableUiBuilderMigrationStorage {
@@ -154,11 +139,9 @@ public class FileUiBuilderStateStorage(
   }
 
   /**
-   * Replaces the primary state with its one-generation backup, leaving the backup intact.
-   *
-   * This is deliberately explicit: callers should first retain and diagnose a corrupt primary. The
-   * restored envelope is still validated by [PersistentUiBuilderService] on its next startup.
-   * Returns false when no prior generation has been recorded.
+   * Replaces the primary state with its one-generation backup, leaving the backup intact. Explicit:
+   * callers should diagnose a corrupt primary first; the service still validates on startup.
+   * Returns false when no prior generation exists.
    */
   public fun restoreBackup(): Boolean = locked {
     if (!Files.exists(backupFile)) return@locked false
@@ -181,10 +164,8 @@ public class FileUiBuilderStateStorage(
   }
 
   /**
-   * The primary state file's size against the ceiling every write is bounded by.
-   *
-   * Deliberately not under the lock and deliberately tolerant of a missing or unreadable file: this
-   * answers a gauge, and a status route must never be the thing that blocks a save or fails.
+   * The primary file's size against the ceiling. Not locked and tolerant of a missing file: a
+   * status gauge must never block a save or fail.
    */
   override fun usage(): UiBuilderStorageUsage {
     val bytes =

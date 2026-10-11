@@ -83,13 +83,9 @@ private val FINDING_TARGET = Color(0xFF00E676)
 internal data class DesignCaptureRequest(val sequence: Int, val widthDp: Float, val heightDp: Float)
 
 /**
- * Draws the whole design off screen at the frame's size and hands back its pixels — the "design"
- * half of every measurement.
- *
- * The same renderer, theme and catalog the canvas draws with, because it is mounted where
- * [NodeCapture] is and for the same reason: a measurement of a picture the canvas does not show is
- * a measurement of nothing the operator can fix. No editor overlay, no selection, no reference —
- * those are what is being measured *against*, not part of it.
+ * Draws the whole design off screen at the frame's size and hands back its pixels (the "design"
+ * half of every measurement), with the canvas's renderer, theme and catalog, mounted where
+ * [NodeCapture] is. No overlay, selection or reference.
  */
 @Composable
 internal fun DesignCapture(
@@ -134,9 +130,7 @@ internal sealed interface ReferenceMeasureKind {
 
 /**
  * Everything a measurement needs, gathered on the UI thread so the arithmetic can leave it.
- *
- * [layers] are the canvas's own layout, already in frame dp; [nodes] give each layer's component
- * and properties, for its type size.
+ * [layers] are the canvas's layout in frame dp; [nodes] give each layer's component and properties.
  */
 internal class ReferenceMeasureInput(
   val kind: ReferenceMeasureKind,
@@ -153,8 +147,7 @@ internal class ReferenceMeasureInput(
 
 /**
  * Run one measurement through the shared engine ([compareDifferences], [compareLayer]). Pure apart
- * from reading pixels, and slow enough (tens of milliseconds) that the editor calls it off the main
- * dispatcher.
+ * from reading pixels, and slow enough (tens of ms) to run off the main dispatcher.
  */
 internal fun measureAgainstReference(input: ReferenceMeasureInput): ReferenceFindings {
   val comparison =

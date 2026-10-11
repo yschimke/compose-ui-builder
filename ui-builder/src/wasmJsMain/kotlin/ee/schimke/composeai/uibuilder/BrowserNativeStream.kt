@@ -20,29 +20,16 @@ import kotlinx.serialization.json.longOrNull
 import org.jetbrains.skia.Image
 
 /**
- * The editor's native pane, streamed off the serve host's existing live lane.
+ * The editor's native pane, streamed off the serve host's existing live lane
+ * (`/{session}/ws/{preview}`, the viewer's Live toggle socket): frames arrive as
+ * `{"type":"frame","dataBase64":"…","codec":"…","seq":n}` and `{"type":"input", …}` carries pointer
+ * events in frame pixels. See `ServeStreamProtocol` for the wire shapes.
  *
- * ## Nothing here is a new protocol
+ * Lives in `wasmJsMain` because the common editor has no `WebSocket` or base64; it only sees
+ * [UiBuilderNativeStream] (a frame, a failure and a `send`).
  *
- * `/{session}/ws/{preview}` is the socket the viewer's Live toggle has always opened: frames are
- * pushed as `{"type":"frame","dataBase64":"…","codec":"…","seq":n}`, and `{"type":"input", …}` goes
- * the other way carrying a pointer event in the frame's own pixels. The native preview route
- * already compiled the design and redeemed its token into exactly such a session, so this class is
- * a socket and a decoder and no more than that. See `ServeStreamProtocol` for the wire shapes.
- *
- * ## Why this lives in `wasmJsMain`
- *
- * `:ui-builder`'s editor is common Compose with no `WebSocket` and no base64 in it — the same rule
- * `BrowserCommentHost` and `BrowserUiBuilderWebSocketTransport` follow. The editor is handed
- * [UiBuilderNativeStream], which is a frame, a failure and a `send`; everything that knows about
- * origins, tokens and PNG bytes is here.
- *
- * ## Visibility, and why the socket says so
- *
- * A native pane in a tab nobody is looking at is a held Android daemon rendering into nothing. The
- * lane throttles on `{"type":"visibility"}` rather than tearing down, so coming back repaints from
- * a keyframe instead of paying for another boot; this reports the page's own visibility once on
- * open and on every change while the pane is up.
+ * Reports page visibility on open and on change (`{"type":"visibility"}`), so the lane throttles a
+ * hidden pane instead of tearing it down, and repaints from a keyframe on return.
  */
 internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeStream {
 
@@ -53,10 +40,8 @@ internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeS
     private set
 
   /**
-   * The newest sequence painted, so a frame that arrives out of order is dropped rather than drawn.
-   *
-   * The lane's own `seq` restarts at 0 on a reconnect, and this object is never reused across one:
-   * a new session is a new stream and a new instance of this class.
+   * The newest sequence painted, so out-of-order frames are dropped. `seq` restarts on reconnect,
+   * but each session gets a new instance.
    */
   private var painted = -1L
 
@@ -68,9 +53,7 @@ internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeS
         url = nativeStreamUrl(live.sessionId, live.previewId),
         onTextMessage = ::onMessage,
         onClosed = {
-          // Only a close *before* the first frame is a failure worth a sentence. After one, a
-          // close is an ordinary teardown — the pane already has a picture, and replacing it with
-          // an error because the seat was reclaimed would be a worse answer than the last frame.
+          // Only a close before the first frame is a failure; afterwards the last frame stays.
           if (!closed && frame == null && failure == null) {
             failure = "the live native session closed before it drew a frame"
           }
@@ -119,9 +102,8 @@ internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeS
       "frame" -> {
         val sequence = message["seq"]?.jsonPrimitive?.longOrNull ?: (painted + 1)
         if (sequence < painted) return
-        // `dataBase64`, which is what `ServeStreamProtocol.frameMessage` writes — *not* `image`,
-        // which is the still render's field on the HTTP payload. Reading the wrong one silently
-        // dropped every frame and left the pane on "connecting…" forever.
+        // `dataBase64`, as `ServeStreamProtocol.frameMessage` writes it (not the still render's
+        // `image`).
         val encoded = message["dataBase64"]?.jsonPrimitive?.contentOrNull ?: return
         val decoded = decode(encoded) ?: return
         painted = sequence
@@ -136,13 +118,8 @@ internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeS
   }
 
   /**
-   * The frame's bytes as an image, or null when they will not decode.
-   *
-   * The lane sends either a bare base64 payload or a `data:` URI depending on the codec, exactly as
-   * the still render's `imageBase64` does, so both spellings are accepted here for the same reason
-   * they are there: the field is named for its payload and the prefix is a wrapper. A frame that
-   * will not decode is dropped — the next one repaints — rather than reported, because a single bad
-   * frame is not a broken stream.
+   * The frame's bytes as an image, or null when they won't decode. Accepts bare base64 or a `data:`
+   * URI, as the still render does. A bad frame is dropped (the next one repaints).
    */
   @OptIn(ExperimentalEncodingApi::class)
   private fun decode(encoded: String) =
@@ -159,11 +136,8 @@ internal class BrowserNativeStream(live: UiBuilderNativeLive) : UiBuilderNativeS
 }
 
 /**
- * The socket URL for one live session, in the path form the lane reads a session id out of.
- *
- * `/{session}/ws/{preview}` rather than `/ws/{preview}?session=` because the path form is the one
- * the redeemed playground session is reachable under. No token rides along: the upgrade is
- * same-origin, so a token-gated host reads the browse cookie it set when the page was opened.
+ * The socket URL for one live session, in the path form the redeemed playground session is
+ * reachable under. No token: the same-origin upgrade carries the browse cookie.
  */
 internal fun nativeStreamUrl(sessionId: String, previewId: String): String =
   js(

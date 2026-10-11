@@ -133,9 +133,8 @@ class UiBuilderProtocolBridgeTest {
 
   @Test
   fun `a removal is sent as its own mutation, and either spelling in a delta removes the property`() {
-    // The published protocol has no removal mutation; `setProperty` with `{"type":"null"}` is what
-    // the server reads as an unset (#480), and the client has to read it back the same way rather
-    // than storing a null the canvas would then treat as a value.
+    // `setProperty` with `{"type":"null"}` is an unset (see #480); the client must read it back as
+    // one rather than storing a null the canvas treats as a value.
     val local =
       DesignCommand(
         designId = "shared-design",

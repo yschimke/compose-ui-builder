@@ -8,25 +8,15 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.coroutines.MainScope
 
 /**
- * The vendored families as this page serves them: `fonts/fonts.json` and its files, beside the
- * bundle, which is where both the editor's and the renderer runtime's builds copy
- * `assets/rc-fonts`.
+ * The vendored families as this page serves them: `fonts/fonts.json` and its files beside the
+ * bundle (both builds copy `assets/rc-fonts`). Resolved against the bundle's module URL, so fonts
+ * load from the host's immutable content-addressed prefix (`/ui-builder/v/<digest>/`); pages
+ * without such a module (the renderer runtime) resolve against themselves.
  *
- * Resolved against the bundle's own module URL rather than the page: a host serves the editor
- * document at `/ui-builder/<design>` but its assets under an immutable, content-addressed prefix
- * (`/ui-builder/v/<digest>/`, the module's `src` after the host rewrites the shell), so fonts from
- * there are cached for good and never revalidated, where the unprefixed copies are `no-cache`. A
- * page with no such module (the renderer runtime, whose own path is already immutable) resolves
- * against itself.
- *
- * A family the manifest does not list comes from the host's Google Fonts route
- * ([GOOGLE_FONTS_ROUTE]) instead. The page's own `connect-src` admits only this origin, so the
- * browser cannot fetch `fonts.gstatic.com` itself; the host fetches the file once, keeps it, and
- * answers same-origin. A host without the route answers 404, and the family stays on the default
- * face exactly as it did before. A glyph no font here has goes the same way
- * ([routeFallbackFontsThroughHost]).
- *
- * Same-origin and token-carrying like every other request the page makes ([sameOriginRequestUrl]).
+ * Families the manifest doesn't list come from the host's Google Fonts route
+ * ([GOOGLE_FONTS_ROUTE]), since `connect-src` only admits this origin; a host without it answers
+ * 404 and the family stays default. Missing glyphs go the same way
+ * ([routeFallbackFontsThroughHost]). Requests go through [sameOriginRequestUrl].
  */
 @OptIn(ExperimentalEncodingApi::class)
 fun browserFontRegistry(baseUrl: String = bundleFontsBaseUrl()): UiBuilderFontRegistry {

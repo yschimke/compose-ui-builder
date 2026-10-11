@@ -2,22 +2,11 @@ package ee.schimke.composeai.uibuilder.export
 
 /**
  * The colour roles a `wear-m3/screen-scaffold` can re-skin, and the property each is authored as.
+ * The canvas draws the subtree under Wear's scheme with these replaced, and
+ * [WearScreenCodeExporter] writes `MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(…))`.
  *
- * A Wear screen could only be recoloured one component at a time, and the components with no colour
- * of their own — the progress indicator, the edge button, an icon — stayed stock lavender beside a
- * re-branded list (yschimke/wear-m3-catalog#682). A theme belongs on the screen, where everything
- * inside reads it: the canvas draws the scaffold's subtree under a copy of Wear's scheme with these
- * roles replaced, and [WearScreenCodeExporter] wraps the screen in the same
- * `MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(…))`.
- *
- * Role overrides rather than a seed. A seed needs a dynamic-scheme generator on both sides — the
- * catalog's own named themes use `materialkolor` — and a generated screen that pulled a library in
- * to recolour itself is a dependency an author did not ask for. Every role here exists under the
- * same name on Wear's `ColorScheme` and on Material 3's, which the canvas also has to recolour: its
- * token resolution for a few foundation nodes goes through the mobile scheme.
- *
- * One list, read by the catalog that declares the properties, the canvas that draws them and the
- * generator that writes them, so the three cannot disagree about which roles exist.
+ * Role overrides rather than a seed, which would pull a dynamic-scheme library into generated code.
+ * Every role exists by name on both Wear's and Material 3's `ColorScheme`.
  */
 object WearScreenTheme {
   /**

@@ -14,9 +14,8 @@ import org.jetbrains.skia.Image
 
 /**
  * `remote-m3/remote-icon` draws on the canvas with what the design authored under `RemoteIcon`'s
- * own names. The `wear-m3/icon` adapter reads `iconKey` and `color`; the catalog mapping is what
- * routes `imageVector` and `tint` to them, and without the second the canvas drew every icon in the
- * content colour while the export wrote the tint.
+ * own names: the catalog mapping routes `imageVector` and `tint` to the `wear-m3/icon` adapter's
+ * `iconKey` and `color`.
  */
 class RemoteIconCanvasTest {
 

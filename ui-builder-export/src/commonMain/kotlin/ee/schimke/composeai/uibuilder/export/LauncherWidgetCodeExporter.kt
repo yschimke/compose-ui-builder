@@ -5,37 +5,18 @@ import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Generates the Kotlin a **launcher widget** design becomes: a `RemoteComposeWidget` whose
+ * Generates the Kotlin a launcher widget design becomes: a `RemoteComposeWidget` whose
  * `Content(context, widgetId)` is the design's body, and a `@Preview` at the launcher grid size the
  * design was authored at.
  *
- * ## Why this is not the Wear widget exporter
+ * Unlike [WearWidgetCodeExporter], a phone launcher widget is an `AppWidgetProvider` recording
+ * `Content` under the `WIDGETS_V6` profile, with no Remote Material 3 theme. The body uses
+ * [RemoteContentEmitter] with [RemoteTextVocabulary.CREATION]; the shape follows AndroidX's
+ * `MyWidget` demo in `compose/remote/integration-tests/player-view-demos`.
  *
- * [WearWidgetCodeExporter] writes a Glance Wear widget: a `GlanceWearWidget`, a
- * `WearWidgetDocument` with a `WearWidgetBrush`, and a preview per Wear host shape, all under
- * `RemoteMaterialTheme`. A phone launcher widget is none of those. It is an `AppWidgetProvider` —
- * `androidx.compose.remote.creation.compose.widgets.RemoteComposeWidget` — that records its
- * `Content` under the `WIDGETS_V6` profile and hands the launcher the document; the launcher, not a
- * watch host, frames it, and there is no Remote Material 3 to theme it. So the shared part is
- * [RemoteContentEmitter]'s body vocabulary (layouts, modifiers, state, actions, the catalog's own
- * records) written with `remote-creation-compose`'s `RemoteText` ([RemoteTextVocabulary.CREATION]),
- * and everything around the body is this file's. The shape follows AndroidX's own `MyWidget` demo
- * in `compose/remote/integration-tests/player-view-demos`.
- *
- * ## The root is erased into `Content`
- *
- * [ROOT] is the builder's stand-in for the widget itself. Its background becomes the
- * `RemoteModifier.background` of the box `Content` draws; its size is the design environment's,
- * which is a launcher grid size ([LauncherWidgetGrid]) and picks the preview's frame. A launcher
- * clips every widget to its own corner radius, so the root has none to author.
- *
- * ## Refusals are by name
- *
- * The same discipline as every generator here. A node that only `remote-material3` can write — a
- * theme colour or type role, an ambient text style, a Remote Material 3 component — is refused with
- * the reason, because this catalog does not have that library and the source would not compile.
- * Pictures are refused for now: a launcher widget's bitmaps want a decision about where the bytes
- * live that this first version does not make.
+ * [ROOT] is erased into `Content`: its background becomes the box's `RemoteModifier.background`,
+ * its size is the environment's launcher grid size ([LauncherWidgetGrid]); the launcher clips
+ * corners. Anything only `remote-material3` can write is refused by name, as are pictures for now.
  */
 object LauncherWidgetCodeExporter {
 
@@ -51,15 +32,12 @@ object LauncherWidgetCodeExporter {
 
   /**
    * @param packageName the package the file declares, or null for the Code pane's snippet.
-   * @param components the catalog's own records — `WidgetButton` and the rest — which the body's
-   *   record-driven fallback writes from.
-   * @param rootComponentId the component a design's root must be. [ROOT] while the export is routed
-   *   by component id; under the catalog-owned cutover it is whatever screen root the declaring
-   *   catalog publishes, because the catalog chose this emitter by its `composeSourceExport`
-   *   declaration rather than by the name of its root (`CatalogExportRouting.LAUNCHER_WIDGET`).
-   * @param frameSizes the catalog's own `frame.geometry.sizesDp`, label by `width x height`, which
-   *   name the preview. Null reads the [LauncherWidgetGrid] reference table, which is the same
-   *   table `remote-widgets` publishes.
+   * @param components the catalog's own records, used by the body's record-driven fallback.
+   * @param rootComponentId the component a design's root must be: [ROOT] when routed by id, or the
+   *   declaring catalog's screen root under the catalog-owned cutover
+   *   (`CatalogExportRouting.LAUNCHER_WIDGET`).
+   * @param frameSizes the catalog's `frame.geometry.sizesDp`, labelled `width x height`, naming the
+   *   preview. Null reads the [LauncherWidgetGrid] reference table.
    */
   fun export(
     document: UiBuilderDocument,
@@ -131,9 +109,7 @@ object LauncherWidgetCodeExporter {
       document.environmentDp("heightDp")
         ?: frameSizes?.firstOrNull()?.heightDp
         ?: LauncherWidgetGrid.DEFAULT.heightDp
-    // Off the grid is still a widget — a launcher's cells are not the reference ones — so it is
-    // previewed at the size it was drawn at, named by dp rather than by a cell count it does not
-    // have.
+    // Off-grid sizes are still previewed, named by dp rather than a cell count.
     val catalogLabel =
       frameSizes?.firstOrNull { it.widthDp == widthDp && it.heightDp == heightDp }?.label
     val previewLabel =
@@ -215,14 +191,10 @@ fun UiBuilderDocument.isLauncherWidget(): Boolean {
 }
 
 /**
- * The launcher home-screen grid a launcher widget is sized in: discrete cells, `3x2`, `2x1`, rather
- * than dp.
- *
- * The dp behind a cell count is the portrait size Android documents for it — `(73n − 16) × (118m −
- * 16)` dp, measured on a Pixel 4's 5x4 grid
- * (https://developer.android.com/develop/ui/views/appwidgets/layouts). Real launchers vary the
- * cell, which is why a design states the COUNT and this dp is its reference rendering. The
- * `remote-widgets` catalog publishes the same table as its `frame.geometry.sizesDp`.
+ * The launcher home-screen grid a launcher widget is sized in: cell counts (`3x2`, `2x1`), with
+ * Android's documented portrait reference size `(73n − 16) × (118m − 16)` dp
+ * (https://developer.android.com/develop/ui/views/appwidgets/layouts). `remote-widgets` publishes
+ * the same table as `frame.geometry.sizesDp`.
  */
 object LauncherWidgetGrid {
 

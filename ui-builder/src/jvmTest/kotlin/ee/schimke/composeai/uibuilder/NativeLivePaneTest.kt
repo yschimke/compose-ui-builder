@@ -32,12 +32,9 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
 
 /**
- * The native pane's live half: the streamed frame, and the taps that reach the screen drawing it.
- *
- * The socket itself is the host's and is not under test here — what is, is the contract the editor
- * holds it to. A frame replaces the still, a press that does not move arrives as one `click` in the
- * frame's own pixels, and the caption says which of the two you are looking at, because "is this
- * live" is otherwise only discoverable by poking the screen and seeing whether it answers.
+ * The native pane's live half: the streamed frame, and the taps that reach it. Tests the editor's
+ * contract (the socket is the host's): a frame replaces the still, a stationary press arrives as
+ * one `click` in frame pixels, and the caption says which you're looking at.
  */
 @OptIn(ExperimentalTestApi::class)
 class NativeLivePaneTest {
@@ -133,10 +130,8 @@ class NativeLivePaneTest {
           )
         }
       }
-      // Until a frame lands the pane is honest about what it has: a session it is talking to, not a
-      // picture. "Compiling this design…" would be the wrong sentence — the compile is done.
-      // `m3-catalog` declares no native backend, so the default — desktop — is what it names. The
-      // point is that it names one rather than saying "compiling".
+      // Until a frame lands, the pane says it's connecting (the compile is done), naming the
+      // backend; `m3-catalog` declares none, so the default, desktop.
       onNodeWithText("Native · connecting to desktop…", substring = true).assertExists()
 
       runOnIdle { stream.paint() }
@@ -188,9 +183,8 @@ class NativeLivePaneTest {
       height = 900,
     ) {
       val stream = FakeStream()
-      // The editor reads `initialPanes` once, so the pane set cannot be driven from outside it.
-      // What is under test is the effect's `onDispose`, and leaving the composition is what runs
-      // it — which is also what a closed tab and a navigated-away editor do.
+      // `initialPanes` is read once, so dispose is exercised by leaving the composition (as a
+      // closed tab does).
       var open by mutableStateOf(true)
       setContent {
         MaterialTheme {

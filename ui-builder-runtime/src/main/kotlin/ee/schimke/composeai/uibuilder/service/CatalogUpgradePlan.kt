@@ -22,19 +22,8 @@ import kotlinx.serialization.json.contentOrNull
 /**
  * What moving a design from one catalog's vocabulary to another's would cost it.
  *
- * ## Why this exists
- *
- * A catalog that replaces another does not always spell the same components the same way. The case
- * that forced it: a published catalog took over from a synthesised one that had BORROWED ids from a
- * neighbouring design system, so designs already authored against the borrowed spelling named
- * components the served catalog had never heard of. An undeclared property is survivable
- * ([UndeclaredCatalogProperties]); an unknown component is not, and should not be — there is
- * nothing to draw.
- *
- * ## The catalog says what it replaces, and this file says nothing
- *
- * The mapping is `statusSemantics.supersedes` on the TARGET catalog, keyed by the id a stored
- * document may still carry:
+ * A replacing catalog may spell components differently; an unknown component cannot be drawn. The
+ * mapping is `statusSemantics.supersedes` on the target catalog, keyed by the old id:
  * ```jsonc
  * "supersedes": {
  *   "<old component id>": {
@@ -46,25 +35,9 @@ import kotlinx.serialization.json.contentOrNull
  * }
  * ```
  *
- * Not a table in this repository, and deliberately not:
- * `docs/design/UI_BUILDER_CATALOG_CONTRACT.md` moves a catalog's knowledge into the catalog that
- * owns it, and `ui-builder-catalog-literals.sh` enforces that no module here learns a catalog's
- * name. A successor is exactly that knowledge — only the catalog that published the new component
- * can say which old one it stands in for, and it can say so in the same release that introduces it.
- *
- * ## Declared mappings, and everything else
- *
- * A rule states only what someone had to decide: the successor, the properties whose NAME changed,
- * and the properties the target states as modifiers instead. It never lists what is dropped. A
- * property the target simply does not declare falls out at the end with a `WARNING` naming it, and
- * that is deliberate — a list of drops would go stale the moment the target catalog changed, and a
- * catalog that later declares the property should start carrying it across with no edit anywhere.
- *
- * ## Nothing is thrown away
- *
- * The candidate is a proposal. The stored document is untouched until an apply lands, and a dropped
- * value stays in it either way, so a catalog that grows the property back restores the design
- * rather than a migration having to put it back.
+ * The catalog owns this knowledge (`docs/design/UI_BUILDER_CATALOG_CONTRACT.md`); no module here
+ * names a catalog. Rules never list drops: undeclared properties fall out with a `WARNING`. The
+ * candidate is a proposal, and the stored document keeps dropped values.
  */
 internal data class CatalogUpgradeOutcome(
   /** The document as it would be under the target catalog. Never stored by planning it. */
@@ -91,11 +64,8 @@ internal data class VariantSuccessor(
 )
 
 /**
- * The modifiers an upgrade may write, by the name a catalog states.
- *
- * The builder's own vocabulary rather than any catalog's, which is why it is legitimately here —
- * but closed, because a modifier this build cannot construct must not be silently skipped: the
- * value it was carrying is the thing the move exists to preserve.
+ * The modifiers an upgrade may write, by the name a catalog states. Closed: an unconstructible
+ * modifier must not be silently skipped, since its value is what the move preserves.
  */
 private val MODIFIER_WRITERS: Map<String, (UiValueV1) -> DesignModifierV1> =
   mapOf("background" to { color -> BackgroundModifierV1(color) })
@@ -106,11 +76,8 @@ internal fun canWriteUpgradeModifier(modifier: String): Boolean = modifier in MO
 private const val SUPERSEDES_KEY = "supersedes"
 
 /**
- * The successors [catalog] declares, ignoring anything malformed.
- *
- * A published file is data this runtime did not write, so a broken entry must not take a design's
- * only repair path down with it: an entry that does not name a `componentId` is not a rule, and the
- * node it would have moved is reported as unknown exactly as if nothing had been declared.
+ * The successors [catalog] declares, ignoring malformed entries (a published file must not break a
+ * design's only repair path).
  */
 internal fun successors(catalog: CatalogCapabilityV1): Map<String, ComponentSuccessor> {
   val declared = catalog.statusSemantics[SUPERSEDES_KEY] as? JsonObject ?: return emptyMap()
@@ -135,12 +102,8 @@ internal fun successors(catalog: CatalogCapabilityV1): Map<String, ComponentSucc
 }
 
 /**
- * The move from [document]'s current pin to [targetPin], judged against [target].
- *
- * Pure: it reads the document and the catalog and returns what would happen. Nothing here writes,
- * validates or persists — the caller validates [CatalogUpgradeOutcome.candidate] against the target
- * catalog, because that is the same question every other write path asks and it should be answered
- * by the same validator rather than re-implemented here.
+ * The move from [document]'s current pin to [targetPin], judged against [target]. Pure: the caller
+ * validates [CatalogUpgradeOutcome.candidate] with the same validator as every write.
  */
 internal fun planCatalogUpgrade(
   document: DesignDocumentV1,
@@ -160,9 +123,8 @@ internal fun planCatalogUpgrade(
         } ?: rule?.componentId ?: node.componentId
       val component = declared[componentId]
       if (component == null && componentId !in document.components) {
-        // Nothing to move onto: the target declares no successor for this id and does not declare
-        // the id itself. `ERROR` rather than a dropped node, because deleting somebody's content to
-        // make a document validate is never the repair.
+        // No successor and not declared by the target: `ERROR`, since deleting content is never the
+        // repair.
         issues +=
           CatalogUpgradeIssueV1(
             CatalogUpgradeIssueSeverityV1.ERROR,
@@ -228,9 +190,8 @@ internal fun planCatalogUpgrade(
         }
         val renamed = rule?.properties?.get(name) ?: name
         if (component != null && renamed !in names) {
-          // The drop that is not declared anywhere: whatever the target does not have a place for.
-          // The value stays in the stored document -- only the candidate is without it -- so this
-          // is a warning about what an export would stop writing, not a deletion.
+          // Undeclared by the target: a warning that export would stop writing it; the stored value
+          // stays.
           issues +=
             CatalogUpgradeIssueV1(
               CatalogUpgradeIssueSeverityV1.WARNING,
@@ -269,9 +230,7 @@ internal fun planCatalogUpgrade(
           changes += AddCatalogUpgradeChangeV1(slotPath(nodeId, to), children.encoded())
         }
       }
-      // `componentId` included, and it is the whole point of the move: without it the plan
-      // reported a rename it never made, the candidate still named the component the target does
-      // not declare, and every preview came back BLOCKED for the rename it had just described.
+      // Including `componentId`: the rename is the point of the move.
       node.copy(
         componentId = componentId,
         properties = properties,
@@ -279,10 +238,8 @@ internal fun planCatalogUpgrade(
         slots = slots,
       )
     }
-  // A property the target REQUIRES and the design never set: given the generator's own placeholder
-  // rather than left to block the move. Without it a tab row drawn before `selectedTabIndex` became
-  // required could never be upgraded, and the automatic recovery left the design stranded for good.
-  // A warning, so the person accepting the move sees which value was chosen for them.
+  // A property the target requires and the design never set gets the generator's placeholder, with
+  // a warning, so the move is not blocked.
   val (filledCandidate, filled) =
     document.copy(catalogPin = targetPin, nodes = nodes).withRequiredPlaceholders(target)
   filled.forEach { (nodeId, property, value) ->
@@ -325,9 +282,8 @@ private fun propertyPath(nodeId: String, property: String) =
 private fun slotPath(nodeId: String, slot: String) = "${nodePath(nodeId)}/slots/$slot"
 
 /**
- * The wire shape of a value, for a change a person reads rather than a document anything replays.
- *
- * `encodeDefaults` so a change record spells a value the same way the stored design does.
+ * The wire shape of a value for a human-readable change; `encodeDefaults` so it matches the stored
+ * design's spelling.
  */
 private val json = Json { encodeDefaults = true }
 
@@ -339,9 +295,6 @@ private fun DesignModifierV1.encoded(): JsonElement =
 
 private fun List<String>.encoded(): JsonElement = JsonArray(map { JsonPrimitive(it) })
 
-/**
- * The whole reference, not its system id: source and target usually share the id and differ only in
- * the revision, so a change spelling ids alone would read as a change to nothing.
- */
+/** The whole reference: source and target usually differ only in revision. */
 private fun CatalogReferenceV1.encoded(): JsonElement =
   json.encodeToJsonElement(CatalogReferenceV1.serializer(), this)

@@ -29,14 +29,10 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * The editor's own client, talking to the service in the page.
- *
- * Driven through [UiBuilderProtocolHttpClient] rather than by calling the service directly, because
- * the claim being tested is that the local mode is reached by *the same client*: the envelope, the
- * request-id correlation and the strict codec are all part of what has to work offline.
- *
- * On the JVM rather than in `commonTest` only because the service's front door is `suspend` and
- * this module's common test source set has no coroutine test runner. The code under test is common.
+ * The editor's own client, talking to the service in the page, driven through
+ * [UiBuilderProtocolHttpClient] so the envelope, request-id correlation and strict codec are
+ * covered offline. On the JVM only because common tests lack a coroutine runner; the code is
+ * common.
  */
 class LocalUiBuilderServiceTest {
   private val storage = InMemoryLocalDesignStorage()
