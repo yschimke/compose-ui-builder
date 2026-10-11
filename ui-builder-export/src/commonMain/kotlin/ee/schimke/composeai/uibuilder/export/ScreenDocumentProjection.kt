@@ -336,15 +336,16 @@ object ScreenDocumentProjection {
     // Components are not behind this flag: a placement exports as a private composable in the same
     // file.
     if (!UiBuilderBuildFeatures.remoteCompose) {
-      // An event with no actions on a node inside a component definition is a callback parameter
-      // of that component: intent the caller handles, with nothing stateful in the document.
+      // A click with no actions on a node inside a component definition is a callback parameter of
+      // that component: intent the caller handles, with nothing stateful in the document.
       val callbacksOnly = componentNodes(document)
       document.nodes.values
         .filter {
           SHOW_BY_STATE in it.properties ||
             it.componentId == "layout/for-each" ||
             (it.eventBindings.isNotEmpty() &&
-              !(it.id in callbacksOnly && it.eventBindings.values.all { a -> a.isEmpty() })) ||
+              !(it.id in callbacksOnly &&
+                it.eventBindings.all { (event, actions) -> isIntent(event, actions) })) ||
             it.properties.values.any { value ->
               value is StateValueV1 || value is StateEqualsValueV1
             }
@@ -505,8 +506,9 @@ object ScreenDocumentProjection {
 
     private fun modifierClick(node: DesignNodeV1): ChainLink? {
       if (node.componentId !in MODIFIER_CLICK_COMPONENTS) return null
-      val actions = node.eventBindings["click"].orEmpty()
-      if (actions.isEmpty()) return null
+      val actions = node.eventBindings["click"] ?: return null
+      // Inside a component an action-free click is still the caller's callback, on the modifier.
+      if (actions.isEmpty() && functionScope == null) return null
       val callback = callback(node, "click") ?: return null
       return ChainLink(
         "androidx.compose.foundation.clickable",
@@ -518,7 +520,7 @@ object ScreenDocumentProjection {
       functionScope?.let { function ->
         // An action-free event is the component's API, so it reads as one (`onCancelClick`). A
         // callback forwarding authored actions keeps its positional name, as before.
-        val intent = node.eventBindings[event].orEmpty().isEmpty()
+        val intent = isIntent(event, node.eventBindings[event].orEmpty())
         val name = if (intent) callbackName(node.id, event) else null
         return function.capture("event:${node.id}:$event", null, name) { callback(node, event) }
       }
@@ -662,6 +664,10 @@ object ScreenDocumentProjection {
         return if (usable) checkNotNull(preferred) else "capture${captures.size}"
       }
 
+      /** The names this function's captured parameters already hold. */
+      fun parameterNames(): Set<String> =
+        captures.values.map { it.first.getValue("name").jsonPrimitive.content }.toSet()
+
       fun encode(): JsonObject = buildJsonObject {
         put("name", name)
         put(
@@ -750,7 +756,10 @@ object ScreenDocumentProjection {
           key !in KOTLIN_HARD_KEYWORDS &&
           key != "modifier" &&
           !Regex("(argument|capture)\\d+").matches(key)
-      return if (plain && scope.fields.values.none { it.name == key }) key else positional
+      // A callback captured earlier in the body may already hold the name (`onGoButtonClick`).
+      val callbacks = functionScope?.takeIf { it.bindings === scope }?.parameterNames().orEmpty()
+      return if (plain && scope.fields.values.none { it.name == key } && key !in callbacks) key
+      else positional
     }
 
     private fun supplied(value: UiValueV1, field: BoundField, where: String): ScreenValue? =
@@ -762,9 +771,11 @@ object ScreenDocumentProjection {
         return it
       }
       if (functionScope == null) return emptyMap()
-      // Inside a component every bound event is a parameter, an action-free one included: the
-      // caller decides what the intent does.
+      // Inside a component every bound event with actions is a parameter, and so is an action-free
+      // click: the caller decides what that intent does. Other action-free events (a value change
+      // carries a value a zero-argument callback cannot) are left out, as before.
       return node.eventBindings
+        .filter { (event, actions) -> actions.isNotEmpty() || isIntent(event, actions) }
         .mapNotNull { (event, _) ->
           if (event == "click" && node.componentId in MODIFIER_CLICK_COMPONENTS) null
           else
@@ -3588,6 +3599,14 @@ object ScreenDocumentProjection {
   private const val STRING_RESOURCE_TYPE = "org.jetbrains.compose.resources.StringResource"
   /** A generated `Res.string` member name: a plain Kotlin identifier. */
   private val RESOURCE_KEY = Regex("[A-Za-z_][A-Za-z0-9_]*")
+
+  /**
+   * An event with no actions that is the component's API rather than authoring: a zero-argument
+   * click, which a caller can supply as `() -> Unit`.
+   */
+  private fun isIntent(event: String, actions: List<*>): Boolean =
+    actions.isEmpty() && event == "click"
+
   /** A generated callback parameter name: `on` and a plain Kotlin identifier. */
   private val CALLBACK_NAME = Regex("on[A-Z][A-Za-z0-9]*")
   private const val DP = "androidx.compose.ui.unit.Dp"

@@ -42,6 +42,11 @@ class ComponentCallbackExportTest {
   private fun document(
     actions: String = "",
     label: String = """{"type": "string", "value": "Go"}""",
+    button: String =
+      """"componentId": "m3/button",
+            "properties": {"style": {"type": "enum", "value": "filled"}}""",
+    event: String = "click",
+    binding: String = "label",
   ) =
     json.decodeFromString<DesignDocumentV1>(
       """
@@ -57,12 +62,11 @@ class ComponentCallbackExportTest {
         "nodes": {
           "place": {"id": "place", "componentId": "design/component-instance",
             "component": {"componentKey": "choice",
-              "arguments": {"label": $label}}},
-          "go-button": {"id": "go-button", "componentId": "m3/button",
-            "properties": {"style": {"type": "enum", "value": "filled"}},
-            "slots": {"content": ["text"]}, "eventBindings": {"click": [$actions]}},
+              "arguments": {"$binding": $label}}},
+          "go-button": {"id": "go-button", $button,
+            "slots": {"content": ["text"]}, "eventBindings": {"$event": [$actions]}},
           "text": {"id": "text", "componentId": "m3/text",
-            "properties": {"text": {"type": "binding", "value": "label"}}}
+            "properties": {"text": {"type": "binding", "value": "$binding"}}}
         }
       }
       """
@@ -94,6 +98,54 @@ class ComponentCallbackExportTest {
       )
     val label = choice.parameters.single { it.name == "label" }
     assertEquals("kotlin.String", assertIs<ScreenParameter.Value>(label).typeFqn)
+  }
+
+  @Test
+  fun `an action-free click on a layout node is the caller's callback on its modifier`() {
+    val projected =
+      ScreenDocumentProjection.project(
+        document(button = """"componentId": "layout/box", "properties": {}""").let {
+          it.copy(
+            nodes =
+              it.nodes +
+                ("go-button" to
+                  it.nodes.getValue("go-button").let { b ->
+                    b.copy(slots = mapOf("children" to listOf("text")))
+                  })
+          )
+        },
+        emptyMap(),
+        structure = ProjectedStructure(),
+      )
+    assertIs<ScreenDocumentProjection.Outcome.Projected>(projected, projected.toString())
+    val choice = projected.document.functions.single()
+    assertTrue(
+      choice.parameters.any { it is ScreenParameter.Callback && it.name == "onGoButtonClick" },
+      choice.toString(),
+    )
+    assertTrue("clickable" in choice.root.toString(), choice.root.toString())
+  }
+
+  @Test
+  fun `an action-free event that carries a value is not a zero-argument callback`() {
+    val projected =
+      ScreenDocumentProjection.project(
+        document(event = "valueChange"),
+        emptyMap(),
+        structure = ProjectedStructure(),
+      )
+    if (projected is ScreenDocumentProjection.Outcome.Projected) {
+      val names = projected.document.functions.single().parameters.map { it.name }
+      assertFalse(names.any { "ValueChange" in it }, names.toString())
+    }
+  }
+
+  @Test
+  fun `a binding keeps clear of a callback that already took its name`() {
+    val choice = component(document(binding = "onGoButtonClick"), ProjectedStructure())
+    val names = choice.parameters.map { it.name }
+    assertEquals(names.toSet().size, names.size, names.toString())
+    assertTrue("onGoButtonClick" in names, names.toString())
   }
 
   @Test
