@@ -402,6 +402,10 @@ val wasmNoInlinePatterns =
     "androidx.compose.material.icons.*",
     "ee.schimke.composeai.uibuilder.renderer.sdk.generated*",
     "ee.schimke.composeai.uibuilder.export.generatedMaterialIconMembersChunk*",
+    // Export's per-kind node builders (placement, repetition, selection, variable font text, the
+    // catalog's export projection) each have one caller, `Pass.node`; inlined, they made it the
+    // largest TurboFan compile on opening an M3 design (166 MB once the projection joined them).
+    "ee.schimke.composeai.uibuilder.export.Pass.*Node",
   )
 
 // `--no-inline` is a pass and must precede the inlining passes, so the rules go right after the
