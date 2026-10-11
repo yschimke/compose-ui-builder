@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -562,165 +563,208 @@ internal fun EditorToolbar(
     EditorShortcutsDialog(onDismiss = { showShortcuts = false })
   }
   Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 3.dp) {
-    Row(
-      Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 14.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-      DocumentIdentity(state)
-      Spacer(Modifier.width(10.dp))
-      ToolbarIconAction("Undo", "$COMMAND_MODIFIER+Z", UiBuilderChromeIcon.Undo, canUndo) {
-        dispatch(UiBuilderEditorEvent.Undo)
-      }
-      ToolbarIconAction("Redo", "$COMMAND_MODIFIER+Shift+Z", UiBuilderChromeIcon.Redo, canRedo) {
-        dispatch(UiBuilderEditorEvent.Redo)
-      }
-      Spacer(Modifier.weight(1f))
-      // Only once the reference has content, since most designs never use it.
-      if (state.reference.hasContent) {
-        ToolbarToggleAction(
-          label = if (state.reference.settings.visible) "Hide reference" else "Show reference",
-          icon =
-            if (state.reference.settings.visible) UiBuilderChromeIcon.Show
-            else UiBuilderChromeIcon.Hide,
-          checked = state.reference.settings.visible,
-        ) {
-          dispatch(UiBuilderEditorEvent.ToggleReference)
-        }
-      }
-      ToolbarToggleAction(
-        label = if (state.codePaneVisible) "Code · hide" else "Code",
-        icon = UiBuilderChromeIcon.Code,
-        checked = state.codePaneVisible,
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+      // The row does not wrap, so between the compact breakpoint and this width the session actions
+      // (New, Fork, Sharing) move into More rather than pushing the agent control and More itself
+      // off the end.
+      val foldSessionActions = maxWidth < TOOLBAR_SESSION_ACTIONS_MIN_WIDTH
+      Row(
+        Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
       ) {
-        dispatch(UiBuilderEditorEvent.ToggleCodePane)
-      }
-      // Beside Code, because they are the two answers to "how do I get this out": the Kotlin the
-      // design is, and the picture it draws. Absent where the host cannot render one.
-      if (exportHost != null) ExportMenu(exportHost)
-      if (availablePanes.size > 1) {
-        WorkspacePanesMenu(panes, availablePanes, previewSurfaces, nativeAvailable, dispatch)
-      }
-      // Beside the panes menu, as the other "what am I looking at" choice. Only while the native
-      // pane is open, the one view a single shape choice still steers.
-      state.document.wearWidgetScaffoldSize()?.let { size ->
-        if (EditorPane.Native in panes) {
-          WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
+        DocumentIdentity(state)
+        Spacer(Modifier.width(10.dp))
+        ToolbarIconAction("Undo", "$COMMAND_MODIFIER+Z", UiBuilderChromeIcon.Undo, canUndo) {
+          dispatch(UiBuilderEditorEvent.Undo)
         }
-      }
-      if (collaborators.isNotEmpty() || agentHost != null) {
-        Spacer(Modifier.width(6.dp))
-        PresenceRow(collaborators)
-        Spacer(Modifier.width(6.dp))
-      }
-      if (onNewDesign != null) {
-        ToolbarIconAction("New design", "", UiBuilderChromeIcon.New, true, onNewDesign)
-      }
-      if (onForkDesign != null) {
-        ToolbarIconAction("Fork this design", "", UiBuilderChromeIcon.Copy, true, onForkDesign)
-      }
-      if (visibilityLabel != null) VisibilityToolbarAction(visibilityLabel, onManageVisibility)
-      if (agentHost != null) {
-        AgentToolbarAction(agentHost, onOpenAgentPrompt)
-      } else if (onCopyAiPrompt != null) {
-        ToolbarIconAction("Copy prompt for your agent", "", UiBuilderChromeIcon.Copy, true) {
-          scope.launch { onNotice(onCopyAiPrompt()) }
+        ToolbarIconAction("Redo", "$COMMAND_MODIFIER+Shift+Z", UiBuilderChromeIcon.Redo, canRedo) {
+          dispatch(UiBuilderEditorEvent.Redo)
         }
-      }
-      Box {
-        ToolbarIconAction("More editor actions", "", UiBuilderChromeIcon.More, true) {
-          overflowOpen = true
-        }
-        val menuEntries = buildList {
-          if (onBrowseDesigns != null) {
-            add(
-              UiBuilderMenuEntry.Action("My designs", icon = UiBuilderMenuIcon.Folder) {
-                overflowOpen = false
-                onBrowseDesigns()
-              }
-            )
+        Spacer(Modifier.weight(1f))
+        // Only once the reference has content, since most designs never use it.
+        if (state.reference.hasContent) {
+          ToolbarToggleAction(
+            label = if (state.reference.settings.visible) "Hide reference" else "Show reference",
+            icon =
+              if (state.reference.settings.visible) UiBuilderChromeIcon.Show
+              else UiBuilderChromeIcon.Hide,
+            checked = state.reference.settings.visible,
+          ) {
+            dispatch(UiBuilderEditorEvent.ToggleReference)
           }
-          add(
-            UiBuilderMenuEntry.Action(
-              "Keyboard shortcuts",
-              icon = UiBuilderMenuIcon.Keyboard,
-            ) {
-              overflowOpen = false
-              showShortcuts = true
+        }
+        ToolbarToggleAction(
+          label = if (state.codePaneVisible) "Code · hide" else "Code",
+          icon = UiBuilderChromeIcon.Code,
+          checked = state.codePaneVisible,
+        ) {
+          dispatch(UiBuilderEditorEvent.ToggleCodePane)
+        }
+        // Beside Code, because they are the two answers to "how do I get this out": the Kotlin the
+        // design is, and the picture it draws. Absent where the host cannot render one.
+        if (exportHost != null) ExportMenu(exportHost)
+        if (availablePanes.size > 1) {
+          WorkspacePanesMenu(panes, availablePanes, previewSurfaces, nativeAvailable, dispatch)
+        }
+        // Beside the panes menu, as the other "what am I looking at" choice. Only while the native
+        // pane is open, the one view a single shape choice still steers.
+        state.document.wearWidgetScaffoldSize()?.let { size ->
+          if (EditorPane.Native in panes) {
+            WidgetHostShapeMenu(state.wearWidgetHostShape, size, dispatch)
+          }
+        }
+        if (collaborators.isNotEmpty() || agentHost != null) {
+          Spacer(Modifier.width(6.dp))
+          PresenceRow(collaborators)
+          Spacer(Modifier.width(6.dp))
+        }
+        if (!foldSessionActions) {
+          if (onNewDesign != null) {
+            ToolbarIconAction("New design", "", UiBuilderChromeIcon.New, true, onNewDesign)
+          }
+          if (onForkDesign != null) {
+            ToolbarIconAction("Fork this design", "", UiBuilderChromeIcon.Copy, true, onForkDesign)
+          }
+          if (visibilityLabel != null) VisibilityToolbarAction(visibilityLabel, onManageVisibility)
+        }
+        if (agentHost != null) {
+          AgentToolbarAction(agentHost, onOpenAgentPrompt)
+        } else if (onCopyAiPrompt != null) {
+          ToolbarIconAction("Copy prompt for your agent", "", UiBuilderChromeIcon.Copy, true) {
+            scope.launch { onNotice(onCopyAiPrompt()) }
+          }
+        }
+        Box {
+          ToolbarIconAction("More editor actions", "", UiBuilderChromeIcon.More, true) {
+            overflowOpen = true
+          }
+          val menuEntries = buildList {
+            if (foldSessionActions) {
+              if (visibilityLabel != null) {
+                add(UiBuilderMenuEntry.Heading(visibilityLabel))
+                if (onManageVisibility != null)
+                  add(
+                    UiBuilderMenuEntry.Action("Sharing") {
+                      overflowOpen = false
+                      onManageVisibility()
+                    }
+                  )
+                add(UiBuilderMenuEntry.Divider)
+              }
+              if (onNewDesign != null) {
+                add(
+                  UiBuilderMenuEntry.Action("New design") {
+                    overflowOpen = false
+                    onNewDesign()
+                  }
+                )
+              }
+              if (onForkDesign != null) {
+                add(
+                  UiBuilderMenuEntry.Action("Fork this design") {
+                    overflowOpen = false
+                    onForkDesign()
+                  }
+                )
+              }
             }
+            if (onBrowseDesigns != null) {
+              add(
+                UiBuilderMenuEntry.Action("My designs", icon = UiBuilderMenuIcon.Folder) {
+                  overflowOpen = false
+                  onBrowseDesigns()
+                }
+              )
+            }
+            add(
+              UiBuilderMenuEntry.Action(
+                "Keyboard shortcuts",
+                icon = UiBuilderMenuIcon.Keyboard,
+              ) {
+                overflowOpen = false
+                showShortcuts = true
+              }
+            )
+            if (onTidy != null) {
+              add(
+                UiBuilderMenuEntry.Action(
+                  "Tidy to the 4dp grid",
+                  icon = UiBuilderMenuIcon.Tidy,
+                ) {
+                  overflowOpen = false
+                  onTidy.invoke()
+                }
+              )
+            }
+            if (onReconnect != null) {
+              add(
+                UiBuilderMenuEntry.Action("Reconnect", icon = UiBuilderMenuIcon.Refresh) {
+                  overflowOpen = false
+                  onReconnect()
+                }
+              )
+            }
+            if (onTakeOffline != null) {
+              add(
+                UiBuilderMenuEntry.Action("Keep in this browser") {
+                  overflowOpen = false
+                  onTakeOffline()
+                }
+              )
+            }
+            if (onSyncToServer != null) {
+              add(
+                UiBuilderMenuEntry.Action("Sync to the server") {
+                  overflowOpen = false
+                  onSyncToServer()
+                }
+              )
+            }
+            if (onPublishToServer != null) {
+              add(
+                UiBuilderMenuEntry.Action("Publish to the server") {
+                  overflowOpen = false
+                  onPublishToServer()
+                }
+              )
+            }
+            if (onComponentPacks != null) {
+              add(
+                UiBuilderMenuEntry.Action(
+                  "Component packs…",
+                  icon = UiBuilderMenuIcon.Components,
+                ) {
+                  overflowOpen = false
+                  onComponentPacks()
+                }
+              )
+            }
+            if (onHelp != null) {
+              add(
+                UiBuilderMenuEntry.Action("Help", icon = UiBuilderMenuIcon.Help) {
+                  overflowOpen = false
+                  onHelp()
+                }
+              )
+            }
+          }
+          LocalUiBuilderChrome.current.PopupMenu(
+            expanded = overflowOpen,
+            onDismissRequest = { overflowOpen = false },
+            entries = menuEntries,
           )
-          if (onTidy != null) {
-            add(
-              UiBuilderMenuEntry.Action(
-                "Tidy to the 4dp grid",
-                icon = UiBuilderMenuIcon.Tidy,
-              ) {
-                overflowOpen = false
-                onTidy.invoke()
-              }
-            )
-          }
-          if (onReconnect != null) {
-            add(
-              UiBuilderMenuEntry.Action("Reconnect", icon = UiBuilderMenuIcon.Refresh) {
-                overflowOpen = false
-                onReconnect()
-              }
-            )
-          }
-          if (onTakeOffline != null) {
-            add(
-              UiBuilderMenuEntry.Action("Keep in this browser") {
-                overflowOpen = false
-                onTakeOffline()
-              }
-            )
-          }
-          if (onSyncToServer != null) {
-            add(
-              UiBuilderMenuEntry.Action("Sync to the server") {
-                overflowOpen = false
-                onSyncToServer()
-              }
-            )
-          }
-          if (onPublishToServer != null) {
-            add(
-              UiBuilderMenuEntry.Action("Publish to the server") {
-                overflowOpen = false
-                onPublishToServer()
-              }
-            )
-          }
-          if (onComponentPacks != null) {
-            add(
-              UiBuilderMenuEntry.Action(
-                "Component packs…",
-                icon = UiBuilderMenuIcon.Components,
-              ) {
-                overflowOpen = false
-                onComponentPacks()
-              }
-            )
-          }
-          if (onHelp != null) {
-            add(
-              UiBuilderMenuEntry.Action("Help", icon = UiBuilderMenuIcon.Help) {
-                overflowOpen = false
-                onHelp()
-              }
-            )
-          }
         }
-        LocalUiBuilderChrome.current.PopupMenu(
-          expanded = overflowOpen,
-          onDismissRequest = { overflowOpen = false },
-          entries = menuEntries,
-        )
       }
     }
   }
 }
+
+/**
+ * Below this width [EditorToolbar] folds New, Fork and Sharing into More, so the agent control and
+ * More stay on screen when a hosted design supplies every action at once.
+ */
+internal val TOOLBAR_SESSION_ACTIONS_MIN_WIDTH = 1200.dp
 
 /**
  * The Export menu: the design as a picture, into Figma, a link or a file. Rows are

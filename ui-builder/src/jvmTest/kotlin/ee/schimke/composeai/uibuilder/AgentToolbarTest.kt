@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.unit.dp
 import ee.schimke.composeai.uibuilder.canvas.UiBuilderBoard
 import ee.schimke.composeai.uibuilder.capability.CapabilityCatalogParser
@@ -133,7 +134,8 @@ class AgentToolbarTest {
 
   @Test
   fun `editor has one agent entry and preserves access notice at desktop and compact sizes`() =
-    runComposeUiTest {
+    // A window as wide as the widest layout, so the 1280dp box is not clipped to the default 1024.
+    runDesktopComposeUiTest(width = 1280, height = 800) {
       var width by mutableStateOf(1280)
       var showAccessNotice by mutableStateOf(true)
       val host = Host()
@@ -213,5 +215,117 @@ class AgentToolbarTest {
       onNodeWithText("Private · invited collaborators only").assertExists()
       onNodeWithText("Sharing").performSemanticsAction(SemanticsActions.OnClick) { it() }
       assertEquals(2, sharingOpened)
+    }
+
+  @Test
+  fun `hosted toolbar keeps every trailing action reachable at intermediate widths`() =
+    runDesktopComposeUiTest(width = 1440, height = 700) {
+      var width by mutableStateOf(960)
+      val host = Host()
+      var newOpened = 0
+      var forked = 0
+      var sharingOpened = 0
+      val empty = JsonObject(emptyMap())
+      val document =
+        UiBuilderDocument(
+          "ui-builder-document.v1",
+          "toolbar",
+          "Design",
+          1,
+          empty,
+          empty,
+          empty,
+          listOf("board"),
+          mapOf("board" to UiBuilderBoard.node("board")),
+        )
+      val catalog =
+        CapabilityCatalogParser.parse(
+          checkNotNull(javaClass.getResource("/m3-catalog-capabilities-v1.json")).readText()
+        )
+      val exportHost =
+        object : UiBuilderExportHost {
+          override val formats = listOf(EditorExportFormat.Png)
+
+          override suspend fun copyPicture(format: EditorExportFormat) = "copied"
+
+          override suspend fun copyLink(format: EditorExportFormat) = "linked"
+
+          override suspend fun download(format: EditorExportFormat) = "downloaded"
+        }
+      val reviewer =
+        UiBuilderCollaborator(
+          "ada",
+          "Ada",
+          "#AA3355",
+          emptyList(),
+          UiBuilderParticipantKind.Browser,
+        )
+      setContent {
+        MaterialTheme {
+          Box(Modifier.width(width.dp).height(700.dp).testTag("toolbar-overflow-layout")) {
+            // Everything LiveSessionApp supplies for a hosted design at once.
+            UiBuilderEditor(
+              document,
+              catalog,
+              collaborators = listOf(reviewer),
+              agentHost = host,
+              exportHost = exportHost,
+              newDesignCatalogs =
+                listOf(UiBuilderNewDesignCatalog("m3", "Material 3", emptyList())),
+              onCreateDesign = { _, _, _, _ -> newOpened++ },
+              onBrowseDesigns = {},
+              onForkDesign = { forked++ },
+              visibilityLabel = "Private · invited collaborators only",
+              onManageVisibility = { sharingOpened++ },
+            )
+          }
+        }
+      }
+      val output = File("build/toolbar-overflow").apply { mkdirs() }
+      waitForIdle()
+      ImageIO.write(
+        onNodeWithTag("toolbar-overflow-layout").captureToImage().toAwtImage(),
+        "png",
+        File(output, "intermediate-960.png"),
+      )
+      // The agent control and More are the trailing controls the row used to clip.
+      onNodeWithText("Connect agent").assertIsDisplayed()
+      onNodeWithContentDescription("More editor actions").assertIsDisplayed()
+      onNodeWithContentDescription("New design").assertDoesNotExist()
+      onNodeWithContentDescription("Fork this design").assertDoesNotExist()
+      onNodeWithContentDescription("Sharing · Private · invited collaborators only")
+        .assertDoesNotExist()
+      onNodeWithContentDescription("More editor actions").performSemanticsAction(
+        SemanticsActions.OnClick
+      ) {
+        it()
+      }
+      onNodeWithText("New design").assertIsDisplayed()
+      onNodeWithText("Fork this design").assertIsDisplayed()
+      onNodeWithText("Private · invited collaborators only").assertIsDisplayed()
+      onNodeWithText("Fork this design").performSemanticsAction(SemanticsActions.OnClick) { it() }
+      assertEquals(1, forked)
+      onNodeWithContentDescription("More editor actions").performSemanticsAction(
+        SemanticsActions.OnClick
+      ) {
+        it()
+      }
+      onNodeWithText("Sharing").performSemanticsAction(SemanticsActions.OnClick) { it() }
+      assertEquals(1, sharingOpened)
+
+      // Wide enough for every action: they stay on the toolbar itself.
+      runOnIdle { width = 1440 }
+      waitForIdle()
+      ImageIO.write(
+        onNodeWithTag("toolbar-overflow-layout").captureToImage().toAwtImage(),
+        "png",
+        File(output, "wide-1440.png"),
+      )
+      onNodeWithContentDescription("New design").assertIsDisplayed()
+      onNodeWithContentDescription("Fork this design").assertIsDisplayed()
+      onNodeWithContentDescription("Sharing · Private · invited collaborators only")
+        .assertIsDisplayed()
+      onNodeWithText("Connect agent").assertIsDisplayed()
+      onNodeWithContentDescription("More editor actions").assertIsDisplayed()
     }
 }
