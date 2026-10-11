@@ -102,8 +102,7 @@ And it asserts the **gap ledger** exactly, so the list can only shrink deliberat
 ### Where it stands
 
 Every catalog re-captured on 2026-10-10 from its delivery branch, `remote-widgets` included now that
-it publishes one. `CatalogCutoverShadowTableTest` holds this table exactly — it is the report
-compose-preview-server logs at startup for each shadowed catalog, computed from the same files:
+it publishes one. This is the last shadow report, before the comparison was retired (see **Shadow mode (retired)**):
 
 | Catalog | Ready to own | Findings | Losses |
 | --- | --- | --- | --- |
@@ -186,48 +185,14 @@ like every other catalog. Its shadow report is ready: no findings, and nothing s
 **Recommendation: flip `remote-widgets` first.** It has nothing to fall back to and nothing to
 delete, so owning it is only gain, and it is the smallest proof of the whole path on a real box.
 
-## Shadow mode: measuring a flip on the box before making it
+## Shadow mode (retired)
 
-`CatalogCutoverShadow` (`:ui-builder-runtime`) is the readiness check as a library call, so a
-deployment can run it against what a catalog publishes *today* instead of against fixtures captured
-on one day. `CatalogCutoverProbe` delegates to it, so the gap ledger above and a box's report are
-the same measurement.
-
-`CatalogCutoverShadow.report(catalogId, published, templates, …)` answers two questions and changes
-nothing served:
-
-- **`findings`**: would serving the catalog owned work? Seeds it publishes, that they validate,
-  its declared export route, and that every seed exports through it.
-- **`differences`**: what would an editor see change if the Kotlin catalog were deleted? The Kotlin
-  catalog as this build serves it, against the published one as served owned (both with the
-  builder vocabulary added, so that is never reported as lost), component by component: role,
-  traits, modifiers, properties and slots. Null for a catalog nothing here synthesises.
-- **`losses`**: the differences that take something away. That covers:
-  - a component only the Kotlin catalog has;
-  - a changed role;
-  - a dropped trait, modifier, property, slot, or a slot's accepted role or trait;
-  - a property type that drops an alternative (`["boolean","object"] -> "boolean"` is the loss of
-    binding it to state);
-  - a property that becomes required;
-  - allowed values or a slot cardinality that narrow.
-
-  Additions and relaxations are not losses, and neither is what the published catalog's
-  `statusSemantics.supersedes` carries across: a saved design is moved through it
-  (`CatalogUpgradePlan`) rather than stranded. So a Kotlin-only component the published catalog
-  supersedes is reported as superseded, not lost, provided it offers every successor; and a property
-  the entry migrates (the `variants.property` that picks the successor, a property renamed onto one
-  the successor declares, or one restated as a modifier) is reported as migrated. m3-catalog's
-  `m3/progress-indicator` and the `variant` of `m3/card`, `m3/icon-button` and `m3/text-field` are
-  that case.
-
-**Ready means no findings and no losses.** Until 2026-10 it meant no findings alone, and
-preview.coo.ee reported `remote-m3` "ready to own" while owning it would have dropped
-`RemoteAuthorable`, `remoteCall` and state-bound `enabled` from about 25 components.
-
-On compose-preview-server it is a per-catalog `"shadow": true` beside `"owned"` in `catalogs.json`'s
-`uiBuilder` block: the box keeps serving what `owned` says, logs the report at startup and serves it
-from the admin config route. Flip a catalog when its shadow report has been clean for long enough to
-trust, not when a capture happened to be.
+Before every catalog was owned, `CatalogCutoverShadow` compared the synthesised Kotlin catalog with
+the published one component by component, and compose-preview-server logged that report per
+`"shadow": true` catalog. preview.coo.ee has served all six catalogs owned since 2026-10-10, so the
+comparison was deleted. What is left is its owned half, `OwnedCatalogCheck`: would a catalog's
+published seeds validate and export through the route it declares. `CatalogCutoverProbe` delegates
+to it for the ledger above.
 
 ## Switching over
 
@@ -291,7 +256,7 @@ readiness test is green with that catalog owned, and `ledger empty for it` is th
 | `isLauncherWidget()`'s root-id test, in `RecordFreeExport` and in the editor model's minimum frame size, and `LauncherWidgetGrid`'s cell table | ~60 | `remote-widgets`' `composeSourceExport` declaration and `frame.geometry.sizesDp` | `remote-widgets` owned; the editor's minimum then reads "this catalog declares sizes" from the frame block it already parses |
 
 | `m3-catalog-capabilities-v1.json` | — | m3-catalog's published `ui-builder.json` | the offline hosts no longer read it; remaining readers are the host-bridge web archive (with the wear/remote goldens above) and `DesktopExportHostTest` |
-| `CatalogCutoverShadow`, `CatalogCutoverShadowTableTest`, `CatalogCutoverReadinessTest`, `ui-builder-runtime/src/test/resources/catalog-cutover/`, `scripts/capture-catalog-cutover-fixtures.sh` | — | — | every catalog owned for a release with no withheld-catalog errors; the offline hosts' tests move to synthetic catalogs first |
+| ~~`CatalogCutoverShadow`, `CatalogCutoverShadowTableTest`~~ (deleted), `OwnedCatalogCheck`, `CatalogCutoverReadinessTest`, `ui-builder-runtime/src/test/resources/catalog-cutover/`, `scripts/capture-catalog-cutover-fixtures.sh` | — | — | every catalog owned for a release with no withheld-catalog errors; the offline hosts' tests move to synthetic catalogs first |
 
 `blankUiBuilderDocument` and `ComposeFoundationCatalog` stay: they are the builder's own vocabulary,
 not knowledge of somebody else's catalog. The packaged `m3-catalog` capability no longer counts as

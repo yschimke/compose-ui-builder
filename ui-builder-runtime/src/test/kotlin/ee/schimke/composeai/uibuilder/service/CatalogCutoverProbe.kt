@@ -30,9 +30,9 @@ internal object CatalogCutoverProbe {
       CatalogCutoverFixtures.catalogIds.associateWith(CatalogCutoverFixtures::catalog),
     templates: (String) -> CatalogSeedTemplates = CatalogCutoverFixtures::templates,
   ): List<String> =
-    // The same check a deployment runs in shadow, so the ledger and a box's report agree.
+    // The same check that decides whether a catalog can be served owned.
     published.flatMap { (id, catalog) ->
-      CatalogCutoverShadow.ownedFindings(
+      OwnedCatalogCheck.findings(
         catalogId = id,
         published = catalog,
         templates = templates(id),
